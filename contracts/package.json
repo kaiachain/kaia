@@ -1,5 +1,6 @@
 {
   "devDependencies": {
-    "hardhat": "2.13"
+    "hardhat": "2.13",
+    "ts-node": "^10.9.2"
   }
 }
