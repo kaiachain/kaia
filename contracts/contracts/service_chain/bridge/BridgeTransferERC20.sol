@@ -20,7 +20,7 @@ import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/I
 import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 
-import "../../service_chain/bridge/IERC20BridgeReceiver.sol";
+import "../../service_chain/sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeTransfer.sol";
 
 
