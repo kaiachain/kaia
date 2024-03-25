@@ -30,7 +30,7 @@ describe("TreasuryRebalance", function () {
     retired2 = kir.address;
 
     const TEST = await ethers.getContractFactory(
-      "contracts/system_contracts/consensus/kip103/Ownable.sol:Ownable"
+      "contracts/libs/system_contracts/Ownable.sol:Ownable"
     );
     test = await TEST.deploy();
 
