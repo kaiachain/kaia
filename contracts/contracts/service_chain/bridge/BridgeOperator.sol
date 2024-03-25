@@ -16,10 +16,10 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract BridgeOperator is Ownable {

@@ -16,10 +16,10 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./IERC721BridgeReceiver.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../service_chain/bridge/IERC721BridgeReceiver.sol";
 
 
 /**

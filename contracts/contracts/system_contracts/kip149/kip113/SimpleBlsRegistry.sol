@@ -19,11 +19,11 @@ pragma solidity ^0.8.18;
 
 import "./IKIP113.sol";
 import "./IAddressBook.sol";
-import "../lib/Initializable.sol";
-import "../lib/UUPSUpgradeable.sol";
-import "../lib/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract KIP113 is Initializable, UUPSUpgradeable, OwnableUpgradeable, IKIP113 {
+contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable, IKIP113 {
     IAddressBook public constant abook = IAddressBook(0x0000000000000000000000000000000000000400);
     bytes32 public constant ZERO48HASH = 0xc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd293; // keccak256(hex"00"*48)
     bytes32 public constant ZERO96HASH = 0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21; // keccak256(hex"00"*96)

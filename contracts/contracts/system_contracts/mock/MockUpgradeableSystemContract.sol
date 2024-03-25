@@ -17,32 +17,29 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.18;
 
-import "./KIP113.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract KIP113Mock is KIP113 {
-    function register(address addr, bytes calldata publicKey, bytes calldata pop) external override {
-        if (record[addr].publicKey.length == 0) {
-            allNodeIds.push(addr);
-        }
-        record[addr] = BlsPublicKeyInfo(publicKey, pop);
+contract MockUpgradeableSystemContract is Initializable, UUPSUpgradeable {
+    uint256 public number;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
-    function getAllBlsInfo()
-        external
-        view
-        virtual
-        override
-        returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList)
-    {
-        uint count = allNodeIds.length;
-
-        nodeIdList = new address[](count);
-        pubkeyList = new BlsPublicKeyInfo[](count);
-
-        for (uint i = 0; i < count; i++) {
-            nodeIdList[i] = allNodeIds[i];
-            pubkeyList[i] = record[allNodeIds[i]];
-        }
-        return (nodeIdList, pubkeyList);
+    function initialize(uint256 _number) public initializer {
+        __UUPSUpgradeable_init();
+        number = _number;
     }
+
+    function setNumber(uint256 newNumber) public virtual {
+        number = newNumber;
+    }
+
+    function increment() public virtual {
+        number++;
+    }
+
+    function _authorizeUpgrade(address) internal override {}
 }

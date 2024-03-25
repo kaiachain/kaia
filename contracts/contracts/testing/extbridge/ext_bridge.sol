@@ -16,8 +16,8 @@
 
 pragma solidity 0.5.6;
 
-import "../bridge/BridgeTransferERC20.sol";
-import "../bridge/BridgeTransferERC721.sol";
+import "../../service_chain/bridge/BridgeTransferERC20.sol";
+import "../../service_chain/bridge/BridgeTransferERC721.sol";
 import "./callback.sol";
 
 

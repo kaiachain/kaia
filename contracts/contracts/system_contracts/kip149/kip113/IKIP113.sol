@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 /// @title KIP-113 BLS public key registry
 /// @dev See https://github.com/klaytn/kips/issues/113

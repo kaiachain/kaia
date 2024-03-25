@@ -16,10 +16,10 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "../externals/openzeppelin-solidity/contracts/utils/Address.sol";
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./IERC20BridgeReceiver.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/utils/Address.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../service_chain/bridge/IERC20BridgeReceiver.sol";
 
 
 /**

@@ -16,7 +16,7 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract BridgeCounterPart is Ownable {

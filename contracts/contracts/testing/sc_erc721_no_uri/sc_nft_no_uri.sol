@@ -16,11 +16,11 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Mintable.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Mintable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
-import "../externals/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../sc_erc721/ERC721ServiceChain.sol";
 
 contract ServiceChainNFT_NoURI is ERC721, ERC721Mintable, ERC721Burnable, ERC721ServiceChain {

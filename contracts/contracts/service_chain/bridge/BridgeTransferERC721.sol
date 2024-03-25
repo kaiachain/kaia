@@ -16,11 +16,11 @@
 
 pragma solidity 0.5.6;
 
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
-import "../externals/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
+import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
 
-import "../sc_erc721/IERC721BridgeReceiver.sol";
+import "../../service_chain/bridge/IERC721BridgeReceiver.sol";
 import "./BridgeTransfer.sol";
 
 

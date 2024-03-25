@@ -1,4 +1,4 @@
-// Copyright 2018 The klaytn Authors
+// Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
 // The klaytn library is free software: you can redistribute it and/or modify
@@ -14,5 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package contract contains predefined Klaytn reward contracts.
-package contract
+// SPDX-License-Identifier: LGPL-3.0-only
+pragma solidity ^0.8.18;
+
+import "./MockUpgradeableSystemContract.sol";
+
+contract MockUpgradeableSystemContractV2 is MockUpgradeableSystemContract {
+    // Added for V2
+    uint256 public setTime;
+
+    function increment() public override {
+        number++;
+        setTime = block.timestamp;
+    }
+}
