@@ -20,6 +20,7 @@ These contracts in `contracts/testing` are used for unit testing and performance
 - `sc_erc721/sc_nft.sol`: for node/sc tests.
 - `sc_erc721_no_uri/sc_nft_no_uri.sol`: for node/sc tests.
 - `storagetrie/*.sol`: for BenchmarkStorageTrieStore.
+- `system_contracts/*.sol`: for system_contracts tests.
 - `test/*.sol`: for TestCompileSolidityOrLoad.
 - `validatesender/*.sol`: for TestValidateSenderContract.
 
@@ -27,10 +28,10 @@ These contracts in `contracts/testing` are used for unit testing and performance
 
 These contracts in `contracts/libs` are external dependencies. Some old libraries are kept to support other legacy contracts.
 
-- `externals/openzeppelin-solidity/*`: OpenZeppelin contracts.
-- `cnstaking/SafeMath.sol`: SafeMath for older solidity versions.
 - `kip13/InterfaceIdentifier.sol`: The ERC-165 supportsInterface.
-- `reward/SafeMath.sol`: SafeMath for older solidity versions.
+- `openzeppelin-v2/*`: OpenZeppelin contracts.
+- `system_contracts/cnstaking/SafeMath.sol`: SafeMath for older solidity versions.
+- `system_contracts/reward/SafeMath.sol`: SafeMath for older solidity versions.
 - `system_contracts/*.sol`: OpenZeppelin contracts.
 
 ## Service chain contracts
