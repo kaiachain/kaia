@@ -318,12 +318,15 @@ func (t *TxInternalDataEthereumDynamicFee) String() string {
 	tx := &Transaction{data: t}
 
 	v, r, s := t.V, t.R, t.S
-
-	signer := LatestSignerForChainID(t.ChainId())
-	if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-		from = "[invalid sender: invalid sig]"
+	if v != nil {
+		signer := LatestSignerForChainID(t.ChainId())
+		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+			from = "[invalid sender: invalid sig]"
+		} else {
+			from = fmt.Sprintf("%x", f[:])
+		}
 	} else {
-		from = fmt.Sprintf("%x", f[:])
+		from = "[invalid sender: nil V field]"
 	}
 
 	if t.GetRecipient() == nil {
