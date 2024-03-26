@@ -16,12 +16,12 @@
 
 pragma solidity 0.5.6;
 
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721MetadataMintable.sol";
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC721/ERC721Burnable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC721/ERC721Full.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC721/ERC721Metadata.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC721/ERC721MetadataMintable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC721/ERC721Burnable.sol";
 
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/ownership/Ownable.sol";
 import "./ERC721ServiceChain.sol";
 
 

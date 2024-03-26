@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 pragma solidity ^0.4.24;
-import "../../../libs/system_contracts/reward/SafeMath.sol";
+import "../../../libs/SafeMath.sol";
 
 /**
  * @title AddressBook

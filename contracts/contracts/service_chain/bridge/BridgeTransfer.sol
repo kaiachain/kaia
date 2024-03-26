@@ -16,7 +16,7 @@
 
 pragma solidity 0.5.6;
 
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/math/SafeMath.sol";
 
 import "./BridgeHandledRequests.sol";
 import "./BridgeFee.sol";

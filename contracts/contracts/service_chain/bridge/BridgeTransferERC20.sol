@@ -16,9 +16,9 @@
 
 pragma solidity 0.5.6;
 
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/IERC20.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/ERC20Mintable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/ERC20Burnable.sol";
 
 import "../../service_chain/sc_erc20/IERC20BridgeReceiver.sol";
 import "./BridgeTransfer.sol";

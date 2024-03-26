@@ -24,15 +24,14 @@ These contracts in `contracts/testing` are used for unit testing and performance
 - `test/*.sol`: for TestCompileSolidityOrLoad.
 - `validatesender/*.sol`: for TestValidateSenderContract.
 
-## External libraries
+## Libraries
 
 These contracts in `contracts/libs` are external dependencies. Some old libraries are kept to support other legacy contracts.
 
 - `kip13/InterfaceIdentifier.sol`: The ERC-165 supportsInterface.
-- `openzeppelin-v2/*`: OpenZeppelin contracts.
-- `system_contracts/cnstaking/SafeMath.sol`: SafeMath for older solidity versions.
-- `system_contracts/reward/SafeMath.sol`: SafeMath for older solidity versions.
-- `system_contracts/*.sol`: OpenZeppelin contracts.
+- `openzeppelin-contracts-v2/*`: OpenZeppelin contracts.
+- `Ownable.sol`: Ownable contract.
+- `SafeMath.sol`: SafeMath for older solidity versions.
 
 ## Service chain contracts
 

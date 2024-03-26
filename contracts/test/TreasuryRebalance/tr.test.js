@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("TreasuryRebalance", function () {
+describe("TreasuryRebalance", function() {
   let TreasuryRebalance,
     treasuryRebalance,
     kgf,
@@ -14,7 +14,7 @@ describe("TreasuryRebalance", function () {
     newbie2;
   let currentBlock, executionBlock, memo;
 
-  beforeEach(async function () {
+  beforeEach(async function() {
     [owner, account1, newbie1, newbie2] = await ethers.getSigners();
     currentBlock = await ethers.provider.getBlockNumber();
     executionBlock = currentBlock + 40;
@@ -30,7 +30,7 @@ describe("TreasuryRebalance", function () {
     retired2 = kir.address;
 
     const TEST = await ethers.getContractFactory(
-      "contracts/libs/system_contracts/Ownable.sol:Ownable"
+      "contracts/libs/Ownable.sol:Ownable"
     );
     test = await TEST.deploy();
 
@@ -56,8 +56,8 @@ describe("TreasuryRebalance", function () {
       '{ "retirees": [ { "retired": "0x38138d89c321b3b5f421e9452b69cf29e4380bae", "balance": 20000000000000000000 }, { "retired": "0x0a33a1b99bd67a7189573dd74de80293afdf969a", "balance": 20000000000000000000 } ], "newbies": [ { "newbie": "0x38138d89c321b3b5f421e9452b69cf29e4380bae", "fundAllocated": 10000000000000000000 }, { "newbie": "0x0a33a1b99bd67a7189573dd74de80293afdf969a", "fundAllocated": 10000000000000000000 } ], "burnt": 7.2e+37, "success": true }';
   });
 
-  describe("Deployment", function () {
-    it("Should check the correct initial values for dependancy treasuryRebalances", async function () {
+  describe("Deployment", function() {
+    it("Should check the correct initial values for dependancy treasuryRebalances", async function() {
       const retired1Balance = await ethers.provider.getBalance(retired1);
       const retired2Balance = await ethers.provider.getBalance(retired1);
       expect(await retired1Balance).to.equal(hre.ethers.utils.parseEther("20"));
@@ -67,7 +67,7 @@ describe("TreasuryRebalance", function () {
       expect(adminList[0]).to.equal(owner.address);
     });
 
-    it("Should set the correct initial values for main treasuryRebalance", async function () {
+    it("Should set the correct initial values for main treasuryRebalance", async function() {
       expect(await treasuryRebalance.status()).to.equal(0);
       expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
       expect(await treasuryRebalance.rebalanceBlockNumber()).to.be.greaterThan(
@@ -76,21 +76,21 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("registerRetired()", function () {
-    it("Should add a retired", async function () {
+  describe("registerRetired()", function() {
+    it("Should add a retired", async function() {
       await treasuryRebalance.registerRetired(retired1);
       const retired = await treasuryRebalance.getRetired(retired1);
       expect(retired[0]).to.equal(retired1);
       expect(retired[1].length).to.equal(0);
     });
 
-    it("Should emit a RegisterRetired event", async function () {
+    it("Should emit a RegisterRetired event", async function() {
       await expect(treasuryRebalance.registerRetired(retired1))
         .to.emit(treasuryRebalance, "RetiredRegistered")
         .withArgs(retired1);
     });
 
-    it("Should not allow adding the same retired twice", async function () {
+    it("Should not allow adding the same retired twice", async function() {
       expect(await treasuryRebalance.retiredExists(retired1)).to.equal(false);
       await treasuryRebalance.registerRetired(retired1);
       await expect(
@@ -98,62 +98,62 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Retired address is already registered");
     });
 
-    it("Should not allow non-owner to add a retired", async function () {
+    it("Should not allow non-owner to add a retired", async function() {
       await expect(
         treasuryRebalance.connect(account1).registerRetired(retired2)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should not register retired when contract is not in Initialized state", async function () {
+    it("Should not register retired when contract is not in Initialized state", async function() {
       await treasuryRebalance.finalizeRegistration();
       await expect(
         treasuryRebalance.registerRetired(retired1)
       ).to.be.revertedWith("Not in the designated status");
     });
 
-    it("retireds length should be one", async function () {
+    it("retireds length should be one", async function() {
       await treasuryRebalance.registerRetired(retired1);
       const length = await treasuryRebalance.getRetiredCount();
       expect(length).to.equal(1);
     });
 
-    it("Should revert if the retired address is zero", async function () {
+    it("Should revert if the retired address is zero", async function() {
       await expect(
         treasuryRebalance.registerRetired(ethers.constants.AddressZero)
       ).to.be.revertedWith("Invalid address");
     });
   });
 
-  describe("removeRetired()", function () {
-    beforeEach(async function () {
+  describe("removeRetired()", function() {
+    beforeEach(async function() {
       await treasuryRebalance.registerRetired(retired1);
     });
 
-    it("Should remove a retired", async function () {
+    it("Should remove a retired", async function() {
       await treasuryRebalance.removeRetired(retired1);
       await expect(treasuryRebalance.getRetired(retired1)).to.be.revertedWith(
         "Retired not registered"
       );
     });
 
-    it("Should emit a RemoveRetired event", async function () {
+    it("Should emit a RemoveRetired event", async function() {
       await expect(treasuryRebalance.removeRetired(retired1))
         .to.emit(treasuryRebalance, "RetiredRemoved")
         .withArgs(retired1);
     });
 
-    it("Should not allow removing a non-existent retired", async function () {
+    it("Should not allow removing a non-existent retired", async function() {
       await expect(treasuryRebalance.removeRetired(owner.address)).to.be
         .reverted;
     });
 
-    it("Should not allow non-owner to remove a retired", async function () {
+    it("Should not allow non-owner to remove a retired", async function() {
       await expect(
         treasuryRebalance.connect(account1).removeRetired(retired1)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should not remove retired when contract is not in Initialized state", async function () {
+    it("Should not remove retired when contract is not in Initialized state", async function() {
       await treasuryRebalance.finalizeRegistration();
       await expect(
         treasuryRebalance.removeRetired(retired1)
@@ -161,14 +161,14 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("registerNewbie", function () {
+  describe("registerNewbie", function() {
     let newbieAddress;
 
-    beforeEach(async function () {
+    beforeEach(async function() {
       newbieAddress = newbie1.address;
     });
 
-    it("Should register newbie address and its fund distribution", async function () {
+    it("Should register newbie address and its fund distribution", async function() {
       const amount = hre.ethers.utils.parseEther("20");
 
       await treasuryRebalance.registerNewbie(newbieAddress, amount);
@@ -181,14 +181,14 @@ describe("TreasuryRebalance", function () {
       expect(treasuryAmount).to.equal(amount);
     });
 
-    it("Should emit a RegisterNewbie event", async function () {
+    it("Should emit a RegisterNewbie event", async function() {
       const amount = hre.ethers.utils.parseEther("20");
       await expect(treasuryRebalance.registerNewbie(newbieAddress, amount))
         .to.emit(treasuryRebalance, "NewbieRegistered")
         .withArgs(newbieAddress, amount);
     });
 
-    it("Should revert if register newbie twice", async function () {
+    it("Should revert if register newbie twice", async function() {
       const amount1 = hre.ethers.utils.parseEther("20");
       await treasuryRebalance.registerNewbie(newbie1.address, amount1);
       await treasuryRebalance.registerNewbie(newbie2.address, amount1);
@@ -197,7 +197,7 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Newbie address is already registered");
     });
 
-    it("Should revert if newbie when contract is not in Initialized state", async function () {
+    it("Should revert if newbie when contract is not in Initialized state", async function() {
       const amount1 = hre.ethers.utils.parseEther("20");
       await treasuryRebalance.finalizeRegistration();
       await expect(
@@ -205,7 +205,7 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Not in the designated status");
     });
 
-    it("Should not allow non-owner to add a newbie", async function () {
+    it("Should not allow non-owner to add a newbie", async function() {
       const amount1 = hre.ethers.utils.parseEther("20");
       await expect(
         treasuryRebalance
@@ -214,31 +214,31 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should revert if the newbie address is zero", async function () {
+    it("Should revert if the newbie address is zero", async function() {
       const amount1 = hre.ethers.utils.parseEther("20");
       await expect(
         treasuryRebalance.registerNewbie(ethers.constants.AddressZero, amount1)
       ).to.be.revertedWith("Invalid address");
     });
 
-    it("Should revert if the amount is set to 0", async function () {
+    it("Should revert if the amount is set to 0", async function() {
       await expect(
         treasuryRebalance.registerNewbie(newbieAddress, 0)
       ).to.be.revertedWith("Amount cannot be set to 0");
     });
   });
 
-  describe("removeNewbie", function () {
+  describe("removeNewbie", function() {
     let newbieAddress;
     let amount;
 
-    beforeEach(async function () {
+    beforeEach(async function() {
       newbieAddress = newbie1.address;
       amount = hre.ethers.utils.parseEther("20");
       await treasuryRebalance.registerNewbie(newbieAddress, amount);
     });
 
-    it("Should remove newbie", async function () {
+    it("Should remove newbie", async function() {
       await treasuryRebalance.removeNewbie(newbieAddress);
       expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
       expect(await treasuryRebalance.getTreasuryAmount()).to.equal(0);
@@ -247,24 +247,24 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Newbie not registered");
     });
 
-    it("Should emit RemoveNewbie event", async function () {
+    it("Should emit RemoveNewbie event", async function() {
       await expect(treasuryRebalance.removeNewbie(newbieAddress))
         .to.emit(treasuryRebalance, "NewbieRemoved")
         .withArgs(newbieAddress);
     });
 
-    it("Should not remove unregistered newbie", async function () {
+    it("Should not remove unregistered newbie", async function() {
       await expect(treasuryRebalance.removeNewbie(newbie2.address)).to.be
         .reverted;
     });
 
-    it("Should not allow non-owner to remove a newbie", async function () {
+    it("Should not allow non-owner to remove a newbie", async function() {
       await expect(
         treasuryRebalance.connect(account1).removeNewbie(newbieAddress)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should not remove newbie when contract is not in Initialized state", async function () {
+    it("Should not remove newbie when contract is not in Initialized state", async function() {
       await treasuryRebalance.finalizeRegistration();
       await expect(
         treasuryRebalance.removeNewbie(newbieAddress)
@@ -272,8 +272,8 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("approve", function () {
-    beforeEach(async function () {
+  describe("approve", function() {
+    beforeEach(async function() {
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerRetired(retired2);
       await treasuryRebalance.registerRetired(owner.address);
@@ -282,7 +282,7 @@ describe("TreasuryRebalance", function () {
       await treasuryRebalance.finalizeRegistration();
     });
 
-    it("Should approve retired if msg.sender is admin of retired contract", async function () {
+    it("Should approve retired if msg.sender is admin of retired contract", async function() {
       const retired = await treasuryRebalance.getRetired(retired1);
       expect(retired[1].length).to.equal(0);
       const tx = await treasuryRebalance.approve(retired1);
@@ -298,66 +298,66 @@ describe("TreasuryRebalance", function () {
         .withArgs(retired1, owner.address, 1);
     });
 
-    it("Should approve retiredAddress is the msg.sender if retired is a EOA", async function () {
+    it("Should approve retiredAddress is the msg.sender if retired is a EOA", async function() {
       await treasuryRebalance.approve(owner.address);
       const retired = await treasuryRebalance.getRetired(owner.address);
       expect(retired[1][0]).to.equal(owner.address);
     });
 
-    it("Should revert if retired is already approved", async function () {
+    it("Should revert if retired is already approved", async function() {
       await treasuryRebalance.approve(retired1);
       await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith(
         "Already approved"
       );
     });
 
-    it("Should revert if retired is not registered", async function () {
+    it("Should revert if retired is not registered", async function() {
       // try to approve unregistered retired
       await expect(
         treasuryRebalance.approve(newbie2.address)
       ).to.be.revertedWith("retired needs to be registered before approval");
     });
 
-    it("Should revert if retired is a EOA and if msg.sender is not the admin", async function () {
+    it("Should revert if retired is a EOA and if msg.sender is not the admin", async function() {
       await expect(
         treasuryRebalance.approve(newbie1.address)
       ).to.be.revertedWith("retiredAddress is not the msg.sender");
     });
 
-    it("Should revert if retired is a contract address but does not have getState() method", async function () {
+    it("Should revert if retired is a contract address but does not have getState() method", async function() {
       await expect(treasuryRebalance.approve(test.address)).to.be.reverted;
     });
 
-    it("Should revert if retired is a contract but adminList is empty", async function () {
+    it("Should revert if retired is a contract but adminList is empty", async function() {
       await kgf.emptyAdminList();
       await expect(treasuryRebalance.approve(retired1)).to.be.revertedWith(
         "admin list cannot be empty"
       );
     });
 
-    it("Should not approve if retired is a contract but msg.sender is not the admin", async function () {
+    it("Should not approve if retired is a contract but msg.sender is not the admin", async function() {
       await expect(
         treasuryRebalance.connect(account1).approve(retired1)
       ).to.be.revertedWith("msg.sender is not the admin");
     });
   });
 
-  describe("setStatus", function () {
+  describe("setStatus", function() {
     let initialStatus;
 
-    beforeEach(async function () {
+    beforeEach(async function() {
       initialStatus = await treasuryRebalance.status();
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerRetired(retired2);
     });
 
-    it("Should set status to Registered", async function () {
+    it("Should set status to Registered", async function() {
       expect(initialStatus).to.equal(0);
       await treasuryRebalance.finalizeRegistration();
       expect(await treasuryRebalance.status()).to.equal(1);
     });
 
-    it("Should set status to Approved", async function () {
+    it("Should set status to Approved", async function() {
       await treasuryRebalance.finalizeRegistration();
       await treasuryRebalance.approve(retired1);
       await treasuryRebalance.approve(retired2);
@@ -365,7 +365,7 @@ describe("TreasuryRebalance", function () {
       expect(await treasuryRebalance.status()).to.equal(2);
     });
 
-    it("Should not set status to Approved when treasury amount exceeds balance of retirees", async function () {
+    it("Should not set status to Approved when treasury amount exceeds balance of retirees", async function() {
       const amount = hre.ethers.utils.parseEther("50");
       await treasuryRebalance.registerNewbie(newbie1.address, amount);
       await treasuryRebalance.finalizeRegistration();
@@ -376,27 +376,27 @@ describe("TreasuryRebalance", function () {
       );
     });
 
-    it("Should revert if the current status is tried to set again", async function () {
+    it("Should revert if the current status is tried to set again", async function() {
       await treasuryRebalance.finalizeRegistration();
       await expect(treasuryRebalance.finalizeRegistration()).to.be.revertedWith(
         "Not in the designated status"
       );
     });
 
-    it("Should revert if owner tries to set Finalize after Registered", async function () {
+    it("Should revert if owner tries to set Finalize after Registered", async function() {
       await treasuryRebalance.finalizeRegistration();
       await expect(treasuryRebalance.finalizeContract(memo)).to.be.revertedWith(
         "Not in the designated status"
       );
     });
 
-    it("Should revert if owner tries to set Approved before Registered", async function () {
+    it("Should revert if owner tries to set Approved before Registered", async function() {
       await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
         "Not in the designated status"
       );
     });
 
-    it("Should revert if owner tries to set Registered after Approved", async function () {
+    it("Should revert if owner tries to set Registered after Approved", async function() {
       await treasuryRebalance.finalizeRegistration();
       await treasuryRebalance.approve(retired1);
       await treasuryRebalance.approve(retired2);
@@ -418,7 +418,7 @@ describe("TreasuryRebalance", function () {
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
-    it("Should emit StatusChanged event", async function () {
+    it("Should emit StatusChanged event", async function() {
       await treasuryRebalance.finalizeRegistration();
       await treasuryRebalance.approve(retired1);
       await treasuryRebalance.approve(retired2);
@@ -427,15 +427,15 @@ describe("TreasuryRebalance", function () {
         .withArgs(2);
     });
 
-    describe("Reach Quorom", function () {
-      it("Should revert if min required admins does not approve", async function () {
+    describe("Reach Quorom", function() {
+      it("Should revert if min required admins does not approve", async function() {
         await treasuryRebalance.finalizeRegistration();
         await expect(treasuryRebalance.finalizeApproval()).to.be.revertedWith(
           "min required admins should approve"
         );
       });
 
-      it("Should revert if approved admin change during the contract ", async function () {
+      it("Should revert if approved admin change during the contract ", async function() {
         await treasuryRebalance.finalizeRegistration();
         await treasuryRebalance.approve(retired1);
         await treasuryRebalance.approve(retired2);
@@ -449,7 +449,7 @@ describe("TreasuryRebalance", function () {
         await treasuryRebalance.finalizeApproval();
       });
 
-      it("Should revert if approved admin change during the contract ", async function () {
+      it("Should revert if approved admin change during the contract ", async function() {
         await treasuryRebalance.finalizeRegistration();
         await treasuryRebalance.approve(retired1);
         await kgf.changeMinReq(2);
@@ -463,7 +463,7 @@ describe("TreasuryRebalance", function () {
         );
       });
 
-      it("Should revert if admin list change during the contract ", async function () {
+      it("Should revert if admin list change during the contract ", async function() {
         await treasuryRebalance.finalizeRegistration();
         await treasuryRebalance.approve(retired1);
         await kgf.emptyAdminList();
@@ -473,7 +473,7 @@ describe("TreasuryRebalance", function () {
         );
       });
 
-      it("Should revert if EOA did not approve", async function () {
+      it("Should revert if EOA did not approve", async function() {
         await treasuryRebalance.registerRetired(owner.address);
         await treasuryRebalance.registerRetired(account1.address);
         await treasuryRebalance.finalizeRegistration();
@@ -487,8 +487,8 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("finalize contract", function () {
-    beforeEach(async function () {
+  describe("finalize contract", function() {
+    beforeEach(async function() {
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerRetired(retired2);
       await treasuryRebalance.finalizeRegistration();
@@ -496,7 +496,7 @@ describe("TreasuryRebalance", function () {
       await treasuryRebalance.approve(retired2);
     });
 
-    it("should set the memo and status to Finalized", async function () {
+    it("should set the memo and status to Finalized", async function() {
       await treasuryRebalance.finalizeApproval();
       await hre.network.provider.send("hardhat_mine", ["0x32"]);
       await treasuryRebalance.finalizeContract(memo);
@@ -504,7 +504,7 @@ describe("TreasuryRebalance", function () {
       expect(await treasuryRebalance.status()).to.equal(3);
     });
 
-    it("Should emit Finalize event", async function () {
+    it("Should emit Finalize event", async function() {
       await treasuryRebalance.finalizeApproval();
       await hre.network.provider.send("hardhat_mine", ["0x32"]);
       await expect(treasuryRebalance.finalizeContract(memo))
@@ -533,12 +533,12 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("reset", function () {
-    beforeEach(async function () {
+  describe("reset", function() {
+    beforeEach(async function() {
       await treasuryRebalance;
     });
 
-    it("should reset all storage values to 0 at Initialize state", async function () {
+    it("should reset all storage values to 0 at Initialize state", async function() {
       await treasuryRebalance.reset();
       expect(await treasuryRebalance.getRetiredCount()).to.equal(0);
       expect(await treasuryRebalance.getNewbieCount()).to.equal(0);
@@ -548,7 +548,7 @@ describe("TreasuryRebalance", function () {
       expect(await treasuryRebalance.rebalanceBlockNumber()).to.not.equal(0);
     });
 
-    it("should reset all storage values to 0 at Registered state", async function () {
+    it("should reset all storage values to 0 at Registered state", async function() {
       const amount = hre.ethers.utils.parseEther("50");
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerRetired(retired2);
@@ -567,7 +567,7 @@ describe("TreasuryRebalance", function () {
       expect(await treasuryRebalance.rebalanceBlockNumber()).to.not.equal(0);
     });
 
-    it("should reset all storage values to 0 at Approved state", async function () {
+    it("should reset all storage values to 0 at Approved state", async function() {
       const amount = hre.ethers.utils.parseEther("10");
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerNewbie(newbie1.address, amount);
@@ -589,7 +589,7 @@ describe("TreasuryRebalance", function () {
       expect(await treasuryRebalance.rebalanceBlockNumber()).to.not.equal(0);
     });
 
-    it("should revert when tried to reset after finalization", async function () {
+    it("should revert when tried to reset after finalization", async function() {
       const amount = hre.ethers.utils.parseEther("10");
       await treasuryRebalance.registerRetired(retired1);
       await treasuryRebalance.registerNewbie(newbie1.address, amount);
@@ -609,22 +609,22 @@ describe("TreasuryRebalance", function () {
       );
     });
 
-    it("should revert when tried to reset after it passes the execution block", async function () {
+    it("should revert when tried to reset after it passes the execution block", async function() {
       await hre.network.provider.send("hardhat_mine", ["0x32"]);
       await expect(treasuryRebalance.reset()).to.be.revertedWith(
         "Contract is finalized, cannot reset values"
       );
     });
 
-    it("Should not allow non-owner to reset", async function () {
+    it("Should not allow non-owner to reset", async function() {
       await expect(
         treasuryRebalance.connect(account1).reset()
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
-  describe("fallback", function () {
-    it("should revert if KLAY is sent to the contract address", async function () {
+  describe("fallback", function() {
+    it("should revert if KLAY is sent to the contract address", async function() {
       await expect(
         owner.sendTransaction({
           to: treasuryRebalance.address,
@@ -634,8 +634,8 @@ describe("TreasuryRebalance", function () {
     });
   });
 
-  describe("isContract", function () {
-    it("should check whether EOA/contract address", async function () {
+  describe("isContract", function() {
+    it("should check whether EOA/contract address", async function() {
       const eoa = await treasuryRebalance.isContractAddr(owner.address);
       const contractAddress = await treasuryRebalance.isContractAddr(
         treasuryRebalance.address

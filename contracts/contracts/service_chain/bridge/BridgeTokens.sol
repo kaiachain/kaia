@@ -16,7 +16,7 @@
 
 pragma solidity 0.5.6;
 
-import "../../libs/openzeppelin-v2/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/ownership/Ownable.sol";
 
 contract BridgeTokens is Ownable {
     mapping(address => address) public registeredTokens; // <token, counterpart token>
