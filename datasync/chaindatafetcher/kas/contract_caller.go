@@ -30,7 +30,7 @@ import (
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/contracts/kip13"
+	"github.com/klaytn/klaytn/contracts/contracts/libs/kip13"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 

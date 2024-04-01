@@ -21,7 +21,10 @@ import (
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	kip113contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
+	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
+	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
+	testcontract "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/log"
 )
 
@@ -46,19 +49,20 @@ var (
 	ImplementationSlot = common.Hex2Bytes("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
 
 	// Some system contracts are allocated at special addresses.
-	AddressBookAddr = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
-	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
+	CypressCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	AddressBookAddr   = common.HexToAddress("0x0000000000000000000000000000000000000400") // TODO: replace contracts/reward/contract/utils.go
+	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
 	// The following addresses are only used for testing.
 	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
 
 	// System contract binaries to be injected at hardfork or used in testing.
-	RegistryCode     = hexutil.MustDecode("0x" + contracts.RegistryBinRuntime)
-	RegistryMockCode = hexutil.MustDecode("0x" + contracts.RegistryMockBinRuntime)
-	Kip113Code       = hexutil.MustDecode("0x" + contracts.KIP113BinRuntime)
-	Kip113MockCode   = hexutil.MustDecode("0x" + contracts.KIP113MockBinRuntime)
+	RegistryCode     = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
+	RegistryMockCode = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
+	Kip113Code       = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
+	Kip113MockCode   = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
 
-	ERC1967ProxyCode = hexutil.MustDecode("0x" + contracts.ERC1967ProxyBinRuntime)
+	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled = errors.New("Registry contract not installed")

@@ -8,7 +8,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
-	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	contracts "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"

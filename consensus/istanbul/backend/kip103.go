@@ -13,7 +13,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/contracts/kip103"
+	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip103"
 )
 
 var (
