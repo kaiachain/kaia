@@ -154,8 +154,7 @@ func TestRebalanceTreasury(t *testing.T) {
 		assert.Nil(t, err)
 
 		header := chain.CurrentHeader()
-		c := NewKip103ContractCaller(state, chain, header)
-		res, err := RebalanceTreasury(state, chain, header, c)
+		res, err := RebalanceTreasury(state, chain, header)
 		assert.Equal(t, tc.expectedErr, err)
 
 		for i, addr := range retireeAddrs {

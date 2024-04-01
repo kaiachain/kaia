@@ -18,10 +18,10 @@ package system
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 
 	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -139,8 +139,11 @@ func (result *kip103result) totalNewbieBalance() *big.Int {
 // RebalanceTreasury reads data from a contract, validates stored values, and executes treasury rebalancing (KIP-103).
 // It can change the global state by removing old treasury balances and allocating new treasury balances.
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
-func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header, c bind.ContractCaller) (*kip103result, error) {
-	result := newKip103Receipt()
+func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header) (*kip103result, error) {
+	var (
+		result = newKip103Receipt()
+		c      = NewKip103ContractCaller(state, chain, header)
+	)
 
 	caller, err := rebalance.NewTreasuryRebalanceCaller(chain.Config().Kip103ContractAddress, c)
 	if err != nil {
@@ -196,6 +199,12 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	remainder := new(big.Int).Sub(totalRetiredAmount, totalNewbieAmount)
 	result.Burnt.Add(result.Burnt, remainder)
 	result.Success = true
+
+	memo, err := json.Marshal(result)
+	if err != nil {
+		logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
+	}
+	logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
 
 	return result, nil
 }
