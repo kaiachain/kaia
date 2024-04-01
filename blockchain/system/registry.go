@@ -24,7 +24,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/common"
-	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	contracts "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
 	"github.com/klaytn/klaytn/params"
 )
 
