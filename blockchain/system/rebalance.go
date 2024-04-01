@@ -120,7 +120,7 @@ func (result *kip103result) fillNewbie(contract *rebalance.TreasuryRebalanceCall
 	return nil
 }
 
-func (result *kip103result) totalRetriedBalance() *big.Int {
+func (result *kip103result) totalRetiredBalance() *big.Int {
 	total := big.NewInt(0)
 	for _, bal := range result.Retired {
 		total.Add(total, bal)
@@ -173,7 +173,7 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	}
 
 	// Validation 4) Check the total balance of retirees are bigger than the distributing amount
-	totalRetiredAmount := result.totalRetriedBalance()
+	totalRetiredAmount := result.totalRetiredBalance()
 	totalNewbieAmount := result.totalNewbieBalance()
 	if totalRetiredAmount.Cmp(totalNewbieAmount) < 0 {
 		return result, ErrRebalanceNotEnoughBalance

@@ -99,7 +99,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			false,
 		},
 		{
-			// failed case - rebalancing aborted doe to wrong state
+			// failed case - rebalancing aborted due to wrong state
 			big.NewInt(1),
 			EnumRebalanceStatus_Registered,
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000)},
@@ -112,7 +112,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			false,
 		},
 		{
-			// failed case - rebalancing aborted doe to bigger allocation than retirees
+			// failed case - rebalancing aborted due to bigger allocation than retirees
 			big.NewInt(1),
 			EnumRebalanceStatus_Registered,
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000 + 1)},
@@ -154,7 +154,7 @@ func TestRebalanceTreasury(t *testing.T) {
 		assert.Nil(t, err)
 
 		header := chain.CurrentHeader()
-		c := &Kip103ContractCaller{state, chain, header}
+		c := NewKip103ContractCaller(state, chain, header)
 		res, err := RebalanceTreasury(state, chain, header, c)
 		assert.Equal(t, tc.expectedErr, err)
 
