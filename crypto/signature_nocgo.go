@@ -25,7 +25,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"fmt"
 
@@ -62,7 +61,13 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return pub.ToECDSA(), nil
+	// We need to explicitly set the curve here, because we're wrapping
+	// the original curve to add (un-)marshalling
+	return &ecdsa.PublicKey{
+		Curve: S256(),
+		X:     pub.X(),
+		Y:     pub.Y(),
+	}, nil
 }
 
 // Sign calculates an ECDSA signature.
@@ -132,7 +137,13 @@ func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return key.ToECDSA(), nil
+	// We need to explicitly set the curve here, because we're wrapping
+	// the original curve to add (un-)marshalling
+	return &ecdsa.PublicKey{
+		Curve: S256(),
+		X:     key.X(),
+		Y:     key.Y(),
+	}, nil
 }
 
 // CompressPubkey encodes a public key to the 33-byte compressed format. The
@@ -151,6 +162,38 @@ func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
 }
 
 // S256 returns an instance of the secp256k1 curve.
-func S256() elliptic.Curve {
-	return btcec.S256()
+func S256() EllipticCurve {
+	return btCurve{btcec.S256()}
+}
+
+type btCurve struct {
+	*btcec.KoblitzCurve
+}
+
+// Marshall converts a point given as (x, y) into a byte slice.
+func (curve btCurve) Marshal(x, y *big.Int) []byte {
+	byteLen := (curve.Params().BitSize + 7) / 8
+
+	ret := make([]byte, 1+2*byteLen)
+	ret[0] = 4 // uncompressed point
+
+	x.FillBytes(ret[1 : 1+byteLen])
+	y.FillBytes(ret[1+byteLen : 1+2*byteLen])
+
+	return ret
+}
+
+// Unmarshal converts a point, serialised by Marshal, into an x, y pair. On
+// error, x = nil.
+func (curve btCurve) Unmarshal(data []byte) (x, y *big.Int) {
+	byteLen := (curve.Params().BitSize + 7) / 8
+	if len(data) != 1+2*byteLen {
+		return nil, nil
+	}
+	if data[0] != 4 { // uncompressed form
+		return nil, nil
+	}
+	x = new(big.Int).SetBytes(data[1 : 1+byteLen])
+	y = new(big.Int).SetBytes(data[1+byteLen:])
+	return
 }

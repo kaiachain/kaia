@@ -6,6 +6,9 @@
 // This file is derived from crypto/secp256k1/secp256.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
+//go:build !gofuzz && cgo
+// +build !gofuzz,cgo
+
 package secp256k1
 
 /*
@@ -20,11 +23,15 @@ package secp256k1
 #  define USE_FIELD_10X26
 #  define USE_SCALAR_8X32
 #endif
+
+#ifndef NDEBUG
+#  define NDEBUG
+#endif
+
 #define USE_ENDOMORPHISM
 #define USE_NUM_NONE
 #define USE_FIELD_INV_BUILTIN
 #define USE_SCALAR_INV_BUILTIN
-#define NDEBUG
 #include "./libsecp256k1/src/secp256k1.c"
 #include "./libsecp256k1/src/modules/recovery/main_impl.h"
 #include "ext.h"
