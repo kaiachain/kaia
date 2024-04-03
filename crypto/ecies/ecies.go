@@ -41,12 +41,12 @@ import (
 	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
-	"github.com/klaytn/klaytn/crypto"
 	"hash"
 	"io"
 	"math/big"
 
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 )
 
 var (
