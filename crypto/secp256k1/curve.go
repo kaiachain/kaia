@@ -37,10 +37,12 @@
 package secp256k1
 
 import "C"
+
 import (
 	"crypto/elliptic"
-	"github.com/klaytn/klaytn/common"
 	"math/big"
+
+	"github.com/klaytn/klaytn/common"
 )
 
 const (

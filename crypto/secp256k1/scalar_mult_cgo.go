@@ -7,16 +7,16 @@
 
 package secp256k1
 
-import (
-	"math/big"
-	"unsafe"
-)
-
 /*
 #include "libsecp256k1/include/secp256k1.h"
 extern int secp256k1_ext_scalar_mul(const secp256k1_context* ctx, const unsigned char *point, const unsigned char *scalar);
 */
 import "C"
+
+import (
+	"math/big"
+	"unsafe"
+)
 
 func (BitCurve *BitCurve) ScalarMult(Bx, By *big.Int, scalar []byte) (*big.Int, *big.Int) {
 	// Ensure scalar is exactly 32 bytes. We pad always, even if
