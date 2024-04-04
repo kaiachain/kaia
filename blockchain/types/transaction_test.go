@@ -476,7 +476,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 		}
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByTimeAndNonce(signer, groups)
+	txset := NewTransactionsByPriceAndNonce(signer, groups, nil)
 
 	txs := Transactions{}
 	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
@@ -651,7 +651,7 @@ func TestTransactionTimeSort(t *testing.T) {
 		groups[addr] = append(groups[addr], tx)
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByTimeAndNonce(signer, groups)
+	txset := NewTransactionsByPriceAndNonce(signer, groups, nil)
 
 	txs := Transactions{}
 	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
@@ -702,7 +702,7 @@ func TestTransactionTimeSortDifferentGasPrice(t *testing.T) {
 		gasPrice = gasPrice.Add(gasPrice, big.NewInt(1))
 	}
 	// Sort the transactions and cross check the nonce ordering
-	txset := NewTransactionsByTimeAndNonce(signer, groups)
+	txset := NewTransactionsByPriceAndNonce(signer, groups, nil)
 
 	txs := Transactions{}
 	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
@@ -893,10 +893,12 @@ func TestIsSorted(t *testing.T) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
-	batches := make(Transactions, 10)
+	batches := make(txByEffectivePriceAndTime, 10)
 
 	for i := 0; i < 10; i++ {
-		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+		tx, _ := SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(int64(i)))
+		batches[i] = txWithFee
 	}
 
 	// Shuffle transactions.
@@ -904,8 +906,8 @@ func TestIsSorted(t *testing.T) {
 		batches[i], batches[j] = batches[j], batches[i]
 	})
 
-	sort.Sort(TxByPriceAndTime(batches))
-	assert.True(t, sort.IsSorted(TxByPriceAndTime(batches)))
+	sort.Sort(txByEffectivePriceAndTime(batches))
+	assert.True(t, sort.IsSorted(txByEffectivePriceAndTime(batches)))
 }
 
 func TestFilterTransactionWithBaseFee(t *testing.T) {
@@ -964,10 +966,12 @@ func benchmarkTxSortByTime(b *testing.B, size int) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
-	batches := make(Transactions, size)
+	batches := make(txByEffectivePriceAndTime, size)
 
 	for i := 0; i < size; i++ {
-		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+		tx, _ := SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(int64(i)))
+		batches[i] = txWithFee
 	}
 
 	// Shuffle transactions.
@@ -979,6 +983,114 @@ func benchmarkTxSortByTime(b *testing.B, size int) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		sort.Sort(TxByPriceAndTime(batches))
+		sort.Sort(txByEffectivePriceAndTime(batches))
 	}
+}
+
+func TestTransactionPriceNonceSortLegacy(t *testing.T) {
+	t.Parallel()
+	testTransactionPriceNonceSort(t, nil)
+}
+
+func TestTransactionPriceNonceSort1559(t *testing.T) {
+	t.Parallel()
+	testTransactionPriceNonceSort(t, big.NewInt(0))
+	testTransactionPriceNonceSort(t, big.NewInt(5))
+	testTransactionPriceNonceSort(t, big.NewInt(50))
+}
+
+// Tests that transactions can be correctly sorted according to their price in
+// decreasing order, but at the same time with increasing nonces when issued by
+// the same account.
+func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 25)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	signer := LatestSignerForChainID(common.Big1)
+
+	// Generate a batch of transactions with overlapping values, but shifted nonces
+	groups := map[common.Address]Transactions{}
+	expectedCount := 0
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		count := 25
+		for i := 0; i < 25; i++ {
+			var tx *Transaction
+			gasFeeCap := rand.Intn(50)
+			if baseFee == nil {
+				tx = NewTx(&TxInternalDataLegacy{
+					AccountNonce: uint64(start + i),
+					Recipient:    &common.Address{},
+					Amount:       big.NewInt(100),
+					GasLimit:     100,
+					Price:        big.NewInt(int64(gasFeeCap)),
+					Payload:      nil,
+				})
+			} else {
+				tx = NewTx(&TxInternalDataEthereumDynamicFee{
+					AccountNonce: uint64(start + i),
+					Recipient:    &common.Address{},
+					Amount:       big.NewInt(100),
+					GasLimit:     100,
+					GasFeeCap:    big.NewInt(int64(gasFeeCap)),
+					GasTipCap:    big.NewInt(int64(rand.Intn(gasFeeCap + 1))),
+					Payload:      nil,
+				})
+				if count == 25 && int64(gasFeeCap) < baseFee.Int64() {
+					count = i
+				}
+			}
+			tx, err := SignTx(tx, signer, key)
+			if err != nil {
+				t.Fatalf("failed to sign tx: %s", err)
+			}
+			groups[addr] = append(groups[addr], tx)
+		}
+		expectedCount += count
+	}
+	// Sort the transactions and cross check the nonce ordering
+	txset := NewTransactionsByPriceAndNonce(signer, groups, baseFee)
+
+	txs := Transactions{}
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	if len(txs) != expectedCount {
+		t.Errorf("expected %d transactions, found %d", expectedCount, len(txs))
+	}
+	for i, txi := range txs {
+		fromi, _ := Sender(signer, txi)
+
+		// Make sure the nonce order is valid
+		for j, txj := range txs[i+1:] {
+			fromj, _ := Sender(signer, txj)
+			if fromi == fromj && txi.Nonce() > txj.Nonce() {
+				t.Errorf("invalid nonce ordering: tx #%d (A=%x N=%v) < tx #%d (A=%x N=%v)", i, fromi[:4], txi.Nonce(), i+j, fromj[:4], txj.Nonce())
+			}
+		}
+		// If the next tx has different from account, the price must be lower than the current one
+		if i+1 < len(txs) {
+			next := txs[i+1]
+			fromNext, _ := Sender(signer, next)
+			tip := txi.EffectiveGasTip(baseFee)
+			nextTip := next.EffectiveGasTip(baseFee)
+			if fromi != fromNext && tip.Cmp(nextTip) < 0 {
+				t.Errorf("invalid gasprice ordering: tx #%d (A=%x P=%v) < tx #%d (A=%x P=%v)", i, fromi[:4], txi.GasPrice(), i+1, fromNext[:4], next.GasPrice())
+			}
+		}
+	}
+}
+
+func TestEmptyHeap(t *testing.T) {
+	heap := NewTransactionsByPriceAndNonce(nil, nil, nil)
+	assert.Nil(t, heap.Peek())
+	assert.True(t, heap.Empty())
+	assert.NotPanics(t, func() {
+		heap.Shift()
+		heap.Pop()
+		heap.Clear()
+	})
 }
