@@ -1973,9 +1973,8 @@ var (
 
 	// Gas price oracle settings
 	GpoBlocksFlag = &cli.IntFlag{
-		Name:  "gpo.blocks",
-		Usage: "Number of recent blocks to check for gas prices",
-		//Value:    config.Defaults.GPO.Blocks,
+		Name:     "gpo.blocks",
+		Usage:    "Number of recent blocks to check for gas prices",
 		Value:    cn.GetDefaultConfig().GPO.Blocks,
 		Category: "GAS PRICE ORACLE",
 	}
