@@ -35,7 +35,7 @@ import (
 
 const sampleNumber = 3 // Number of transactions sampled in a block
 
-var maxPrice = big.NewInt(500 * params.Ston)
+var DefaultMaxPrice = big.NewInt(500 * params.Ston)
 
 type Config struct {
 	Blocks           int
@@ -43,6 +43,7 @@ type Config struct {
 	MaxHeaderHistory int
 	MaxBlockHistory  int
 	Default          *big.Int `toml:",omitempty"`
+	MaxPrice         *big.Int `toml:",omitempty"`
 }
 
 // OracleBackend includes all necessary background APIs for oracle.
@@ -64,6 +65,7 @@ type Oracle struct {
 	backend   OracleBackend
 	lastHead  common.Hash
 	lastPrice *big.Int
+	maxPrice  *big.Int
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
 	txPool    TxPool
@@ -88,7 +90,11 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	if percent > 100 {
 		percent = 100
 	}
-
+	maxPrice := params.MaxPrice
+	if maxPrice == nil || maxPrice.Int64() <= 0 {
+		maxPrice = DefaultMaxPrice
+		logger.Warn("Sanitizing invalid gasprice oracle price cap", "provided", params.MaxPrice, "updated", maxPrice)
+	}
 	maxHeaderHistory := params.MaxHeaderHistory
 	if maxHeaderHistory < 1 {
 		maxHeaderHistory = 1
@@ -104,6 +110,7 @@ func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
+		maxPrice:         maxPrice,
 		checkBlocks:      blocks,
 		maxEmpty:         blocks / 2,
 		maxBlocks:        blocks * 5,
@@ -252,8 +259,12 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 		slices.SortFunc(results, func(a, b *big.Int) int { return a.Cmp(b) })
 		price = results[(len(results)-1)*oracle.percentile/100]
 	}
-	if price.Cmp(maxPrice) > 0 {
-		price = new(big.Int).Set(maxPrice)
+	// NOTE: This upper bound for suggested gas tip can lead to suggesting insufficient gas tip,
+	//       however the possibility of gas tip exceeding 500 ston would be very low.
+	//       On the other hand, having no upper bount for gas tip can lead to suggesting
+	//       very high gas tip when there are only few transactions with unnecessarily high gas tip.
+	if price.Cmp(oracle.maxPrice) > 0 {
+		price = new(big.Int).Set(oracle.maxPrice)
 	}
 	oracle.cacheLock.Lock()
 	oracle.lastHead = headHash

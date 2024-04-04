@@ -62,6 +62,7 @@ func GetDefaultConfig() *Config {
 			Percentile:       60,
 			MaxHeaderHistory: 1024,
 			MaxBlockHistory:  1024,
+			MaxPrice:         gasprice.DefaultMaxPrice,
 		},
 		WsEndpoint: "localhost:8546",
 
