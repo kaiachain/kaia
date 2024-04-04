@@ -268,9 +268,9 @@ type results struct {
 	err    error
 }
 
-// getBlockValues calculates the lowest transaction gas price in a given block
-// and sends it to the result channel. If the block is empty or all transactions
-// are sent by the miner itself(it doesn't make any sense to include this kind of
+// getBlockValues calculates the specified number of lowest transaction gas tips
+// in a given block and sends them to the result channel. If a transaction was
+// sent by the miner itself(it doesn't make any sense to include this kind of
 // transaction prices for sampling), nil gasprice is returned.
 func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit int, result chan results, quit chan struct{}) {
 	block, err := oracle.backend.BlockByNumber(ctx, rpc.BlockNumber(blockNum))
