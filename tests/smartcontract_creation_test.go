@@ -69,11 +69,11 @@ func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, si
 }
 
 func genOptions(b *testing.B) ([]testData, error) {
-	solFiles := []string{"../contracts/reward/contract/KlaytnReward.sol"}
+	solFiles := []string{"../contracts/contracts/testing/reward/KlaytnReward.sol"}
 
 	opts := make([]testData, len(solFiles))
 	for i, filename := range solFiles {
-		contracts, err := compiler.CompileSolidity("", filename)
+		contracts, err := compiler.CompileSolidityOrLoad("", filename)
 		if err != nil {
 			return nil, err
 		}

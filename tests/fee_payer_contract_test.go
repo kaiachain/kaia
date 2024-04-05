@@ -83,7 +83,7 @@ func testFeePayerContract(t *testing.T, fn string) {
 
 	// 1. Deploy the contract `FeePayer`.
 	start = time.Now()
-	filepath := "../contracts/feepayer/fee_payer_test.sol"
+	filepath := "../contracts/contracts/testing/feepayer/fee_payer_test.sol"
 	contracts, err := deployContract(filepath, bcdata, accountMap, prof)
 	if err != nil {
 		t.Fatal(err)
@@ -142,8 +142,8 @@ func testFeePayerContract(t *testing.T, fn string) {
 func testFeePayerContractIndirect(t *testing.T, fn string) {
 	prof := profile.NewProfiler()
 
-	callee_path := "../contracts/feepayer/fee_payer_test.sol"
-	caller_path := "../contracts/feepayer/fee_payer_indirect_test.sol"
+	callee_path := "../contracts/contracts/testing/feepayer/fee_payer_test.sol"
+	caller_path := "../contracts/contracts/testing/feepayer/fee_payer_indirect_test.sol"
 
 	// Initialize blockchain
 	start := time.Now()
