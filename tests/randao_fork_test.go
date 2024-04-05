@@ -14,7 +14,9 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/contracts/system_contracts"
+	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
+	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
+	testcontract "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
@@ -214,9 +216,9 @@ func testRandao_allocKip113(numNodes int, ownerAddr, kip113Addr common.Address) 
 }
 
 // Deploy KIP-113 contract
-func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bind.TransactOpts) (*system_contracts.KIP113Mock, common.Address) {
+func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bind.TransactOpts) (*testcontract.KIP113Mock, common.Address) {
 	var (
-		abi, _      = system_contracts.KIP113MockMetaData.GetAbi()
+		abi, _      = testcontract.KIP113MockMetaData.GetAbi()
 		initData, _ = abi.Pack("initialize")
 
 		chain   = ctx.nodes[0].cn.BlockChain()
@@ -225,16 +227,16 @@ func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bi
 	)
 
 	// Deploy implementation and proxy
-	implAddr, tx, _, err := system_contracts.DeployKIP113Mock(owner, backend)
+	implAddr, tx, _, err := testcontract.DeployKIP113Mock(owner, backend)
 	assert.Nil(t, err)
 	ctx.WaitTx(t, tx.Hash())
 
-	proxyAddr, tx, _, err := system_contracts.DeployERC1967Proxy(owner, backend, implAddr, initData)
+	proxyAddr, tx, _, err := proxycontract.DeployERC1967Proxy(owner, backend, implAddr, initData)
 	assert.Nil(t, err)
 	ctx.WaitTx(t, tx.Hash())
 
 	t.Logf("Kip113 impl=%s proxy=%s", implAddr.Hex(), proxyAddr.Hex())
-	kip113, _ := system_contracts.NewKIP113Mock(proxyAddr, backend)
+	kip113, _ := testcontract.NewKIP113Mock(proxyAddr, backend)
 
 	// Register node BLS public keys
 	var txs []*types.Transaction
@@ -268,7 +270,7 @@ func testRandao_checkRegistry(t *testing.T, ctx *blockchainTestContext, ownerAdd
 		bgctx       = context.Background()
 		chain       = ctx.nodes[0].cn.BlockChain()
 		backend     = backends.NewBlockchainContractBackend(chain, nil, nil)
-		registry, _ = system_contracts.NewRegistryCaller(system.RegistryAddr, backend)
+		registry, _ = kip149contract.NewRegistryCaller(system.RegistryAddr, backend)
 
 		before *big.Int // Largest num without Registry
 		after  *big.Int // Smallest num with Registry

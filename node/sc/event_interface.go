@@ -5,7 +5,7 @@ import (
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
+	bridgecontract "github.com/klaytn/klaytn/contracts/contracts/service_chain/bridge"
 )
 
 type IRequestValueTransferEvent interface {
@@ -22,7 +22,7 @@ type IRequestValueTransferEvent interface {
 	GetRaw() types.Log
 }
 
-//////////////////// type RequestValueTransferEvent struct ////////////////////
+// ////////////////// type RequestValueTransferEvent struct ////////////////////
 // RequestValueTransferEvent from Bridge contract
 type RequestValueTransferEvent struct {
 	*bridgecontract.BridgeRequestValueTransfer
@@ -68,7 +68,7 @@ func (rEv RequestValueTransferEvent) GetRaw() types.Log {
 	return rEv.Raw
 }
 
-//////////////////// type RequestValueTransferEncodedEvent struct ////////////////////
+// ////////////////// type RequestValueTransferEncodedEvent struct ////////////////////
 type RequestValueTransferEncodedEvent struct {
 	*bridgecontract.BridgeRequestValueTransferEncoded
 }

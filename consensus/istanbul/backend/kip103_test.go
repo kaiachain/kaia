@@ -13,7 +13,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/contracts/kip103"
+	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip103"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 )

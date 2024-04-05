@@ -22,7 +22,7 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/common"
-	govcontract "github.com/klaytn/klaytn/contracts/gov"
+	govcontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/gov"
 	"github.com/klaytn/klaytn/params"
 )
 

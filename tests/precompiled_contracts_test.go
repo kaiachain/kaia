@@ -18,7 +18,6 @@ package tests
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -36,13 +35,6 @@ import (
 
 func TestPrecompiledContract(t *testing.T) {
 	prof := profile.NewProfiler()
-
-	if isCompilerAvailable() == false {
-		if testing.Verbose() {
-			fmt.Printf("TestFeePayerContract is skipped due to the lack of solc.")
-		}
-		return
-	}
 
 	// Initialize blockchain
 	start := time.Now()
@@ -62,8 +54,9 @@ func TestPrecompiledContract(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// Deploy the contract.
+	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/contracts/testing/precompiledContracts/precompiled.sol > ../contracts/contracts/testing/precompiledContracts/precompiled.sol.json
 	start = time.Now()
-	filepath := "../contracts/precompiledContracts/precompiled.sol"
+	filepath := "../contracts/contracts/testing/precompiledContracts/precompiled.sol"
 	contracts, err := deployContract(filepath, bcdata, accountMap, prof)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +67,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x01: ecrecover
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledEcrecover"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledEcrecover"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		hash := crypto.Keccak256Hash([]byte{1, 2, 3, 4})
@@ -125,7 +118,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x02: sha256
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledSha256Hash"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledSha256Hash"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callSha256"
@@ -174,7 +167,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x03: ripemd160
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledRipemd160Hash"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledRipemd160Hash"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callRipemd160"
@@ -225,7 +218,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x04: datacopy (identity)
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledDatacopy"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledDatacopy"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callDatacopy"
@@ -271,7 +264,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x05: bigModExp
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledBigModExp"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledBigModExp"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callBigModExp"
@@ -320,7 +313,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x06: bn256Add
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledBn256Add"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledBn256Add"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callBn256Add"
@@ -371,7 +364,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x07: bn256ScalarMul
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledBn256ScalarMul"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledBn256ScalarMul"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callBn256ScalarMul"
@@ -421,7 +414,7 @@ func TestPrecompiledContract(t *testing.T) {
 
 	// PrecompiledContracts 0x08: bn256Paring
 	{
-		c := contracts["../contracts/precompiledContracts/precompiled.sol:PrecompiledBn256Pairing"]
+		c := contracts["../contracts/contracts/testing/precompiledContracts/precompiled.sol:PrecompiledBn256Pairing"]
 		abii, err := abi.JSON(strings.NewReader(c.abi))
 
 		fn := "callBn256Pairing"

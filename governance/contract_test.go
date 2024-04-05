@@ -25,7 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	govcontract "github.com/klaytn/klaytn/contracts/gov"
+	govcontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/gov"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
