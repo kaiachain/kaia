@@ -1128,6 +1128,7 @@ func testValidateSmartContractDeploy(t *testing.T) {
 		internalTx.From,
 		internalTx.Payload,
 		internalTx.HumanReadable,
+		internalTx.CodeFormat,
 	})
 	assert.Equal(t, nil, err)
 
@@ -1184,6 +1185,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 		internalTx.From,
 		internalTx.Payload,
 		internalTx.HumanReadable,
+		internalTx.CodeFormat,
 	})
 	assert.Equal(t, nil, err)
 
@@ -1211,6 +1213,7 @@ func testValidateFeeDelegatedSmartContractDeploy(t *testing.T) {
 		internalTx.From,
 		internalTx.Payload,
 		internalTx.HumanReadable,
+		internalTx.CodeFormat,
 	})
 	assert.Equal(t, nil, err)
 
@@ -1276,6 +1279,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		internalTx.Payload,
 		internalTx.HumanReadable,
 		internalTx.FeeRatio,
+		internalTx.CodeFormat,
 	})
 	assert.Equal(t, nil, err)
 
@@ -1304,6 +1308,7 @@ func testValidateFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		internalTx.Payload,
 		internalTx.HumanReadable,
 		internalTx.FeeRatio,
+		internalTx.CodeFormat,
 	})
 	assert.Equal(t, nil, err)
 
