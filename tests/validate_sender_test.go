@@ -187,15 +187,16 @@ func TestValidateSenderContract(t *testing.T) {
 	}
 
 	// Deploy the contract `ValidateSender`.
+	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/contracts/testing/validatesender/validate_sender.sol > ../contracts/contracts/testing/validatesender/validate_sender.sol.json
 	start = time.Now()
-	filepath := "../contracts/validatesender/validate_sender.sol"
+	filepath := "../contracts/contracts/testing/validatesender/validate_sender.sol"
 	contracts, err := deployContract(filepath, bcdata, accountMap, prof)
 	if err != nil {
 		t.Fatal(err)
 	}
 	prof.Profile("main_deployContract", time.Now().Sub(start))
 
-	c := contracts["../contracts/validatesender/validate_sender.sol:ValidateSenderContract"]
+	c := contracts["../contracts/contracts/testing/validatesender/validate_sender.sol:ValidateSenderContract"]
 	abii, err := abi.JSON(strings.NewReader(c.abi))
 	assert.Equal(t, nil, err)
 
