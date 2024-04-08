@@ -269,7 +269,6 @@ func Encrypt(rand io.Reader, pub *PublicKey, m, s1, s2 []byte) (ct []byte, err e
 		return nil, err
 	}
 
-	// hash := params.Hash()
 	z, err := R.GenerateShared(pub, params.KeyLen, params.KeyLen)
 	if err != nil {
 		return nil, err
