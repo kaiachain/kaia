@@ -6,6 +6,7 @@ NOTE: the contract files can be relocated within this directory.
 
 These contracts in `contracts/testing` are used for unit testing and performance benchmarks.
 
+- `compiler/*.sol`: for TestCompileSolidityOrLoad.
 - `computationcost/*.sol`: for BenchmarkEvmOp.
 - `extbridge/*.sol`: An example of extended token bridge that calls a specific callback. for TestExtendedBridgeAndCallbackERC20.
 - `feepayer/*.sol`: for TestFeePayerContract.
@@ -21,7 +22,6 @@ These contracts in `contracts/testing` are used for unit testing and performance
 - `sc_erc721_no_uri/sc_nft_no_uri.sol`: for node/sc tests.
 - `storagetrie/*.sol`: for BenchmarkStorageTrieStore.
 - `system_contracts/*.sol`: for system_contracts tests.
-- `test/*.sol`: for TestCompileSolidityOrLoad.
 - `validatesender/*.sol`: for TestValidateSenderContract.
 
 ## Libraries

@@ -27,9 +27,10 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/reward/contract"
+	contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/consensus"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/params"
 )
@@ -47,7 +48,7 @@ const (
 	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
 )
 
-var addressBookContractAddress = common.HexToAddress(contract.AddressBookContractAddress)
+var addressBookContractAddress = system.AddressBookAddr
 
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {

@@ -28,7 +28,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	bridgecontract "github.com/klaytn/klaytn/contracts/bridge"
+	bridgecontract "github.com/klaytn/klaytn/contracts/contracts/service_chain/bridge"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/sc/bridgepool"
 	"github.com/klaytn/klaytn/rlp"

@@ -9,7 +9,9 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
-	contracts "github.com/klaytn/klaytn/contracts/system_contracts"
+	contracts "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
+	proxycontracts "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
+	testcontracts "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/crypto/bls"
 	"github.com/klaytn/klaytn/log"
@@ -42,7 +44,7 @@ func TestReadKip113(t *testing.T) {
 	transactor.Register(sender, nodeId, pub1, pop1)
 	backend.Commit()
 
-	caller, _ := contracts.NewKIP113Caller(contractAddr, backend)
+	caller, _ := contracts.NewSimpleBlsRegistryCaller(contractAddr, backend)
 
 	opts := &bind.CallOpts{BlockNumber: nil}
 	owner, _ := caller.Owner(opts)
@@ -80,7 +82,7 @@ func TestAllocKip113(t *testing.T) {
 		_, pub1, pop1 = makeBlsKey()
 		_, pub2, pop2 = makeBlsKey()
 
-		abi, _   = contracts.KIP113MockMetaData.GetAbi()
+		abi, _   = testcontracts.KIP113MockMetaData.GetAbi()
 		input, _ = abi.Pack("initialize")
 
 		alloc = blockchain.GenesisAlloc{
@@ -90,9 +92,9 @@ func TestAllocKip113(t *testing.T) {
 		}
 		backend = backends.NewSimulatedBackend(alloc)
 	)
-	kip113Addr, _, _, _ := contracts.DeployKIP113Mock(sender, backend)
+	kip113Addr, _, _, _ := testcontracts.DeployKIP113Mock(sender, backend)
 	backend.Commit()
-	contractAddr, _, _, _ := contracts.DeployERC1967Proxy(sender, backend, kip113Addr, input)
+	contractAddr, _, _, _ := proxycontracts.DeployERC1967Proxy(sender, backend, kip113Addr, input)
 	backend.Commit()
 	var (
 		allocProxyStorage  = AllocProxy(kip113Addr)
@@ -110,7 +112,7 @@ func TestAllocKip113(t *testing.T) {
 	allocStorage := MergeStorage(allocProxyStorage, allocKip113Storage)
 
 	// 2. Create storage by calling register()
-	contract, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
+	contract, _ := testcontracts.NewKIP113MockTransactor(contractAddr, backend)
 
 	contract.Register(sender, nodeId1, pub1, pop1)
 	contract.Register(sender, nodeId2, pub2, pop2)
@@ -121,28 +123,28 @@ func TestAllocKip113(t *testing.T) {
 	compareStorage(t, backend, kip113Addr, allocLogicStorage)
 }
 
-func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.SimulatedBackend, params ...interface{}) (*contracts.KIP113MockTransactor, common.Address) {
+func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.SimulatedBackend, params ...interface{}) (*testcontracts.KIP113MockTransactor, common.Address) {
 	// Prepare input data for ERC1967Proxy constructor
-	abi, err := contracts.KIP113MockMetaData.GetAbi()
+	abi, err := testcontracts.KIP113MockMetaData.GetAbi()
 	assert.Nil(t, err)
 	data, err := abi.Pack("initialize")
 	assert.Nil(t, err)
 
 	// Deploy Proxy contract
 	// 1. Deploy KIP113Mock implementation contract
-	implAddr, _, _, err := contracts.DeployKIP113Mock(sender, backend)
+	implAddr, _, _, err := testcontracts.DeployKIP113Mock(sender, backend)
 	backend.Commit()
 	assert.Nil(t, err)
 	t.Logf("KIP113Mock impl at %x", implAddr)
 
 	// 2. Deploy ERC1967Proxy(KIP113Mock.address, _data)
-	contractAddr, _, _, err := contracts.DeployERC1967Proxy(sender, backend, implAddr, data)
+	contractAddr, _, _, err := proxycontracts.DeployERC1967Proxy(sender, backend, implAddr, data)
 	backend.Commit()
 	assert.Nil(t, err)
 	t.Logf("ERC1967Proxy at %x", contractAddr)
 
 	// 3. Attach KIP113Mock contract to the proxy
-	transactor, _ := contracts.NewKIP113MockTransactor(contractAddr, backend)
+	transactor, _ := testcontracts.NewKIP113MockTransactor(contractAddr, backend)
 
 	return transactor, contractAddr
 }

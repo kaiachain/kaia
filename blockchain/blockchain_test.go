@@ -1752,7 +1752,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	// It has to be cached because TestBlockChain_SetCanonicalBlock calls it many times
 	if len(internalTxContractCode) == 0 {
 		contracts, err := compiler.CompileSolidityOrLoad("",
-			"../contracts/internal_tx_contract/internal_tx_contract.sol")
+			"../contracts/contracts/testing/internal_tx_contract/internal_tx_contract.sol")
 		assert.Nil(t, err)
 
 		var contract compiler.Contract
