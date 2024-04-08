@@ -1037,7 +1037,6 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})
@@ -1098,7 +1097,6 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})

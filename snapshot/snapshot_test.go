@@ -47,8 +47,6 @@ func randomHash() common.Hash {
 
 // randomAccount generates a random account and returns it RLP encoded.
 func randomAccount() []byte {
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	var (
 		acc  account.Account
 		root = randomHash()
