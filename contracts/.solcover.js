@@ -1,3 +1,3 @@
 module.exports = {
-  skipFiles: ["libs", "service_chain", "testing"],
+  skipFiles: ["libs", "testing"],
 };
