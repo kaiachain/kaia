@@ -1,0 +1,69 @@
+#!/bin/bash
+# abigen wrapper. Mainly to deal with solidity version and node_modules imports
+
+PKG=
+SOL=
+OUT=
+VER=
+OTHER_ARGS=
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --pkg)
+      PKG="$2"
+      shift; shift; ;;
+    --sol)
+      SOL="$2"
+      shift; shift; ;;
+    --out)
+      OUT="$2"
+      shift; shift; ;;
+    --ver)
+      VER="$2"
+      shift; shift; ;;
+    *)
+      OTHER_ARGS="$OTHER_ARGS $1"
+      shift; ;;
+  esac
+done
+
+if [ -z "$PKG" ]; then
+  echo "missing --pkg"
+  exit 1
+fi
+if [ -z "$SOL" ]; then
+  echo "missing --sol"
+  exit 1
+fi
+if [ -z "$OUT" ]; then
+  echo "missing --out"
+  exit 1
+fi
+if [ -n "$VER" ]; then
+  if ! solc --version | grep -q "$VER"; then
+    # Try https://github.com/crytic/solc-select if installed
+    if command -v solc-select >/dev/null; then
+      solc-select use $VER
+    # Try https://github.com/alloy-rs/svm-rs if installed
+    elif command -v svm >/dev/null; then
+      svm use $VER
+    fi
+  fi
+  # Check again
+  if ! solc --version | grep -q "$VER"; then
+    echo "wrong solc version. required: $VER"
+    exit 1
+  fi
+fi
+
+# abigen can't handle node_modules imports, so we symlink them
+ln -sf node_modules/@openzeppelin ./@openzeppelin
+cleanup() {
+  # This symlink interferes with hardhat; delete after abigen.
+  rm -f ./@openzeppelin
+}
+trap cleanup EXIT
+
+set -x
+abigen --pkg $PKG --sol $SOL --out $OUT $OTHER_ARGS
+{ set +x; } 2>/dev/null
