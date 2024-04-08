@@ -71,6 +71,7 @@ func TestRebalanceTreasury(t *testing.T) {
 		expectNonce           uint64
 		expectBurnt           *big.Int
 		expectSuccess         bool
+		expectMemo            string
 	}{
 		{
 			// normal case
@@ -84,6 +85,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			10,
 			big.NewInt(12345),
 			true,
+			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":12345,\"success\":true}",
 		},
 		{
 			// failed case - rebalancing aborted due to wrong rebalanceBlockNumber
@@ -97,6 +99,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			8,
 			big.NewInt(0),
 			false,
+			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":0,\"success\":false}",
 		},
 		{
 			// failed case - rebalancing aborted due to wrong state
@@ -110,6 +113,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			9,
 			big.NewInt(0),
 			false,
+			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":0,\"success\":false}",
 		},
 		{
 			// failed case - rebalancing aborted due to bigger allocation than retirees
@@ -123,6 +127,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			9,
 			big.NewInt(0),
 			false,
+			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000001},\"burnt\":0,\"success\":false}",
 		},
 	}
 
@@ -173,6 +178,6 @@ func TestRebalanceTreasury(t *testing.T) {
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
 		memo, _ := json.Marshal(res)
-		t.Log(string(memo))
+		assert.Equal(t, tc.expectMemo, string(memo))
 	}
 }
