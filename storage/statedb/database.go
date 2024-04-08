@@ -1128,7 +1128,6 @@ func (db *Database) SaveTrieNodeCacheToFile(filePath string, concurrency int) {
 
 // DumpPeriodically atomically saves fast cache data to the given dir with the specified interval.
 func (db *Database) SaveCachePeriodically(c *TrieNodeCacheConfig, stopCh <-chan struct{}) {
-	rand.Seed(time.Now().UnixNano())
 	randomVal := 0.5 + rand.Float64()/2.0 // 0.5 <= randomVal < 1.0
 	startTime := time.Duration(int(randomVal * float64(c.FastCacheSavePeriod)))
 	logger.Info("first periodic cache saving will be triggered", "after", startTime)

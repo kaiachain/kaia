@@ -2717,7 +2717,6 @@ func TestGetBridgeContractBalance(t *testing.T) {
 
 	// Case 2 - ? (Random)
 	{
-		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < 10; i++ {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
 			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
