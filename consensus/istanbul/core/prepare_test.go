@@ -1,6 +1,7 @@
 package core
 
 import (
+	crand "crypto/rand"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -118,7 +119,7 @@ func BenchmarkMsgCmp(b *testing.B) {
 func TestSubjectCmp(t *testing.T) {
 	genRandomHash := func(n int) common.Hash {
 		b := make([]byte, n)
-		_, err := rand.Read(b)
+		_, err := crand.Read(b)
 		assert.Nil(t, err)
 		return common.BytesToHash(b)
 	}
