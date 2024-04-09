@@ -35,7 +35,6 @@ import (
 
 func Test_newSegment_Success_LegacyMessage(t *testing.T) {
 	value := common.MakeRandomBytes(100)
-	rand.Seed(time.Now().UnixNano())
 	total := uint64(10)
 	idx := rand.Uint64() % total
 	totalBytes := common.Int64ToByteBigEndian(total)
@@ -61,7 +60,6 @@ func Test_newSegment_Success_LegacyMessage(t *testing.T) {
 
 func Test_newSegment_Success_Version1Message(t *testing.T) {
 	value := common.MakeRandomBytes(100)
-	rand.Seed(time.Now().UnixNano())
 	total := uint64(10)
 	idx := rand.Uint64() % total
 	totalBytes := common.Int64ToByteBigEndian(total)

@@ -22,6 +22,7 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
+	crand "crypto/rand"
 	"fmt"
 	"io"
 	"math/big"
@@ -113,7 +114,7 @@ func pricedTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ec
 
 func pricedDataTransaction(nonce uint64, gaslimit uint64, gasprice *big.Int, key *ecdsa.PrivateKey, bytes uint64) *types.Transaction {
 	data := make([]byte, bytes)
-	rand.Read(data)
+	crand.Read(data)
 
 	tx, _ := types.SignTx(types.NewTransaction(nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), gaslimit, gasprice, data),
 		types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)

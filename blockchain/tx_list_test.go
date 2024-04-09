@@ -25,7 +25,6 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/crypto"
@@ -80,7 +79,6 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 
 	// Insert the transactions in a random order
 	list := newTxList(true)
-	rand.Seed(time.Now().UnixNano())
 	for _, v := range rand.Perm(len(txs)) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}

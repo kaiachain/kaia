@@ -900,7 +900,6 @@ func TestIsSorted(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(batches), func(i, j int) {
 		batches[i], batches[j] = batches[j], batches[i]
 	})
@@ -972,7 +971,6 @@ func benchmarkTxSortByTime(b *testing.B, size int) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(batches), func(i, j int) {
 		batches[i], batches[j] = batches[j], batches[i]
 	})

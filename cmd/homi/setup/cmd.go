@@ -629,8 +629,6 @@ func useKip113Mock(ctx *cli.Context, genesisJson *blockchain.Genesis, kip113Logi
 func RandStringRunes(n int) string {
 	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+{}|[]")
 
-	rand.Seed(time.Now().UnixNano())
-
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]

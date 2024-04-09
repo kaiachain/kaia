@@ -27,7 +27,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
 	"encoding/binary"
@@ -702,7 +701,10 @@ func exportPubkey(pub *ecies.PublicKey) []byte {
 	if pub == nil {
 		panic("nil pubkey")
 	}
-	return elliptic.Marshal(pub.Curve, pub.X, pub.Y)[1:]
+	if curve, ok := pub.Curve.(crypto.EllipticCurve); ok {
+		return curve.Marshal(pub.X, pub.Y)[1:]
+	}
+	return []byte{}
 }
 
 func xor(one, other []byte) (xor []byte) {

@@ -98,7 +98,6 @@ func (s *KafkaSuite) TestKafka_split() {
 func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
 	// make test data
 	data := common.MakeRandomBytes(100)
-	rand.Seed(time.Now().UnixNano())
 	totalSegments := rand.Uint64()
 	idx := rand.Uint64() % totalSegments
 
@@ -117,7 +116,6 @@ func (s *KafkaSuite) TestKafka_makeProducerV1Message() {
 func (s *KafkaSuite) TestKafka_makeProducerMessage() {
 	// make test data
 	data := common.MakeRandomBytes(100)
-	rand.Seed(time.Now().UnixNano())
 	totalSegments := rand.Uint64()
 	idx := rand.Uint64() % totalSegments
 
