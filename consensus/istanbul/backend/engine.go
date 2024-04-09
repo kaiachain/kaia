@@ -530,10 +530,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// RebalanceTreasury can modify the global state (state),
 	// so the existing state db should be used to apply the rebalancing result.
 	// Only on the KIP-103 and KIP-160 hardfork block, the following logic should be executed
-	if chain.Config().IsDragonForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
-		_, err := system.RebalanceTreasury(state, chain, header)
+	isKIP103, isDragon := chain.Config().IsKIP103ForkBlock(header.Number), chain.Config().IsDragonForkBlock(header.Number)
+	if isKIP103 || isDragon {
+		result, err := system.RebalanceTreasury(state, chain, header)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing. State not changed", "err", err)
+		} else {
+			logger.Info("successfully executed treasury rebalancing", "memo", string(result.Memo(isKIP103)))
 		}
 	}
 
