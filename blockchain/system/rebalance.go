@@ -19,7 +19,6 @@ package system
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn"
@@ -147,7 +146,7 @@ func newRebalanceReceipt() *rebalanceResult {
 	}
 }
 
-func (result *rebalanceResult) Memo(isKip103 bool) []byte {
+func (result *rebalanceResult) memo(isKip103 bool) []byte {
 	var (
 		memo []byte
 		err  error
@@ -227,25 +226,21 @@ func (result *rebalanceResult) totalAllocatedBalance() *big.Int {
 // The new allocation can be larger than the removed amount, and the difference between two amounts will be burnt.
 func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header) (*rebalanceResult, error) {
 	var (
-		result = newRebalanceReceipt()
-		c      = backends.NewBlockchainContractBackend(chain, nil, nil)
-
-		caller RebalanceCaller
 		err    error
+		caller RebalanceCaller
+
+		result   = newRebalanceReceipt()
+		isDragon = chain.Config().IsDragonForkBlock(header.Number)
+		isKIP103 = chain.Config().IsKIP103ForkBlock(header.Number)
 	)
 
-	if chain.Config().IsDragonForkBlock(header.Number) {
-		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().RandaoRegistry.Records[Kip160Name], c)
-		if err != nil {
-			return nil, err
-		}
-	} else if chain.Config().IsKIP103ForkBlock(header.Number) {
+	if isDragon {
+		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().RandaoRegistry.Records[Kip160Name], backends.NewBlockchainContractBackend(chain, nil, nil))
+	} else if isKIP103 {
 		caller, err = NewKip103ContractCaller(state, chain, header)
-		if err != nil {
-			return result, err
-		}
-	} else {
-		return nil, errors.New("unsupported block number for rebalance treasury")
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// Retrieve 1) Get Zeroed
@@ -269,14 +264,14 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	}
 
 	// Validation  3) Check approvals from zeroeds
-	if err := caller.CheckZeroedsApproved(nil); err != nil {
+	if err = caller.CheckZeroedsApproved(nil); err != nil {
 		return result, err
 	}
 
 	// Validation 4) Check the total balance of retirees are bigger than the distributing amount
 	totalZeroedAmount := result.totalZeroedBalance()
 	totalAllocatedAmount := result.totalAllocatedBalance()
-	if chain.Config().IsKIP103ForkBlock(header.Number) && totalZeroedAmount.Cmp(totalAllocatedAmount) < 0 {
+	if isKIP103 && totalZeroedAmount.Cmp(totalAllocatedAmount) < 0 {
 		return result, ErrRebalanceNotEnoughBalance
 	}
 
@@ -298,11 +293,7 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	result.Burnt.Add(result.Burnt, remainder)
 	result.Success = true
 
-	memo, err := json.Marshal(result)
-	if err != nil {
-		logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
-	}
-	logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
-
+	// Leave a memo for logging
+	logger.Info("successfully executed treasury rebalancing", "memo", string(result.memo(isKIP103)))
 	return result, nil
 }

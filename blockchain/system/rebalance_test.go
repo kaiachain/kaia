@@ -190,7 +190,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		}
 
 		backend.Commit()
-		assert.Equal(t, uint64(1), backend.BlockChain().CurrentBlock().NumberU64())
+		assert.Equal(t, uint64(1), chain.CurrentBlock().NumberU64())
 
 		// Get state and check post-transition state
 		state, err := chain.State()
@@ -214,7 +214,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		memo := res.Memo(chain.Config().IsKIP103ForkBlock(backend.BlockChain().CurrentHeader().Number))
+		memo := res.memo(chain.Config().IsKIP103ForkBlock(chain.CurrentHeader().Number))
 		t.Log(string(memo))
 		//assert.Equal(t, tc.expectMemo, string(memo))
 	}
