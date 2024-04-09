@@ -24,7 +24,6 @@ import (
 	kip113contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
 	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
-	rebalancecontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/rebalance"
 	testcontract "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/log"
 )
@@ -37,12 +36,14 @@ var (
 	GovParamName    = "GovParam"
 	Kip103Name      = "KIP103"
 	Kip113Name      = "KIP113"
+	Kip160Name      = "KIP160"
 
 	AllContractNames = []string{
 		AddressBookName,
 		GovParamName,
 		Kip103Name,
 		Kip113Name,
+		Kip160Name,
 	}
 
 	// This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1 used in the
@@ -60,7 +61,7 @@ var (
 	// System contract binaries to be injected at hardfork or used in testing.
 	RegistryCode     = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
 	RegistryMockCode = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
-	Kip103Code       = hexutil.MustDecode("0x" + rebalancecontract.TreasuryRebalanceBinRuntime)
+	Kip160MockCode   = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)
 	Kip103MockCode   = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockBinRuntime)
 	Kip113Code       = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
 	Kip113MockCode   = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
