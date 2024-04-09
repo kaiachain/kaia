@@ -1063,7 +1063,7 @@ var (
 	HeavyDebugRequestLimitFlag = &cli.IntFlag{
 		Name:     "rpc.unsafe-debug.heavy-debug.request-limit",
 		Usage:    "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
-		Value:    50,
+		Value:    500,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
 		Category: "API AND CONSOLE",

@@ -76,7 +76,7 @@ const (
 )
 
 var (
-	HeavyAPIRequestLimit int32 = 500
+	HeavyAPIRequestLimit int32 // HeavyDebugRequestLimitFlag
 	heavyAPIRequestCount int32 = 0
 )
 
