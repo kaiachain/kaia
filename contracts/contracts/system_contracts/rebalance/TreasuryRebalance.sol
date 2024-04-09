@@ -2,7 +2,11 @@
 
 pragma solidity ^0.8.0;
 
+<<<<<<<< HEAD:contracts/contracts/system_contracts/kip103/TreasuryRebalance.sol
 import "../../libs/Ownable.sol";
+========
+import "../lib/Ownable_0.8.sol";
+>>>>>>>> 9b55e3bc (refactoring for kip103):contracts/contracts/system_contracts/rebalance/TreasuryRebalance.sol
 import "./ITreasuryRebalance.sol";
 
 /**
