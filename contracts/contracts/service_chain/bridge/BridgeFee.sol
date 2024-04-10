@@ -36,21 +36,30 @@ contract BridgeFee {
         feeReceiver = _feeReceiver;
     }
 
+    // Caller of this function must be nonReentrant.
+    // - BridgeTransferKLAY._requestKLAYTransfer() is nonReentrant
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
         if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            feeReceiver.transfer(fee);
-            if (_feeLimit.sub(fee) > 0) {
-                msg.sender.transfer(_feeLimit.sub(fee));
+            (bool ok, ) = feeReceiver.call.value(fee)("");
+            require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
+
+            uint256 feeRefund = _feeLimit.sub(fee);
+            if (feeRefund > 0) {
+                (bool ok, ) = msg.sender.call.value(feeRefund)("");
+                require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
             }
 
             return fee;
         }
 
-        msg.sender.transfer(_feeLimit);
+        if (_feeLimit > 0) {
+            (bool ok, ) = msg.sender.call.value(_feeLimit)("");
+            require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
+        }
         return 0;
     }
 
@@ -61,14 +70,18 @@ contract BridgeFee {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
             require(IERC20(_token).transfer(feeReceiver, fee), "_payERC20FeeAndRefundChange: transfer failed");
-            if (_feeLimit.sub(fee) > 0) {
-                require(IERC20(_token).transfer(from, _feeLimit.sub(fee)), "_payERC20FeeAndRefundChange: transfer failed");
+
+            uint256 feeRefund = _feeLimit.sub(fee);
+            if (feeRefund > 0) {
+                require(IERC20(_token).transfer(from, feeRefund), "_payERC20FeeAndRefundChange: transfer failed");
             }
 
             return fee;
         }
 
-        require(IERC20(_token).transfer(from, _feeLimit), "_payERC20FeeAndRefundChange: transfer failed");
+        if (_feeLimit > 0) {
+            require(IERC20(_token).transfer(from, _feeLimit), "_payERC20FeeAndRefundChange: transfer failed");
+        }
         return 0;
     }
 
