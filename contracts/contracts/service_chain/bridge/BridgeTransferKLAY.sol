@@ -17,9 +17,10 @@
 pragma solidity 0.5.6;
 
 import "./BridgeTransfer.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/utils/ReentrancyGuard.sol";
 
 
-contract BridgeTransferKLAY is BridgeTransfer {
+contract BridgeTransferKLAY is BridgeTransfer, ReentrancyGuard {
     bool public isLockedKLAY;
 
     event KLAYLocked();
@@ -69,6 +70,7 @@ contract BridgeTransferKLAY is BridgeTransfer {
     )
         public
         onlyOperators
+        nonReentrant
     {
         _lowerHandleNonceCheck(_requestedNonce);
 
@@ -93,13 +95,15 @@ contract BridgeTransferKLAY is BridgeTransfer {
             _extraData
         );
 
-        _to.transfer(_value);
+        (bool ok, ) = _to.call.value(_value)("");
+        require(ok, "handleKLAYTransfer: transfer failed");
     }
 
     // _requestKLAYTransfer requests transfer KLAY to _to on relative chain.
     function _requestKLAYTransfer(address _to, uint256 _feeLimit,  bytes memory _extraData)
         internal
         unlockedKLAY
+        nonReentrant
     {
         require(isRunning, "stopped bridge");
         require(msg.value > _feeLimit, "insufficient amount");

@@ -36,24 +36,29 @@ contract BridgeFee {
         feeReceiver = _feeReceiver;
     }
 
+    // Caller of this function must be nonReentrant.
+    // - BridgeTransferKLAY._requestKLAYTransfer() is nonReentrant
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
         if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            feeReceiver.transfer(fee);
+            (bool ok, ) = feeReceiver.call.value(fee)("");
+            require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
 
             uint256 feeRefund = _feeLimit.sub(fee);
             if (feeRefund > 0) {
-                msg.sender.transfer(feeRefund);
+                (bool ok, ) = msg.sender.call.value(feeRefund)("");
+                require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
             }
 
             return fee;
         }
 
         if (_feeLimit > 0) {
-            msg.sender.transfer(_feeLimit);
+            (bool ok, ) = msg.sender.call.value(_feeLimit)("");
+            require(ok, "_payKLAYFeeAndRefundChange: transfer failed");
         }
         return 0;
     }
