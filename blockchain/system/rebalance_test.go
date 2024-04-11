@@ -2,6 +2,7 @@ package system
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -91,7 +92,6 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		}
 	)
 
-	// TODO-system: add a case when zeroeds < allocateds
 	testCases := []struct {
 		rebalanceBlockNumber *big.Int
 		status               uint8
@@ -214,8 +214,11 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		memo := res.memo(chain.Config().IsKIP103ForkBlock(chain.CurrentHeader().Number))
-		t.Log(string(memo))
-		//assert.Equal(t, tc.expectMemo, string(memo))
+		isKip160, isKip103 := chain.Config().DragonCompatibleBlock != nil, chain.Config().Kip103CompatibleBlock != nil
+		if isKip160 {
+			tc.expectMemo = strings.Replace(tc.expectMemo, "retired", "zeroed", -1)
+			tc.expectMemo = strings.Replace(tc.expectMemo, "newbie", "allocated", -1)
+		}
+		assert.Equal(t, tc.expectMemo, string(res.memo(isKip103)))
 	}
 }
