@@ -1912,7 +1912,6 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
 	defer blockchain.Stop()
 
-	rand.Seed(time.Now().UnixNano())
 	chainLength := rand.Int63n(500) + 100
 
 	// generate blocks

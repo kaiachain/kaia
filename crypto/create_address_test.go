@@ -66,7 +66,6 @@ func BenchmarkCreateAddress(b *testing.B) {
 
 func randCode(codeSize uint) []byte {
 	code := make([]byte, 0, codeSize)
-	rand.Seed(0)
 	r := rand.Uint64()
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, r)

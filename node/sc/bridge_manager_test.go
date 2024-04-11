@@ -18,6 +18,7 @@ package sc
 
 import (
 	"context"
+	crand "crypto/rand"
 	"encoding/hex"
 	"log"
 	"math/big"
@@ -2462,7 +2463,7 @@ func checkRegisterMultipleToken(t *testing.T, bm *BridgeManager, cBridgeAddr, pB
 
 func randomHex(n int) (string, error) {
 	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
+	if _, err := crand.Read(bytes); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
@@ -2716,7 +2717,6 @@ func TestGetBridgeContractBalance(t *testing.T) {
 
 	// Case 2 - ? (Random)
 	{
-		rand.Seed(time.Now().UnixNano())
 		for i := 0; i < 10; i++ {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
 			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)

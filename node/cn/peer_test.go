@@ -23,12 +23,10 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/klaytn/klaytn/crypto"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/p2p"
 	"github.com/stretchr/testify/assert"
 )
@@ -385,7 +383,6 @@ func TestBasePeer_SendTransactionWithSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})
@@ -445,7 +442,6 @@ func TestBasePeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})
@@ -500,7 +496,6 @@ func TestMultiChannelPeer_SendTransactionWithSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})
@@ -562,7 +557,6 @@ func TestMultiChannelPeer_ReSendTransactionWithSortedByTime(t *testing.T) {
 	}
 
 	// Shuffle transactions.
-	rand.Seed(time.Now().Unix())
 	rand.Shuffle(len(txs), func(i, j int) {
 		txs[i], txs[j] = txs[j], txs[i]
 	})

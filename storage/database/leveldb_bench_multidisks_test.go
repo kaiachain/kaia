@@ -23,7 +23,6 @@ import (
 	"os"
 	"sync"
 	"testing"
-	"time"
 )
 
 type multiDiskOption struct {
@@ -471,7 +470,6 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 				db.Put(keys[k], values[k])
 			}
 
-			rand.Seed(time.Now().UnixNano())
 			b.StartTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -506,7 +504,6 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 
 			keys, values := genKeysAndValues(numBytes, numRows)
 
-			rand.Seed(time.Now().UnixNano())
 			b.StartTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -541,7 +538,6 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 
 			keys, values := genKeysAndValues(numBytes, numRows)
 
-			rand.Seed(time.Now().UnixNano())
 			b.StartTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
