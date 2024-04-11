@@ -259,10 +259,10 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 		slices.SortFunc(results, func(a, b *big.Int) int { return a.Cmp(b) })
 		price = results[(len(results)-1)*oracle.percentile/100]
 	}
-	// NOTE: This upper bound for suggested gas tip can lead to suggesting insufficient gas tip,
-	//       however the possibility of gas tip exceeding 500 ston would be very low.
-	//       On the other hand, having no upper bount for gas tip can lead to suggesting
-	//       very high gas tip when there are only few transactions with unnecessarily high gas tip.
+	// NOTE: This maximum suggested gas tip can lead to suggesting insufficient gas tip,
+	//       however, the possibility of gas tip exceeding 500 ston would be very low given the block capacity of Klaytn.
+	//       On the other hand, referencing the user-submitted transactions as-is can lead to suggesting
+	//       very high gas tip when there are only a few transactions with unnecessarily high gas tip.
 	if price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
 	}
