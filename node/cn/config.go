@@ -62,7 +62,7 @@ func GetDefaultConfig() *Config {
 			Percentile:       60,
 			MaxHeaderHistory: 1024,
 			MaxBlockHistory:  1024,
-			MaxPrice:         gasprice.DefaultMaxPrice,
+			MaxPrice:         big.NewInt(params.DefaultGPOMaxPrice),
 		},
 		WsEndpoint: "localhost:8546",
 

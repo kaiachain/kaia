@@ -35,8 +35,6 @@ import (
 
 const sampleNumber = 3 // Number of transactions sampled in a block
 
-var DefaultMaxPrice = big.NewInt(500 * params.Ston)
-
 type Config struct {
 	Blocks           int
 	Percentile       int
@@ -78,38 +76,38 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend OracleBackend, params Config, txPool TxPool) *Oracle {
-	blocks := params.Blocks
+func NewOracle(backend OracleBackend, config Config, txPool TxPool) *Oracle {
+	blocks := config.Blocks
 	if blocks < 1 {
 		blocks = 1
 	}
-	percent := params.Percentile
+	percent := config.Percentile
 	if percent < 0 {
 		percent = 0
 	}
 	if percent > 100 {
 		percent = 100
 	}
-	maxPrice := params.MaxPrice
+	maxPrice := config.MaxPrice
 	if maxPrice == nil || maxPrice.Int64() <= 0 {
-		maxPrice = DefaultMaxPrice
-		logger.Warn("Sanitizing invalid gasprice oracle price cap", "provided", params.MaxPrice, "updated", maxPrice)
+		maxPrice = big.NewInt(params.DefaultGPOMaxPrice)
+		logger.Warn("Sanitizing invalid gasprice oracle price cap", "provided", config.MaxPrice, "updated", maxPrice)
 	}
-	maxHeaderHistory := params.MaxHeaderHistory
+	maxHeaderHistory := config.MaxHeaderHistory
 	if maxHeaderHistory < 1 {
 		maxHeaderHistory = 1
-		logger.Warn("Sanitizing invalid gasprice oracle max header history", "provided", params.MaxHeaderHistory, "updated", maxHeaderHistory)
+		logger.Warn("Sanitizing invalid gasprice oracle max header history", "provided", config.MaxHeaderHistory, "updated", maxHeaderHistory)
 	}
-	maxBlockHistory := params.MaxBlockHistory
+	maxBlockHistory := config.MaxBlockHistory
 	if maxBlockHistory < 1 {
 		maxBlockHistory = 1
-		logger.Warn("Sanitizing invalid gasprice oracle max block history", "provided", params.MaxBlockHistory, "updated", maxBlockHistory)
+		logger.Warn("Sanitizing invalid gasprice oracle max block history", "provided", config.MaxBlockHistory, "updated", maxBlockHistory)
 	}
 	cache, _ := lru.New(2048)
 
 	return &Oracle{
 		backend:          backend,
-		lastPrice:        params.Default,
+		lastPrice:        config.Default,
 		maxPrice:         maxPrice,
 		checkBlocks:      blocks,
 		maxEmpty:         blocks / 2,

@@ -179,6 +179,9 @@ const (
 	VMLogToAll    = VMLogToFile | VMLogToStdout
 
 	UpperGasLimit = uint64(999999999999)
+
+	// Default max price for gas price oracle
+	DefaultGPOMaxPrice = 500 * Ston
 )
 
 const (
