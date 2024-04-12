@@ -48,13 +48,9 @@ func TestRebalanceTreasuryKIP160(t *testing.T) {
 		KoreCompatibleBlock:      big.NewInt(0),
 		ShanghaiCompatibleBlock:  big.NewInt(0),
 		CancunCompatibleBlock:    big.NewInt(0),
+		RandaoCompatibleBlock:    big.NewInt(0),
 		DragonCompatibleBlock:    big.NewInt(1),
-		RandaoRegistry: &params.RegistryConfig{
-			Records: map[string]common.Address{
-				"KIP160": rebalanceAddress,
-			},
-			Owner: sender.From,
-		},
+		Kip160ContractAddress:    rebalanceAddress,
 	}
 	config.SetDefaults()
 	rebalanceTreasury(t, sender, config, rebalanceAddress, Kip160MockCode)

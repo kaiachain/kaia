@@ -207,10 +207,12 @@ type ChainConfig struct {
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	DragonCompatibleBlock    *big.Int `json:"dragonCompatibleBlock,omitempty"`    // DragonCompatible switch block (nil = no fork, 0 already on Dragon)
 
-	// KIP103 is a special purpose hardfork feature that can be executed only once
-	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
+	// TreasuryRebalance is a special purpose hardfork feature that can be executed only once
+	// KIP103: Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
+	// KIP160: Kip160ContractAddress should be specified to enable KIP160, then it will happen at DragonCompatibleBlock
 	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
+	Kip160ContractAddress common.Address `json:"kip160ContractAddress,omitempty"` // Kip160 contract address already deployed on the network
 
 	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
@@ -323,7 +325,7 @@ func (c *ChainConfig) String() string {
 	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v Kip160ContractAddress: %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -334,6 +336,7 @@ func (c *ChainConfig) String() string {
 			c.CancunCompatibleBlock,
 			c.DragonCompatibleBlock,
 			c.RandaoCompatibleBlock,
+			c.Kip160ContractAddress.String(),
 			kip103,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
@@ -341,7 +344,7 @@ func (c *ChainConfig) String() string {
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v Kip160ContractAddress: %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -352,6 +355,7 @@ func (c *ChainConfig) String() string {
 			c.CancunCompatibleBlock,
 			c.DragonCompatibleBlock,
 			c.RandaoCompatibleBlock,
+			c.Kip160ContractAddress.String(),
 			kip103,
 			c.UnitPrice,
 			c.DeriveShaImpl,

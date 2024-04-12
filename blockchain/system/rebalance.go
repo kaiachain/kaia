@@ -235,7 +235,7 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	)
 
 	if isDragon {
-		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().RandaoRegistry.Records[Kip160Name], backends.NewBlockchainContractBackend(chain, nil, nil))
+		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().Kip160ContractAddress, backends.NewBlockchainContractBackend(chain, nil, nil))
 	} else if isKIP103 {
 		caller, err = NewKip103ContractCaller(state, chain, header)
 	}

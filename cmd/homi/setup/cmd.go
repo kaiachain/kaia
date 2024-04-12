@@ -781,6 +781,7 @@ func Gen(ctx *cli.Context) error {
 	// KIP103 hardfork is optional
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
+	genesisJson.Config.Kip160ContractAddress = common.HexToAddress(ctx.String(kip160ContractAddressFlag.Name))
 
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
