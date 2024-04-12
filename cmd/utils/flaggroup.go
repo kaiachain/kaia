@@ -341,6 +341,14 @@ var FlagGroups = []FlagGroup{
 		},
 	},
 	{
+		Name: "GAS PRICE ORACLE",
+		Flags: []cli.Flag{
+			GpoBlocksFlag,
+			GpoPercentileFlag,
+			GpoMaxGasPriceFlag,
+		},
+	},
+	{
 		Name: "MISC",
 		Flags: []cli.Flag{
 			GenKeyFlag,

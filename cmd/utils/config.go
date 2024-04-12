@@ -711,6 +711,11 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	*/
 	// Set the Tx resending related configuration variables
 	setTxResendConfig(ctx, cfg)
+
+	// Set gas price oracle configs
+	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
+	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
+	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value
