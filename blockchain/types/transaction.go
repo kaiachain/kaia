@@ -919,6 +919,33 @@ func (s *TxByTime) Pop() interface{} {
 	return x
 }
 
+// TxByPriceAndTime implements both the sort and the heap interface, making it useful
+// for all at once sorting as well as individually adding and removing elements.
+type TxByPriceAndTime Transactions
+
+func (s TxByPriceAndTime) Len() int { return len(s) }
+func (s TxByPriceAndTime) Less(i, j int) bool {
+	// Use the time the transaction was first seen for deterministic sorting
+	cmp := s[i].GasPrice().Cmp(s[j].GasPrice())
+	if cmp == 0 {
+		return s[i].time.Before(s[j].time)
+	}
+	return cmp > 0
+}
+func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
+func (s *TxByPriceAndTime) Push(x interface{}) {
+	*s = append(*s, x.(*Transaction))
+}
+
+func (s *TxByPriceAndTime) Pop() interface{} {
+	old := *s
+	n := len(old)
+	x := old[n-1]
+	*s = old[0 : n-1]
+	return x
+}
+
 // txWithMinerFee wraps a transaction with its gas price or effective miner gasTipCap
 type txWithMinerFee struct {
 	tx   *Transaction
