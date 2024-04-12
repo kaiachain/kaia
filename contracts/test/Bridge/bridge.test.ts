@@ -194,9 +194,16 @@ describe("Bridge", function () {
       expect(await bridge.configurationNonce()).to.equal(0);
       expect(await bridge.feeOfKLAY()).to.equal(0);
 
-      await bridge.connect(op2).setKLAYFee(7, 0);
+      await bridge.connect(op1).setKLAYFee(9, 0); // Can vote again with different data
+      expect(await bridge.configurationNonce()).to.equal(0);
+      expect(await bridge.feeOfKLAY()).to.equal(0);
+
+      await bridge.connect(op2).setKLAYFee(9, 0);
       expect(await bridge.configurationNonce()).to.equal(1);
-      expect(await bridge.feeOfKLAY()).to.equal(7);
+      expect(await bridge.feeOfKLAY()).to.equal(9);
+
+      // The configuration nonce has increased; not votable anymore.
+      expect(bridge.connect(op1).setKLAYFee(9, 0)).to.be.revertedWith("nonce mismatch");
     });
   });
 
