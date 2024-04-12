@@ -248,6 +248,15 @@ describe("Bridge", function () {
   });
 
   describe("BridgeTransfer", function () {
+    it("setRunningStatus", async function () {
+      const { bridge, owner, user1 } = await loadFixture(deployBridgeFixture);
+
+      expect(bridge.connect(user1).setRunningStatus(false)).to.be.revertedWith("Ownable: caller is not the owner");
+
+      expect(await bridge.isRunning()).to.equal(true);
+      await bridge.connect(owner).setRunningStatus(false);
+      expect(await bridge.isRunning()).to.equal(false);
+    });
     it("start", async function () {
       const { bridge, owner, user1 } = await loadFixture(deployBridgeFixture);
 
