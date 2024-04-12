@@ -38,22 +38,15 @@ func TestRebalanceTreasuryKIP160(t *testing.T) {
 	rebalanceAddress := common.HexToAddress("0x1030")
 	senderKey, _ := crypto.GenerateKey()
 	sender := bind.NewKeyedTransactor(senderKey)
-	config := &params.ChainConfig{
-		UnitPrice:                25000000000,
-		ChainID:                  big.NewInt(1),
-		IstanbulCompatibleBlock:  big.NewInt(0),
-		LondonCompatibleBlock:    big.NewInt(0),
-		EthTxTypeCompatibleBlock: big.NewInt(0),
-		MagmaCompatibleBlock:     big.NewInt(0),
-		KoreCompatibleBlock:      big.NewInt(0),
-		ShanghaiCompatibleBlock:  big.NewInt(0),
-		CancunCompatibleBlock:    big.NewInt(0),
-		RandaoCompatibleBlock:    big.NewInt(0),
-		DragonCompatibleBlock:    big.NewInt(1),
-		Kip160ContractAddress:    rebalanceAddress,
-	}
-	config.SetDefaults()
-	rebalanceTreasury(t, sender, config, rebalanceAddress, Kip160MockCode)
+	rebalanceTreasury(t,
+		sender,
+		&params.ChainConfig{
+			Kip160CompatibleBlock: big.NewInt(1),
+			Kip160ContractAddress: rebalanceAddress,
+		},
+		rebalanceAddress,
+		Kip160MockCode,
+	)
 }
 
 func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.ChainConfig, rebalanceAddress common.Address, rebalanceCode []byte) {
@@ -175,7 +168,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			allocatedAddrs = append(allocatedAddrs, entry.addr)
 		}
 
-		if chain.Config().DragonCompatibleBlock != nil {
+		if chain.Config().Kip160CompatibleBlock != nil {
 			contract, _ := system_contracts.NewTreasuryRebalanceMockV2Transactor(rebalanceAddress, backend)
 			_, err := contract.TestSetAll(sender, zeroedAddrs, allocatedAddrs, tc.allocatedAmounts, tc.rebalanceBlockNumber, tc.status)
 			assert.Nil(t, err)
@@ -202,7 +195,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			assert.Equal(t, tc.expectAllocatedsAmounts[i], state.GetBalance(addr))
 		}
 
-		if chain.Config().DragonCompatibleBlock != nil {
+		if chain.Config().Kip160CompatibleBlock != nil {
 			assert.Equal(t, uint64(0x0), state.GetNonce(common.HexToAddress("0x0")))
 		} else {
 			assert.Equal(t, tc.expectNonce, state.GetNonce(common.HexToAddress("0x0")))
@@ -210,7 +203,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		isKip160, isKip103 := chain.Config().DragonCompatibleBlock != nil, chain.Config().Kip103CompatibleBlock != nil
+		isKip160, isKip103 := chain.Config().Kip160CompatibleBlock != nil, chain.Config().Kip103CompatibleBlock != nil
 		if isKip160 {
 			tc.expectMemo = strings.Replace(tc.expectMemo, "retired", "zeroed", -1)
 			tc.expectMemo = strings.Replace(tc.expectMemo, "newbie", "allocated", -1)

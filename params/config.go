@@ -207,11 +207,14 @@ type ChainConfig struct {
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	DragonCompatibleBlock    *big.Int `json:"dragonCompatibleBlock,omitempty"`    // DragonCompatible switch block (nil = no fork, 0 already on Dragon)
 
-	// TreasuryRebalance is a special purpose hardfork feature that can be executed only once
-	// KIP103: Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
-	// KIP160: Kip160ContractAddress should be specified to enable KIP160, then it will happen at DragonCompatibleBlock
+	// Kip103 is a special purpose hardfork feature that can be executed only once
+	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
 	Kip103CompatibleBlock *big.Int       `json:"kip103CompatibleBlock,omitempty"` // Kip103Compatible activate block (nil = no fork)
 	Kip103ContractAddress common.Address `json:"kip103ContractAddress,omitempty"` // Kip103 contract address already deployed on the network
+
+	// Kip160 is an optional hardfork
+	// Both Kip160CompatibleBlock and Kip160ContractAddress should be specified to enable KIP160
+	Kip160CompatibleBlock *big.Int       `json:"kip160CompatibleBlock,omitempty"` // Kip160Compatible activate block (nil = no fork)
 	Kip160ContractAddress common.Address `json:"kip160ContractAddress,omitempty"` // Kip160 contract address already deployed on the network
 
 	// Randao is an optional hardfork
@@ -323,9 +326,10 @@ func (c *ChainConfig) String() string {
 	}
 
 	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
+	kip160 := fmt.Sprintf("KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v Kip160ContractAddress: %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -336,15 +340,15 @@ func (c *ChainConfig) String() string {
 			c.CancunCompatibleBlock,
 			c.DragonCompatibleBlock,
 			c.RandaoCompatibleBlock,
-			c.Kip160ContractAddress.String(),
 			kip103,
+			kip160,
 			c.Istanbul.SubGroupSize,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v Kip160ContractAddress: %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -355,8 +359,8 @@ func (c *ChainConfig) String() string {
 			c.CancunCompatibleBlock,
 			c.DragonCompatibleBlock,
 			c.RandaoCompatibleBlock,
-			c.Kip160ContractAddress.String(),
 			kip103,
+			kip160,
 			c.UnitPrice,
 			c.DeriveShaImpl,
 			engine,
@@ -411,14 +415,6 @@ func (c *ChainConfig) IsDragonForkEnabled(num *big.Int) bool {
 	return isForked(c.DragonCompatibleBlock, num)
 }
 
-// IsDragonForkBlock returns whether num is equal to the dragon block.
-func (c *ChainConfig) IsDragonForkBlock(num *big.Int) bool {
-	if c.DragonCompatibleBlock == nil || num == nil {
-		return false
-	}
-	return c.DragonCompatibleBlock.Cmp(num) == 0
-}
-
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
 func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)
@@ -430,6 +426,14 @@ func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
 		return false
 	}
 	return c.Kip103CompatibleBlock.Cmp(num) == 0
+}
+
+// IsKIP160ForkBlock returns whether num is equal to the kip160 block.
+func (c *ChainConfig) IsKIP160ForkBlock(num *big.Int) bool {
+	if c.Kip160CompatibleBlock == nil || num == nil {
+		return false
+	}
+	return c.Kip160CompatibleBlock.Cmp(num) == 0
 }
 
 // IsRandaoForkBlockParent returns whethere num is one block before the randao block.

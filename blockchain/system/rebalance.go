@@ -230,11 +230,11 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 		caller RebalanceCaller
 
 		result   = newRebalanceReceipt()
-		isDragon = chain.Config().IsDragonForkBlock(header.Number)
+		isKIP160 = chain.Config().IsKIP160ForkBlock(header.Number)
 		isKIP103 = chain.Config().IsKIP103ForkBlock(header.Number)
 	)
 
-	if isDragon {
+	if isKIP160 {
 		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().Kip160ContractAddress, backends.NewBlockchainContractBackend(chain, nil, nil))
 	} else if isKIP103 {
 		caller, err = NewKip103ContractCaller(state, chain, header)
