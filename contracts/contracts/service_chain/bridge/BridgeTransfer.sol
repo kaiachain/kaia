@@ -45,12 +45,20 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         modeMintBurn = _modeMintBurn;
     }
 
-    // start can allow or disallow the value transfer request.
+    // setRunningStatus can allow or disallow the value transfer request.
+    function setRunningStatus(bool _status)
+        public
+        onlyOwner
+    {
+        isRunning = _status;
+    }
+
+    // start is an alias of setRunningStatus created for backwards compatibility.
     function start(bool _status)
         external
         onlyOwner
     {
-        isRunning = _status;
+        setRunningStatus(_status);
     }
 
     /**
