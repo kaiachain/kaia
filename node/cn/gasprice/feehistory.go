@@ -47,7 +47,7 @@ var (
 const (
 	// maxBlockFetchers is the max number of goroutines to spin up to pull blocks
 	// for the fee history calculation.
-	maxBlockFetchers = 1
+	maxBlockFetchers = 4
 )
 
 // blockFees represents a single block for processing
