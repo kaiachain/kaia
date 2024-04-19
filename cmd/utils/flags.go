@@ -1971,6 +1971,26 @@ var (
 		Category: "KLAY",
 	}
 
+	// Gas price oracle settings
+	GpoBlocksFlag = &cli.IntFlag{
+		Name:     "gpo.blocks",
+		Usage:    "Number of recent blocks to check for gas prices",
+		Value:    cn.GetDefaultConfig().GPO.Blocks,
+		Category: "GAS PRICE ORACLE",
+	}
+	GpoPercentileFlag = &cli.IntFlag{
+		Name:     "gpo.percentile",
+		Usage:    "Suggested gas price is the given percentile of a set of recent transaction gas prices",
+		Value:    cn.GetDefaultConfig().GPO.Percentile,
+		Category: "GAS PRICE ORACLE",
+	}
+	GpoMaxGasPriceFlag = &cli.Int64Flag{
+		Name:     "gpo.maxprice",
+		Usage:    "Maximum transaction priority fee (or gasprice before Magma fork) to be recommended by gpo",
+		Value:    cn.GetDefaultConfig().GPO.MaxPrice.Int64(),
+		Category: "GAS PRICE ORACLE",
+	}
+
 	// TODO-Klaytn-Bootnode: Add bootnode's metric options
 	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
 )
