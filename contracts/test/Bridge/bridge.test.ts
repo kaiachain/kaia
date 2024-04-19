@@ -373,15 +373,44 @@ describe("Bridge", function () {
       const fixture = await loadFixture(deployBridgeConfiguredMintBurnFixture);
       await expectSendERC20_1step(fixture);
     });
-    it("send zero fee", async function () {
+    it("nonzero fee no refund", async function() {
+      const fixture = await loadFixture(deployBridgeConfiguredFixture);
+      const { bridge, token, op1, op2, feeReceiver, user1, user2 } = fixture;
+
+      // fee = 0.3, feeLimit = 0.3 -> no refund
+      await expect(token.connect(user1).requestValueTransfer(parseEther("1.0"), user2.address, parseEther("0.3"), "0x"))
+        .to.emit(token, "Transfer").withArgs(user1.address, bridge.address, parseEther("1.3"));
+      expect(await bridge.requestNonce()).to.equal(1);
+      expect(await token.balanceOf(user1.address)).to.equal(parseEther("3.7"));
+      expect(await token.balanceOf(feeReceiver.address)).to.equal(parseEther("0.3"));
+      expect(await token.balanceOf(bridge.address)).to.equal(parseEther("1.0"));
+    });
+    it("zero fee no refund", async function () {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);
       const { bridge, token, op1, op2, feeReceiver, user1, user2 } = fixture;
 
       await bridge.connect(op1).setERC20Fee(token.address, 0, 2);
       await bridge.connect(op2).setERC20Fee(token.address, 0, 2);
 
+      // fee = 0, feeLimit = 0 -> no refund
       await expect(token.connect(user1).requestValueTransfer(parseEther("1.0"), user2.address, parseEther("0.0"), "0x"))
         .to.emit(token, "Transfer").withArgs(user1.address, bridge.address, parseEther("1.0"));
+      expect(await bridge.requestNonce()).to.equal(1);
+      expect(await token.balanceOf(user1.address)).to.equal(parseEther("4.0"));
+      expect(await token.balanceOf(feeReceiver.address)).to.equal(parseEther("0.0"));
+      expect(await token.balanceOf(bridge.address)).to.equal(parseEther("1.0"));
+    });
+    it("zero fee full refund", async function () {
+      const fixture = await loadFixture(deployBridgeConfiguredFixture);
+      const { bridge, token, op1, op2, feeReceiver, user1, user2 } = fixture;
+
+      await bridge.connect(op1).setERC20Fee(token.address, 0, 2);
+      await bridge.connect(op2).setERC20Fee(token.address, 0, 2);
+
+      // fee = 0, feeLimit = 0.2 -> refund feeLimit
+      await expect(token.connect(user1).requestValueTransfer(parseEther("1.0"), user2.address, parseEther("0.2"), "0x"))
+        .to.emit(token, "Transfer").withArgs(user1.address, bridge.address, parseEther("1.2"))
+        .to.emit(token, "Transfer").withArgs(bridge.address, user1.address, parseEther("0.2"));
       expect(await bridge.requestNonce()).to.equal(1);
       expect(await token.balanceOf(user1.address)).to.equal(parseEther("4.0"));
       expect(await token.balanceOf(feeReceiver.address)).to.equal(parseEther("0.0"));
@@ -579,6 +608,10 @@ describe("Bridge", function () {
     // user          5.0    3.6 - gasFee
     // feeReceiver   0.0    0.4
     // bridge        0.0    1.0
+    async function gasFee(sentTx: ContractTransaction) {
+      const receipt = await sentTx.wait();
+      return receipt.gasUsed.mul(receipt.effectiveGasPrice);
+    }
     async function expectSendKLAY(fixture: BridgeFixture, tx: Promise<ContractTransaction>) {
       const { bridge, feeReceiver, user1 } = fixture;
 
@@ -598,12 +631,8 @@ describe("Bridge", function () {
       // When using requestKLAYTransfer, eventArg = msg.value - feeLimit = msg.value - (msg.value - _value) = _value
       // When using fallback, eventArg = msg.value - feeLimit = msg.value - fee.
 
-      const receipt = await sentTx.wait();
-      const gasFee = receipt.gasUsed.mul(receipt.effectiveGasPrice);
-      const expectedBalance = parseEther("3.6").sub(gasFee);
-
       expect(await bridge.requestNonce()).to.equal(1);
-      expect(await ethers.provider.getBalance(user1.address)).to.equal(expectedBalance);
+      expect(await ethers.provider.getBalance(user1.address)).to.equal(parseEther("3.6").sub(await gasFee(sentTx)));
       expect(await ethers.provider.getBalance(feeReceiver.address)).to.equal(parseEther("0.4"));
       expect(await ethers.provider.getBalance(bridge.address)).to.equal(parseEther("1.0"));
     }
@@ -626,28 +655,44 @@ describe("Bridge", function () {
 
       await expectSendKLAY(fixture, bridge.connect(user1).fallback({value: parseEther("1.4")}));
     });
-    it("send zero fee", async function() {
+    it("zero fee no refund", async function () {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);
       const { bridge, op1, op2, feeReceiver, user1 } = fixture;
 
+      // Set fee = 0
       await bridge.connect(op1).setKLAYFee(0, 2);
       await bridge.connect(op2).setKLAYFee(0, 2);
 
+      // fee = 0, feeLimit = 0 -> no refund
       const sentTx = await bridge.connect(user1).fallback({value: parseEther("1.0")});
-      const receipt = await sentTx.wait();
-      const gasFee = receipt.gasUsed.mul(receipt.effectiveGasPrice);
-      const expectedBalance = parseEther("4.0").sub(gasFee);
+      expect(await ethers.provider.getBalance(user1.address)).to.equal(parseEther("4.0").sub(await gasFee(sentTx)));
+      expect(await ethers.provider.getBalance(feeReceiver.address)).to.equal(parseEther("0.0"));
+      expect(await ethers.provider.getBalance(bridge.address)).to.equal(parseEther("1.0"));
+    });
+    it("zero fee full refund", async function () {
+      const fixture = await loadFixture(deployBridgeConfiguredFixture);
+      const { bridge, op1, op2, feeReceiver, user1, user2 } = fixture;
 
-      expect(await ethers.provider.getBalance(user1.address)).to.equal(expectedBalance);
+      // Set fee = 0
+      await bridge.connect(op1).setKLAYFee(0, 2);
+      await bridge.connect(op2).setKLAYFee(0, 2);
+
+      // fee = 0, feeLimit = 0.2 -> refund feeLimit
+      const sentTx = await bridge.connect(user1).requestKLAYTransfer(
+        user2.address, parseEther("1.0"), "0x", {value: parseEther("1.2")});
+      expect(await ethers.provider.getBalance(user1.address)).to.equal(parseEther("4.0").sub(await gasFee(sentTx)));
       expect(await ethers.provider.getBalance(feeReceiver.address)).to.equal(parseEther("0.0"));
       expect(await ethers.provider.getBalance(bridge.address)).to.equal(parseEther("1.0"));
     });
     it("receive", async function() {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);
-      const { bridge, op1, op2, user1, user2 } = fixture;
+      const { bridge, owner, op1, op2, user1, user2 } = fixture;
 
       // Add liquidity
-      await ethers.provider.send("hardhat_setBalance", [bridge.address, parseEther("1000.0").toHexString()]);
+      await bridge.connect(owner).chargeWithoutEvent({value: parseEther("1000.0")});
+
+      expect(bridge.connect(op1).handleKLAYTransfer(txhash, user1.address, user2.address, parseEther("1.0"), 0, blockNum, "0x"))
+        .to.be.revertedWith("msg.sender is not an operator");
 
       await bridge.connect(op1).handleKLAYTransfer(txhash, user1.address, user2.address, parseEther("1.0"), 0, blockNum, "0x");
       expect(await bridge.connect(op2).handleKLAYTransfer(txhash, user1.address, user2.address, parseEther("1.0"), 0, blockNum, "0x"))
@@ -679,9 +724,20 @@ describe("Bridge", function () {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);
       const { bridge, owner, user1 } = fixture;
 
+      expect(bridge.connect(user1).lockKLAY()).to.be.revertedWith("Ownable: caller is not the owner");
       await bridge.connect(owner).lockKLAY();
-      expect(bridge.connect(user1).fallback({value: parseEther("1.0")}))
-        .to.be.revertedWith("locked");
+      expect(bridge.connect(owner).lockKLAY()).to.be.revertedWith("locked");
+
+      // Transfer not working when locked
+      expect(bridge.connect(user1).fallback({value: parseEther("1.0")})).to.be.revertedWith("locked");
+
+      expect(bridge.connect(user1).unlockKLAY()).to.be.revertedWith("Ownable: caller is not the owner");
+      await bridge.connect(owner).unlockKLAY();
+      expect(bridge.connect(owner).unlockKLAY()).to.be.revertedWith("unlocked");
+
+      // Transfer working when unlocked
+      await bridge.connect(user1).fallback({value: parseEther("1.4")});
+      expect(await ethers.provider.getBalance(bridge.address)).to.equal(parseEther("1.0"));
     });
     it("stopped bridge", async function() {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);
