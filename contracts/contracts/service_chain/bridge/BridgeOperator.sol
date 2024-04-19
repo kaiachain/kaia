@@ -73,6 +73,7 @@ contract BridgeOperator is Ownable {
     {
         VotesData storage vote = votes[uint8(_voteType)][_nonce];
 
+        // If the same voter voted again, revoke previous vote.
         bytes32 oldVoteKeyOfVoter = vote.voted[msg.sender];
         if (oldVoteKeyOfVoter == bytes32(0)) {
             vote.voters.push(msg.sender);
@@ -80,6 +81,7 @@ contract BridgeOperator is Ownable {
             vote.voteCounts[oldVoteKeyOfVoter]--;
         }
 
+        // Either the current voter has voted before or not, update the vote data.
         vote.voted[msg.sender] = _voteKey;
 
         if (vote.voteCounts[_voteKey] == 0) {
@@ -88,27 +90,9 @@ contract BridgeOperator is Ownable {
         vote.voteCounts[_voteKey]++;
 
         if (vote.voteCounts[_voteKey] >= operatorThresholds[uint8(_voteType)]) {
-            _removeVoteData(_voteType, _nonce);
             return true;
         }
         return false;
-    }
-
-    // _removeVoteData removes a vote data according to voteType and nonce.
-    function _removeVoteData(VoteType _voteType, uint64 _nonce)
-        internal
-    {
-        VotesData storage vote = votes[uint8(_voteType)][_nonce];
-
-        for (uint8 i = 0; i < vote.voters.length; i++) {
-            delete vote.voted[vote.voters[i]];
-        }
-
-        for (uint8 i = 0; i < vote.voteKeys.length; i++) {
-            delete vote.voteCounts[vote.voteKeys[i]];
-        }
-
-        delete votes[uint8(_voteType)][_nonce];
     }
 
     // _voteValueTransfer votes value transfer transaction with the operator.
