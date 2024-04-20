@@ -8,6 +8,7 @@ describe("TreasuryRebalance", function() {
     kir,
     test,
     owner,
+    account1,
     retired1,
     retired2,
     newbie1,
@@ -296,6 +297,20 @@ describe("TreasuryRebalance", function() {
       await expect(tx)
         .to.emit(treasuryRebalance, "Approved")
         .withArgs(retired1, owner.address, 1);
+    });
+
+    // To measure gas: REPORT_GAS=1 hh test --grep "long adminList"
+    it("Should approve retired contract with very long adminList", async function() {
+      await kgf.addDummyAdmins(1000);
+      await kgf.addAdmin(account1.address);
+      const adminList = (await kgf.getState())[0];
+      expect(adminList.length).to.equal(1002);
+      expect(adminList[0]).to.equal(owner.address);
+      expect(adminList[1001]).includes(account1.address);
+
+      expect(retired1).to.equal(kgf.address);
+      await treasuryRebalance.connect(owner).approve(retired1); // loop ends short
+      await treasuryRebalance.connect(account1).approve(retired1); // loop reaches the end
     });
 
     it("Should approve retiredAddress is the msg.sender if retired is a EOA", async function() {
