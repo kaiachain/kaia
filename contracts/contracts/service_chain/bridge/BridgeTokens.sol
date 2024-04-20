@@ -59,6 +59,10 @@ contract BridgeTokens is Ownable {
         onlyOwner
         onlyNotRegisteredToken(_token)
     {
+        // If _cToken == 0 then registeredTokens[_token] = 0, which confuses the
+        // onlyRegisteredToken and onlyNotRegisteredToken modifiers.
+        require(_cToken != address(0), "counterpart token address is zero");
+
         registeredTokens[_token] = _cToken;
         indexOfTokens[_token] = registeredTokenList.length;
         registeredTokenList.push(_token);
