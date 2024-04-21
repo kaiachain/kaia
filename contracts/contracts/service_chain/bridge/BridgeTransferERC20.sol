@@ -86,7 +86,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
-        require(_value > 0, "zero msg.value");
+        require(_value > 0, "zero ERC20 token amount");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
