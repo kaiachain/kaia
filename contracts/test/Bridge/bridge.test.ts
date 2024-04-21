@@ -205,6 +205,33 @@ describe("Bridge", function () {
       // The configuration nonce has increased; not votable anymore.
       expect(bridge.connect(op1).setKLAYFee(9, 0)).to.be.revertedWith("nonce mismatch");
     });
+    it("vote configuration interleaved", async function () {
+      const { bridge, owner, op1, op2, op3, token } = await loadFixture(deployBridgeFixture);
+      await bridge.connect(owner).registerOperator(op1.address);
+      await bridge.connect(owner).registerOperator(op2.address);
+      await bridge.connect(owner).registerOperator(op3.address);
+      await bridge.connect(owner).deregisterOperator(owner.address);
+      await bridge.connect(owner).setOperatorThreshold(VoteType.ValueTransfer, 2);
+      await bridge.connect(owner).setOperatorThreshold(VoteType.Configuration, 2);
+
+      // Two operators accidentally voted on same nonce different configuration,
+      // temporarily stuck but recovers by amending the votes.
+
+      // Operator 1 votes setKLAYFee
+      await bridge.connect(op1).setKLAYFee(7, 0);
+      expect(await bridge.configurationNonce()).to.equal(0);
+      expect(await bridge.feeOfKLAY()).to.equal(0);
+
+      // Operator 2 votes setERC20Fee
+      await bridge.connect(op2).setERC20Fee(token.address, 7, 0);
+      expect(await bridge.configurationNonce()).to.equal(0);
+      expect(await bridge.feeOfKLAY()).to.equal(0);
+
+      // Operator 2 amends, now votes setKLAYFee, changing the configuration.
+      await bridge.connect(op2).setKLAYFee(7, 0);
+      expect(await bridge.configurationNonce()).to.equal(1);
+      expect(await bridge.feeOfKLAY()).to.equal(7);
+    });
   });
 
   describe("BridgeToken", function () {
