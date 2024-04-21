@@ -139,6 +139,8 @@ contract BridgeTransferKLAY is BridgeTransfer, ReentrancyGuard {
     function chargeWithoutEvent() external payable {}
 
     // setKLAYFee set the fee of KLAY transfer.
+    // Make sure there is no ongoing configuration change with the same configurationNonce.
+    // Must wait for one configuration to be completed before start another.
     function setKLAYFee(uint256 _fee, uint64 _requestNonce)
         external
         onlyOperators
