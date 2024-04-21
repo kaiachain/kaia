@@ -22,10 +22,13 @@ import "../../libs/openzeppelin-contracts-v2/contracts/ownership/Ownable.sol";
 contract BridgeCounterPart is Ownable {
     address public counterpartBridge;
 
+    event CounterpartBridgeChanged(address _bridge);
+
     function setCounterPartBridge(address _bridge)
         external
         onlyOwner
     {
         counterpartBridge = _bridge;
+        emit CounterpartBridgeChanged(_bridge);
     }
 }

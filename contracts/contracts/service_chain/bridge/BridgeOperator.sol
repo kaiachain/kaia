@@ -47,6 +47,10 @@ contract BridgeOperator is Ownable {
         Max
     }
 
+    event OperatorRegistered(address indexed operator);
+    event OperatorDeregistered(address indexed operator);
+    event OperatorThresholdChanged(VoteType indexed voteType, uint8 threshold);
+
     constructor() internal {
         for (uint8 i = 0; i < uint8(VoteType.Max); i++) {
             operatorThresholds[uint8(i)] = 1;
@@ -136,6 +140,7 @@ contract BridgeOperator is Ownable {
         require(!operators[_operator], "exist operator");
         operators[_operator] = true;
         operatorList.push(_operator);
+        emit OperatorRegistered(_operator);
     }
 
     // deregisterOperator deregisters the operator.
@@ -165,9 +170,10 @@ contract BridgeOperator is Ownable {
                break;
            }
         }
+        emit OperatorDeregistered(_operator);
     }
 
-// setOperatorThreshold sets the operator threshold.
+    // setOperatorThreshold sets the operator threshold.
     function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner
@@ -175,5 +181,6 @@ contract BridgeOperator is Ownable {
         require(_threshold > 0, "zero threshold");
         require(operatorList.length >= _threshold, "bigger than num of operators");
         operatorThresholds[uint8(_voteType)] = _threshold;
+        emit OperatorThresholdChanged(_voteType, _threshold);
     }
 }
