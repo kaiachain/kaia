@@ -139,6 +139,18 @@ contract BridgeOperator is Ownable {
     }
 
     // deregisterOperator deregisters the operator.
+    //
+    // Note that outstanding votes by the deregistered operator are not revoked.
+    // This enables a subtle counterintuitive scenario.
+    //
+    // Suppose there are two operators A, B and C with threshold 2.
+    // 1. Operator A votes on nonce N
+    // 2. Owner deregisters A
+    // 3. Operator B votes on nonce N, thereby executing the request N.
+    // In this case the request was executed with A's vote after A is deregistered.
+    //
+    // The Owner shall recognize this issue and expect that operator deregistration
+    // takes some time to be fully effective.
     function deregisterOperator(address _operator)
     external
     onlyOwner
