@@ -27,12 +27,12 @@ contract BridgeTransferKLAY is BridgeTransfer, ReentrancyGuard {
     event KLAYUnlocked();
 
     modifier lockedKLAY {
-        require(isLockedKLAY == true, "unlocked");
+        require(isLockedKLAY, "unlocked");
         _;
     }
 
     modifier unlockedKLAY {
-        require(isLockedKLAY == false, "locked");
+        require(!isLockedKLAY, "locked");
         _;
     }
 

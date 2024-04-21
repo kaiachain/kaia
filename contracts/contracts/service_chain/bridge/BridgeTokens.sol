@@ -40,12 +40,12 @@ contract BridgeTokens is Ownable {
     }
 
     modifier onlyLockedToken(address _token) {
-        require(lockedTokens[_token] == true, "unlocked token");
+        require(lockedTokens[_token], "unlocked token");
         _;
     }
 
     modifier onlyUnlockedToken(address _token) {
-        require(lockedTokens[_token] == false, "locked token");
+        require(!lockedTokens[_token], "locked token");
         _;
     }
 
