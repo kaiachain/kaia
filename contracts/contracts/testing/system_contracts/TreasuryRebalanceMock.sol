@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../../system_contracts/rebalance/TreasuryRebalance.sol";
+import "../../system_contracts/rebalance/TreasuryRebalanceV2.sol";
 
 contract TreasuryRebalanceMock is TreasuryRebalance {
     constructor(uint256 _rebalanceBlockNumber) TreasuryRebalance(_rebalanceBlockNumber) {}
