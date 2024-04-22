@@ -122,7 +122,7 @@ contract TreasuryRebalanceV2 is Ownable {
     //State changing Functions
     /**
      * @dev updates rebalance block number
-     * @param _rebalanceBlockNumber is the updated target block number of the execution the rebalance in Core
+     * @param _rebalanceBlockNumber is the target block number to be updated
      */
     function updateRebalanceBlocknumber(
         uint256 _rebalanceBlockNumber
