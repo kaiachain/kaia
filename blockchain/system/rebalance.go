@@ -19,6 +19,7 @@ package system
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math/big"
 
 	"github.com/klaytn/klaytn"
@@ -238,6 +239,8 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 		caller, err = rebalance.NewTreasuryRebalanceV2Caller(chain.Config().Kip160ContractAddress, backends.NewBlockchainContractBackend(chain, nil, nil))
 	} else if isKIP103 {
 		caller, err = NewKip103ContractCaller(state, chain, header)
+	} else {
+		return nil, errors.New("rebalancing shouldn't be executed unless the block number is kip103 or kip160 hard fork")
 	}
 	if err != nil {
 		return nil, err
@@ -263,7 +266,7 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 		return result, ErrRebalanceBadStatus
 	}
 
-	// Validation  3) Check approvals from zeroeds
+	// Validation 3) Check approvals from zeroeds
 	if err = caller.CheckZeroedsApproved(nil); err != nil {
 		return result, err
 	}
