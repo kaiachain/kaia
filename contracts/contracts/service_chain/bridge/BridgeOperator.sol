@@ -47,6 +47,10 @@ contract BridgeOperator is Ownable {
         Max
     }
 
+    event OperatorRegistered(address indexed operator);
+    event OperatorDeregistered(address indexed operator);
+    event OperatorThresholdChanged(VoteType indexed voteType, uint8 threshold);
+
     constructor() internal {
         for (uint8 i = 0; i < uint8(VoteType.Max); i++) {
             operatorThresholds[uint8(i)] = 1;
@@ -136,9 +140,22 @@ contract BridgeOperator is Ownable {
         require(!operators[_operator], "exist operator");
         operators[_operator] = true;
         operatorList.push(_operator);
+        emit OperatorRegistered(_operator);
     }
 
     // deregisterOperator deregisters the operator.
+    //
+    // Note that outstanding votes by the deregistered operator are not revoked.
+    // This enables a subtle counterintuitive scenario.
+    //
+    // Suppose there are two operators A, B and C with threshold 2.
+    // 1. Operator A votes on nonce N
+    // 2. Owner deregisters A
+    // 3. Operator B votes on nonce N, thereby executing the request N.
+    // In this case the request was executed with A's vote after A is deregistered.
+    //
+    // The Owner shall recognize this issue and expect that operator deregistration
+    // takes some time to be fully effective.
     function deregisterOperator(address _operator)
     external
     onlyOwner
@@ -153,9 +170,10 @@ contract BridgeOperator is Ownable {
                break;
            }
         }
+        emit OperatorDeregistered(_operator);
     }
 
-// setOperatorThreshold sets the operator threshold.
+    // setOperatorThreshold sets the operator threshold.
     function setOperatorThreshold(VoteType _voteType, uint8 _threshold)
     external
     onlyOwner
@@ -163,5 +181,6 @@ contract BridgeOperator is Ownable {
         require(_threshold > 0, "zero threshold");
         require(operatorList.length >= _threshold, "bigger than num of operators");
         operatorThresholds[uint8(_voteType)] = _threshold;
+        emit OperatorThresholdChanged(_voteType, _threshold);
     }
 }

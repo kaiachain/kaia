@@ -86,7 +86,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
-        require(_value > 0, "zero msg.value");
+        require(_value > 0, "zero ERC20 token amount");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
@@ -136,6 +136,8 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
 
 
     // setERC20Fee sets the fee of the token transfer.
+    // Make sure there is no ongoing configuration change with the same configurationNonce.
+    // Must wait for one configuration to be completed before start another.
     function setERC20Fee(address _token, uint256 _fee, uint64 _requestNonce)
         external
         onlyOperators
