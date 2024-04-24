@@ -61,6 +61,8 @@ const (
 	demoteUnexecutablesFullValidationTxLimit = 1000
 	// txMsgCh is the number of list of transactions can be queued.
 	txMsgChSize = 100
+	// txFeedChSize is the number of transactions can be queued for event feed.
+	txFeedChSize = 100
 )
 
 var (
@@ -210,7 +212,8 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	txMsgCh chan types.Transactions
+	txMsgCh  chan types.Transactions // A buffer for async tx intake via AddRemotes
+	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
 	rules params.Rules // Fork indicator
 }
@@ -235,6 +238,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
 		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
+		txFeedCh:     make(chan types.Transactions, txFeedChSize),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -255,9 +259,10 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
 
 	// Start the event loop and return
-	pool.wg.Add(2)
+	pool.wg.Add(3)
 	go pool.loop()
 	go pool.handleTxMsg()
+	go pool.handleTxFeed()
 
 	if config.EnableSpamThrottlerAtRuntime {
 		if err := pool.StartSpamThrottler(DefaultSpamThrottlerConfig); err != nil {
@@ -942,7 +947,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		logger.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
 		// We've directly injected a replacement transaction, notify subsystems
-		go pool.txFeed.Send(NewTxsEvent{types.Transactions{tx}})
+		pool.txFeedCh <- types.Transactions{tx}
 
 		return old != nil, nil
 	}
@@ -1166,6 +1171,19 @@ func (pool *TxPool) handleTxMsg() {
 		select {
 		case txs := <-pool.txMsgCh:
 			pool.AddRemotes(txs)
+		case <-pool.chainHeadSub.Err():
+			return
+		}
+	}
+}
+
+func (pool *TxPool) handleTxFeed() {
+	defer pool.wg.Done()
+
+	for {
+		select {
+		case txs := <-pool.txFeedCh:
+			pool.txFeed.Send(NewTxsEvent{txs})
 		case <-pool.chainHeadSub.Err():
 			return
 		}
@@ -1439,7 +1457,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	}
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
-		pool.txFeed.Send(NewTxsEvent{promoted})
+		pool.txFeedCh <- promoted
 	}
 	// If the pending limit is overflown, start equalizing allowances
 	pending := uint64(0)
