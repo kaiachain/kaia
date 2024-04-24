@@ -136,11 +136,11 @@ func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 			return err
 		}
 
-		signerAdd, err := validateFn(payload, m.Signature)
+		signerAddr, err := validateFn(payload, m.Signature)
 		if err != nil {
 			return err
 		}
-		if bytes.Compare(signerAdd.Bytes(), m.Address.Bytes()) != 0 {
+		if !bytes.Equal(signerAddr.Bytes(), m.Address.Bytes()) {
 			return errInvalidSigner
 		}
 	}
