@@ -39,4 +39,6 @@ var (
 	errInvalidMessage = errors.New("invalid message")
 	// errFailedDecodeMessageSet is returned when the message set is malformed.
 	errFailedDecodeMessageSet = errors.New("failed to decode message set")
+	// errInvalidSigner is returned when the message is signed by a validator different than message sender
+	errInvalidSigner = errors.New("message not signed by the sender")
 )
