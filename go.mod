@@ -59,7 +59,7 @@ require (
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.21.0
-	golang.org/x/net v0.22.0
+	golang.org/x/net v0.23.0
 	golang.org/x/sys v0.18.0
 	golang.org/x/tools v0.19.0
 	google.golang.org/grpc v1.56.3
