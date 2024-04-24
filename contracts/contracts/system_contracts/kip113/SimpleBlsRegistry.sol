@@ -82,6 +82,9 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
     }
 
     function _removeCnNodeId(address cnNodeId) private {
+        // Note that allNodeIds should be less than a few hundred
+        // considering the feasible size of BFT consensus network and
+        // perhaps residual nodeIds of the exited validators.
         for (uint256 i = 0; i < allNodeIds.length; i++) {
             if (allNodeIds[i] == cnNodeId) {
                 allNodeIds[i] = allNodeIds[allNodeIds.length - 1];

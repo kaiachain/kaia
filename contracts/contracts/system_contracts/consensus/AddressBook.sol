@@ -610,11 +610,14 @@ contract AddressBook {
     /*
      * External function
      */
-    function reviseRewardAddress(address _rewardAddress) external 
+    function reviseRewardAddress(address _rewardAddress) external
     notNull(_rewardAddress) {
         bool foundIt = false;
         uint256 index = 0;
         uint256 cnStakingContractListCnt = cnStakingContractList.length;
+        // Note that cnStakingContractListCnt should be less than a few hundred
+        // considering the feasible size of BFT consensus network and
+        // perhaps residual nodeIds of the exited validators.
         for(uint256 i = 0; i < cnStakingContractListCnt; i++){
             if (cnStakingContractList[i] == msg.sender) {
                 foundIt = true;
