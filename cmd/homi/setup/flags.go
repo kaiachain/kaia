@@ -533,6 +533,20 @@ var (
 		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
 	}
 
+	// KIP160 hardfork is optional
+	kip160CompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kip160-compatible-blocknumber",
+		Usage:   "kip160Compatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kip160-compatible-blocknumber"},
+	}
+
+	kip160ContractAddressFlag = &cli.StringFlag{
+		Name:    "kip160-contract-address",
+		Usage:   "kip160 contract address",
+		Aliases: []string{"genesis.hardfork.kip160-contract-address"},
+	}
+
 	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{
 		Name:    "randao-compatible-blocknumber",
 		Usage:   "randaoCompatible blockNumber",

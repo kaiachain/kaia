@@ -1,8 +1,8 @@
 package system
 
 import (
-	"encoding/json"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -17,16 +17,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRebalanceTreasury(t *testing.T) {
+func TestRebalanceTreasuryKIP103(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	rebalanceAddress := common.HexToAddress("0x1030")
+	senderKey, _ := crypto.GenerateKey()
+	sender := bind.NewKeyedTransactor(senderKey)
+	rebalanceTreasury(t,
+		sender,
+		&params.ChainConfig{
+			Kip103CompatibleBlock: big.NewInt(1),
+			Kip103ContractAddress: rebalanceAddress,
+		},
+		rebalanceAddress,
+		Kip103MockCode,
+	)
+}
 
+func TestRebalanceTreasuryKIP160(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	rebalanceAddress := common.HexToAddress("0x1030")
+	senderKey, _ := crypto.GenerateKey()
+	sender := bind.NewKeyedTransactor(senderKey)
+	rebalanceTreasury(t,
+		sender,
+		&params.ChainConfig{
+			Kip160CompatibleBlock: big.NewInt(1),
+			Kip160ContractAddress: rebalanceAddress,
+		},
+		rebalanceAddress,
+		Kip160MockCode,
+	)
+}
+
+func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.ChainConfig, rebalanceAddress common.Address, rebalanceCode []byte) {
 	var (
-		rebalanceAddress = common.HexToAddress("0x1030")
-		senderKey, _     = crypto.GenerateKey()
-		sender           = bind.NewKeyedTransactor(senderKey)
-		senderAddr       = sender.From
+		senderAddr = sender.From
 
-		retirees = []struct {
+		zeroeds = []struct {
 			addr    common.Address
 			balance *big.Int
 		}{
@@ -35,7 +62,7 @@ func TestRebalanceTreasury(t *testing.T) {
 			{common.HexToAddress("0xaa22"), big.NewInt(1_000_000)},
 		}
 
-		newbies = []struct {
+		allocateds = []struct {
 			addr    common.Address
 			balance *big.Int
 		}{
@@ -43,35 +70,29 @@ func TestRebalanceTreasury(t *testing.T) {
 			{common.HexToAddress("0xbb11"), big.NewInt(0)},
 		}
 
-		config = &params.ChainConfig{
-			Kip103CompatibleBlock: big.NewInt(1),
-			Kip103ContractAddress: rebalanceAddress,
-		}
-
 		alloc = blockchain.GenesisAlloc{
-			senderAddr:       {Balance: big.NewInt(params.KLAY)},
-			rebalanceAddress: {Code: Kip103MockCode, Balance: common.Big0},
-			retirees[0].addr: {Balance: retirees[0].balance},
-			retirees[1].addr: {Balance: retirees[1].balance},
-			retirees[2].addr: {Balance: retirees[2].balance},
-			newbies[0].addr:  {Balance: newbies[0].balance},
-			newbies[1].addr:  {Balance: newbies[1].balance},
+			senderAddr:         {Balance: big.NewInt(params.KLAY)},
+			rebalanceAddress:   {Code: rebalanceCode, Balance: common.Big0},
+			zeroeds[0].addr:    {Balance: zeroeds[0].balance},
+			zeroeds[1].addr:    {Balance: zeroeds[1].balance},
+			zeroeds[2].addr:    {Balance: zeroeds[2].balance},
+			allocateds[0].addr: {Balance: allocateds[0].balance},
+			allocateds[1].addr: {Balance: allocateds[1].balance},
 		}
 	)
 
-	// TODO-system: add a case when retirees < newbies
 	testCases := []struct {
 		rebalanceBlockNumber *big.Int
 		status               uint8
-		newbieAmounts        []*big.Int
+		allocatedAmounts     []*big.Int
 
-		expectedErr           error
-		expectRetireesAmounts []*big.Int
-		expectNewbiesAmounts  []*big.Int
-		expectNonce           uint64
-		expectBurnt           *big.Int
-		expectSuccess         bool
-		expectMemo            string
+		expectedErr             error
+		expectZeroedsAmounts    []*big.Int
+		expectAllocatedsAmounts []*big.Int
+		expectNonce             uint64
+		expectBurnt             *big.Int
+		expectSuccess           bool
+		expectMemo              string
 	}{
 		{
 			// normal case
@@ -94,8 +115,8 @@ func TestRebalanceTreasury(t *testing.T) {
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000)},
 
 			ErrRebalanceIncorrectBlock,
-			[]*big.Int{retirees[0].balance, retirees[1].balance, retirees[2].balance},
-			[]*big.Int{newbies[0].balance, newbies[1].balance},
+			[]*big.Int{zeroeds[0].balance, zeroeds[1].balance, zeroeds[2].balance},
+			[]*big.Int{allocateds[0].balance, allocateds[1].balance},
 			8,
 			big.NewInt(0),
 			false,
@@ -108,22 +129,22 @@ func TestRebalanceTreasury(t *testing.T) {
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000)},
 
 			ErrRebalanceBadStatus,
-			[]*big.Int{retirees[0].balance, retirees[1].balance, retirees[2].balance},
-			[]*big.Int{newbies[0].balance, newbies[1].balance},
+			[]*big.Int{zeroeds[0].balance, zeroeds[1].balance, zeroeds[2].balance},
+			[]*big.Int{allocateds[0].balance, allocateds[1].balance},
 			9,
 			big.NewInt(0),
 			false,
 			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":0,\"success\":false}",
 		},
 		{
-			// failed case - rebalancing aborted due to bigger allocation than retirees
+			// failed case - rebalancing aborted doe to bigger allocation than zeroeds
 			big.NewInt(1),
 			EnumRebalanceStatus_Registered,
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000 + 1)},
 
 			ErrRebalanceBadStatus,
-			[]*big.Int{retirees[0].balance, retirees[1].balance, retirees[2].balance},
-			[]*big.Int{newbies[0].balance, newbies[1].balance},
+			[]*big.Int{zeroeds[0].balance, zeroeds[1].balance, zeroeds[2].balance},
+			[]*big.Int{allocateds[0].balance, allocateds[1].balance},
 			9,
 			big.NewInt(0),
 			false,
@@ -133,43 +154,48 @@ func TestRebalanceTreasury(t *testing.T) {
 
 	for _, tc := range testCases {
 		var (
-			db                        = database.NewMemoryDBManager()
-			backend                   = backends.NewSimulatedBackendWithDatabase(db, alloc, config)
-			chain                     = backend.BlockChain()
-			contract, _               = system_contracts.NewTreasuryRebalanceMockTransactor(rebalanceAddress, backend)
-			retireeAddrs, newbieAddrs []common.Address
+			db                          = database.NewMemoryDBManager()
+			backend                     = backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+			chain                       = backend.BlockChain()
+			zeroedAddrs, allocatedAddrs []common.Address
 		)
 
 		// Deploy TreasuryRebalanceMock contract at block 0 and transit to block 1
-		for _, entry := range retirees {
-			retireeAddrs = append(retireeAddrs, entry.addr)
+		for _, entry := range zeroeds {
+			zeroedAddrs = append(zeroedAddrs, entry.addr)
 		}
-		for _, entry := range newbies {
-			newbieAddrs = append(newbieAddrs, entry.addr)
+		for _, entry := range allocateds {
+			allocatedAddrs = append(allocatedAddrs, entry.addr)
 		}
 
-		_, err := contract.TestSetAll(sender, retireeAddrs, newbieAddrs, tc.newbieAmounts, tc.rebalanceBlockNumber, tc.status)
-		assert.Nil(t, err)
+		if chain.Config().Kip160CompatibleBlock != nil {
+			contract, _ := system_contracts.NewTreasuryRebalanceMockV2Transactor(rebalanceAddress, backend)
+			_, err := contract.TestSetAll(sender, zeroedAddrs, allocatedAddrs, tc.allocatedAmounts, tc.rebalanceBlockNumber, tc.status)
+			assert.Nil(t, err)
+		} else {
+			contract, _ := system_contracts.NewTreasuryRebalanceMockTransactor(rebalanceAddress, backend)
+			_, err := contract.TestSetAll(sender, zeroedAddrs, allocatedAddrs, tc.allocatedAmounts, tc.rebalanceBlockNumber, tc.status)
+			assert.Nil(t, err)
+		}
 
 		backend.Commit()
-		assert.Equal(t, uint64(1), backend.BlockChain().CurrentBlock().NumberU64())
+		assert.Equal(t, uint64(1), chain.CurrentBlock().NumberU64())
 
 		// Get state and check post-transition state
 		state, err := chain.State()
 		assert.Nil(t, err)
 
-		header := chain.CurrentHeader()
-		res, err := RebalanceTreasury(state, chain, header)
+		res, err := RebalanceTreasury(state, chain, chain.CurrentHeader())
 		assert.Equal(t, tc.expectedErr, err)
 
-		for i, addr := range retireeAddrs {
-			assert.Equal(t, tc.expectRetireesAmounts[i], state.GetBalance(addr))
+		for i, addr := range zeroedAddrs {
+			assert.Equal(t, tc.expectZeroedsAmounts[i], state.GetBalance(addr))
 		}
-		for i, addr := range newbieAddrs {
-			assert.Equal(t, tc.expectNewbiesAmounts[i], state.GetBalance(addr))
+		for i, addr := range allocatedAddrs {
+			assert.Equal(t, tc.expectAllocatedsAmounts[i], state.GetBalance(addr))
 		}
 
-		if chain.Config().DragonCompatibleBlock != nil {
+		if chain.Config().Kip160CompatibleBlock != nil {
 			assert.Equal(t, uint64(0x0), state.GetNonce(common.HexToAddress("0x0")))
 		} else {
 			assert.Equal(t, tc.expectNonce, state.GetNonce(common.HexToAddress("0x0")))
@@ -177,7 +203,11 @@ func TestRebalanceTreasury(t *testing.T) {
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		memo, _ := json.Marshal(res)
-		assert.Equal(t, tc.expectMemo, string(memo))
+		isKip160, isKip103 := chain.Config().Kip160CompatibleBlock != nil, chain.Config().Kip103CompatibleBlock != nil
+		if isKip160 {
+			tc.expectMemo = strings.Replace(tc.expectMemo, "retired", "zeroed", -1)
+			tc.expectMemo = strings.Replace(tc.expectMemo, "newbie", "allocated", -1)
+		}
+		assert.Equal(t, tc.expectMemo, string(res.memo(isKip103)))
 	}
 }

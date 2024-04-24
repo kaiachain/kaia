@@ -46,7 +46,7 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 // These files were compiled with solidity 0.8.19.
 
 //go:generate ./abigenw --pkg gov --sol ./contracts/system_contracts/gov/GovParam.sol --out ./contracts/system_contracts/gov/GovParam.go --ver 0.8.19
-//go:generate ./abigenw --pkg kip103 --sol ./contracts/system_contracts/kip103/TreasuryRebalance.sol --out ./contracts/system_contracts/kip103/TreasuryRebalance.go --ver 0.8.19
+//go:generate ./abigenw --pkg rebalance --sol ./contracts/system_contracts/rebalance/all.sol --out ./contracts/system_contracts/rebalance/all.go --ver 0.8.19
 //go:generate ./abigenw --pkg kip113 --sol ./contracts/system_contracts/kip113/SimpleBlsRegistry.sol --out ./contracts/system_contracts/kip113/SimpleBlsRegistry.go --ver 0.8.19
 //go:generate ./abigenw --pkg kip149 --sol ./contracts/system_contracts/kip149/Registry.sol --out ./contracts/system_contracts/kip149/Registry.go --ver 0.8.19
 //go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./contracts/system_contracts/proxy/proxy.go --ver 0.8.19
