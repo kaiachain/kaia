@@ -602,10 +602,6 @@ func (valSet *weightedCouncil) ReplaceValidators(vals []istanbul.Validator) bool
 	return true
 }
 
-func (valSet *weightedCouncil) GetValidators() []istanbul.Validator {
-	return valSet.validators
-}
-
 func (valSet *weightedCouncil) Copy() istanbul.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
@@ -783,8 +779,8 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 
 // getStakingAmountsOfValidators calculates stakingAmounts of validators.
 // If validators have multiple staking contracts, stakingAmounts will be a sum of stakingAmounts with the same rewardAddress.
-//  - []*weightedValidator : a list of validators which type is converted to weightedValidator
-//  - []float64 : a list of stakingAmounts.
+//   - []*weightedValidator : a list of validators which type is converted to weightedValidator
+//   - []float64 : a list of stakingAmounts.
 func getStakingAmountsOfValidators(validators istanbul.Validators, stakingInfo *reward.StakingInfo) ([]*weightedValidator, []float64, error) {
 	nVals := len(validators)
 	weightedVals := make([]*weightedValidator, nVals)
