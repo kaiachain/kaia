@@ -21,9 +21,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/pborman/uuid"
 )
 
 type KeyV4 struct {
@@ -81,7 +81,10 @@ func (k *KeyV4) UnmarshalJSON(j []byte) (err error) {
 		return err
 	}
 
-	k.Id = uuid.Parse(keyJSON.Id)
+	k.Id, err = uuid.Parse(keyJSON.Id)
+	if err != nil {
+		return err
+	}
 
 	addr, err := hex.DecodeString(keyJSON.Address)
 	if err != nil {

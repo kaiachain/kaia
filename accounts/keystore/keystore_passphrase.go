@@ -33,10 +33,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
@@ -336,8 +336,13 @@ func DecryptKey(keyjson []byte, auth string) (Key, error) {
 		}
 	}
 
+	id, err := uuid.FromBytes(keyId)
+	if err != nil {
+		return nil, err
+	}
+
 	return &KeyV4{
-		Id:          uuid.UUID(keyId),
+		Id:          id,
 		Address:     address,
 		PrivateKeys: privateKeys,
 	}, nil
@@ -348,9 +353,13 @@ func decryptKeyV4(keyProtected *encryptedKeyJSONV4, auth string) (keyBytes [][][
 		return nil, nil, fmt.Errorf("version not supported: %v (should be 4)", keyProtected.Version)
 	}
 
-	keyId = uuid.Parse(keyProtected.Id)
-	keyBytes = make([][][]byte, len(keyProtected.Keyring))
+	id, err := uuid.Parse(keyProtected.Id)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyId = id[:]
 
+	keyBytes = make([][][]byte, len(keyProtected.Keyring))
 	for i, keys := range keyProtected.Keyring {
 		keyBytes[i] = make([][]byte, len(keys))
 		for j, key := range keys {
@@ -368,7 +377,12 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if keyProtected.Version != 3 {
 		return nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}
-	keyId = uuid.Parse(keyProtected.Id)
+
+	id, err := uuid.Parse(keyProtected.Id)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyId = id[:]
 
 	plainText, err := decryptKey(keyProtected.Crypto, auth)
 	if err != nil {
@@ -416,7 +430,12 @@ func decryptKey(cryptoJson cryptoJSON, auth string) (keyBytes []byte, err error)
 }
 
 func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byte, keyId []byte, err error) {
-	keyId = uuid.Parse(keyProtected.Id)
+	id, err := uuid.Parse(keyProtected.Id)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyId = id[:]
+
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
 		return nil, nil, err
