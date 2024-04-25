@@ -23,9 +23,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/klaytn/klaytn/crypto/bls"
-	"github.com/pborman/uuid"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -50,8 +51,12 @@ type encryptedKeyEIP2335JSON struct {
 
 // NewKeyEIP2335 creates a new EIP-2335 keystore Key type using a BLS private key.
 func NewKeyEIP2335(blsKey bls.SecretKey) *KeyEIP2335 {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		panic(fmt.Sprintf("Could not create random uuid: %v", err))
+	}
 	return &KeyEIP2335{
-		ID:        uuid.NewRandom(),
+		ID:        id,
 		PublicKey: blsKey.PublicKey(),
 		SecretKey: blsKey,
 	}
@@ -64,8 +69,8 @@ func DecryptKeyEIP2335(keyJSON []byte, password string) (*KeyEIP2335, error) {
 		return nil, err
 	}
 
-	id := uuid.Parse(k.ID)
-	if id == nil {
+	id, err := uuid.Parse(k.ID)
+	if err != nil {
 		return nil, errors.New("Invalid UUID")
 	}
 
