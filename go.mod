@@ -42,7 +42,6 @@ require (
 	github.com/newrelic/go-agent/v3 v3.11.0
 	github.com/otiai10/copy v1.0.1
 	github.com/pbnjay/memory v0.0.0-20190104145345-974d429e7ae4
-	github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.1
@@ -75,6 +74,7 @@ require (
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
+	github.com/google/uuid v1.6.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
@@ -109,7 +109,6 @@ require (
 	github.com/golang/glog v1.1.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

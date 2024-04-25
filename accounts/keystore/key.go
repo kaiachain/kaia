@@ -32,10 +32,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
-	"github.com/pborman/uuid"
 )
 
 // Key represents a keystore storing private keys of an account.
@@ -133,7 +133,11 @@ func (k *KeyV3) UnmarshalJSON(j []byte) (err error) {
 	}
 
 	u := new(uuid.UUID)
-	*u = uuid.Parse(keyJSON.Id)
+	*u, err = uuid.Parse(keyJSON.Id)
+	if err != nil {
+		return err
+	}
+
 	k.Id = *u
 	addr, err := hex.DecodeString(keyJSON.Address)
 	if err != nil {
@@ -175,7 +179,10 @@ func (k *KeyV3) ResetPrivateKey() {
 }
 
 func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) Key {
-	id := uuid.NewRandom()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		panic(fmt.Sprintf("Could not create random uuid: %v", err))
+	}
 	key := &KeyV4{
 		Id:          id,
 		Address:     address,
@@ -185,7 +192,11 @@ func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address commo
 }
 
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) Key {
-	id := uuid.NewRandom()
+	id, err := uuid.NewRandom()
+	if err != nil {
+		panic(fmt.Sprintf("Could not create random uuid: %v", err))
+	}
+
 	key := &KeyV4{
 		Id:          id,
 		Address:     crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
