@@ -33,6 +33,7 @@ func (c *core) Start() error {
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	c.subscribeEvents()
+	c.handlerWg.Add(1)
 	go c.handleEvents()
 
 	return nil
@@ -80,8 +81,6 @@ func (c *core) handleEvents() {
 		c.current = nil
 		c.handlerWg.Done()
 	}()
-
-	c.handlerWg.Add(1)
 
 	for {
 		select {
