@@ -33,6 +33,8 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
     uint64 public recoveryBlockNumber = 1; // the block number that recovery start to filter log from.
     mapping(uint64 => uint64) public handleNoncesToBlockNums;  // <request nonce> => <request blockNum>
 
+    event RunningStatusChanged(bool _status);
+
     using SafeMath for uint256;
 
     enum TokenType {
@@ -45,12 +47,21 @@ contract BridgeTransfer is BridgeHandledRequests, BridgeFee, BridgeOperator {
         modeMintBurn = _modeMintBurn;
     }
 
-    // start can allow or disallow the value transfer request.
+    // setRunningStatus can allow or disallow the value transfer request.
+    function setRunningStatus(bool _status)
+        public
+        onlyOwner
+    {
+        isRunning = _status;
+        emit RunningStatusChanged(_status);
+    }
+
+    // start is an alias of setRunningStatus created for backwards compatibility.
     function start(bool _status)
         external
         onlyOwner
     {
-        isRunning = _status;
+        setRunningStatus(_status);
     }
 
     /**

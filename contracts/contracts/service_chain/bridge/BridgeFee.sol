@@ -18,11 +18,13 @@ pragma solidity 0.5.6;
 
 import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/IERC20.sol";
 import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/ERC20Mintable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/SafeERC20.sol";
 import "../../libs/openzeppelin-contracts-v2/contracts/math/SafeMath.sol";
 
 
 contract BridgeFee {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address payable public feeReceiver = address(0);
     uint256 public feeOfKLAY = 0;
@@ -36,21 +38,30 @@ contract BridgeFee {
         feeReceiver = _feeReceiver;
     }
 
+    // Caller of this function must be nonReentrant.
+    // - BridgeTransferKLAY._requestKLAYTransfer() is nonReentrant
     function _payKLAYFeeAndRefundChange(uint256 _feeLimit) internal returns(uint256) {
         uint256 fee = feeOfKLAY;
 
         if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            feeReceiver.transfer(fee);
-            if (_feeLimit.sub(fee) > 0) {
-                msg.sender.transfer(_feeLimit.sub(fee));
+            (bool ok, ) = feeReceiver.call.value(fee)("");
+            require(ok, "transfer fee failed");
+
+            uint256 feeRefund = _feeLimit.sub(fee);
+            if (feeRefund > 0) {
+                (bool ok, ) = msg.sender.call.value(feeRefund)("");
+                require(ok, "refund fee failed");
             }
 
             return fee;
         }
 
-        msg.sender.transfer(_feeLimit);
+        if (_feeLimit > 0) {
+            (bool ok, ) = msg.sender.call.value(_feeLimit)("");
+            require(ok, "refund fee failed");
+        }
         return 0;
     }
 
@@ -60,15 +71,19 @@ contract BridgeFee {
         if (feeReceiver != address(0) && fee > 0) {
             require(_feeLimit >= fee, "insufficient feeLimit");
 
-            require(IERC20(_token).transfer(feeReceiver, fee), "_payERC20FeeAndRefundChange: transfer failed");
-            if (_feeLimit.sub(fee) > 0) {
-                require(IERC20(_token).transfer(from, _feeLimit.sub(fee)), "_payERC20FeeAndRefundChange: transfer failed");
+            IERC20(_token).safeTransfer(feeReceiver, fee);
+
+            uint256 feeRefund = _feeLimit.sub(fee);
+            if (feeRefund > 0) {
+                IERC20(_token).safeTransfer(from, feeRefund);
             }
 
             return fee;
         }
 
-        require(IERC20(_token).transfer(from, _feeLimit), "_payERC20FeeAndRefundChange: transfer failed");
+        if (_feeLimit > 0) {
+            IERC20(_token).safeTransfer(from, _feeLimit);
+        }
         return 0;
     }
 

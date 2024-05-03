@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.18;
+pragma solidity 0.8.19;
 
 import "./IKIP113.sol";
 import "./IAddressBook.sol";
@@ -82,6 +82,9 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
     }
 
     function _removeCnNodeId(address cnNodeId) private {
+        // Note that allNodeIds should be less than a few hundred
+        // considering the feasible size of BFT consensus network and
+        // perhaps residual nodeIds of the exited validators.
         for (uint256 i = 0; i < allNodeIds.length; i++) {
             if (allNodeIds[i] == cnNodeId) {
                 allNodeIds[i] = allNodeIds[allNodeIds.length - 1];

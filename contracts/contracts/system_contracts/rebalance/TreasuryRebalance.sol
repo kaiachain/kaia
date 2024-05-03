@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
 import "../../libs/Ownable.sol";
 import "./ITreasuryRebalance.sol";
@@ -53,6 +53,12 @@ contract TreasuryRebalance is Ownable, ITreasuryRebalance {
     /**
      * @dev registers retired details
      * @param _retiredAddress is the address of the retired
+     *
+     * If the retired address is a contract, make sure its adminList is not too long
+     * because otherwise the for-loops around adminList or approvers may run out of gas.
+     * However, processing even 1000 admins is feasible as it takes a few million gas.
+     * The number of multisig admins is much less than1000 is not in normal use cases
+     * and the retired contracts are trusted by the Owner, so out of gas is unlikely.
      */
     function registerRetired(
         address _retiredAddress

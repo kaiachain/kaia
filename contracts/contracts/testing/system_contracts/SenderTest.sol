@@ -32,6 +32,15 @@ contract SenderTest1 {
         _adminList.push(admin);
     }
 
+    /// @dev Add dummy admin addresses to test large adminList.
+    function addDummyAdmins(uint256 count) public {
+        address admin = 0xF000000000000000000000000000000000000001;
+        for (uint256 i = 0; i < count; i++) {
+            admin = address(uint160(admin) + 1);
+            _adminList.push(admin);
+        }
+    }
+
     /*
      *  Deposit function
      */

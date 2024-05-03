@@ -19,12 +19,15 @@ pragma solidity 0.5.6;
 import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/IERC20.sol";
 import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/ERC20Mintable.sol";
 import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/ERC20Burnable.sol";
+import "../../libs/openzeppelin-contracts-v2/contracts/token/ERC20/SafeERC20.sol";
 
 import "../../service_chain/IERC20BridgeReceiver.sol";
 import "./BridgeTransfer.sol";
 
 
 contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransfer {
+    using SafeERC20 for IERC20;
+
     // handleERC20Transfer sends the token by the request.
     function handleERC20Transfer(
         bytes32 _requestTxHash,
@@ -65,7 +68,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         if (modeMintBurn) {
             require(ERC20Mintable(_tokenAddress).mint(_to, _value), "handleERC20Transfer: mint failed");
         } else {
-            require(IERC20(_tokenAddress).transfer(_to, _value), "handleERC20Transfer: transfer failed");
+            IERC20(_tokenAddress).safeTransfer(_to, _value);
         }
     }
 
@@ -83,7 +86,7 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
         onlyUnlockedToken(_tokenAddress)
     {
         require(isRunning, "stopped bridge");
-        require(_value > 0, "zero msg.value");
+        require(_value > 0, "zero ERC20 token amount");
 
         uint256 fee = _payERC20FeeAndRefundChange(_from, _tokenAddress, _feeLimit);
 
@@ -127,12 +130,14 @@ contract BridgeTransferERC20 is BridgeTokens, IERC20BridgeReceiver, BridgeTransf
     )
         public
     {
-        require(IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _value.add(_feeLimit)), "requestERC20Transfer: transferFrom failed");
+        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _value.add(_feeLimit));
         _requestERC20Transfer(_tokenAddress, msg.sender, _to, _value, _feeLimit, _extraData);
     }
 
 
     // setERC20Fee sets the fee of the token transfer.
+    // Make sure there is no ongoing configuration change with the same configurationNonce.
+    // Must wait for one configuration to be completed before start another.
     function setERC20Fee(address _token, uint256 _fee, uint64 _requestNonce)
         external
         onlyOperators
