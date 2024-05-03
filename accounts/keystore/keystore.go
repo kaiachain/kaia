@@ -24,7 +24,6 @@ import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
 	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -68,7 +67,8 @@ type KeyStore struct {
 	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
 	updating    bool                    // Whether the event notification loop is running
 
-	mu sync.RWMutex
+	mu       sync.RWMutex // Protects the in-memory structures
+	importMu sync.Mutex   // Protects the keystore import process
 }
 
 type unlocked struct {
@@ -485,6 +485,11 @@ func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (ac
 	if err != nil {
 		return accounts.Account{}, err
 	}
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
+	if ks.cache.hasAddress(key.GetAddress()) {
+		return accounts.Account{}, errors.New("account already exists")
+	}
 	return ks.importKey(key, newPassphrase)
 }
 
@@ -523,8 +528,10 @@ func (ks *KeyStore) ImportECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase st
 	} else {
 		key = newKeyFromECDSA(priv)
 	}
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
 	if ks.cache.hasAddress(key.GetAddress()) {
-		return accounts.Account{}, fmt.Errorf("account already exists")
+		return accounts.Account{}, errors.New("account already exists")
 	}
 	return ks.importKey(key, passphrase)
 }
@@ -532,8 +539,10 @@ func (ks *KeyStore) ImportECDSAWithAddress(priv *ecdsa.PrivateKey, passphrase st
 // ImportECDSA stores the given key into the key directory, encrypting it with the passphrase.
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
 	key := newKeyFromECDSA(priv)
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
 	if ks.cache.hasAddress(key.GetAddress()) {
-		return accounts.Account{}, fmt.Errorf("account already exists")
+		return accounts.Account{}, errors.New("account already exists")
 	}
 	return ks.importKey(key, passphrase)
 }
