@@ -1,11 +1,11 @@
 package core
 
 import (
+	crand "crypto/rand"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -118,7 +118,7 @@ func BenchmarkMsgCmp(b *testing.B) {
 func TestSubjectCmp(t *testing.T) {
 	genRandomHash := func(n int) common.Hash {
 		b := make([]byte, n)
-		_, err := rand.Read(b)
+		_, err := crand.Read(b)
 		assert.Nil(t, err)
 		return common.BytesToHash(b)
 	}
@@ -148,7 +148,6 @@ func TestSubjectCmp(t *testing.T) {
 		return r
 	}
 
-	rand.Seed(time.Now().UnixNano())
 	min, max, n := 1, 9999, 10000
 	var identity bool
 	var s1, s2 *istanbul.Subject

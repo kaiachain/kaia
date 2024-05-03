@@ -100,7 +100,8 @@ func BenchmarkEvmOp(t *testing.B) {
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
-	filename := string("../contracts/computationcost/opcodeBench.sol")
+	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/contracts/testing/computationcost/opcodeBench.sol > ../contracts/contracts/testing/computationcost/opcodeBench.sol.json
+	filename := string("../contracts/contracts/testing/computationcost/opcodeBench.sol")
 	contracts, err := compiler.CompileSolidityOrLoad("", filename)
 	require.NoError(t, err)
 

@@ -132,8 +132,18 @@ func (sb *backend) PreprocessHeaderVerification(headers []*types.Header) (chan<-
 	abort := make(chan struct{})
 	results := make(chan error, inmemoryBlocks)
 	go func() {
+		errored := false
 		for _, header := range headers {
-			err := sb.computeSignatureAddrs(header)
+			var err error
+			if errored { // If errored once in the batch, skip the rest
+				err = consensus.ErrUnknownAncestor
+			} else {
+				err = sb.computeSignatureAddrs(header)
+			}
+
+			if err != nil {
+				errored = true
+			}
 
 			select {
 			case <-abort:
@@ -284,8 +294,18 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
+		errored := false
 		for i, header := range headers {
-			err := sb.verifyHeader(chain, header, headers[:i])
+			var err error
+			if errored { // If errored once in the batch, skip the rest
+				err = consensus.ErrUnknownAncestor
+			} else {
+				err = sb.verifyHeader(chain, header, headers[:i])
+			}
+
+			if err != nil {
+				errored = true
+			}
 
 			select {
 			case <-abort:

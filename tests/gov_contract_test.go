@@ -29,7 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	govcontract "github.com/klaytn/klaytn/contracts/gov"
+	govcontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/gov"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/node/cn"

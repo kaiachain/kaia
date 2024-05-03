@@ -763,7 +763,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 		},
 	}
 
-	validatorAddrs, _ := genValidators(10)
+	validatorAddrs, validatorKeys := genValidators(10)
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
@@ -790,13 +790,13 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 
 			// `istCore.validateFn` will be executed on processing a istanbul message
 			istCore.validateFn = func(arg1 []byte, arg2 []byte) (common.Address, error) {
-				// postpones the processing of a istanbul message
+				// delays the processing of a istanbul message
 				time.Sleep(processingTime)
-				return common.Address{}, nil
+				return istCore.checkValidatorSignature(arg1, arg2)
 			}
 
 			// prepare a round change message payload
-			payload := makeRCMsgPayload(tc.messageRound, sequence, lastProposal.Hash(), validatorAddrs[0])
+			payload := makeRCMsgPayload(t, tc.messageRound, sequence, lastProposal.Hash(), validatorAddrs[0], validatorKeys[validatorAddrs[0]])
 			if payload == nil {
 				t.Fatal("failed to make a round change message payload")
 			}
@@ -822,7 +822,7 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 }
 
 // makeRCMsgPayload makes a payload of round change message.
-func makeRCMsgPayload(round int64, sequence int64, prevHash common.Hash, senderAddr common.Address) []byte {
+func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common.Hash, senderAddr common.Address, signerKey *ecdsa.PrivateKey) []byte {
 	subject, err := Encode(&istanbul.Subject{
 		View: &istanbul.View{
 			Round:    big.NewInt(round),
@@ -831,9 +831,7 @@ func makeRCMsgPayload(round int64, sequence int64, prevHash common.Hash, senderA
 		Digest:   common.Hash{},
 		PrevHash: prevHash,
 	})
-	if err != nil {
-		return nil
-	}
+	require.Nil(t, err)
 
 	msg := &message{
 		Hash:    prevHash,
@@ -842,10 +840,14 @@ func makeRCMsgPayload(round int64, sequence int64, prevHash common.Hash, senderA
 		Address: senderAddr,
 	}
 
+	data, err := msg.PayloadNoSig()
+	require.Nil(t, err)
+
+	msg.Signature, err = crypto.Sign(crypto.Keccak256([]byte(data)), signerKey)
+	require.Nil(t, err)
+
 	payload, err := msg.Payload()
-	if err != nil {
-		return nil
-	}
+	require.Nil(t, err)
 
 	return payload
 }

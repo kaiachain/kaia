@@ -19,14 +19,12 @@ package kafka
 import (
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/klaytn/klaytn/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckpointDB_ReadCheckpoint(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	testDB := database.NewMemoryDBManager()
 	db := NewCheckpointDB()
 	db.SetComponent(testDB)

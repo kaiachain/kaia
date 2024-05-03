@@ -16,22 +16,38 @@
 
 package contracts
 
-//go:generate abigen --sol ./gov/GovParam.sol --pkg gov --out ./gov/GovParam.go
+/*
+Recommended to install solc-select or svm-rs to switch solc versions within abigenw.
 
-//go:generate abigen --sol ./bridge/Bridge.sol --pkg bridge --out ./bridge/Bridge.go
-//go:generate abigen --sol ./extbridge/ext_bridge.sol --pkg extbridge --out ./extbridge/ext_bridge.go
+	solc-select install 0.4.24 0.5.6 0.8.19
+	go generate
 
-//go:generate abigen --sol ./sc_erc721/sc_nft.sol --pkg scnft --out ./sc_erc721/sc_nft.go
-//go:generate abigen --sol ./sc_erc721_no_uri/sc_nft_no_uri.sol --pkg scnft_no_uri --out ./sc_erc721_no_uri/sc_nft_no_uri.go
+Othewise, you can manually switch solc versions and run go generate for each solc version.
 
-//go:generate abigen --sol ./sc_erc20/sc_token.sol --pkg sctoken --out ./sc_erc20/sc_token.go
+	go generate --run 0.4.24
+	go generate --run 0.5.6
+	go generate --run 0.8.19
+*/
 
-//go:generate abigen --sol ./kip13/InterfaceIdentifier.sol --pkg kip13 --out ./kip13/InterfaceIdentifier.go
+// These files were compiled with solidity 0.4.24.
 
-//go:generate abigen --sol ./kip103/TreasuryRebalance.sol --pkg kip103 --out ./kip103/TreasuryRebalance.go
+//go:generate ./abigenw --pkg misc --sol ./contracts/system_contracts/misc/credit.sol --out ./contracts/system_contracts/misc/credit.go --ver 0.4.24
+//go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/consensus.sol --out ./contracts/system_contracts/consensus/consensus.go --ver 0.4.24
+//go:generate ./abigenw --pkg reward --sol ./contracts/testing/reward/all.sol --out ./contracts/testing/reward/all.go --ver 0.4.24
 
-//go:generate abigen --sol ./system_contracts/all.sol --pkg system_contracts --out ./system_contracts/all.go
+// These files were compiled with solidity 0.5.6.
 
-//`credit.sol` was compiled by solidity@0.4.24.
-// This code data was included in cypress genesis file.
-////go:generate abigen --sol ./cypress/credit.sol --pkg cypress --out ./cypress/credit.go
+//go:generate ./abigenw --pkg bridge --sol ./contracts/service_chain/bridge/Bridge.sol --out ./contracts/service_chain/bridge/bridge.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc20 --sol ./contracts/testing/sc_erc20/sc_token.sol --out ./contracts/testing/sc_erc20/sc_token.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc721 --sol ./contracts/testing/sc_erc721/sc_nft.sol --out ./contracts/testing/sc_erc721/sc_nft.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc721_no_uri --sol ./contracts/testing/sc_erc721_no_uri/sc_nft_no_uri.sol --out ./contracts/testing/sc_erc721_no_uri/sc_nft_no_uri.go --ver 0.5.6
+//go:generate ./abigenw --pkg extbridge --sol ./contracts/testing/extbridge/ext_bridge.sol --out ./contracts/testing/extbridge/ext_bridge.go --ver 0.5.6
+
+// These files were compiled with solidity 0.8.19.
+
+//go:generate ./abigenw --pkg gov --sol ./contracts/system_contracts/gov/GovParam.sol --out ./contracts/system_contracts/gov/GovParam.go --ver 0.8.19
+//go:generate ./abigenw --pkg kip103 --sol ./contracts/system_contracts/kip103/TreasuryRebalance.sol --out ./contracts/system_contracts/kip103/TreasuryRebalance.go --ver 0.8.19
+//go:generate ./abigenw --pkg kip113 --sol ./contracts/system_contracts/kip113/SimpleBlsRegistry.sol --out ./contracts/system_contracts/kip113/SimpleBlsRegistry.go --ver 0.8.19
+//go:generate ./abigenw --pkg kip149 --sol ./contracts/system_contracts/kip149/Registry.sol --out ./contracts/system_contracts/kip149/Registry.go --ver 0.8.19
+//go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./contracts/system_contracts/proxy/proxy.go --ver 0.8.19
+//go:generate ./abigenw --pkg system_contracts --sol ./contracts/testing/system_contracts/all.sol --out ./contracts/testing/system_contracts/all.go --ver 0.8.19

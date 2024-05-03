@@ -160,7 +160,6 @@ func TestUDP_responseTimeouts(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.table.Close()
 
-	rand.Seed(time.Now().UnixNano())
 	randomDuration := func(max time.Duration) time.Duration {
 		return time.Duration(rand.Int63n(int64(max)))
 	}

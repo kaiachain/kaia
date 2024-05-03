@@ -1752,7 +1752,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	// It has to be cached because TestBlockChain_SetCanonicalBlock calls it many times
 	if len(internalTxContractCode) == 0 {
 		contracts, err := compiler.CompileSolidityOrLoad("",
-			"../contracts/internal_tx_contract/internal_tx_contract.sol")
+			"../contracts/contracts/testing/internal_tx_contract/internal_tx_contract.sol")
 		assert.Nil(t, err)
 
 		var contract compiler.Contract
@@ -1912,7 +1912,6 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	blockchain, _ := NewBlockChain(db, cacheConfig, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
 	defer blockchain.Stop()
 
-	rand.Seed(time.Now().UnixNano())
 	chainLength := rand.Int63n(500) + 100
 
 	// generate blocks

@@ -21,6 +21,7 @@
 package snapshot
 
 import (
+	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -28,19 +29,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types/account"
-
 	"github.com/VictoriaMetrics/fastcache"
-	"github.com/klaytn/klaytn/storage/database"
-
+	"github.com/klaytn/klaytn/blockchain/types/account"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/rlp"
+	"github.com/klaytn/klaytn/storage/database"
 )
 
 // randomHash generates a random blob of data and returns it as a hash.
 func randomHash() common.Hash {
 	var hash common.Hash
-	if n, err := rand.Read(hash[:]); n != common.HashLength || err != nil {
+	if n, err := crand.Read(hash[:]); n != common.HashLength || err != nil {
 		panic(err)
 	}
 	return hash
@@ -48,8 +47,6 @@ func randomHash() common.Hash {
 
 // randomAccount generates a random account and returns it RLP encoded.
 func randomAccount() []byte {
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	var (
 		acc  account.Account
 		root = randomHash()

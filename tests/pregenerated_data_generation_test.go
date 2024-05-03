@@ -28,7 +28,6 @@ import (
 	"runtime/pprof"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -39,10 +38,6 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 var errNoOriginalDataDir = errors.New("original data directory does not exist, aborting the test")
 

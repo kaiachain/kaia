@@ -22,9 +22,10 @@ import (
 	"testing"
 
 	"github.com/klaytn/klaytn/blockchain"
+	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
-	rewardcontract "github.com/klaytn/klaytn/contracts/reward/contract"
+	rewardcontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/consensus"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/log"
@@ -90,7 +91,7 @@ func TestAddressBookConnector(t *testing.T) {
 	}
 
 	// Temporarily use the newly deployed address in StakingManager
-	oldAddr := common.HexToAddress(rewardcontract.AddressBookContractAddress)
+	oldAddr := system.AddressBookAddr
 	reward.SetTestAddressBookAddress(deployAddr)
 	defer reward.SetTestAddressBookAddress(oldAddr)
 

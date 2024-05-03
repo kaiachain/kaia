@@ -27,16 +27,11 @@ import (
 	mrand "math/rand"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/storage/database"
 )
-
-func init() {
-	mrand.Seed(time.Now().Unix())
-}
 
 func TestProof(t *testing.T) {
 	trie, vals := randomTrie(500)
