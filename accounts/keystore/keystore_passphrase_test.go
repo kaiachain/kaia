@@ -25,11 +25,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
-
+	"github.com/google/uuid"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/crypto"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -75,8 +74,11 @@ func TestEncryptDecryptV4Single(t *testing.T) {
 
 	auth := string("password")
 
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+
 	key := &KeyV4{
-		Id:          uuid.NewRandom(),
+		Id:          id,
 		Address:     crypto.PubkeyToAddress(pk.PublicKey),
 		PrivateKeys: [][]*ecdsa.PrivateKey{{pk}},
 	}
@@ -99,10 +101,12 @@ func TestEncryptDecryptV4Multiple(t *testing.T) {
 		pks[i] = k
 	}
 
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
 	auth := "password"
 
 	key := &KeyV4{
-		Id:          uuid.NewRandom(),
+		Id:          id,
 		Address:     crypto.PubkeyToAddress(pks[0].PublicKey),
 		PrivateKeys: [][]*ecdsa.PrivateKey{pks},
 	}
@@ -129,10 +133,12 @@ func TestEncryptDecryptV4RoleBased(t *testing.T) {
 		}
 	}
 
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
 	auth := "password"
 
 	key := &KeyV4{
-		Id:          uuid.NewRandom(),
+		Id:          id,
 		Address:     crypto.PubkeyToAddress(pks[0][0].PublicKey),
 		PrivateKeys: pks,
 	}
