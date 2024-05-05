@@ -36,16 +36,18 @@ The contracts in `contracts/testing` are used for unit testing and performance b
 
 ### Libraries
 
-These contracts in `contracts/libs` are external dependencies. Some old libraries are kept to support other legacy contracts.
+These contracts in `contracts/libs` are external dependencies and libraries. Some old libraries are kept to support other legacy contracts.
 
 - `kip13/InterfaceIdentifier.sol`: The ERC-165 supportsInterface.
 - `openzeppelin-contracts-v2/*`: OpenZeppelin contracts.
 - `Ownable.sol`: Ownable contract.
 - `SafeMath.sol`: SafeMath for older solidity versions.
+- `ValidContract.sol`: Check if the contract is valid.
 
 Some libraries are outside `/contracts` directory and are installed via npm
 
-- e.g. `node_modules/@openzeppelin/contracts`: OpenZeppelin contracts.
+- `node_modules/@openzeppelin/contracts`: OpenZeppelin contracts.
+- `node_modules/openzeppelin-contracts-5.0`: OpenZeppelin contracts v5.0.
 
 ### Service chain contracts
 
@@ -78,8 +80,11 @@ These contracts in `contracts/system_contracts` are deployed or planned to be de
 - `kip149/Registry.sol`: The [KIP-146](https://github.com/klaytn/kips/blob/main/KIPs/kip-146.md) system contract registry.
   - Deployed at address 0x401 via [hardfork](../consensus/istanbul/backend/engine.go#L547): [testnet](https://baobab.klaytnfinder.io/account/0x0000000000000000000000000000000000000401), [mainnet](https://www.klaytnfinder.io/account/0x0000000000000000000000000000000000000401)
   - Introduced with v1.12.0 in Dec 2023. active to date.
+- `kip163/CnStakingV3MultiSig.sol`: TBA.
+  - Not deployed yet.
+- `kip163/PublicDelegation.sol`: TBA.
+  - Not deployed yet.
 - `misc/credit.sol`: The credit data.
   - Deployed at address [0x0](https://klaytnscope.com/account/0x0000000000000000000000000000000000000000?tabId=contractCode), not on testnet.
   - Deployed at the [genesis block](/blockchain/genesis_alloc.go) in 2018, relevant to date.
 - `proxy/proxy.sol`: The ERC1967 Upgradable Proxy.
-
