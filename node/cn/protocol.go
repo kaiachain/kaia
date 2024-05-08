@@ -56,7 +56,7 @@ var ProtocolLengths = []uint64{21, 19, 17, 8}
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
 // Kaia protocol message codes
-// TODO-Kaia-Issue751 Protocol message should be refactored. Present code is not used.
+// TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
 const (
 	// Protocol messages belonging to klay/62
 	StatusMsg                   = 0x00

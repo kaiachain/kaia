@@ -45,7 +45,7 @@ type weightedValidator struct {
 	address common.Address
 
 	rewardAddress atomic.Value
-	votingPower   uint64 // TODO-Kaia-Issue1336 This should be updated for governance implementation
+	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
 	weight        uint64
 }
 
@@ -132,7 +132,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 		}
 		proposers = append(proposers, val)
 
-		// TODO-Kaia-Issue1166 Disable Trace log later
+		// TODO-Klaytn-Issue1166 Disable Trace log later
 		logger.Trace("RecoverWeightedCouncilProposer() proposers", "i", i, "address", val.Address().String())
 	}
 	weightedCouncil.proposers = proposers
@@ -552,7 +552,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 	}
 
 	// TODO-Kaia-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
-	// TODO-Kaia-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
+	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
 	// sort validator

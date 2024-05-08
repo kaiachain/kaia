@@ -325,7 +325,7 @@ func (self *worker) update() {
 			}
 			self.commitNewWork()
 
-			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			// Handle ChainSideEvent
 		case <-self.chainSideCh:
@@ -415,7 +415,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 			blockWriteTime := time.Since(start)
 
-			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 
 			// check if canon block and write transactions
@@ -454,7 +454,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
 
-			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
 				self.commitNewWork()

@@ -100,7 +100,7 @@ var (
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
-	// TODO-Kaia-Issue1911  This flag needs to be adjusted to the appropriate value.
+	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
 	//  Currently, this value is taken to cache all 10 million accounts
 	//  and should be optimized considering memory size and performance.
 	maxAccountForCache = 10000000
@@ -123,7 +123,7 @@ const (
 // CacheConfig contains the configuration values for the 1) stateDB caching and
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
-	// TODO-Kaia-Issue1666 Need to check the benefit of trie caching.
+	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
 	ArchiveMode          bool                         // If true, state trie is not pruned and always written to database
 	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
@@ -1149,7 +1149,7 @@ func (bc *BlockChain) procFutureBlocks() {
 // WriteStatus status of write
 type WriteStatus byte
 
-// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 //
 //	Later we may be able to remove SideStatTy.
 const (
@@ -1511,7 +1511,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 		return true
 	}
 
-	// TODO-Kaia-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
+	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
 	if blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 {
 		return true
 	}
@@ -1645,7 +1645,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 
 	bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 
-	// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total blockscore is higher than our known, add it to the canonical chain
@@ -1735,7 +1735,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	default:
 	}
 
-	// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total blockscore is higher than our known, add it to the canonical chain

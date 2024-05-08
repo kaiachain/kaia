@@ -321,7 +321,7 @@ func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	return fmt.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
 }
 
-// TODO-Kaia-Issue833 Disabled because this test fails intermittently in CI
+// TODO-Klaytn-Issue833 Disabled because this test fails intermittently in CI
 /*
 // TestUpdatedKeyfileContents tests that updating the contents of a keystore file
 // is noticed by the watcher, and the account cache is updated accordingly

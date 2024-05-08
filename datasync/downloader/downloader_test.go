@@ -1796,7 +1796,7 @@ func testFakedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
-// TODO-Kaia-Issue833 Disabled because this test fails intermittently in CI
+// TODO-Klaytn-Issue833 Disabled because this test fails intermittently in CI
 /*
 // This test reproduces an issue where unexpected deliveries would
 // block indefinitely if they arrived at the right time.
