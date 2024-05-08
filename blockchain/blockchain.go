@@ -1385,7 +1385,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		trieDBPreimagesSizeGauge.Update(int64(preimagesSize))
 
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
-			// NOTE-Klaytn Not to change the original behavior, error is not returned.
+			// NOTE-Kaia Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
 				logger.Error("Error from trieDB.Cap", "err", err, "limit", nodesSizeLimit-database.IdealBatchSize)

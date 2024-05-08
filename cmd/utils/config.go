@@ -133,7 +133,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
 		ServiceChain:     *sc.DefaultServiceChainConfig(),
 	}
 
-	// NOTE-Klaytn : klaytn loads the flags from yaml, not toml
+	// NOTE-Kaia : klaytn loads the flags from yaml, not toml
 	// Load config file.
 	// if file := ctx.String(ConfigFileFlag.Name); file != "" {
 	// 	if err := LoadConfig(file, &cfg); err != nil {
@@ -909,7 +909,7 @@ func (kCfg *KlayConfig) SetChainDataFetcherConfig(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASDBConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASDBHostFlag.Name) {
@@ -926,7 +926,7 @@ func checkKASDBConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASCacheURLFlag.Name) {
@@ -940,7 +940,7 @@ func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 	kasConfig := kas.DefaultKASConfig

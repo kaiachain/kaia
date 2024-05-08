@@ -30,7 +30,7 @@ import (
 
 const (
 	// TODO-Kaia-MultiSig: Need to fix the maximum number of keys allowed for an account.
-	// NOTE-Klaytn-MultiSig: This value should not be reduced. If it is reduced, there is a case:
+	// NOTE-Kaia-MultiSig: This value should not be reduced. If it is reduced, there is a case:
 	// - the tx validation will be failed if the sender has larger keys.
 	MaxNumKeysForMultiSig = uint64(10)
 )

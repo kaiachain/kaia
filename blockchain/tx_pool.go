@@ -687,7 +687,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrInvalidChainId
 	}
 
-	// NOTE-Klaytn Drop transactions with unexpected gasPrice
+	// NOTE-Kaia Drop transactions with unexpected gasPrice
 	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		// Sanity check for extremely large numbers

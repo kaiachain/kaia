@@ -103,7 +103,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	return nil
 }
 
-// NOTE-Klaytn-RemoveLater Below Prove is only used in tests, not in core codes.
+// NOTE-Kaia-RemoveLater Below Prove is only used in tests, not in core codes.
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.

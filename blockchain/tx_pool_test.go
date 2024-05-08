@@ -402,7 +402,7 @@ func TestInvalidTransactions(t *testing.T) {
 	tx = transaction(1, 100000, key)
 	pool.SetBaseFee(big.NewInt(1000))
 
-	// NOTE-Klaytn We only accept txs with an expected gas price only
+	// NOTE-Kaia We only accept txs with an expected gas price only
 	// regardless of local or remote.
 	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
@@ -443,7 +443,7 @@ func TestInvalidTransactionsMagma(t *testing.T) {
 	tx = transaction(1, 100000, key)
 	pool.SetBaseFee(big.NewInt(1000))
 
-	// NOTE-Klaytn if the gasPrice in tx is lower than txPool's
+	// NOTE-Kaia if the gasPrice in tx is lower than txPool's
 	// It should return ErrGasPriceBelowBaseFee error after magma hardfork
 	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrGasPriceBelowBaseFee, "got", err)
@@ -632,7 +632,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 	tx2, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 	tx3, _ := types.SignTx(types.NewTransaction(0, common.HexToAddress("0xAAAA"), big.NewInt(100), 1000000, big.NewInt(1), nil), signer, key)
 
-	// NOTE-Klaytn Add the first two transaction, ensure the first one stays only
+	// NOTE-Kaia Add the first two transaction, ensure the first one stays only
 	if replace, err := pool.add(tx1, false); err != nil || replace {
 		t.Errorf("first transaction insert failed (%v) or reported replacement (%v)", err, replace)
 	}
@@ -646,7 +646,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 	if tx := pool.pending[addr].txs.items[0]; tx.Hash() != tx1.Hash() {
 		t.Errorf("transaction mismatch: have %x, want %x", tx.Hash(), tx2.Hash())
 	}
-	// NOTE-Klaytn Add the third transaction and ensure it's not saved
+	// NOTE-Kaia Add the third transaction and ensure it's not saved
 	pool.add(tx3, false)
 	pool.promoteExecutables([]common.Address{addr})
 	if pool.pending[addr].Len() != 1 {
@@ -1454,7 +1454,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	}
 }
 
-// NOTE-Klaytn Disable test, because we don't have a pool repricing feature anymore.
+// NOTE-Kaia Disable test, because we don't have a pool repricing feature anymore.
 // Tests that setting the transaction pool gas price to a higher value correctly
 // discards everything cheaper than that and moves any gapped transactions back
 // from the pending pool to the queue.
@@ -1532,7 +1532,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
-	// NOTE-Klaytn Klaytn currently accepts remote txs regardless of gas price.
+	// NOTE-Kaia Klaytn currently accepts remote txs regardless of gas price.
 	// TODO-Kaia-RemoveLater Remove or uncomment the code below once the policy for how to
 	//         deal with underpriced remote txs is decided.
 	// Check that we can't add the old transactions back
@@ -1647,7 +1647,7 @@ func TestTransactionPoolRepricingKeepsLocals(t *testing.T) {
 }
 */
 
-// NOTE-Klaytn Disable test, because we accept only transactions with a expected
+// NOTE-Kaia Disable test, because we accept only transactions with a expected
 //         gas price and there is no underpricing policy anymore.
 // Tests that when the pool reaches its global transaction limit, underpriced
 // transactions are gradually shifted out for more expensive ones and any gapped
@@ -1759,7 +1759,7 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 }
 */
 
-// NOTE-Klaytn Disable test, because we accept only transactions with a expected
+// NOTE-Kaia Disable test, because we accept only transactions with a expected
 //         gas price and there is no underpricing policy anymore.
 // Tests that more expensive transactions push out cheap ones from the pool, but
 // without producing instability by creating gaps that start jumping transactions
@@ -1830,7 +1830,7 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 }
 */
 
-// NOTE-Klaytn Disable this test, because we don't have a replacement rule.
+// NOTE-Kaia Disable this test, because we don't have a replacement rule.
 // Tests that the pool rejects replacement transactions that don't meet the minimum
 // price bump required.
 /*

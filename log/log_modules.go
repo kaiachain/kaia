@@ -53,7 +53,7 @@ func (mi ModuleID) String() string {
 	return moduleNames[mi]
 }
 
-// NOTE-Klaytn-Log Please add module in lexicographical order.
+// NOTE-Kaia-Log Please add module in lexicographical order.
 const (
 	// 0
 	BaseLogger ModuleID = iota

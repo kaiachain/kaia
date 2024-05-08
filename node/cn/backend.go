@@ -385,7 +385,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use latest unitPrice
+	// NOTE-Kaia Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 

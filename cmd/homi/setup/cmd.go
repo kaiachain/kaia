@@ -664,7 +664,7 @@ func Gen(ctx *cli.Context) error {
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
-	// Note-klaytn : the following code that seems unnecessary is for the priority to flags, not yaml
+	// NOTE-Kaia : the following code that seems unnecessary is for the priority to flags, not yaml
 	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
 		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
 		case "baobab":
@@ -1279,7 +1279,7 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 }
 
 func indexGenType(genTypeFlag string, base string) int {
-	// NOTE-Klaytn: genTypeFlag's default value is docker
+	// NOTE-Kaia: genTypeFlag's default value is docker
 	if base != "" && genTypeFlag == "" {
 		genTypeFlag = base
 	}
