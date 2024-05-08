@@ -118,29 +118,29 @@ func DeployAddressBookMock(auth *bind.TransactOpts, backend bind.ContractBackend
 	return address, tx, &AddressBookMock{AddressBookMockCaller: AddressBookMockCaller{contract: contract}, AddressBookMockTransactor: AddressBookMockTransactor{contract: contract}, AddressBookMockFilterer: AddressBookMockFilterer{contract: contract}}, nil
 }
 
-// AddressBookMock is an auto generated Go binding around a Klaytn contract.
+// AddressBookMock is an auto generated Go binding around a Kaia contract.
 type AddressBookMock struct {
 	AddressBookMockCaller     // Read-only binding to the contract
 	AddressBookMockTransactor // Write-only binding to the contract
 	AddressBookMockFilterer   // Log filterer for contract events
 }
 
-// AddressBookMockCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressBookMockCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressBookMockCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressBookMockTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressBookMockTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressBookMockFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressBookMockFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockSession is an auto generated Go binding around a Klaytn contract,
+// AddressBookMockSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressBookMockSession struct {
 	Contract     *AddressBookMock  // Generic contract binding to set the session for
@@ -148,31 +148,31 @@ type AddressBookMockSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressBookMockCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressBookMockCallerSession struct {
 	Contract *AddressBookMockCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// AddressBookMockTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressBookMockTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressBookMockTransactorSession struct {
 	Contract     *AddressBookMockTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressBookMockRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressBookMockRaw struct {
 	Contract *AddressBookMock // Generic contract binding to access the raw methods on
 }
 
-// AddressBookMockCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressBookMockCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressBookMockCallerRaw struct {
 	Contract *AddressBookMockCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressBookMockTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressBookMockTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressBookMockTransactorRaw struct {
 	Contract *AddressBookMockTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1683,29 +1683,29 @@ func DeployAddressBookMockOneCN(auth *bind.TransactOpts, backend bind.ContractBa
 	return address, tx, &AddressBookMockOneCN{AddressBookMockOneCNCaller: AddressBookMockOneCNCaller{contract: contract}, AddressBookMockOneCNTransactor: AddressBookMockOneCNTransactor{contract: contract}, AddressBookMockOneCNFilterer: AddressBookMockOneCNFilterer{contract: contract}}, nil
 }
 
-// AddressBookMockOneCN is an auto generated Go binding around a Klaytn contract.
+// AddressBookMockOneCN is an auto generated Go binding around a Kaia contract.
 type AddressBookMockOneCN struct {
 	AddressBookMockOneCNCaller     // Read-only binding to the contract
 	AddressBookMockOneCNTransactor // Write-only binding to the contract
 	AddressBookMockOneCNFilterer   // Log filterer for contract events
 }
 
-// AddressBookMockOneCNCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressBookMockOneCNCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressBookMockOneCNCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockOneCNTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressBookMockOneCNTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressBookMockOneCNTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockOneCNFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressBookMockOneCNFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressBookMockOneCNFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockOneCNSession is an auto generated Go binding around a Klaytn contract,
+// AddressBookMockOneCNSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressBookMockOneCNSession struct {
 	Contract     *AddressBookMockOneCN // Generic contract binding to set the session for
@@ -1713,31 +1713,31 @@ type AddressBookMockOneCNSession struct {
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockOneCNCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressBookMockOneCNCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressBookMockOneCNCallerSession struct {
 	Contract *AddressBookMockOneCNCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts               // Call options to use throughout this session
 }
 
-// AddressBookMockOneCNTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressBookMockOneCNTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressBookMockOneCNTransactorSession struct {
 	Contract     *AddressBookMockOneCNTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts               // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockOneCNRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressBookMockOneCNRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressBookMockOneCNRaw struct {
 	Contract *AddressBookMockOneCN // Generic contract binding to access the raw methods on
 }
 
-// AddressBookMockOneCNCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressBookMockOneCNCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressBookMockOneCNCallerRaw struct {
 	Contract *AddressBookMockOneCNCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressBookMockOneCNTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressBookMockOneCNTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressBookMockOneCNTransactorRaw struct {
 	Contract *AddressBookMockOneCNTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2020,29 +2020,29 @@ func DeployAddressBookMockThreeCN(auth *bind.TransactOpts, backend bind.Contract
 	return address, tx, &AddressBookMockThreeCN{AddressBookMockThreeCNCaller: AddressBookMockThreeCNCaller{contract: contract}, AddressBookMockThreeCNTransactor: AddressBookMockThreeCNTransactor{contract: contract}, AddressBookMockThreeCNFilterer: AddressBookMockThreeCNFilterer{contract: contract}}, nil
 }
 
-// AddressBookMockThreeCN is an auto generated Go binding around a Klaytn contract.
+// AddressBookMockThreeCN is an auto generated Go binding around a Kaia contract.
 type AddressBookMockThreeCN struct {
 	AddressBookMockThreeCNCaller     // Read-only binding to the contract
 	AddressBookMockThreeCNTransactor // Write-only binding to the contract
 	AddressBookMockThreeCNFilterer   // Log filterer for contract events
 }
 
-// AddressBookMockThreeCNCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressBookMockThreeCNCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressBookMockThreeCNCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockThreeCNTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressBookMockThreeCNTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressBookMockThreeCNTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockThreeCNFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressBookMockThreeCNFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressBookMockThreeCNFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockThreeCNSession is an auto generated Go binding around a Klaytn contract,
+// AddressBookMockThreeCNSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressBookMockThreeCNSession struct {
 	Contract     *AddressBookMockThreeCN // Generic contract binding to set the session for
@@ -2050,31 +2050,31 @@ type AddressBookMockThreeCNSession struct {
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockThreeCNCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressBookMockThreeCNCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressBookMockThreeCNCallerSession struct {
 	Contract *AddressBookMockThreeCNCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                 // Call options to use throughout this session
 }
 
-// AddressBookMockThreeCNTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressBookMockThreeCNTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressBookMockThreeCNTransactorSession struct {
 	Contract     *AddressBookMockThreeCNTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockThreeCNRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressBookMockThreeCNRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressBookMockThreeCNRaw struct {
 	Contract *AddressBookMockThreeCN // Generic contract binding to access the raw methods on
 }
 
-// AddressBookMockThreeCNCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressBookMockThreeCNCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressBookMockThreeCNCallerRaw struct {
 	Contract *AddressBookMockThreeCNCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressBookMockThreeCNTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressBookMockThreeCNTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressBookMockThreeCNTransactorRaw struct {
 	Contract *AddressBookMockThreeCNTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2409,29 +2409,29 @@ func DeployAddressBookMockWrong(auth *bind.TransactOpts, backend bind.ContractBa
 	return address, tx, &AddressBookMockWrong{AddressBookMockWrongCaller: AddressBookMockWrongCaller{contract: contract}, AddressBookMockWrongTransactor: AddressBookMockWrongTransactor{contract: contract}, AddressBookMockWrongFilterer: AddressBookMockWrongFilterer{contract: contract}}, nil
 }
 
-// AddressBookMockWrong is an auto generated Go binding around a Klaytn contract.
+// AddressBookMockWrong is an auto generated Go binding around a Kaia contract.
 type AddressBookMockWrong struct {
 	AddressBookMockWrongCaller     // Read-only binding to the contract
 	AddressBookMockWrongTransactor // Write-only binding to the contract
 	AddressBookMockWrongFilterer   // Log filterer for contract events
 }
 
-// AddressBookMockWrongCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressBookMockWrongCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressBookMockWrongCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockWrongTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressBookMockWrongTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressBookMockWrongTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockWrongFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressBookMockWrongFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressBookMockWrongFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressBookMockWrongSession is an auto generated Go binding around a Klaytn contract,
+// AddressBookMockWrongSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressBookMockWrongSession struct {
 	Contract     *AddressBookMockWrong // Generic contract binding to set the session for
@@ -2439,31 +2439,31 @@ type AddressBookMockWrongSession struct {
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockWrongCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressBookMockWrongCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressBookMockWrongCallerSession struct {
 	Contract *AddressBookMockWrongCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts               // Call options to use throughout this session
 }
 
-// AddressBookMockWrongTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressBookMockWrongTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressBookMockWrongTransactorSession struct {
 	Contract     *AddressBookMockWrongTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts               // Transaction auth options to use throughout this session
 }
 
-// AddressBookMockWrongRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressBookMockWrongRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressBookMockWrongRaw struct {
 	Contract *AddressBookMockWrong // Generic contract binding to access the raw methods on
 }
 
-// AddressBookMockWrongCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressBookMockWrongCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressBookMockWrongCallerRaw struct {
 	Contract *AddressBookMockWrongCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressBookMockWrongTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressBookMockWrongTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressBookMockWrongTransactorRaw struct {
 	Contract *AddressBookMockWrongTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2628,29 +2628,29 @@ func DeployKlaytnReward(auth *bind.TransactOpts, backend bind.ContractBackend) (
 	return address, tx, &KlaytnReward{KlaytnRewardCaller: KlaytnRewardCaller{contract: contract}, KlaytnRewardTransactor: KlaytnRewardTransactor{contract: contract}, KlaytnRewardFilterer: KlaytnRewardFilterer{contract: contract}}, nil
 }
 
-// KlaytnReward is an auto generated Go binding around a Klaytn contract.
+// KlaytnReward is an auto generated Go binding around a Kaia contract.
 type KlaytnReward struct {
 	KlaytnRewardCaller     // Read-only binding to the contract
 	KlaytnRewardTransactor // Write-only binding to the contract
 	KlaytnRewardFilterer   // Log filterer for contract events
 }
 
-// KlaytnRewardCaller is an auto generated read-only Go binding around a Klaytn contract.
+// KlaytnRewardCaller is an auto generated read-only Go binding around a Kaia contract.
 type KlaytnRewardCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// KlaytnRewardTransactor is an auto generated write-only Go binding around a Kaia contract.
 type KlaytnRewardTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// KlaytnRewardFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type KlaytnRewardFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// KlaytnRewardSession is an auto generated Go binding around a Klaytn contract,
+// KlaytnRewardSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type KlaytnRewardSession struct {
 	Contract     *KlaytnReward     // Generic contract binding to set the session for
@@ -2658,31 +2658,31 @@ type KlaytnRewardSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// KlaytnRewardCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// KlaytnRewardCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type KlaytnRewardCallerSession struct {
 	Contract *KlaytnRewardCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// KlaytnRewardTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// KlaytnRewardTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type KlaytnRewardTransactorSession struct {
 	Contract     *KlaytnRewardTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// KlaytnRewardRaw is an auto generated low-level Go binding around a Klaytn contract.
+// KlaytnRewardRaw is an auto generated low-level Go binding around a Kaia contract.
 type KlaytnRewardRaw struct {
 	Contract *KlaytnReward // Generic contract binding to access the raw methods on
 }
 
-// KlaytnRewardCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// KlaytnRewardCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type KlaytnRewardCallerRaw struct {
 	Contract *KlaytnRewardCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// KlaytnRewardTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// KlaytnRewardTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type KlaytnRewardTransactorRaw struct {
 	Contract *KlaytnRewardTransactor // Generic write-only contract binding to access the raw methods on
 }

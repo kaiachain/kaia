@@ -71,29 +71,29 @@ func DeployCypressCredit(auth *bind.TransactOpts, backend bind.ContractBackend) 
 	return address, tx, &CypressCredit{CypressCreditCaller: CypressCreditCaller{contract: contract}, CypressCreditTransactor: CypressCreditTransactor{contract: contract}, CypressCreditFilterer: CypressCreditFilterer{contract: contract}}, nil
 }
 
-// CypressCredit is an auto generated Go binding around a Klaytn contract.
+// CypressCredit is an auto generated Go binding around a Kaia contract.
 type CypressCredit struct {
 	CypressCreditCaller     // Read-only binding to the contract
 	CypressCreditTransactor // Write-only binding to the contract
 	CypressCreditFilterer   // Log filterer for contract events
 }
 
-// CypressCreditCaller is an auto generated read-only Go binding around a Klaytn contract.
+// CypressCreditCaller is an auto generated read-only Go binding around a Kaia contract.
 type CypressCreditCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CypressCreditTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// CypressCreditTransactor is an auto generated write-only Go binding around a Kaia contract.
 type CypressCreditTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CypressCreditFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// CypressCreditFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type CypressCreditFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CypressCreditSession is an auto generated Go binding around a Klaytn contract,
+// CypressCreditSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type CypressCreditSession struct {
 	Contract     *CypressCredit    // Generic contract binding to set the session for
@@ -101,31 +101,31 @@ type CypressCreditSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// CypressCreditCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// CypressCreditCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type CypressCreditCallerSession struct {
 	Contract *CypressCreditCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts        // Call options to use throughout this session
 }
 
-// CypressCreditTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// CypressCreditTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type CypressCreditTransactorSession struct {
 	Contract     *CypressCreditTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
 }
 
-// CypressCreditRaw is an auto generated low-level Go binding around a Klaytn contract.
+// CypressCreditRaw is an auto generated low-level Go binding around a Kaia contract.
 type CypressCreditRaw struct {
 	Contract *CypressCredit // Generic contract binding to access the raw methods on
 }
 
-// CypressCreditCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// CypressCreditCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type CypressCreditCallerRaw struct {
 	Contract *CypressCreditCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// CypressCreditTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// CypressCreditTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type CypressCreditTransactorRaw struct {
 	Contract *CypressCreditTransactor // Generic write-only contract binding to access the raw methods on
 }

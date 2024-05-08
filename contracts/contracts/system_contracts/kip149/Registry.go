@@ -61,29 +61,29 @@ const IRegistryBinRuntime = ``
 // Deprecated: Use IRegistryMetaData.Sigs instead.
 var IRegistryFuncSigs = IRegistryMetaData.Sigs
 
-// IRegistry is an auto generated Go binding around a Klaytn contract.
+// IRegistry is an auto generated Go binding around a Kaia contract.
 type IRegistry struct {
 	IRegistryCaller     // Read-only binding to the contract
 	IRegistryTransactor // Write-only binding to the contract
 	IRegistryFilterer   // Log filterer for contract events
 }
 
-// IRegistryCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IRegistryCaller is an auto generated read-only Go binding around a Kaia contract.
 type IRegistryCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRegistryTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IRegistryTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IRegistryTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRegistryFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IRegistryFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IRegistryFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRegistrySession is an auto generated Go binding around a Klaytn contract,
+// IRegistrySession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IRegistrySession struct {
 	Contract     *IRegistry        // Generic contract binding to set the session for
@@ -91,31 +91,31 @@ type IRegistrySession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IRegistryCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IRegistryCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IRegistryCallerSession struct {
 	Contract *IRegistryCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts    // Call options to use throughout this session
 }
 
-// IRegistryTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IRegistryTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IRegistryTransactorSession struct {
 	Contract     *IRegistryTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// IRegistryRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IRegistryRaw is an auto generated low-level Go binding around a Kaia contract.
 type IRegistryRaw struct {
 	Contract *IRegistry // Generic contract binding to access the raw methods on
 }
 
-// IRegistryCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IRegistryCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IRegistryCallerRaw struct {
 	Contract *IRegistryCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IRegistryTransactorRaw struct {
 	Contract *IRegistryTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -774,29 +774,29 @@ func DeployRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &Registry{RegistryCaller: RegistryCaller{contract: contract}, RegistryTransactor: RegistryTransactor{contract: contract}, RegistryFilterer: RegistryFilterer{contract: contract}}, nil
 }
 
-// Registry is an auto generated Go binding around a Klaytn contract.
+// Registry is an auto generated Go binding around a Kaia contract.
 type Registry struct {
 	RegistryCaller     // Read-only binding to the contract
 	RegistryTransactor // Write-only binding to the contract
 	RegistryFilterer   // Log filterer for contract events
 }
 
-// RegistryCaller is an auto generated read-only Go binding around a Klaytn contract.
+// RegistryCaller is an auto generated read-only Go binding around a Kaia contract.
 type RegistryCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RegistryTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// RegistryTransactor is an auto generated write-only Go binding around a Kaia contract.
 type RegistryTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RegistryFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// RegistryFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type RegistryFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RegistrySession is an auto generated Go binding around a Klaytn contract,
+// RegistrySession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type RegistrySession struct {
 	Contract     *Registry         // Generic contract binding to set the session for
@@ -804,31 +804,31 @@ type RegistrySession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RegistryCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// RegistryCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type RegistryCallerSession struct {
 	Contract *RegistryCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// RegistryTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// RegistryTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type RegistryTransactorSession struct {
 	Contract     *RegistryTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// RegistryRaw is an auto generated low-level Go binding around a Klaytn contract.
+// RegistryRaw is an auto generated low-level Go binding around a Kaia contract.
 type RegistryRaw struct {
 	Contract *Registry // Generic contract binding to access the raw methods on
 }
 
-// RegistryCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// RegistryCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type RegistryCallerRaw struct {
 	Contract *RegistryCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// RegistryTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// RegistryTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type RegistryTransactorRaw struct {
 	Contract *RegistryTransactor // Generic write-only contract binding to access the raw methods on
 }

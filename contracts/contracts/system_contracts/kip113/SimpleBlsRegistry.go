@@ -69,29 +69,29 @@ func DeployAddressUpgradeable(auth *bind.TransactOpts, backend bind.ContractBack
 	return address, tx, &AddressUpgradeable{AddressUpgradeableCaller: AddressUpgradeableCaller{contract: contract}, AddressUpgradeableTransactor: AddressUpgradeableTransactor{contract: contract}, AddressUpgradeableFilterer: AddressUpgradeableFilterer{contract: contract}}, nil
 }
 
-// AddressUpgradeable is an auto generated Go binding around a Klaytn contract.
+// AddressUpgradeable is an auto generated Go binding around a Kaia contract.
 type AddressUpgradeable struct {
 	AddressUpgradeableCaller     // Read-only binding to the contract
 	AddressUpgradeableTransactor // Write-only binding to the contract
 	AddressUpgradeableFilterer   // Log filterer for contract events
 }
 
-// AddressUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// AddressUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressUpgradeableSession struct {
 	Contract     *AddressUpgradeable // Generic contract binding to set the session for
@@ -99,31 +99,31 @@ type AddressUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// AddressUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressUpgradeableCallerSession struct {
 	Contract *AddressUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// AddressUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressUpgradeableTransactorSession struct {
 	Contract     *AddressUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// AddressUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressUpgradeableRaw struct {
 	Contract *AddressUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// AddressUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressUpgradeableCallerRaw struct {
 	Contract *AddressUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressUpgradeableTransactorRaw struct {
 	Contract *AddressUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -223,29 +223,29 @@ var ContextUpgradeableABI = ContextUpgradeableMetaData.ABI
 // ContextUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ContextUpgradeableBinRuntime = ``
 
-// ContextUpgradeable is an auto generated Go binding around a Klaytn contract.
+// ContextUpgradeable is an auto generated Go binding around a Kaia contract.
 type ContextUpgradeable struct {
 	ContextUpgradeableCaller     // Read-only binding to the contract
 	ContextUpgradeableTransactor // Write-only binding to the contract
 	ContextUpgradeableFilterer   // Log filterer for contract events
 }
 
-// ContextUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ContextUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ContextUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ContextUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ContextUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ContextUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ContextUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// ContextUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ContextUpgradeableSession struct {
 	Contract     *ContextUpgradeable // Generic contract binding to set the session for
@@ -253,31 +253,31 @@ type ContextUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// ContextUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ContextUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ContextUpgradeableCallerSession struct {
 	Contract *ContextUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// ContextUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ContextUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ContextUpgradeableTransactorSession struct {
 	Contract     *ContextUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// ContextUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ContextUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ContextUpgradeableRaw struct {
 	Contract *ContextUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// ContextUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ContextUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ContextUpgradeableCallerRaw struct {
 	Contract *ContextUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ContextUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ContextUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ContextUpgradeableTransactorRaw struct {
 	Contract *ContextUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -508,29 +508,29 @@ var ERC1967UpgradeUpgradeableABI = ERC1967UpgradeUpgradeableMetaData.ABI
 // ERC1967UpgradeUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ERC1967UpgradeUpgradeableBinRuntime = ``
 
-// ERC1967UpgradeUpgradeable is an auto generated Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeable is an auto generated Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeable struct {
 	ERC1967UpgradeUpgradeableCaller     // Read-only binding to the contract
 	ERC1967UpgradeUpgradeableTransactor // Write-only binding to the contract
 	ERC1967UpgradeUpgradeableFilterer   // Log filterer for contract events
 }
 
-// ERC1967UpgradeUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC1967UpgradeUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC1967UpgradeUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC1967UpgradeUpgradeableSession struct {
 	Contract     *ERC1967UpgradeUpgradeable // Generic contract binding to set the session for
@@ -538,31 +538,31 @@ type ERC1967UpgradeUpgradeableSession struct {
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC1967UpgradeUpgradeableCallerSession struct {
 	Contract *ERC1967UpgradeUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                    // Call options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC1967UpgradeUpgradeableTransactorSession struct {
 	Contract     *ERC1967UpgradeUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                    // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableRaw struct {
 	Contract *ERC1967UpgradeUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableCallerRaw struct {
 	Contract *ERC1967UpgradeUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableTransactorRaw struct {
 	Contract *ERC1967UpgradeUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1238,29 +1238,29 @@ const IAddressBookBinRuntime = ``
 // Deprecated: Use IAddressBookMetaData.Sigs instead.
 var IAddressBookFuncSigs = IAddressBookMetaData.Sigs
 
-// IAddressBook is an auto generated Go binding around a Klaytn contract.
+// IAddressBook is an auto generated Go binding around a Kaia contract.
 type IAddressBook struct {
 	IAddressBookCaller     // Read-only binding to the contract
 	IAddressBookTransactor // Write-only binding to the contract
 	IAddressBookFilterer   // Log filterer for contract events
 }
 
-// IAddressBookCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IAddressBookCaller is an auto generated read-only Go binding around a Kaia contract.
 type IAddressBookCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IAddressBookTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IAddressBookTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IAddressBookFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IAddressBookFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookSession is an auto generated Go binding around a Klaytn contract,
+// IAddressBookSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IAddressBookSession struct {
 	Contract     *IAddressBook     // Generic contract binding to set the session for
@@ -1268,31 +1268,31 @@ type IAddressBookSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IAddressBookCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IAddressBookCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IAddressBookCallerSession struct {
 	Contract *IAddressBookCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// IAddressBookTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IAddressBookTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IAddressBookTransactorSession struct {
 	Contract     *IAddressBookTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// IAddressBookRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IAddressBookRaw is an auto generated low-level Go binding around a Kaia contract.
 type IAddressBookRaw struct {
 	Contract *IAddressBook // Generic contract binding to access the raw methods on
 }
 
-// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IAddressBookCallerRaw struct {
 	Contract *IAddressBookCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IAddressBookTransactorRaw struct {
 	Contract *IAddressBookTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2159,29 +2159,29 @@ const IBeaconUpgradeableBinRuntime = ``
 // Deprecated: Use IBeaconUpgradeableMetaData.Sigs instead.
 var IBeaconUpgradeableFuncSigs = IBeaconUpgradeableMetaData.Sigs
 
-// IBeaconUpgradeable is an auto generated Go binding around a Klaytn contract.
+// IBeaconUpgradeable is an auto generated Go binding around a Kaia contract.
 type IBeaconUpgradeable struct {
 	IBeaconUpgradeableCaller     // Read-only binding to the contract
 	IBeaconUpgradeableTransactor // Write-only binding to the contract
 	IBeaconUpgradeableFilterer   // Log filterer for contract events
 }
 
-// IBeaconUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IBeaconUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IBeaconUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IBeaconUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IBeaconUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IBeaconUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IBeaconUpgradeableSession struct {
 	Contract     *IBeaconUpgradeable // Generic contract binding to set the session for
@@ -2189,31 +2189,31 @@ type IBeaconUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// IBeaconUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IBeaconUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IBeaconUpgradeableCallerSession struct {
 	Contract *IBeaconUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// IBeaconUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IBeaconUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IBeaconUpgradeableTransactorSession struct {
 	Contract     *IBeaconUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// IBeaconUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IBeaconUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IBeaconUpgradeableRaw struct {
 	Contract *IBeaconUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// IBeaconUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IBeaconUpgradeableCallerRaw struct {
 	Contract *IBeaconUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IBeaconUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IBeaconUpgradeableTransactorRaw struct {
 	Contract *IBeaconUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2349,29 +2349,29 @@ const IERC1822ProxiableUpgradeableBinRuntime = ``
 // Deprecated: Use IERC1822ProxiableUpgradeableMetaData.Sigs instead.
 var IERC1822ProxiableUpgradeableFuncSigs = IERC1822ProxiableUpgradeableMetaData.Sigs
 
-// IERC1822ProxiableUpgradeable is an auto generated Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeable is an auto generated Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeable struct {
 	IERC1822ProxiableUpgradeableCaller     // Read-only binding to the contract
 	IERC1822ProxiableUpgradeableTransactor // Write-only binding to the contract
 	IERC1822ProxiableUpgradeableFilterer   // Log filterer for contract events
 }
 
-// IERC1822ProxiableUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC1822ProxiableUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC1822ProxiableUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC1822ProxiableUpgradeableSession struct {
 	Contract     *IERC1822ProxiableUpgradeable // Generic contract binding to set the session for
@@ -2379,31 +2379,31 @@ type IERC1822ProxiableUpgradeableSession struct {
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC1822ProxiableUpgradeableCallerSession struct {
 	Contract *IERC1822ProxiableUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                       // Call options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC1822ProxiableUpgradeableTransactorSession struct {
 	Contract     *IERC1822ProxiableUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                       // Transaction auth options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableRaw struct {
 	Contract *IERC1822ProxiableUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// IERC1822ProxiableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableCallerRaw struct {
 	Contract *IERC1822ProxiableUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC1822ProxiableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableTransactorRaw struct {
 	Contract *IERC1822ProxiableUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2532,29 +2532,29 @@ var IERC1967UpgradeableABI = IERC1967UpgradeableMetaData.ABI
 // IERC1967UpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC1967UpgradeableBinRuntime = ``
 
-// IERC1967Upgradeable is an auto generated Go binding around a Klaytn contract.
+// IERC1967Upgradeable is an auto generated Go binding around a Kaia contract.
 type IERC1967Upgradeable struct {
 	IERC1967UpgradeableCaller     // Read-only binding to the contract
 	IERC1967UpgradeableTransactor // Write-only binding to the contract
 	IERC1967UpgradeableFilterer   // Log filterer for contract events
 }
 
-// IERC1967UpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC1967UpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC1967UpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC1967UpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC1967UpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IERC1967UpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC1967UpgradeableSession struct {
 	Contract     *IERC1967Upgradeable // Generic contract binding to set the session for
@@ -2562,31 +2562,31 @@ type IERC1967UpgradeableSession struct {
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// IERC1967UpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC1967UpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC1967UpgradeableCallerSession struct {
 	Contract *IERC1967UpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// IERC1967UpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC1967UpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC1967UpgradeableTransactorSession struct {
 	Contract     *IERC1967UpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// IERC1967UpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC1967UpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC1967UpgradeableRaw struct {
 	Contract *IERC1967Upgradeable // Generic contract binding to access the raw methods on
 }
 
-// IERC1967UpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC1967UpgradeableCallerRaw struct {
 	Contract *IERC1967UpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC1967UpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC1967UpgradeableTransactorRaw struct {
 	Contract *IERC1967UpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3107,29 +3107,29 @@ const IKIP113BinRuntime = ``
 // Deprecated: Use IKIP113MetaData.Sigs instead.
 var IKIP113FuncSigs = IKIP113MetaData.Sigs
 
-// IKIP113 is an auto generated Go binding around a Klaytn contract.
+// IKIP113 is an auto generated Go binding around a Kaia contract.
 type IKIP113 struct {
 	IKIP113Caller     // Read-only binding to the contract
 	IKIP113Transactor // Write-only binding to the contract
 	IKIP113Filterer   // Log filterer for contract events
 }
 
-// IKIP113Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IKIP113Caller is an auto generated read-only Go binding around a Kaia contract.
 type IKIP113Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IKIP113Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IKIP113Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IKIP113Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IKIP113Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Session is an auto generated Go binding around a Klaytn contract,
+// IKIP113Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IKIP113Session struct {
 	Contract     *IKIP113          // Generic contract binding to set the session for
@@ -3137,31 +3137,31 @@ type IKIP113Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IKIP113CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IKIP113CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IKIP113CallerSession struct {
 	Contract *IKIP113Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IKIP113TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IKIP113TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IKIP113TransactorSession struct {
 	Contract     *IKIP113Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IKIP113Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IKIP113Raw is an auto generated low-level Go binding around a Kaia contract.
 type IKIP113Raw struct {
 	Contract *IKIP113 // Generic contract binding to access the raw methods on
 }
 
-// IKIP113CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IKIP113CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IKIP113CallerRaw struct {
 	Contract *IKIP113Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IKIP113TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IKIP113TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IKIP113TransactorRaw struct {
 	Contract *IKIP113Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3304,29 +3304,29 @@ var InitializableABI = InitializableMetaData.ABI
 // InitializableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const InitializableBinRuntime = ``
 
-// Initializable is an auto generated Go binding around a Klaytn contract.
+// Initializable is an auto generated Go binding around a Kaia contract.
 type Initializable struct {
 	InitializableCaller     // Read-only binding to the contract
 	InitializableTransactor // Write-only binding to the contract
 	InitializableFilterer   // Log filterer for contract events
 }
 
-// InitializableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// InitializableCaller is an auto generated read-only Go binding around a Kaia contract.
 type InitializableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// InitializableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type InitializableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// InitializableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type InitializableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableSession is an auto generated Go binding around a Klaytn contract,
+// InitializableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type InitializableSession struct {
 	Contract     *Initializable    // Generic contract binding to set the session for
@@ -3334,31 +3334,31 @@ type InitializableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// InitializableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// InitializableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type InitializableCallerSession struct {
 	Contract *InitializableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts        // Call options to use throughout this session
 }
 
-// InitializableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// InitializableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type InitializableTransactorSession struct {
 	Contract     *InitializableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
 }
 
-// InitializableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// InitializableRaw is an auto generated low-level Go binding around a Kaia contract.
 type InitializableRaw struct {
 	Contract *Initializable // Generic contract binding to access the raw methods on
 }
 
-// InitializableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// InitializableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type InitializableCallerRaw struct {
 	Contract *InitializableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// InitializableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// InitializableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type InitializableTransactorRaw struct {
 	Contract *InitializableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3598,29 +3598,29 @@ const OwnableUpgradeableBinRuntime = ``
 // Deprecated: Use OwnableUpgradeableMetaData.Sigs instead.
 var OwnableUpgradeableFuncSigs = OwnableUpgradeableMetaData.Sigs
 
-// OwnableUpgradeable is an auto generated Go binding around a Klaytn contract.
+// OwnableUpgradeable is an auto generated Go binding around a Kaia contract.
 type OwnableUpgradeable struct {
 	OwnableUpgradeableCaller     // Read-only binding to the contract
 	OwnableUpgradeableTransactor // Write-only binding to the contract
 	OwnableUpgradeableFilterer   // Log filterer for contract events
 }
 
-// OwnableUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableUpgradeableSession struct {
 	Contract     *OwnableUpgradeable // Generic contract binding to set the session for
@@ -3628,31 +3628,31 @@ type OwnableUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// OwnableUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableUpgradeableCallerSession struct {
 	Contract *OwnableUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// OwnableUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableUpgradeableTransactorSession struct {
 	Contract     *OwnableUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// OwnableUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableUpgradeableRaw struct {
 	Contract *OwnableUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// OwnableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableUpgradeableCallerRaw struct {
 	Contract *OwnableUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableUpgradeableTransactorRaw struct {
 	Contract *OwnableUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -4147,29 +4147,29 @@ func DeploySimpleBlsRegistry(auth *bind.TransactOpts, backend bind.ContractBacke
 	return address, tx, &SimpleBlsRegistry{SimpleBlsRegistryCaller: SimpleBlsRegistryCaller{contract: contract}, SimpleBlsRegistryTransactor: SimpleBlsRegistryTransactor{contract: contract}, SimpleBlsRegistryFilterer: SimpleBlsRegistryFilterer{contract: contract}}, nil
 }
 
-// SimpleBlsRegistry is an auto generated Go binding around a Klaytn contract.
+// SimpleBlsRegistry is an auto generated Go binding around a Kaia contract.
 type SimpleBlsRegistry struct {
 	SimpleBlsRegistryCaller     // Read-only binding to the contract
 	SimpleBlsRegistryTransactor // Write-only binding to the contract
 	SimpleBlsRegistryFilterer   // Log filterer for contract events
 }
 
-// SimpleBlsRegistryCaller is an auto generated read-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryCaller is an auto generated read-only Go binding around a Kaia contract.
 type SimpleBlsRegistryCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistryTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryTransactor is an auto generated write-only Go binding around a Kaia contract.
 type SimpleBlsRegistryTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistryFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// SimpleBlsRegistryFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type SimpleBlsRegistryFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistrySession is an auto generated Go binding around a Klaytn contract,
+// SimpleBlsRegistrySession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type SimpleBlsRegistrySession struct {
 	Contract     *SimpleBlsRegistry // Generic contract binding to set the session for
@@ -4177,31 +4177,31 @@ type SimpleBlsRegistrySession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// SimpleBlsRegistryCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// SimpleBlsRegistryCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type SimpleBlsRegistryCallerSession struct {
 	Contract *SimpleBlsRegistryCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// SimpleBlsRegistryTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// SimpleBlsRegistryTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type SimpleBlsRegistryTransactorSession struct {
 	Contract     *SimpleBlsRegistryTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// SimpleBlsRegistryRaw is an auto generated low-level Go binding around a Klaytn contract.
+// SimpleBlsRegistryRaw is an auto generated low-level Go binding around a Kaia contract.
 type SimpleBlsRegistryRaw struct {
 	Contract *SimpleBlsRegistry // Generic contract binding to access the raw methods on
 }
 
-// SimpleBlsRegistryCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type SimpleBlsRegistryCallerRaw struct {
 	Contract *SimpleBlsRegistryCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// SimpleBlsRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type SimpleBlsRegistryTransactorRaw struct {
 	Contract *SimpleBlsRegistryTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5691,29 +5691,29 @@ func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.Contract
 	return address, tx, &StorageSlotUpgradeable{StorageSlotUpgradeableCaller: StorageSlotUpgradeableCaller{contract: contract}, StorageSlotUpgradeableTransactor: StorageSlotUpgradeableTransactor{contract: contract}, StorageSlotUpgradeableFilterer: StorageSlotUpgradeableFilterer{contract: contract}}, nil
 }
 
-// StorageSlotUpgradeable is an auto generated Go binding around a Klaytn contract.
+// StorageSlotUpgradeable is an auto generated Go binding around a Kaia contract.
 type StorageSlotUpgradeable struct {
 	StorageSlotUpgradeableCaller     // Read-only binding to the contract
 	StorageSlotUpgradeableTransactor // Write-only binding to the contract
 	StorageSlotUpgradeableFilterer   // Log filterer for contract events
 }
 
-// StorageSlotUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// StorageSlotUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type StorageSlotUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// StorageSlotUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type StorageSlotUpgradeableSession struct {
 	Contract     *StorageSlotUpgradeable // Generic contract binding to set the session for
@@ -5721,31 +5721,31 @@ type StorageSlotUpgradeableSession struct {
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// StorageSlotUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// StorageSlotUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type StorageSlotUpgradeableCallerSession struct {
 	Contract *StorageSlotUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                 // Call options to use throughout this session
 }
 
-// StorageSlotUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// StorageSlotUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type StorageSlotUpgradeableTransactorSession struct {
 	Contract     *StorageSlotUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
 }
 
-// StorageSlotUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// StorageSlotUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type StorageSlotUpgradeableRaw struct {
 	Contract *StorageSlotUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// StorageSlotUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableCallerRaw struct {
 	Contract *StorageSlotUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// StorageSlotUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableTransactorRaw struct {
 	Contract *StorageSlotUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5854,29 +5854,29 @@ const UUPSUpgradeableBinRuntime = ``
 // Deprecated: Use UUPSUpgradeableMetaData.Sigs instead.
 var UUPSUpgradeableFuncSigs = UUPSUpgradeableMetaData.Sigs
 
-// UUPSUpgradeable is an auto generated Go binding around a Klaytn contract.
+// UUPSUpgradeable is an auto generated Go binding around a Kaia contract.
 type UUPSUpgradeable struct {
 	UUPSUpgradeableCaller     // Read-only binding to the contract
 	UUPSUpgradeableTransactor // Write-only binding to the contract
 	UUPSUpgradeableFilterer   // Log filterer for contract events
 }
 
-// UUPSUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// UUPSUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type UUPSUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// UUPSUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type UUPSUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// UUPSUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type UUPSUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// UUPSUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type UUPSUpgradeableSession struct {
 	Contract     *UUPSUpgradeable  // Generic contract binding to set the session for
@@ -5884,31 +5884,31 @@ type UUPSUpgradeableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// UUPSUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// UUPSUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type UUPSUpgradeableCallerSession struct {
 	Contract *UUPSUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// UUPSUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// UUPSUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type UUPSUpgradeableTransactorSession struct {
 	Contract     *UUPSUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// UUPSUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// UUPSUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type UUPSUpgradeableRaw struct {
 	Contract *UUPSUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// UUPSUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// UUPSUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type UUPSUpgradeableCallerRaw struct {
 	Contract *UUPSUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// UUPSUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// UUPSUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type UUPSUpgradeableTransactorRaw struct {
 	Contract *UUPSUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }

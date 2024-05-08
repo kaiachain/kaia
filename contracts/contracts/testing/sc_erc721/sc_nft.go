@@ -63,29 +63,29 @@ func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (commo
 	return address, tx, &Address{AddressCaller: AddressCaller{contract: contract}, AddressTransactor: AddressTransactor{contract: contract}, AddressFilterer: AddressFilterer{contract: contract}}, nil
 }
 
-// Address is an auto generated Go binding around a Klaytn contract.
+// Address is an auto generated Go binding around a Kaia contract.
 type Address struct {
 	AddressCaller     // Read-only binding to the contract
 	AddressTransactor // Write-only binding to the contract
 	AddressFilterer   // Log filterer for contract events
 }
 
-// AddressCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressSession is an auto generated Go binding around a Klaytn contract,
+// AddressSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressSession struct {
 	Contract     *Address          // Generic contract binding to set the session for
@@ -93,31 +93,31 @@ type AddressSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// AddressCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressCallerSession struct {
 	Contract *AddressCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// AddressTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressTransactorSession struct {
 	Contract     *AddressTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// AddressRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressRaw struct {
 	Contract *Address // Generic contract binding to access the raw methods on
 }
 
-// AddressCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressCallerRaw struct {
 	Contract *AddressCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressTransactorRaw struct {
 	Contract *AddressTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -239,29 +239,29 @@ func DeployCounters(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &Counters{CountersCaller: CountersCaller{contract: contract}, CountersTransactor: CountersTransactor{contract: contract}, CountersFilterer: CountersFilterer{contract: contract}}, nil
 }
 
-// Counters is an auto generated Go binding around a Klaytn contract.
+// Counters is an auto generated Go binding around a Kaia contract.
 type Counters struct {
 	CountersCaller     // Read-only binding to the contract
 	CountersTransactor // Write-only binding to the contract
 	CountersFilterer   // Log filterer for contract events
 }
 
-// CountersCaller is an auto generated read-only Go binding around a Klaytn contract.
+// CountersCaller is an auto generated read-only Go binding around a Kaia contract.
 type CountersCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// CountersTransactor is an auto generated write-only Go binding around a Kaia contract.
 type CountersTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// CountersFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type CountersFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersSession is an auto generated Go binding around a Klaytn contract,
+// CountersSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type CountersSession struct {
 	Contract     *Counters         // Generic contract binding to set the session for
@@ -269,31 +269,31 @@ type CountersSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// CountersCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// CountersCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type CountersCallerSession struct {
 	Contract *CountersCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// CountersTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// CountersTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type CountersTransactorSession struct {
 	Contract     *CountersTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// CountersRaw is an auto generated low-level Go binding around a Klaytn contract.
+// CountersRaw is an auto generated low-level Go binding around a Kaia contract.
 type CountersRaw struct {
 	Contract *Counters // Generic contract binding to access the raw methods on
 }
 
-// CountersCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// CountersCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type CountersCallerRaw struct {
 	Contract *CountersCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// CountersTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// CountersTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type CountersTransactorRaw struct {
 	Contract *CountersTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -400,29 +400,29 @@ const ERC165BinRuntime = ``
 // Deprecated: Use ERC165MetaData.Sigs instead.
 var ERC165FuncSigs = ERC165MetaData.Sigs
 
-// ERC165 is an auto generated Go binding around a Klaytn contract.
+// ERC165 is an auto generated Go binding around a Kaia contract.
 type ERC165 struct {
 	ERC165Caller     // Read-only binding to the contract
 	ERC165Transactor // Write-only binding to the contract
 	ERC165Filterer   // Log filterer for contract events
 }
 
-// ERC165Caller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC165Caller is an auto generated read-only Go binding around a Kaia contract.
 type ERC165Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC165Transactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC165Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC165Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC165Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Session is an auto generated Go binding around a Klaytn contract,
+// ERC165Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC165Session struct {
 	Contract     *ERC165           // Generic contract binding to set the session for
@@ -430,31 +430,31 @@ type ERC165Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC165CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC165CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC165CallerSession struct {
 	Contract *ERC165Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// ERC165TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC165TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC165TransactorSession struct {
 	Contract     *ERC165Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC165Raw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC165Raw is an auto generated low-level Go binding around a Kaia contract.
 type ERC165Raw struct {
 	Contract *ERC165 // Generic contract binding to access the raw methods on
 }
 
-// ERC165CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC165CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC165CallerRaw struct {
 	Contract *ERC165Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC165TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC165TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC165TransactorRaw struct {
 	Contract *ERC165Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -621,29 +621,29 @@ func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common
 	return address, tx, &ERC721{ERC721Caller: ERC721Caller{contract: contract}, ERC721Transactor: ERC721Transactor{contract: contract}, ERC721Filterer: ERC721Filterer{contract: contract}}, nil
 }
 
-// ERC721 is an auto generated Go binding around a Klaytn contract.
+// ERC721 is an auto generated Go binding around a Kaia contract.
 type ERC721 struct {
 	ERC721Caller     // Read-only binding to the contract
 	ERC721Transactor // Write-only binding to the contract
 	ERC721Filterer   // Log filterer for contract events
 }
 
-// ERC721Caller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721Caller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721Transactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Session is an auto generated Go binding around a Klaytn contract,
+// ERC721Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721Session struct {
 	Contract     *ERC721           // Generic contract binding to set the session for
@@ -651,31 +651,31 @@ type ERC721Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721CallerSession struct {
 	Contract *ERC721Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// ERC721TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721TransactorSession struct {
 	Contract     *ERC721Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721Raw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721Raw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721Raw struct {
 	Contract *ERC721 // Generic contract binding to access the raw methods on
 }
 
-// ERC721CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721CallerRaw struct {
 	Contract *ERC721Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721TransactorRaw struct {
 	Contract *ERC721Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1533,29 +1533,29 @@ func DeployERC721Burnable(auth *bind.TransactOpts, backend bind.ContractBackend)
 	return address, tx, &ERC721Burnable{ERC721BurnableCaller: ERC721BurnableCaller{contract: contract}, ERC721BurnableTransactor: ERC721BurnableTransactor{contract: contract}, ERC721BurnableFilterer: ERC721BurnableFilterer{contract: contract}}, nil
 }
 
-// ERC721Burnable is an auto generated Go binding around a Klaytn contract.
+// ERC721Burnable is an auto generated Go binding around a Kaia contract.
 type ERC721Burnable struct {
 	ERC721BurnableCaller     // Read-only binding to the contract
 	ERC721BurnableTransactor // Write-only binding to the contract
 	ERC721BurnableFilterer   // Log filterer for contract events
 }
 
-// ERC721BurnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721BurnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721BurnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721BurnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721BurnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721BurnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721BurnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableSession is an auto generated Go binding around a Klaytn contract,
+// ERC721BurnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721BurnableSession struct {
 	Contract     *ERC721Burnable   // Generic contract binding to set the session for
@@ -1563,31 +1563,31 @@ type ERC721BurnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721BurnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721BurnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721BurnableCallerSession struct {
 	Contract *ERC721BurnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ERC721BurnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721BurnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721BurnableTransactorSession struct {
 	Contract     *ERC721BurnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ERC721BurnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721BurnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721BurnableRaw struct {
 	Contract *ERC721Burnable // Generic contract binding to access the raw methods on
 }
 
-// ERC721BurnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721BurnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721BurnableCallerRaw struct {
 	Contract *ERC721BurnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721BurnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721BurnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721BurnableTransactorRaw struct {
 	Contract *ERC721BurnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2468,29 +2468,29 @@ func DeployERC721Enumerable(auth *bind.TransactOpts, backend bind.ContractBacken
 	return address, tx, &ERC721Enumerable{ERC721EnumerableCaller: ERC721EnumerableCaller{contract: contract}, ERC721EnumerableTransactor: ERC721EnumerableTransactor{contract: contract}, ERC721EnumerableFilterer: ERC721EnumerableFilterer{contract: contract}}, nil
 }
 
-// ERC721Enumerable is an auto generated Go binding around a Klaytn contract.
+// ERC721Enumerable is an auto generated Go binding around a Kaia contract.
 type ERC721Enumerable struct {
 	ERC721EnumerableCaller     // Read-only binding to the contract
 	ERC721EnumerableTransactor // Write-only binding to the contract
 	ERC721EnumerableFilterer   // Log filterer for contract events
 }
 
-// ERC721EnumerableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721EnumerableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721EnumerableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721EnumerableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721EnumerableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721EnumerableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721EnumerableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721EnumerableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721EnumerableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721EnumerableSession is an auto generated Go binding around a Klaytn contract,
+// ERC721EnumerableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721EnumerableSession struct {
 	Contract     *ERC721Enumerable // Generic contract binding to set the session for
@@ -2498,31 +2498,31 @@ type ERC721EnumerableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721EnumerableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721EnumerableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721EnumerableCallerSession struct {
 	Contract *ERC721EnumerableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts           // Call options to use throughout this session
 }
 
-// ERC721EnumerableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721EnumerableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721EnumerableTransactorSession struct {
 	Contract     *ERC721EnumerableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts           // Transaction auth options to use throughout this session
 }
 
-// ERC721EnumerableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721EnumerableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721EnumerableRaw struct {
 	Contract *ERC721Enumerable // Generic contract binding to access the raw methods on
 }
 
-// ERC721EnumerableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721EnumerableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721EnumerableCallerRaw struct {
 	Contract *ERC721EnumerableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721EnumerableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721EnumerableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721EnumerableTransactorRaw struct {
 	Contract *ERC721EnumerableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3472,29 +3472,29 @@ func DeployERC721Full(auth *bind.TransactOpts, backend bind.ContractBackend, nam
 	return address, tx, &ERC721Full{ERC721FullCaller: ERC721FullCaller{contract: contract}, ERC721FullTransactor: ERC721FullTransactor{contract: contract}, ERC721FullFilterer: ERC721FullFilterer{contract: contract}}, nil
 }
 
-// ERC721Full is an auto generated Go binding around a Klaytn contract.
+// ERC721Full is an auto generated Go binding around a Kaia contract.
 type ERC721Full struct {
 	ERC721FullCaller     // Read-only binding to the contract
 	ERC721FullTransactor // Write-only binding to the contract
 	ERC721FullFilterer   // Log filterer for contract events
 }
 
-// ERC721FullCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721FullCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721FullCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721FullTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721FullTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721FullTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721FullFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721FullFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721FullFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721FullSession is an auto generated Go binding around a Klaytn contract,
+// ERC721FullSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721FullSession struct {
 	Contract     *ERC721Full       // Generic contract binding to set the session for
@@ -3502,31 +3502,31 @@ type ERC721FullSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721FullCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721FullCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721FullCallerSession struct {
 	Contract *ERC721FullCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts     // Call options to use throughout this session
 }
 
-// ERC721FullTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721FullTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721FullTransactorSession struct {
 	Contract     *ERC721FullTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// ERC721FullRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721FullRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721FullRaw struct {
 	Contract *ERC721Full // Generic contract binding to access the raw methods on
 }
 
-// ERC721FullCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721FullCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721FullCallerRaw struct {
 	Contract *ERC721FullCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721FullTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721FullTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721FullTransactorRaw struct {
 	Contract *ERC721FullTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -4560,29 +4560,29 @@ func DeployERC721Metadata(auth *bind.TransactOpts, backend bind.ContractBackend,
 	return address, tx, &ERC721Metadata{ERC721MetadataCaller: ERC721MetadataCaller{contract: contract}, ERC721MetadataTransactor: ERC721MetadataTransactor{contract: contract}, ERC721MetadataFilterer: ERC721MetadataFilterer{contract: contract}}, nil
 }
 
-// ERC721Metadata is an auto generated Go binding around a Klaytn contract.
+// ERC721Metadata is an auto generated Go binding around a Kaia contract.
 type ERC721Metadata struct {
 	ERC721MetadataCaller     // Read-only binding to the contract
 	ERC721MetadataTransactor // Write-only binding to the contract
 	ERC721MetadataFilterer   // Log filterer for contract events
 }
 
-// ERC721MetadataCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721MetadataCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721MetadataCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721MetadataTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721MetadataTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721MetadataFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721MetadataFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataSession is an auto generated Go binding around a Klaytn contract,
+// ERC721MetadataSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721MetadataSession struct {
 	Contract     *ERC721Metadata   // Generic contract binding to set the session for
@@ -4590,31 +4590,31 @@ type ERC721MetadataSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721MetadataCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721MetadataCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721MetadataCallerSession struct {
 	Contract *ERC721MetadataCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ERC721MetadataTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721MetadataTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721MetadataTransactorSession struct {
 	Contract     *ERC721MetadataTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ERC721MetadataRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721MetadataRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721MetadataRaw struct {
 	Contract *ERC721Metadata // Generic contract binding to access the raw methods on
 }
 
-// ERC721MetadataCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721MetadataCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721MetadataCallerRaw struct {
 	Contract *ERC721MetadataCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721MetadataTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721MetadataTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721MetadataTransactorRaw struct {
 	Contract *ERC721MetadataTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5543,29 +5543,29 @@ const ERC721MetadataMintableBinRuntime = ``
 // Deprecated: Use ERC721MetadataMintableMetaData.Sigs instead.
 var ERC721MetadataMintableFuncSigs = ERC721MetadataMintableMetaData.Sigs
 
-// ERC721MetadataMintable is an auto generated Go binding around a Klaytn contract.
+// ERC721MetadataMintable is an auto generated Go binding around a Kaia contract.
 type ERC721MetadataMintable struct {
 	ERC721MetadataMintableCaller     // Read-only binding to the contract
 	ERC721MetadataMintableTransactor // Write-only binding to the contract
 	ERC721MetadataMintableFilterer   // Log filterer for contract events
 }
 
-// ERC721MetadataMintableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721MetadataMintableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721MetadataMintableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataMintableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721MetadataMintableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721MetadataMintableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataMintableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721MetadataMintableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721MetadataMintableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MetadataMintableSession is an auto generated Go binding around a Klaytn contract,
+// ERC721MetadataMintableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721MetadataMintableSession struct {
 	Contract     *ERC721MetadataMintable // Generic contract binding to set the session for
@@ -5573,31 +5573,31 @@ type ERC721MetadataMintableSession struct {
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// ERC721MetadataMintableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721MetadataMintableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721MetadataMintableCallerSession struct {
 	Contract *ERC721MetadataMintableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                 // Call options to use throughout this session
 }
 
-// ERC721MetadataMintableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721MetadataMintableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721MetadataMintableTransactorSession struct {
 	Contract     *ERC721MetadataMintableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
 }
 
-// ERC721MetadataMintableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721MetadataMintableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721MetadataMintableRaw struct {
 	Contract *ERC721MetadataMintable // Generic contract binding to access the raw methods on
 }
 
-// ERC721MetadataMintableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721MetadataMintableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721MetadataMintableCallerRaw struct {
 	Contract *ERC721MetadataMintableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721MetadataMintableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721MetadataMintableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721MetadataMintableTransactorRaw struct {
 	Contract *ERC721MetadataMintableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -6900,29 +6900,29 @@ const ERC721ServiceChainBinRuntime = ``
 // Deprecated: Use ERC721ServiceChainMetaData.Sigs instead.
 var ERC721ServiceChainFuncSigs = ERC721ServiceChainMetaData.Sigs
 
-// ERC721ServiceChain is an auto generated Go binding around a Klaytn contract.
+// ERC721ServiceChain is an auto generated Go binding around a Kaia contract.
 type ERC721ServiceChain struct {
 	ERC721ServiceChainCaller     // Read-only binding to the contract
 	ERC721ServiceChainTransactor // Write-only binding to the contract
 	ERC721ServiceChainFilterer   // Log filterer for contract events
 }
 
-// ERC721ServiceChainCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721ServiceChainCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721ServiceChainCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721ServiceChainTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721ServiceChainTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721ServiceChainFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721ServiceChainFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainSession is an auto generated Go binding around a Klaytn contract,
+// ERC721ServiceChainSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721ServiceChainSession struct {
 	Contract     *ERC721ServiceChain // Generic contract binding to set the session for
@@ -6930,31 +6930,31 @@ type ERC721ServiceChainSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// ERC721ServiceChainCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721ServiceChainCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721ServiceChainCallerSession struct {
 	Contract *ERC721ServiceChainCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// ERC721ServiceChainTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721ServiceChainTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721ServiceChainTransactorSession struct {
 	Contract     *ERC721ServiceChainTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// ERC721ServiceChainRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721ServiceChainRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721ServiceChainRaw struct {
 	Contract *ERC721ServiceChain // Generic contract binding to access the raw methods on
 }
 
-// ERC721ServiceChainCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721ServiceChainCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721ServiceChainCallerRaw struct {
 	Contract *ERC721ServiceChainCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721ServiceChainTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721ServiceChainTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721ServiceChainTransactorRaw struct {
 	Contract *ERC721ServiceChainTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -8101,29 +8101,29 @@ const IERC165BinRuntime = ``
 // Deprecated: Use IERC165MetaData.Sigs instead.
 var IERC165FuncSigs = IERC165MetaData.Sigs
 
-// IERC165 is an auto generated Go binding around a Klaytn contract.
+// IERC165 is an auto generated Go binding around a Kaia contract.
 type IERC165 struct {
 	IERC165Caller     // Read-only binding to the contract
 	IERC165Transactor // Write-only binding to the contract
 	IERC165Filterer   // Log filterer for contract events
 }
 
-// IERC165Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC165Caller is an auto generated read-only Go binding around a Kaia contract.
 type IERC165Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC165Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC165Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC165Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC165Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Session is an auto generated Go binding around a Klaytn contract,
+// IERC165Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC165Session struct {
 	Contract     *IERC165          // Generic contract binding to set the session for
@@ -8131,31 +8131,31 @@ type IERC165Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC165CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC165CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC165CallerSession struct {
 	Contract *IERC165Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IERC165TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC165TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC165TransactorSession struct {
 	Contract     *IERC165Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IERC165Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC165Raw is an auto generated low-level Go binding around a Kaia contract.
 type IERC165Raw struct {
 	Contract *IERC165 // Generic contract binding to access the raw methods on
 }
 
-// IERC165CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC165CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC165CallerRaw struct {
 	Contract *IERC165Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC165TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC165TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC165TransactorRaw struct {
 	Contract *IERC165Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -8300,29 +8300,29 @@ const IERC721BinRuntime = ``
 // Deprecated: Use IERC721MetaData.Sigs instead.
 var IERC721FuncSigs = IERC721MetaData.Sigs
 
-// IERC721 is an auto generated Go binding around a Klaytn contract.
+// IERC721 is an auto generated Go binding around a Kaia contract.
 type IERC721 struct {
 	IERC721Caller     // Read-only binding to the contract
 	IERC721Transactor // Write-only binding to the contract
 	IERC721Filterer   // Log filterer for contract events
 }
 
-// IERC721Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721Caller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Session is an auto generated Go binding around a Klaytn contract,
+// IERC721Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721Session struct {
 	Contract     *IERC721          // Generic contract binding to set the session for
@@ -8330,31 +8330,31 @@ type IERC721Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC721CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721CallerSession struct {
 	Contract *IERC721Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IERC721TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721TransactorSession struct {
 	Contract     *IERC721Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IERC721Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721Raw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721Raw struct {
 	Contract *IERC721 // Generic contract binding to access the raw methods on
 }
 
-// IERC721CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721CallerRaw struct {
 	Contract *IERC721Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721TransactorRaw struct {
 	Contract *IERC721Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -9180,29 +9180,29 @@ const IERC721BridgeReceiverBinRuntime = ``
 // Deprecated: Use IERC721BridgeReceiverMetaData.Sigs instead.
 var IERC721BridgeReceiverFuncSigs = IERC721BridgeReceiverMetaData.Sigs
 
-// IERC721BridgeReceiver is an auto generated Go binding around a Klaytn contract.
+// IERC721BridgeReceiver is an auto generated Go binding around a Kaia contract.
 type IERC721BridgeReceiver struct {
 	IERC721BridgeReceiverCaller     // Read-only binding to the contract
 	IERC721BridgeReceiverTransactor // Write-only binding to the contract
 	IERC721BridgeReceiverFilterer   // Log filterer for contract events
 }
 
-// IERC721BridgeReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721BridgeReceiverFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721BridgeReceiverFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverSession is an auto generated Go binding around a Klaytn contract,
+// IERC721BridgeReceiverSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721BridgeReceiverSession struct {
 	Contract     *IERC721BridgeReceiver // Generic contract binding to set the session for
@@ -9210,31 +9210,31 @@ type IERC721BridgeReceiverSession struct {
 	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
 }
 
-// IERC721BridgeReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721BridgeReceiverCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721BridgeReceiverCallerSession struct {
 	Contract *IERC721BridgeReceiverCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                // Call options to use throughout this session
 }
 
-// IERC721BridgeReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721BridgeReceiverTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721BridgeReceiverTransactorSession struct {
 	Contract     *IERC721BridgeReceiverTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                // Transaction auth options to use throughout this session
 }
 
-// IERC721BridgeReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721BridgeReceiverRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721BridgeReceiverRaw struct {
 	Contract *IERC721BridgeReceiver // Generic contract binding to access the raw methods on
 }
 
-// IERC721BridgeReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverCallerRaw struct {
 	Contract *IERC721BridgeReceiverCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721BridgeReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverTransactorRaw struct {
 	Contract *IERC721BridgeReceiverTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -9374,29 +9374,29 @@ const IERC721EnumerableBinRuntime = ``
 // Deprecated: Use IERC721EnumerableMetaData.Sigs instead.
 var IERC721EnumerableFuncSigs = IERC721EnumerableMetaData.Sigs
 
-// IERC721Enumerable is an auto generated Go binding around a Klaytn contract.
+// IERC721Enumerable is an auto generated Go binding around a Kaia contract.
 type IERC721Enumerable struct {
 	IERC721EnumerableCaller     // Read-only binding to the contract
 	IERC721EnumerableTransactor // Write-only binding to the contract
 	IERC721EnumerableFilterer   // Log filterer for contract events
 }
 
-// IERC721EnumerableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721EnumerableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721EnumerableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721EnumerableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721EnumerableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721EnumerableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721EnumerableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721EnumerableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721EnumerableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721EnumerableSession is an auto generated Go binding around a Klaytn contract,
+// IERC721EnumerableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721EnumerableSession struct {
 	Contract     *IERC721Enumerable // Generic contract binding to set the session for
@@ -9404,31 +9404,31 @@ type IERC721EnumerableSession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IERC721EnumerableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721EnumerableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721EnumerableCallerSession struct {
 	Contract *IERC721EnumerableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// IERC721EnumerableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721EnumerableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721EnumerableTransactorSession struct {
 	Contract     *IERC721EnumerableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// IERC721EnumerableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721EnumerableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721EnumerableRaw struct {
 	Contract *IERC721Enumerable // Generic contract binding to access the raw methods on
 }
 
-// IERC721EnumerableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721EnumerableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721EnumerableCallerRaw struct {
 	Contract *IERC721EnumerableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721EnumerableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721EnumerableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721EnumerableTransactorRaw struct {
 	Contract *IERC721EnumerableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -10353,29 +10353,29 @@ const IERC721MetadataBinRuntime = ``
 // Deprecated: Use IERC721MetadataMetaData.Sigs instead.
 var IERC721MetadataFuncSigs = IERC721MetadataMetaData.Sigs
 
-// IERC721Metadata is an auto generated Go binding around a Klaytn contract.
+// IERC721Metadata is an auto generated Go binding around a Kaia contract.
 type IERC721Metadata struct {
 	IERC721MetadataCaller     // Read-only binding to the contract
 	IERC721MetadataTransactor // Write-only binding to the contract
 	IERC721MetadataFilterer   // Log filterer for contract events
 }
 
-// IERC721MetadataCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721MetadataCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721MetadataCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721MetadataTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721MetadataTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721MetadataTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721MetadataFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721MetadataFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721MetadataFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721MetadataSession is an auto generated Go binding around a Klaytn contract,
+// IERC721MetadataSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721MetadataSession struct {
 	Contract     *IERC721Metadata  // Generic contract binding to set the session for
@@ -10383,31 +10383,31 @@ type IERC721MetadataSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC721MetadataCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721MetadataCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721MetadataCallerSession struct {
 	Contract *IERC721MetadataCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// IERC721MetadataTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721MetadataTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721MetadataTransactorSession struct {
 	Contract     *IERC721MetadataTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// IERC721MetadataRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721MetadataRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721MetadataRaw struct {
 	Contract *IERC721Metadata // Generic contract binding to access the raw methods on
 }
 
-// IERC721MetadataCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721MetadataCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721MetadataCallerRaw struct {
 	Contract *IERC721MetadataCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721MetadataTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721MetadataTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721MetadataTransactorRaw struct {
 	Contract *IERC721MetadataTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -11320,29 +11320,29 @@ const IERC721ReceiverBinRuntime = ``
 // Deprecated: Use IERC721ReceiverMetaData.Sigs instead.
 var IERC721ReceiverFuncSigs = IERC721ReceiverMetaData.Sigs
 
-// IERC721Receiver is an auto generated Go binding around a Klaytn contract.
+// IERC721Receiver is an auto generated Go binding around a Kaia contract.
 type IERC721Receiver struct {
 	IERC721ReceiverCaller     // Read-only binding to the contract
 	IERC721ReceiverTransactor // Write-only binding to the contract
 	IERC721ReceiverFilterer   // Log filterer for contract events
 }
 
-// IERC721ReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721ReceiverCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721ReceiverCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721ReceiverTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721ReceiverTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721ReceiverFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721ReceiverFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverSession is an auto generated Go binding around a Klaytn contract,
+// IERC721ReceiverSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721ReceiverSession struct {
 	Contract     *IERC721Receiver  // Generic contract binding to set the session for
@@ -11350,31 +11350,31 @@ type IERC721ReceiverSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC721ReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721ReceiverCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721ReceiverCallerSession struct {
 	Contract *IERC721ReceiverCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// IERC721ReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721ReceiverTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721ReceiverTransactorSession struct {
 	Contract     *IERC721ReceiverTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// IERC721ReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721ReceiverRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721ReceiverRaw struct {
 	Contract *IERC721Receiver // Generic contract binding to access the raw methods on
 }
 
-// IERC721ReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721ReceiverCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721ReceiverCallerRaw struct {
 	Contract *IERC721ReceiverCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721ReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721ReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721ReceiverTransactorRaw struct {
 	Contract *IERC721ReceiverTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -11504,29 +11504,29 @@ const MinterRoleBinRuntime = ``
 // Deprecated: Use MinterRoleMetaData.Sigs instead.
 var MinterRoleFuncSigs = MinterRoleMetaData.Sigs
 
-// MinterRole is an auto generated Go binding around a Klaytn contract.
+// MinterRole is an auto generated Go binding around a Kaia contract.
 type MinterRole struct {
 	MinterRoleCaller     // Read-only binding to the contract
 	MinterRoleTransactor // Write-only binding to the contract
 	MinterRoleFilterer   // Log filterer for contract events
 }
 
-// MinterRoleCaller is an auto generated read-only Go binding around a Klaytn contract.
+// MinterRoleCaller is an auto generated read-only Go binding around a Kaia contract.
 type MinterRoleCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// MinterRoleTransactor is an auto generated write-only Go binding around a Kaia contract.
 type MinterRoleTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// MinterRoleFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type MinterRoleFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleSession is an auto generated Go binding around a Klaytn contract,
+// MinterRoleSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type MinterRoleSession struct {
 	Contract     *MinterRole       // Generic contract binding to set the session for
@@ -11534,31 +11534,31 @@ type MinterRoleSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// MinterRoleCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// MinterRoleCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type MinterRoleCallerSession struct {
 	Contract *MinterRoleCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts     // Call options to use throughout this session
 }
 
-// MinterRoleTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// MinterRoleTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type MinterRoleTransactorSession struct {
 	Contract     *MinterRoleTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// MinterRoleRaw is an auto generated low-level Go binding around a Klaytn contract.
+// MinterRoleRaw is an auto generated low-level Go binding around a Kaia contract.
 type MinterRoleRaw struct {
 	Contract *MinterRole // Generic contract binding to access the raw methods on
 }
 
-// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type MinterRoleCallerRaw struct {
 	Contract *MinterRoleCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type MinterRoleTransactorRaw struct {
 	Contract *MinterRoleTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -12021,29 +12021,29 @@ const OwnableBinRuntime = ``
 // Deprecated: Use OwnableMetaData.Sigs instead.
 var OwnableFuncSigs = OwnableMetaData.Sigs
 
-// Ownable is an auto generated Go binding around a Klaytn contract.
+// Ownable is an auto generated Go binding around a Kaia contract.
 type Ownable struct {
 	OwnableCaller     // Read-only binding to the contract
 	OwnableTransactor // Write-only binding to the contract
 	OwnableFilterer   // Log filterer for contract events
 }
 
-// OwnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableSession struct {
 	Contract     *Ownable          // Generic contract binding to set the session for
@@ -12051,31 +12051,31 @@ type OwnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// OwnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableCallerSession struct {
 	Contract *OwnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// OwnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableTransactorSession struct {
 	Contract     *OwnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// OwnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableRaw struct {
 	Contract *Ownable // Generic contract binding to access the raw methods on
 }
 
-// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableCallerRaw struct {
 	Contract *OwnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableTransactorRaw struct {
 	Contract *OwnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -12447,29 +12447,29 @@ func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.
 	return address, tx, &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
 }
 
-// Roles is an auto generated Go binding around a Klaytn contract.
+// Roles is an auto generated Go binding around a Kaia contract.
 type Roles struct {
 	RolesCaller     // Read-only binding to the contract
 	RolesTransactor // Write-only binding to the contract
 	RolesFilterer   // Log filterer for contract events
 }
 
-// RolesCaller is an auto generated read-only Go binding around a Klaytn contract.
+// RolesCaller is an auto generated read-only Go binding around a Kaia contract.
 type RolesCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// RolesTransactor is an auto generated write-only Go binding around a Kaia contract.
 type RolesTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// RolesFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type RolesFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesSession is an auto generated Go binding around a Klaytn contract,
+// RolesSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type RolesSession struct {
 	Contract     *Roles            // Generic contract binding to set the session for
@@ -12477,31 +12477,31 @@ type RolesSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RolesCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// RolesCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type RolesCallerSession struct {
 	Contract *RolesCaller  // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// RolesTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// RolesTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type RolesTransactorSession struct {
 	Contract     *RolesTransactor  // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RolesRaw is an auto generated low-level Go binding around a Klaytn contract.
+// RolesRaw is an auto generated low-level Go binding around a Kaia contract.
 type RolesRaw struct {
 	Contract *Roles // Generic contract binding to access the raw methods on
 }
 
-// RolesCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// RolesCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type RolesCallerRaw struct {
 	Contract *RolesCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type RolesTransactorRaw struct {
 	Contract *RolesTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -12623,29 +12623,29 @@ func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &SafeMath{SafeMathCaller: SafeMathCaller{contract: contract}, SafeMathTransactor: SafeMathTransactor{contract: contract}, SafeMathFilterer: SafeMathFilterer{contract: contract}}, nil
 }
 
-// SafeMath is an auto generated Go binding around a Klaytn contract.
+// SafeMath is an auto generated Go binding around a Kaia contract.
 type SafeMath struct {
 	SafeMathCaller     // Read-only binding to the contract
 	SafeMathTransactor // Write-only binding to the contract
 	SafeMathFilterer   // Log filterer for contract events
 }
 
-// SafeMathCaller is an auto generated read-only Go binding around a Klaytn contract.
+// SafeMathCaller is an auto generated read-only Go binding around a Kaia contract.
 type SafeMathCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// SafeMathTransactor is an auto generated write-only Go binding around a Kaia contract.
 type SafeMathTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// SafeMathFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type SafeMathFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathSession is an auto generated Go binding around a Klaytn contract,
+// SafeMathSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type SafeMathSession struct {
 	Contract     *SafeMath         // Generic contract binding to set the session for
@@ -12653,31 +12653,31 @@ type SafeMathSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// SafeMathCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// SafeMathCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type SafeMathCallerSession struct {
 	Contract *SafeMathCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// SafeMathTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// SafeMathTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type SafeMathTransactorSession struct {
 	Contract     *SafeMathTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// SafeMathRaw is an auto generated low-level Go binding around a Klaytn contract.
+// SafeMathRaw is an auto generated low-level Go binding around a Kaia contract.
 type SafeMathRaw struct {
 	Contract *SafeMath // Generic contract binding to access the raw methods on
 }
 
-// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type SafeMathCallerRaw struct {
 	Contract *SafeMathCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type SafeMathTransactorRaw struct {
 	Contract *SafeMathTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -12834,29 +12834,29 @@ func DeployServiceChainNFT(auth *bind.TransactOpts, backend bind.ContractBackend
 	return address, tx, &ServiceChainNFT{ServiceChainNFTCaller: ServiceChainNFTCaller{contract: contract}, ServiceChainNFTTransactor: ServiceChainNFTTransactor{contract: contract}, ServiceChainNFTFilterer: ServiceChainNFTFilterer{contract: contract}}, nil
 }
 
-// ServiceChainNFT is an auto generated Go binding around a Klaytn contract.
+// ServiceChainNFT is an auto generated Go binding around a Kaia contract.
 type ServiceChainNFT struct {
 	ServiceChainNFTCaller     // Read-only binding to the contract
 	ServiceChainNFTTransactor // Write-only binding to the contract
 	ServiceChainNFTFilterer   // Log filterer for contract events
 }
 
-// ServiceChainNFTCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ServiceChainNFTCaller is an auto generated read-only Go binding around a Kaia contract.
 type ServiceChainNFTCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ServiceChainNFTTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ServiceChainNFTTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ServiceChainNFTFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ServiceChainNFTFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTSession is an auto generated Go binding around a Klaytn contract,
+// ServiceChainNFTSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ServiceChainNFTSession struct {
 	Contract     *ServiceChainNFT  // Generic contract binding to set the session for
@@ -12864,31 +12864,31 @@ type ServiceChainNFTSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ServiceChainNFTCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ServiceChainNFTCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ServiceChainNFTCallerSession struct {
 	Contract *ServiceChainNFTCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// ServiceChainNFTTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ServiceChainNFTTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ServiceChainNFTTransactorSession struct {
 	Contract     *ServiceChainNFTTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// ServiceChainNFTRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ServiceChainNFTRaw is an auto generated low-level Go binding around a Kaia contract.
 type ServiceChainNFTRaw struct {
 	Contract *ServiceChainNFT // Generic contract binding to access the raw methods on
 }
 
-// ServiceChainNFTCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ServiceChainNFTCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ServiceChainNFTCallerRaw struct {
 	Contract *ServiceChainNFTCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ServiceChainNFTTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ServiceChainNFTTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ServiceChainNFTTransactorRaw struct {
 	Contract *ServiceChainNFTTransactor // Generic write-only contract binding to access the raw methods on
 }
