@@ -261,7 +261,6 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 	var err error
 	for i := 0; i < numShards; i++ {
 		lruShard.shards[i], err = lru.NewWithEvict(shardsSize, nil)
-
 		if err != nil {
 			return nil, err
 		}

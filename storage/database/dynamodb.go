@@ -134,8 +134,9 @@ func (r CustomRetryer) ShouldRetry(req *request.Request) bool {
 //
 // If you use this config, you will be charged for what you use.
 // You need to set AWS credentials to access to dynamoDB.
-//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+//
+//	$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//	$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",

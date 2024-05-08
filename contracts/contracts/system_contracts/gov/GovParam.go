@@ -391,7 +391,6 @@ func (_GovParam *GovParamTransactorRaw) Transact(opts *bind.TransactOpts, method
 func (_GovParam *GovParamCaller) Checkpoints(opts *bind.CallOpts, name string) ([]IGovParamParam, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "checkpoints", name)
-
 	if err != nil {
 		return *new([]IGovParamParam), err
 	}
@@ -399,7 +398,6 @@ func (_GovParam *GovParamCaller) Checkpoints(opts *bind.CallOpts, name string) (
 	out0 := *abi.ConvertType(out[0], new([]IGovParamParam)).(*[]IGovParamParam)
 
 	return out0, err
-
 }
 
 // Checkpoints is a free data retrieval call binding the contract method 0x296451d9.
@@ -422,7 +420,6 @@ func (_GovParam *GovParamCallerSession) Checkpoints(name string) ([]IGovParamPar
 func (_GovParam *GovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]string, [][]IGovParamParam, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllCheckpoints")
-
 	if err != nil {
 		return *new([]string), *new([][]IGovParamParam), err
 	}
@@ -431,7 +428,6 @@ func (_GovParam *GovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]strin
 	out1 := *abi.ConvertType(out[1], new([][]IGovParamParam)).(*[][]IGovParamParam)
 
 	return out0, out1, err
-
 }
 
 // GetAllCheckpoints is a free data retrieval call binding the contract method 0x5516c21c.
@@ -454,7 +450,6 @@ func (_GovParam *GovParamCallerSession) GetAllCheckpoints() ([]string, [][]IGovP
 func (_GovParam *GovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParamNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -462,7 +457,6 @@ func (_GovParam *GovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllParamNames is a free data retrieval call binding the contract method 0xcc4783b6.
@@ -485,7 +479,6 @@ func (_GovParam *GovParamCallerSession) GetAllParamNames() ([]string, error) {
 func (_GovParam *GovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParams")
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -494,7 +487,6 @@ func (_GovParam *GovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, []
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParams is a free data retrieval call binding the contract method 0xa170052e.
@@ -517,7 +509,6 @@ func (_GovParam *GovParamCallerSession) GetAllParams() ([]string, [][]byte, erro
 func (_GovParam *GovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber *big.Int) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParamsAt", blockNumber)
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -526,7 +517,6 @@ func (_GovParam *GovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParamsAt is a free data retrieval call binding the contract method 0x1e31825a.
@@ -549,7 +539,6 @@ func (_GovParam *GovParamCallerSession) GetAllParamsAt(blockNumber *big.Int) ([]
 func (_GovParam *GovParamCaller) GetParam(opts *bind.CallOpts, name string) (bool, []byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getParam", name)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -558,7 +547,6 @@ func (_GovParam *GovParamCaller) GetParam(opts *bind.CallOpts, name string) (boo
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParam is a free data retrieval call binding the contract method 0x5d4f71d4.
@@ -581,7 +569,6 @@ func (_GovParam *GovParamCallerSession) GetParam(name string) (bool, []byte, err
 func (_GovParam *GovParamCaller) GetParamAt(opts *bind.CallOpts, name string, blockNumber *big.Int) (bool, []byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getParamAt", name, blockNumber)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -590,7 +577,6 @@ func (_GovParam *GovParamCaller) GetParamAt(opts *bind.CallOpts, name string, bl
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParamAt is a free data retrieval call binding the contract method 0x6a1ec27c.
@@ -613,7 +599,6 @@ func (_GovParam *GovParamCallerSession) GetParamAt(name string, blockNumber *big
 func (_GovParam *GovParamCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -621,7 +606,6 @@ func (_GovParam *GovParamCaller) Owner(opts *bind.CallOpts) (common.Address, err
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -644,7 +628,6 @@ func (_GovParam *GovParamCallerSession) Owner() (common.Address, error) {
 func (_GovParam *GovParamCaller) ParamNames(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "paramNames", arg0)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -652,7 +635,6 @@ func (_GovParam *GovParamCaller) ParamNames(opts *bind.CallOpts, arg0 *big.Int) 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // ParamNames is a free data retrieval call binding the contract method 0xdb758754.
@@ -831,7 +813,6 @@ type GovParamOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_GovParam *GovParamFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*GovParamOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -852,7 +833,6 @@ func (_GovParam *GovParamFilterer) FilterOwnershipTransferred(opts *bind.FilterO
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_GovParam *GovParamFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *GovParamOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -985,7 +965,6 @@ type GovParamSetParam struct {
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_GovParam *GovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*GovParamSetParamIterator, error) {
-
 	logs, sub, err := _GovParam.contract.FilterLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -997,7 +976,6 @@ func (_GovParam *GovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*GovPa
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_GovParam *GovParamFilterer) WatchSetParam(opts *bind.WatchOpts, sink chan<- *GovParamSetParam) (event.Subscription, error) {
-
 	logs, sub, err := _GovParam.contract.WatchLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1217,7 +1195,6 @@ func (_IGovParam *IGovParamTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_IGovParam *IGovParamCaller) Checkpoints(opts *bind.CallOpts, name string) ([]IGovParamParam, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "checkpoints", name)
-
 	if err != nil {
 		return *new([]IGovParamParam), err
 	}
@@ -1225,7 +1202,6 @@ func (_IGovParam *IGovParamCaller) Checkpoints(opts *bind.CallOpts, name string)
 	out0 := *abi.ConvertType(out[0], new([]IGovParamParam)).(*[]IGovParamParam)
 
 	return out0, err
-
 }
 
 // Checkpoints is a free data retrieval call binding the contract method 0x296451d9.
@@ -1248,7 +1224,6 @@ func (_IGovParam *IGovParamCallerSession) Checkpoints(name string) ([]IGovParamP
 func (_IGovParam *IGovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]string, [][]IGovParamParam, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllCheckpoints")
-
 	if err != nil {
 		return *new([]string), *new([][]IGovParamParam), err
 	}
@@ -1257,7 +1232,6 @@ func (_IGovParam *IGovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]str
 	out1 := *abi.ConvertType(out[1], new([][]IGovParamParam)).(*[][]IGovParamParam)
 
 	return out0, out1, err
-
 }
 
 // GetAllCheckpoints is a free data retrieval call binding the contract method 0x5516c21c.
@@ -1280,7 +1254,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllCheckpoints() ([]string, [][]IGo
 func (_IGovParam *IGovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParamNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -1288,7 +1261,6 @@ func (_IGovParam *IGovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]stri
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllParamNames is a free data retrieval call binding the contract method 0xcc4783b6.
@@ -1311,7 +1283,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParamNames() ([]string, error) {
 func (_IGovParam *IGovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParams")
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -1320,7 +1291,6 @@ func (_IGovParam *IGovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, 
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParams is a free data retrieval call binding the contract method 0xa170052e.
@@ -1343,7 +1313,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParams() ([]string, [][]byte, er
 func (_IGovParam *IGovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber *big.Int) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParamsAt", blockNumber)
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -1352,7 +1321,6 @@ func (_IGovParam *IGovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumb
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParamsAt is a free data retrieval call binding the contract method 0x1e31825a.
@@ -1375,7 +1343,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParamsAt(blockNumber *big.Int) (
 func (_IGovParam *IGovParamCaller) GetParam(opts *bind.CallOpts, name string) (bool, []byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getParam", name)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -1384,7 +1351,6 @@ func (_IGovParam *IGovParamCaller) GetParam(opts *bind.CallOpts, name string) (b
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParam is a free data retrieval call binding the contract method 0x5d4f71d4.
@@ -1407,7 +1373,6 @@ func (_IGovParam *IGovParamCallerSession) GetParam(name string) (bool, []byte, e
 func (_IGovParam *IGovParamCaller) GetParamAt(opts *bind.CallOpts, name string, blockNumber *big.Int) (bool, []byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getParamAt", name, blockNumber)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -1416,7 +1381,6 @@ func (_IGovParam *IGovParamCaller) GetParamAt(opts *bind.CallOpts, name string, 
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParamAt is a free data retrieval call binding the contract method 0x6a1ec27c.
@@ -1439,7 +1403,6 @@ func (_IGovParam *IGovParamCallerSession) GetParamAt(name string, blockNumber *b
 func (_IGovParam *IGovParamCaller) ParamNames(opts *bind.CallOpts, idx *big.Int) (string, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "paramNames", idx)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -1447,7 +1410,6 @@ func (_IGovParam *IGovParamCaller) ParamNames(opts *bind.CallOpts, idx *big.Int)
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // ParamNames is a free data retrieval call binding the contract method 0xdb758754.
@@ -1586,7 +1548,6 @@ type IGovParamSetParam struct {
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_IGovParam *IGovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*IGovParamSetParamIterator, error) {
-
 	logs, sub, err := _IGovParam.contract.FilterLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1598,7 +1559,6 @@ func (_IGovParam *IGovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*IGo
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_IGovParam *IGovParamFilterer) WatchSetParam(opts *bind.WatchOpts, sink chan<- *IGovParamSetParam) (event.Subscription, error) {
-
 	logs, sub, err := _IGovParam.contract.WatchLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1811,7 +1771,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1819,7 +1778,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -1956,7 +1914,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1977,7 +1934,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)

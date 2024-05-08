@@ -548,7 +548,6 @@ func (_ERC165 *ERC165TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -556,7 +555,6 @@ func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -771,7 +769,6 @@ func (_ERC721 *ERC721TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -779,7 +776,6 @@ func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -802,7 +798,6 @@ func (_ERC721 *ERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -810,7 +805,6 @@ func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -833,7 +827,6 @@ func (_ERC721 *ERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addres
 func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -841,7 +834,6 @@ func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -864,7 +856,6 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -872,7 +863,6 @@ func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (com
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -895,7 +885,6 @@ func (_ERC721 *ERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, e
 func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -903,7 +892,6 @@ func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -1104,7 +1092,6 @@ type ERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1129,7 +1116,6 @@ func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1265,7 +1251,6 @@ type ERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1286,7 +1271,6 @@ func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1418,7 +1402,6 @@ type ERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1443,7 +1426,6 @@ func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1699,7 +1681,6 @@ func (_ERC721Burnable *ERC721BurnableTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1707,7 +1688,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -1730,7 +1710,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1738,7 +1717,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -1761,7 +1739,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1769,7 +1746,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -1792,7 +1768,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1800,7 +1775,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -1823,7 +1797,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1831,7 +1804,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -2053,7 +2025,6 @@ type ERC721BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2078,7 +2049,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2214,7 +2184,6 @@ type ERC721BurnableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721BurnableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2235,7 +2204,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2367,7 +2335,6 @@ type ERC721BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2392,7 +2359,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721BurnableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2651,7 +2617,6 @@ func (_ERC721Mintable *ERC721MintableTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Mintable *ERC721MintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2659,7 +2624,6 @@ func (_ERC721Mintable *ERC721MintableCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -2682,7 +2646,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Mintable *ERC721MintableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2690,7 +2653,6 @@ func (_ERC721Mintable *ERC721MintableCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -2713,7 +2675,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Mintable *ERC721MintableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2721,7 +2682,6 @@ func (_ERC721Mintable *ERC721MintableCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -2744,7 +2704,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Mintable *ERC721MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2752,7 +2711,6 @@ func (_ERC721Mintable *ERC721MintableCaller) IsMinter(opts *bind.CallOpts, accou
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -2775,7 +2733,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) IsMinter(account common.Addr
 func (_ERC721Mintable *ERC721MintableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2783,7 +2740,6 @@ func (_ERC721Mintable *ERC721MintableCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -2806,7 +2762,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Mintable *ERC721MintableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2814,7 +2769,6 @@ func (_ERC721Mintable *ERC721MintableCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -3078,7 +3032,6 @@ type ERC721MintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3103,7 +3056,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MintableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3239,7 +3191,6 @@ type ERC721MintableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MintableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3260,7 +3211,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MintableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3390,7 +3340,6 @@ type ERC721MintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC721MintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3407,7 +3356,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterAdded(opts *bind.Filt
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC721MintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3533,7 +3481,6 @@ type ERC721MintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC721MintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3550,7 +3497,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterRemoved(opts *bind.Fi
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC721MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3678,7 +3624,6 @@ type ERC721MintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3703,7 +3648,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MintableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3943,7 +3887,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainTransactorRaw) Transact(opts *bind.
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3951,7 +3894,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) BalanceOf(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -3974,7 +3916,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) BalanceOf(owner comm
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "bridge")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3982,7 +3923,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) Bridge(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Bridge is a free data retrieval call binding the contract method 0xe78cea92.
@@ -4005,7 +3945,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Bridge() (common.Add
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4013,7 +3952,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) GetApproved(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -4036,7 +3974,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) GetApproved(tokenId 
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4044,7 +3981,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsApprovedForAll(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -4067,7 +4003,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsApprovedForAll(own
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4075,7 +4010,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -4098,7 +4032,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsOwner() (bool, err
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4106,7 +4039,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -4129,7 +4061,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Owner() (common.Addr
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4137,7 +4068,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) OwnerOf(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -4160,7 +4090,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) OwnerOf(tokenId *big
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4168,7 +4097,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) SupportsInterface(opts *bin
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -4453,7 +4381,6 @@ type ERC721ServiceChainApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ServiceChainApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4478,7 +4405,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApproval(opts *bind
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4614,7 +4540,6 @@ type ERC721ServiceChainApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ServiceChainApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4635,7 +4560,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApprovalForAll(opts
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4766,7 +4690,6 @@ type ERC721ServiceChainOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ERC721ServiceChainOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4787,7 +4710,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4919,7 +4841,6 @@ type ERC721ServiceChainTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721ServiceChainTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4944,7 +4865,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterTransfer(opts *bind
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5168,7 +5088,6 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5176,7 +5095,6 @@ func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -5369,7 +5287,6 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5377,7 +5294,6 @@ func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Addre
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -5400,7 +5316,6 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int,
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5408,7 +5323,6 @@ func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -5431,7 +5345,6 @@ func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addr
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5439,7 +5352,6 @@ func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -5462,7 +5374,6 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, ope
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5470,7 +5381,6 @@ func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -5493,7 +5403,6 @@ func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address,
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5501,7 +5410,6 @@ func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -5702,7 +5610,6 @@ type IERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5727,7 +5634,6 @@ func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []c
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5863,7 +5769,6 @@ type IERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5884,7 +5789,6 @@ func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, own
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -6016,7 +5920,6 @@ type IERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6041,7 +5944,6 @@ func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []co
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6631,7 +6533,6 @@ func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, me
 func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _MinterRole.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -6639,7 +6540,6 @@ func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -6775,7 +6675,6 @@ type MinterRoleMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6792,7 +6691,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, 
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6918,7 +6816,6 @@ type MinterRoleMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6935,7 +6832,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -7154,7 +7050,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -7162,7 +7057,6 @@ func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -7185,7 +7079,6 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -7193,7 +7086,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -7330,7 +7222,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7351,7 +7242,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7967,7 +7857,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURITransactorRaw) Transact(opts *b
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -7975,7 +7864,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) BalanceOf(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -7998,7 +7886,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) BalanceOf(owner 
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "bridge")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8006,7 +7893,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Bridge(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Bridge is a free data retrieval call binding the contract method 0xe78cea92.
@@ -8029,7 +7915,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) Bridge() (common
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8037,7 +7922,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) GetApproved(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -8060,7 +7944,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) GetApproved(toke
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8068,7 +7951,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsApprovedForAll(opts *
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -8091,7 +7973,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsApprovedForAll
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8099,7 +7980,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsMinter(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -8122,7 +8002,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsMinter(account
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8130,7 +8009,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsOwner(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -8153,7 +8031,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsOwner() (bool,
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8161,7 +8038,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Owner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -8184,7 +8060,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) Owner() (common.
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8192,7 +8067,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) OwnerOf(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -8215,7 +8089,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) OwnerOf(tokenId 
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8223,7 +8096,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) SupportsInterface(opts 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -8613,7 +8485,6 @@ type ServiceChainNFTNoURIApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ServiceChainNFTNoURIApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8638,7 +8509,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApproval(opts *
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8774,7 +8644,6 @@ type ServiceChainNFTNoURIApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ServiceChainNFTNoURIApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8795,7 +8664,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApprovalForAll(
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8925,7 +8793,6 @@ type ServiceChainNFTNoURIMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTNoURIMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -8942,7 +8809,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterAdded(opt
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9068,7 +8934,6 @@ type ServiceChainNFTNoURIMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTNoURIMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9085,7 +8950,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterRemoved(o
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9212,7 +9076,6 @@ type ServiceChainNFTNoURIOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ServiceChainNFTNoURIOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9233,7 +9096,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterOwnershipTransf
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9365,7 +9227,6 @@ type ServiceChainNFTNoURITransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ServiceChainNFTNoURITransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -9390,7 +9251,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterTransfer(opts *
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURITransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)

@@ -501,7 +501,6 @@ type ERC1967ProxyAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967ProxyAdminChangedIterator, error) {
-
 	logs, sub, err := _ERC1967Proxy.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -513,7 +512,6 @@ func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterAdminChanged(opts *bind.FilterO
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967ProxyAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967Proxy.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -634,7 +632,6 @@ type ERC1967ProxyBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967ProxyBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -651,7 +648,6 @@ func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterBeaconUpgraded(opts *bind.Filte
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967ProxyBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -777,7 +773,6 @@ type ERC1967ProxyUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967ProxyUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -794,7 +789,6 @@ func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterUpgraded(opts *bind.FilterOpts,
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967Proxy *ERC1967ProxyFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967ProxyUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1075,7 +1069,6 @@ type ERC1967UpgradeAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeAdminChangedIterator, error) {
-
 	logs, sub, err := _ERC1967Upgrade.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -1087,7 +1080,6 @@ func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterAdminChanged(opts *bind.Fil
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967Upgrade.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -1208,7 +1200,6 @@ type ERC1967UpgradeBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -1225,7 +1216,6 @@ func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterBeaconUpgraded(opts *bind.F
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -1351,7 +1341,6 @@ type ERC1967UpgradeUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1368,7 +1357,6 @@ func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterUpgraded(opts *bind.FilterO
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1584,7 +1572,6 @@ func (_IBeacon *IBeaconTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IBeacon *IBeaconCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IBeacon.contract.Call(opts, &out, "implementation")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1592,7 +1579,6 @@ func (_IBeacon *IBeaconCaller) Implementation(opts *bind.CallOpts) (common.Addre
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
@@ -1776,7 +1762,6 @@ func (_IERC1822Proxiable *IERC1822ProxiableTransactorRaw) Transact(opts *bind.Tr
 func (_IERC1822Proxiable *IERC1822ProxiableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IERC1822Proxiable.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -1784,7 +1769,6 @@ func (_IERC1822Proxiable *IERC1822ProxiableCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -2033,7 +2017,6 @@ type IERC1967AdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967 *IERC1967Filterer) FilterAdminChanged(opts *bind.FilterOpts) (*IERC1967AdminChangedIterator, error) {
-
 	logs, sub, err := _IERC1967.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2045,7 +2028,6 @@ func (_IERC1967 *IERC1967Filterer) FilterAdminChanged(opts *bind.FilterOpts) (*I
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967 *IERC1967Filterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *IERC1967AdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _IERC1967.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2166,7 +2148,6 @@ type IERC1967BeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967 *IERC1967Filterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*IERC1967BeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2183,7 +2164,6 @@ func (_IERC1967 *IERC1967Filterer) FilterBeaconUpgraded(opts *bind.FilterOpts, b
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967 *IERC1967Filterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967BeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2309,7 +2289,6 @@ type IERC1967Upgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967 *IERC1967Filterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*IERC1967UpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -2326,7 +2305,6 @@ func (_IERC1967 *IERC1967Filterer) FilterUpgraded(opts *bind.FilterOpts, impleme
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967 *IERC1967Filterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967Upgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)

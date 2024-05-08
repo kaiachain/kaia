@@ -266,7 +266,6 @@ func (_AddressBookMock *AddressBookMockTransactorRaw) Transact(opts *bind.Transa
 func (_AddressBookMock *AddressBookMockCaller) CNNODEIDTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "CN_NODE_ID_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -274,7 +273,6 @@ func (_AddressBookMock *AddressBookMockCaller) CNNODEIDTYPE(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNNODEIDTYPE is a free data retrieval call binding the contract method 0x76674c54.
@@ -297,7 +295,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CNNODEIDTYPE() (uint8, err
 func (_AddressBookMock *AddressBookMockCaller) CNREWARDADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "CN_REWARD_ADDRESS_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -305,7 +302,6 @@ func (_AddressBookMock *AddressBookMockCaller) CNREWARDADDRESSTYPE(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNREWARDADDRESSTYPE is a free data retrieval call binding the contract method 0x32b91e85.
@@ -328,7 +324,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CNREWARDADDRESSTYPE() (uin
 func (_AddressBookMock *AddressBookMockCaller) CNSTAKINGADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "CN_STAKING_ADDRESS_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -336,7 +331,6 @@ func (_AddressBookMock *AddressBookMockCaller) CNSTAKINGADDRESSTYPE(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNSTAKINGADDRESSTYPE is a free data retrieval call binding the contract method 0xde5bbfbc.
@@ -359,7 +353,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CNSTAKINGADDRESSTYPE() (ui
 func (_AddressBookMock *AddressBookMockCaller) CONTRACTTYPE(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -367,7 +360,6 @@ func (_AddressBookMock *AddressBookMockCaller) CONTRACTTYPE(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // CONTRACTTYPE is a free data retrieval call binding the contract method 0x4b6a94cc.
@@ -390,7 +382,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CONTRACTTYPE() (string, er
 func (_AddressBookMock *AddressBookMockCaller) KIRCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "KIR_CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -398,7 +389,6 @@ func (_AddressBookMock *AddressBookMockCaller) KIRCONTRACTTYPE(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // KIRCONTRACTTYPE is a free data retrieval call binding the contract method 0x41b6945c.
@@ -421,7 +411,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) KIRCONTRACTTYPE() (uint8, 
 func (_AddressBookMock *AddressBookMockCaller) MAXADMIN(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "MAX_ADMIN")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -429,7 +418,6 @@ func (_AddressBookMock *AddressBookMockCaller) MAXADMIN(opts *bind.CallOpts) (*b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MAXADMIN is a free data retrieval call binding the contract method 0x58d65880.
@@ -452,7 +440,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) MAXADMIN() (*big.Int, erro
 func (_AddressBookMock *AddressBookMockCaller) MAXPENDINGREQUEST(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "MAX_PENDING_REQUEST")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -460,7 +447,6 @@ func (_AddressBookMock *AddressBookMockCaller) MAXPENDINGREQUEST(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MAXPENDINGREQUEST is a free data retrieval call binding the contract method 0x778f39cb.
@@ -483,7 +469,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) MAXPENDINGREQUEST() (*big.
 func (_AddressBookMock *AddressBookMockCaller) ONEWEEK(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "ONE_WEEK")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -491,7 +476,6 @@ func (_AddressBookMock *AddressBookMockCaller) ONEWEEK(opts *bind.CallOpts) (*bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // ONEWEEK is a free data retrieval call binding the contract method 0x8e6f6b77.
@@ -514,7 +498,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) ONEWEEK() (*big.Int, error
 func (_AddressBookMock *AddressBookMockCaller) POCCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "POC_CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -522,7 +505,6 @@ func (_AddressBookMock *AddressBookMockCaller) POCCONTRACTTYPE(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // POCCONTRACTTYPE is a free data retrieval call binding the contract method 0xb50060e4.
@@ -545,7 +527,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) POCCONTRACTTYPE() (uint8, 
 func (_AddressBookMock *AddressBookMockCaller) TWOWEEKS(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "TWO_WEEKS")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -553,7 +534,6 @@ func (_AddressBookMock *AddressBookMockCaller) TWOWEEKS(opts *bind.CallOpts) (*b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TWOWEEKS is a free data retrieval call binding the contract method 0x934d1fa4.
@@ -576,7 +556,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) TWOWEEKS() (*big.Int, erro
 func (_AddressBookMock *AddressBookMockCaller) VERSION(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "VERSION")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -584,7 +563,6 @@ func (_AddressBookMock *AddressBookMockCaller) VERSION(opts *bind.CallOpts) (*bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
@@ -607,7 +585,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) VERSION() (*big.Int, error
 func (_AddressBookMock *AddressBookMockCaller) AdminList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "adminList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -615,7 +592,6 @@ func (_AddressBookMock *AddressBookMockCaller) AdminList(opts *bind.CallOpts, ar
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AdminList is a free data retrieval call binding the contract method 0x11117fc8.
@@ -638,7 +614,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) AdminList(arg0 *big.Int) (
 func (_AddressBookMock *AddressBookMockCaller) CnIndexMap(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "cnIndexMap", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -646,7 +621,6 @@ func (_AddressBookMock *AddressBookMockCaller) CnIndexMap(opts *bind.CallOpts, a
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // CnIndexMap is a free data retrieval call binding the contract method 0xdd8bd2cc.
@@ -669,7 +643,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CnIndexMap(arg0 common.Add
 func (_AddressBookMock *AddressBookMockCaller) CnNodeIdList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "cnNodeIdList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -677,7 +650,6 @@ func (_AddressBookMock *AddressBookMockCaller) CnNodeIdList(opts *bind.CallOpts,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // CnNodeIdList is a free data retrieval call binding the contract method 0x056eb492.
@@ -700,7 +672,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CnNodeIdList(arg0 *big.Int
 func (_AddressBookMock *AddressBookMockCaller) CnRewardAddressList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "cnRewardAddressList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -708,7 +679,6 @@ func (_AddressBookMock *AddressBookMockCaller) CnRewardAddressList(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // CnRewardAddressList is a free data retrieval call binding the contract method 0x3a48ef97.
@@ -731,7 +701,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CnRewardAddressList(arg0 *
 func (_AddressBookMock *AddressBookMockCaller) CnStakingContractList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "cnStakingContractList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -739,7 +708,6 @@ func (_AddressBookMock *AddressBookMockCaller) CnStakingContractList(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // CnStakingContractList is a free data retrieval call binding the contract method 0xde38e29f.
@@ -762,7 +730,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) CnStakingContractList(arg0
 func (_AddressBookMock *AddressBookMockCaller) GetAllAddress(opts *bind.CallOpts) ([]uint8, []common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "getAllAddress")
-
 	if err != nil {
 		return *new([]uint8), *new([]common.Address), err
 	}
@@ -771,7 +738,6 @@ func (_AddressBookMock *AddressBookMockCaller) GetAllAddress(opts *bind.CallOpts
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
-
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -794,7 +760,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) GetAllAddress() ([]uint8, 
 func (_AddressBookMock *AddressBookMockCaller) GetAllAddressInfo(opts *bind.CallOpts) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "getAllAddressInfo")
-
 	if err != nil {
 		return *new([]common.Address), *new([]common.Address), *new([]common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -806,7 +771,6 @@ func (_AddressBookMock *AddressBookMockCaller) GetAllAddressInfo(opts *bind.Call
 	out4 := *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, out3, out4, err
-
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -829,7 +793,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) GetAllAddressInfo() ([]com
 func (_AddressBookMock *AddressBookMockCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeId common.Address) (common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
-
 	if err != nil {
 		return *new(common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -839,7 +802,6 @@ func (_AddressBookMock *AddressBookMockCaller) GetCnInfo(opts *bind.CallOpts, _c
 	out2 := *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -862,7 +824,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) GetCnInfo(_cnNodeId common
 func (_AddressBookMock *AddressBookMockCaller) GetState(opts *bind.CallOpts) ([]common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "getState")
-
 	if err != nil {
 		return *new([]common.Address), *new(*big.Int), err
 	}
@@ -871,7 +832,6 @@ func (_AddressBookMock *AddressBookMockCaller) GetState(opts *bind.CallOpts) ([]
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -894,7 +854,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) GetState() ([]common.Addre
 func (_AddressBookMock *AddressBookMockCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "isActivated")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -902,7 +861,6 @@ func (_AddressBookMock *AddressBookMockCaller) IsActivated(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -925,7 +883,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) IsActivated() (bool, error
 func (_AddressBookMock *AddressBookMockCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "isConstructed")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -933,7 +890,6 @@ func (_AddressBookMock *AddressBookMockCaller) IsConstructed(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -956,7 +912,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) IsConstructed() (bool, err
 func (_AddressBookMock *AddressBookMockCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "kirContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -964,7 +919,6 @@ func (_AddressBookMock *AddressBookMockCaller) KirContractAddress(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -987,7 +941,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) KirContractAddress() (comm
 func (_AddressBookMock *AddressBookMockCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "pocContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -995,7 +948,6 @@ func (_AddressBookMock *AddressBookMockCaller) PocContractAddress(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -1018,7 +970,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) PocContractAddress() (comm
 func (_AddressBookMock *AddressBookMockCaller) Requirement(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "requirement")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1026,7 +977,6 @@ func (_AddressBookMock *AddressBookMockCaller) Requirement(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Requirement is a free data retrieval call binding the contract method 0xb7563930.
@@ -1049,7 +999,6 @@ func (_AddressBookMock *AddressBookMockCallerSession) Requirement() (*big.Int, e
 func (_AddressBookMock *AddressBookMockCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMock.contract.Call(opts, &out, "spareContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1057,7 +1006,6 @@ func (_AddressBookMock *AddressBookMockCaller) SpareContractAddress(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -1636,7 +1584,6 @@ type AddressBookMockReviseRewardAddress struct {
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_AddressBookMock *AddressBookMockFilterer) FilterReviseRewardAddress(opts *bind.FilterOpts) (*AddressBookMockReviseRewardAddressIterator, error) {
-
 	logs, sub, err := _AddressBookMock.contract.FilterLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -1648,7 +1595,6 @@ func (_AddressBookMock *AddressBookMockFilterer) FilterReviseRewardAddress(opts 
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_AddressBookMock *AddressBookMockFilterer) WatchReviseRewardAddress(opts *bind.WatchOpts, sink chan<- *AddressBookMockReviseRewardAddress) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBookMock.contract.WatchLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -1885,7 +1831,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNTransactorRaw) Transact(opts *b
 func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) AbookAdmin(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockOneCN.contract.Call(opts, &out, "abookAdmin")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1893,7 +1838,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) AbookAdmin(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AbookAdmin is a free data retrieval call binding the contract method 0x2afbeca6.
@@ -1916,7 +1860,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCallerSession) AbookAdmin() (co
 func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) Cn0(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockOneCN.contract.Call(opts, &out, "cn0")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1924,7 +1867,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) Cn0(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Cn0 is a free data retrieval call binding the contract method 0x71e0981b.
@@ -1947,7 +1889,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCallerSession) Cn0() (common.Ad
 func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) Dummy(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockOneCN.contract.Call(opts, &out, "dummy")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1955,7 +1896,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) Dummy(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Dummy is a free data retrieval call binding the contract method 0x32e43a11.
@@ -1978,7 +1918,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCallerSession) Dummy() (common.
 func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeId common.Address) (common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockOneCN.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
-
 	if err != nil {
 		return *new(common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -1988,7 +1927,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) GetCnInfo(opts *bind.Ca
 	out2 := *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -2011,7 +1949,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCallerSession) GetCnInfo(_cnNod
 func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) GetState(opts *bind.CallOpts) ([]common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMockOneCN.contract.Call(opts, &out, "getState")
-
 	if err != nil {
 		return *new([]common.Address), *new(*big.Int), err
 	}
@@ -2020,7 +1957,6 @@ func (_AddressBookMockOneCN *AddressBookMockOneCNCaller) GetState(opts *bind.Cal
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -2232,7 +2168,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNTransactorRaw) Transact(opt
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) AbookAdmin(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "abookAdmin")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2240,7 +2175,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) AbookAdmin(opts *bi
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AbookAdmin is a free data retrieval call binding the contract method 0x2afbeca6.
@@ -2263,7 +2197,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) AbookAdmin()
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn0(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "cn0")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2271,7 +2204,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn0(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Cn0 is a free data retrieval call binding the contract method 0x71e0981b.
@@ -2294,7 +2226,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) Cn0() (commo
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn1(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "cn1")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2302,7 +2233,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn1(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Cn1 is a free data retrieval call binding the contract method 0xc1a7bbad.
@@ -2325,7 +2255,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) Cn1() (commo
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn2(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "cn2")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2333,7 +2262,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Cn2(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Cn2 is a free data retrieval call binding the contract method 0xc8f5b08b.
@@ -2356,7 +2284,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) Cn2() (commo
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Dummy(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "dummy")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2364,7 +2291,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) Dummy(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Dummy is a free data retrieval call binding the contract method 0x32e43a11.
@@ -2387,7 +2313,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) Dummy() (com
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeId common.Address) (common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
-
 	if err != nil {
 		return *new(common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -2397,7 +2322,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) GetCnInfo(opts *bin
 	out2 := *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -2420,7 +2344,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCallerSession) GetCnInfo(_c
 func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) GetState(opts *bind.CallOpts) ([]common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _AddressBookMockThreeCN.contract.Call(opts, &out, "getState")
-
 	if err != nil {
 		return *new([]common.Address), *new(*big.Int), err
 	}
@@ -2429,7 +2352,6 @@ func (_AddressBookMockThreeCN *AddressBookMockThreeCNCaller) GetState(opts *bind
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -2635,7 +2557,6 @@ func (_AddressBookMockWrong *AddressBookMockWrongTransactorRaw) Transact(opts *b
 func (_AddressBookMockWrong *AddressBookMockWrongCaller) GetAllAddressInfo(opts *bind.CallOpts) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBookMockWrong.contract.Call(opts, &out, "getAllAddressInfo")
-
 	if err != nil {
 		return *new([]common.Address), *new([]common.Address), *new([]common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -2647,7 +2568,6 @@ func (_AddressBookMockWrong *AddressBookMockWrongCaller) GetAllAddressInfo(opts 
 	out4 := *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, out3, out4, err
-
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -2856,7 +2776,6 @@ func (_KlaytnReward *KlaytnRewardTransactorRaw) Transact(opts *bind.TransactOpts
 func (_KlaytnReward *KlaytnRewardCaller) BalanceOf(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _KlaytnReward.contract.Call(opts, &out, "balanceOf", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2864,7 +2783,6 @@ func (_KlaytnReward *KlaytnRewardCaller) BalanceOf(opts *bind.CallOpts, arg0 com
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -2887,7 +2805,6 @@ func (_KlaytnReward *KlaytnRewardCallerSession) BalanceOf(arg0 common.Address) (
 func (_KlaytnReward *KlaytnRewardCaller) TotalAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _KlaytnReward.contract.Call(opts, &out, "totalAmount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2895,7 +2812,6 @@ func (_KlaytnReward *KlaytnRewardCaller) TotalAmount(opts *bind.CallOpts) (*big.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalAmount is a free data retrieval call binding the contract method 0x1a39d8ef.

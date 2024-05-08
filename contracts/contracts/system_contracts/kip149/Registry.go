@@ -209,7 +209,6 @@ func (_IRegistry *IRegistryTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_IRegistry *IRegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "getAllNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -217,7 +216,6 @@ func (_IRegistry *IRegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, e
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllNames is a free data retrieval call binding the contract method 0xfb825e5f.
@@ -240,7 +238,6 @@ func (_IRegistry *IRegistryCallerSession) GetAllNames() ([]string, error) {
 func (_IRegistry *IRegistryCaller) GetAllRecords(opts *bind.CallOpts, name string) ([]IRegistryRecord, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "getAllRecords", name)
-
 	if err != nil {
 		return *new([]IRegistryRecord), err
 	}
@@ -248,7 +245,6 @@ func (_IRegistry *IRegistryCaller) GetAllRecords(opts *bind.CallOpts, name strin
 	out0 := *abi.ConvertType(out[0], new([]IRegistryRecord)).(*[]IRegistryRecord)
 
 	return out0, err
-
 }
 
 // GetAllRecords is a free data retrieval call binding the contract method 0x78d573a2.
@@ -271,7 +267,6 @@ func (_IRegistry *IRegistryCallerSession) GetAllRecords(name string) ([]IRegistr
 func (_IRegistry *IRegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "names", arg0)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -279,7 +274,6 @@ func (_IRegistry *IRegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (st
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Names is a free data retrieval call binding the contract method 0x4622ab03.
@@ -302,7 +296,6 @@ func (_IRegistry *IRegistryCallerSession) Names(arg0 *big.Int) (string, error) {
 func (_IRegistry *IRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -310,7 +303,6 @@ func (_IRegistry *IRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, e
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -333,7 +325,8 @@ func (_IRegistry *IRegistryCallerSession) Owner() (common.Address, error) {
 func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "records", arg0, arg1)
 
@@ -345,7 +338,6 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // Records is a free data retrieval call binding the contract method 0x3b51650d.
@@ -354,7 +346,8 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -364,7 +357,8 @@ func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct 
 func (_IRegistry *IRegistryCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -509,7 +503,6 @@ type IRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*IRegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -530,7 +523,6 @@ func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.Filte
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *IRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -662,7 +654,6 @@ type IRegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*IRegistryRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -683,7 +674,6 @@ func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, add
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *IRegistryRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -932,7 +922,6 @@ func (_Registry *RegistryTransactorRaw) Transact(opts *bind.TransactOpts, method
 func (_Registry *RegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "getActiveAddr", name)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -940,7 +929,6 @@ func (_Registry *RegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
@@ -963,7 +951,6 @@ func (_Registry *RegistryCallerSession) GetActiveAddr(name string) (common.Addre
 func (_Registry *RegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "getAllNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -971,7 +958,6 @@ func (_Registry *RegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, err
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllNames is a free data retrieval call binding the contract method 0xfb825e5f.
@@ -994,7 +980,6 @@ func (_Registry *RegistryCallerSession) GetAllNames() ([]string, error) {
 func (_Registry *RegistryCaller) GetAllRecords(opts *bind.CallOpts, name string) ([]IRegistryRecord, error) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "getAllRecords", name)
-
 	if err != nil {
 		return *new([]IRegistryRecord), err
 	}
@@ -1002,7 +987,6 @@ func (_Registry *RegistryCaller) GetAllRecords(opts *bind.CallOpts, name string)
 	out0 := *abi.ConvertType(out[0], new([]IRegistryRecord)).(*[]IRegistryRecord)
 
 	return out0, err
-
 }
 
 // GetAllRecords is a free data retrieval call binding the contract method 0x78d573a2.
@@ -1025,7 +1009,6 @@ func (_Registry *RegistryCallerSession) GetAllRecords(name string) ([]IRegistryR
 func (_Registry *RegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "names", arg0)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -1033,7 +1016,6 @@ func (_Registry *RegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (stri
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Names is a free data retrieval call binding the contract method 0x4622ab03.
@@ -1056,7 +1038,6 @@ func (_Registry *RegistryCallerSession) Names(arg0 *big.Int) (string, error) {
 func (_Registry *RegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1064,7 +1045,6 @@ func (_Registry *RegistryCaller) Owner(opts *bind.CallOpts) (common.Address, err
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -1087,7 +1067,8 @@ func (_Registry *RegistryCallerSession) Owner() (common.Address, error) {
 func (_Registry *RegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _Registry.contract.Call(opts, &out, "records", arg0, arg1)
 
@@ -1099,7 +1080,6 @@ func (_Registry *RegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 
 	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // Records is a free data retrieval call binding the contract method 0x3b51650d.
@@ -1108,7 +1088,8 @@ func (_Registry *RegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 
 func (_Registry *RegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Records(&_Registry.CallOpts, arg0, arg1)
 }
 
@@ -1118,7 +1099,8 @@ func (_Registry *RegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 func (_Registry *RegistryCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error) {
+}, error,
+) {
 	return _Registry.Contract.Records(&_Registry.CallOpts, arg0, arg1)
 }
 
@@ -1242,7 +1224,6 @@ type RegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Registry *RegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*RegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1263,7 +1244,6 @@ func (_Registry *RegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterO
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Registry *RegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *RegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1395,7 +1375,6 @@ type RegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*RegistryRegisteredIterator, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -1416,7 +1395,6 @@ func (_Registry *RegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr 
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_Registry *RegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *RegistryRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
-
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)

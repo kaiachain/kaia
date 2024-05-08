@@ -374,7 +374,6 @@ func (_BridgeFee *BridgeFeeTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_BridgeFee *BridgeFeeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeFee.contract.Call(opts, &out, "feeOfERC20", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -382,7 +381,6 @@ func (_BridgeFee *BridgeFeeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.A
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfERC20 is a free data retrieval call binding the contract method 0x488af871.
@@ -405,7 +403,6 @@ func (_BridgeFee *BridgeFeeCallerSession) FeeOfERC20(arg0 common.Address) (*big.
 func (_BridgeFee *BridgeFeeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeFee.contract.Call(opts, &out, "feeOfKLAY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -413,7 +410,6 @@ func (_BridgeFee *BridgeFeeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, err
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfKLAY is a free data retrieval call binding the contract method 0xc263b5d6.
@@ -436,7 +432,6 @@ func (_BridgeFee *BridgeFeeCallerSession) FeeOfKLAY() (*big.Int, error) {
 func (_BridgeFee *BridgeFeeCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeFee.contract.Call(opts, &out, "feeReceiver")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -444,7 +439,6 @@ func (_BridgeFee *BridgeFeeCaller) FeeReceiver(opts *bind.CallOpts) (common.Addr
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeReceiver is a free data retrieval call binding the contract method 0xb3f00674.
@@ -539,7 +533,6 @@ type BridgeFeeERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeFeeERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -560,7 +553,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -690,7 +682,6 @@ type BridgeFeeFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeFee *BridgeFeeFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeFeeFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -707,7 +698,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterFeeReceiverChanged(opts *bind.FilterO
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeFee *BridgeFeeFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -833,7 +823,6 @@ type BridgeFeeKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeFeeKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -850,7 +839,6 @@ func (_BridgeFee *BridgeFeeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts,
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeFee *BridgeFeeFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeFeeKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -1088,7 +1076,6 @@ func (_BridgeHandledRequests *BridgeHandledRequestsTransactorRaw) Transact(opts 
 func (_BridgeHandledRequests *BridgeHandledRequestsCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var out []interface{}
 	err := _BridgeHandledRequests.contract.Call(opts, &out, "handledRequestTx", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1096,7 +1083,6 @@ func (_BridgeHandledRequests *BridgeHandledRequestsCaller) HandledRequestTx(opts
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // HandledRequestTx is a free data retrieval call binding the contract method 0x8a75eee2.
@@ -1293,7 +1279,6 @@ func (_BridgeOperator *BridgeOperatorTransactorRaw) Transact(opts *bind.Transact
 func (_BridgeOperator *BridgeOperatorCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "MAX_OPERATOR")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -1301,7 +1286,6 @@ func (_BridgeOperator *BridgeOperatorCaller) MAXOPERATOR(opts *bind.CallOpts) (u
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // MAXOPERATOR is a free data retrieval call binding the contract method 0x3a3099d1.
@@ -1324,7 +1308,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) MAXOPERATOR() (uint64, error
 func (_BridgeOperator *BridgeOperatorCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "closedValueTransferVotes", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1332,7 +1315,6 @@ func (_BridgeOperator *BridgeOperatorCaller) ClosedValueTransferVotes(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ClosedValueTransferVotes is a free data retrieval call binding the contract method 0x9832c1d7.
@@ -1355,7 +1337,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) ClosedValueTransferVotes(arg
 func (_BridgeOperator *BridgeOperatorCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "configurationNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -1363,7 +1344,6 @@ func (_BridgeOperator *BridgeOperatorCaller) ConfigurationNonce(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // ConfigurationNonce is a free data retrieval call binding the contract method 0xac6fff0b.
@@ -1386,7 +1366,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) ConfigurationNonce() (uint64
 func (_BridgeOperator *BridgeOperatorCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "getOperatorList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -1394,7 +1373,6 @@ func (_BridgeOperator *BridgeOperatorCaller) GetOperatorList(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetOperatorList is a free data retrieval call binding the contract method 0xb2c01030.
@@ -1417,7 +1395,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) GetOperatorList() ([]common.
 func (_BridgeOperator *BridgeOperatorCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1425,7 +1402,6 @@ func (_BridgeOperator *BridgeOperatorCaller) IsOwner(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -1448,7 +1424,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) IsOwner() (bool, error) {
 func (_BridgeOperator *BridgeOperatorCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "operatorList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1456,7 +1431,6 @@ func (_BridgeOperator *BridgeOperatorCaller) OperatorList(opts *bind.CallOpts, a
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OperatorList is a free data retrieval call binding the contract method 0xcb38f407.
@@ -1479,7 +1453,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) OperatorList(arg0 *big.Int) 
 func (_BridgeOperator *BridgeOperatorCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "operatorThresholds", arg0)
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -1487,7 +1460,6 @@ func (_BridgeOperator *BridgeOperatorCaller) OperatorThresholds(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // OperatorThresholds is a free data retrieval call binding the contract method 0x5526f76b.
@@ -1510,7 +1482,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) OperatorThresholds(arg0 uint
 func (_BridgeOperator *BridgeOperatorCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "operators", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1518,7 +1489,6 @@ func (_BridgeOperator *BridgeOperatorCaller) Operators(opts *bind.CallOpts, arg0
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
@@ -1541,7 +1511,6 @@ func (_BridgeOperator *BridgeOperatorCallerSession) Operators(arg0 common.Addres
 func (_BridgeOperator *BridgeOperatorCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeOperator.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1549,7 +1518,6 @@ func (_BridgeOperator *BridgeOperatorCaller) Owner(opts *bind.CallOpts) (common.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -1749,7 +1717,6 @@ type BridgeOperatorOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeOperator *BridgeOperatorFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeOperatorOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1770,7 +1737,6 @@ func (_BridgeOperator *BridgeOperatorFilterer) FilterOwnershipTransferred(opts *
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeOperator *BridgeOperatorFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeOperatorOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2024,7 +1990,6 @@ func (_BridgeTokens *BridgeTokensTransactorRaw) Transact(opts *bind.TransactOpts
 func (_BridgeTokens *BridgeTokensCaller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "getRegisteredTokenList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -2032,7 +1997,6 @@ func (_BridgeTokens *BridgeTokensCaller) GetRegisteredTokenList(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetRegisteredTokenList is a free data retrieval call binding the contract method 0xea21eade.
@@ -2055,7 +2019,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) GetRegisteredTokenList() ([]comm
 func (_BridgeTokens *BridgeTokensCaller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "indexOfTokens", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2063,7 +2026,6 @@ func (_BridgeTokens *BridgeTokensCaller) IndexOfTokens(opts *bind.CallOpts, arg0
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // IndexOfTokens is a free data retrieval call binding the contract method 0x48a18a6a.
@@ -2086,7 +2048,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) IndexOfTokens(arg0 common.Addres
 func (_BridgeTokens *BridgeTokensCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2094,7 +2055,6 @@ func (_BridgeTokens *BridgeTokensCaller) IsOwner(opts *bind.CallOpts) (bool, err
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -2117,7 +2077,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) IsOwner() (bool, error) {
 func (_BridgeTokens *BridgeTokensCaller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "lockedTokens", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2125,7 +2084,6 @@ func (_BridgeTokens *BridgeTokensCaller) LockedTokens(opts *bind.CallOpts, arg0 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // LockedTokens is a free data retrieval call binding the contract method 0x5eb7413a.
@@ -2148,7 +2106,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) LockedTokens(arg0 common.Address
 func (_BridgeTokens *BridgeTokensCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2156,7 +2113,6 @@ func (_BridgeTokens *BridgeTokensCaller) Owner(opts *bind.CallOpts) (common.Addr
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -2179,7 +2135,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) Owner() (common.Address, error) 
 func (_BridgeTokens *BridgeTokensCaller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "registeredTokenList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2187,7 +2142,6 @@ func (_BridgeTokens *BridgeTokensCaller) RegisteredTokenList(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokenList is a free data retrieval call binding the contract method 0x3e4fe949.
@@ -2210,7 +2164,6 @@ func (_BridgeTokens *BridgeTokensCallerSession) RegisteredTokenList(arg0 *big.In
 func (_BridgeTokens *BridgeTokensCaller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTokens.contract.Call(opts, &out, "registeredTokens", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2218,7 +2171,6 @@ func (_BridgeTokens *BridgeTokensCaller) RegisteredTokens(opts *bind.CallOpts, a
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokens is a free data retrieval call binding the contract method 0x8c0bd916.
@@ -2439,7 +2391,6 @@ type BridgeTokensOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTokens *BridgeTokensFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTokensOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2460,7 +2411,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterOwnershipTransferred(opts *bind
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTokens *BridgeTokensFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTokensOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2590,7 +2540,6 @@ type BridgeTokensTokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -2607,7 +2556,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenDeregistered(opts *bind.Fi
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -2733,7 +2681,6 @@ type BridgeTokensTokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -2750,7 +2697,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenLocked(opts *bind.FilterOp
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -2876,7 +2822,6 @@ type BridgeTokensTokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -2893,7 +2838,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenRegistered(opts *bind.Filt
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3019,7 +2963,6 @@ type BridgeTokensTokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTokensTokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3036,7 +2979,6 @@ func (_BridgeTokens *BridgeTokensFilterer) FilterTokenUnlocked(opts *bind.Filter
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTokens *BridgeTokensFilterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTokensTokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -3278,7 +3220,6 @@ func (_BridgeTransfer *BridgeTransferTransactorRaw) Transact(opts *bind.Transact
 func (_BridgeTransfer *BridgeTransferCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "MAX_OPERATOR")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3286,7 +3227,6 @@ func (_BridgeTransfer *BridgeTransferCaller) MAXOPERATOR(opts *bind.CallOpts) (u
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // MAXOPERATOR is a free data retrieval call binding the contract method 0x3a3099d1.
@@ -3309,7 +3249,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) MAXOPERATOR() (uint64, error
 func (_BridgeTransfer *BridgeTransferCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "closedValueTransferVotes", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3317,7 +3256,6 @@ func (_BridgeTransfer *BridgeTransferCaller) ClosedValueTransferVotes(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ClosedValueTransferVotes is a free data retrieval call binding the contract method 0x9832c1d7.
@@ -3340,7 +3278,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ClosedValueTransferVotes(arg
 func (_BridgeTransfer *BridgeTransferCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "configurationNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3348,7 +3285,6 @@ func (_BridgeTransfer *BridgeTransferCaller) ConfigurationNonce(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // ConfigurationNonce is a free data retrieval call binding the contract method 0xac6fff0b.
@@ -3371,7 +3307,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ConfigurationNonce() (uint64
 func (_BridgeTransfer *BridgeTransferCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "feeOfERC20", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3379,7 +3314,6 @@ func (_BridgeTransfer *BridgeTransferCaller) FeeOfERC20(opts *bind.CallOpts, arg
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfERC20 is a free data retrieval call binding the contract method 0x488af871.
@@ -3402,7 +3336,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeOfERC20(arg0 common.Addre
 func (_BridgeTransfer *BridgeTransferCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "feeOfKLAY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3410,7 +3343,6 @@ func (_BridgeTransfer *BridgeTransferCaller) FeeOfKLAY(opts *bind.CallOpts) (*bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfKLAY is a free data retrieval call binding the contract method 0xc263b5d6.
@@ -3433,7 +3365,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeOfKLAY() (*big.Int, error
 func (_BridgeTransfer *BridgeTransferCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "feeReceiver")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3441,7 +3372,6 @@ func (_BridgeTransfer *BridgeTransferCaller) FeeReceiver(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeReceiver is a free data retrieval call binding the contract method 0xb3f00674.
@@ -3464,7 +3394,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) FeeReceiver() (common.Addres
 func (_BridgeTransfer *BridgeTransferCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "getOperatorList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -3472,7 +3401,6 @@ func (_BridgeTransfer *BridgeTransferCaller) GetOperatorList(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetOperatorList is a free data retrieval call binding the contract method 0xb2c01030.
@@ -3495,7 +3423,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) GetOperatorList() ([]common.
 func (_BridgeTransfer *BridgeTransferCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "handleNoncesToBlockNums", arg0)
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3503,7 +3430,6 @@ func (_BridgeTransfer *BridgeTransferCaller) HandleNoncesToBlockNums(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // HandleNoncesToBlockNums is a free data retrieval call binding the contract method 0x13a6738a.
@@ -3526,7 +3452,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) HandleNoncesToBlockNums(arg0
 func (_BridgeTransfer *BridgeTransferCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "handledRequestTx", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3534,7 +3459,6 @@ func (_BridgeTransfer *BridgeTransferCaller) HandledRequestTx(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // HandledRequestTx is a free data retrieval call binding the contract method 0x8a75eee2.
@@ -3557,7 +3481,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) HandledRequestTx(arg0 [32]by
 func (_BridgeTransfer *BridgeTransferCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3565,7 +3488,6 @@ func (_BridgeTransfer *BridgeTransferCaller) IsOwner(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -3588,7 +3510,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) IsOwner() (bool, error) {
 func (_BridgeTransfer *BridgeTransferCaller) IsRunning(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "isRunning")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3596,7 +3517,6 @@ func (_BridgeTransfer *BridgeTransferCaller) IsRunning(opts *bind.CallOpts) (boo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsRunning is a free data retrieval call binding the contract method 0x2014e5d1.
@@ -3619,7 +3539,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) IsRunning() (bool, error) {
 func (_BridgeTransfer *BridgeTransferCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "lowerHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3627,7 +3546,6 @@ func (_BridgeTransfer *BridgeTransferCaller) LowerHandleNonce(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // LowerHandleNonce is a free data retrieval call binding the contract method 0x4b40b826.
@@ -3650,7 +3568,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) LowerHandleNonce() (uint64, 
 func (_BridgeTransfer *BridgeTransferCaller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "modeMintBurn")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3658,7 +3575,6 @@ func (_BridgeTransfer *BridgeTransferCaller) ModeMintBurn(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ModeMintBurn is a free data retrieval call binding the contract method 0x6e176ec2.
@@ -3681,7 +3597,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) ModeMintBurn() (bool, error)
 func (_BridgeTransfer *BridgeTransferCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "operatorList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3689,7 +3604,6 @@ func (_BridgeTransfer *BridgeTransferCaller) OperatorList(opts *bind.CallOpts, a
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OperatorList is a free data retrieval call binding the contract method 0xcb38f407.
@@ -3712,7 +3626,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) OperatorList(arg0 *big.Int) 
 func (_BridgeTransfer *BridgeTransferCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "operatorThresholds", arg0)
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -3720,7 +3633,6 @@ func (_BridgeTransfer *BridgeTransferCaller) OperatorThresholds(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // OperatorThresholds is a free data retrieval call binding the contract method 0x5526f76b.
@@ -3743,7 +3655,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) OperatorThresholds(arg0 uint
 func (_BridgeTransfer *BridgeTransferCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "operators", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3751,7 +3662,6 @@ func (_BridgeTransfer *BridgeTransferCaller) Operators(opts *bind.CallOpts, arg0
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
@@ -3774,7 +3684,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) Operators(arg0 common.Addres
 func (_BridgeTransfer *BridgeTransferCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3782,7 +3691,6 @@ func (_BridgeTransfer *BridgeTransferCaller) Owner(opts *bind.CallOpts) (common.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3805,7 +3713,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) Owner() (common.Address, err
 func (_BridgeTransfer *BridgeTransferCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "recoveryBlockNumber")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3813,7 +3720,6 @@ func (_BridgeTransfer *BridgeTransferCaller) RecoveryBlockNumber(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RecoveryBlockNumber is a free data retrieval call binding the contract method 0x989ba0d3.
@@ -3836,7 +3742,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) RecoveryBlockNumber() (uint6
 func (_BridgeTransfer *BridgeTransferCaller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "requestNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3844,7 +3749,6 @@ func (_BridgeTransfer *BridgeTransferCaller) RequestNonce(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RequestNonce is a free data retrieval call binding the contract method 0x7c1a0302.
@@ -3867,7 +3771,6 @@ func (_BridgeTransfer *BridgeTransferCallerSession) RequestNonce() (uint64, erro
 func (_BridgeTransfer *BridgeTransferCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransfer.contract.Call(opts, &out, "upperHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -3875,7 +3778,6 @@ func (_BridgeTransfer *BridgeTransferCaller) UpperHandleNonce(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // UpperHandleNonce is a free data retrieval call binding the contract method 0x54edad72.
@@ -4117,7 +4019,6 @@ type BridgeTransferERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -4138,7 +4039,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterERC20FeeChanged(opts *bind.
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -4268,7 +4168,6 @@ type BridgeTransferFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -4285,7 +4184,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterFeeReceiverChanged(opts *bi
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -4419,7 +4317,6 @@ type BridgeTransferHandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferHandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4444,7 +4341,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterHandleValueTransfer(opts *b
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferHandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4578,7 +4474,6 @@ type BridgeTransferKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -4595,7 +4490,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterKLAYFeeChanged(opts *bind.F
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -4722,7 +4616,6 @@ type BridgeTransferOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4743,7 +4636,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterOwnershipTransferred(opts *
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4880,7 +4772,6 @@ type BridgeTransferRequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferRequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4905,7 +4796,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransfer(opts *
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferRequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5048,7 +4938,6 @@ type BridgeTransferRequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferRequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5073,7 +4962,6 @@ func (_BridgeTransfer *BridgeTransferFilterer) FilterRequestValueTransferEncoded
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransfer *BridgeTransferFilterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferRequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5336,7 +5224,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20TransactorRaw) Transact(opts *bin
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "MAX_OPERATOR")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -5344,7 +5231,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) MAXOPERATOR(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // MAXOPERATOR is a free data retrieval call binding the contract method 0x3a3099d1.
@@ -5367,7 +5253,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) MAXOPERATOR() (uin
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "closedValueTransferVotes", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5375,7 +5260,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ClosedValueTransferVotes(
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ClosedValueTransferVotes is a free data retrieval call binding the contract method 0x9832c1d7.
@@ -5398,7 +5282,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ClosedValueTransfe
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "configurationNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -5406,7 +5289,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ConfigurationNonce(opts *
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // ConfigurationNonce is a free data retrieval call binding the contract method 0xac6fff0b.
@@ -5429,7 +5311,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ConfigurationNonce
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "feeOfERC20", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5437,7 +5318,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfERC20(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfERC20 is a free data retrieval call binding the contract method 0x488af871.
@@ -5460,7 +5340,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeOfERC20(arg0 co
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "feeOfKLAY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5468,7 +5347,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeOfKLAY(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfKLAY is a free data retrieval call binding the contract method 0xc263b5d6.
@@ -5491,7 +5369,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeOfKLAY() (*big.
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "feeReceiver")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5499,7 +5376,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) FeeReceiver(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeReceiver is a free data retrieval call binding the contract method 0xb3f00674.
@@ -5522,7 +5398,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) FeeReceiver() (com
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "getOperatorList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -5530,7 +5405,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetOperatorList(opts *bin
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetOperatorList is a free data retrieval call binding the contract method 0xb2c01030.
@@ -5553,7 +5427,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) GetOperatorList() 
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "getRegisteredTokenList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -5561,7 +5434,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) GetRegisteredTokenList(op
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetRegisteredTokenList is a free data retrieval call binding the contract method 0xea21eade.
@@ -5584,7 +5456,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) GetRegisteredToken
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "handleNoncesToBlockNums", arg0)
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -5592,7 +5463,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandleNoncesToBlockNums(o
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // HandleNoncesToBlockNums is a free data retrieval call binding the contract method 0x13a6738a.
@@ -5615,7 +5485,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) HandleNoncesToBloc
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "handledRequestTx", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5623,7 +5492,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) HandledRequestTx(opts *bi
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // HandledRequestTx is a free data retrieval call binding the contract method 0x8a75eee2.
@@ -5646,7 +5514,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) HandledRequestTx(a
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "indexOfTokens", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5654,7 +5521,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IndexOfTokens(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // IndexOfTokens is a free data retrieval call binding the contract method 0x48a18a6a.
@@ -5677,7 +5543,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IndexOfTokens(arg0
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5685,7 +5550,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsOwner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -5708,7 +5572,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IsOwner() (bool, e
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsRunning(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "isRunning")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5716,7 +5579,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) IsRunning(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsRunning is a free data retrieval call binding the contract method 0x2014e5d1.
@@ -5739,7 +5601,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) IsRunning() (bool,
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "lockedTokens", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5747,7 +5608,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LockedTokens(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // LockedTokens is a free data retrieval call binding the contract method 0x5eb7413a.
@@ -5770,7 +5630,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) LockedTokens(arg0 
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "lowerHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -5778,7 +5637,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) LowerHandleNonce(opts *bi
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // LowerHandleNonce is a free data retrieval call binding the contract method 0x4b40b826.
@@ -5801,7 +5659,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) LowerHandleNonce()
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "modeMintBurn")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5809,7 +5666,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) ModeMintBurn(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ModeMintBurn is a free data retrieval call binding the contract method 0x6e176ec2.
@@ -5832,7 +5688,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) ModeMintBurn() (bo
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "operatorList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5840,7 +5695,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorList(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OperatorList is a free data retrieval call binding the contract method 0xcb38f407.
@@ -5863,7 +5717,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) OperatorList(arg0 
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "operatorThresholds", arg0)
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -5871,7 +5724,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) OperatorThresholds(opts *
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // OperatorThresholds is a free data retrieval call binding the contract method 0x5526f76b.
@@ -5894,7 +5746,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) OperatorThresholds
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "operators", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5902,7 +5753,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Operators(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
@@ -5925,7 +5775,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) Operators(arg0 com
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5933,7 +5782,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) Owner(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -5956,7 +5804,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) Owner() (common.Ad
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "recoveryBlockNumber")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -5964,7 +5811,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RecoveryBlockNumber(opts 
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RecoveryBlockNumber is a free data retrieval call binding the contract method 0x989ba0d3.
@@ -5987,7 +5833,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RecoveryBlockNumbe
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "registeredTokenList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5995,7 +5840,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokenList(opts 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokenList is a free data retrieval call binding the contract method 0x3e4fe949.
@@ -6018,7 +5862,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RegisteredTokenLis
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "registeredTokens", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -6026,7 +5869,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RegisteredTokens(opts *bi
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokens is a free data retrieval call binding the contract method 0x8c0bd916.
@@ -6049,7 +5891,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RegisteredTokens(a
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "requestNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -6057,7 +5898,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) RequestNonce(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RequestNonce is a free data retrieval call binding the contract method 0x7c1a0302.
@@ -6080,7 +5920,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20CallerSession) RequestNonce() (ui
 func (_BridgeTransferERC20 *BridgeTransferERC20Caller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC20.contract.Call(opts, &out, "upperHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -6088,7 +5927,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Caller) UpperHandleNonce(opts *bi
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // UpperHandleNonce is a free data retrieval call binding the contract method 0x54edad72.
@@ -6498,7 +6336,6 @@ type BridgeTransferERC20ERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC20ERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6519,7 +6356,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterERC20FeeChanged(o
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20ERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -6649,7 +6485,6 @@ type BridgeTransferERC20FeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferERC20FeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -6666,7 +6501,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterFeeReceiverChange
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20FeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -6800,7 +6634,6 @@ type BridgeTransferERC20HandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20HandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6825,7 +6658,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterHandleValueTransf
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20HandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6959,7 +6791,6 @@ type BridgeTransferERC20KLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferERC20KLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -6976,7 +6807,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterKLAYFeeChanged(op
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20KLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -7103,7 +6933,6 @@ type BridgeTransferERC20OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferERC20OwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7124,7 +6953,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterOwnershipTransfer
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7261,7 +7089,6 @@ type BridgeTransferERC20RequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20RequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7286,7 +7113,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTrans
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20RequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7429,7 +7255,6 @@ type BridgeTransferERC20RequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC20RequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7454,7 +7279,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterRequestValueTrans
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20RequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7588,7 +7412,6 @@ type BridgeTransferERC20TokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7605,7 +7428,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenDeregistered
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7731,7 +7553,6 @@ type BridgeTransferERC20TokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7748,7 +7569,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenLocked(opts 
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7874,7 +7694,6 @@ type BridgeTransferERC20TokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -7891,7 +7710,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenRegistered(o
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -8017,7 +7835,6 @@ type BridgeTransferERC20TokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC20TokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -8034,7 +7851,6 @@ func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) FilterTokenUnlocked(opt
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC20 *BridgeTransferERC20Filterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC20TokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -8288,7 +8104,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721TransactorRaw) Transact(opts *b
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "MAX_OPERATOR")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -8296,7 +8111,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) MAXOPERATOR(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // MAXOPERATOR is a free data retrieval call binding the contract method 0x3a3099d1.
@@ -8319,7 +8133,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) MAXOPERATOR() (u
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "closedValueTransferVotes", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8327,7 +8140,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ClosedValueTransferVote
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ClosedValueTransferVotes is a free data retrieval call binding the contract method 0x9832c1d7.
@@ -8350,7 +8162,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ClosedValueTrans
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "configurationNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -8358,7 +8169,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ConfigurationNonce(opts
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // ConfigurationNonce is a free data retrieval call binding the contract method 0xac6fff0b.
@@ -8381,7 +8191,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ConfigurationNon
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "feeOfERC20", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -8389,7 +8198,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfERC20(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfERC20 is a free data retrieval call binding the contract method 0x488af871.
@@ -8412,7 +8220,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeOfERC20(arg0 
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "feeOfKLAY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -8420,7 +8227,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeOfKLAY(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfKLAY is a free data retrieval call binding the contract method 0xc263b5d6.
@@ -8443,7 +8249,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeOfKLAY() (*bi
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "feeReceiver")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8451,7 +8256,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) FeeReceiver(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeReceiver is a free data retrieval call binding the contract method 0xb3f00674.
@@ -8474,7 +8278,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) FeeReceiver() (c
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "getOperatorList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -8482,7 +8285,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetOperatorList(opts *b
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetOperatorList is a free data retrieval call binding the contract method 0xb2c01030.
@@ -8505,7 +8307,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) GetOperatorList(
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "getRegisteredTokenList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -8513,7 +8314,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) GetRegisteredTokenList(
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetRegisteredTokenList is a free data retrieval call binding the contract method 0xea21eade.
@@ -8536,7 +8336,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) GetRegisteredTok
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "handleNoncesToBlockNums", arg0)
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -8544,7 +8343,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandleNoncesToBlockNums
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // HandleNoncesToBlockNums is a free data retrieval call binding the contract method 0x13a6738a.
@@ -8567,7 +8365,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) HandleNoncesToBl
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "handledRequestTx", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8575,7 +8372,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) HandledRequestTx(opts *
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // HandledRequestTx is a free data retrieval call binding the contract method 0x8a75eee2.
@@ -8598,7 +8394,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) HandledRequestTx
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "indexOfTokens", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -8606,7 +8401,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IndexOfTokens(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // IndexOfTokens is a free data retrieval call binding the contract method 0x48a18a6a.
@@ -8629,7 +8423,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IndexOfTokens(ar
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8637,7 +8430,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsOwner(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -8660,7 +8452,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IsOwner() (bool,
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsRunning(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "isRunning")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8668,7 +8459,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) IsRunning(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsRunning is a free data retrieval call binding the contract method 0x2014e5d1.
@@ -8691,7 +8481,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) IsRunning() (boo
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "lockedTokens", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8699,7 +8488,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LockedTokens(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // LockedTokens is a free data retrieval call binding the contract method 0x5eb7413a.
@@ -8722,7 +8510,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) LockedTokens(arg
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "lowerHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -8730,7 +8517,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) LowerHandleNonce(opts *
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // LowerHandleNonce is a free data retrieval call binding the contract method 0x4b40b826.
@@ -8753,7 +8539,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) LowerHandleNonce
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "modeMintBurn")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8761,7 +8546,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) ModeMintBurn(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ModeMintBurn is a free data retrieval call binding the contract method 0x6e176ec2.
@@ -8784,7 +8568,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) ModeMintBurn() (
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "operatorList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8792,7 +8575,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorList(opts *bind
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OperatorList is a free data retrieval call binding the contract method 0xcb38f407.
@@ -8815,7 +8597,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) OperatorList(arg
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "operatorThresholds", arg0)
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -8823,7 +8604,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) OperatorThresholds(opts
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // OperatorThresholds is a free data retrieval call binding the contract method 0x5526f76b.
@@ -8846,7 +8626,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) OperatorThreshol
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "operators", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8854,7 +8633,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Operators(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
@@ -8877,7 +8655,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) Operators(arg0 c
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8885,7 +8662,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) Owner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -8908,7 +8684,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) Owner() (common.
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "recoveryBlockNumber")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -8916,7 +8691,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RecoveryBlockNumber(opt
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RecoveryBlockNumber is a free data retrieval call binding the contract method 0x989ba0d3.
@@ -8939,7 +8713,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RecoveryBlockNum
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "registeredTokenList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8947,7 +8720,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokenList(opt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokenList is a free data retrieval call binding the contract method 0x3e4fe949.
@@ -8970,7 +8742,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RegisteredTokenL
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "registeredTokens", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8978,7 +8749,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RegisteredTokens(opts *
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokens is a free data retrieval call binding the contract method 0x8c0bd916.
@@ -9001,7 +8771,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RegisteredTokens
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "requestNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -9009,7 +8778,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) RequestNonce(opts *bind
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RequestNonce is a free data retrieval call binding the contract method 0x7c1a0302.
@@ -9032,7 +8800,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721CallerSession) RequestNonce() (
 func (_BridgeTransferERC721 *BridgeTransferERC721Caller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _BridgeTransferERC721.contract.Call(opts, &out, "upperHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -9040,7 +8807,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Caller) UpperHandleNonce(opts *
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // UpperHandleNonce is a free data retrieval call binding the contract method 0x54edad72.
@@ -9429,7 +9195,6 @@ type BridgeTransferERC721ERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*BridgeTransferERC721ERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -9450,7 +9215,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterERC20FeeChanged
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721ERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -9580,7 +9344,6 @@ type BridgeTransferERC721FeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*BridgeTransferERC721FeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -9597,7 +9360,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterFeeReceiverChan
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721FeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -9731,7 +9493,6 @@ type BridgeTransferERC721HandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721HandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -9756,7 +9517,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterHandleValueTran
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721HandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -9890,7 +9650,6 @@ type BridgeTransferERC721KLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*BridgeTransferERC721KLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -9907,7 +9666,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterKLAYFeeChanged(
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721KLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -10034,7 +9792,6 @@ type BridgeTransferERC721OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*BridgeTransferERC721OwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10055,7 +9812,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterOwnershipTransf
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10192,7 +9948,6 @@ type BridgeTransferERC721RequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721RequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10217,7 +9972,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTra
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721RequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10360,7 +10114,6 @@ type BridgeTransferERC721RequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*BridgeTransferERC721RequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10385,7 +10138,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterRequestValueTra
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721RequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -10519,7 +10271,6 @@ type BridgeTransferERC721TokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10536,7 +10287,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenDeregister
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10662,7 +10412,6 @@ type BridgeTransferERC721TokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10679,7 +10428,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenLocked(opt
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10805,7 +10553,6 @@ type BridgeTransferERC721TokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10822,7 +10569,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenRegistered
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10948,7 +10694,6 @@ type BridgeTransferERC721TokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*BridgeTransferERC721TokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -10965,7 +10710,6 @@ func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) FilterTokenUnlocked(o
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_BridgeTransferERC721 *BridgeTransferERC721Filterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *BridgeTransferERC721TokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -11298,7 +11042,6 @@ type CallbackRegisteredOffer struct {
 //
 // Solidity: event RegisteredOffer(address owner, uint256 valueOrID, address tokenAddress, uint256 price)
 func (_Callback *CallbackFilterer) FilterRegisteredOffer(opts *bind.FilterOpts) (*CallbackRegisteredOfferIterator, error) {
-
 	logs, sub, err := _Callback.contract.FilterLogs(opts, "RegisteredOffer")
 	if err != nil {
 		return nil, err
@@ -11310,7 +11053,6 @@ func (_Callback *CallbackFilterer) FilterRegisteredOffer(opts *bind.FilterOpts) 
 //
 // Solidity: event RegisteredOffer(address owner, uint256 valueOrID, address tokenAddress, uint256 price)
 func (_Callback *CallbackFilterer) WatchRegisteredOffer(opts *bind.WatchOpts, sink chan<- *CallbackRegisteredOffer) (event.Subscription, error) {
-
 	logs, sub, err := _Callback.contract.WatchLogs(opts, "RegisteredOffer")
 	if err != nil {
 		return nil, err
@@ -11697,7 +11439,6 @@ func (_ERC165 *ERC165TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -11705,7 +11446,6 @@ func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -11918,7 +11658,6 @@ func (_ERC20 *ERC20TransactorRaw) Transact(opts *bind.TransactOpts, method strin
 func (_ERC20 *ERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -11926,7 +11665,6 @@ func (_ERC20 *ERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -11949,7 +11687,6 @@ func (_ERC20 *ERC20CallerSession) Allowance(owner common.Address, spender common
 func (_ERC20 *ERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20.contract.Call(opts, &out, "balanceOf", account)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -11957,7 +11694,6 @@ func (_ERC20 *ERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -11980,7 +11716,6 @@ func (_ERC20 *ERC20CallerSession) BalanceOf(account common.Address) (*big.Int, e
 func (_ERC20 *ERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -11988,7 +11723,6 @@ func (_ERC20 *ERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -12189,7 +11923,6 @@ type ERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -12210,7 +11943,6 @@ func (_ERC20 *ERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []commo
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -12342,7 +12074,6 @@ type ERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -12363,7 +12094,6 @@ func (_ERC20 *ERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20 *ERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -12614,7 +12344,6 @@ func (_ERC20Burnable *ERC20BurnableTransactorRaw) Transact(opts *bind.TransactOp
 func (_ERC20Burnable *ERC20BurnableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Burnable.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -12622,7 +12351,6 @@ func (_ERC20Burnable *ERC20BurnableCaller) Allowance(opts *bind.CallOpts, owner 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -12645,7 +12373,6 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) Allowance(owner common.Address
 func (_ERC20Burnable *ERC20BurnableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Burnable.contract.Call(opts, &out, "balanceOf", account)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -12653,7 +12380,6 @@ func (_ERC20Burnable *ERC20BurnableCaller) BalanceOf(opts *bind.CallOpts, accoun
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -12676,7 +12402,6 @@ func (_ERC20Burnable *ERC20BurnableCallerSession) BalanceOf(account common.Addre
 func (_ERC20Burnable *ERC20BurnableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Burnable.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -12684,7 +12409,6 @@ func (_ERC20Burnable *ERC20BurnableCaller) TotalSupply(opts *bind.CallOpts) (*bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -12927,7 +12651,6 @@ type ERC20BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -12948,7 +12671,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20BurnableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -13080,7 +12802,6 @@ type ERC20BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13101,7 +12822,6 @@ func (_ERC20Burnable *ERC20BurnableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Burnable *ERC20BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20BurnableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -13354,7 +13074,6 @@ func (_ERC20Mintable *ERC20MintableTransactorRaw) Transact(opts *bind.TransactOp
 func (_ERC20Mintable *ERC20MintableCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Mintable.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13362,7 +13081,6 @@ func (_ERC20Mintable *ERC20MintableCaller) Allowance(opts *bind.CallOpts, owner 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -13385,7 +13103,6 @@ func (_ERC20Mintable *ERC20MintableCallerSession) Allowance(owner common.Address
 func (_ERC20Mintable *ERC20MintableCaller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Mintable.contract.Call(opts, &out, "balanceOf", account)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13393,7 +13110,6 @@ func (_ERC20Mintable *ERC20MintableCaller) BalanceOf(opts *bind.CallOpts, accoun
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -13416,7 +13132,6 @@ func (_ERC20Mintable *ERC20MintableCallerSession) BalanceOf(account common.Addre
 func (_ERC20Mintable *ERC20MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC20Mintable.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -13424,7 +13139,6 @@ func (_ERC20Mintable *ERC20MintableCaller) IsMinter(opts *bind.CallOpts, account
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -13447,7 +13161,6 @@ func (_ERC20Mintable *ERC20MintableCallerSession) IsMinter(account common.Addres
 func (_ERC20Mintable *ERC20MintableCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC20Mintable.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13455,7 +13168,6 @@ func (_ERC20Mintable *ERC20MintableCaller) TotalSupply(opts *bind.CallOpts) (*bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -13719,7 +13431,6 @@ type ERC20MintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*ERC20MintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -13740,7 +13451,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterApproval(opts *bind.FilterOpt
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC20MintableApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -13870,7 +13580,6 @@ type ERC20MintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -13887,7 +13596,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterAdded(opts *bind.Filter
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -14013,7 +13721,6 @@ type ERC20MintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC20MintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -14030,7 +13737,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterMinterRemoved(opts *bind.Filt
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC20MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -14158,7 +13864,6 @@ type ERC20MintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*ERC20MintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -14179,7 +13884,6 @@ func (_ERC20Mintable *ERC20MintableFilterer) FilterTransfer(opts *bind.FilterOpt
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_ERC20Mintable *ERC20MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC20MintableTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -14430,7 +14134,6 @@ func (_ERC721 *ERC721TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -14438,7 +14141,6 @@ func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -14461,7 +14163,6 @@ func (_ERC721 *ERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -14469,7 +14170,6 @@ func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -14492,7 +14192,6 @@ func (_ERC721 *ERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addres
 func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -14500,7 +14199,6 @@ func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -14523,7 +14221,6 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -14531,7 +14228,6 @@ func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (com
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -14554,7 +14250,6 @@ func (_ERC721 *ERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, e
 func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -14562,7 +14257,6 @@ func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -14763,7 +14457,6 @@ type ERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -14788,7 +14481,6 @@ func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -14924,7 +14616,6 @@ type ERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -14945,7 +14636,6 @@ func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -15077,7 +14767,6 @@ type ERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -15102,7 +14791,6 @@ func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -15358,7 +15046,6 @@ func (_ERC721Burnable *ERC721BurnableTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15366,7 +15053,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -15389,7 +15075,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -15397,7 +15082,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -15420,7 +15104,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -15428,7 +15111,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -15451,7 +15133,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -15459,7 +15140,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -15482,7 +15162,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -15490,7 +15169,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -15712,7 +15390,6 @@ type ERC721BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -15737,7 +15414,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -15873,7 +15549,6 @@ type ERC721BurnableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721BurnableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -15894,7 +15569,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -16026,7 +15700,6 @@ type ERC721BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -16051,7 +15724,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721BurnableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -16309,7 +15981,6 @@ func (_ERC721Metadata *ERC721MetadataTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Metadata *ERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -16317,7 +15988,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -16340,7 +16010,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Metadata *ERC721MetadataCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -16348,7 +16017,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -16371,7 +16039,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Metadata *ERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -16379,7 +16046,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -16402,7 +16068,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Metadata *ERC721MetadataCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "name")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -16410,7 +16075,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) Name(opts *bind.CallOpts) (string, 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -16433,7 +16097,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) Name() (string, error) {
 func (_ERC721Metadata *ERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -16441,7 +16104,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -16464,7 +16126,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Metadata *ERC721MetadataCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -16472,7 +16133,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -16495,7 +16155,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) SupportsInterface(interfaceI
 func (_ERC721Metadata *ERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "symbol")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -16503,7 +16162,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
@@ -16526,7 +16184,6 @@ func (_ERC721Metadata *ERC721MetadataCallerSession) Symbol() (string, error) {
 func (_ERC721Metadata *ERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
 	var out []interface{}
 	err := _ERC721Metadata.contract.Call(opts, &out, "tokenURI", tokenId)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -16534,7 +16191,6 @@ func (_ERC721Metadata *ERC721MetadataCaller) TokenURI(opts *bind.CallOpts, token
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
@@ -16735,7 +16391,6 @@ type ERC721MetadataApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -16760,7 +16415,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -16896,7 +16550,6 @@ type ERC721MetadataApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -16917,7 +16570,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -17049,7 +16701,6 @@ type ERC721MetadataTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -17074,7 +16725,6 @@ func (_ERC721Metadata *ERC721MetadataFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Metadata *ERC721MetadataFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -17314,7 +16964,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableTransactorRaw) Transact(opt
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -17322,7 +16971,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) BalanceOf(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -17345,7 +16993,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) BalanceOf(ow
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -17353,7 +17000,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) GetApproved(opts *b
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -17376,7 +17022,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) GetApproved(
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -17384,7 +17029,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsApprovedForAll(op
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -17407,7 +17051,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsApprovedFo
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -17415,7 +17058,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) IsMinter(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -17438,7 +17080,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) IsMinter(acc
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "name")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -17446,7 +17087,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Name(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -17469,7 +17109,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Name() (stri
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -17477,7 +17116,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) OwnerOf(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -17500,7 +17138,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) OwnerOf(toke
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -17508,7 +17145,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) SupportsInterface(o
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -17531,7 +17167,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) SupportsInte
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Symbol(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "symbol")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -17539,7 +17174,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) Symbol(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
@@ -17562,7 +17196,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCallerSession) Symbol() (st
 func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
 	var out []interface{}
 	err := _ERC721MetadataMintable.contract.Call(opts, &out, "tokenURI", tokenId)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -17570,7 +17203,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableCaller) TokenURI(opts *bind
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
@@ -17834,7 +17466,6 @@ type ERC721MetadataMintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -17859,7 +17490,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApproval(op
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -17995,7 +17625,6 @@ type ERC721MetadataMintableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MetadataMintableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -18016,7 +17645,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterApprovalFor
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -18146,7 +17774,6 @@ type ERC721MetadataMintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -18163,7 +17790,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterAdded
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -18289,7 +17915,6 @@ type ERC721MetadataMintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC721MetadataMintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -18306,7 +17931,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterMinterRemov
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -18434,7 +18058,6 @@ type ERC721MetadataMintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MetadataMintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -18459,7 +18082,6 @@ func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) FilterTransfer(op
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721MetadataMintable *ERC721MetadataMintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MetadataMintableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -18751,7 +18373,6 @@ func (_ExtBridge *ExtBridgeTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_ExtBridge *ExtBridgeCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "MAX_OPERATOR")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -18759,7 +18380,6 @@ func (_ExtBridge *ExtBridgeCaller) MAXOPERATOR(opts *bind.CallOpts) (uint64, err
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // MAXOPERATOR is a free data retrieval call binding the contract method 0x3a3099d1.
@@ -18782,7 +18402,6 @@ func (_ExtBridge *ExtBridgeCallerSession) MAXOPERATOR() (uint64, error) {
 func (_ExtBridge *ExtBridgeCaller) Callback(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "callback")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -18790,7 +18409,6 @@ func (_ExtBridge *ExtBridgeCaller) Callback(opts *bind.CallOpts) (common.Address
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Callback is a free data retrieval call binding the contract method 0x083b2732.
@@ -18813,7 +18431,6 @@ func (_ExtBridge *ExtBridgeCallerSession) Callback() (common.Address, error) {
 func (_ExtBridge *ExtBridgeCaller) ClosedValueTransferVotes(opts *bind.CallOpts, arg0 uint64) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "closedValueTransferVotes", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -18821,7 +18438,6 @@ func (_ExtBridge *ExtBridgeCaller) ClosedValueTransferVotes(opts *bind.CallOpts,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ClosedValueTransferVotes is a free data retrieval call binding the contract method 0x9832c1d7.
@@ -18844,7 +18460,6 @@ func (_ExtBridge *ExtBridgeCallerSession) ClosedValueTransferVotes(arg0 uint64) 
 func (_ExtBridge *ExtBridgeCaller) ConfigurationNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "configurationNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -18852,7 +18467,6 @@ func (_ExtBridge *ExtBridgeCaller) ConfigurationNonce(opts *bind.CallOpts) (uint
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // ConfigurationNonce is a free data retrieval call binding the contract method 0xac6fff0b.
@@ -18875,7 +18489,6 @@ func (_ExtBridge *ExtBridgeCallerSession) ConfigurationNonce() (uint64, error) {
 func (_ExtBridge *ExtBridgeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "feeOfERC20", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18883,7 +18496,6 @@ func (_ExtBridge *ExtBridgeCaller) FeeOfERC20(opts *bind.CallOpts, arg0 common.A
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfERC20 is a free data retrieval call binding the contract method 0x488af871.
@@ -18906,7 +18518,6 @@ func (_ExtBridge *ExtBridgeCallerSession) FeeOfERC20(arg0 common.Address) (*big.
 func (_ExtBridge *ExtBridgeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "feeOfKLAY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18914,7 +18525,6 @@ func (_ExtBridge *ExtBridgeCaller) FeeOfKLAY(opts *bind.CallOpts) (*big.Int, err
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // FeeOfKLAY is a free data retrieval call binding the contract method 0xc263b5d6.
@@ -18937,7 +18547,6 @@ func (_ExtBridge *ExtBridgeCallerSession) FeeOfKLAY() (*big.Int, error) {
 func (_ExtBridge *ExtBridgeCaller) FeeReceiver(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "feeReceiver")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -18945,7 +18554,6 @@ func (_ExtBridge *ExtBridgeCaller) FeeReceiver(opts *bind.CallOpts) (common.Addr
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeReceiver is a free data retrieval call binding the contract method 0xb3f00674.
@@ -18968,7 +18576,6 @@ func (_ExtBridge *ExtBridgeCallerSession) FeeReceiver() (common.Address, error) 
 func (_ExtBridge *ExtBridgeCaller) GetOperatorList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "getOperatorList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -18976,7 +18583,6 @@ func (_ExtBridge *ExtBridgeCaller) GetOperatorList(opts *bind.CallOpts) ([]commo
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetOperatorList is a free data retrieval call binding the contract method 0xb2c01030.
@@ -18999,7 +18605,6 @@ func (_ExtBridge *ExtBridgeCallerSession) GetOperatorList() ([]common.Address, e
 func (_ExtBridge *ExtBridgeCaller) GetRegisteredTokenList(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "getRegisteredTokenList")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -19007,7 +18612,6 @@ func (_ExtBridge *ExtBridgeCaller) GetRegisteredTokenList(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetRegisteredTokenList is a free data retrieval call binding the contract method 0xea21eade.
@@ -19030,7 +18634,6 @@ func (_ExtBridge *ExtBridgeCallerSession) GetRegisteredTokenList() ([]common.Add
 func (_ExtBridge *ExtBridgeCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, arg0 uint64) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "handleNoncesToBlockNums", arg0)
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -19038,7 +18641,6 @@ func (_ExtBridge *ExtBridgeCaller) HandleNoncesToBlockNums(opts *bind.CallOpts, 
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // HandleNoncesToBlockNums is a free data retrieval call binding the contract method 0x13a6738a.
@@ -19061,7 +18663,6 @@ func (_ExtBridge *ExtBridgeCallerSession) HandleNoncesToBlockNums(arg0 uint64) (
 func (_ExtBridge *ExtBridgeCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [32]byte) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "handledRequestTx", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19069,7 +18670,6 @@ func (_ExtBridge *ExtBridgeCaller) HandledRequestTx(opts *bind.CallOpts, arg0 [3
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // HandledRequestTx is a free data retrieval call binding the contract method 0x8a75eee2.
@@ -19092,7 +18692,6 @@ func (_ExtBridge *ExtBridgeCallerSession) HandledRequestTx(arg0 [32]byte) (bool,
 func (_ExtBridge *ExtBridgeCaller) IndexOfTokens(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "indexOfTokens", arg0)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -19100,7 +18699,6 @@ func (_ExtBridge *ExtBridgeCaller) IndexOfTokens(opts *bind.CallOpts, arg0 commo
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // IndexOfTokens is a free data retrieval call binding the contract method 0x48a18a6a.
@@ -19123,7 +18721,6 @@ func (_ExtBridge *ExtBridgeCallerSession) IndexOfTokens(arg0 common.Address) (*b
 func (_ExtBridge *ExtBridgeCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19131,7 +18728,6 @@ func (_ExtBridge *ExtBridgeCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -19154,7 +18750,6 @@ func (_ExtBridge *ExtBridgeCallerSession) IsOwner() (bool, error) {
 func (_ExtBridge *ExtBridgeCaller) IsRunning(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "isRunning")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19162,7 +18757,6 @@ func (_ExtBridge *ExtBridgeCaller) IsRunning(opts *bind.CallOpts) (bool, error) 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsRunning is a free data retrieval call binding the contract method 0x2014e5d1.
@@ -19185,7 +18779,6 @@ func (_ExtBridge *ExtBridgeCallerSession) IsRunning() (bool, error) {
 func (_ExtBridge *ExtBridgeCaller) LockedTokens(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "lockedTokens", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19193,7 +18786,6 @@ func (_ExtBridge *ExtBridgeCaller) LockedTokens(opts *bind.CallOpts, arg0 common
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // LockedTokens is a free data retrieval call binding the contract method 0x5eb7413a.
@@ -19216,7 +18808,6 @@ func (_ExtBridge *ExtBridgeCallerSession) LockedTokens(arg0 common.Address) (boo
 func (_ExtBridge *ExtBridgeCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "lowerHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -19224,7 +18815,6 @@ func (_ExtBridge *ExtBridgeCaller) LowerHandleNonce(opts *bind.CallOpts) (uint64
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // LowerHandleNonce is a free data retrieval call binding the contract method 0x4b40b826.
@@ -19247,7 +18837,6 @@ func (_ExtBridge *ExtBridgeCallerSession) LowerHandleNonce() (uint64, error) {
 func (_ExtBridge *ExtBridgeCaller) ModeMintBurn(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "modeMintBurn")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19255,7 +18844,6 @@ func (_ExtBridge *ExtBridgeCaller) ModeMintBurn(opts *bind.CallOpts) (bool, erro
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ModeMintBurn is a free data retrieval call binding the contract method 0x6e176ec2.
@@ -19278,7 +18866,6 @@ func (_ExtBridge *ExtBridgeCallerSession) ModeMintBurn() (bool, error) {
 func (_ExtBridge *ExtBridgeCaller) OperatorList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "operatorList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -19286,7 +18873,6 @@ func (_ExtBridge *ExtBridgeCaller) OperatorList(opts *bind.CallOpts, arg0 *big.I
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OperatorList is a free data retrieval call binding the contract method 0xcb38f407.
@@ -19309,7 +18895,6 @@ func (_ExtBridge *ExtBridgeCallerSession) OperatorList(arg0 *big.Int) (common.Ad
 func (_ExtBridge *ExtBridgeCaller) OperatorThresholds(opts *bind.CallOpts, arg0 uint8) (uint8, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "operatorThresholds", arg0)
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -19317,7 +18902,6 @@ func (_ExtBridge *ExtBridgeCaller) OperatorThresholds(opts *bind.CallOpts, arg0 
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // OperatorThresholds is a free data retrieval call binding the contract method 0x5526f76b.
@@ -19340,7 +18924,6 @@ func (_ExtBridge *ExtBridgeCallerSession) OperatorThresholds(arg0 uint8) (uint8,
 func (_ExtBridge *ExtBridgeCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (bool, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "operators", arg0)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -19348,7 +18931,6 @@ func (_ExtBridge *ExtBridgeCaller) Operators(opts *bind.CallOpts, arg0 common.Ad
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
@@ -19371,7 +18953,6 @@ func (_ExtBridge *ExtBridgeCallerSession) Operators(arg0 common.Address) (bool, 
 func (_ExtBridge *ExtBridgeCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -19379,7 +18960,6 @@ func (_ExtBridge *ExtBridgeCaller) Owner(opts *bind.CallOpts) (common.Address, e
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -19402,7 +18982,6 @@ func (_ExtBridge *ExtBridgeCallerSession) Owner() (common.Address, error) {
 func (_ExtBridge *ExtBridgeCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "recoveryBlockNumber")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -19410,7 +18989,6 @@ func (_ExtBridge *ExtBridgeCaller) RecoveryBlockNumber(opts *bind.CallOpts) (uin
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RecoveryBlockNumber is a free data retrieval call binding the contract method 0x989ba0d3.
@@ -19433,7 +19011,6 @@ func (_ExtBridge *ExtBridgeCallerSession) RecoveryBlockNumber() (uint64, error) 
 func (_ExtBridge *ExtBridgeCaller) RegisteredTokenList(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "registeredTokenList", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -19441,7 +19018,6 @@ func (_ExtBridge *ExtBridgeCaller) RegisteredTokenList(opts *bind.CallOpts, arg0
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokenList is a free data retrieval call binding the contract method 0x3e4fe949.
@@ -19464,7 +19040,6 @@ func (_ExtBridge *ExtBridgeCallerSession) RegisteredTokenList(arg0 *big.Int) (co
 func (_ExtBridge *ExtBridgeCaller) RegisteredTokens(opts *bind.CallOpts, arg0 common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "registeredTokens", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -19472,7 +19047,6 @@ func (_ExtBridge *ExtBridgeCaller) RegisteredTokens(opts *bind.CallOpts, arg0 co
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RegisteredTokens is a free data retrieval call binding the contract method 0x8c0bd916.
@@ -19495,7 +19069,6 @@ func (_ExtBridge *ExtBridgeCallerSession) RegisteredTokens(arg0 common.Address) 
 func (_ExtBridge *ExtBridgeCaller) RequestNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "requestNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -19503,7 +19076,6 @@ func (_ExtBridge *ExtBridgeCaller) RequestNonce(opts *bind.CallOpts) (uint64, er
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // RequestNonce is a free data retrieval call binding the contract method 0x7c1a0302.
@@ -19526,7 +19098,6 @@ func (_ExtBridge *ExtBridgeCallerSession) RequestNonce() (uint64, error) {
 func (_ExtBridge *ExtBridgeCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64, error) {
 	var out []interface{}
 	err := _ExtBridge.contract.Call(opts, &out, "upperHandleNonce")
-
 	if err != nil {
 		return *new(uint64), err
 	}
@@ -19534,7 +19105,6 @@ func (_ExtBridge *ExtBridgeCaller) UpperHandleNonce(opts *bind.CallOpts) (uint64
 	out0 := *abi.ConvertType(out[0], new(uint64)).(*uint64)
 
 	return out0, err
-
 }
 
 // UpperHandleNonce is a free data retrieval call binding the contract method 0x54edad72.
@@ -20070,7 +19640,6 @@ type ExtBridgeERC20FeeChanged struct {
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_ExtBridge *ExtBridgeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts, token []common.Address, fee []*big.Int) (*ExtBridgeERC20FeeChangedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -20091,7 +19660,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterERC20FeeChanged(opts *bind.FilterOpts
 //
 // Solidity: event ERC20FeeChanged(address indexed token, uint256 indexed fee)
 func (_ExtBridge *ExtBridgeFilterer) WatchERC20FeeChanged(opts *bind.WatchOpts, sink chan<- *ExtBridgeERC20FeeChanged, token []common.Address, fee []*big.Int) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -20221,7 +19789,6 @@ type ExtBridgeFeeReceiverChanged struct {
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_ExtBridge *ExtBridgeFilterer) FilterFeeReceiverChanged(opts *bind.FilterOpts, feeReceiver []common.Address) (*ExtBridgeFeeReceiverChangedIterator, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -20238,7 +19805,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterFeeReceiverChanged(opts *bind.FilterO
 //
 // Solidity: event FeeReceiverChanged(address indexed feeReceiver)
 func (_ExtBridge *ExtBridgeFilterer) WatchFeeReceiverChanged(opts *bind.WatchOpts, sink chan<- *ExtBridgeFeeReceiverChanged, feeReceiver []common.Address) (event.Subscription, error) {
-
 	var feeReceiverRule []interface{}
 	for _, feeReceiverItem := range feeReceiver {
 		feeReceiverRule = append(feeReceiverRule, feeReceiverItem)
@@ -20372,7 +19938,6 @@ type ExtBridgeHandleValueTransfer struct {
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_ExtBridge *ExtBridgeFilterer) FilterHandleValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*ExtBridgeHandleValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -20397,7 +19962,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterHandleValueTransfer(opts *bind.Filter
 //
 // Solidity: event HandleValueTransfer(bytes32 requestTxHash, uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 handleNonce, uint64 lowerHandleNonce, bytes extraData)
 func (_ExtBridge *ExtBridgeFilterer) WatchHandleValueTransfer(opts *bind.WatchOpts, sink chan<- *ExtBridgeHandleValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -20531,7 +20095,6 @@ type ExtBridgeKLAYFeeChanged struct {
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_ExtBridge *ExtBridgeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts, fee []*big.Int) (*ExtBridgeKLAYFeeChangedIterator, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -20548,7 +20111,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterKLAYFeeChanged(opts *bind.FilterOpts,
 //
 // Solidity: event KLAYFeeChanged(uint256 indexed fee)
 func (_ExtBridge *ExtBridgeFilterer) WatchKLAYFeeChanged(opts *bind.WatchOpts, sink chan<- *ExtBridgeKLAYFeeChanged, fee []*big.Int) (event.Subscription, error) {
-
 	var feeRule []interface{}
 	for _, feeItem := range fee {
 		feeRule = append(feeRule, feeItem)
@@ -20675,7 +20237,6 @@ type ExtBridgeOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ExtBridge *ExtBridgeFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ExtBridgeOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -20696,7 +20257,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterOwnershipTransferred(opts *bind.Filte
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ExtBridge *ExtBridgeFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ExtBridgeOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -20833,7 +20393,6 @@ type ExtBridgeRequestValueTransfer struct {
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_ExtBridge *ExtBridgeFilterer) FilterRequestValueTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*ExtBridgeRequestValueTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -20858,7 +20417,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterRequestValueTransfer(opts *bind.Filte
 //
 // Solidity: event RequestValueTransfer(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData)
 func (_ExtBridge *ExtBridgeFilterer) WatchRequestValueTransfer(opts *bind.WatchOpts, sink chan<- *ExtBridgeRequestValueTransfer, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -21001,7 +20559,6 @@ type ExtBridgeRequestValueTransferEncoded struct {
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_ExtBridge *ExtBridgeFilterer) FilterRequestValueTransferEncoded(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenAddress []common.Address) (*ExtBridgeRequestValueTransferEncodedIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -21026,7 +20583,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterRequestValueTransferEncoded(opts *bin
 //
 // Solidity: event RequestValueTransferEncoded(uint8 tokenType, address indexed from, address indexed to, address indexed tokenAddress, uint256 valueOrTokenId, uint64 requestNonce, uint256 fee, bytes extraData, uint8 encodingVer, bytes encodedData)
 func (_ExtBridge *ExtBridgeFilterer) WatchRequestValueTransferEncoded(opts *bind.WatchOpts, sink chan<- *ExtBridgeRequestValueTransferEncoded, from []common.Address, to []common.Address, tokenAddress []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -21160,7 +20716,6 @@ type ExtBridgeTokenDeregistered struct {
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) FilterTokenDeregistered(opts *bind.FilterOpts, token []common.Address) (*ExtBridgeTokenDeregisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21177,7 +20732,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterTokenDeregistered(opts *bind.FilterOp
 //
 // Solidity: event TokenDeregistered(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) WatchTokenDeregistered(opts *bind.WatchOpts, sink chan<- *ExtBridgeTokenDeregistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21303,7 +20857,6 @@ type ExtBridgeTokenLocked struct {
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) FilterTokenLocked(opts *bind.FilterOpts, token []common.Address) (*ExtBridgeTokenLockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21320,7 +20873,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterTokenLocked(opts *bind.FilterOpts, to
 //
 // Solidity: event TokenLocked(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) WatchTokenLocked(opts *bind.WatchOpts, sink chan<- *ExtBridgeTokenLocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21446,7 +20998,6 @@ type ExtBridgeTokenRegistered struct {
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) FilterTokenRegistered(opts *bind.FilterOpts, token []common.Address) (*ExtBridgeTokenRegisteredIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21463,7 +21014,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterTokenRegistered(opts *bind.FilterOpts
 //
 // Solidity: event TokenRegistered(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) WatchTokenRegistered(opts *bind.WatchOpts, sink chan<- *ExtBridgeTokenRegistered, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21589,7 +21139,6 @@ type ExtBridgeTokenUnlocked struct {
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, token []common.Address) (*ExtBridgeTokenUnlockedIterator, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21606,7 +21155,6 @@ func (_ExtBridge *ExtBridgeFilterer) FilterTokenUnlocked(opts *bind.FilterOpts, 
 //
 // Solidity: event TokenUnlocked(address indexed token)
 func (_ExtBridge *ExtBridgeFilterer) WatchTokenUnlocked(opts *bind.WatchOpts, sink chan<- *ExtBridgeTokenUnlocked, token []common.Address) (event.Subscription, error) {
-
 	var tokenRule []interface{}
 	for _, tokenItem := range token {
 		tokenRule = append(tokenRule, tokenItem)
@@ -21822,7 +21370,6 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -21830,7 +21377,6 @@ func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -22019,7 +21565,6 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -22027,7 +21572,6 @@ func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -22050,7 +21594,6 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "balanceOf", account)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -22058,7 +21601,6 @@ func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Addre
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -22081,7 +21623,6 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(account common.Address) (*big.Int,
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -22089,7 +21630,6 @@ func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -22248,7 +21788,6 @@ type IERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22269,7 +21808,6 @@ func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -22401,7 +21939,6 @@ type IERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -22422,7 +21959,6 @@ func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -22833,7 +22369,6 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -22841,7 +22376,6 @@ func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Addre
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -22864,7 +22398,6 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int,
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -22872,7 +22405,6 @@ func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -22895,7 +22427,6 @@ func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addr
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -22903,7 +22434,6 @@ func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -22926,7 +22456,6 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, ope
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -22934,7 +22463,6 @@ func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -22957,7 +22485,6 @@ func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address,
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -22965,7 +22492,6 @@ func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -23166,7 +22692,6 @@ type IERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23191,7 +22716,6 @@ func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []c
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23327,7 +22851,6 @@ type IERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23348,7 +22871,6 @@ func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, own
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -23480,7 +23002,6 @@ type IERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -23505,7 +23026,6 @@ func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []co
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -23923,7 +23443,6 @@ func (_IERC721Metadata *IERC721MetadataTransactorRaw) Transact(opts *bind.Transa
 func (_IERC721Metadata *IERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -23931,7 +23450,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) BalanceOf(opts *bind.CallOpts, ow
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -23954,7 +23472,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) BalanceOf(owner common.Add
 func (_IERC721Metadata *IERC721MetadataCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -23962,7 +23479,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) GetApproved(opts *bind.CallOpts, 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -23985,7 +23501,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) GetApproved(tokenId *big.I
 func (_IERC721Metadata *IERC721MetadataCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -23993,7 +23508,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) IsApprovedForAll(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -24016,7 +23530,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) IsApprovedForAll(owner com
 func (_IERC721Metadata *IERC721MetadataCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "name")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -24024,7 +23537,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) Name(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -24047,7 +23559,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) Name() (string, error) {
 func (_IERC721Metadata *IERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -24055,7 +23566,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) OwnerOf(opts *bind.CallOpts, toke
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -24078,7 +23588,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) OwnerOf(tokenId *big.Int) 
 func (_IERC721Metadata *IERC721MetadataCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -24086,7 +23595,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) SupportsInterface(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -24109,7 +23617,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) SupportsInterface(interfac
 func (_IERC721Metadata *IERC721MetadataCaller) Symbol(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "symbol")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -24117,7 +23624,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) Symbol(opts *bind.CallOpts) (stri
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
@@ -24140,7 +23646,6 @@ func (_IERC721Metadata *IERC721MetadataCallerSession) Symbol() (string, error) {
 func (_IERC721Metadata *IERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tokenId *big.Int) (string, error) {
 	var out []interface{}
 	err := _IERC721Metadata.contract.Call(opts, &out, "tokenURI", tokenId)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -24148,7 +23653,6 @@ func (_IERC721Metadata *IERC721MetadataCaller) TokenURI(opts *bind.CallOpts, tok
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // TokenURI is a free data retrieval call binding the contract method 0xc87b56dd.
@@ -24349,7 +23853,6 @@ type IERC721MetadataApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721MetadataApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24374,7 +23877,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterApproval(opts *bind.Filte
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721MetadataApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24510,7 +24012,6 @@ type IERC721MetadataApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721MetadataApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24531,7 +24032,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterApprovalForAll(opts *bind
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721MetadataApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -24663,7 +24163,6 @@ type IERC721MetadataTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721MetadataTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -24688,7 +24187,6 @@ func (_IERC721Metadata *IERC721MetadataFilterer) FilterTransfer(opts *bind.Filte
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721Metadata *IERC721MetadataFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721MetadataTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -25096,7 +24594,6 @@ func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, me
 func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _MinterRole.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -25104,7 +24601,6 @@ func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -25240,7 +24736,6 @@ type MinterRoleMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -25257,7 +24752,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, 
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -25383,7 +24877,6 @@ type MinterRoleMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -25400,7 +24893,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -25619,7 +25111,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -25627,7 +25118,6 @@ func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -25650,7 +25140,6 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -25658,7 +25147,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -25795,7 +25283,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -25816,7 +25303,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)

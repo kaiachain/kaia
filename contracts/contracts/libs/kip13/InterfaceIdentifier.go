@@ -196,7 +196,6 @@ func (_InterfaceIdentifier *InterfaceIdentifierTransactorRaw) Transact(opts *bin
 func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
 	var out []interface{}
 	err := _InterfaceIdentifier.contract.Call(opts, &out, "supportsInterface", interfaceID)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -204,7 +203,6 @@ func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *b
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.

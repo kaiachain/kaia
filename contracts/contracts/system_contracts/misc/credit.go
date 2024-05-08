@@ -219,7 +219,6 @@ func (_CypressCredit *CypressCreditTransactorRaw) Transact(opts *bind.TransactOp
 func (_CypressCredit *CypressCreditCaller) GetNames(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _CypressCredit.contract.Call(opts, &out, "getNames")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -227,7 +226,6 @@ func (_CypressCredit *CypressCreditCaller) GetNames(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // GetNames is a free data retrieval call binding the contract method 0xcd838f0f.
@@ -250,7 +248,6 @@ func (_CypressCredit *CypressCreditCallerSession) GetNames() (string, error) {
 func (_CypressCredit *CypressCreditCaller) GetPhoto(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _CypressCredit.contract.Call(opts, &out, "getPhoto")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -258,7 +255,6 @@ func (_CypressCredit *CypressCreditCaller) GetPhoto(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // GetPhoto is a free data retrieval call binding the contract method 0xb2ec005e.

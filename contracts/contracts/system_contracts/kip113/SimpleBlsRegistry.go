@@ -442,7 +442,6 @@ type ContextUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ContextUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _ContextUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -454,7 +453,6 @@ func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ContextUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _ContextUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -730,7 +728,6 @@ type ERC1967UpgradeUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -742,7 +739,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdmin
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -863,7 +859,6 @@ type ERC1967UpgradeUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeUpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -880,7 +875,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaco
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -1006,7 +1000,6 @@ type ERC1967UpgradeUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1018,7 +1011,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterIniti
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1139,7 +1131,6 @@ type ERC1967UpgradeUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1156,7 +1147,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgra
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1396,7 +1386,8 @@ func (_IAddressBook *IAddressBookTransactorRaw) Transact(opts *bind.TransactOpts
 func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddress")
 
@@ -1408,7 +1399,6 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 	outstruct.TypeList = *abi.ConvertType(out[0], new([]uint8)).(*[]uint8)
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	return *outstruct, err
-
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -1417,7 +1407,8 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1427,7 +1418,8 @@ func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1440,7 +1432,8 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddressInfo")
 
@@ -1458,7 +1451,6 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	outstruct.PocContractAddress = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
 	outstruct.KirContractAddress = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 	return *outstruct, err
-
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -1470,7 +1462,8 @@ func (_IAddressBook *IAddressBookSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1483,7 +1476,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1494,7 +1488,8 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
 
@@ -1508,7 +1503,6 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	outstruct.CnStakingcontract = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
 	outstruct.CnRewardAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 	return *outstruct, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -1518,7 +1512,8 @@ func (_IAddressBook *IAddressBookSession) GetCnInfo(_cnNodeId common.Address) (s
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1529,7 +1524,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1539,7 +1535,6 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getPendingRequestList")
-
 	if err != nil {
 		return *new([][32]byte), err
 	}
@@ -1547,7 +1542,6 @@ func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
 
 	return out0, err
-
 }
 
 // GetPendingRequestList is a free data retrieval call binding the contract method 0xda34a0bd.
@@ -1575,7 +1569,8 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfo", _id)
 
@@ -1597,7 +1592,6 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	outstruct.InitialProposedTime = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[6], new(uint8)).(*uint8)
 	return *outstruct, err
-
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x82d67e5a.
@@ -1611,7 +1605,8 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfo(_id [32]byte) (struct {
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1626,7 +1621,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfo(_id [32]byte) (st
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1638,7 +1634,8 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfoByArgs", _functionId, _firstArg, _secondArg, _thirdArg)
 
@@ -1654,7 +1651,6 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	outstruct.InitialProposedTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[3], new(uint8)).(*uint8)
 	return *outstruct, err
-
 }
 
 // GetRequestInfoByArgs is a free data retrieval call binding the contract method 0x407091eb.
@@ -1665,7 +1661,8 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfoByArgs(_functionId uint8
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1677,7 +1674,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1687,7 +1685,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getState")
 
@@ -1699,7 +1698,6 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.Requirement = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -1708,7 +1706,8 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 func (_IAddressBook *IAddressBookSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1718,7 +1717,8 @@ func (_IAddressBook *IAddressBookSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1728,7 +1728,6 @@ func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isActivated")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1736,7 +1735,6 @@ func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -1759,7 +1757,6 @@ func (_IAddressBook *IAddressBookCallerSession) IsActivated() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isConstructed")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1767,7 +1764,6 @@ func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (boo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -1790,7 +1786,6 @@ func (_IAddressBook *IAddressBookCallerSession) IsConstructed() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "kirContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1798,7 +1793,6 @@ func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -1821,7 +1815,6 @@ func (_IAddressBook *IAddressBookCallerSession) KirContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "pocContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1829,7 +1822,6 @@ func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -1852,7 +1844,6 @@ func (_IAddressBook *IAddressBookCallerSession) PocContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "spareContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1860,7 +1851,6 @@ func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -2317,7 +2307,6 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableTransactorRaw) Transact(opts *bind.
 func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IBeaconUpgradeable.contract.Call(opts, &out, "implementation")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2325,7 +2314,6 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
@@ -2509,7 +2497,6 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableTransactorRaw) 
 func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IERC1822ProxiableUpgradeable.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -2517,7 +2504,6 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) Proxiab
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -2766,7 +2752,6 @@ type IERC1967UpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*IERC1967UpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _IERC1967Upgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2778,7 +2763,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _IERC1967Upgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2899,7 +2883,6 @@ type IERC1967UpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*IERC1967UpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2916,7 +2899,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(op
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -3042,7 +3024,6 @@ type IERC1967UpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*IERC1967UpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3059,7 +3040,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bi
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3275,7 +3255,8 @@ func (_IKIP113 *IKIP113TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IKIP113.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -3287,7 +3268,6 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
-
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -3296,7 +3276,8 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3306,7 +3287,8 @@ func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 func (_IKIP113 *IKIP113CallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3541,7 +3523,6 @@ type InitializableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.FilterOpts) (*InitializableInitializedIterator, error) {
-
 	logs, sub, err := _Initializable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3553,7 +3534,6 @@ func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.Filter
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *InitializableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _Initializable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3766,7 +3746,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableTransactorRaw) Transact(opts *bind.
 func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _OwnableUpgradeable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3774,7 +3753,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3910,7 +3888,6 @@ type OwnableUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*OwnableUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _OwnableUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3922,7 +3899,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _OwnableUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -4044,7 +4020,6 @@ type OwnableUpgradeableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableUpgradeableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4065,7 +4040,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4321,7 +4295,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryTransactorRaw) Transact(opts *bind.Tr
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO48HASH")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4329,7 +4302,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -4352,7 +4324,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO48HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO96HASH")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4360,7 +4331,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -4383,7 +4353,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO96HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "abook")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4391,7 +4360,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -4414,7 +4382,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Abook() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "allNodeIds", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4422,7 +4389,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -4445,7 +4411,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) AllNodeIds(arg0 *big.I
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -4457,7 +4424,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
-
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -4466,7 +4432,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4476,7 +4443,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4486,7 +4454,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struc
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4494,7 +4461,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -4517,7 +4483,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Owner() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4525,7 +4490,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -4548,7 +4512,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ProxiableUUID() ([32]b
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "record", arg0)
 
@@ -4560,7 +4525,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 	outstruct.PublicKey = *abi.ConvertType(out[0], new([]byte)).(*[]byte)
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 	return *outstruct, err
-
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -4569,7 +4533,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4579,7 +4544,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) 
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4808,7 +4774,6 @@ type SimpleBlsRegistryAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*SimpleBlsRegistryAdminChangedIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4820,7 +4785,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bi
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4941,7 +4905,6 @@ type SimpleBlsRegistryBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*SimpleBlsRegistryBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -4958,7 +4921,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -5084,7 +5046,6 @@ type SimpleBlsRegistryInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bind.FilterOpts) (*SimpleBlsRegistryInitializedIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5096,7 +5057,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bin
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5218,7 +5178,6 @@ type SimpleBlsRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*SimpleBlsRegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5239,7 +5198,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5371,7 +5329,6 @@ type SimpleBlsRegistryRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind.FilterOpts) (*SimpleBlsRegistryRegisteredIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5383,7 +5340,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5506,7 +5462,6 @@ type SimpleBlsRegistryUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bind.FilterOpts) (*SimpleBlsRegistryUnregisteredIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5518,7 +5473,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bi
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUnregistered) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5639,7 +5593,6 @@ type SimpleBlsRegistryUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*SimpleBlsRegistryUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -5656,7 +5609,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.F
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -6050,7 +6002,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transact(opts *bind.Transa
 func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _UUPSUpgradeable.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6058,7 +6009,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -6195,7 +6145,6 @@ type UUPSUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*UUPSUpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6207,7 +6156,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.F
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6328,7 +6276,6 @@ type UUPSUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*UUPSUpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6345,7 +6292,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6471,7 +6417,6 @@ type UUPSUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*UUPSUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6483,7 +6428,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.Fi
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6604,7 +6548,6 @@ type UUPSUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*UUPSUpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -6621,7 +6564,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.Filte
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)

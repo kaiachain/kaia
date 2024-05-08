@@ -264,7 +264,6 @@ func (_AddressBook *AddressBookTransactorRaw) Transact(opts *bind.TransactOpts, 
 func (_AddressBook *AddressBookCaller) CNNODEIDTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "CN_NODE_ID_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -272,7 +271,6 @@ func (_AddressBook *AddressBookCaller) CNNODEIDTYPE(opts *bind.CallOpts) (uint8,
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNNODEIDTYPE is a free data retrieval call binding the contract method 0x76674c54.
@@ -295,7 +293,6 @@ func (_AddressBook *AddressBookCallerSession) CNNODEIDTYPE() (uint8, error) {
 func (_AddressBook *AddressBookCaller) CNREWARDADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "CN_REWARD_ADDRESS_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -303,7 +300,6 @@ func (_AddressBook *AddressBookCaller) CNREWARDADDRESSTYPE(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNREWARDADDRESSTYPE is a free data retrieval call binding the contract method 0x32b91e85.
@@ -326,7 +322,6 @@ func (_AddressBook *AddressBookCallerSession) CNREWARDADDRESSTYPE() (uint8, erro
 func (_AddressBook *AddressBookCaller) CNSTAKINGADDRESSTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "CN_STAKING_ADDRESS_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -334,7 +329,6 @@ func (_AddressBook *AddressBookCaller) CNSTAKINGADDRESSTYPE(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // CNSTAKINGADDRESSTYPE is a free data retrieval call binding the contract method 0xde5bbfbc.
@@ -357,7 +351,6 @@ func (_AddressBook *AddressBookCallerSession) CNSTAKINGADDRESSTYPE() (uint8, err
 func (_AddressBook *AddressBookCaller) CONTRACTTYPE(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -365,7 +358,6 @@ func (_AddressBook *AddressBookCaller) CONTRACTTYPE(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // CONTRACTTYPE is a free data retrieval call binding the contract method 0x4b6a94cc.
@@ -388,7 +380,6 @@ func (_AddressBook *AddressBookCallerSession) CONTRACTTYPE() (string, error) {
 func (_AddressBook *AddressBookCaller) KIRCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "KIR_CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -396,7 +387,6 @@ func (_AddressBook *AddressBookCaller) KIRCONTRACTTYPE(opts *bind.CallOpts) (uin
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // KIRCONTRACTTYPE is a free data retrieval call binding the contract method 0x41b6945c.
@@ -419,7 +409,6 @@ func (_AddressBook *AddressBookCallerSession) KIRCONTRACTTYPE() (uint8, error) {
 func (_AddressBook *AddressBookCaller) MAXADMIN(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "MAX_ADMIN")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -427,7 +416,6 @@ func (_AddressBook *AddressBookCaller) MAXADMIN(opts *bind.CallOpts) (*big.Int, 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MAXADMIN is a free data retrieval call binding the contract method 0x58d65880.
@@ -450,7 +438,6 @@ func (_AddressBook *AddressBookCallerSession) MAXADMIN() (*big.Int, error) {
 func (_AddressBook *AddressBookCaller) MAXPENDINGREQUEST(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "MAX_PENDING_REQUEST")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -458,7 +445,6 @@ func (_AddressBook *AddressBookCaller) MAXPENDINGREQUEST(opts *bind.CallOpts) (*
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MAXPENDINGREQUEST is a free data retrieval call binding the contract method 0x778f39cb.
@@ -481,7 +467,6 @@ func (_AddressBook *AddressBookCallerSession) MAXPENDINGREQUEST() (*big.Int, err
 func (_AddressBook *AddressBookCaller) ONEWEEK(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "ONE_WEEK")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -489,7 +474,6 @@ func (_AddressBook *AddressBookCaller) ONEWEEK(opts *bind.CallOpts) (*big.Int, e
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // ONEWEEK is a free data retrieval call binding the contract method 0x8e6f6b77.
@@ -512,7 +496,6 @@ func (_AddressBook *AddressBookCallerSession) ONEWEEK() (*big.Int, error) {
 func (_AddressBook *AddressBookCaller) POCCONTRACTTYPE(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "POC_CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -520,7 +503,6 @@ func (_AddressBook *AddressBookCaller) POCCONTRACTTYPE(opts *bind.CallOpts) (uin
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // POCCONTRACTTYPE is a free data retrieval call binding the contract method 0xb50060e4.
@@ -543,7 +525,6 @@ func (_AddressBook *AddressBookCallerSession) POCCONTRACTTYPE() (uint8, error) {
 func (_AddressBook *AddressBookCaller) TWOWEEKS(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "TWO_WEEKS")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -551,7 +532,6 @@ func (_AddressBook *AddressBookCaller) TWOWEEKS(opts *bind.CallOpts) (*big.Int, 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TWOWEEKS is a free data retrieval call binding the contract method 0x934d1fa4.
@@ -574,7 +554,6 @@ func (_AddressBook *AddressBookCallerSession) TWOWEEKS() (*big.Int, error) {
 func (_AddressBook *AddressBookCaller) VERSION(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "VERSION")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -582,7 +561,6 @@ func (_AddressBook *AddressBookCaller) VERSION(opts *bind.CallOpts) (*big.Int, e
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
@@ -605,7 +583,6 @@ func (_AddressBook *AddressBookCallerSession) VERSION() (*big.Int, error) {
 func (_AddressBook *AddressBookCaller) GetAllAddress(opts *bind.CallOpts) ([]uint8, []common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getAllAddress")
-
 	if err != nil {
 		return *new([]uint8), *new([]common.Address), err
 	}
@@ -614,7 +591,6 @@ func (_AddressBook *AddressBookCaller) GetAllAddress(opts *bind.CallOpts) ([]uin
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
-
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -637,7 +613,6 @@ func (_AddressBook *AddressBookCallerSession) GetAllAddress() ([]uint8, []common
 func (_AddressBook *AddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) ([]common.Address, []common.Address, []common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getAllAddressInfo")
-
 	if err != nil {
 		return *new([]common.Address), *new([]common.Address), *new([]common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -649,7 +624,6 @@ func (_AddressBook *AddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) ([
 	out4 := *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, out3, out4, err
-
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -672,7 +646,6 @@ func (_AddressBook *AddressBookCallerSession) GetAllAddressInfo() ([]common.Addr
 func (_AddressBook *AddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeId common.Address) (common.Address, common.Address, common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
-
 	if err != nil {
 		return *new(common.Address), *new(common.Address), *new(common.Address), err
 	}
@@ -682,7 +655,6 @@ func (_AddressBook *AddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeId 
 	out2 := *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 
 	return out0, out1, out2, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -705,7 +677,6 @@ func (_AddressBook *AddressBookCallerSession) GetCnInfo(_cnNodeId common.Address
 func (_AddressBook *AddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getPendingRequestList")
-
 	if err != nil {
 		return *new([][32]byte), err
 	}
@@ -713,7 +684,6 @@ func (_AddressBook *AddressBookCaller) GetPendingRequestList(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
 
 	return out0, err
-
 }
 
 // GetPendingRequestList is a free data retrieval call binding the contract method 0xda34a0bd.
@@ -736,7 +706,6 @@ func (_AddressBook *AddressBookCallerSession) GetPendingRequestList() ([][32]byt
 func (_AddressBook *AddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id [32]byte) (uint8, [32]byte, [32]byte, [32]byte, []common.Address, *big.Int, uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getRequestInfo", _id)
-
 	if err != nil {
 		return *new(uint8), *new([32]byte), *new([32]byte), *new([32]byte), *new([]common.Address), *new(*big.Int), *new(uint8), err
 	}
@@ -750,7 +719,6 @@ func (_AddressBook *AddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id [
 	out6 := *abi.ConvertType(out[6], new(uint8)).(*uint8)
 
 	return out0, out1, out2, out3, out4, out5, out6, err
-
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x82d67e5a.
@@ -773,7 +741,6 @@ func (_AddressBook *AddressBookCallerSession) GetRequestInfo(_id [32]byte) (uint
 func (_AddressBook *AddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpts, _functionId uint8, _firstArg [32]byte, _secondArg [32]byte, _thirdArg [32]byte) ([32]byte, []common.Address, *big.Int, uint8, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getRequestInfoByArgs", _functionId, _firstArg, _secondArg, _thirdArg)
-
 	if err != nil {
 		return *new([32]byte), *new([]common.Address), *new(*big.Int), *new(uint8), err
 	}
@@ -784,7 +751,6 @@ func (_AddressBook *AddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpts,
 	out3 := *abi.ConvertType(out[3], new(uint8)).(*uint8)
 
 	return out0, out1, out2, out3, err
-
 }
 
 // GetRequestInfoByArgs is a free data retrieval call binding the contract method 0x407091eb.
@@ -807,7 +773,6 @@ func (_AddressBook *AddressBookCallerSession) GetRequestInfoByArgs(_functionId u
 func (_AddressBook *AddressBookCaller) GetState(opts *bind.CallOpts) ([]common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "getState")
-
 	if err != nil {
 		return *new([]common.Address), *new(*big.Int), err
 	}
@@ -816,7 +781,6 @@ func (_AddressBook *AddressBookCaller) GetState(opts *bind.CallOpts) ([]common.A
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -839,7 +803,6 @@ func (_AddressBook *AddressBookCallerSession) GetState() ([]common.Address, *big
 func (_AddressBook *AddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "isActivated")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -847,7 +810,6 @@ func (_AddressBook *AddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, e
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -870,7 +832,6 @@ func (_AddressBook *AddressBookCallerSession) IsActivated() (bool, error) {
 func (_AddressBook *AddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "isConstructed")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -878,7 +839,6 @@ func (_AddressBook *AddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -901,7 +861,6 @@ func (_AddressBook *AddressBookCallerSession) IsConstructed() (bool, error) {
 func (_AddressBook *AddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "kirContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -909,7 +868,6 @@ func (_AddressBook *AddressBookCaller) KirContractAddress(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -932,7 +890,6 @@ func (_AddressBook *AddressBookCallerSession) KirContractAddress() (common.Addre
 func (_AddressBook *AddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "pocContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -940,7 +897,6 @@ func (_AddressBook *AddressBookCaller) PocContractAddress(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -963,7 +919,6 @@ func (_AddressBook *AddressBookCallerSession) PocContractAddress() (common.Addre
 func (_AddressBook *AddressBookCaller) Requirement(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "requirement")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -971,7 +926,6 @@ func (_AddressBook *AddressBookCaller) Requirement(opts *bind.CallOpts) (*big.In
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Requirement is a free data retrieval call binding the contract method 0xb7563930.
@@ -994,7 +948,6 @@ func (_AddressBook *AddressBookCallerSession) Requirement() (*big.Int, error) {
 func (_AddressBook *AddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _AddressBook.contract.Call(opts, &out, "spareContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1002,7 +955,6 @@ func (_AddressBook *AddressBookCaller) SpareContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -1578,7 +1530,6 @@ type AddressBookActivateAddressBook struct {
 //
 // Solidity: event ActivateAddressBook()
 func (_AddressBook *AddressBookFilterer) FilterActivateAddressBook(opts *bind.FilterOpts) (*AddressBookActivateAddressBookIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ActivateAddressBook")
 	if err != nil {
 		return nil, err
@@ -1590,7 +1541,6 @@ func (_AddressBook *AddressBookFilterer) FilterActivateAddressBook(opts *bind.Fi
 //
 // Solidity: event ActivateAddressBook()
 func (_AddressBook *AddressBookFilterer) WatchActivateAddressBook(opts *bind.WatchOpts, sink chan<- *AddressBookActivateAddressBook) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ActivateAddressBook")
 	if err != nil {
 		return nil, err
@@ -1711,7 +1661,6 @@ type AddressBookAddAdmin struct {
 //
 // Solidity: event AddAdmin(address indexed admin)
 func (_AddressBook *AddressBookFilterer) FilterAddAdmin(opts *bind.FilterOpts, admin []common.Address) (*AddressBookAddAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -1728,7 +1677,6 @@ func (_AddressBook *AddressBookFilterer) FilterAddAdmin(opts *bind.FilterOpts, a
 //
 // Solidity: event AddAdmin(address indexed admin)
 func (_AddressBook *AddressBookFilterer) WatchAddAdmin(opts *bind.WatchOpts, sink chan<- *AddressBookAddAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -1859,7 +1807,6 @@ type AddressBookCancelRequest struct {
 //
 // Solidity: event CancelRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) FilterCancelRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookCancelRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -1880,7 +1827,6 @@ func (_AddressBook *AddressBookFilterer) FilterCancelRequest(opts *bind.FilterOp
 //
 // Solidity: event CancelRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) WatchCancelRequest(opts *bind.WatchOpts, sink chan<- *AddressBookCancelRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2009,7 +1955,6 @@ type AddressBookClearRequest struct {
 //
 // Solidity: event ClearRequest()
 func (_AddressBook *AddressBookFilterer) FilterClearRequest(opts *bind.FilterOpts) (*AddressBookClearRequestIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -2021,7 +1966,6 @@ func (_AddressBook *AddressBookFilterer) FilterClearRequest(opts *bind.FilterOpt
 //
 // Solidity: event ClearRequest()
 func (_AddressBook *AddressBookFilterer) WatchClearRequest(opts *bind.WatchOpts, sink chan<- *AddressBookClearRequest) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -2142,7 +2086,6 @@ type AddressBookDeleteAdmin struct {
 //
 // Solidity: event DeleteAdmin(address indexed admin)
 func (_AddressBook *AddressBookFilterer) FilterDeleteAdmin(opts *bind.FilterOpts, admin []common.Address) (*AddressBookDeleteAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -2159,7 +2102,6 @@ func (_AddressBook *AddressBookFilterer) FilterDeleteAdmin(opts *bind.FilterOpts
 //
 // Solidity: event DeleteAdmin(address indexed admin)
 func (_AddressBook *AddressBookFilterer) WatchDeleteAdmin(opts *bind.WatchOpts, sink chan<- *AddressBookDeleteAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -2287,7 +2229,6 @@ type AddressBookDeployContract struct {
 //
 // Solidity: event DeployContract(string contractType, address[] adminList, uint256 requirement)
 func (_AddressBook *AddressBookFilterer) FilterDeployContract(opts *bind.FilterOpts) (*AddressBookDeployContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -2299,7 +2240,6 @@ func (_AddressBook *AddressBookFilterer) FilterDeployContract(opts *bind.FilterO
 //
 // Solidity: event DeployContract(string contractType, address[] adminList, uint256 requirement)
 func (_AddressBook *AddressBookFilterer) WatchDeployContract(opts *bind.WatchOpts, sink chan<- *AddressBookDeployContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -2425,7 +2365,6 @@ type AddressBookExecuteRequestFailure struct {
 //
 // Solidity: event ExecuteRequestFailure(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) FilterExecuteRequestFailure(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExecuteRequestFailureIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2446,7 +2385,6 @@ func (_AddressBook *AddressBookFilterer) FilterExecuteRequestFailure(opts *bind.
 //
 // Solidity: event ExecuteRequestFailure(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) WatchExecuteRequestFailure(opts *bind.WatchOpts, sink chan<- *AddressBookExecuteRequestFailure, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2581,7 +2519,6 @@ type AddressBookExecuteRequestSuccess struct {
 //
 // Solidity: event ExecuteRequestSuccess(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) FilterExecuteRequestSuccess(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExecuteRequestSuccessIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2602,7 +2539,6 @@ func (_AddressBook *AddressBookFilterer) FilterExecuteRequestSuccess(opts *bind.
 //
 // Solidity: event ExecuteRequestSuccess(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_AddressBook *AddressBookFilterer) WatchExecuteRequestSuccess(opts *bind.WatchOpts, sink chan<- *AddressBookExecuteRequestSuccess, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2738,7 +2674,6 @@ type AddressBookExpiredRequest struct {
 //
 // Solidity: event ExpiredRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) FilterExpiredRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookExpiredRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2759,7 +2694,6 @@ func (_AddressBook *AddressBookFilterer) FilterExpiredRequest(opts *bind.FilterO
 //
 // Solidity: event ExpiredRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) WatchExpiredRequest(opts *bind.WatchOpts, sink chan<- *AddressBookExpiredRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -2891,7 +2825,6 @@ type AddressBookRegisterCnStakingContract struct {
 //
 // Solidity: event RegisterCnStakingContract(address cnNodeId, address cnStakingContractAddress, address cnRewardAddress)
 func (_AddressBook *AddressBookFilterer) FilterRegisterCnStakingContract(opts *bind.FilterOpts) (*AddressBookRegisterCnStakingContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "RegisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -2903,7 +2836,6 @@ func (_AddressBook *AddressBookFilterer) FilterRegisterCnStakingContract(opts *b
 //
 // Solidity: event RegisterCnStakingContract(address cnNodeId, address cnStakingContractAddress, address cnRewardAddress)
 func (_AddressBook *AddressBookFilterer) WatchRegisterCnStakingContract(opts *bind.WatchOpts, sink chan<- *AddressBookRegisterCnStakingContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "RegisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -3026,7 +2958,6 @@ type AddressBookReviseRewardAddress struct {
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_AddressBook *AddressBookFilterer) FilterReviseRewardAddress(opts *bind.FilterOpts) (*AddressBookReviseRewardAddressIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -3038,7 +2969,6 @@ func (_AddressBook *AddressBookFilterer) FilterReviseRewardAddress(opts *bind.Fi
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_AddressBook *AddressBookFilterer) WatchReviseRewardAddress(opts *bind.WatchOpts, sink chan<- *AddressBookReviseRewardAddress) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -3165,7 +3095,6 @@ type AddressBookRevokeRequest struct {
 //
 // Solidity: event RevokeRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) FilterRevokeRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookRevokeRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3186,7 +3115,6 @@ func (_AddressBook *AddressBookFilterer) FilterRevokeRequest(opts *bind.FilterOp
 //
 // Solidity: event RevokeRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) WatchRevokeRequest(opts *bind.WatchOpts, sink chan<- *AddressBookRevokeRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3322,7 +3250,6 @@ type AddressBookSubmitRequest struct {
 //
 // Solidity: event SubmitRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) FilterSubmitRequest(opts *bind.FilterOpts, id [][32]byte, from []common.Address) (*AddressBookSubmitRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3343,7 +3270,6 @@ func (_AddressBook *AddressBookFilterer) FilterSubmitRequest(opts *bind.FilterOp
 //
 // Solidity: event SubmitRequest(bytes32 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_AddressBook *AddressBookFilterer) WatchSubmitRequest(opts *bind.WatchOpts, sink chan<- *AddressBookSubmitRequest, id [][32]byte, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -3473,7 +3399,6 @@ type AddressBookUnregisterCnStakingContract struct {
 //
 // Solidity: event UnregisterCnStakingContract(address cnNodeId)
 func (_AddressBook *AddressBookFilterer) FilterUnregisterCnStakingContract(opts *bind.FilterOpts) (*AddressBookUnregisterCnStakingContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UnregisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -3485,7 +3410,6 @@ func (_AddressBook *AddressBookFilterer) FilterUnregisterCnStakingContract(opts 
 //
 // Solidity: event UnregisterCnStakingContract(address cnNodeId)
 func (_AddressBook *AddressBookFilterer) WatchUnregisterCnStakingContract(opts *bind.WatchOpts, sink chan<- *AddressBookUnregisterCnStakingContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UnregisterCnStakingContract")
 	if err != nil {
 		return nil, err
@@ -3609,7 +3533,6 @@ type AddressBookUpdateKirContract struct {
 //
 // Solidity: event UpdateKirContract(address prevKirContractAddress, uint256 prevVersion, address curKirContractAddress, uint256 curVersion)
 func (_AddressBook *AddressBookFilterer) FilterUpdateKirContract(opts *bind.FilterOpts) (*AddressBookUpdateKirContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateKirContract")
 	if err != nil {
 		return nil, err
@@ -3621,7 +3544,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateKirContract(opts *bind.Filt
 //
 // Solidity: event UpdateKirContract(address prevKirContractAddress, uint256 prevVersion, address curKirContractAddress, uint256 curVersion)
 func (_AddressBook *AddressBookFilterer) WatchUpdateKirContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateKirContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateKirContract")
 	if err != nil {
 		return nil, err
@@ -3745,7 +3667,6 @@ type AddressBookUpdatePocContract struct {
 //
 // Solidity: event UpdatePocContract(address prevPocContractAddress, uint256 prevVersion, address curPocContractAddress, uint256 curVersion)
 func (_AddressBook *AddressBookFilterer) FilterUpdatePocContract(opts *bind.FilterOpts) (*AddressBookUpdatePocContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdatePocContract")
 	if err != nil {
 		return nil, err
@@ -3757,7 +3678,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdatePocContract(opts *bind.Filt
 //
 // Solidity: event UpdatePocContract(address prevPocContractAddress, uint256 prevVersion, address curPocContractAddress, uint256 curVersion)
 func (_AddressBook *AddressBookFilterer) WatchUpdatePocContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdatePocContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdatePocContract")
 	if err != nil {
 		return nil, err
@@ -3878,7 +3798,6 @@ type AddressBookUpdateRequirement struct {
 //
 // Solidity: event UpdateRequirement(uint256 requirement)
 func (_AddressBook *AddressBookFilterer) FilterUpdateRequirement(opts *bind.FilterOpts) (*AddressBookUpdateRequirementIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -3890,7 +3809,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateRequirement(opts *bind.Filt
 //
 // Solidity: event UpdateRequirement(uint256 requirement)
 func (_AddressBook *AddressBookFilterer) WatchUpdateRequirement(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateRequirement) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -4011,7 +3929,6 @@ type AddressBookUpdateSpareContract struct {
 //
 // Solidity: event UpdateSpareContract(address spareContractAddress)
 func (_AddressBook *AddressBookFilterer) FilterUpdateSpareContract(opts *bind.FilterOpts) (*AddressBookUpdateSpareContractIterator, error) {
-
 	logs, sub, err := _AddressBook.contract.FilterLogs(opts, "UpdateSpareContract")
 	if err != nil {
 		return nil, err
@@ -4023,7 +3940,6 @@ func (_AddressBook *AddressBookFilterer) FilterUpdateSpareContract(opts *bind.Fi
 //
 // Solidity: event UpdateSpareContract(address spareContractAddress)
 func (_AddressBook *AddressBookFilterer) WatchUpdateSpareContract(opts *bind.WatchOpts, sink chan<- *AddressBookUpdateSpareContract) (event.Subscription, error) {
-
 	logs, sub, err := _AddressBook.contract.WatchLogs(opts, "UpdateSpareContract")
 	if err != nil {
 		return nil, err
@@ -4483,7 +4399,6 @@ func (_CnStakingContract *CnStakingContractTransactorRaw) Transact(opts *bind.Tr
 func (_CnStakingContract *CnStakingContractCaller) ADDRESSBOOKADDRESS(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "ADDRESS_BOOK_ADDRESS")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4491,7 +4406,6 @@ func (_CnStakingContract *CnStakingContractCaller) ADDRESSBOOKADDRESS(opts *bind
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // ADDRESSBOOKADDRESS is a free data retrieval call binding the contract method 0xf2f2f49b.
@@ -4514,7 +4428,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) ADDRESSBOOKADDRESS() (
 func (_CnStakingContract *CnStakingContractCaller) CONTRACTTYPE(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "CONTRACT_TYPE")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -4522,7 +4435,6 @@ func (_CnStakingContract *CnStakingContractCaller) CONTRACTTYPE(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // CONTRACTTYPE is a free data retrieval call binding the contract method 0x4b6a94cc.
@@ -4545,7 +4457,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) CONTRACTTYPE() (string
 func (_CnStakingContract *CnStakingContractCaller) MAXADMIN(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "MAX_ADMIN")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4553,7 +4464,6 @@ func (_CnStakingContract *CnStakingContractCaller) MAXADMIN(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MAXADMIN is a free data retrieval call binding the contract method 0x58d65880.
@@ -4576,7 +4486,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) MAXADMIN() (*big.Int, 
 func (_CnStakingContract *CnStakingContractCaller) ONEWEEK(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "ONE_WEEK")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4584,7 +4493,6 @@ func (_CnStakingContract *CnStakingContractCaller) ONEWEEK(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // ONEWEEK is a free data retrieval call binding the contract method 0x8e6f6b77.
@@ -4607,7 +4515,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) ONEWEEK() (*big.Int, e
 func (_CnStakingContract *CnStakingContractCaller) VERSION(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "VERSION")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4615,7 +4522,6 @@ func (_CnStakingContract *CnStakingContractCaller) VERSION(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
@@ -4638,7 +4544,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) VERSION() (*big.Int, e
 func (_CnStakingContract *CnStakingContractCaller) ContractValidator(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "contractValidator")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4646,7 +4551,6 @@ func (_CnStakingContract *CnStakingContractCaller) ContractValidator(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // ContractValidator is a free data retrieval call binding the contract method 0x7a5db068.
@@ -4669,7 +4573,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) ContractValidator() (c
 func (_CnStakingContract *CnStakingContractCaller) GetApprovedStakingWithdrawalIds(opts *bind.CallOpts, _from *big.Int, _to *big.Int, _state uint8) ([]*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getApprovedStakingWithdrawalIds", _from, _to, _state)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -4677,7 +4580,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetApprovedStakingWithdrawalI
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetApprovedStakingWithdrawalIds is a free data retrieval call binding the contract method 0xd2569eb9.
@@ -4700,7 +4602,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetApprovedStakingWith
 func (_CnStakingContract *CnStakingContractCaller) GetApprovedStakingWithdrawalInfo(opts *bind.CallOpts, _index *big.Int) (common.Address, *big.Int, *big.Int, uint8, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getApprovedStakingWithdrawalInfo", _index)
-
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), *new(*big.Int), *new(uint8), err
 	}
@@ -4711,7 +4612,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetApprovedStakingWithdrawalI
 	out3 := *abi.ConvertType(out[3], new(uint8)).(*uint8)
 
 	return out0, out1, out2, out3, err
-
 }
 
 // GetApprovedStakingWithdrawalInfo is a free data retrieval call binding the contract method 0x725c0503.
@@ -4734,7 +4634,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetApprovedStakingWith
 func (_CnStakingContract *CnStakingContractCaller) GetLockupStakingInfo(opts *bind.CallOpts) ([]*big.Int, []*big.Int, *big.Int, *big.Int, *big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getLockupStakingInfo")
-
 	if err != nil {
 		return *new([]*big.Int), *new([]*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), err
 	}
@@ -4746,7 +4645,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetLockupStakingInfo(opts *bi
 	out4 := *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
 
 	return out0, out1, out2, out3, out4, err
-
 }
 
 // GetLockupStakingInfo is a free data retrieval call binding the contract method 0x5ecd75f2.
@@ -4769,7 +4667,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetLockupStakingInfo()
 func (_CnStakingContract *CnStakingContractCaller) GetRequestIds(opts *bind.CallOpts, _from *big.Int, _to *big.Int, _state uint8) ([]*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getRequestIds", _from, _to, _state)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -4777,7 +4674,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetRequestIds(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetRequestIds is a free data retrieval call binding the contract method 0x0fd440ec.
@@ -4800,7 +4696,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetRequestIds(_from *b
 func (_CnStakingContract *CnStakingContractCaller) GetRequestInfo(opts *bind.CallOpts, _id *big.Int) (uint8, [32]byte, [32]byte, [32]byte, common.Address, []common.Address, uint8, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getRequestInfo", _id)
-
 	if err != nil {
 		return *new(uint8), *new([32]byte), *new([32]byte), *new([32]byte), *new(common.Address), *new([]common.Address), *new(uint8), err
 	}
@@ -4814,7 +4709,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetRequestInfo(opts *bind.Cal
 	out6 := *abi.ConvertType(out[6], new(uint8)).(*uint8)
 
 	return out0, out1, out2, out3, out4, out5, out6, err
-
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x0b816045.
@@ -4837,7 +4731,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetRequestInfo(_id *bi
 func (_CnStakingContract *CnStakingContractCaller) GetReviewers(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getReviewers")
-
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -4845,7 +4738,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetReviewers(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
-
 }
 
 // GetReviewers is a free data retrieval call binding the contract method 0x75a87643.
@@ -4868,7 +4760,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetReviewers() ([]comm
 func (_CnStakingContract *CnStakingContractCaller) GetState(opts *bind.CallOpts) (common.Address, common.Address, common.Address, []common.Address, *big.Int, []*big.Int, []*big.Int, bool, bool, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "getState")
-
 	if err != nil {
 		return *new(common.Address), *new(common.Address), *new(common.Address), *new([]common.Address), *new(*big.Int), *new([]*big.Int), *new([]*big.Int), *new(bool), *new(bool), err
 	}
@@ -4884,7 +4775,6 @@ func (_CnStakingContract *CnStakingContractCaller) GetState(opts *bind.CallOpts)
 	out8 := *abi.ConvertType(out[8], new(bool)).(*bool)
 
 	return out0, out1, out2, out3, out4, out5, out6, out7, out8, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -4907,7 +4797,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) GetState() (common.Add
 func (_CnStakingContract *CnStakingContractCaller) InitialLockupStaking(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "initialLockupStaking")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4915,7 +4804,6 @@ func (_CnStakingContract *CnStakingContractCaller) InitialLockupStaking(opts *bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // InitialLockupStaking is a free data retrieval call binding the contract method 0x06704222.
@@ -4938,7 +4826,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) InitialLockupStaking()
 func (_CnStakingContract *CnStakingContractCaller) IsInitialized(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "isInitialized")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4946,7 +4833,6 @@ func (_CnStakingContract *CnStakingContractCaller) IsInitialized(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsInitialized is a free data retrieval call binding the contract method 0x392e53cd.
@@ -4969,7 +4855,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) IsInitialized() (bool,
 func (_CnStakingContract *CnStakingContractCaller) LastClearedId(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "lastClearedId")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4977,7 +4862,6 @@ func (_CnStakingContract *CnStakingContractCaller) LastClearedId(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // LastClearedId is a free data retrieval call binding the contract method 0xe7abb98d.
@@ -5000,7 +4884,8 @@ func (_CnStakingContract *CnStakingContractCallerSession) LastClearedId() (*big.
 func (_CnStakingContract *CnStakingContractCaller) LockupConditions(opts *bind.CallOpts) (struct {
 	AllReviewed   bool
 	ReviewedCount *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "lockupConditions")
 
@@ -5012,7 +4897,6 @@ func (_CnStakingContract *CnStakingContractCaller) LockupConditions(opts *bind.C
 	outstruct.AllReviewed = *abi.ConvertType(out[0], new(bool)).(*bool)
 	outstruct.ReviewedCount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // LockupConditions is a free data retrieval call binding the contract method 0x2429f8a9.
@@ -5021,7 +4905,8 @@ func (_CnStakingContract *CnStakingContractCaller) LockupConditions(opts *bind.C
 func (_CnStakingContract *CnStakingContractSession) LockupConditions() (struct {
 	AllReviewed   bool
 	ReviewedCount *big.Int
-}, error) {
+}, error,
+) {
 	return _CnStakingContract.Contract.LockupConditions(&_CnStakingContract.CallOpts)
 }
 
@@ -5031,7 +4916,8 @@ func (_CnStakingContract *CnStakingContractSession) LockupConditions() (struct {
 func (_CnStakingContract *CnStakingContractCallerSession) LockupConditions() (struct {
 	AllReviewed   bool
 	ReviewedCount *big.Int
-}, error) {
+}, error,
+) {
 	return _CnStakingContract.Contract.LockupConditions(&_CnStakingContract.CallOpts)
 }
 
@@ -5041,7 +4927,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) LockupConditions() (st
 func (_CnStakingContract *CnStakingContractCaller) NodeId(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "nodeId")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5049,7 +4934,6 @@ func (_CnStakingContract *CnStakingContractCaller) NodeId(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // NodeId is a free data retrieval call binding the contract method 0x139d7fed.
@@ -5072,7 +4956,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) NodeId() (common.Addre
 func (_CnStakingContract *CnStakingContractCaller) RemainingLockupStaking(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "remainingLockupStaking")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5080,7 +4963,6 @@ func (_CnStakingContract *CnStakingContractCaller) RemainingLockupStaking(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // RemainingLockupStaking is a free data retrieval call binding the contract method 0x7b5e0481.
@@ -5103,7 +4985,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) RemainingLockupStaking
 func (_CnStakingContract *CnStakingContractCaller) RequestCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "requestCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5111,7 +4992,6 @@ func (_CnStakingContract *CnStakingContractCaller) RequestCount(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // RequestCount is a free data retrieval call binding the contract method 0x5badbe4c.
@@ -5134,7 +5014,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) RequestCount() (*big.I
 func (_CnStakingContract *CnStakingContractCaller) Requirement(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "requirement")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5142,7 +5021,6 @@ func (_CnStakingContract *CnStakingContractCaller) Requirement(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Requirement is a free data retrieval call binding the contract method 0xb7563930.
@@ -5165,7 +5043,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) Requirement() (*big.In
 func (_CnStakingContract *CnStakingContractCaller) RewardAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "rewardAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5173,7 +5050,6 @@ func (_CnStakingContract *CnStakingContractCaller) RewardAddress(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RewardAddress is a free data retrieval call binding the contract method 0x8cf57cb9.
@@ -5196,7 +5072,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) RewardAddress() (commo
 func (_CnStakingContract *CnStakingContractCaller) Staking(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "staking")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5204,7 +5079,6 @@ func (_CnStakingContract *CnStakingContractCaller) Staking(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Staking is a free data retrieval call binding the contract method 0x4cf088d9.
@@ -5227,7 +5101,6 @@ func (_CnStakingContract *CnStakingContractCallerSession) Staking() (*big.Int, e
 func (_CnStakingContract *CnStakingContractCaller) WithdrawalRequestCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _CnStakingContract.contract.Call(opts, &out, "withdrawalRequestCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5235,7 +5108,6 @@ func (_CnStakingContract *CnStakingContractCaller) WithdrawalRequestCount(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // WithdrawalRequestCount is a free data retrieval call binding the contract method 0x19e44e32.
@@ -5812,7 +5684,6 @@ type CnStakingContractAddAdmin struct {
 //
 // Solidity: event AddAdmin(address indexed admin)
 func (_CnStakingContract *CnStakingContractFilterer) FilterAddAdmin(opts *bind.FilterOpts, admin []common.Address) (*CnStakingContractAddAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -5829,7 +5700,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterAddAdmin(opts *bind.F
 //
 // Solidity: event AddAdmin(address indexed admin)
 func (_CnStakingContract *CnStakingContractFilterer) WatchAddAdmin(opts *bind.WatchOpts, sink chan<- *CnStakingContractAddAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -5958,7 +5828,6 @@ type CnStakingContractApproveStakingWithdrawal struct {
 //
 // Solidity: event ApproveStakingWithdrawal(uint256 approvedWithdrawalId, address to, uint256 value, uint256 withdrawableFrom)
 func (_CnStakingContract *CnStakingContractFilterer) FilterApproveStakingWithdrawal(opts *bind.FilterOpts) (*CnStakingContractApproveStakingWithdrawalIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "ApproveStakingWithdrawal")
 	if err != nil {
 		return nil, err
@@ -5970,7 +5839,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterApproveStakingWithdra
 //
 // Solidity: event ApproveStakingWithdrawal(uint256 approvedWithdrawalId, address to, uint256 value, uint256 withdrawableFrom)
 func (_CnStakingContract *CnStakingContractFilterer) WatchApproveStakingWithdrawal(opts *bind.WatchOpts, sink chan<- *CnStakingContractApproveStakingWithdrawal) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "ApproveStakingWithdrawal")
 	if err != nil {
 		return nil, err
@@ -6093,7 +5961,6 @@ type CnStakingContractCancelApprovedStakingWithdrawal struct {
 //
 // Solidity: event CancelApprovedStakingWithdrawal(uint256 approvedWithdrawalId, address to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) FilterCancelApprovedStakingWithdrawal(opts *bind.FilterOpts) (*CnStakingContractCancelApprovedStakingWithdrawalIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "CancelApprovedStakingWithdrawal")
 	if err != nil {
 		return nil, err
@@ -6105,7 +5972,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterCancelApprovedStaking
 //
 // Solidity: event CancelApprovedStakingWithdrawal(uint256 approvedWithdrawalId, address to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) WatchCancelApprovedStakingWithdrawal(opts *bind.WatchOpts, sink chan<- *CnStakingContractCancelApprovedStakingWithdrawal) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "CancelApprovedStakingWithdrawal")
 	if err != nil {
 		return nil, err
@@ -6231,7 +6097,6 @@ type CnStakingContractCancelRequest struct {
 //
 // Solidity: event CancelRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) FilterCancelRequest(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractCancelRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -6252,7 +6117,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterCancelRequest(opts *b
 //
 // Solidity: event CancelRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) WatchCancelRequest(opts *bind.WatchOpts, sink chan<- *CnStakingContractCancelRequest, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -6381,7 +6245,6 @@ type CnStakingContractClearRequest struct {
 //
 // Solidity: event ClearRequest()
 func (_CnStakingContract *CnStakingContractFilterer) FilterClearRequest(opts *bind.FilterOpts) (*CnStakingContractClearRequestIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -6393,7 +6256,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterClearRequest(opts *bi
 //
 // Solidity: event ClearRequest()
 func (_CnStakingContract *CnStakingContractFilterer) WatchClearRequest(opts *bind.WatchOpts, sink chan<- *CnStakingContractClearRequest) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "ClearRequest")
 	if err != nil {
 		return nil, err
@@ -6513,7 +6375,6 @@ type CnStakingContractCompleteReviewInitialConditions struct {
 //
 // Solidity: event CompleteReviewInitialConditions()
 func (_CnStakingContract *CnStakingContractFilterer) FilterCompleteReviewInitialConditions(opts *bind.FilterOpts) (*CnStakingContractCompleteReviewInitialConditionsIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "CompleteReviewInitialConditions")
 	if err != nil {
 		return nil, err
@@ -6525,7 +6386,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterCompleteReviewInitial
 //
 // Solidity: event CompleteReviewInitialConditions()
 func (_CnStakingContract *CnStakingContractFilterer) WatchCompleteReviewInitialConditions(opts *bind.WatchOpts, sink chan<- *CnStakingContractCompleteReviewInitialConditions) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "CompleteReviewInitialConditions")
 	if err != nil {
 		return nil, err
@@ -6652,7 +6512,6 @@ type CnStakingContractConfirmRequest struct {
 //
 // Solidity: event ConfirmRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_CnStakingContract *CnStakingContractFilterer) FilterConfirmRequest(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractConfirmRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -6673,7 +6532,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterConfirmRequest(opts *
 //
 // Solidity: event ConfirmRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_CnStakingContract *CnStakingContractFilterer) WatchConfirmRequest(opts *bind.WatchOpts, sink chan<- *CnStakingContractConfirmRequest, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -6803,7 +6661,6 @@ type CnStakingContractDeleteAdmin struct {
 //
 // Solidity: event DeleteAdmin(address indexed admin)
 func (_CnStakingContract *CnStakingContractFilterer) FilterDeleteAdmin(opts *bind.FilterOpts, admin []common.Address) (*CnStakingContractDeleteAdminIterator, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -6820,7 +6677,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterDeleteAdmin(opts *bin
 //
 // Solidity: event DeleteAdmin(address indexed admin)
 func (_CnStakingContract *CnStakingContractFilterer) WatchDeleteAdmin(opts *bind.WatchOpts, sink chan<- *CnStakingContractDeleteAdmin, admin []common.Address) (event.Subscription, error) {
-
 	var adminRule []interface{}
 	for _, adminItem := range admin {
 		adminRule = append(adminRule, adminItem)
@@ -6953,7 +6809,6 @@ type CnStakingContractDeployContract struct {
 //
 // Solidity: event DeployContract(string contractType, address contractValidator, address nodeId, address rewardAddress, address[] cnAdminList, uint256 requirement, uint256[] unlockTime, uint256[] unlockAmount)
 func (_CnStakingContract *CnStakingContractFilterer) FilterDeployContract(opts *bind.FilterOpts) (*CnStakingContractDeployContractIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -6965,7 +6820,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterDeployContract(opts *
 //
 // Solidity: event DeployContract(string contractType, address contractValidator, address nodeId, address rewardAddress, address[] cnAdminList, uint256 requirement, uint256[] unlockTime, uint256[] unlockAmount)
 func (_CnStakingContract *CnStakingContractFilterer) WatchDeployContract(opts *bind.WatchOpts, sink chan<- *CnStakingContractDeployContract) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "DeployContract")
 	if err != nil {
 		return nil, err
@@ -7087,7 +6941,6 @@ type CnStakingContractDepositLockupStakingAndInit struct {
 //
 // Solidity: event DepositLockupStakingAndInit(address from, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) FilterDepositLockupStakingAndInit(opts *bind.FilterOpts) (*CnStakingContractDepositLockupStakingAndInitIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "DepositLockupStakingAndInit")
 	if err != nil {
 		return nil, err
@@ -7099,7 +6952,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterDepositLockupStakingA
 //
 // Solidity: event DepositLockupStakingAndInit(address from, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) WatchDepositLockupStakingAndInit(opts *bind.WatchOpts, sink chan<- *CnStakingContractDepositLockupStakingAndInit) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "DepositLockupStakingAndInit")
 	if err != nil {
 		return nil, err
@@ -7225,7 +7077,6 @@ type CnStakingContractExecuteRequestFailure struct {
 //
 // Solidity: event ExecuteRequestFailure(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) FilterExecuteRequestFailure(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractExecuteRequestFailureIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7246,7 +7097,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterExecuteRequestFailure
 //
 // Solidity: event ExecuteRequestFailure(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) WatchExecuteRequestFailure(opts *bind.WatchOpts, sink chan<- *CnStakingContractExecuteRequestFailure, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7381,7 +7231,6 @@ type CnStakingContractExecuteRequestSuccess struct {
 //
 // Solidity: event ExecuteRequestSuccess(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) FilterExecuteRequestSuccess(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractExecuteRequestSuccessIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7402,7 +7251,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterExecuteRequestSuccess
 //
 // Solidity: event ExecuteRequestSuccess(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) WatchExecuteRequestSuccess(opts *bind.WatchOpts, sink chan<- *CnStakingContractExecuteRequestSuccess, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7532,7 +7380,6 @@ type CnStakingContractReviewInitialConditions struct {
 //
 // Solidity: event ReviewInitialConditions(address indexed from)
 func (_CnStakingContract *CnStakingContractFilterer) FilterReviewInitialConditions(opts *bind.FilterOpts, from []common.Address) (*CnStakingContractReviewInitialConditionsIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7549,7 +7396,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterReviewInitialConditio
 //
 // Solidity: event ReviewInitialConditions(address indexed from)
 func (_CnStakingContract *CnStakingContractFilterer) WatchReviewInitialConditions(opts *bind.WatchOpts, sink chan<- *CnStakingContractReviewInitialConditions, from []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -7677,7 +7523,6 @@ type CnStakingContractReviseRewardAddress struct {
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_CnStakingContract *CnStakingContractFilterer) FilterReviseRewardAddress(opts *bind.FilterOpts) (*CnStakingContractReviseRewardAddressIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -7689,7 +7534,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterReviseRewardAddress(o
 //
 // Solidity: event ReviseRewardAddress(address cnNodeId, address prevRewardAddress, address curRewardAddress)
 func (_CnStakingContract *CnStakingContractFilterer) WatchReviseRewardAddress(opts *bind.WatchOpts, sink chan<- *CnStakingContractReviseRewardAddress) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "ReviseRewardAddress")
 	if err != nil {
 		return nil, err
@@ -7816,7 +7660,6 @@ type CnStakingContractRevokeConfirmation struct {
 //
 // Solidity: event RevokeConfirmation(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_CnStakingContract *CnStakingContractFilterer) FilterRevokeConfirmation(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractRevokeConfirmationIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7837,7 +7680,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterRevokeConfirmation(op
 //
 // Solidity: event RevokeConfirmation(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg, address[] confirmers)
 func (_CnStakingContract *CnStakingContractFilterer) WatchRevokeConfirmation(opts *bind.WatchOpts, sink chan<- *CnStakingContractRevokeConfirmation, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -7968,7 +7810,6 @@ type CnStakingContractStakeKlay struct {
 //
 // Solidity: event StakeKlay(address from, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) FilterStakeKlay(opts *bind.FilterOpts) (*CnStakingContractStakeKlayIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "StakeKlay")
 	if err != nil {
 		return nil, err
@@ -7980,7 +7821,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterStakeKlay(opts *bind.
 //
 // Solidity: event StakeKlay(address from, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) WatchStakeKlay(opts *bind.WatchOpts, sink chan<- *CnStakingContractStakeKlay) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "StakeKlay")
 	if err != nil {
 		return nil, err
@@ -8106,7 +7946,6 @@ type CnStakingContractSubmitRequest struct {
 //
 // Solidity: event SubmitRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) FilterSubmitRequest(opts *bind.FilterOpts, id []*big.Int, from []common.Address) (*CnStakingContractSubmitRequestIterator, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -8127,7 +7966,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterSubmitRequest(opts *b
 //
 // Solidity: event SubmitRequest(uint256 indexed id, address indexed from, uint8 functionId, bytes32 firstArg, bytes32 secondArg, bytes32 thirdArg)
 func (_CnStakingContract *CnStakingContractFilterer) WatchSubmitRequest(opts *bind.WatchOpts, sink chan<- *CnStakingContractSubmitRequest, id []*big.Int, from []common.Address) (event.Subscription, error) {
-
 	var idRule []interface{}
 	for _, idItem := range id {
 		idRule = append(idRule, idItem)
@@ -8257,7 +8095,6 @@ type CnStakingContractUpdateRequirement struct {
 //
 // Solidity: event UpdateRequirement(uint256 requirement)
 func (_CnStakingContract *CnStakingContractFilterer) FilterUpdateRequirement(opts *bind.FilterOpts) (*CnStakingContractUpdateRequirementIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -8269,7 +8106,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterUpdateRequirement(opt
 //
 // Solidity: event UpdateRequirement(uint256 requirement)
 func (_CnStakingContract *CnStakingContractFilterer) WatchUpdateRequirement(opts *bind.WatchOpts, sink chan<- *CnStakingContractUpdateRequirement) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "UpdateRequirement")
 	if err != nil {
 		return nil, err
@@ -8390,7 +8226,6 @@ type CnStakingContractUpdateRewardAddress struct {
 //
 // Solidity: event UpdateRewardAddress(address rewardAddress)
 func (_CnStakingContract *CnStakingContractFilterer) FilterUpdateRewardAddress(opts *bind.FilterOpts) (*CnStakingContractUpdateRewardAddressIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "UpdateRewardAddress")
 	if err != nil {
 		return nil, err
@@ -8402,7 +8237,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterUpdateRewardAddress(o
 //
 // Solidity: event UpdateRewardAddress(address rewardAddress)
 func (_CnStakingContract *CnStakingContractFilterer) WatchUpdateRewardAddress(opts *bind.WatchOpts, sink chan<- *CnStakingContractUpdateRewardAddress) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "UpdateRewardAddress")
 	if err != nil {
 		return nil, err
@@ -8525,7 +8359,6 @@ type CnStakingContractWithdrawApprovedStaking struct {
 //
 // Solidity: event WithdrawApprovedStaking(uint256 approvedWithdrawalId, address to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) FilterWithdrawApprovedStaking(opts *bind.FilterOpts) (*CnStakingContractWithdrawApprovedStakingIterator, error) {
-
 	logs, sub, err := _CnStakingContract.contract.FilterLogs(opts, "WithdrawApprovedStaking")
 	if err != nil {
 		return nil, err
@@ -8537,7 +8370,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterWithdrawApprovedStaki
 //
 // Solidity: event WithdrawApprovedStaking(uint256 approvedWithdrawalId, address to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) WatchWithdrawApprovedStaking(opts *bind.WatchOpts, sink chan<- *CnStakingContractWithdrawApprovedStaking) (event.Subscription, error) {
-
 	logs, sub, err := _CnStakingContract.contract.WatchLogs(opts, "WithdrawApprovedStaking")
 	if err != nil {
 		return nil, err
@@ -8659,7 +8491,6 @@ type CnStakingContractWithdrawLockupStaking struct {
 //
 // Solidity: event WithdrawLockupStaking(address indexed to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) FilterWithdrawLockupStaking(opts *bind.FilterOpts, to []common.Address) (*CnStakingContractWithdrawLockupStakingIterator, error) {
-
 	var toRule []interface{}
 	for _, toItem := range to {
 		toRule = append(toRule, toItem)
@@ -8676,7 +8507,6 @@ func (_CnStakingContract *CnStakingContractFilterer) FilterWithdrawLockupStaking
 //
 // Solidity: event WithdrawLockupStaking(address indexed to, uint256 value)
 func (_CnStakingContract *CnStakingContractFilterer) WatchWithdrawLockupStaking(opts *bind.WatchOpts, sink chan<- *CnStakingContractWithdrawLockupStaking, to []common.Address) (event.Subscription, error) {
-
 	var toRule []interface{}
 	for _, toItem := range to {
 		toRule = append(toRule, toItem)
@@ -8894,7 +8724,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceTransactorRaw) Tran
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) IsInitialized(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _CnStakingContractInterface.contract.Call(opts, &out, "isInitialized")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8902,7 +8731,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) IsInitializ
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsInitialized is a free data retrieval call binding the contract method 0x392e53cd.
@@ -8925,7 +8753,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCallerSession) IsIn
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) NodeId(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContractInterface.contract.Call(opts, &out, "nodeId")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8933,7 +8760,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) NodeId(opts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // NodeId is a free data retrieval call binding the contract method 0x139d7fed.
@@ -8956,7 +8782,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCallerSession) Node
 func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) RewardAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _CnStakingContractInterface.contract.Call(opts, &out, "rewardAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8964,7 +8789,6 @@ func (_CnStakingContractInterface *CnStakingContractInterfaceCaller) RewardAddre
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // RewardAddress is a free data retrieval call binding the contract method 0x8cf57cb9.
@@ -9148,7 +8972,6 @@ func (_KirContractInterface *KirContractInterfaceTransactorRaw) Transact(opts *b
 func (_KirContractInterface *KirContractInterfaceCaller) GetKirVersion(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _KirContractInterface.contract.Call(opts, &out, "getKirVersion")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -9156,7 +8979,6 @@ func (_KirContractInterface *KirContractInterfaceCaller) GetKirVersion(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetKirVersion is a free data retrieval call binding the contract method 0x44426346.
@@ -9340,7 +9162,6 @@ func (_PocContractInterface *PocContractInterfaceTransactorRaw) Transact(opts *b
 func (_PocContractInterface *PocContractInterfaceCaller) GetPocVersion(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _PocContractInterface.contract.Call(opts, &out, "getPocVersion")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -9348,7 +9169,6 @@ func (_PocContractInterface *PocContractInterfaceCaller) GetPocVersion(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetPocVersion is a free data retrieval call binding the contract method 0x0f610072.
