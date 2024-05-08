@@ -582,7 +582,7 @@ func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amo
 	m[addr] = m[addr].Add(m[addr], amount)
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)

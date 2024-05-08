@@ -29,10 +29,10 @@ import (
 	"github.com/klaytn/klaytn/event"
 )
 
-// Account represents a Klaytn account located at a specific location defined
+// Account represents a Kaia account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Klaytn account address derived from the key
+	Address common.Address `json:"address"` // Kaia account address derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 

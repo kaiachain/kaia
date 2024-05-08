@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package bind generates Go bindings for Klaytn contracts.
+Package bind generates Go bindings for Kaia contracts.
 
 # Source Files
 

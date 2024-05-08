@@ -757,7 +757,7 @@ var RegistryFuncSigs = RegistryMetaData.Sigs
 // Deprecated: Use RegistryMetaData.Bin instead.
 var RegistryBin = RegistryMetaData.Bin
 
-// DeployRegistry deploys a new Klaytn contract, binding an instance of Registry to it.
+// DeployRegistry deploys a new Kaia contract, binding an instance of Registry to it.
 func DeployRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Registry, error) {
 	parsed, err := RegistryMetaData.GetAbi()
 	if err != nil {

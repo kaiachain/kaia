@@ -49,9 +49,9 @@ type CallOpts struct {
 }
 
 // TransactOpts is the collection of authorization data required to create a
-// valid Klaytn transaction.
+// valid Kaia transaction.
 type TransactOpts struct {
-	From   common.Address // Klaytn account to send the transaction from
+	From   common.Address // Kaia account to send the transaction from
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 

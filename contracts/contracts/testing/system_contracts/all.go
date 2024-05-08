@@ -58,7 +58,7 @@ const AddressUpgradeableBinRuntime = `730000000000000000000000000000000000000000
 // Deprecated: Use AddressUpgradeableMetaData.Bin instead.
 var AddressUpgradeableBin = AddressUpgradeableMetaData.Bin
 
-// DeployAddressUpgradeable deploys a new Klaytn contract, binding an instance of AddressUpgradeable to it.
+// DeployAddressUpgradeable deploys a new Kaia contract, binding an instance of AddressUpgradeable to it.
 func DeployAddressUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressUpgradeable, error) {
 	parsed, err := AddressUpgradeableMetaData.GetAbi()
 	if err != nil {
@@ -6432,7 +6432,7 @@ var KIP113MockFuncSigs = KIP113MockMetaData.Sigs
 // Deprecated: Use KIP113MockMetaData.Bin instead.
 var KIP113MockBin = KIP113MockMetaData.Bin
 
-// DeployKIP113Mock deploys a new Klaytn contract, binding an instance of KIP113Mock to it.
+// DeployKIP113Mock deploys a new Kaia contract, binding an instance of KIP113Mock to it.
 func DeployKIP113Mock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *KIP113Mock, error) {
 	parsed, err := KIP113MockMetaData.GetAbi()
 	if err != nil {
@@ -7986,7 +7986,7 @@ var OwnableFuncSigs = OwnableMetaData.Sigs
 // Deprecated: Use OwnableMetaData.Bin instead.
 var OwnableBin = OwnableMetaData.Bin
 
-// DeployOwnable deploys a new Klaytn contract, binding an instance of Ownable to it.
+// DeployOwnable deploys a new Kaia contract, binding an instance of Ownable to it.
 func DeployOwnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Ownable, error) {
 	parsed, err := OwnableMetaData.GetAbi()
 	if err != nil {
@@ -8941,7 +8941,7 @@ var RegistryMockFuncSigs = RegistryMockMetaData.Sigs
 // Deprecated: Use RegistryMockMetaData.Bin instead.
 var RegistryMockBin = RegistryMockMetaData.Bin
 
-// DeployRegistryMock deploys a new Klaytn contract, binding an instance of RegistryMock to it.
+// DeployRegistryMock deploys a new Kaia contract, binding an instance of RegistryMock to it.
 func DeployRegistryMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RegistryMock, error) {
 	parsed, err := RegistryMockMetaData.GetAbi()
 	if err != nil {
@@ -9669,7 +9669,7 @@ var SimpleBlsRegistryFuncSigs = SimpleBlsRegistryMetaData.Sigs
 // Deprecated: Use SimpleBlsRegistryMetaData.Bin instead.
 var SimpleBlsRegistryBin = SimpleBlsRegistryMetaData.Bin
 
-// DeploySimpleBlsRegistry deploys a new Klaytn contract, binding an instance of SimpleBlsRegistry to it.
+// DeploySimpleBlsRegistry deploys a new Kaia contract, binding an instance of SimpleBlsRegistry to it.
 func DeploySimpleBlsRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SimpleBlsRegistry, error) {
 	parsed, err := SimpleBlsRegistryMetaData.GetAbi()
 	if err != nil {
@@ -11213,7 +11213,7 @@ const StorageSlotUpgradeableBinRuntime = `73000000000000000000000000000000000000
 // Deprecated: Use StorageSlotUpgradeableMetaData.Bin instead.
 var StorageSlotUpgradeableBin = StorageSlotUpgradeableMetaData.Bin
 
-// DeployStorageSlotUpgradeable deploys a new Klaytn contract, binding an instance of StorageSlotUpgradeable to it.
+// DeployStorageSlotUpgradeable deploys a new Kaia contract, binding an instance of StorageSlotUpgradeable to it.
 func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlotUpgradeable, error) {
 	parsed, err := StorageSlotUpgradeableMetaData.GetAbi()
 	if err != nil {
@@ -11425,7 +11425,7 @@ var TreasuryRebalanceFuncSigs = TreasuryRebalanceMetaData.Sigs
 // Deprecated: Use TreasuryRebalanceMetaData.Bin instead.
 var TreasuryRebalanceBin = TreasuryRebalanceMetaData.Bin
 
-// DeployTreasuryRebalance deploys a new Klaytn contract, binding an instance of TreasuryRebalance to it.
+// DeployTreasuryRebalance deploys a new Kaia contract, binding an instance of TreasuryRebalance to it.
 func DeployTreasuryRebalance(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalance, error) {
 	parsed, err := TreasuryRebalanceMetaData.GetAbi()
 	if err != nil {
@@ -13659,7 +13659,7 @@ var TreasuryRebalanceMockFuncSigs = TreasuryRebalanceMockMetaData.Sigs
 // Deprecated: Use TreasuryRebalanceMockMetaData.Bin instead.
 var TreasuryRebalanceMockBin = TreasuryRebalanceMockMetaData.Bin
 
-// DeployTreasuryRebalanceMock deploys a new Klaytn contract, binding an instance of TreasuryRebalanceMock to it.
+// DeployTreasuryRebalanceMock deploys a new Kaia contract, binding an instance of TreasuryRebalanceMock to it.
 func DeployTreasuryRebalanceMock(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceMock, error) {
 	parsed, err := TreasuryRebalanceMockMetaData.GetAbi()
 	if err != nil {
@@ -15915,7 +15915,7 @@ var TreasuryRebalanceMockV2FuncSigs = TreasuryRebalanceMockV2MetaData.Sigs
 // Deprecated: Use TreasuryRebalanceMockV2MetaData.Bin instead.
 var TreasuryRebalanceMockV2Bin = TreasuryRebalanceMockV2MetaData.Bin
 
-// DeployTreasuryRebalanceMockV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceMockV2 to it.
+// DeployTreasuryRebalanceMockV2 deploys a new Kaia contract, binding an instance of TreasuryRebalanceMockV2 to it.
 func DeployTreasuryRebalanceMockV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceMockV2, error) {
 	parsed, err := TreasuryRebalanceMockV2MetaData.GetAbi()
 	if err != nil {
@@ -18170,7 +18170,7 @@ var TreasuryRebalanceV2FuncSigs = TreasuryRebalanceV2MetaData.Sigs
 // Deprecated: Use TreasuryRebalanceV2MetaData.Bin instead.
 var TreasuryRebalanceV2Bin = TreasuryRebalanceV2MetaData.Bin
 
-// DeployTreasuryRebalanceV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceV2 to it.
+// DeployTreasuryRebalanceV2 deploys a new Kaia contract, binding an instance of TreasuryRebalanceV2 to it.
 func DeployTreasuryRebalanceV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceV2, error) {
 	parsed, err := TreasuryRebalanceV2MetaData.GetAbi()
 	if err != nil {

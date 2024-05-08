@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package accounts implements high level Klaytn account management.
+Package accounts implements high level Kaia account management.
 
 There are several important data structures and their hierarchy is as below
 

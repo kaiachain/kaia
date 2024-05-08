@@ -54,7 +54,7 @@ var CypressCreditFuncSigs = CypressCreditMetaData.Sigs
 // Deprecated: Use CypressCreditMetaData.Bin instead.
 var CypressCreditBin = CypressCreditMetaData.Bin
 
-// DeployCypressCredit deploys a new Klaytn contract, binding an instance of CypressCredit to it.
+// DeployCypressCredit deploys a new Kaia contract, binding an instance of CypressCredit to it.
 func DeployCypressCredit(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CypressCredit, error) {
 	parsed, err := CypressCreditMetaData.GetAbi()
 	if err != nil {

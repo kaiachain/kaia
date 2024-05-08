@@ -771,7 +771,7 @@ type EthRPCTransaction struct {
 // Because every transaction in Klaytn, implements json.Marshaler interface (MarshalJSON), but
 // it is marshaled for Klaytn format only.
 // e.g. Ethereum transaction have V, R, and S field for signature but,
-// Klaytn transaction have types.TxSignaturesJSON which includes array of signatures which is not
+// Kaia transaction have types.TxSignaturesJSON which includes array of signatures which is not
 // applicable for Ethereum transaction.
 type ethTxJSON struct {
 	Type hexutil.Uint64 `json:"type"`
@@ -818,7 +818,7 @@ func newEthRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *EthRPC
 }
 
 // resolveToField returns value which fits to `to` field based on transaction types.
-// This function is used when converting Klaytn transactions to Ethereum transaction types.
+// This function is used when converting Kaia transactions to Ethereum transaction types.
 func resolveToField(tx *types.Transaction) *common.Address {
 	switch tx.Type() {
 	case types.TxTypeAccountUpdate, types.TxTypeFeeDelegatedAccountUpdate, types.TxTypeFeeDelegatedAccountUpdateWithRatio,
@@ -832,7 +832,7 @@ func resolveToField(tx *types.Transaction) *common.Address {
 	return tx.To()
 }
 
-// newEthRPCTransaction creates an EthRPCTransaction from Klaytn transaction.
+// newEthRPCTransaction creates an EthRPCTransaction from Kaia transaction.
 func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
 	// When an unknown transaction is requested through rpc call,
 	// nil is returned by Klaytn API, and it is handled.
@@ -1034,7 +1034,7 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	txpoolAPI := api.publicTransactionPoolAPI.b
 
-	// Formats return Klaytn Transaction Receipt to the Ethereum Transaction Receipt.
+	// Formats return Kaia transaction Receipt to the Ethereum Transaction Receipt.
 	tx, blockHash, blockNumber, index, receipt := txpoolAPI.GetTxLookupInfoAndReceipt(ctx, hash)
 
 	if tx == nil {

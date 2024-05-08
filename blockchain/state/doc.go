@@ -25,7 +25,7 @@ the objects and the persistent layer.
 
 # Overview of state package
 
-stateObject represents a Klaytn account identified by its address.
+stateObject represents a Kaia account identified by its address.
 Once it is loaded from the persistent layer, it is cached and managed by StateDB.
 
 StateDB caches stateObjects and mediates the operations to them.

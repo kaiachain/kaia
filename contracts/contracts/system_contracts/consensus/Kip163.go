@@ -1760,7 +1760,7 @@ const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604
 // Deprecated: Use AddressMetaData.Bin instead.
 var AddressBin = AddressMetaData.Bin
 
-// DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
+// DeployAddress deploys a new Kaia contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
 	parsed, err := AddressMetaData.GetAbi()
 	if err != nil {
@@ -1999,7 +1999,7 @@ var CnStakingV3FuncSigs = CnStakingV3MetaData.Sigs
 // Deprecated: Use CnStakingV3MetaData.Bin instead.
 var CnStakingV3Bin = CnStakingV3MetaData.Bin
 
-// DeployCnStakingV3 deploys a new Klaytn contract, binding an instance of CnStakingV3 to it.
+// DeployCnStakingV3 deploys a new Kaia contract, binding an instance of CnStakingV3 to it.
 func DeployCnStakingV3(auth *bind.TransactOpts, backend bind.ContractBackend, _owner common.Address, _nodeId common.Address, _rewardAddress common.Address, _unlockTime []*big.Int, _unlockAmount []*big.Int) (common.Address, *types.Transaction, *CnStakingV3, error) {
 	parsed, err := CnStakingV3MetaData.GetAbi()
 	if err != nil {
@@ -6925,7 +6925,7 @@ var CnStakingV3MultiSigFuncSigs = CnStakingV3MultiSigMetaData.Sigs
 // Deprecated: Use CnStakingV3MultiSigMetaData.Bin instead.
 var CnStakingV3MultiSigBin = CnStakingV3MultiSigMetaData.Bin
 
-// DeployCnStakingV3MultiSig deploys a new Klaytn contract, binding an instance of CnStakingV3MultiSig to it.
+// DeployCnStakingV3MultiSig deploys a new Kaia contract, binding an instance of CnStakingV3MultiSig to it.
 func DeployCnStakingV3MultiSig(auth *bind.TransactOpts, backend bind.ContractBackend, _contractValidator common.Address, _nodeId common.Address, _rewardAddress common.Address, _cnAdminlist []common.Address, _requirement *big.Int, _unlockTime []*big.Int, _unlockAmount []*big.Int) (common.Address, *types.Transaction, *CnStakingV3MultiSig, error) {
 	parsed, err := CnStakingV3MultiSigMetaData.GetAbi()
 	if err != nil {
@@ -21944,7 +21944,7 @@ const EnumerableSetBinRuntime = `73000000000000000000000000000000000000000030146
 // Deprecated: Use EnumerableSetMetaData.Bin instead.
 var EnumerableSetBin = EnumerableSetMetaData.Bin
 
-// DeployEnumerableSet deploys a new Klaytn contract, binding an instance of EnumerableSet to it.
+// DeployEnumerableSet deploys a new Kaia contract, binding an instance of EnumerableSet to it.
 func DeployEnumerableSet(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *EnumerableSet, error) {
 	parsed, err := EnumerableSetMetaData.GetAbi()
 	if err != nil {
@@ -37767,7 +37767,7 @@ const MathBinRuntime = `73000000000000000000000000000000000000000030146080604052
 // Deprecated: Use MathMetaData.Bin instead.
 var MathBin = MathMetaData.Bin
 
-// DeployMath deploys a new Klaytn contract, binding an instance of Math to it.
+// DeployMath deploys a new Kaia contract, binding an instance of Math to it.
 func DeployMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Math, error) {
 	parsed, err := MathMetaData.GetAbi()
 	if err != nil {
@@ -38378,7 +38378,7 @@ var PublicDelegationFuncSigs = PublicDelegationMetaData.Sigs
 // Deprecated: Use PublicDelegationMetaData.Bin instead.
 var PublicDelegationBin = PublicDelegationMetaData.Bin
 
-// DeployPublicDelegation deploys a new Klaytn contract, binding an instance of PublicDelegation to it.
+// DeployPublicDelegation deploys a new Kaia contract, binding an instance of PublicDelegation to it.
 func DeployPublicDelegation(auth *bind.TransactOpts, backend bind.ContractBackend, _baseCnStakingV3 common.Address, _pdArgs IPublicDelegationPDConstructorArgs) (common.Address, *types.Transaction, *PublicDelegation, error) {
 	parsed, err := PublicDelegationMetaData.GetAbi()
 	if err != nil {
@@ -41694,7 +41694,7 @@ var PublicDelegationFactoryFuncSigs = PublicDelegationFactoryMetaData.Sigs
 // Deprecated: Use PublicDelegationFactoryMetaData.Bin instead.
 var PublicDelegationFactoryBin = PublicDelegationFactoryMetaData.Bin
 
-// DeployPublicDelegationFactory deploys a new Klaytn contract, binding an instance of PublicDelegationFactory to it.
+// DeployPublicDelegationFactory deploys a new Kaia contract, binding an instance of PublicDelegationFactory to it.
 func DeployPublicDelegationFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *PublicDelegationFactory, error) {
 	parsed, err := PublicDelegationFactoryMetaData.GetAbi()
 	if err != nil {
@@ -44513,7 +44513,7 @@ const ValidContractBinRuntime = `73000000000000000000000000000000000000000030146
 // Deprecated: Use ValidContractMetaData.Bin instead.
 var ValidContractBin = ValidContractMetaData.Bin
 
-// DeployValidContract deploys a new Klaytn contract, binding an instance of ValidContract to it.
+// DeployValidContract deploys a new Kaia contract, binding an instance of ValidContract to it.
 func DeployValidContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ValidContract, error) {
 	parsed, err := ValidContractMetaData.GetAbi()
 	if err != nil {

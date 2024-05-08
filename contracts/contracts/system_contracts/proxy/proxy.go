@@ -46,7 +46,7 @@ const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604
 // Deprecated: Use AddressMetaData.Bin instead.
 var AddressBin = AddressMetaData.Bin
 
-// DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
+// DeployAddress deploys a new Kaia contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
 	parsed, err := AddressMetaData.GetAbi()
 	if err != nil {
@@ -222,7 +222,7 @@ const ERC1967ProxyBinRuntime = `608060405236601057600e6013565b005b600e5b601f601b
 // Deprecated: Use ERC1967ProxyMetaData.Bin instead.
 var ERC1967ProxyBin = ERC1967ProxyMetaData.Bin
 
-// DeployERC1967Proxy deploys a new Klaytn contract, binding an instance of ERC1967Proxy to it.
+// DeployERC1967Proxy deploys a new Kaia contract, binding an instance of ERC1967Proxy to it.
 func DeployERC1967Proxy(auth *bind.TransactOpts, backend bind.ContractBackend, _logic common.Address, _data []byte) (common.Address, *types.Transaction, *ERC1967Proxy, error) {
 	parsed, err := ERC1967ProxyMetaData.GetAbi()
 	if err != nil {
@@ -2566,7 +2566,7 @@ const StorageSlotBinRuntime = `7300000000000000000000000000000000000000003014608
 // Deprecated: Use StorageSlotMetaData.Bin instead.
 var StorageSlotBin = StorageSlotMetaData.Bin
 
-// DeployStorageSlot deploys a new Klaytn contract, binding an instance of StorageSlot to it.
+// DeployStorageSlot deploys a new Kaia contract, binding an instance of StorageSlot to it.
 func DeployStorageSlot(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlot, error) {
 	parsed, err := StorageSlotMetaData.GetAbi()
 	if err != nil {

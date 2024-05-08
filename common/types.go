@@ -324,7 +324,7 @@ func (h Hash) ExtendZero() ExtHash {
 
 /////////// Address
 
-// Address represents the 20 byte address of a Klaytn account.
+// Address represents the 20 byte address of a Kaia account.
 type Address [AddressLength]byte
 
 func EmptyAddress(a Address) bool {

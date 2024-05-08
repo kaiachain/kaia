@@ -101,7 +101,7 @@ var AddressBookMockFuncSigs = AddressBookMockMetaData.Sigs
 // Deprecated: Use AddressBookMockMetaData.Bin instead.
 var AddressBookMockBin = AddressBookMockMetaData.Bin
 
-// DeployAddressBookMock deploys a new Klaytn contract, binding an instance of AddressBookMock to it.
+// DeployAddressBookMock deploys a new Kaia contract, binding an instance of AddressBookMock to it.
 func DeployAddressBookMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressBookMock, error) {
 	parsed, err := AddressBookMockMetaData.GetAbi()
 	if err != nil {
@@ -1666,7 +1666,7 @@ var AddressBookMockOneCNFuncSigs = AddressBookMockOneCNMetaData.Sigs
 // Deprecated: Use AddressBookMockOneCNMetaData.Bin instead.
 var AddressBookMockOneCNBin = AddressBookMockOneCNMetaData.Bin
 
-// DeployAddressBookMockOneCN deploys a new Klaytn contract, binding an instance of AddressBookMockOneCN to it.
+// DeployAddressBookMockOneCN deploys a new Kaia contract, binding an instance of AddressBookMockOneCN to it.
 func DeployAddressBookMockOneCN(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressBookMockOneCN, error) {
 	parsed, err := AddressBookMockOneCNMetaData.GetAbi()
 	if err != nil {
@@ -2003,7 +2003,7 @@ var AddressBookMockThreeCNFuncSigs = AddressBookMockThreeCNMetaData.Sigs
 // Deprecated: Use AddressBookMockThreeCNMetaData.Bin instead.
 var AddressBookMockThreeCNBin = AddressBookMockThreeCNMetaData.Bin
 
-// DeployAddressBookMockThreeCN deploys a new Klaytn contract, binding an instance of AddressBookMockThreeCN to it.
+// DeployAddressBookMockThreeCN deploys a new Kaia contract, binding an instance of AddressBookMockThreeCN to it.
 func DeployAddressBookMockThreeCN(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressBookMockThreeCN, error) {
 	parsed, err := AddressBookMockThreeCNMetaData.GetAbi()
 	if err != nil {
@@ -2392,7 +2392,7 @@ var AddressBookMockWrongFuncSigs = AddressBookMockWrongMetaData.Sigs
 // Deprecated: Use AddressBookMockWrongMetaData.Bin instead.
 var AddressBookMockWrongBin = AddressBookMockWrongMetaData.Bin
 
-// DeployAddressBookMockWrong deploys a new Klaytn contract, binding an instance of AddressBookMockWrong to it.
+// DeployAddressBookMockWrong deploys a new Kaia contract, binding an instance of AddressBookMockWrong to it.
 func DeployAddressBookMockWrong(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressBookMockWrong, error) {
 	parsed, err := AddressBookMockWrongMetaData.GetAbi()
 	if err != nil {
@@ -2611,7 +2611,7 @@ var KlaytnRewardFuncSigs = KlaytnRewardMetaData.Sigs
 // Deprecated: Use KlaytnRewardMetaData.Bin instead.
 var KlaytnRewardBin = KlaytnRewardMetaData.Bin
 
-// DeployKlaytnReward deploys a new Klaytn contract, binding an instance of KlaytnReward to it.
+// DeployKlaytnReward deploys a new Kaia contract, binding an instance of KlaytnReward to it.
 func DeployKlaytnReward(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *KlaytnReward, error) {
 	parsed, err := KlaytnRewardMetaData.GetAbi()
 	if err != nil {

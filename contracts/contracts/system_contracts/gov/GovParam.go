@@ -226,7 +226,7 @@ var GovParamFuncSigs = GovParamMetaData.Sigs
 // Deprecated: Use GovParamMetaData.Bin instead.
 var GovParamBin = GovParamMetaData.Bin
 
-// DeployGovParam deploys a new Klaytn contract, binding an instance of GovParam to it.
+// DeployGovParam deploys a new Kaia contract, binding an instance of GovParam to it.
 func DeployGovParam(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GovParam, error) {
 	parsed, err := GovParamMetaData.GetAbi()
 	if err != nil {

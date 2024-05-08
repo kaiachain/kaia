@@ -94,7 +94,7 @@ func BenchmarkTxPerformanceSmartContractExecution(b *testing.B) {
 }
 
 // BenchmarkTxPerformanceNew measures performance of newly introduced transaction types.
-// This requires one more step "account creation of a Klaytn account" compared to BenchmarkTxPerformanceCompatible.
+// This requires one more step "account creation of a Kaia account" compared to BenchmarkTxPerformanceCompatible.
 func BenchmarkTxPerformanceNew(b *testing.B) {
 	testfns := []genTx{
 		genNewAccountUpdateMultisig3,

@@ -2176,7 +2176,7 @@ var OwnableFuncSigs = OwnableMetaData.Sigs
 // Deprecated: Use OwnableMetaData.Bin instead.
 var OwnableBin = OwnableMetaData.Bin
 
-// DeployOwnable deploys a new Klaytn contract, binding an instance of Ownable to it.
+// DeployOwnable deploys a new Kaia contract, binding an instance of Ownable to it.
 func DeployOwnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Ownable, error) {
 	parsed, err := OwnableMetaData.GetAbi()
 	if err != nil {
@@ -2638,7 +2638,7 @@ var TreasuryRebalanceFuncSigs = TreasuryRebalanceMetaData.Sigs
 // Deprecated: Use TreasuryRebalanceMetaData.Bin instead.
 var TreasuryRebalanceBin = TreasuryRebalanceMetaData.Bin
 
-// DeployTreasuryRebalance deploys a new Klaytn contract, binding an instance of TreasuryRebalance to it.
+// DeployTreasuryRebalance deploys a new Kaia contract, binding an instance of TreasuryRebalance to it.
 func DeployTreasuryRebalance(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalance, error) {
 	parsed, err := TreasuryRebalanceMetaData.GetAbi()
 	if err != nil {
@@ -4872,7 +4872,7 @@ var TreasuryRebalanceV2FuncSigs = TreasuryRebalanceV2MetaData.Sigs
 // Deprecated: Use TreasuryRebalanceV2MetaData.Bin instead.
 var TreasuryRebalanceV2Bin = TreasuryRebalanceV2MetaData.Bin
 
-// DeployTreasuryRebalanceV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceV2 to it.
+// DeployTreasuryRebalanceV2 deploys a new Kaia contract, binding an instance of TreasuryRebalanceV2 to it.
 func DeployTreasuryRebalanceV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceV2, error) {
 	parsed, err := TreasuryRebalanceV2MetaData.GetAbi()
 	if err != nil {

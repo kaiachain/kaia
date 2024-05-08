@@ -52,7 +52,7 @@ const AddressUpgradeableBinRuntime = `730000000000000000000000000000000000000000
 // Deprecated: Use AddressUpgradeableMetaData.Bin instead.
 var AddressUpgradeableBin = AddressUpgradeableMetaData.Bin
 
-// DeployAddressUpgradeable deploys a new Klaytn contract, binding an instance of AddressUpgradeable to it.
+// DeployAddressUpgradeable deploys a new Kaia contract, binding an instance of AddressUpgradeable to it.
 func DeployAddressUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressUpgradeable, error) {
 	parsed, err := AddressUpgradeableMetaData.GetAbi()
 	if err != nil {
@@ -4130,7 +4130,7 @@ var SimpleBlsRegistryFuncSigs = SimpleBlsRegistryMetaData.Sigs
 // Deprecated: Use SimpleBlsRegistryMetaData.Bin instead.
 var SimpleBlsRegistryBin = SimpleBlsRegistryMetaData.Bin
 
-// DeploySimpleBlsRegistry deploys a new Klaytn contract, binding an instance of SimpleBlsRegistry to it.
+// DeploySimpleBlsRegistry deploys a new Kaia contract, binding an instance of SimpleBlsRegistry to it.
 func DeploySimpleBlsRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SimpleBlsRegistry, error) {
 	parsed, err := SimpleBlsRegistryMetaData.GetAbi()
 	if err != nil {
@@ -5674,7 +5674,7 @@ const StorageSlotUpgradeableBinRuntime = `73000000000000000000000000000000000000
 // Deprecated: Use StorageSlotUpgradeableMetaData.Bin instead.
 var StorageSlotUpgradeableBin = StorageSlotUpgradeableMetaData.Bin
 
-// DeployStorageSlotUpgradeable deploys a new Klaytn contract, binding an instance of StorageSlotUpgradeable to it.
+// DeployStorageSlotUpgradeable deploys a new Kaia contract, binding an instance of StorageSlotUpgradeable to it.
 func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlotUpgradeable, error) {
 	parsed, err := StorageSlotUpgradeableMetaData.GetAbi()
 	if err != nil {

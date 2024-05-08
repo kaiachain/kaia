@@ -46,7 +46,7 @@ const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604
 // Deprecated: Use AddressMetaData.Bin instead.
 var AddressBin = AddressMetaData.Bin
 
-// DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
+// DeployAddress deploys a new Kaia contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
 	parsed, err := AddressMetaData.GetAbi()
 	if err != nil {
@@ -222,7 +222,7 @@ const CountersBinRuntime = `7300000000000000000000000000000000000000003014608060
 // Deprecated: Use CountersMetaData.Bin instead.
 var CountersBin = CountersMetaData.Bin
 
-// DeployCounters deploys a new Klaytn contract, binding an instance of Counters to it.
+// DeployCounters deploys a new Kaia contract, binding an instance of Counters to it.
 func DeployCounters(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Counters, error) {
 	parsed, err := CountersMetaData.GetAbi()
 	if err != nil {
@@ -604,7 +604,7 @@ var ERC721FuncSigs = ERC721MetaData.Sigs
 // Deprecated: Use ERC721MetaData.Bin instead.
 var ERC721Bin = ERC721MetaData.Bin
 
-// DeployERC721 deploys a new Klaytn contract, binding an instance of ERC721 to it.
+// DeployERC721 deploys a new Kaia contract, binding an instance of ERC721 to it.
 func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721, error) {
 	parsed, err := ERC721MetaData.GetAbi()
 	if err != nil {
@@ -1516,7 +1516,7 @@ var ERC721BurnableFuncSigs = ERC721BurnableMetaData.Sigs
 // Deprecated: Use ERC721BurnableMetaData.Bin instead.
 var ERC721BurnableBin = ERC721BurnableMetaData.Bin
 
-// DeployERC721Burnable deploys a new Klaytn contract, binding an instance of ERC721Burnable to it.
+// DeployERC721Burnable deploys a new Kaia contract, binding an instance of ERC721Burnable to it.
 func DeployERC721Burnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Burnable, error) {
 	parsed, err := ERC721BurnableMetaData.GetAbi()
 	if err != nil {
@@ -2452,7 +2452,7 @@ var ERC721MintableFuncSigs = ERC721MintableMetaData.Sigs
 // Deprecated: Use ERC721MintableMetaData.Bin instead.
 var ERC721MintableBin = ERC721MintableMetaData.Bin
 
-// DeployERC721Mintable deploys a new Klaytn contract, binding an instance of ERC721Mintable to it.
+// DeployERC721Mintable deploys a new Kaia contract, binding an instance of ERC721Mintable to it.
 func DeployERC721Mintable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Mintable, error) {
 	parsed, err := ERC721MintableMetaData.GetAbi()
 	if err != nil {
@@ -7311,7 +7311,7 @@ const RolesBinRuntime = `7300000000000000000000000000000000000000003014608060405
 // Deprecated: Use RolesMetaData.Bin instead.
 var RolesBin = RolesMetaData.Bin
 
-// DeployRoles deploys a new Klaytn contract, binding an instance of Roles to it.
+// DeployRoles deploys a new Kaia contract, binding an instance of Roles to it.
 func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Roles, error) {
 	parsed, err := RolesMetaData.GetAbi()
 	if err != nil {
@@ -7487,7 +7487,7 @@ const SafeMathBinRuntime = `7300000000000000000000000000000000000000003014608060
 // Deprecated: Use SafeMathMetaData.Bin instead.
 var SafeMathBin = SafeMathMetaData.Bin
 
-// DeploySafeMath deploys a new Klaytn contract, binding an instance of SafeMath to it.
+// DeploySafeMath deploys a new Kaia contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
 	parsed, err := SafeMathMetaData.GetAbi()
 	if err != nil {
@@ -7692,7 +7692,7 @@ var ServiceChainNFTNoURIFuncSigs = ServiceChainNFTNoURIMetaData.Sigs
 // Deprecated: Use ServiceChainNFTNoURIMetaData.Bin instead.
 var ServiceChainNFTNoURIBin = ServiceChainNFTNoURIMetaData.Bin
 
-// DeployServiceChainNFTNoURI deploys a new Klaytn contract, binding an instance of ServiceChainNFTNoURI to it.
+// DeployServiceChainNFTNoURI deploys a new Kaia contract, binding an instance of ServiceChainNFTNoURI to it.
 func DeployServiceChainNFTNoURI(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainNFTNoURI, error) {
 	parsed, err := ServiceChainNFTNoURIMetaData.GetAbi()
 	if err != nil {

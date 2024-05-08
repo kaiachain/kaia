@@ -385,7 +385,7 @@ type SyncPeer interface {
 	Log() log.Logger
 }
 
-// Syncer is an Klaytn account and storage trie syncer based on snapshots and
+// Syncer is an Kaia account and storage trie syncer based on snapshots and
 // the snap protocol. It's purpose is to download all the accounts and storage
 // slots from remote peers and reassemble chunks of the state trie, on top of
 // which a state sync can be run to fix any gaps / overlaps.

@@ -99,7 +99,7 @@ var AddressBookFuncSigs = AddressBookMetaData.Sigs
 // Deprecated: Use AddressBookMetaData.Bin instead.
 var AddressBookBin = AddressBookMetaData.Bin
 
-// DeployAddressBook deploys a new Klaytn contract, binding an instance of AddressBook to it.
+// DeployAddressBook deploys a new Kaia contract, binding an instance of AddressBook to it.
 func DeployAddressBook(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressBook, error) {
 	parsed, err := AddressBookMetaData.GetAbi()
 	if err != nil {
@@ -4234,7 +4234,7 @@ var CnStakingContractFuncSigs = CnStakingContractMetaData.Sigs
 // Deprecated: Use CnStakingContractMetaData.Bin instead.
 var CnStakingContractBin = CnStakingContractMetaData.Bin
 
-// DeployCnStakingContract deploys a new Klaytn contract, binding an instance of CnStakingContract to it.
+// DeployCnStakingContract deploys a new Kaia contract, binding an instance of CnStakingContract to it.
 func DeployCnStakingContract(auth *bind.TransactOpts, backend bind.ContractBackend, _contractValidator common.Address, _nodeId common.Address, _rewardAddress common.Address, _cnAdminlist []common.Address, _requirement *big.Int, _unlockTime []*big.Int, _unlockAmount []*big.Int) (common.Address, *types.Transaction, *CnStakingContract, error) {
 	parsed, err := CnStakingContractMetaData.GetAbi()
 	if err != nil {
@@ -9202,7 +9202,7 @@ const SafeMathBinRuntime = `7300000000000000000000000000000000000000003014608060
 // Deprecated: Use SafeMathMetaData.Bin instead.
 var SafeMathBin = SafeMathMetaData.Bin
 
-// DeploySafeMath deploys a new Klaytn contract, binding an instance of SafeMath to it.
+// DeploySafeMath deploys a new Kaia contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
 	parsed, err := SafeMathMetaData.GetAbi()
 	if err != nil {

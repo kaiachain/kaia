@@ -997,7 +997,7 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 }
 
 func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRPCTransaction, tx *types.Transaction, expectedIndex hexutil.Uint64) {
-	// All Klaytn transaction types must be returned as TxTypeLegacyTransaction types.
+	// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
 	assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
 
 	// Check the data of common fields of the transaction.
@@ -1011,7 +1011,7 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 	assert.Equal(t, tx.GetTxInternalData().RawSignatureValues()[0].S, ethTx.S.ToInt())
 	assert.Equal(t, hexutil.Uint64(tx.Nonce()), ethTx.Nonce)
 
-	// Check the optional field of Klaytn transactions.
+	// Check the optional field of Kaia transactions.
 	assert.Equal(t, 0, bytes.Compare(ethTx.Input, tx.Data()))
 
 	to := tx.To()
@@ -1035,7 +1035,7 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 	}
 
 	// Fields additionally used for Ethereum transaction types are not used
-	// when returning Klaytn transactions.
+	// when returning Kaia transactions.
 	assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
 	assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
 	assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
@@ -1076,7 +1076,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	}
 	assert.Equal(t, from, kReceipt["from"])
 
-	// Klaytn transactions that do not use the 'To' field
+	// Kaia transactions that do not use the 'To' field
 	// fill in 'To' with from during converting format.
 	toInTx := tx.To()
 	fromAddress := getFrom(tx)

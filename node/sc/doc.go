@@ -18,7 +18,7 @@
 Package sc implements an auxiliary blockchain called Service Chain.
 
 Service Chains in Klaytn are auxiliary blockchains independent from the Klaytn main chain.
-They mostly act like normal Kaia blockchains but has additional features to connect them to another Klaytn network.
+They mostly act like normal Kaia blockchains but has additional features to connect them to another Kaia network.
 They can be used as separate public/private blockchains or child chains of a Klaytn chain (or another Service Chain).
 The followings describe main features of Service chain.
   - Anchoring block data of Service Chain

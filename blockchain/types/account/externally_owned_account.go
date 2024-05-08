@@ -20,7 +20,7 @@ import (
 	"fmt"
 )
 
-// ExternallyOwnedAccount represents a Klaytn account used by a user.
+// ExternallyOwnedAccount represents a Kaia account used by a user.
 type ExternallyOwnedAccount struct {
 	*AccountCommon
 }
