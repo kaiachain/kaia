@@ -5,7 +5,9 @@ import { Transaction, Contract, BytesLike } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers.js";
 import _ from "lodash";
 
+export const DIRTY = ethers.utils.parseEther("0.001");
 export const ABOOK_ADDRESS = "0x0000000000000000000000000000000000000400";
+export const REGISTRY_ADDRESS = "0x0000000000000000000000000000000000000401";
 
 export const FuncID = {
   Unknown: 0,
@@ -20,6 +22,8 @@ export const FuncID = {
   UpdateStakingTracker: 9,
   UpdateVoterAddress: 10,
 };
+export const FuncIDV3 = { ...FuncID, ToggleRedelegation: 11 };
+
 export const RequestState = {
   Unknown: 0,
   NotConfirmed: 1,
@@ -191,7 +195,8 @@ export async function deployAndInitStakingContract(
 }
 
 export async function getRuntimecode(name: string): Promise<string> {
-  const contract = await ethers.deployContract(name);
+  const Factory = await ethers.getContractFactory(name);
+  const contract = await Factory.deploy();
   return await ethers.provider.getCode(contract.address);
 }
 
@@ -212,6 +217,13 @@ export async function deployAddressBook(kind = "AddressBookMock") {
       return await ethers.getContractAt(k, ABOOK_ADDRESS);
     }
   }
+  await setCodeAt(kinds[0], ABOOK_ADDRESS);
+  return await ethers.getContractAt(kinds[0], ABOOK_ADDRESS);
+}
+
+export async function deployRegistry() {
+  await setCodeAt("Registry", REGISTRY_ADDRESS);
+  return await ethers.getContractAt("Registry", REGISTRY_ADDRESS);
 }
 
 // Time related
@@ -243,6 +255,11 @@ export async function setTime(timestamp: number) {
   await hre.network.provider.send("evm_mine", [timestamp]);
 }
 
+export async function addTime(time: number) {
+  await hre.network.provider.send("evm_increaseTime", [time]);
+  await hre.network.provider.send("evm_mine", []);
+}
+
 // Query chain
 export async function getBalance(address: string) {
   const hex = await hre.network.provider.send("eth_getBalance", [address]);
@@ -256,6 +273,10 @@ export function toPeb(klay: bigint) {
 
 export function toKlay(peb: bigint) {
   return ethers.utils.formatEther(peb);
+}
+
+export function toShares(klay: bigint) {
+  return BigInt(toPeb(klay)) * 10n ** 18n;
 }
 
 export function addPebs(a: bigint | string, b: bigint | string) {
@@ -376,8 +397,17 @@ export function augmentChai() {
 export async function onlyAdminFail(tx: Transaction) {
   await expectRevert(tx, "Address is not admin.");
 }
+export async function onlyAccessControlFail(
+  tx: Transaction,
+  contract: Contract
+) {
+  await expectCustomRevert(tx, contract, "AccessControlUnauthorizedAccount");
+}
 export async function notNullFail(tx: Transaction) {
   await expectRevert(tx, "Address is null");
+}
+export async function notNullFailWithPoint(tx: Transaction) {
+  await expectRevert(tx, "Address is null.");
 }
 export async function notConfirmedRequestFail(tx: Transaction) {
   await expectRevert(tx, "Must be at not-confirmed state.");
@@ -394,6 +424,13 @@ export async function expectRevert(
   message: string | RegExp
 ) {
   return expect(expr).to.be.revertedWith(message);
+}
+export async function expectCustomRevert(
+  expr: Transaction,
+  contract: Contract,
+  message: string
+) {
+  return expect(expr).to.be.revertedWithCustomError(contract, message);
 }
 
 export function checkRequestInfo(expected: any, returned: any) {

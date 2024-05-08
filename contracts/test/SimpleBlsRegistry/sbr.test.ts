@@ -1,7 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployAddressBook } from "../helper";
+import { deployAddressBook } from "../common/helper";
 import loadBls, { ModuleInstance } from "bls-signatures";
 import { expect } from "chai";
 
