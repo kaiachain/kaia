@@ -170,7 +170,7 @@ func (journal *bridgeAddrJournal) insert(bridgeAlias string, localAddress common
 	if localAddress == empty || remoteAddress == empty {
 		return ErrEmptyBridgeAddress
 	}
-	// TODO-Klaytn-ServiceChain: support false paired
+	// TODO-Kaia-ServiceChain: support false paired
 	item := BridgeJournal{
 		bridgeAlias,
 		localAddress,

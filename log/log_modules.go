@@ -29,7 +29,7 @@ const StatsReportLimit = 10 * time.Second
 type ModuleID int
 
 // When printID is true, log prints ModuleID instead of ModuleName.
-// TODO-Klaytn This can be controlled by runtime configuration.
+// TODO-Kaia This can be controlled by runtime configuration.
 var printID = true
 
 func GetModuleName(mi ModuleID) string {

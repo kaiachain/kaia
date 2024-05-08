@@ -36,7 +36,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// TODO-Klaytn Needs to separate APIs along with each namespaces.
+// TODO-Kaia Needs to separate APIs along with each namespaces.
 
 // Client defines typed wrappers for the Klaytn RPC API.
 type Client struct {
@@ -111,7 +111,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if err := json.Unmarshal(raw, &body); err != nil {
 		return nil, err
 	}
-	// TODO-Klaytn Enable the below error checks after having a way to get the correct EmptyRootHash
+	// TODO-Kaia Enable the below error checks after having a way to get the correct EmptyRootHash
 	// Quick-verify transaction lists. This mostly helps with debugging the server.
 	//if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 	//	return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")

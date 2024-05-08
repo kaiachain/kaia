@@ -53,7 +53,7 @@ var (
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 
-	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
+	// TODO-Kaia EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
 	EnabledExpensive = false
 )
 

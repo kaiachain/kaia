@@ -100,7 +100,7 @@ func HandleMessage(reader SnapshotReader, downloader SnapshotDownloader, peer *P
 	}
 	defer msg.Discard()
 	start := time.Now()
-	// TODO-Klaytn-SnapSync add metric to track the amount of time it takes to serve the request and run the manager
+	// TODO-Kaia-SnapSync add metric to track the amount of time it takes to serve the request and run the manager
 	// Handle the message depending on its contents
 	switch {
 	case msg.Code == GetAccountRangeMsg:
@@ -232,7 +232,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 	if req.Bytes > softResponseLimit {
 		req.Bytes = softResponseLimit
 	}
-	// TODO-Klaytn-SnapSync investigate the cache pollution
+	// TODO-Kaia-SnapSync investigate the cache pollution
 	// Retrieve the requested state and bail out if non existent
 	tr, err := statedb.NewTrie(req.Root, chain.StateCache().TrieDB(), nil)
 	if err != nil {
@@ -264,7 +264,7 @@ func ServiceGetAccountRangeQuery(chain SnapshotReader, req *GetAccountRangePacke
 		if bytes.Compare(hash[:], req.Limit[:]) >= 0 {
 			break
 		}
-		// TODO-Klaytn-SnapSync check if the size is much larger than soft response limit
+		// TODO-Kaia-SnapSync check if the size is much larger than soft response limit
 		if size > req.Bytes {
 			break
 		}
@@ -295,9 +295,9 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 	if req.Bytes > softResponseLimit {
 		req.Bytes = softResponseLimit
 	}
-	// TODO-Klaytn-SnapSync Do we want to enforce > 0 accounts and 1 account if origin is set?
-	// TODO-Klaytn-SnapSync   - Logging locally is not ideal as remote faulst annoy the local user
-	// TODO-Klaytn-SnapSync   - Dropping the remote peer is less flexible wrt client bugs (slow is better than non-functional)
+	// TODO-Kaia-SnapSync Do we want to enforce > 0 accounts and 1 account if origin is set?
+	// TODO-Kaia-SnapSync   - Logging locally is not ideal as remote faulst annoy the local user
+	// TODO-Kaia-SnapSync   - Dropping the remote peer is less flexible wrt client bugs (slow is better than non-functional)
 
 	// Calculate the hard limit at which to abort, even if mid storage trie
 	hardLimit := uint64(float64(req.Bytes) * (1 + stateLookupSlack))
@@ -375,7 +375,7 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			acc := serializer.GetAccount()
 			pacc := account.GetProgramAccount(acc)
 			if pacc == nil {
-				// TODO-Klaytn-SnapSync it would be better to continue rather than return. Do not waste the completed job until now.
+				// TODO-Kaia-SnapSync it would be better to continue rather than return. Do not waste the completed job until now.
 				return nil, nil
 			}
 			stTrie, err := statedb.NewStorageTrie(pacc.GetStorageRoot(), chain.StateCache().TrieDB(), nil)

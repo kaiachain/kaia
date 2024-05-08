@@ -67,7 +67,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	if server == nil {
 		return false, ErrNodeStopped
 	}
-	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Kaia Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(server, url, false); err != nil {
 		return false, err
 	} else {

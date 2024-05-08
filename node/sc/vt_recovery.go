@@ -90,7 +90,7 @@ func (vtr *valueTransferRecovery) Start() error {
 		return ErrVtrDisabled
 	}
 
-	// TODO-Klaytn-Servicechain If there is no user API to start recovery, remove isRunning in Start/Stop.
+	// TODO-Kaia-Servicechain If there is no user API to start recovery, remove isRunning in Start/Stop.
 	if vtr.isRunning {
 		return ErrVtrAlreadyStarted
 	}

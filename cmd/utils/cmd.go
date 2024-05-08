@@ -214,7 +214,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 	return nil
 }
 
-// TODO-Klaytn Commented out due to mismatched interface.
+// TODO-Kaia Commented out due to mismatched interface.
 //// ImportPreimages imports a batch of exported hash preimages into the database.
 //func ImportPreimages(db *database.LevelDB, fn string) error {
 //	logger.Info("Importing preimages", "file", fn)

@@ -132,7 +132,7 @@ type arcCache struct {
 
 func (cache *arcCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	cache.arc.Add(key, value)
-	// TODO-Klaytn-RemoveLater need to be removed or should be added according to usage of evicted flag
+	// TODO-Kaia-RemoveLater need to be removed or should be added according to usage of evicted flag
 	return true
 }
 

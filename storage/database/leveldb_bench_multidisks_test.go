@@ -554,4 +554,4 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 	}
 }
 
-// TODO-Klaytn: MAKE PRE-LOADED TEST FOR BATCH, PUT
+// TODO-Kaia: MAKE PRE-LOADED TEST FOR BATCH, PUT

@@ -683,7 +683,7 @@ func TestHashimoto(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FailedTest This tests fails in Klaytn. Enable or delete this test later.
+// TODO-Kaia-FailedTest This tests fails in Klaytn. Enable or delete this test later.
 // Tests that caches generated on disk may be done concurrently.
 /*
 func TestConcurrentDiskCacheGeneration(t *testing.T) {

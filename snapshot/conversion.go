@@ -51,7 +51,7 @@ type (
 	leafCallbackFn func(accountHash, codeHash common.Hash, stat *generateStats) (common.Hash, error)
 )
 
-// TODO-Klaytn-Snapshot port GenerateAccountTrieRoot/GenerateStorageTrieRoot/GenerateTrie
+// TODO-Kaia-Snapshot port GenerateAccountTrieRoot/GenerateStorageTrieRoot/GenerateTrie
 
 // generateStats is a collection of statistics gathered by the trie generator
 // for logging purposes.

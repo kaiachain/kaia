@@ -205,7 +205,7 @@ loop:
 			}
 			expectedNonce++
 
-			// TODO-Klaytn added more request token/NFT transfer cases,
+			// TODO-Kaia added more request token/NFT transfer cases,
 			RequestKLAYTransfer(b, bridgeAccount, testAcc.From, 1, t)
 			backend.Commit()
 

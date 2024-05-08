@@ -32,7 +32,7 @@ var ErrShouldBeSingleSignature = errors.New("the number of signatures should be 
 
 // TxSignatures is a slice of TxSignature. It is created to support multi-sig accounts.
 // Note that this structure also processes txs having a single signature.
-// TODO-Klaytn-Accounts: replace TxSignature with TxSignatures to all newly implemented tx types.
+// TODO-Kaia-Accounts: replace TxSignature with TxSignatures to all newly implemented tx types.
 type TxSignatures []*TxSignature
 
 func NewTxSignatures() TxSignatures {
@@ -77,7 +77,7 @@ func (t TxSignatures) ChainId() *big.Int {
 		logger.CritWithStack("should not be called if no entries exist", err)
 	}
 
-	// TODO-Klaytn-Multisig: Find a way to handle multiple V values here.
+	// TODO-Kaia-Multisig: Find a way to handle multiple V values here.
 	return txSig.ChainId()
 }
 

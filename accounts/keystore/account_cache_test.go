@@ -94,7 +94,7 @@ func TestWatchNewFile(t *testing.T) {
 	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantAccounts))
 }
 
-// TODO-Klaytn Disabled because this test fails intermittently in CI (Issue #833)
+// TODO-Kaia Disabled because this test fails intermittently in CI (Issue #833)
 /*
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
@@ -321,7 +321,7 @@ func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	return fmt.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
 }
 
-// TODO-Klaytn-Issue833 Disabled because this test fails intermittently in CI
+// TODO-Kaia-Issue833 Disabled because this test fails intermittently in CI
 /*
 // TestUpdatedKeyfileContents tests that updating the contents of a keystore file
 // is noticed by the watcher, and the account cache is updated accordingly

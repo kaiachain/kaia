@@ -72,7 +72,7 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			//	startTime = time.Now()
 			//}
 			///////////////////////////////////////////////////////
-			ret, computationCost, err := RunPrecompiledContract(p, input, contract, evm) // TODO-Klaytn-Issue615
+			ret, computationCost, err := RunPrecompiledContract(p, input, contract, evm) // TODO-Kaia-Issue615
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
 			//if opDebug {
@@ -226,11 +226,11 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
+		return nil, gas, ErrDepth // TODO-Kaia-Issue615
 	}
 	// Fail if we're trying to transfer more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
+		return nil, gas, ErrInsufficientBalance // TODO-Kaia-Issue615
 	}
 
 	var (
@@ -333,13 +333,13 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
+		return nil, gas, ErrDepth // TODO-Kaia-Issue615
 	}
 	// Note although it's noop to transfer X ether to caller itself. But
 	// if caller doesn't have enough balance, it would be an error to allow
 	// over-charging itself. So the check here is necessary.
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
+		return nil, gas, ErrInsufficientBalance // TODO-Kaia-Issue615
 	}
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
@@ -386,7 +386,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
+		return nil, gas, ErrDepth // TODO-Kaia-Issue615
 	}
 
 	if !isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
@@ -435,7 +435,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	}
 	// Fail if we're trying to execute above the call depth limit
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, gas, ErrDepth // TODO-Klaytn-Issue615
+		return nil, gas, ErrDepth // TODO-Kaia-Issue615
 	}
 	// Make sure the readonly is only set if we aren't in readonly yet
 	// this makes also sure that the readonly flag isn't removed for
@@ -498,10 +498,10 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
-		return nil, common.Address{}, gas, ErrDepth // TODO-Klaytn-Issue615
+		return nil, common.Address{}, gas, ErrDepth // TODO-Kaia-Issue615
 	}
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
-		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
+		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Kaia-Issue615
 	}
 
 	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
@@ -535,7 +535,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
+	// TODO-Kaia-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
 	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat, evm.chainRules)
@@ -576,12 +576,12 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 				// Then, `vmerr` will be used to make a receipt status using `getReceiptStatusFromVMerr()`.
 				// Since `getReceiptStatusFromVMerr()` uses a map to determine the receipt status,
 				// this `err` should be an error variable declared in vm/errors.go.
-				// TODO-Klaytn: Make a package of error variables containing all exported error variables.
-				// After the above TODO-Klaytn is resolved, we can return the error returned by `SetCode()` directly.
+				// TODO-Kaia: Make a package of error variables containing all exported error variables.
+				// After the above TODO-Kaia is resolved, we can return the error returned by `SetCode()` directly.
 				err = ErrFailedOnSetCode
 			}
 		} else {
-			err = ErrCodeStoreOutOfGas // TODO-Klaytn-Issue615
+			err = ErrCodeStoreOutOfGas // TODO-Kaia-Issue615
 		}
 	}
 
@@ -595,7 +595,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 	// Assign err if contract code size exceeds the max while the err is still empty.
 	if maxCodeSizeExceeded && err == nil {
-		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
+		err = ErrMaxCodeSizeExceeded // TODO-Kaia-Issue615
 	}
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.

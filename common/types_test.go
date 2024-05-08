@@ -231,7 +231,7 @@ func BenchmarkAddressHex(b *testing.B) {
 	}
 }
 
-// TODO-Klaytn-FailedTest Klaytn doesn't have MixedcaseAddress type
+// TODO-Kaia-FailedTest Klaytn doesn't have MixedcaseAddress type
 /*
 func TestMixedcaseAccount_Address(t *testing.T) {
 

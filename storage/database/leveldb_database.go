@@ -228,7 +228,7 @@ func getCompressionType(ct LevelDBCompressionType, dbEntryType DBEntryType) opt.
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
 func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, error) {
-	// TODO-Klaytn-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
+	// TODO-Kaia-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
 
 	localLogger := logger.NewWith("path", dbPath)
 

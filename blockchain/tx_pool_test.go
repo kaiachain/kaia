@@ -1533,7 +1533,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
 	// NOTE-Klaytn Klaytn currently accepts remote txs regardless of gas price.
-	// TODO-Klaytn-RemoveLater Remove or uncomment the code below once the policy for how to
+	// TODO-Kaia-RemoveLater Remove or uncomment the code below once the policy for how to
 	//         deal with underpriced remote txs is decided.
 	// Check that we can't add the old transactions back
 	//if err := pool.AddRemote(pricedTransaction(1, 100000, big.NewInt(1), keys[0])); err != ErrUnderpriced {
@@ -1585,7 +1585,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 */
 
 // NOTE-GS Disable test, because we don't have a repricing policy
-// TODO-Klaytn What's our rule for local transaction ?
+// TODO-Kaia What's our rule for local transaction ?
 // Tests that setting the transaction pool gas price to a higher value does not
 // remove local transactions.
 /*

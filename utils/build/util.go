@@ -199,7 +199,7 @@ func ExpandPackages(packages []string) []string {
 // ExcludePackages excludes packages having patterns from the passed package slice and
 // returns a slice including only the remained packages.
 func ExcludePackages(packages []string, patterns []string) []string {
-	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
+	// TODO-Kaia This exclusion code is a naive implementation. Improve this if it hurts build performance.
 	packages = ExpandPackages(packages)
 
 	for _, pattern := range patterns {

@@ -44,8 +44,8 @@ const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
 	addressTypeRewardAddr
-	addressTypePoCAddr // TODO-klaytn: PoC should be changed to KFF after changing AddressBook contract
-	addressTypeKIRAddr // TODO-klaytn: KIR should be changed to KCF after changing AddressBook contract
+	addressTypePoCAddr // TODO-Kaia: PoC should be changed to KFF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-Kaia: KIR should be changed to KCF after changing AddressBook contract
 )
 
 var addressBookContractAddress = system.AddressBookAddr
@@ -409,7 +409,7 @@ func PurgeStakingInfoCache() {
 	stakingManager.stakingInfoCache.purge()
 }
 
-// TODO-Klaytn-Reward the following methods are used for testing purpose, it needs to be moved into test files.
+// TODO-Kaia-Reward the following methods are used for testing purpose, it needs to be moved into test files.
 // Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
 // This way you can avoid irreversible side effects during tests.
 

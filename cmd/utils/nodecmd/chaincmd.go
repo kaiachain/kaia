@@ -260,7 +260,7 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 			return err
 		}
 
-		// TODO-Klaytn: Add validation logic for other GovernanceModes
+		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
 			var found bool

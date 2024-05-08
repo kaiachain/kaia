@@ -107,7 +107,7 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
 	}
 
-	// TODO-Klaytn: Replace gxhash with istanbul
+	// TODO-Kaia: Replace gxhash with istanbul
 	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{})
 	if err != nil {
 		return err

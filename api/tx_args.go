@@ -644,11 +644,11 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
 			}
 			if args.GasPrice == nil {
-				// TODO-Klaytn: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
+				// TODO-Kaia: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
 				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
 				// is fine as now.
 				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-					// TODO-Klaytn: Klaytn is using fixed BaseFee(0) as now but
+					// TODO-Kaia: Klaytn is using fixed BaseFee(0) as now but
 					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
 					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
 				}

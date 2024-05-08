@@ -396,7 +396,7 @@ func TestVerifyHeader(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrFutureBlock)
 	}
 
-	// TODO-Klaytn: add more tests for header.Governance, header.Rewardbase, header.Vote
+	// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
 }
 
 func TestVerifySeal(t *testing.T) {

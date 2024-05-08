@@ -229,7 +229,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		op = contract.GetOp(pc)
 		operation := in.cfg.JumpTable[op]
 		if operation == nil {
-			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Klaytn-Issue615
+			return nil, fmt.Errorf("invalid opcode 0x%x", int(op)) // TODO-Kaia-Issue615
 		}
 		// Validate stack
 		if sLen := stack.len(); sLen < operation.minStack {
@@ -259,12 +259,12 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		if operation.memorySize != nil {
 			memSize, overflow := operation.memorySize(stack)
 			if overflow {
-				return nil, errGasUintOverflow // TODO-Klaytn-Issue615
+				return nil, errGasUintOverflow // TODO-Kaia-Issue615
 			}
 			// memory is expanded in words of 32 bytes. Gas
 			// is also calculated in words.
 			if memorySize, overflow = math.SafeMul(toWordSize(memSize), 32); overflow {
-				return nil, errGasUintOverflow // TODO-Klaytn-Issue615
+				return nil, errGasUintOverflow // TODO-Kaia-Issue615
 			}
 			if allocatedMemorySize < memorySize {
 				extraSize = memorySize - allocatedMemorySize
@@ -278,7 +278,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 			dynamicCost, err = operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
 			cost += dynamicCost // total cost, for debug tracing
 			if err != nil || !contract.UseGas(dynamicCost) {
-				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue615
+				return nil, kerrors.ErrOutOfGas // TODO-Kaia-Issue615
 			}
 		}
 		if extraSize > 0 {
@@ -305,7 +305,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
-		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
+		return nil, ErrTotalTimeLimitReached // TODO-Kaia-Issue615
 	}
 	if err == errStopToken {
 		err = nil // clear stop token error

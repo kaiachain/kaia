@@ -20,7 +20,7 @@
 
 package blockchain
 
-// TODO-Klaytn-FailedTest Fails because this test assumes Homestead fee.
+// TODO-Kaia-FailedTest Fails because this test assumes Homestead fee.
 /*
 import (
 	"fmt"

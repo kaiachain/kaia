@@ -323,7 +323,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	// TODO-Klaytn-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
+	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
@@ -374,7 +374,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			istBackend.SetChain(cn.blockchain)
 		}
 	} else {
-		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
+		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
 		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
 	}
 

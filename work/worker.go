@@ -325,7 +325,7 @@ func (self *worker) update() {
 			}
 			self.commitNewWork()
 
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			// Handle ChainSideEvent
 		case <-self.chainSideCh:
@@ -354,7 +354,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				continue
 			}
 
-			// TODO-Klaytn drop or missing tx
+			// TODO-Kaia drop or missing tx
 			if self.nodetype != common.CONSENSUSNODE {
 				if !TxResendUseLegacy {
 					continue
@@ -415,7 +415,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			}
 			blockWriteTime := time.Since(start)
 
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 
 			// check if canon block and write transactions
@@ -454,7 +454,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
 
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+			// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
 				self.commitNewWork()
@@ -524,7 +524,7 @@ func (self *worker) commitNewWork() {
 		}
 	}
 
-	// TODO-Klaytn drop or missing tx
+	// TODO-Kaia drop or missing tx
 	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
@@ -735,7 +735,7 @@ CommitTransactionLoop:
 		from, _ := types.Sender(env.signer, tx)
 
 		// NOTE-Klaytn Since Klaytn is always in EIP155, the below replay protection code is not needed.
-		// TODO-Klaytn-RemoveLater Remove the code commented below.
+		// TODO-Kaia-RemoveLater Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {

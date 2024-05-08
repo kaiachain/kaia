@@ -105,7 +105,7 @@ func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine
 		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy),
 		canStart: 1,
 	}
-	// TODO-Klaytn drop or missing tx
+	// TODO-Kaia drop or missing tx
 	miner.Register(NewCpuAgent(backend.BlockChain(), engine, nodetype))
 	go miner.update()
 

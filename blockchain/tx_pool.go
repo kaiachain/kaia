@@ -54,7 +54,7 @@ const (
 	// non-trivial consequences: larger transactions are significantly harder and
 	// more expensive to propagate; larger transactions also take more resources
 	// to validate whether they fit into the pool or not.
-	// TODO-klaytn: Change the name to clarify what it means. It means the max length of the transaction.
+	// TODO-Kaia: Change the name to clarify what it means. It means the max length of the transaction.
 	MaxTxDataSize = 4 * txSlotSize // 128KB
 
 	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.
@@ -201,7 +201,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	// TODO-Klaytn
+	// TODO-Kaia
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList   // All currently processable transactions
@@ -1078,7 +1078,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 		}
 	}
 
-	// TODO-Klaytn: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
+	// TODO-Kaia: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
 }

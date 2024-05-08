@@ -227,7 +227,7 @@ func (ec *Client) BridgeDeregisterBridge(ctx context.Context, cBridge common.Add
 	return ec.c.CallContext(ctx, nil, "subbridge_deregisterBridge", cBridge, pBridge)
 }
 
-// TODO-Klaytn if client pkg is removed in sc pkg, this will be replaced origin struct.
+// TODO-Kaia if client pkg is removed in sc pkg, this will be replaced origin struct.
 type BridgeJournal struct {
 	ChildAddress  common.Address `json:"childAddress"`
 	ParentAddress common.Address `json:"parentAddress"`

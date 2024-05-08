@@ -214,7 +214,7 @@ func (n *Node) Start() error {
 			p2pServer.AddProtocols(service.Protocols())
 		}
 		for _, s := range services {
-			// TODO-Klaytn-ServiceChain call setcomponents repeatedly for same component
+			// TODO-Kaia-ServiceChain call setcomponents repeatedly for same component
 			s.SetComponents(service.Components())
 		}
 	}

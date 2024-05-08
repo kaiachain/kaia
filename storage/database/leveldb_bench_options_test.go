@@ -317,7 +317,7 @@ func Benchmark_KlayOptions_Batch(b *testing.B) {
 	}
 }
 
-// TODO-Klaytn = Add a test for checking GoRoutine Overhead
+// TODO-Kaia = Add a test for checking GoRoutine Overhead
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Batch Insertion Tests End /////////////////////////////////////
@@ -461,7 +461,7 @@ func randStrBytes(n int) []byte {
 
 func getShardForTest(keys [][]byte, index, numShards int) int64 {
 	return int64(index % numShards)
-	// TODO-Klaytn: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getShardForTest
+	// TODO-Kaia: CHANGE BELOW LOGIC FROM ROUND-ROBIN TO USE getShardForTest
 	//key := keys[index]
 	//hashString := strings.TrimPrefix(common.Bytes2Hex(key),"0x")
 	//if len(hashString) > 15 {

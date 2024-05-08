@@ -27,7 +27,7 @@ import (
 
 // NOTE-Klaytn-Cache BlockChain Caches
 // Below is the list of the constants for cache size.
-// TODO-Klaytn: Below should be handled by ini or other configurations.
+// TODO-Kaia: Below should be handled by ini or other configurations.
 const (
 	maxHeaderCache        = 512
 	maxTdCache            = 1024

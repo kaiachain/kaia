@@ -62,7 +62,7 @@ var (
 )
 
 // EthereumAPI provides an API to access the Klaytn through the `eth` namespace.
-// TODO-Klaytn: Removed unused variable
+// TODO-Kaia: Removed unused variable
 type EthereumAPI struct {
 	publicFilterAPI   *filters.PublicFilterAPI
 	governanceKlayAPI *governance.GovernanceKlayAPI

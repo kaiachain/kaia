@@ -528,7 +528,7 @@ func (t *expectEvents) expect(events ...*Event) {
 	}
 }
 
-// TODO-Klaytn-Issue833 Disabled because this test fails intermittently in CI
+// TODO-Kaia-Issue833 Disabled because this test fails intermittently in CI
 /*
 // TestHTTPNodeRPC tests calling RPC methods on nodes via the HTTP API
 func TestHTTPNodeRPC(t *testing.T) {

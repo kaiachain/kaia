@@ -116,7 +116,7 @@ func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo
 }
 
 // TestBridgeManager tests the event/method of Token/NFT/Bridge contracts.
-// TODO-Klaytn-Servicechain needs to refine this test.
+// TODO-Kaia-Servicechain needs to refine this test.
 // - consider parent/child chain simulated backend.
 // - separate each test
 func TestBridgeManager(t *testing.T) {

@@ -60,13 +60,13 @@ const (
 	// maxQueuedProps is the maximum number of block propagations to queue up before
 	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
 	// that might cover uncles should be enough.
-	// TODO-Klaytn-Refactoring Look into the usage of maxQueuedProps and remove it if needed
+	// TODO-Kaia-Refactoring Look into the usage of maxQueuedProps and remove it if needed
 	maxQueuedProps = 4
 
 	// maxQueuedAnns is the maximum number of block announcements to queue up before
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
-	// TODO-Klaytn-Refactoring Look into the usage of maxQueuedAnns and remove it if needed
+	// TODO-Kaia-Refactoring Look into the usage of maxQueuedAnns and remove it if needed
 	maxQueuedAnns = 4
 
 	handshakeTimeout = 5 * time.Second
@@ -1007,7 +1007,7 @@ func (p *multiChannelPeer) msgSender(msgcode uint64, data interface{}) error {
 
 // GetRW returns the MsgReadWriter of the peer.
 func (p *multiChannelPeer) GetRW() p2p.MsgReadWriter {
-	return p.rw // TODO-Klaytn check this function usage
+	return p.rw // TODO-Kaia check this function usage
 }
 
 // UpdateRWImplementationVersion updates the version of the implementation of RW.
@@ -1029,7 +1029,7 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 	}, channelSizePerPeer)
 	go func() {
 		for {
-			// TODO-klaytn: check 30-second timeout works
+			// TODO-Kaia: check 30-second timeout works
 			msg, err := rw.ReadMsg()
 			select {
 			case <-closed:

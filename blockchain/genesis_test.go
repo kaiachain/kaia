@@ -74,7 +74,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			wantConfig:       cypressGenesisBlock.Config,
 			wantStoredConfig: cypressGenesisBlock.Config,
 		},
-		// TODO-klaytn: add more cypress test cases after cypress hard fork block numbers are added
+		// TODO-Kaia: add more cypress test cases after cypress hard fork block numbers are added
 		{
 			// Because of the fork-ordering check logic, the istanbulCompatibleBlock should be less than the londonCompatibleBlock
 			name:       "baobab chainConfig update - correct hard-fork block number order",

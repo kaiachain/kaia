@@ -96,11 +96,11 @@ var (
 )
 
 // Below is the list of the constants for cache size.
-// TODO-Klaytn: Below should be handled by ini or other configurations.
+// TODO-Kaia: Below should be handled by ini or other configurations.
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
-	// TODO-Klaytn-Issue1911  This flag needs to be adjusted to the appropriate value.
+	// TODO-Kaia-Issue1911  This flag needs to be adjusted to the appropriate value.
 	//  Currently, this value is taken to cache all 10 million accounts
 	//  and should be optimized considering memory size and performance.
 	maxAccountForCache = 10000000
@@ -123,7 +123,7 @@ const (
 // CacheConfig contains the configuration values for the 1) stateDB caching and
 // 2) trie caching/pruning resident in a blockchain.
 type CacheConfig struct {
-	// TODO-Klaytn-Issue1666 Need to check the benefit of trie caching.
+	// TODO-Kaia-Issue1666 Need to check the benefit of trie caching.
 	ArchiveMode          bool                         // If true, state trie is not pruned and always written to database
 	CacheSize            int                          // Size of in-memory cache of a trie (MiB) to flush matured singleton trie nodes to disk
 	BlockInterval        uint                         // Block interval to flush the trie. Each interval state trie will be flushed into disk
@@ -195,7 +195,7 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
-	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
+	parallelDBWrite bool // TODO-Kaia-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
 	// State migration
 	prepareStateMigration bool
@@ -1149,7 +1149,7 @@ func (bc *BlockChain) procFutureBlocks() {
 // WriteStatus status of write
 type WriteStatus byte
 
-// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 //
 //	Later we may be able to remove SideStatTy.
 const (
@@ -1244,7 +1244,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		start = time.Now()
 		bytes = 0
 
-		// TODO-Klaytn Needs to roll back if any one of batches fails
+		// TODO-Kaia Needs to roll back if any one of batches fails
 		bodyBatch            = bc.db.NewBatch(database.BodyDB)
 		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
@@ -1511,7 +1511,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 		return true
 	}
 
-	// TODO-Klaytn-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
+	// TODO-Kaia-Issue1602 Introduce a simple and more concise way to determine commit trie requirements from governance
 	if blockNum%uint64(bc.cacheConfig.BlockInterval) == 0 {
 		return true
 	}
@@ -1598,7 +1598,7 @@ func (bc *BlockChain) writeBlockLogsToRemoteCache(blockLogsKey []byte, receipts 
 		logger.Error("rlp encoding error", "err", err)
 		return
 	}
-	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	// TODO-Kaia-KES: refine this not to use trieNodeCache
 	cache, ok := bc.stateCache.TrieDB().TrieNodeCache().(*statedb.HybridCache)
 	if !ok {
 		logger.Error("only HybridCache supports block logs writing",
@@ -1645,7 +1645,7 @@ func (bc *BlockChain) writeBlockWithStateSerial(block *types.Block, receipts []*
 
 	bc.writeReceipts(block.Hash(), block.NumberU64(), receipts)
 
-	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total blockscore is higher than our known, add it to the canonical chain
@@ -1699,7 +1699,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	parallelDBWriteWG := sync.WaitGroup{}
 	parallelDBWriteErrCh := make(chan error, 2)
 	// Irrelevant of the canonical status, write the block itself to the database
-	// TODO-Klaytn-Storage Implementing worker pool pattern instead of generating goroutines every time.
+	// TODO-Kaia-Storage Implementing worker pool pattern instead of generating goroutines every time.
 	parallelDBWriteWG.Add(4)
 	go func() {
 		defer parallelDBWriteWG.Done()
@@ -1735,7 +1735,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	default:
 	}
 
-	// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
+	// TODO-Kaia-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 	//         Later we may be able to refine below code.
 
 	// If the total blockscore is higher than our known, add it to the canonical chain
@@ -2205,13 +2205,13 @@ func (bc *BlockChain) sendKESSubscriptionData(block *types.Block) {
 	bc.chainFeed.Send(ChainEvent{
 		Block: block,
 		Hash:  block.Hash(),
-		// TODO-Klaytn-KES: fill the following data if needed
+		// TODO-Kaia-KES: fill the following data if needed
 		Receipts:         types.Receipts{},
 		Logs:             []*types.Log{},
 		InternalTxTraces: []*vm.InternalTxTrace{},
 	})
 
-	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	// TODO-Kaia-KES: refine this not to use trieNodeCache
 	logKey := append(kesCachePrefixBlockLogs, block.Number().Bytes()...)
 	encodedLogs := bc.stateCache.TrieDB().TrieNodeCache().Get(logKey)
 	if encodedLogs == nil {
@@ -2302,7 +2302,7 @@ func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
 			bc.replaceCurrentBlock(block)
 			pool.lockedReset(oldHead, bc.CurrentHeader())
 
-			// TODO-Klaytn-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
+			// TODO-Kaia-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
 		case <-bc.quit:
 			logger.Info("Closed current block update loop")
 			return
@@ -2728,7 +2728,7 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error) {
-	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
+	// TODO-Kaia We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
 		// istanbul BFT

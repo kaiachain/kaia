@@ -507,7 +507,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 
 // setKlayConfig applies klay-related command line flags to the config.
 func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
-	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	cfg := &kCfg.CN
 	raiseFDLimit()
@@ -700,7 +700,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `baobab` test network's genesis block
 	/*
 		if ctx.Bool(TestnetFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {

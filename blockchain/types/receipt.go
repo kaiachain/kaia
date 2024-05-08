@@ -46,7 +46,7 @@ const (
 	// ReceiptStatusSuccessful is the status code of a transaction if execution succeeded.
 	ReceiptStatusSuccessful = uint(1)
 
-	// TODO-Klaytn Enable more error below.
+	// TODO-Kaia Enable more error below.
 	// Klaytn specific
 	// NOTE-Klaytn Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
@@ -80,13 +80,13 @@ const (
 	ReceiptStatusErrNotSupported                         = uint(0x1d)
 	ReceiptStatusErrInvalidCodeFormat                    = uint(0x1e)
 	ReceiptStatusLast                                    = uint(0x1f) // Last value which is not an actual ReceiptStatus
-//	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
+//	ReceiptStatusErrInvalidJumpDestination   // TODO-Kaia-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
 //	ReceiptStatusErrStackOverflow            // Default case, because no static message available
 //	ReceiptStatusErrInsufficientBalance      // No receipt available for this error
 //	ReceiptStatusErrTotalTimeLimitReached    // No receipt available for this error
-//	ReceiptStatusErrGasUintOverflow          // TODO-Klaytn-Issue615
+//	ReceiptStatusErrGasUintOverflow          // TODO-Kaia-Issue615
 
 )
 

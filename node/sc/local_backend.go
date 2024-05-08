@@ -48,12 +48,12 @@ type filterLocalBackend struct {
 }
 
 func (fb *filterLocalBackend) ChainDB() database.DBManager {
-	// TODO-Klaytn consider chain's chainDB instead of bridge's chainDB currently.
+	// TODO-Kaia consider chain's chainDB instead of bridge's chainDB currently.
 	return fb.subbridge.chainDB
 }
 
 func (fb *filterLocalBackend) EventMux() *event.TypeMux {
-	// TODO-Klaytn consider chain's eventMux instead of bridge's eventMux currently.
+	// TODO-Kaia consider chain's eventMux instead of bridge's eventMux currently.
 	return fb.subbridge.EventMux()
 }
 
@@ -68,7 +68,7 @@ func (fb *filterLocalBackend) HeaderByNumber(ctx context.Context, block rpc.Bloc
 	if err := checkCtx(ctx); err != nil {
 		return nil, err
 	}
-	// TODO-Klaytn consider pendingblock instead of latest block
+	// TODO-Kaia consider pendingblock instead of latest block
 	if block == rpc.LatestBlockNumber {
 		return fb.subbridge.blockchain.CurrentHeader(), nil
 	}
@@ -106,13 +106,13 @@ func (fb *filterLocalBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.S
 }
 
 func (fb *filterLocalBackend) BloomStatus() (uint64, uint64) {
-	// TODO-Klaytn consider this number of sections.
+	// TODO-Kaia consider this number of sections.
 	// BloomBitsBlocks (const : 4096), the number of processed sections maintained by the chain indexer
 	return 4096, 0
 }
 
 func (fb *filterLocalBackend) ServiceFilter(_dummyCtx context.Context, session *bloombits.MatcherSession) {
-	// TODO-Klaytn this method should implmentation to support indexed tag in solidity
+	// TODO-Kaia this method should implmentation to support indexed tag in solidity
 	//for i := 0; i < bloomFilterThreads; i++ {
 	//	go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, backend.bloomRequests)
 	//}

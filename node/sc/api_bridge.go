@@ -534,7 +534,7 @@ func (sb *SubBridgeAPI) AddPeer(url string) (bool, error) {
 	if server == nil {
 		return false, node.ErrNodeStopped
 	}
-	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Kaia Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(server, url); err != nil {
 		return false, err
 	} else {

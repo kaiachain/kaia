@@ -33,7 +33,7 @@ const (
 	RoleTransaction RoleType = iota
 	RoleAccountUpdate
 	RoleFeePayer
-	// TODO-Klaytn-Accounts: more roles can be listed here.
+	// TODO-Kaia-Accounts: more roles can be listed here.
 	RoleLast
 )
 

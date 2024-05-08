@@ -45,7 +45,7 @@ type weightedValidator struct {
 	address common.Address
 
 	rewardAddress atomic.Value
-	votingPower   uint64 // TODO-Klaytn-Issue1336 This should be updated for governance implementation
+	votingPower   uint64 // TODO-Kaia-Issue1336 This should be updated for governance implementation
 	weight        uint64
 }
 
@@ -105,7 +105,7 @@ type weightedCouncil struct {
 	validatorMu sync.RWMutex // this validator mutex protects concurrent usage of validators and demotedValidators
 	selector    istanbul.ProposalSelector
 
-	// TODO-Klaytn-Governance proposers means that the proposers for next block, so refactor it.
+	// TODO-Kaia-Governance proposers means that the proposers for next block, so refactor it.
 	// proposers are determined on a specific block, but it can be removed after votes.
 	proposers         []istanbul.Validator
 	proposersBlockNum uint64 // block number when proposers is determined
@@ -132,7 +132,7 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 		}
 		proposers = append(proposers, val)
 
-		// TODO-Klaytn-Issue1166 Disable Trace log later
+		// TODO-Kaia-Issue1166 Disable Trace log later
 		logger.Trace("RecoverWeightedCouncilProposer() proposers", "i", i, "address", val.Address().String())
 	}
 	weightedCouncil.proposers = proposers
@@ -174,7 +174,7 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 		//}
 
 		for i := range addrs {
-			// TODO-Klaytn-TokenEconomy: Use default value until the formula to calculate votingpower released
+			// TODO-Kaia-TokenEconomy: Use default value until the formula to calculate votingpower released
 			votingPowers[i] = 1000
 			//staking := stateDB.GetBalance(addr)
 			//if staking.Cmp(common.Big0) == 0 {
@@ -339,8 +339,8 @@ func (valSet *weightedCouncil) DemotedList() []istanbul.Validator {
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
-	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
-	// TODO-Klaytn-Istanbul: or the proposer should be calculated based on `view`
+	// TODO-Kaia-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
+	// TODO-Kaia-Istanbul: or the proposer should be calculated based on `view`
 	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view)
 }
 
@@ -445,7 +445,7 @@ func (valSet *weightedCouncil) CheckInSubList(prevHash common.Hash, view *istanb
 }
 
 func (valSet *weightedCouncil) IsSubSet() bool {
-	// TODO-Klaytn-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
+	// TODO-Kaia-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
 	return valSet.Size() > valSet.subSize
 }
 
@@ -464,7 +464,7 @@ func (valSet *weightedCouncil) getByAddress(addr common.Address) (int, istanbul.
 			return i, val
 		}
 	}
-	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
+	// TODO-Kaia-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
 	/*logger.Warn("failed to find an address in the validator list",
 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())*/
 	return -1, nil
@@ -492,7 +492,7 @@ func (valSet *weightedCouncil) GetDemotedByAddress(addr common.Address) (int, is
 }
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
-	// TODO-Klaytn-Istanbul: nil check for valSet.proposer is needed
+	// TODO-Kaia-Istanbul: nil check for valSet.proposer is needed
 	// logger.Trace("GetProposer()", "proposer", valSet.proposer)
 	return valSet.proposer.Load().(istanbul.Validator)
 }
@@ -524,7 +524,7 @@ func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round u
 	newProposer := valSet.selector(valSet, lastProposer, round)
 	if newProposer == nil {
 		if len(valSet.validators) == 0 {
-			// TODO-Klaytn We must make a policy about the mininum number of validators, which can prevent this case.
+			// TODO-Kaia We must make a policy about the mininum number of validators, which can prevent this case.
 			logger.Error("NO VALIDATOR! Use lastProposer as a workaround")
 			newProposer = newWeightedValidator(lastProposer, common.Address{}, 0, 0)
 		} else {
@@ -551,8 +551,8 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 		}
 	}
 
-	// TODO-Klaytn-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
-	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
+	// TODO-Kaia-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
+	// TODO-Kaia-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
 	// sort validator
@@ -648,7 +648,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // - already has up-do-date proposers
 // - successfully calculated up-do-date proposers
 func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
-	// TODO-Klaytn-Governance divide the following logic into two parts: proposers update / validators update
+	// TODO-Kaia-Governance divide the following logic into two parts: proposers update / validators update
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 

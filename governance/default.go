@@ -501,7 +501,7 @@ func (gov *Governance) DB() database.DBManager {
 }
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
-	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
+	// TODO-Kaia-Governance Change this part to add all votes to the header at once
 	for key, val := range g.voteMap.Copy() {
 		if val.Casted == false {
 			vote := new(GovernanceVote)
@@ -1240,7 +1240,7 @@ func (gov *Governance) CurrentParams() *params.GovParamSet {
 
 // EffectiveParams returns the parameter set used for generating the block `num`
 func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
+	// TODO-Kaia: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
 	bignum := new(big.Int).SetUint64(num)

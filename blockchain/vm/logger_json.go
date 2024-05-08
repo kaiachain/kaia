@@ -63,7 +63,7 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccL
 		log.Memory = memory.Data()
 	}
 	if !l.cfg.DisableStack {
-		// TODO-Klaytn: residual porting PR -> https://github.com/ethereum/go-ethereum/pull/23016/files
+		// TODO-Kaia: residual porting PR -> https://github.com/ethereum/go-ethereum/pull/23016/files
 		logstack := make([]*big.Int, len(stack.Data()))
 		for i, item := range stack.Data() {
 			logstack[i] = item.ToBig()

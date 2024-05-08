@@ -26,7 +26,7 @@ import (
 )
 
 // HandleChainEventContext supports 2PC Commit (insert block + insert txs) for data consistency
-// @TODO-Klaytn improve performance, too slower than HanleChainEvent()
+// @TODO-Kaia improve performance, too slower than HanleChainEvent()
 func (ds *DBSyncer) HandleChainEventContext(block *types.Block) error {
 	logger.Info("dbsyncer HandleChainEvent", "number", block.Number(), "txs", block.Transactions().Len())
 	startblock := time.Now()

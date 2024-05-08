@@ -40,7 +40,7 @@ var (
 	errNoChainReader      = errors.New("sb.chain is nil! --mine option might be missing")
 	errInvalidPeerAddress = errors.New("invalid address")
 
-	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
+	// TODO-Kaia-Istanbul: define Versions and Lengths with correct values.
 	IstanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
 		Versions: []uint{65, 64},

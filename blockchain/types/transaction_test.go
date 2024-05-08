@@ -527,10 +527,10 @@ func TestGasOverflow(t *testing.T) {
 	totalGas = new(big.Int).Add(txGas, new(big.Int).Add(defaultGas, new(big.Int).Mul(numKeys, gasPerKey)))
 	assert.Equal(t, true, totalGas.BitLen() <= 64)
 
-	// TODO-Klaytn-Gas: Need to find a way of checking integer overflow for smart contract execution.
+	// TODO-Kaia-Gas: Need to find a way of checking integer overflow for smart contract execution.
 }
 
-// TODO-Klaytn-FailedTest This test is failed in Klaytn
+// TODO-Kaia-FailedTest This test is failed in Klaytn
 /*
 // TestTransactionJSON tests serializing/de-serializing to/from JSON.
 func TestTransactionJSON(t *testing.T) {

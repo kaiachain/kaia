@@ -290,7 +290,7 @@ type DBManager interface {
 	WriteGovernanceState(b []byte)
 	ReadGovernanceState() ([]byte, error)
 	DeleteGovernance(num uint64)
-	// TODO-Klaytn implement governance DB deletion methods.
+	// TODO-Kaia implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
@@ -425,7 +425,7 @@ type databaseManager struct {
 	dbs    []Database
 	cm     *cacheManager
 
-	// TODO-Klaytn need to refine below.
+	// TODO-Kaia need to refine below.
 	// -merge status variable
 	lockInMigration      sync.RWMutex
 	inMigration          bool
@@ -960,7 +960,7 @@ func (dbm *databaseManager) Close() {
 	}
 }
 
-// TODO-Klaytn Some of below need to be invisible outside database package
+// TODO-Kaia Some of below need to be invisible outside database package
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
@@ -1755,7 +1755,7 @@ func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
 	// Try with the legacy code scheme first, if not then try with current
 	// scheme. Since most of the code will be found with legacy scheme.
 	//
-	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	// TODO-Kaia-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
 	if data, _ := db.Get(hash[:]); len(data) > 0 {
 		return data
@@ -1779,7 +1779,7 @@ func (dbm *databaseManager) HasCode(hash common.Hash) bool {
 	// Try with the prefixed code scheme first, if not then try with legacy
 	// scheme.
 	//
-	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	// TODO-Kaia-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
 	if ok, _ := db.Has(hash.Bytes()); ok {
 		return true
@@ -1835,13 +1835,13 @@ func (dbm *databaseManager) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
 		if val, err := dbm.ReadTrieNodeFromNew(hash); err == nil {
 			return val, nil
 		} else if err != dataNotFoundErr {
-			// TODO-Klaytn-Database Need to be properly handled
+			// TODO-Kaia-Database Need to be properly handled
 			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
 	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if err != nil && err != dataNotFoundErr {
-		// TODO-Klaytn-Database Need to be properly handled
+		// TODO-Kaia-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
 	}
 	return val, err

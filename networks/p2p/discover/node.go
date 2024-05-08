@@ -138,7 +138,7 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-// TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
+// TODO-Kaia-NodeDiscovery: Deprecate supporting "enode"
 var (
 	incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
 	lookupIPFunc      = net.LookupIP

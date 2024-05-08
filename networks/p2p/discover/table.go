@@ -507,7 +507,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 }
 
 func (tab *Table) loadSeedNodes(bond bool) {
-	// TODO-Klaytn-Node Separate logic to storages.
+	// TODO-Kaia-Node Separate logic to storages.
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
 	seeds = removeBn(seeds)
 	seeds = append(seeds, tab.nursery...)

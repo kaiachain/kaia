@@ -154,7 +154,7 @@ func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 		log.Fatalf("Klaytn service not running: %v", err)
 	}
 
-	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
+	// TODO-Kaia-NodeCmd disable accept tx before finishing sync.
 	if err := cn.StartMining(false); err != nil {
 		log.Fatalf("Failed to start mining: %v", err)
 	}

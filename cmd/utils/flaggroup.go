@@ -31,7 +31,7 @@ type FlagGroup struct {
 	Flags []cli.Flag
 }
 
-// TODO-Klaytn: consider changing the type of FlagGroups to map
+// TODO-Kaia: consider changing the type of FlagGroups to map
 // FlagGroups categorizes flags into groups to print structured help.
 var FlagGroups = []FlagGroup{
 	{

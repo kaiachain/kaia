@@ -40,7 +40,7 @@ func (c *core) sendCommit() {
 		return
 	}
 
-	// TODO-Klaytn-Istanbul: generalize broadcastCommit for all istanbul message types
+	// TODO-Kaia-Istanbul: generalize broadcastCommit for all istanbul message types
 	c.broadcastCommit(sub)
 }
 

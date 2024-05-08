@@ -331,7 +331,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
 
-	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
+	// TODO-Kaia concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{
 		Concurrency:        ConcurrencyLimit,
 		Handler:            fhandler,

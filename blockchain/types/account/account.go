@@ -66,7 +66,7 @@ var (
 )
 
 var (
-	// TODO-Klaytn-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
+	// TODO-Kaia-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
 	emptyCodeHash = crypto.Keccak256(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)

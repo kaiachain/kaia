@@ -186,7 +186,7 @@ func (tx *Transaction) SenderTxHashAll() common.Hash {
 }
 
 func validateSignature(v, r, s *big.Int) bool {
-	// TODO-Klaytn: Need to consider the case v.BitLen() > 64.
+	// TODO-Kaia: Need to consider the case v.BitLen() > 64.
 	// Since ValidateSignatureValues receives v as type of byte, leave it as a future work.
 	if v != nil && !isProtectedV(v) {
 		return crypto.ValidateSignatureValues(byte(v.Uint64()-27), r, s, true)
@@ -568,7 +568,7 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // AsMessageWithAccountKeyPicker requires a signer to derive the sender and AccountKeyPicker.
 //
 // XXX Rename message to something less arbitrary?
-// TODO-Klaytn: Message is removed and this function will return *Transaction.
+// TODO-Kaia: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
 	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {

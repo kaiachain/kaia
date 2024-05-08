@@ -204,7 +204,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		bootFail:           false,
 		rpcSendCh:          make(chan []byte),
 	}
-	// TODO-Klaytn change static config to user define config
+	// TODO-Kaia change static config to user define config
 	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
 		ParentChainID: new(big.Int).SetUint64(config.ParentChainID),
 		Journal:       path.Join(config.DataDir, "bridge_transactions.rlp"),
@@ -351,7 +351,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.txPool = v
 			// event from core-service
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
-		// TODO-Klaytn if need pending block, should use miner
+		// TODO-Kaia if need pending block, should use miner
 		case *work.Miner:
 		}
 	}

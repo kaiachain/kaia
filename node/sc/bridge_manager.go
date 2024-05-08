@@ -38,7 +38,7 @@ import (
 const (
 	TokenEventChanSize  = 10000
 	BridgeAddrJournal   = "bridge_addrs.rlp"
-	maxPendingNonceDiff = 1000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
+	maxPendingNonceDiff = 1000 // TODO-Kaia-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
 
 	maxHandledEventSize = 10000000
 )
@@ -90,7 +90,7 @@ type BridgeInfo struct {
 
 	counterpartBackend Backend
 	address            common.Address
-	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
+	counterpartAddress common.Address // TODO-Kaia need to set counterpart
 	account            *accountInfo
 	bridge             *bridgecontract.Bridge
 	counterpartBridge  *bridgecontract.Bridge
@@ -299,7 +299,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	)
 
 	ctpartTokenAddr := bi.GetCounterPartToken(tokenAddr)
-	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
+	// TODO-Kaia-Servicechain Add counterpart token address in requestValueTransferEvent
 	if tokenType != KLAY && ctpartTokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", ctpartTokenAddr.Hex())
 		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, tokenAddr)
@@ -1098,7 +1098,7 @@ func (bm *BridgeManager) loop(
 		return
 	}
 
-	// TODO-Klaytn change goroutine logic for performance
+	// TODO-Kaia change goroutine logic for performance
 	for {
 		select {
 		case <-bi.closed:

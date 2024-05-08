@@ -514,7 +514,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(pset) {
-		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
+		// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())

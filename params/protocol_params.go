@@ -102,8 +102,8 @@ const (
 	CreateBySelfdestructGas uint64 = 25000
 
 	// Fee for Service Chain
-	// TODO-Klaytn-ServiceChain The following parameters should be fixed.
-	// TODO-Klaytn-Governance The following parameters should be able to be modified by governance.
+	// TODO-Kaia-ServiceChain The following parameters should be fixed.
+	// TODO-Kaia-Governance The following parameters should be able to be modified by governance.
 	TxChainDataAnchoringGas uint64 = 21000 // Per transaction anchoring chain data. NOTE: Not payable on data of calls between transactions. // G_transactionchaindataanchoring
 	ChainDataAnchoringGas   uint64 = 100   // Per byte of anchoring chain data NOTE: Not payable on data of calls between transactions. // G_chaindataanchoring
 
@@ -154,14 +154,14 @@ const (
 	BFTMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.
 
 	// AccountKey
-	// TODO-Klaytn: Need to fix below values.
+	// TODO-Kaia: Need to fix below values.
 	TxAccountCreationGasDefault uint64 = 0
 	TxValidationGasDefault      uint64 = 0
 	TxAccountCreationGasPerKey  uint64 = 20000 // WARNING: With integer overflow in mind before changing this value.
 	TxValidationGasPerKey       uint64 = 15000 // WARNING: With integer overflow in mind before changing this value.
 
 	// Fee for new tx types
-	// TODO-Klaytn: Need to fix values
+	// TODO-Kaia: Need to fix values
 	TxGasAccountCreation       uint64 = 21000
 	TxGasAccountUpdate         uint64 = 21000
 	TxGasFeeDelegated          uint64 = 10000
@@ -199,7 +199,7 @@ var (
 
 	TxGasHumanReadable uint64 = 4000000000 // NOTE: HumanReadable related functions are inactivated now
 
-	// TODO-Klaytn Change the variables used in GXhash to more appropriate values for Klaytn Network
+	// TODO-Kaia Change the variables used in GXhash to more appropriate values for Klaytn Network
 	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
 	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
@@ -212,7 +212,7 @@ var (
 	// Execution time limit for all txs in a block
 	BlockGenerationTimeLimit = DefaultBlockGenerationTimeLimit
 
-	// TODO-Klaytn-Governance Change the following variables to governance items which requires consensus of CCN
+	// TODO-Kaia-Governance Change the following variables to governance items which requires consensus of CCN
 	// Block generation interval in seconds. It should be equal or larger than 1
 	BlockGenerationInterval = DefaultBlockGenerationInterval
 )
