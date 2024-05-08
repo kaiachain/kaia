@@ -176,7 +176,7 @@ func initGenesis(ctx *cli.Context) error {
 		}
 	}
 
-	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Klaytn doesn't use it
+	for _, name := range []string{"chaindata"} { // Removed "lightchaindata" since Kaia doesn't use it
 		dbc := &database.DBConfig{
 			Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,

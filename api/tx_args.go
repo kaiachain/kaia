@@ -645,10 +645,10 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 			}
 			if args.GasPrice == nil {
 				// TODO-Kaia: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
-				// But Klaytn currently uses fixed unit price determined by Governance, so using b.SuggestPrice
+				// But Kaia currently uses fixed unit price determined by Governance, so using b.SuggestPrice
 				// is fine as now.
 				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-					// TODO-Kaia: Klaytn is using fixed BaseFee(0) as now but
+					// TODO-Kaia: Kaia is using fixed BaseFee(0) as now but
 					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
 					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
 				}
@@ -714,7 +714,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	return nil
 }
 
-// ToMessage change EthTransactionArgs to types.Transaction in Klaytn.
+// ToMessage change EthTransactionArgs to types.Transaction in Kaia.
 func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
 	// Reject invalid combinations of pre- and post-1559 fee styles
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {

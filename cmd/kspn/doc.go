@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-kspn is the command-line client for Klaytn ServiceChain Proxy Node.
+kspn is the command-line client for Kaia ServiceChain Proxy Node.
 
 kspn has the node type of "pn" internally. Please try `kspn -h` to see commands and options list.
 

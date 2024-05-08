@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package work implements Klaytn block creation and mining.
+Package work implements Kaia block creation and mining.
 
 work package is in charge of generating blocks and it contains `miner`, `worker` and `agents` which performs building blocks with transactions.
 `miner` contains `worker` and a consensus engine, so it controls the worker and passes the result to the consensus engine.

@@ -195,7 +195,7 @@ func (api *API) Discard(address common.Address) {
 	delete(api.istanbul.candidates, address)
 }
 
-// API extended by Klaytn developers
+// API extended by Kaia developers
 type APIExtension struct {
 	chain    consensus.ChainReader
 	istanbul *backend

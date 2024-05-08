@@ -15,17 +15,17 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package reward implements the Klaytn Reward System.
-The Klaytn reward system manages stakingInfo and distributes block rewards.
+Package reward implements the Kaia Reward System.
+The Kaia reward system manages stakingInfo and distributes block rewards.
 
 # Managing stakingInfo
 
 Klaytn uses WeightedRandom policy to choose a block proposer.
-It means, the percentage of becoming a block proposer depends on how much KLAY a node has staked.
+It means, the percentage of becoming a block proposer depends on how much KAIA a node has staked.
 Therefore, a node with stakes more than others will have more opportunities than other nodes.
 
 StakingInfo is a data including stakingAmount and addresses (node, staking, reward, KFF and KCF).
-StakingAmount is a balance how much KLAY each node has staked. Only CCO can stake KLAY.
+StakingAmount is a balance how much KAIA each node has staked. Only CCO can stake KLAY.
 Each CCO stakes KLAY by a smart contract called staking contract.
 StakingAmount is derived by checking balance of staking contract.
 StakingInfo has 5 types of addresses. All addresses are obtained by the addressBookContract which is pre-deployed in the genesis block.

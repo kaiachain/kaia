@@ -76,7 +76,7 @@ type PeerSet interface {
 }
 
 // peerSet represents the collection of active peers currently participating in
-// the Klaytn sub-protocol.
+// the Kaia sub-protocol.
 type peerSet struct {
 	peers   map[string]Peer
 	cnpeers map[common.Address]Peer

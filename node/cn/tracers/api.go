@@ -67,7 +67,7 @@ const (
 	// on top of memory.
 	// For non-archive nodes, this limit _will_ be overblown, as disk-backed tries
 	// will only be found every ~15K blocks or so.
-	// For klaytn, this value is set to a value 4 times larger compared to the ethereum setting.
+	// For Kaia, this value is set to a value 4 times larger compared to the ethereum setting.
 	defaultTracechainMemLimit = common.StorageSize(4 * 500 * 1024 * 1024)
 
 	// fastCallTracer is the go-version callTracer which is lighter and faster than

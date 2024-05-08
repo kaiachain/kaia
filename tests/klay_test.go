@@ -181,7 +181,7 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	return txs, nil
 }
 
-// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KLAY
+// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KAIA
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
@@ -236,7 +236,7 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 	return txs, nil
 }
 
-// makeNewTransactionsToRing makes `numTransactions` transactions which transfers a fixed amount of KLAY
+// makeNewTransactionsToRing makes `numTransactions` transactions which transfers a fixed amount of KAIA
 // from account with index i to account with index (i+1). To have same amount of balance before and after the test,
 // total number of transactions should be the multiple of number of addresses.
 // It returns the generated transactions if successful, or it returns an error if failed.
@@ -643,7 +643,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 }
 
 // BenchmarkValueTransfer measures TPS without network traffics
-// while creating a block. As a disclaimer, this function does not tell that Klaytn
+// while creating a block. As a disclaimer, this function does not tell that Kaia
 // can perform this amount of TPS in real environment.
 func BenchmarkValueTransfer(t *testing.B) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
@@ -697,7 +697,7 @@ func BenchmarkValueTransfer(t *testing.B) {
 }
 
 // BenchmarkNewValueTransfer measures TPS without network traffics
-// while creating a block. As a disclaimer, this function does not tell that Klaytn
+// while creating a block. As a disclaimer, this function does not tell that Kaia
 // can perform this amount of TPS in real environment.
 func BenchmarkNewValueTransfer(t *testing.B) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)

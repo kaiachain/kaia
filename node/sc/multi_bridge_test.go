@@ -526,7 +526,7 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 }
 
 // TestMultiBridgeSetKLAYFee checks the following:
-// - successfully setting KLAY fee
+// - successfully setting KAIA fee
 func TestMultiBridgeSetKLAYFee(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	defer info.sim.Close()
@@ -796,7 +796,7 @@ func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 }
 
 // TestMultiBridgeSetKLAYFeeErrNonce checks the following:
-// - failed to set KLAY fee because of the wrong nonce.
+// - failed to set KAIA fee because of the wrong nonce.
 func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	defer info.sim.Close()

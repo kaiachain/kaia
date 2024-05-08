@@ -45,10 +45,10 @@ const (
 	handshakeTimeout = 5 * time.Second
 )
 
-// BridgePeerInfo represents a short summary of the Klaytn Bridge sub-protocol metadata known
+// BridgePeerInfo represents a short summary of the Kaia Bridge sub-protocol metadata known
 // about a connected peer.
 type BridgePeerInfo struct {
-	Version int    `json:"version"` // Klaytn Bridge protocol version negotiated
+	Version int    `json:"version"` // Kaia Bridge protocol version negotiated
 	Head    string `json:"head"`    // SHA3 hash of the peer's best owned block
 }
 
@@ -109,7 +109,7 @@ type BridgePeer interface {
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
 
-	// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+	// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 	// this function terminates, the Peer is disconnected.
 	Handle(bn *MainBridge) error
 
@@ -381,7 +381,7 @@ func (p *baseBridgePeer) GetRW() p2p.MsgReadWriter {
 	return p.rw
 }
 
-// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 // this function terminates, the Peer is disconnected.
 func (p *baseBridgePeer) Handle(bn *MainBridge) error {
 	return bn.handle(p)
@@ -393,7 +393,7 @@ type singleChannelPeer struct {
 }
 
 // bridgePeerSet represents the collection of active peers currently participating in
-// the Klaytn sub-protocol.
+// the Kaia sub-protocol.
 type bridgePeerSet struct {
 	peers  map[string]BridgePeer
 	lock   sync.RWMutex

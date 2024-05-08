@@ -106,7 +106,7 @@ func (m *MetaData) GetAbi() (*abi.ABI, error) {
 // higher level contract bindings to operate.
 type BoundContract struct {
 	address    common.Address     // Deployment address of the contract on the Kaia blockchain
-	abi        abi.ABI            // Reflect based ABI to access the correct Klaytn methods
+	abi        abi.ABI            // Reflect based ABI to access the correct Kaia methods
 	caller     ContractCaller     // Read interface to interact with the blockchain
 	transactor ContractTransactor // Write interface to interact with the blockchain
 	filterer   ContractFilterer   // Event filtering to interact with the blockchain

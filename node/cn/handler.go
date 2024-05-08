@@ -136,7 +136,7 @@ type ProtocolManager struct {
 	syncStop int32
 }
 
-// NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
+// NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
 // with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
@@ -464,7 +464,7 @@ func (pm *ProtocolManager) handleSnapPeer(peer *snap.Peer) error {
 	return snap.Handle(pm.blockchain, pm.downloader, peer)
 }
 
-// handle is the callback invoked to manage the life cycle of a Klaytn peer. When
+// handle is the callback invoked to manage the life cycle of a Kaia peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {
 	// If the peer has a `snap` extension, wait for it to connect so we can have
@@ -579,7 +579,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		// go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
-		//	p.Log().Debug("Klaytn message handling failed", "err", err)
+		//	p.Log().Debug("Kaia message handling failed", "err", err)
 		//	return err
 		//}
 	}
@@ -1486,7 +1486,7 @@ func (pm *ProtocolManager) useTxResend() bool {
 	return false
 }
 
-// NodeInfo represents a short summary of the Klaytn sub-protocol metadata
+// NodeInfo represents a short summary of the Kaia sub-protocol metadata
 // known about the host peer.
 type NodeInfo struct {
 	// TODO-Kaia describe predefined network ID below

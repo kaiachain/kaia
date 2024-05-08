@@ -120,7 +120,7 @@ func TestWSAttachWelcome(t *testing.T) {
 }
 
 func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
-	// Attach to a running Klaytn node and terminate immediately
+	// Attach to a running Kaia node and terminate immediately
 	attach := runKlay(t, "klay-test", "attach", endpoint)
 	defer attach.ExpectExit()
 	attach.CloseStdin()

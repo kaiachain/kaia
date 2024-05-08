@@ -26,7 +26,7 @@ import (
 	"github.com/holiman/uint256"
 )
 
-// Memory implements a simple memory model for the Klaytn virtual machine.
+// Memory implements a simple memory model for the Kaia virtual machine.
 type Memory struct {
 	store       []byte
 	lastGasCost uint64

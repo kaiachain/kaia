@@ -449,7 +449,7 @@ func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, t
 	return wallet.SignTxAsFeePayerWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
-// Sign calculates a Klaytn ECDSA signature for:
+// Sign calculates a Kaia ECDSA signature for:
 // keccack256("\x19Klaytn Signed Message:\n" + len(message) + message))
 //
 // Note, the produced signature conforms to the secp256k1 curve R, S and V values,

@@ -1309,7 +1309,7 @@ var (
 	ParentChainIDFlag = &cli.IntFlag{
 		Name:     "parentchainid",
 		Usage:    "parent chain ID",
-		Value:    8217, // Klaytn mainnet chain ID
+		Value:    8217, // Kaia mainnet chain ID
 		Aliases:  []string{"servicechain.parent-chainid"},
 		EnvVars:  []string{"KLAYTN_PARENTCHAINID"},
 		Category: "SERVICECHAIN",

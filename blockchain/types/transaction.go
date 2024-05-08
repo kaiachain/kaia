@@ -298,7 +298,7 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 	return tx.data.GetPrice()
 }
 
-// This function is disabled because klaytn has no gas tip
+// This function is disabled because Kaia has no gas tip
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	if tx.Type() == TxTypeEthereumDynamicFee {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)

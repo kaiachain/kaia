@@ -1532,7 +1532,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 	if err := validateTxPoolInternals(pool); err != nil {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
-	// NOTE-Kaia Klaytn currently accepts remote txs regardless of gas price.
+	// NOTE-Kaia Kaia currently accepts remote txs regardless of gas price.
 	// TODO-Kaia-RemoveLater Remove or uncomment the code below once the policy for how to
 	//         deal with underpriced remote txs is decided.
 	// Check that we can't add the old transactions back

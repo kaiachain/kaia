@@ -199,7 +199,7 @@ func genBlocks(t *testing.T) {
 	// Preparing step
 	{
 		var txs types.Transactions
-		// Preparing step. Send KLAY to LegacyAccount.
+		// Preparing step. Send KAIA to LegacyAccount.
 		{
 			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
 			tx := types.NewTransaction(reservoir.GetNonce(),
@@ -213,7 +213,7 @@ func genBlocks(t *testing.T) {
 			reservoir.AddNonce()
 		}
 
-		// Preparing step. Send KLAY to KlaytnAcounts.
+		// Preparing step. Send KAIA to KlaytnAcounts.
 		for i := 1; i < len(accountTypes); i++ {
 			// create an account which account key will be replaced to one of account key types.
 			anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))

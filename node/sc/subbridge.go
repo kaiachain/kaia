@@ -751,7 +751,7 @@ func (sb *SubBridge) syncer() {
 }
 
 func (sb *SubBridge) synchronise(peer BridgePeer) {
-	// @TODO Klaytn ServiceChain Sync
+	// @TODO Kaia ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the

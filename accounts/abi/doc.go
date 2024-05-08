@@ -19,10 +19,10 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package abi implements the Klaytn ABI (Application Binary
+Package abi implements the Kaia ABI (Application Binary
 Interface).
 
-The Klaytn ABI is strongly typed, known at compile time
+The Kaia ABI is strongly typed, known at compile time
 and static. This ABI will handle basic type casting; unsigned
 to signed and visa versa. It does not handle slice casting such
 as unsigned slice to signed slice. Bit size type casting is also

@@ -76,7 +76,7 @@ func GetDefaultLevelDBOption() *opt.Options {
 }
 
 // GetOpenFilesLimit raises out the number of allowed file handles per process
-// for Klaytn and returns half of the allowance to assign to the database.
+// for Kaia and returns half of the allowance to assign to the database.
 func GetOpenFilesLimit() int {
 	limit, err := fdlimit.Current()
 	if err != nil {

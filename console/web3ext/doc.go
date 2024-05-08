@@ -19,13 +19,13 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package web3ext contains the Klaytn specific web3.js extensions.
+Package web3ext contains the Kaia specific web3.js extensions.
 
 web3ext defines `Modules` which defines APIs for each category. This `Modules` is used by console to provide APIs to users.
 
 # API Categories
 
-APIs are categorized as follows. If you want to know more detail, please refer to https://docs.klaytn.com/bapp/json-rpc
+APIs are categorized as follows. If you want to know more detail, please refer to https://docs.Kaia.com/bapp/json-rpc
   - admin
   - debug
   - klay

@@ -734,7 +734,7 @@ CommitTransactionLoop:
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
 
-		// NOTE-Kaia Since Klaytn is always in EIP155, the below replay protection code is not needed.
+		// NOTE-Kaia Since Kaia is always in EIP155, the below replay protection code is not needed.
 		// TODO-Kaia-RemoveLater Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.

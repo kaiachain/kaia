@@ -54,19 +54,19 @@ var (
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
-// If you want more information about Klaytn's precompiled contracts,
-// please refer https://docs.klaytn.com/smart-contract/precompiled-contracts
+// If you want more information about Kaia's precompiled contracts,
+// please refer https://docs.Kaia.com/smart-contract/precompiled-contracts
 type PrecompiledContract interface {
 	// GetRequiredGasAndComputationCost returns the gas and computation cost
 	// required to execute the precompiled contract.
 	GetRequiredGasAndComputationCost(input []byte) (uint64, uint64)
 
 	// Run runs the precompiled contract
-	// contract, evm is only exists in klaytn, those are not used in go-ethereum
+	// contract, evm is only exists in Kaia, those are not used in go-ethereum
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
 }
 
-// PrecompiledContractsByzantium contains the default set of pre-compiled Klaytn
+// PrecompiledContractsByzantium contains the default set of pre-compiled Kaia
 // contracts based on Ethereum Byzantium.
 var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):  &ecrecover{},
@@ -84,7 +84,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 
 // DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
 
-// PrecompiledContractsIstanbul contains the default set of pre-compiled Klaytn
+// PrecompiledContractsIstanbul contains the default set of pre-compiled Kaia
 // contracts based on Ethereum Istanbul.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
@@ -101,7 +101,7 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 }
 
-// PrecompiledContractsKore contains the default set of pre-compiled Klaytn
+// PrecompiledContractsKore contains the default set of pre-compiled Kaia
 // contracts based on Ethereum Berlin.
 var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},
@@ -118,7 +118,7 @@ var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 }
 
-// PrecompiledContractsCancun contains the default set of pre-compiled Klaytn
+// PrecompiledContractsCancun contains the default set of pre-compiled Kaia
 // contracts based on Ethereum Cancun.
 var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}):      &ecrecover{},

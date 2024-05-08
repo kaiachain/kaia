@@ -31,7 +31,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// PublicKlayAPI provides an API to access Klaytn related information.
+// PublicKlayAPI provides an API to access Kaia related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicKlayAPI struct {
 	b Backend

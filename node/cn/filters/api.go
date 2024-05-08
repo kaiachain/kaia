@@ -328,7 +328,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 }
 
 // FilterCriteria represents a request to create a new filter.
-// Same as klaytn.FilterQuery but with UnmarshalJSON() method.
+// Same as Kaia.FilterQuery but with UnmarshalJSON() method.
 type FilterCriteria klaytn.FilterQuery
 
 // NewFilter creates a new filter and returns the filter id. It can be

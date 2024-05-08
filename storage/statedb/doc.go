@@ -41,7 +41,7 @@ periodically flush a couple tries to disk, garbage collecting the remainder.
 Related functions and variables are defined in the files listed below
   - database.go     : Implementation of Database struct
   - db_migration.go : Implementation of DB migration
-  - derive_sha.go   : Implementation of DeriveShaOrig used in Klaytn
+  - derive_sha.go   : Implementation of DeriveShaOrig used in Kaia
   - encoding.go     : Implementation of 3 encodings: KEYBYTES, HEX and COMPACT
   - errors.go       : Errors used in this package
   - hasher.go       : Implementation of recursive and bottom-up hashing

@@ -88,7 +88,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		return err
 	}
 
-	// NOTE-Kaia-Issue973 Developing Klaytn token economy
+	// NOTE-Kaia-Issue973 Developing Kaia token economy
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000441")
 	kcfContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000442")

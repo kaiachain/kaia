@@ -66,7 +66,7 @@ func WaitMined(tx *types.Transaction, backend bind.DeployBackend, t *testing.T) 
 	return nil
 }
 
-// TransferSignedTx sends the transaction to transfer KLAY from auth to `to` and waits the execution of the transaction.
+// TransferSignedTx sends the transaction to transfer KAIA from auth to `to` and waits the execution of the transaction.
 func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBackend, to common.Address, value *big.Int, t *testing.T) (common.Hash, *big.Int, error) {
 	ctx := context.Background()
 

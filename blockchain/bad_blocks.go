@@ -24,5 +24,5 @@ import "github.com/klaytn/klaytn/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{
-	// TODO-Kaia Fill bad hash later for Klaytn if necessary
+	// TODO-Kaia Fill bad hash later for Kaia if necessary
 }

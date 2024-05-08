@@ -15,8 +15,8 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package governance contains functions and variables used for voting and reflecting vote results in Klaytn.
-In Klaytn, various settings such as the amount of KLAY minted as a block reward can be changed by using governance vote.
+Package governance contains functions and variables used for voting and reflecting vote results in Kaia.
+In Kaia, various settings such as the amount of KAIA minted as a block reward can be changed by using governance vote.
 These votes can be casted by nodes of Governance Council and detailed introduction can be found at https://docs.klaytn.com/klaytn/design/governance
 
 # How to cast a vote

@@ -437,7 +437,7 @@ func (bi *BridgeInfo) GetCurrentBlockNumber() (uint64, error) {
 	return bi.subBridge.remoteBackend.CurrentBlockNumber(context.Background())
 }
 
-// DecodeRLP decodes the Klaytn
+// DecodeRLP decodes the Kaia
 func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	var LegacyBridgeAddrInfo struct {
 		LocalAddress  common.Address
@@ -469,7 +469,7 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes a BridgeJournal into the Klaytn RLP BridgeJournal format.
+// EncodeRLP serializes a BridgeJournal into the Kaia RLP BridgeJournal format.
 func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		b.BridgeAlias,
@@ -1161,7 +1161,7 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	return tx.Hash(), nil
 }
 
-// SetKLAYFee set the KLAY transfer fee on the bridge contract.
+// SetKLAYFee set the KAIA transfer fee on the bridge contract.
 func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
 	bi, ok := bm.GetBridgeInfo(bridgeAddr)
 	if !ok {
@@ -1218,7 +1218,7 @@ func (bm *BridgeManager) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big
 	return bi.bridge.FeeOfERC20(nil, tokenAddr)
 }
 
-// GetKLAYFee returns the KLAY transfer fee on the bridge contract.
+// GetKLAYFee returns the KAIA transfer fee on the bridge contract.
 func (bm *BridgeManager) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
 	bi, ok := bm.GetBridgeInfo(bridgeAddr)
 	if !ok {

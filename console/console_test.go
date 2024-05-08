@@ -93,7 +93,7 @@ func newTester(t *testing.T, confOverride func(*cn.Config)) *tester {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
 
-	// Create a networkless protocol stack and start a Klaytn service within
+	// Create a networkless protocol stack and start a Kaia service within
 	stack, err := node.New(&node.Config{DataDir: workspace, UseLightweightKDF: true, Name: testInstance})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)

@@ -38,15 +38,15 @@ import (
 const callTimeout = 300 * time.Millisecond
 
 var (
-	// KIP 13: Interface Query Standard - https://kips.klaytn.com/KIPs/kip-13
+	// KIP 13: Interface Query Standard - https://kips.Kaia.com/KIPs/kip-13
 	IKIP13Id  = [4]byte{0x01, 0xff, 0xc9, 0xa7}
 	InvalidId = [4]byte{0xff, 0xff, 0xff, 0xff}
 
-	// KIP 7: Fungible Token Standard - https://kips.klaytn.com/KIPs/kip-7
+	// KIP 7: Fungible Token Standard - https://kips.Kaia.com/KIPs/kip-7
 	IKIP7Id         = [4]byte{0x65, 0x78, 0x73, 0x71}
 	IKIP7MetadataId = [4]byte{0xa2, 0x19, 0xa0, 0x25}
 
-	// KIP 17: Non-fungible Token Standard - https://kips.klaytn.com/KIPs/kip-17
+	// KIP 17: Non-fungible Token Standard - https://kips.Kaia.com/KIPs/kip-17
 	IKIP17Id         = [4]byte{0x80, 0xac, 0x58, 0xcd}
 	IKIP17MetadataId = [4]byte{0x5b, 0x5e, 0x13, 0x9f}
 

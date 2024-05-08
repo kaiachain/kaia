@@ -17,7 +17,7 @@
 /*
 Package ecies implements the Elliptic Curve Integrated Encryption Scheme.
 
-Package ecies provides functions to Encrypt / Decrypt messages using ECIES which are used in RLPx transport protocol in Klaytn.
+Package ecies provides functions to Encrypt / Decrypt messages using ECIES which are used in RLPx transport protocol in Kaia.
 
 # Source Files
 

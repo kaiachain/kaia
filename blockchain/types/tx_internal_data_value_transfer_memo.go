@@ -32,7 +32,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// TxInternalDataValueTransferMemo represents a transaction with payload data transferring KLAY.
+// TxInternalDataValueTransferMemo represents a transaction with payload data transferring KAIA.
 type TxInternalDataValueTransferMemo struct {
 	AccountNonce uint64
 	Price        *big.Int

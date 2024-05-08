@@ -519,7 +519,7 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 	for _, node := range cns.GetAllNodes() {
 		if node.StakingAmount > minStake {
 			effectiveStake := new(big.Int).SetUint64(node.StakingAmount - minStake)
-			// The KLAY unit will cancel out:
+			// The KAIA unit will cancel out:
 			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KLAY) / totalStakes (KLAY)
 			rewardAmount := new(big.Int).Mul(stakeReward, effectiveStake)
 			rewardAmount = rewardAmount.Div(rewardAmount, totalStakes)

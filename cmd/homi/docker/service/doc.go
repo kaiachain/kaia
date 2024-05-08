@@ -25,7 +25,7 @@ service package provides various templates to build a docker-compose.yml
 # Source Files
 
 Each file contains following contents
-  - constellation.go : Deprecated. This is not being used in Klaytn
+  - constellation.go : Deprecated. This is not being used in Kaia
   - eth_stats.go : Defines `KlayStats` and provides a yaml template for a KlayStats service
   - grafana.go : Defines `GrafanaService` and provides a yaml template for a Grafana service
   - prometheus.go : Defines `PrometheusService` and provides a yaml template for a Prometheus service

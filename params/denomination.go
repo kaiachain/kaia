@@ -20,7 +20,7 @@
 
 package params
 
-// These are the multipliers for KLAY denominations.
+// These are the multipliers for KAIA denominations.
 // Example: To get the peb value of an amount in 'ston', use
 //
 //	new(big.Int).Mul(value, big.NewInt(params.Ston))

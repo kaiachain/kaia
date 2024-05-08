@@ -297,7 +297,7 @@ func TestBlobHash(t *testing.T) {
 		name   string
 		idx    uint64
 		expect common.Hash
-		// hashes []common.Hash // klaytn doesn't support blobHashes
+		// hashes []common.Hash // Kaia doesn't support blobHashes
 	}
 	zero := common.Hash{0}
 	for _, tt := range []testcase{

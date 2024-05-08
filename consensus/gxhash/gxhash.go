@@ -447,7 +447,7 @@ func NewTester() *Gxhash {
 }
 
 // NewFaker creates a gxhash consensus engine with a fake PoW scheme that accepts
-// all blocks' seal as valid, though they still have to conform to the Klaytn
+// all blocks' seal as valid, though they still have to conform to the Kaia
 // consensus rules.
 func NewFaker() *Gxhash {
 	return &Gxhash{

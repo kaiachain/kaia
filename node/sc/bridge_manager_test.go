@@ -329,7 +329,7 @@ func TestBridgeManager(t *testing.T) {
 		assert.Equal(t, testToken.String(), balance.String())
 	}
 
-	// 11. Check KLAY balance
+	// 11. Check KAIA balance
 	{
 		balance, err = sim.BalanceAt(context.Background(), bob.From, nil)
 		assert.Equal(t, nil, err)
@@ -821,7 +821,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 	}
 
-	// 9-1. Request KLAY transfer from Alice to Bob with same feeLimit with fee
+	// 9-1. Request KAIA transfer from Alice to Bob with same feeLimit with fee
 	{
 		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		if err != nil {
@@ -834,7 +834,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 	}
 
-	// 9-2. Request KLAY transfer from Alice to Bob with zero feeLimit
+	// 9-2. Request KAIA transfer from Alice to Bob with zero feeLimit
 	{
 		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
@@ -844,7 +844,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
 	}
 
-	// 9-3. Request KLAY transfer from Alice to Bob with insufficient feeLimit
+	// 9-3. Request KAIA transfer from Alice to Bob with insufficient feeLimit
 	{
 		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
@@ -854,7 +854,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusErrExecutionReverted, t)
 	}
 
-	// 9-4. Request KLAY transfer from Alice to Bob with enough feeLimit
+	// 9-4. Request KAIA transfer from Alice to Bob with enough feeLimit
 	{
 		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKLAY + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKLAY), nil)
 		assert.Equal(t, nil, err)
@@ -864,7 +864,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		CheckReceipt(sim, tx, 1*time.Second, types.ReceiptStatusSuccessful, t)
 	}
 
-	// 9-4. Request KLAY transfer from Alice to Alice through () payable method
+	// 9-4. Request KAIA transfer from Alice to Alice through () payable method
 	{
 		nonce, _ := sim.PendingNonceAt(context.Background(), Alice.From)
 		gasPrice, _ := sim.SuggestGasPrice(context.Background())
@@ -901,7 +901,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 		assert.Equal(t, ERC20Fee*4, balance.Int64())
 	}
 
-	// 11. Check KLAY balance
+	// 11. Check KAIA balance
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
 		t.Log("Alice KLAY balance :", balance)
@@ -2577,7 +2577,7 @@ func TestBridgeAddressType(t *testing.T) {
 	}
 }
 
-// DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KLAY.
+// DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KAIA.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo
 

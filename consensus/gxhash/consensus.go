@@ -78,7 +78,7 @@ func (gxhash *Gxhash) GetConsensusInfo(block *types.Block) (consensus.ConsensusI
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
-// stock Klaytn gxhash engine.
+// stock Kaia gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
 	if gxhash.config.PowMode == ModeFullFake {
@@ -179,7 +179,7 @@ func (gxhash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules of the
-// stock Klaytn gxhash engine.
+// stock Kaia gxhash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size

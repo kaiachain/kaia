@@ -302,7 +302,7 @@ func TestReplication(t *testing.T) {
 		{"horse", "stallion"},
 		// {"shaman", "horse"},
 		// {"doge", "coin"},
-		// {"klaytn", ""},
+		// {"Kaia", ""},
 		// {"dog", "puppy"},
 		// {"somethingveryoddindeedthis is", "myothernodedata"},
 		// {"shaman", ""},

@@ -286,7 +286,7 @@ func (ec *Client) BridgeSetERC20Fee(ctx context.Context, bridgeAddr, tokenAddr c
 	return result, err
 }
 
-// BridgeSetKLAYFee can set the KLAY transfer fee.
+// BridgeSetKLAYFee can set the KAIA transfer fee.
 func (ec *Client) BridgeSetKLAYFee(ctx context.Context, bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
 	var result common.Hash
 	err := ec.c.CallContext(ctx, &result, "subbridge_setKLAYFee", bridgeAddr, fee)
@@ -300,7 +300,7 @@ func (ec *Client) BridgeGetERC20Fee(ctx context.Context, bridgeAddr, tokenAddr c
 	return (*big.Int)(&result), err
 }
 
-// BridgeGetKLAYFee returns the KLAY transfer fee.
+// BridgeGetKLAYFee returns the KAIA transfer fee.
 func (ec *Client) BridgeGetKLAYFee(ctx context.Context, bridgeAddr common.Address) (*big.Int, error) {
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "subbridge_getKLAYFee", bridgeAddr)

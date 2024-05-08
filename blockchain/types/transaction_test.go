@@ -530,7 +530,7 @@ func TestGasOverflow(t *testing.T) {
 	// TODO-Kaia-Gas: Need to find a way of checking integer overflow for smart contract execution.
 }
 
-// TODO-Kaia-FailedTest This test is failed in Klaytn
+// TODO-Kaia-FailedTest This test is failed in Kaia
 /*
 // TestTransactionJSON tests serializing/de-serializing to/from JSON.
 func TestTransactionJSON(t *testing.T) {

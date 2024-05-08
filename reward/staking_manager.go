@@ -136,7 +136,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // If the given number is not on the staking block, it returns nil.
 //
 // Fixup for Gini coefficients:
-// Klaytn core stores Gini: -1 in its database.
+// Kaia core stores Gini: -1 in its database.
 // We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
 // - If cache hit                               -> fillMissingGini -> modifies cached in-memory object
 // - If db hit                                  -> fillMissingGini -> write to cache

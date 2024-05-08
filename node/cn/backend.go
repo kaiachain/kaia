@@ -390,7 +390,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
-	//@TODO Klaytn add core component
+	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
@@ -495,7 +495,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	return ctx.OpenDatabase(dbc)
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
+// CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {

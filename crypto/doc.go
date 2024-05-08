@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package crypto contains several cryptography modules used in Klaytn.
+Package crypto contains several cryptography modules used in Kaia.
 
 crypto package provides various cryptographic functions such as key generation, ECDSA conversion, signature verification and so on.
 

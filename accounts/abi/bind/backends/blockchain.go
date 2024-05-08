@@ -142,7 +142,7 @@ func (b *BlockchainContractBackend) callContract(call klaytn.CallMsg, block *typ
 	txContext := blockchain.NewEVMTxContext(msg, block.Header())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
 
-	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()
+	// EVM demands the sender to have enough KAIA balance (gasPrice * gasLimit) in buyGas()
 	// After KIP-71, gasPrice is nonzero baseFee, regardless of the msg.gasPrice (usually 0)
 	// But our sender (usually 0x0) won't have enough balance. Instead we override gasPrice = 0 here
 	txContext.GasPrice = big.NewInt(0)

@@ -2508,35 +2508,35 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		},
 		{ // simple transfer with insufficient funds with zero gasPrice
 			args: EthTransactionArgs{
-				From:  &account2, // sender has 0 KLAY
+				From:  &account2, // sender has 0 KAIA
 				To:    &account1,
-				Value: &KLAY, // transfer 1 KLAY
+				Value: &KLAY, // transfer 1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
 		{ // simple transfer with slightly insufficient funds with zero gasPrice
 			// this testcase is to check whether the gas prefunded in EthDoCall is not too much
 			args: EthTransactionArgs{
-				From:  &account1, // sender has 2 KLAY
+				From:  &account1, // sender has 2 KAIA
 				To:    &account2,
-				Value: &KLAY2_1, // transfer 2.0000...1 KLAY
+				Value: &KLAY2_1, // transfer 2.0000...1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
 		{ // simple transfer with insufficient funds with nonzero gasPrice
 			args: EthTransactionArgs{
-				From:     &account2, // sender has 0 KLAY
+				From:     &account2, // sender has 0 KAIA
 				To:       &account1,
-				Value:    &KLAY, // transfer 1 KLAY
+				Value:    &KLAY, // transfer 1 KAIA
 				GasPrice: &mKLAY,
 			},
 			expectErr: "insufficient funds for transfer",
 		},
 		{ // simple transfer too high gasPrice
 			args: EthTransactionArgs{
-				From:     &account1, // sender has 2 KLAY
+				From:     &account1, // sender has 2 KAIA
 				To:       &account2,
-				Value:    &KLAY,  // transfer 1 KLAY
+				Value:    &KLAY,  // transfer 1 KAIA
 				GasPrice: &mKLAY, // allowance = (2 - 1) / 0.001 = 1000 gas
 			},
 			expectErr: "gas required exceeds allowance",

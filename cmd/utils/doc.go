@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package utils contains internal helper functions for klaytn commands.
+Package utils contains internal helper functions for Kaia commands.
 
 utils package provides various helper functions especially for handling various commands and options.
 

@@ -76,7 +76,7 @@ type keccakState interface {
 	Read([]byte) (int, error)
 }
 
-// EVMInterpreter is used to run Klaytn based contracts and will utilise the
+// EVMInterpreter is used to run Kaia based contracts and will utilise the
 // passed environment to query external sources for state information.
 // The EVMInterpreter will run the byte code VM based on the passed
 // configuration.

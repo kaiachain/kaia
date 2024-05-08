@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package database implements various types of databases used in Klaytn.
+Package database implements various types of databases used in Kaia.
 This package is used to read/write data from/to the persistent layer.
 
 # Overview of database package

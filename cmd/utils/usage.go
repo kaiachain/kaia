@@ -18,7 +18,7 @@
 // This file is derived from cmd/geth/usage.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Contains the Klaytn node command usage template and generator.
+// Contains the Kaia node command usage template and generator.
 
 package utils
 

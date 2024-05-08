@@ -43,7 +43,7 @@ import (
 	"github.com/klaytn/klaytn/work"
 )
 
-// PublicKlayAPI provides an API to access Klaytn CN-related
+// PublicKlayAPI provides an API to access Kaia CN-related
 // information.
 type PublicKlayAPI struct {
 	cn *CN
@@ -271,14 +271,14 @@ func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (
 	return throttler.GetCandidates(), nil
 }
 
-// PublicDebugAPI is the collection of Klaytn full node APIs exposed
+// PublicDebugAPI is the collection of Kaia full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
 	cn *CN
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
-// related public debug methods of the Klaytn service.
+// related public debug methods of the Kaia service.
 func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
 	return &PublicDebugAPI{cn: cn}
 }

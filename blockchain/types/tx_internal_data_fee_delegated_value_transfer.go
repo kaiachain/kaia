@@ -32,7 +32,7 @@ import (
 )
 
 // TxInternalDataFeeDelegatedValueTransfer represents a fee-delegated transaction
-// transferring KLAY with a fee payer.
+// transferring KAIA with a fee payer.
 // FeePayer should be RLP-encoded after the signature of the sender.
 type TxInternalDataFeeDelegatedValueTransfer struct {
 	AccountNonce uint64

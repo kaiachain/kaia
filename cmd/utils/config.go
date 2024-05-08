@@ -133,7 +133,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
 		ServiceChain:     *sc.DefaultServiceChainConfig(),
 	}
 
-	// NOTE-Kaia : klaytn loads the flags from yaml, not toml
+	// NOTE-Kaia : Kaia loads the flags from yaml, not toml
 	// Load config file.
 	// if file := ctx.String(ConfigFileFlag.Name); file != "" {
 	// 	if err := LoadConfig(file, &cfg); err != nil {
@@ -507,7 +507,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 
 // setKlayConfig applies klay-related command line flags to the config.
 func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
-	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Kaia's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	cfg := &kCfg.CN
 	raiseFDLimit()

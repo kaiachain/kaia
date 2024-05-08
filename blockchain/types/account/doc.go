@@ -15,13 +15,13 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package account implements Account used in Klaytn.
+Package account implements Account used in Kaia.
 
 Inside the package, types, structures, functions, and interfaces associated with the Account are defined.
 
 # Type of Account
 
-There are three types of Accounts used in Klaytn.
+There are three types of Accounts used in Kaia.
 
   - LegacyAccountType
   - ExternallyOwnedAccountType

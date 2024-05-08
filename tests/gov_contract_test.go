@@ -238,7 +238,7 @@ func deployGovParamTx_batchSetParamIn(t *testing.T, node *cn.CN, owner *TestAcco
 	return txs
 }
 
-// Klaytn node only decodes the byte-array param values (refer to params/governance_paramset.go).
+// Kaia node only decodes the byte-array param values (refer to params/governance_paramset.go).
 // Encoding is the job of transaction senders (i.e. clients and dApps).
 // This is a reference implementation of such encoder.
 func chainConfigToBytesMap(t *testing.T, config *params.ChainConfig) map[string][]byte {

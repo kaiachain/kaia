@@ -72,7 +72,7 @@ const (
 	handshakeTimeout = 5 * time.Second
 )
 
-// PeerInfo represents a short summary of the Klaytn sub-protocol metadata known
+// PeerInfo represents a short summary of the Kaia sub-protocol metadata known
 // about a connected peer.
 type PeerInfo struct {
 	Version    int      `json:"version"`    // Kaia protocol version negotiated
@@ -218,7 +218,7 @@ type Peer interface {
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
 
-	// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+	// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 	// this function terminates, the Peer is disconnected.
 	Handle(pm *ProtocolManager) error
 
@@ -764,7 +764,7 @@ func (p *basePeer) GetRW() p2p.MsgReadWriter {
 	return p.rw
 }
 
-// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 // this function terminates, the Peer is disconnected.
 func (p *basePeer) Handle(pm *ProtocolManager) error {
 	return pm.handle(p)
@@ -1079,7 +1079,7 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 	}
 }
 
-// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 // this function terminates, the Peer is disconnected.
 func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	// If the peer has a `snap` extension, wait for it to connect so we can have

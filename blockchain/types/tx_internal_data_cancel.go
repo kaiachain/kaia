@@ -30,7 +30,7 @@ import (
 )
 
 // TxInternalDataCancel is a transaction that cancels a transaction previously submitted into txpool by replacement.
-// Since Klaytn defines fixed gas price for all transactions, a transaction cannot be replaced with
+// Since Kaia defines fixed gas price for all transactions, a transaction cannot be replaced with
 // another transaction with higher gas price. To provide tx replacement, TxInternalDataCancel is introduced.
 // To replace a previously added tx, send a TxInternalCancel transaction with the same nonce.
 type TxInternalDataCancel struct {

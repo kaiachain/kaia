@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-ken is the command-line client for Klaytn Endpoint Node.
+ken is the command-line client for Kaia Endpoint Node.
 
 ken has the node type of "en" internally. Please try `ken -h` to see commands and options list.
 

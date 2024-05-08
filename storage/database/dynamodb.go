@@ -118,7 +118,7 @@ type DynamoData struct {
 // CustomRetryer wraps AWS SDK's built in DefaultRetryer adding additional custom features.
 // DefaultRetryer of AWS SDK has its own standard of retryable situation,
 // but it's not proper when network environment is not stable.
-// CustomRetryer conservatively retry in all error cases because DB failure of Klaytn is critical.
+// CustomRetryer conservatively retry in all error cases because DB failure of Kaia is critical.
 type CustomRetryer struct {
 	client.DefaultRetryer
 }

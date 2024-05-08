@@ -34,7 +34,7 @@ import (
 )
 
 // testerAccountPool is a pool to maintain currently active tester accounts,
-// mapped from textual names used in the tests below to actual Klaytn private
+// mapped from textual names used in the tests below to actual Kaia private
 // keys capable of signing transactions.
 type testerAccountPool struct {
 	accounts map[string]*ecdsa.PrivateKey

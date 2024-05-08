@@ -43,7 +43,7 @@ const (
 var logger = log.NewModuleLogger(log.ServiceChain)
 
 func DefaultServiceChainConfig() *SCConfig {
-	// DefaultConfig contains default settings for use on the Klaytn main net.
+	// DefaultConfig contains default settings for use on the Kaia main net.
 	return &SCConfig{
 		NetworkId: 1,
 		MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
@@ -113,7 +113,7 @@ type SCConfig struct {
 // NodeName returns the devp2p node identifier.
 func (c *SCConfig) NodeName() string {
 	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Klaytn", keep that.
+	// Backwards compatibility: previous versions used title-cased "Kaia", keep that.
 	if name == "klay" || name == "klay-testnet" {
 		name = "Klaytn"
 	}

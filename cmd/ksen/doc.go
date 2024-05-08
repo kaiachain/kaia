@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-ksen is the command-line client for Klaytn ServiceChain Endpoint Node.
+ksen is the command-line client for Kaia ServiceChain Endpoint Node.
 
 ksen has the node type of "en" internally. Please try `ksen -h` to see commands and options list.
 

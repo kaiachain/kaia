@@ -34,9 +34,9 @@ Validate: A validator node can validate blocks from proposers. A block is valid 
 ValidatorSet calculates the block proposer of an upcoming block.
 A validator selected as a block proposer will have a chance to make a block.
 
-# Implementation in Klaytn
+# Implementation in Kaia
 
-Klaytn implements `Validator` and `ValidatorSet` interface for Kaia consensus.
+Kaia implements `Validator` and `ValidatorSet` interface for Kaia consensus.
 Klaytn reflects the ratio of staking amounts to the probability of selecting a proposer.
 This is called weightedRandom policy.
 Detailed information can be found in https://docs.klaytn.com/klaytn/token_economy#klaytn-governance-council-reward.
