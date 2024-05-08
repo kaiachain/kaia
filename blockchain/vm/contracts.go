@@ -55,7 +55,7 @@ var (
 // requires a deterministic gas count based on the input size of the Run method of the
 // contract.
 // If you want more information about Kaia's precompiled contracts,
-// please refer https://docs.Kaia.com/smart-contract/precompiled-contracts
+// please refer https://docs.klaytn.com/smart-contract/precompiled-contracts
 type PrecompiledContract interface {
 	// GetRequiredGasAndComputationCost returns the gas and computation cost
 	// required to execute the precompiled contract.
