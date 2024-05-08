@@ -25,7 +25,7 @@ See below for gRPC: https://grpc.io/docs/quickstart/go/
 Each file provides the following features
   - gClient.go : gRPC client implementation.
   - gServer.go : gRPC server implementation.
-  - Kaia.proto : Define a interface and messages to use in gRPC server and clients.
-  - Kaia.pb.go : the generated Go file from Kaia.proto by protoc-gen-go.
+  - klaytn.proto : Define a interface and messages to use in gRPC server and clients.
+  - klaytn.pb.go : the generated Go file from Kaia.proto by protoc-gen-go.
 */
 package grpc
