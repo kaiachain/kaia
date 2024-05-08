@@ -49,7 +49,7 @@ type PublicKlayAPI struct {
 	cn *CN
 }
 
-// NewPublicKlayAPI creates a new Klaytn protocol API for full nodes.
+// NewPublicKlayAPI creates a new Kaia protocol API for full nodes.
 func NewPublicKlayAPI(e *CN) *PublicKlayAPI {
 	return &PublicKlayAPI{e}
 }

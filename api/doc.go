@@ -33,7 +33,7 @@ Source Files
   - api_private_account.go         : provides private APIs to access accounts managed by the node.
   - api_private_debug.go           : provides private APIs exposed over the debugging node.
   - api_public_account.go          : provides public APIs to access accounts managed by the node.
-  - api_public_blockchain.go       : provides public APIs to access the Klaytn blockchain.
+  - api_public_blockchain.go       : provides public APIs to access the Kaia blockchain.
   - api_public_cypress.go          : provides public APIs to return specific information of Klaytn Cypress network.
   - api_public_debug.go            : provides public APIs exposed over the debugging node.
   - api_public_klay.go             : provides public APIs to access Klaytn related data.

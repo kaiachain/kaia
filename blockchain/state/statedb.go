@@ -57,7 +57,7 @@ var (
 	EnabledExpensive = false
 )
 
-// StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
+// StateDBs within the Kaia protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
 type StateDB struct {
 	db       Database

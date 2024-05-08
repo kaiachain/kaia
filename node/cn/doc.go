@@ -34,7 +34,7 @@ Source Files
   - metrics.go          : includes statistics used in cn package
   - peer.go             : provides the interface and implementation of Peer interface
   - peer_set.go         : provides the interface and implementation of PeerSet interface
-  - protocol.go         : defines the protocol version of Klaytn network and includes errors in cn package
+  - protocol.go         : defines the protocol version of Kaia network and includes errors in cn package
   - sync.go             : includes syncing features of ProtocolManager
 */
 package cn

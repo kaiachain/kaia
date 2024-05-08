@@ -137,7 +137,7 @@ type ProtocolManager struct {
 }
 
 // NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
-// with the Klaytn network.
+// with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config,
@@ -1490,7 +1490,7 @@ func (pm *ProtocolManager) useTxResend() bool {
 // known about the host peer.
 type NodeInfo struct {
 	// TODO-Kaia describe predefined network ID below
-	Network    uint64              `json:"network"`    // Klaytn network ID
+	Network    uint64              `json:"network"`    // Kaia network ID
 	BlockScore *big.Int            `json:"blockscore"` // Total blockscore of the host's blockchain
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules

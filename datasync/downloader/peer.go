@@ -74,7 +74,7 @@ type peerConnection struct {
 
 	peer Peer
 
-	version int        // Klaytn protocol version number to switch strategies
+	version int        // Kaia protocol version number to switch strategies
 	logger  log.Logger // Contextual logger to add extra infos to peer logs
 	lock    sync.RWMutex
 }

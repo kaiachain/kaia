@@ -74,7 +74,7 @@ type BridgePeer interface {
 	// data should have been encoded as an RLP list.
 	Send(msgcode uint64, data interface{}) error
 
-	// Handshake executes the Klaytn protocol handshake, negotiating version number,
+	// Handshake executes the Kaia protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
 	// and returning if the peer on the same chain or not and error.
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash) error
@@ -259,7 +259,7 @@ func (p *baseBridgePeer) SendServiceChainInvalidTxResponse(invalidTxs []InvalidP
 	return p2p.Send(p.rw, ServiceChainInvalidTxResponseMsg, invalidTxs)
 }
 
-// Handshake executes the Klaytn protocol handshake, negotiating version number,
+// Handshake executes the Kaia protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash) error {
 	// Send out own handshake in a new thread

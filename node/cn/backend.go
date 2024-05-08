@@ -678,7 +678,7 @@ func (s *CN) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (s *CN) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
@@ -700,7 +700,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
 	s.protocolManager.Stop()

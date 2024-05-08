@@ -75,7 +75,7 @@ const (
 // PeerInfo represents a short summary of the Klaytn sub-protocol metadata known
 // about a connected peer.
 type PeerInfo struct {
-	Version    int      `json:"version"`    // Klaytn protocol version negotiated
+	Version    int      `json:"version"`    // Kaia protocol version negotiated
 	BlockScore *big.Int `json:"blockscore"` // Total blockscore of the peer's blockchain
 	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
 }
@@ -178,7 +178,7 @@ type Peer interface {
 	// It is used solely by the fetcher.
 	FetchBlockBodies(hashes []common.Hash) error
 
-	// Handshake executes the Klaytn protocol handshake, negotiating version number,
+	// Handshake executes the Kaia protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, and genesis blocks and returning error.
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error
 
@@ -629,7 +629,7 @@ func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
 	return p2p.Send(p.rw, StakingInfoRequestMsg, hashes)
 }
 
-// Handshake executes the Klaytn protocol handshake, negotiating version number,
+// Handshake executes the Kaia protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash, genesis common.Hash) error {
 	// Send out own handshake in a new thread

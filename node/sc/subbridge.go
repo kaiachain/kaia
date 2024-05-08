@@ -79,7 +79,7 @@ type Backend interface {
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
 // known about the host peer.
 type SubBridgeInfo struct {
-	Network uint64              `json:"network"` // Klaytn network ID
+	Network uint64              `json:"network"` // Kaia network ID
 	Genesis common.Hash         `json:"genesis"` // SHA3 hash of the host's genesis block
 	Config  *params.ChainConfig `json:"config"`  // Chain configuration for the fork rules
 	Head    common.Hash         `json:"head"`    // SHA3 hash of the host's best owned block
@@ -423,7 +423,7 @@ func (sb *SubBridge) getChainID() *big.Int {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (sb *SubBridge) Start(srvr p2p.Server) error {
 	if sb.bootFail {
 		return errors.New("subBridge node fail to start")
@@ -755,7 +755,7 @@ func (sb *SubBridge) synchronise(peer BridgePeer) {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (sb *SubBridge) Stop() error {
 	close(sb.quitSync)
 	sb.bridgeManager.stopAllRecoveries()
