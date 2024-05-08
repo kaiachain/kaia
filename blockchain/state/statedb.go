@@ -1137,7 +1137,7 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 //
 // Kore fork:
 // - Add sender to access list (2929)
-// - Add feepayer to access list (only for klaytn)
+// - Add feepayer to access list (only for Kaia)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //

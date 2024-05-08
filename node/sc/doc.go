@@ -22,7 +22,7 @@ They mostly act like normal Kaia blockchains but has additional features to conn
 They can be used as separate public/private blockchains or child chains of a Kaia chain (or another Service Chain).
 The followings describe main features of Service chain.
   - Anchoring block data of Service Chain
-  - Value Transfer (KLAY, KCT)
+  - Value Transfer (KAIA, KCT)
   - Various bridge contract configurations
   - Support high availability
 
@@ -44,7 +44,7 @@ Following is the process of the KAIA transfer from Kaia main chain to a Service 
 2. The bridge contract keeps KAIA on its account and creates an event for the inter-chain request.
 3. The SubBridge subscribes the event log on the main chain node through RPC.
 4. The SubBridge generates a transaction on the child chain node to the bridge contract of the SubBridge.
-5. Finally, The bridge contract mints (or uses its KLAY) and sends KAIA to the target address.
+5. Finally, The bridge contract mints (or uses its KAIA) and sends KAIA to the target address.
 
 # Source Files
 

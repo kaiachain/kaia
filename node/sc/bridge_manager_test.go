@@ -516,7 +516,7 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	bridgeManager.Stop()
 }
 
-// TestBridgeManagerWithFee tests the KLAY/ERC20 transfer with fee.
+// TestBridgeManagerWithFee tests the KAIA/ERC20 transfer with fee.
 func TestBridgeManagerWithFee(t *testing.T) {
 	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)

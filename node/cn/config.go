@@ -184,7 +184,7 @@ type Config struct {
 	RPCEVMTimeout time.Duration
 
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
-	// send-transction variants. The unit is klay.
+	// send-transction variants. The unit is KAIA.
 	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
 

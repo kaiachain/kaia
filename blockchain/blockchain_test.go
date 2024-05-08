@@ -1588,7 +1588,7 @@ func TestEIP3651(t *testing.T) {
 
 	state, _ := chain.State()
 
-	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 klay is the total reward)
+	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 KAIA is the total reward)
 	actual := state.GetBalance(params.AuthorAddressForTesting)
 	expected := gxhash.ByzantiumBlockReward
 	if actual.Cmp(expected) != 0 {

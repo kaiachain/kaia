@@ -521,7 +521,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 		GasLimit:  &tGas,
 		Price:     tGasPrice,
 		Amount:    hValue,
-		// Nonce : nonce,	Nonce will be determined by Klay node.
+		// Nonce : nonce,	Nonce will be determined by Kaia node.
 		Data:    &tData,
 		Payload: &tInput,
 	}

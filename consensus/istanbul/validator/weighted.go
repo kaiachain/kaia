@@ -97,8 +97,8 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 
 type weightedCouncil struct {
 	subSize           uint64
-	demotedValidators istanbul.Validators // validators staking KLAYs less than minimum, and not in committee/proposers
-	validators        istanbul.Validators // validators staking KLAYs more than and equals to minimum, and in committee/proposers
+	demotedValidators istanbul.Validators // validators staking KAIA less than minimum, and not in committee/proposers
+	validators        istanbul.Validators // validators staking KAIA more than and equals to minimum, and in committee/proposers
 	policy            istanbul.ProposerPolicy
 
 	proposer    atomic.Value // istanbul.Validator
@@ -735,7 +735,7 @@ func (valSet *weightedCouncil) setValidators(validators []*weightedValidator, de
 
 // filterValidators divided the given weightedValidators into two group filtered by the minimum amount of staking.
 // If governance mode is single, the governing node will always be a validator.
-// If no validator has enough KLAYs, all become validators.
+// If no validator has enough KAIA, all become validators.
 func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedValidators []*weightedValidator, stakingAmounts []float64, minStaking uint64) ([]*weightedValidator, []float64, []*weightedValidator, []float64) {
 	var (
 		newWeightedValidators []*weightedValidator
@@ -758,10 +758,10 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 		}
 	}
 
-	// when no validator has more than minimum staking amount of KLAYs, all members are in validators
+	// when no validator has more than minimum staking amount of KAIA, all members are in validators
 	if len(newWeightedValidators) <= 0 {
 		// 1. if governance mode is not single,
-		// 2. if governance mode is single and governing node does not have minimum staking amount of KLAYs as well
+		// 2. if governance mode is single and governing node does not have minimum staking amount of KAIA as well
 		if !isSingleMode || uint64(govNodeStaking) < minStaking {
 			newWeightedValidators, newValidatorsStaking = newWeightedDemoted, newDemotedStaking
 			newWeightedDemoted, newDemotedStaking = []*weightedValidator{}, []float64{}

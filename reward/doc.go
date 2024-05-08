@@ -20,13 +20,13 @@ The Kaia reward system manages stakingInfo and distributes block rewards.
 
 # Managing stakingInfo
 
-Klaytn uses WeightedRandom policy to choose a block proposer.
+Kaia uses WeightedRandom policy to choose a block proposer.
 It means, the percentage of becoming a block proposer depends on how much KAIA a node has staked.
 Therefore, a node with stakes more than others will have more opportunities than other nodes.
 
 StakingInfo is a data including stakingAmount and addresses (node, staking, reward, KFF and KCF).
-StakingAmount is a balance how much KAIA each node has staked. Only CCO can stake KLAY.
-Each CCO stakes KLAY by a smart contract called staking contract.
+StakingAmount is a balance how much KAIA each node has staked. Only CCO can stake KAIA.
+Each CCO stakes KAIA by a smart contract called staking contract.
 StakingAmount is derived by checking balance of staking contract.
 StakingInfo has 5 types of addresses. All addresses are obtained by the addressBookContract which is pre-deployed in the genesis block.
 stakingAddress are addresses of staking contracts of CCO. reward, KFF and KCF addresses are the addresses which get a block reward when a block has been created.
@@ -57,8 +57,8 @@ and returns correct stakingInfo to use.
 
 # Distributing Reward
 
-Klaytn distributes the reward of a block to proposer, KFF and KCF.
-The detail information of KFF and KCF is available on Klaytn docs.
+Kaia distributes the reward of a block to proposer, KFF and KCF.
+The detail information of KFF and KCF is available on Kaia docs.
 
 Token Economy - https://docs.klaytn.foundation/content/klaytn/design/token-economy
 

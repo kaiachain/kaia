@@ -535,7 +535,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	// TODO-Kaia-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
+	// TODO-Kaia-Accounts: for now, smart contract accounts cannot withdraw KAIA via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
 	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat, evm.chainRules)
