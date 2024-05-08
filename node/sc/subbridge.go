@@ -99,7 +99,7 @@ type BridgeTxPool interface {
 	Stop()
 }
 
-// SubBridge implements the Klaytn consensus node service.
+// SubBridge implements the Kaia consensus node service.
 type SubBridge struct {
 	config *SCConfig
 

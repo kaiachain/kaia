@@ -98,7 +98,7 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 }
 
-// CN implements the Klaytn consensus node service.
+// CN implements the Kaia consensus node service.
 type CN struct {
 	config      *Config
 	chainConfig *params.ChainConfig

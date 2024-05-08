@@ -357,7 +357,7 @@ func IsPrecompiledContractAddress(addr Address) bool {
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Klaytn address or not.
+// Kaia address or not.
 func IsHexAddress(s string) bool {
 	if hasHexPrefix(s) {
 		s = s[2:]

@@ -459,7 +459,7 @@ func NewFaker() *Gxhash {
 
 // NewFakeFailer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid apart from the single one specified, though they
-// still have to conform to the Klaytn consensus rules.
+// still have to conform to the Kaia consensus rules.
 func NewFakeFailer(fail uint64) *Gxhash {
 	return &Gxhash{
 		config: Config{
@@ -471,7 +471,7 @@ func NewFakeFailer(fail uint64) *Gxhash {
 
 // NewFakeDelayer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid, but delays verifications by some time, though
-// they still have to conform to the Klaytn consensus rules.
+// they still have to conform to the Kaia consensus rules.
 func NewFakeDelayer(delay time.Duration) *Gxhash {
 	return &Gxhash{
 		config: Config{

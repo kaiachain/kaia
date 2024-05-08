@@ -117,7 +117,7 @@ func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
 	return addr, err
 }
 
-// Author retrieves the Klaytn address of the account that minted the given block.
+// Author retrieves the Kaia address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }

@@ -72,7 +72,7 @@ var (
 	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
-// Account is the Klaytn consensus representation of accounts.
+// Account is the Kaia consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account interface {
 	Type() AccountType

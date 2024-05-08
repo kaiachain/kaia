@@ -19,7 +19,7 @@
 // Modified and improved for the klaytn development.
 
 /*
-kcn is the command-line client for Klaytn Consensus Node.
+kcn is the command-line client for Kaia consensus Node.
 
 kcn has the node type of "cn" internally. Please try `kcn -h` to see commands and options list.
 

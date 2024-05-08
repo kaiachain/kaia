@@ -26,7 +26,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-// LegacyAccount is the Klaytn consensus representation of legacy accounts.
+// LegacyAccount is the Kaia consensus representation of legacy accounts.
 // These objects are stored in the main account trie.
 type LegacyAccount struct {
 	Nonce    uint64

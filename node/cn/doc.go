@@ -16,7 +16,7 @@
 
 /*
 Package cn implements components related to network management and message handling.
-CN implements the Klaytn consensus node service.
+CN implements the Kaia consensus node service.
 ProtocolManager handles the messages from the peer nodes and manages its peers.
 Peer is the interface used for peer nodes and has two different kinds of implementation
 depending on single or multi channel usage.

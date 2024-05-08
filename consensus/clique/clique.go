@@ -181,7 +181,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	}
 	signature := header.Extra[len(header.Extra)-ExtraSeal:]
 
-	// Recover the public key and the Klaytn address
+	// Recover the public key and the Kaia address
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
@@ -204,7 +204,7 @@ type Clique struct {
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
-	signer common.Address // Klaytn address of the signing key
+	signer common.Address // Kaia address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 
@@ -233,7 +233,7 @@ func New(config *params.CliqueConfig, db database.DBManager) *Clique {
 	}
 }
 
-// Author implements consensus.Engine, returning the Klaytn address recovered
+// Author implements consensus.Engine, returning the Kaia address recovered
 // from the signature in the header's extra-data section.
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)

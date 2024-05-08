@@ -69,7 +69,7 @@ type ChainReader interface {
 //
 //go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
 type Engine interface {
-	// Author retrieves the Klaytn address of the account that minted the given
+	// Author retrieves the Kaia address of the account that minted the given
 	// block.
 	Author(header *types.Header) (common.Address, error)
 

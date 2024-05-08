@@ -59,7 +59,7 @@ func (ap *testerAccountPool) checkpoint(header *types.Header, signers []string) 
 	}
 }
 
-// address retrieves the Klaytn address of a tester account by label, creating
+// address retrieves the Kaia address of a tester account by label, creating
 // a new account if no previous one exists yet.
 func (ap *testerAccountPool) address(account string) common.Address {
 	// Return the zero account for non-addresses
@@ -70,7 +70,7 @@ func (ap *testerAccountPool) address(account string) common.Address {
 	if ap.accounts[account] == nil {
 		ap.accounts[account], _ = crypto.GenerateKey()
 	}
-	// Resolve and return the Klaytn address
+	// Resolve and return the Kaia address
 	return crypto.PubkeyToAddress(ap.accounts[account].PublicKey)
 }
 
