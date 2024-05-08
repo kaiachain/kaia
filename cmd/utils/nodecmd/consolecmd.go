@@ -159,7 +159,7 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 		endpoint = node.DefaultIPCEndpoint(utils.ClientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
 		// TODO-Kaia-RemoveLater: The below backward compatibility is not related to Kaia.
-		// Backwards compatibility with Kaia < 1.5 which required
+		// Backwards compatibility with Klaytn < 1.5 which required
 		// these prefixes.
 		endpoint = endpoint[4:]
 	}
