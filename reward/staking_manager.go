@@ -167,13 +167,8 @@ func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	}
 
 	// Get staking info from cache
-	if cachedStakingInfo, ok := stakingManager.stakingInfoCache.Get(stakingBlockNumber); ok {
-		logger.Debug("StakingInfoCache hit.", "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
-		// Fill in Gini coeff if not set. Modifies the cached object.
-		if err := fillMissingGiniCoefficient(cachedStakingInfo.(*StakingInfo), stakingBlockNumber); err != nil {
-			logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
-		}
-		return cachedStakingInfo.(*StakingInfo)
+	if cachedStakingInfo := getStakingInfoFromCache(stakingBlockNumber); cachedStakingInfo != nil {
+		return cachedStakingInfo
 	}
 
 	// Get staking info from DB
@@ -247,11 +242,20 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 // Return staking info at any block number.
 func GetStakingInfoFromAddressBook(blockNum uint64) *StakingInfo {
-	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
-	if err != nil {
+	if stakingManager == nil {
 		return nil
 	}
-	return stakingInfo
+
+	// Get staking info from cache
+	if cachedStakingInfo := getStakingInfoFromCache(blockNum); cachedStakingInfo != nil {
+		return cachedStakingInfo
+	}
+
+	if stakingInfo, err := getStakingInfoFromAddressBook(blockNum); err == nil {
+		return stakingInfo
+	}
+
+	return nil
 }
 
 // NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
@@ -328,6 +332,23 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, nodeIds, stakingAddrs, rewardAddrs, kirAddr, pocAddr)
+}
+
+func getStakingInfoFromCache(blockNum uint64) *StakingInfo {
+	if stakingManager == nil {
+		return nil
+	}
+
+	if cachedStakingInfo, ok := stakingManager.stakingInfoCache.Get(blockNum); ok {
+		logger.Debug("StakingInfoCache hit.", "staking block number", blockNum, "stakingInfo", cachedStakingInfo)
+		// Fill in Gini coeff if not set. Modifies the cached object.
+		if err := fillMissingGiniCoefficient(cachedStakingInfo.(*StakingInfo), blockNum); err != nil {
+			logger.Warn("Cannot fill in gini coefficient", "staking block number", blockNum, "err", err)
+		}
+		return cachedStakingInfo.(*StakingInfo)
+	}
+
+	return nil
 }
 
 // CheckStakingInfoStored makes sure the given staking info is stored in cache and DB
@@ -475,11 +496,17 @@ func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
 // SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
-	cache, _ := lru.NewARC(128)
+	var sm *StakingManager
+	var cache *lru.ARCCache
+	if stakingManager == nil {
+		cache, _ = lru.NewARC(128)
+		sm = &StakingManager{stakingInfoCache: cache}
+	} else {
+		cache = stakingManager.stakingInfoCache
+		sm = stakingManager
+	}
 	cache.Add(testInfo.BlockNum, testInfo)
-	SetTestStakingManager(&StakingManager{
-		stakingInfoCache: cache,
-	})
+	SetTestStakingManager(sm)
 }
 
 // SetTestStakingManager sets the staking manager for testing purpose.

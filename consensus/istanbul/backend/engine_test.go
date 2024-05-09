@@ -59,6 +59,9 @@ type (
 	EthTxTypeCompatibleBlock *big.Int
 	magmaCompatibleBlock     *big.Int
 	koreCompatibleBlock      *big.Int
+	shanghaiCompatibleBlock  *big.Int
+	cancunCompatibleBlock    *big.Int
+	dragonCompatibleBlock    *big.Int
 )
 
 type (
@@ -136,6 +139,12 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.MagmaCompatibleBlock = v
 		case koreCompatibleBlock:
 			genesis.Config.KoreCompatibleBlock = v
+		case shanghaiCompatibleBlock:
+			genesis.Config.ShanghaiCompatibleBlock = v
+		case cancunCompatibleBlock:
+			genesis.Config.CancunCompatibleBlock = v
+		case dragonCompatibleBlock:
+			genesis.Config.DragonCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -740,12 +749,26 @@ func TestRewardDistribution(t *testing.T) {
 	}
 }
 
-func makeSnapshotTestConfigItems() []interface{} {
+func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []interface{} {
 	return []interface{}{
-		stakingUpdateInterval(1),
-		proposerUpdateInterval(1),
+		stakingUpdateInterval(stakingInterval),
+		proposerUpdateInterval(proposerInterval),
 		proposerPolicy(params.WeightedRandom),
 	}
+}
+
+func setCustomTestStakingInfo(amounts []uint64, blockNum uint64, dragonEnabled func(u uint64) bool) *reward.StakingManager {
+	if amounts == nil {
+		amounts = make([]uint64, len(nodeKeys))
+	}
+
+	stakingInfo := stakingInfo(amounts, blockNum)
+
+	// Save old StakingManager, overwrite to the fake one.
+	oldStakingManager := reward.GetStakingManager()
+	reward.SetTestStakingManagerIsDragonEnabled(dragonEnabled)
+	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+	return oldStakingManager
 }
 
 // Set StakingInfo with given amount for nodeKeys. If amounts == nil, set to 0 amounts.
@@ -755,8 +778,18 @@ func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
 		amounts = make([]uint64, len(nodeKeys))
 	}
 
+	stakingInfo := stakingInfo(amounts, 0)
+
+	// Save old StakingManager, overwrite to the fake one.
+	oldStakingManager := reward.GetStakingManager()
+	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
+	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+	return oldStakingManager
+}
+
+func stakingInfo(amounts []uint64, blockNum uint64) *reward.StakingInfo {
 	stakingInfo := &reward.StakingInfo{
-		BlockNum: 0,
+		BlockNum: blockNum,
 	}
 	for idx, key := range nodeKeys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -769,12 +802,7 @@ func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
 		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
-
-	// Save old StakingManager, overwrite to the fake one.
-	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
-	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
-	return oldStakingManager
+	return stakingInfo
 }
 
 func toAddressList(validators []istanbul.Validator) []common.Address {
@@ -958,6 +986,95 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	}
 }
 
+func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
+	type testcase struct {
+		stakingAmounts     []uint64 // test staking amounts of each validator
+		isDragonCompatible bool     // whether or not if the inserted block is dragon compatible
+		expectedValidators []int    // the indices of expected validators
+		expectedDemoted    []int    // the indices of expected demoted validators
+	}
+
+	genesisStakingAmounts := []uint64{5000000, 5000000, 5000000, 5000000}
+
+	testcases := []testcase{
+		// The following testcases are the ones before dragon incompatible change
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			false,
+			[]int{0, 1, 2, 3},
+			[]int{},
+		},
+		// The following testcases are the ones after dragon incompatible change
+		{
+			[]uint64{5000000, 5000000, 5000000, 6000000},
+			true,
+			[]int{3},
+			[]int{0, 1, 2},
+		},
+		{
+			[]uint64{5000000, 5000000, 6000000, 6000000},
+			true,
+			[]int{2, 3},
+			[]int{0, 1},
+		},
+	}
+
+	testNum := 4
+	ms := uint64(5500000)
+	configItems := makeSnapshotTestConfigItems(10, 10)
+	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
+	for _, tc := range testcases {
+		if tc.isDragonCompatible {
+			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(0)))
+			configItems = append(configItems, dragonCompatibleBlock(new(big.Int).SetUint64(2)))
+		} else {
+			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+		}
+		chain, engine := newBlockChain(testNum, configItems...)
+
+		dragonEnabled := func(u uint64) bool {
+			if tc.isDragonCompatible {
+				return u >= 2
+			}
+			return false
+		}
+
+		oldStakingManager := setCustomTestStakingInfo(genesisStakingAmounts, 0, dragonEnabled)
+		_ = setCustomTestStakingInfo(tc.stakingAmounts, 1, dragonEnabled)
+
+		block := makeBlockWithSeal(chain, engine, chain.Genesis())
+		_, err := chain.InsertChain(types.Blocks{block})
+		assert.NoError(t, err)
+
+		snap, err := engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
+		assert.NoError(t, err)
+
+		validators := toAddressList(snap.ValSet.List())
+		demoted := toAddressList(snap.ValSet.DemotedList())
+
+		expectedValidators := makeExpectedResult(tc.expectedValidators, addrs)
+		expectedDemoted := makeExpectedResult(tc.expectedDemoted, addrs)
+
+		assert.Equal(t, expectedValidators, validators)
+		assert.Equal(t, expectedDemoted, demoted)
+
+		reward.SetTestStakingManager(oldStakingManager)
+		engine.Stop()
+	}
+}
+
 func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 	type testcase struct {
 		stakingAmounts       []uint64 // test staking amounts of each validator
@@ -1088,7 +1205,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 
 	testNum := 4
 	ms := uint64(5500000)
-	configItems := makeSnapshotTestConfigItems()
+	configItems := makeSnapshotTestConfigItems(1, 1)
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
 	for _, tc := range testcases {
 		if tc.isIstanbulCompatible {
