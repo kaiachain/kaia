@@ -39,7 +39,7 @@ A validator selected as a block proposer will have a chance to make a block.
 Kaia implements `Validator` and `ValidatorSet` interface for Kaia consensus.
 Klaytn reflects the ratio of staking amounts to the probability of selecting a proposer.
 This is called weightedRandom policy.
-Detailed information can be found in https://docs.klaytn.com/klaytn/token_economy#klaytn-governance-council-reward.
+Detailed information can be found in https://docs.kaia.io/docs/learn/token-economy/#klaytn-governance-council-reward-mechanism-.
 Implementation structures are weightedValidator and weightedCouncil in weighted.go file.
 
 # Files

@@ -33,37 +33,37 @@ var BINARY_TYPE = map[string]NodeInfo{
 	CN: {
 		"kcnd",
 		"Klaytn consensus node daemon",
-		"kcnd is a daemon for Klaytn consensus node (kcn). For more information, please refer to https://docs.klaytn.com.",
+		"kcnd is a daemon for Klaytn consensus node (kcn). For more information, please refer to https://docs.kaia.io.",
 	},
 	PN: {
 		"kpnd",
 		"Klaytn proxy node daemon",
-		"kpnd is a daemon for Klaytn proxy node (kpn). For more information, please refer to https://docs.klaytn.com.",
+		"kpnd is a daemon for Klaytn proxy node (kpn). For more information, please refer to https://docs.kaia.io.",
 	},
 	EN: {
 		"kend",
 		"Klaytn endpoint node daemon",
-		"kend is a daemon for Klaytn endpoint node (ken). For more information, please refer to https://docs.klaytn.com.",
+		"kend is a daemon for Klaytn endpoint node (ken). For more information, please refer to https://docs.kaia.io.",
 	},
 	SCN: {
 		"kscnd",
 		"Klaytn servicechain consensus node daemon",
-		"kscnd is a daemon for Klaytn servicechain consensus node (kscn). For more information, please refer to https://docs.klaytn.com.",
+		"kscnd is a daemon for Klaytn servicechain consensus node (kscn). For more information, please refer to https://docs.kaia.io.",
 	},
 	SPN: {
 		"kspnd",
 		"Klaytn servicechain proxy node daemon",
-		"kspnd is a daemon for Klaytn servicechain proxy node (kspn). For more information, please refer to https://docs.klaytn.com.",
+		"kspnd is a daemon for Klaytn servicechain proxy node (kspn). For more information, please refer to https://docs.kaia.io.",
 	},
 	SEN: {
 		"ksend",
 		"Klaytn servicechain endpoint node daemon",
-		"ksend is a daemon for Klaytn servicechain endpoint node (ksen). For more information, please refer to https://docs.klaytn.com.",
+		"ksend is a daemon for Klaytn servicechain endpoint node (ksen). For more information, please refer to https://docs.kaia.io.",
 	},
 	BN: {
 		"kbnd",
 		"Klaytn boot node daemon",
-		"kbnd is a daemon for Klaytn boot node (kbn). For more information, please refer to https://docs.klaytn.com.",
+		"kbnd is a daemon for Klaytn boot node (kbn). For more information, please refer to https://docs.kaia.io.",
 	},
 	HOMI: {
 		"homi",

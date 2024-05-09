@@ -44,6 +44,6 @@ AccountKey related functions and variables are defined in the files listed below
   - public_key.go                     : PublicKeySerializable is defined for serialization of public key.
 
 For more information on AccountKey, please see the document below.
-https://docs.klaytn.com/klaytn/design/accounts#account-key
+https://docs.kaia.io/docs/learn/accounts/#account-key-
 */
 package accountkey
