@@ -25,7 +25,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -102,7 +102,7 @@ func (ec *Client) BridgeGetReceiptFromParentChain(ctx context.Context, hash comm
 	var result *types.Receipt
 	err := ec.c.CallContext(ctx, &result, "subbridge_getReceiptFromParentChain", hash)
 	if err == nil && result == nil {
-		return nil, klaytn.NotFound
+		return nil, kaia.NotFound
 	}
 	return result, err
 }

@@ -20,21 +20,21 @@
 
 package client
 
-import "github.com/klaytn/klaytn"
+import kaia "github.com/klaytn/klaytn"
 
 // Verify that Client implements the Kaia interfaces.
 var (
-	// _ = Kaia.Subscription(&Client{})
-	_ = klaytn.ChainReader(&Client{})
-	_ = klaytn.TransactionReader(&Client{})
-	_ = klaytn.ChainStateReader(&Client{})
-	_ = klaytn.ChainSyncReader(&Client{})
-	_ = klaytn.ContractCaller(&Client{})
-	_ = klaytn.LogFilterer(&Client{})
-	_ = klaytn.TransactionSender(&Client{})
-	_ = klaytn.GasPricer(&Client{})
-	_ = klaytn.PendingStateReader(&Client{})
-	_ = klaytn.PendingContractCaller(&Client{})
-	_ = klaytn.GasEstimator(&Client{})
-	// _ = Kaia.PendingStateEventer(&Client{})
+	// _ = kaia.Subscription(&Client{})
+	_ = kaia.ChainReader(&Client{})
+	_ = kaia.TransactionReader(&Client{})
+	_ = kaia.ChainStateReader(&Client{})
+	_ = kaia.ChainSyncReader(&Client{})
+	_ = kaia.ContractCaller(&Client{})
+	_ = kaia.LogFilterer(&Client{})
+	_ = kaia.TransactionSender(&Client{})
+	_ = kaia.GasPricer(&Client{})
+	_ = kaia.PendingStateReader(&Client{})
+	_ = kaia.PendingContractCaller(&Client{})
+	_ = kaia.GasEstimator(&Client{})
+	// _ = kaia.PendingStateEventer(&Client{})
 )
