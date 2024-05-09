@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -122,7 +122,7 @@ func TestBlockchainCallContract(t *testing.T) {
 	data_revertNoString, _ := parsedAbi2.Pack("revertNoString")
 
 	// Normal case
-	ret, err := c.CallContract(context.Background(), klaytn.CallMsg{
+	ret, err := c.CallContract(context.Background(), kaia.CallMsg{
 		From: testAddr,
 		To:   &code1Addr,
 		Gas:  1000000,
@@ -132,7 +132,7 @@ func TestBlockchainCallContract(t *testing.T) {
 	assert.Equal(t, expectedReturn, ret)
 
 	// Error outside VM - Intrinsic Gas
-	ret, err = c.CallContract(context.Background(), klaytn.CallMsg{
+	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
 		From: testAddr,
 		To:   &code1Addr,
 		Gas:  20000,
@@ -141,7 +141,7 @@ func TestBlockchainCallContract(t *testing.T) {
 	assert.True(t, errors.Is(err, blockchain.ErrIntrinsicGas))
 
 	// VM revert error - empty reason
-	ret, err = c.CallContract(context.Background(), klaytn.CallMsg{
+	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
 		From: testAddr,
 		To:   &code2Addr,
 		Gas:  100000,
@@ -150,7 +150,7 @@ func TestBlockchainCallContract(t *testing.T) {
 	assert.Equal(t, "execution reverted: ", err.Error())
 
 	// VM revert error - string reason
-	ret, err = c.CallContract(context.Background(), klaytn.CallMsg{
+	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
 		From: testAddr,
 		To:   &code2Addr,
 		Gas:  100000,
@@ -208,7 +208,7 @@ func TestBlockChainEstimateGas(t *testing.T) {
 	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
-	gas, err := c.EstimateGas(context.Background(), klaytn.CallMsg{
+	gas, err := c.EstimateGas(context.Background(), kaia.CallMsg{
 		From:  testAddr,
 		To:    &testAddr,
 		Value: big.NewInt(1000),
@@ -217,7 +217,7 @@ func TestBlockChainEstimateGas(t *testing.T) {
 	assert.Equal(t, uint64(params.TxGas), gas)
 
 	// Error case - simple transfer with insufficient funds with zero gasPrice
-	gas, err = c.EstimateGas(context.Background(), klaytn.CallMsg{
+	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
 		From:  code1Addr,
 		To:    &code1Addr,
 		Value: big.NewInt(1),
@@ -317,16 +317,16 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 	txPoolConfig := blockchain.DefaultTxPoolConfig
 	txPoolConfig.Journal = "/dev/null" // disable journaling to file
 	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
-	subscribeNewTxsEvent := func(ch chan<- blockchain.NewTxsEvent) klaytn.Subscription {
+	subscribeNewTxsEvent := func(ch chan<- blockchain.NewTxsEvent) kaia.Subscription {
 		return txPool.SubscribeNewTxsEvent(ch)
 	}
-	subscribeLogsEvent := func(ch chan<- []*types.Log) klaytn.Subscription {
+	subscribeLogsEvent := func(ch chan<- []*types.Log) kaia.Subscription {
 		return bc.SubscribeLogsEvent(ch)
 	}
-	subscribeRemovedLogsEvent := func(ch chan<- blockchain.RemovedLogsEvent) klaytn.Subscription {
+	subscribeRemovedLogsEvent := func(ch chan<- blockchain.RemovedLogsEvent) kaia.Subscription {
 		return bc.SubscribeRemovedLogsEvent(ch)
 	}
-	subscribeChainEvent := func(ch chan<- blockchain.ChainEvent) klaytn.Subscription {
+	subscribeChainEvent := func(ch chan<- blockchain.ChainEvent) kaia.Subscription {
 		return bc.SubscribeChainEvent(ch)
 	}
 	mockBackend.EXPECT().SubscribeNewTxsEvent(any).DoAndReturn(subscribeNewTxsEvent).AnyTimes()
@@ -345,7 +345,7 @@ func TestBlockChainFilterLogs(t *testing.T) {
 	c := initBackendForFiltererTests(t, bc)
 
 	// Normal case
-	logs, err := c.FilterLogs(context.Background(), klaytn.FilterQuery{
+	logs, err := c.FilterLogs(context.Background(), kaia.FilterQuery{
 		FromBlock: big.NewInt(10),
 		ToBlock:   big.NewInt(11),
 		Addresses: []common.Address{code1Addr},
@@ -354,7 +354,7 @@ func TestBlockChainFilterLogs(t *testing.T) {
 	assert.Equal(t, 2, len(logs))
 
 	// No logs exist for code2Addr
-	logs, err = c.FilterLogs(context.Background(), klaytn.FilterQuery{
+	logs, err = c.FilterLogs(context.Background(), kaia.FilterQuery{
 		FromBlock: big.NewInt(0),
 		ToBlock:   big.NewInt(11),
 		Addresses: []common.Address{code2Addr},
@@ -368,7 +368,7 @@ func TestBlockChainSubscribeFilterLogs(t *testing.T) {
 	c := initBackendForFiltererTests(t, bc)
 
 	logs := make(chan types.Log)
-	sub, err := c.SubscribeFilterLogs(context.Background(), klaytn.FilterQuery{
+	sub, err := c.SubscribeFilterLogs(context.Background(), kaia.FilterQuery{
 		FromBlock: big.NewInt(0),
 		ToBlock:   big.NewInt(20),
 		Addresses: []common.Address{code1Addr},

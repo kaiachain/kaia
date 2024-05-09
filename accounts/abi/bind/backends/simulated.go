@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -227,7 +227,7 @@ func (b *SimulatedBackend) TransactionByHash(ctx context.Context, txHash common.
 	if tx != nil {
 		return tx, false, nil
 	}
-	return nil, false, klaytn.NotFound
+	return nil, false, kaia.NotFound
 }
 
 // BlockByHash retrieves a block based on the block hash.
@@ -354,7 +354,7 @@ func (b *SimulatedBackend) PendingCodeAt(_ context.Context, contract common.Addr
 }
 
 // CallContract executes a contract call.
-func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (b *SimulatedBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -377,7 +377,7 @@ func (b *SimulatedBackend) CallContract(ctx context.Context, call klaytn.CallMsg
 }
 
 // PendingCallContract executes a contract call on the pending state.
-func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+func (b *SimulatedBackend) PendingCallContract(ctx context.Context, call kaia.CallMsg) ([]byte, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	defer b.pendingState.RevertToSnapshot(b.pendingState.Snapshot())
@@ -410,7 +410,7 @@ func (b *SimulatedBackend) SuggestGasPrice(_ context.Context) (*big.Int, error) 
 
 // EstimateGas executes the requested code against the latest block/state and
 // returns the used amount of gas.
-func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (uint64, error) {
+func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (uint64, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -444,7 +444,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg)
 
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
-func (b *SimulatedBackend) callContract(_ context.Context, call klaytn.CallMsg, block *types.Block, stateDB *state.StateDB) (*blockchain.ExecutionResult, error) {
+func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, block *types.Block, stateDB *state.StateDB) (*blockchain.ExecutionResult, error) {
 	// Ensure message is initialized properly.
 	if call.GasPrice == nil {
 		call.GasPrice = big.NewInt(1)
@@ -513,7 +513,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 // returning all the results in one batch.
 //
 // TODO(karalabe): Deprecate when the subscription one can return past data too.
-func (b *SimulatedBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
+func (b *SimulatedBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) ([]types.Log, error) {
 	// Initialize unset filter boundaries to run from genesis to chain head
 	from := int64(0)
 	if query.FromBlock != nil {
@@ -545,7 +545,7 @@ func (b *SimulatedBackend) ChainID(ctx context.Context) (*big.Int, error) {
 
 // SubscribeFilterLogs creates a background log filtering operation, returning a
 // subscription immediately, which can be used to stream the found events.
-func (b *SimulatedBackend) SubscribeFilterLogs(_ context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+func (b *SimulatedBackend) SubscribeFilterLogs(_ context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 
@@ -583,7 +583,7 @@ func (b *SimulatedBackend) CurrentBlockNumber(ctx context.Context) (uint64, erro
 }
 
 // SubscribeNewHead returns an event subscription for a new header
-func (b *SimulatedBackend) SubscribeNewHead(_ context.Context, ch chan<- *types.Header) (klaytn.Subscription, error) {
+func (b *SimulatedBackend) SubscribeNewHead(_ context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
 	// subscribe to a new head
 	sink := make(chan *types.Header)
 	sub := b.events.SubscribeNewHeads(sink)

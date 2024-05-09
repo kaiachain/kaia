@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -49,7 +49,7 @@ func (mc *mockCaller) CodeAt(ctx context.Context, contract common.Address, block
 	return []byte{1, 2, 3}, nil
 }
 
-func (mc *mockCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (mc *mockCaller) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	mc.callContractBlockNumber = blockNumber
 	return nil, nil
 }
@@ -59,7 +59,7 @@ func (mc *mockCaller) PendingCodeAt(ctx context.Context, contract common.Address
 	return nil, nil
 }
 
-func (mc *mockCaller) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+func (mc *mockCaller) PendingCallContract(ctx context.Context, call kaia.CallMsg) ([]byte, error) {
 	mc.pendingCallContractCalled = true
 	return nil, nil
 }

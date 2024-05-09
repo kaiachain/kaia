@@ -30,7 +30,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
@@ -56,8 +56,8 @@ func TestSimulatedBackend(t *testing.T) {
 	if isPending {
 		t.Fatal("transaction should not be pending")
 	}
-	if err != klaytn.NotFound {
-		t.Fatalf("err should be `klaytn.NotFound` but received %v", err)
+	if err != kaia.NotFound {
+		t.Fatalf("err should be `kaia.NotFound` but received %v", err)
 	}
 
 	// generate a transaction and confirm you can retrieve it
@@ -424,12 +424,12 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 
 	cases := []struct {
 		name        string
-		message     klaytn.CallMsg
+		message     kaia.CallMsg
 		expect      uint64
 		expectError error
 		expectData  interface{}
 	}{
-		{"plain transfer(valid)", klaytn.CallMsg{
+		{"plain transfer(valid)", kaia.CallMsg{
 			From:     addr,
 			To:       &addr,
 			Gas:      0,
@@ -438,7 +438,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     nil,
 		}, params.TxGas, nil, nil},
 
-		{"plain transfer(invalid)", klaytn.CallMsg{
+		{"plain transfer(invalid)", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -447,7 +447,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     nil,
 		}, 0, errors.New("evm: execution reverted"), nil},
 
-		{"Revert", klaytn.CallMsg{
+		{"Revert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -456,7 +456,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("d8b98391"),
 		}, 0, errors.New("execution reverted: revert reason"), "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d72657665727420726561736f6e00000000000000000000000000000000000000"},
 
-		{"PureRevert", klaytn.CallMsg{
+		{"PureRevert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -465,7 +465,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("aa8b1d30"),
 		}, 0, errors.New("evm: execution reverted"), nil},
 
-		{"OOG", klaytn.CallMsg{
+		{"OOG", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -474,7 +474,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("50f6fe34"),
 		}, 0, errors.New("gas required exceeds allowance (100000)"), nil},
 
-		{"Assert", klaytn.CallMsg{
+		{"Assert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -483,7 +483,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("b9b046f9"),
 		}, 0, errors.New("VM error occurs while running smart contract"), nil},
 
-		{"Valid", klaytn.CallMsg{
+		{"Valid", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -903,7 +903,7 @@ func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 	}
 
 	// make sure you can call the contract in pending state
-	res, err := sim.PendingCallContract(bgCtx, klaytn.CallMsg{
+	res, err := sim.PendingCallContract(bgCtx, kaia.CallMsg{
 		From: testAddr,
 		To:   &addr,
 		Data: input,
@@ -923,7 +923,7 @@ func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 	sim.Commit()
 
 	// make sure you can call the contract
-	res, err = sim.CallContract(bgCtx, klaytn.CallMsg{
+	res, err = sim.CallContract(bgCtx, kaia.CallMsg{
 		From: testAddr,
 		To:   &addr,
 		Data: input,
@@ -994,14 +994,14 @@ func TestSimulatedBackend_CallContractRevert(t *testing.T) {
 
 	call := make([]func([]byte) ([]byte, error), 2)
 	call[0] = func(input []byte) ([]byte, error) {
-		return sim.PendingCallContract(bgCtx, klaytn.CallMsg{
+		return sim.PendingCallContract(bgCtx, kaia.CallMsg{
 			From: testAddr,
 			To:   &addr,
 			Data: input,
 		})
 	}
 	call[1] = func(input []byte) ([]byte, error) {
-		return sim.CallContract(bgCtx, klaytn.CallMsg{
+		return sim.CallContract(bgCtx, kaia.CallMsg{
 			From: testAddr,
 			To:   &addr,
 			Data: input,
