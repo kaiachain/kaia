@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -66,7 +67,7 @@ type blockChain interface {
 }
 
 type StakingManager struct {
-	stakingInfoCache *stakingInfoCache
+	stakingInfoCache *lru.ARCCache
 	stakingInfoDB    stakingInfoDB
 	governanceHelper governanceHelper
 	blockchain       blockChain
@@ -93,8 +94,9 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 	if bc != nil && gh != nil {
 		// this is only called once
 		once.Do(func() {
+			cache, _ := lru.NewARC(128)
 			stakingManager = &StakingManager{
-				stakingInfoCache: newStakingInfoCache(),
+				stakingInfoCache: cache,
 				stakingInfoDB:    db,
 				governanceHelper: gh,
 				blockchain:       bc,
@@ -141,38 +143,42 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 // - If cache hit                               -> fillMissingGini -> modifies cached in-memory object
 // - If db hit                                  -> fillMissingGini -> write to cache
 // - If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
+// The staking info is no longer stored in db after the dragon fork.
 func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
+	isDragon := isDragonEnabled(stakingBlockNumber)
 
 	// shortcut if given block is not on staking update interval
-	if !params.IsStakingUpdateInterval(stakingBlockNumber) {
+	if !isDragon && !params.IsStakingUpdateInterval(stakingBlockNumber) {
 		return nil
 	}
 
 	// Get staking info from cache
-	if cachedStakingInfo := stakingManager.stakingInfoCache.get(stakingBlockNumber); cachedStakingInfo != nil {
+	if cachedStakingInfo, ok := stakingManager.stakingInfoCache.Get(stakingBlockNumber); ok {
 		logger.Debug("StakingInfoCache hit.", "staking block number", stakingBlockNumber, "stakingInfo", cachedStakingInfo)
 		// Fill in Gini coeff if not set. Modifies the cached object.
-		if err := fillMissingGiniCoefficient(cachedStakingInfo, stakingBlockNumber); err != nil {
+		if err := fillMissingGiniCoefficient(cachedStakingInfo.(*StakingInfo), stakingBlockNumber); err != nil {
 			logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
 		}
-		return cachedStakingInfo
+		return cachedStakingInfo.(*StakingInfo)
 	}
 
 	// Get staking info from DB
-	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
-		logger.Debug("StakingInfoDB hit.", "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
-		// Fill in Gini coeff before adding to cache.
-		if err := fillMissingGiniCoefficient(storedStakingInfo, stakingBlockNumber); err != nil {
-			logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
+	if !isDragon {
+		if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
+			logger.Debug("StakingInfoDB hit.", "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
+			// Fill in Gini coeff before adding to cache.
+			if err := fillMissingGiniCoefficient(storedStakingInfo, stakingBlockNumber); err != nil {
+				logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
+			}
+			stakingManager.stakingInfoCache.Add(storedStakingInfo.BlockNum, storedStakingInfo)
+			return storedStakingInfo
+		} else {
+			logger.Debug("failed to get stakingInfo from DB", "err", err, "staking block number", stakingBlockNumber)
 		}
-		stakingManager.stakingInfoCache.add(storedStakingInfo)
-		return storedStakingInfo
-	} else {
-		logger.Debug("failed to get stakingInfo from DB", "err", err, "staking block number", stakingBlockNumber)
 	}
 
 	// Calculate staking info from block header and updates it to cache and db
@@ -209,11 +215,25 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	// Add to cache after setting Gini
-	stakingManager.stakingInfoCache.add(stakingInfo)
+	stakingManager.stakingInfoCache.Add(stakingInfo.BlockNum, stakingInfo)
 
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
+	if isDragon {
+		logger.Info("Add a new stakingInfo to stakingInfoCache", "blockNum", blockNum)
+	} else {
+		logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
+	}
+
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
+}
+
+// Return staking info at any block number.
+func GetStakingInfoFromAddressBook(blockNum uint64) *StakingInfo {
+	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
+	if err != nil {
+		return nil
+	}
+	return stakingInfo
 }
 
 // NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
@@ -222,10 +242,6 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 // 2. If AddressBook is not activated, emptyStakingInfo is returned without error
 // 3. If AddressBook is activated, it returns fetched stakingInfo
 func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
-	if !params.IsStakingUpdateInterval(blockNum) {
-		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
-	}
-
 	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
 	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
 	if err != nil {
@@ -406,7 +422,7 @@ func StakingManagerUnsubscribe() {
 }
 
 func PurgeStakingInfoCache() {
-	stakingManager.stakingInfoCache.purge()
+	stakingManager.stakingInfoCache.Purge()
 }
 
 // TODO-Kaia-Reward the following methods are used for testing purpose, it needs to be moved into test files.
@@ -416,8 +432,9 @@ func PurgeStakingInfoCache() {
 // SetTestStakingManagerWithChain sets a full-featured staking manager with blockchain, database and cache.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
+	cache, _ := lru.NewARC(128)
 	SetTestStakingManager(&StakingManager{
-		stakingInfoCache: newStakingInfoCache(),
+		stakingInfoCache: cache,
 		stakingInfoDB:    db,
 		governanceHelper: gh,
 		blockchain:       bc,
@@ -436,8 +453,8 @@ func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
 // SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
-	cache := newStakingInfoCache()
-	cache.add(testInfo)
+	cache, _ := lru.NewARC(128)
+	cache.Add(testInfo.BlockNum, testInfo)
 	SetTestStakingManager(&StakingManager{
 		stakingInfoCache: cache,
 	})
@@ -449,11 +466,17 @@ func SetTestStakingManager(sm *StakingManager) {
 	stakingManager = sm
 }
 
+// SetTestStakingManagerChainHeadChan sets the isDragonEnabled function for testing purpose.
+// Note that this method is used only for testing purpose.
+func SetTestStakingManagerIsDragonEnabled(enabled func(uint64) bool) {
+	isDragonEnabled = enabled
+}
+
 // SetTestAddressBookAddress is only for testing purpose.
 func SetTestAddressBookAddress(addr common.Address) {
 	addressBookContractAddress = common.HexToAddress(addr.Hex())
 }
 
 func TestGetStakingCacheSize() int {
-	return len(GetStakingManager().stakingInfoCache.cells)
+	return GetStakingManager().stakingInfoCache.Len()
 }
