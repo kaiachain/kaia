@@ -22,7 +22,7 @@ import "testing"
 // This prohibits the case that GetFeeRatio() is not implemented for TxTypeFeeDelegatedWithRatio types.
 func TestFeeRatioCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
-		if i == TxTypeKlaytnLast {
+		if i == TxTypeKaiaLast {
 			i = TxTypeEthereumAccessList
 		}
 
@@ -39,7 +39,7 @@ func TestFeeRatioCheck(t *testing.T) {
 // This prohibits the case that GetFeePayer() is not implemented for TxTypeFeeDelegatedXXX types.
 func TestFeeDelegatedCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
-		if i == TxTypeKlaytnLast {
+		if i == TxTypeKaiaLast {
 			i = TxTypeEthereumAccessList
 		}
 

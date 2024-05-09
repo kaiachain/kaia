@@ -36,9 +36,9 @@ import (
 
 type testBlockEncodingTC struct {
 	encoded    string      // RLP encoded block; debug.getBlockRlp(num)
-	hash       common.Hash // block hash; klay.getBlock(num).hash
+	hash       common.Hash // block hash; kaia.getBlock(num).hash
 	header     *Header     // expected header fields
-	encodedTxs [][]byte    // expected transactions, RLP encoded; klay.getRawTransaction(txhash)
+	encodedTxs [][]byte    // expected transactions, RLP encoded; kaia.getRawTransaction(txhash)
 }
 
 var blockEncodingTCs map[string]testBlockEncodingTC

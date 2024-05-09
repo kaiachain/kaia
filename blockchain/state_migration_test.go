@@ -31,7 +31,7 @@ import (
 )
 
 func createLocalTestDB(t *testing.T) (string, database.DBManager) {
-	dir, err := os.MkdirTemp("", "klaytn-test-migration")
+	dir, err := os.MkdirTemp("", "kaia-test-migration-")
 	if err != nil {
 		t.Fatalf("failed to create a database: %v", err)
 	}

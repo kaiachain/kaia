@@ -484,7 +484,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1845,7 +1845,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
