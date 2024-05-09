@@ -175,7 +175,7 @@ func TestBridgeManager(t *testing.T) {
 	assert.NoError(t, err)
 
 	testToken := big.NewInt(123)
-	testKLAY := big.NewInt(321)
+	testKAIA := big.NewInt(321)
 
 	// 1. Deploy Bridge Contract
 	addr, err := bridgeManager.DeployBridgeTest(sim, 10000, false)
@@ -294,7 +294,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 8. RequestKLAYTransfer from Alice to Bob
 	{
-		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKLAY, GasLimit: testGasLimit}, bob.From, testKLAY, nil)
+		tx, err = bridge.RequestKLAYTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, Value: testKAIA, GasLimit: testGasLimit}, bob.From, testKAIA, nil)
 		assert.NoError(t, err)
 		t.Log("DepositKLAY Transaction", tx.Hash().Hex())
 
@@ -333,7 +333,7 @@ func TestBridgeManager(t *testing.T) {
 	{
 		balance, err = sim.BalanceAt(context.Background(), bob.From, nil)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, testKLAY.String(), balance.String())
+		assert.Equal(t, testKAIA.String(), balance.String())
 	}
 
 	// 12. Check NFT owner sent by RequestValueTransfer()
@@ -575,7 +575,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	testToken := int64(100000)
 	testKAIA := int64(100000)
-	KLAYFee := int64(500)
+	KAIAFee := int64(500)
 	ERC20Fee := int64(500)
 
 	// 1. Deploy Bridge Contract
@@ -623,14 +623,14 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = pBridge.RegisterOperator(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, cAuth.From)
 	assert.NoError(t, err)
-	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KLAYFee), cn)
+	pBridge.SetKLAYFee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, big.NewInt(KAIAFee), cn)
 	pBridge.SetERC20Fee(&bind.TransactOpts{From: cAuth.From, Signer: cAuth.Signer, GasLimit: testGasLimit}, tokenAddr, big.NewInt(ERC20Fee), cn+1)
 	sim.Commit() // block
 
 	{
 		fee, err := pBridge.FeeOfKLAY(nil)
 		assert.Equal(t, nil, err)
-		assert.Equal(t, KLAYFee, fee.Int64())
+		assert.Equal(t, KAIAFee, fee.Int64())
 	}
 
 	{
@@ -823,7 +823,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-1. Request KAIA transfer from Alice to Bob with same feeLimit with fee
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + KLAYFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + KAIAFee), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
 		if err != nil {
 			log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 		}
@@ -846,7 +846,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-3. Request KAIA transfer from Alice to Bob with insufficient feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + (KLAYFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + (KAIAFee - 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -856,7 +856,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 	// 9-4. Request KAIA transfer from Alice to Bob with enough feeLimit
 	{
-		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + (KLAYFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
+		tx, err = pBridge.RequestKLAYTransfer(&bind.TransactOpts{From: Alice.From, Signer: Alice.Signer, Value: big.NewInt(testKAIA + (KAIAFee + 1)), GasLimit: testGasLimit}, Bob.From, big.NewInt(testKAIA), nil)
 		assert.Equal(t, nil, err)
 
 		sim.Commit() // block
@@ -868,7 +868,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		nonce, _ := sim.PendingNonceAt(context.Background(), Alice.From)
 		gasPrice, _ := sim.SuggestGasPrice(context.Background())
-		unsignedTx := types.NewTransaction(nonce, pBridgeAddr, big.NewInt(testKAIA+KLAYFee), testGasLimit, gasPrice, []byte{})
+		unsignedTx := types.NewTransaction(nonce, pBridgeAddr, big.NewInt(testKAIA+KAIAFee), testGasLimit, gasPrice, []byte{})
 
 		chainID, _ := sim.ChainID(context.Background())
 		tx, err = types.SignTx(unsignedTx, types.LatestSignerForChainID(chainID), AliceKey)
@@ -905,7 +905,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	{
 		balance, _ = sim.BalanceAt(context.Background(), Alice.From, nil)
 		t.Log("Alice KAIA balance :", balance)
-		assert.Equal(t, initialValue-(testKAIA+KLAYFee)*2-KLAYFee, balance.Int64())
+		assert.Equal(t, initialValue-(testKAIA+KAIAFee)*2-KAIAFee, balance.Int64())
 
 		balance, _ = sim.BalanceAt(context.Background(), Bob.From, nil)
 		t.Log("Bob KAIA balance :", balance)
@@ -913,7 +913,7 @@ func TestBridgeManagerWithFee(t *testing.T) {
 
 		balance, _ = sim.BalanceAt(context.Background(), receiver.From, nil)
 		t.Log("receiver KAIA balance :", balance)
-		assert.Equal(t, KLAYFee*3, balance.Int64())
+		assert.Equal(t, KAIAFee*3, balance.Int64())
 	}
 
 	bridgeManager.Stop()

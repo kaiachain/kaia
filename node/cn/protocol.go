@@ -26,7 +26,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -144,7 +144,7 @@ type ProtocolManagerDownloader interface {
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
-	Progress() klaytn.SyncProgress
+	Progress() kaia.SyncProgress
 	Cancel()
 
 	GetSnapSyncer() *snap.Syncer

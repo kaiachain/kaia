@@ -41,7 +41,7 @@ func TestTokenPublicVariables(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo)
+			ops[KAIA].request(info, info.localInfo)
 		}
 	})
 	defer info.sim.Close()
@@ -88,7 +88,7 @@ func TestNFTPublicVariables(t *testing.T) {
 
 	info := prepare(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
-			ops[KLAY].request(info, info.localInfo)
+			ops[KAIA].request(info, info.localInfo)
 		}
 	})
 	defer info.sim.Close()

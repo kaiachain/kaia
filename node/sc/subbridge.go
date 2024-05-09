@@ -212,7 +212,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		GlobalQueue:   8192,
 	}
 
-	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
+	logger.Info("Initialising Kaia-Bridge protocol", "network", config.NetworkId)
 	sb.APIBackend = &SubBridgeAPI{sb}
 
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
@@ -512,7 +512,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	if sb.peers.Len() >= sb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Kaia peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
@@ -524,7 +524,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 
 	err := p.Handshake(sb.networkId, sb.getChainID(), td, hash)
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Kaia peer handshake failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -532,7 +532,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	// Register the peer locally
 	if err := sb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Kaia peer registration failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -545,7 +545,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := sb.handleMsg(p); err != nil {
-			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
+			p.GetP2PPeer().Log().Debug("Kaia message handling failed", "err", err)
 			return err
 		}
 	}
@@ -694,7 +694,7 @@ func (sb *SubBridge) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing Klaytn peer", "peer", id)
+	logger.Debug("Removing Kaia peer", "peer", id)
 
 	if err := sb.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)

@@ -26,7 +26,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -300,7 +300,7 @@ func (b *CNAPIBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) ev
 	return b.cn.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *CNAPIBackend) Progress() klaytn.SyncProgress {
+func (b *CNAPIBackend) Progress() kaia.SyncProgress {
 	return b.cn.Progress()
 }
 

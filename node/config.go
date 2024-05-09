@@ -309,7 +309,7 @@ func (c *Config) name() string {
 	return c.Name
 }
 
-var isKlaytnResource = map[string]bool{
+var isKaiaResource = map[string]bool{
 	"chaindata":          true,
 	"nodes":              true,
 	"nodekey":            true,
@@ -326,7 +326,7 @@ func (c *Config) ResolvePath(path string) string {
 	if c.DataDir == "" {
 		return ""
 	}
-	if c.name() == "klay" && isKlaytnResource[path] {
+	if c.name() == "klay" && isKaiaResource[path] {
 		oldpath := ""
 		if c.Name == "klay" {
 			oldpath = filepath.Join(c.DataDir, path)
@@ -493,7 +493,7 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	var ephemeral string
 	if keydir == "" {
 		// There is no datadir.
-		keydir, err = os.MkdirTemp("", "klaytn-keystore")
+		keydir, err = os.MkdirTemp("", "kaia-keystore")
 		ephemeral = keydir
 	}
 
