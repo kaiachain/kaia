@@ -88,7 +88,7 @@ func Env() Environment {
 
 // LocalEnv returns build environment metadata gathered from git.
 func LocalEnv() Environment {
-	env := applyEnvFlags(Environment{Name: "local", Repo: "klaytn/klaytn"})
+	env := applyEnvFlags(Environment{Name: "local", Repo: "kaiachain/kaia"})
 
 	if os.Getenv("KLAYTN_RACE_DETECT") == "1" {
 		env.IsKaiaRaceDetectionOn = true
