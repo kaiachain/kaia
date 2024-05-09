@@ -206,7 +206,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
-		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -227,11 +226,39 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			return genesis.Config, newGenesisBlock.Hash(), err
 		}
 		// This is the usual path which does not overwrite genesis block with the new one.
+		// Make sure the provided genesis is equal to the stored one.
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
+	}
+
+	// The genesis block is present in the database but the corresponding state is not.
+	// It can happen in a state migrated database or live pruned database.
+	header := db.ReadHeader(stored, 0)
+	if ok, _ := db.HasTrieNode(header.Root.ExtendZero()); !ok { // check for the state root node
+		if genesis == nil {
+			switch {
+			case networkId == params.BaobabNetworkId:
+				genesis = DefaultBaobabGenesisBlock()
+			case networkId == params.CypressNetworkId:
+				fallthrough
+			default:
+				genesis = DefaultGenesisBlock()
+			}
+			if genesis.Config.Governance != nil {
+				genesis.Governance = SetGenesisGovernance(genesis)
+			}
+		}
+		// Run genesis.ToBlock() which calls StateDB.Commit() to write the state trie.
+		// But do not call genesis.Commit() which overwrites HeaderHash.
+		InitDeriveSha(genesis.Config)
+		hash := genesis.ToBlock(common.Hash{}, db).Hash()
+		if hash != stored {
+			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
+		}
+		logger.Info("Restored state trie for the genesis block", "stateRoot", header.Root.Hex())
 	}
 
 	// Get the existing chain configuration.
@@ -296,6 +323,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *types.Block {
 	if db == nil {
+		// If db == nil, do not write to the real database. Here we supply a memory database as a placeholder.
 		db = database.NewMemoryDBManager()
 	}
 	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
