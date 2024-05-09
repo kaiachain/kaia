@@ -30,7 +30,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type gKlaytnClient struct {
+type gKaiaClient struct {
 	addr   string
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -56,13 +56,13 @@ type jsonSubscription struct {
 	Result       interface{} `json:"result,omitempty"`
 }
 
-func NewgKlaytnClient(addr string) (*gKlaytnClient, error) {
-	return &gKlaytnClient{addr: addr}, nil
+func NewgKaiaClient(addr string) (*gKaiaClient, error) {
+	return &gKaiaClient{addr: addr}, nil
 }
 
 const timeout = 5 * time.Minute
 
-func (gkc *gKlaytnClient) makeKlaytnClient(timeout time.Duration) (KlaytnNodeClient, error) {
+func (gkc *gKaiaClient) makeKaiaClient(timeout time.Duration) (KlaytnNodeClient, error) {
 	gkc.ctx, gkc.cancel = context.WithTimeout(context.Background(), timeout)
 	conn, err := grpc.DialContext(gkc.ctx, gkc.addr, grpc.WithInsecure())
 	if err != nil {
@@ -74,7 +74,7 @@ func (gkc *gKlaytnClient) makeKlaytnClient(timeout time.Duration) (KlaytnNodeCli
 	return NewKlaytnNodeClient(gkc.conn), nil
 }
 
-func (gkc *gKlaytnClient) makeRPCRequest(service string, method string, args []interface{}) (*RPCRequest, error) {
+func (gkc *gKaiaClient) makeRPCRequest(service string, method string, args []interface{}) (*RPCRequest, error) {
 	payload, err := json.Marshal(args)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (gkc *gKlaytnClient) makeRPCRequest(service string, method string, args []i
 	return &RPCRequest{Service: service, Method: method, Params: params}, nil
 }
 
-func (gkc *gKlaytnClient) handleRPCResponse(response *RPCResponse) error {
+func (gkc *gKaiaClient) handleRPCResponse(response *RPCResponse) error {
 	var out jsonSuccessResponse
 	if err := json.Unmarshal(response.Payload, &out); err != nil {
 		logger.Error("failed to handle response", "err", err)
@@ -104,7 +104,7 @@ func (gkc *gKlaytnClient) handleRPCResponse(response *RPCResponse) error {
 	return nil
 }
 
-func (gkc *gKlaytnClient) handleSubscribe(client KlaytnNode_SubscribeClient, handle func(response *RPCResponse) error) {
+func (gkc *gKaiaClient) handleSubscribe(client KlaytnNode_SubscribeClient, handle func(response *RPCResponse) error) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 
@@ -133,7 +133,7 @@ loop:
 	waitGroup.Wait()
 }
 
-func (gkc *gKlaytnClient) handleBiCall(stream KlaytnNode_BiCallClient, request func() (*RPCRequest, error), handle func(response *RPCResponse) error) {
+func (gkc *gKaiaClient) handleBiCall(stream KlaytnNode_BiCallClient, request func() (*RPCRequest, error), handle func(response *RPCResponse) error) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 
@@ -173,7 +173,7 @@ func (gkc *gKlaytnClient) handleBiCall(stream KlaytnNode_BiCallClient, request f
 	waitGroup.Wait()
 }
 
-func (gkc *gKlaytnClient) Close() {
+func (gkc *gKaiaClient) Close() {
 	if gkc.cancel != nil {
 		gkc.cancel()
 	}

@@ -20,9 +20,9 @@ type tagInfo struct {
 }
 
 type DatadogTracer struct {
-	Tags           []tagInfo
-	Service        string
-	KlaytnResponse bool
+	Tags         []tagInfo
+	Service      string
+	KaiaResponse bool
 }
 
 func newDatadogTracer() *DatadogTracer {
@@ -159,7 +159,7 @@ func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span t
 		span.SetTag("response.code", 0)
 	}
 
-	if dt.KlaytnResponse {
+	if dt.KaiaResponse {
 		var rpcSuccess jsonSuccessResponse
 		if err := json.Unmarshal(response, &rpcSuccess); err == nil && rpcSuccess.Result != nil {
 			successJson, _ := json.Marshal(rpcSuccess.Result)
