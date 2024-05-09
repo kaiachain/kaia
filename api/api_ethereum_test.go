@@ -990,7 +990,7 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 
 	api := EthereumAPI{
 		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),
-		publicKlayAPI:            NewPublicKlayAPI(mockBackend),
+		publicKaiaAPI:            NewPublicKaiaAPI(mockBackend),
 		publicBlockChainAPI:      NewPublicBlockChainAPI(mockBackend),
 	}
 	return mockCtrl, mockBackend, api

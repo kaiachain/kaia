@@ -22,7 +22,7 @@ import (
 	"text/template"
 )
 
-type KlaytnConfig struct {
+type KaiaConfig struct {
 	NetworkId int
 	RPCPort   int
 	WSPort    int
@@ -33,8 +33,8 @@ type KlaytnConfig struct {
 	NodeType  string
 }
 
-func NewKlaytnConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, runDir string, nodeType string) *KlaytnConfig {
-	kConf := &KlaytnConfig{
+func NewKaiaConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, runDir string, nodeType string) *KaiaConfig {
+	kConf := &KaiaConfig{
 		NetworkId: networkId,
 		RPCPort:   rpcPort,
 		WSPort:    wsPort,
@@ -47,8 +47,8 @@ func NewKlaytnConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDi
 	return kConf
 }
 
-func (k KlaytnConfig) String() string {
-	tmpl, err := template.New("KlaytnConfig").Parse(kTemplate)
+func (k KaiaConfig) String() string {
+	tmpl, err := template.New("KaiaConfig").Parse(kTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)
 		return ""
@@ -64,7 +64,7 @@ func (k KlaytnConfig) String() string {
 	return res.String()
 }
 
-var kTemplate = `# Configuration file for the klay service.
+var kTemplate = `# Configuration file for the Kaia service.
 
 NETWORK_ID={{ .NetworkId }}
 

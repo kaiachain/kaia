@@ -43,19 +43,19 @@ import (
 	"github.com/klaytn/klaytn/work"
 )
 
-// PublicKlayAPI provides an API to access Kaia CN-related
+// PublicKaiaAPI provides an API to access Kaia CN-related
 // information.
-type PublicKlayAPI struct {
+type PublicKaiaAPI struct {
 	cn *CN
 }
 
-// NewPublicKlayAPI creates a new Kaia protocol API for full nodes.
-func NewPublicKlayAPI(e *CN) *PublicKlayAPI {
-	return &PublicKlayAPI{e}
+// NewPublicKaiaAPI creates a new Kaia protocol API for full nodes.
+func NewPublicKaiaAPI(e *CN) *PublicKaiaAPI {
+	return &PublicKaiaAPI{e}
 }
 
 // Rewardbase is the address that consensus rewards will be send to
-func (api *PublicKlayAPI) Rewardbase() (common.Address, error) {
+func (api *PublicKaiaAPI) Rewardbase() (common.Address, error) {
 	return api.cn.Rewardbase()
 }
 

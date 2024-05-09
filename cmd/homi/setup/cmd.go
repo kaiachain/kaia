@@ -142,14 +142,14 @@ var HomiFlags = []cli.Flag{
 
 var SetupCommand = &cli.Command{
 	Name:  "setup",
-	Usage: "Generate klaytn CN's init files",
+	Usage: "Generate Kaia CN's init files",
 	Description: `This tool helps generate:
 		* Genesis Block (genesis.json)
 		* Static nodes for all CNs(Consensus Node)
 		* CN details
 		* Docker-compose
 
-		for Klaytn Consensus Node.
+		for Kaia Consensus Node.
 
 Args :
 		type : [local | remote | deploy | docker (default)]
@@ -872,9 +872,9 @@ func Gen(ctx *cli.Context) error {
 		downLoadGrafanaJson()
 	case TypeDeploy:
 		writeCNInfoKey(cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
-		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
+		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "CN")
-		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
+		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "PN")
 		writePNInfoKey(ctx.Int(numOfPNsFlag.Name))
 		writePrometheusConfig(cnNum, ctx.Int(numOfPNsFlag.Name))
@@ -933,8 +933,8 @@ func writePNInfoKey(num int) {
 	}
 }
 
-func writeKlayConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
-	kConfig := NewKlaytnConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
+func writeKaiaConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
+	kConfig := NewKaiaConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
 	WriteFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
 }
 

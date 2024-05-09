@@ -104,12 +104,12 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 
 	ethAPI := NewEthereumAPI()
 
-	publicKlayAPI := NewPublicKlayAPI(apiBackend)
+	publicKaiaAPI := NewPublicKaiaAPI(apiBackend)
 	publicBlockChainAPI := NewPublicBlockChainAPI(apiBackend)
 	publicTransactionPoolAPI := NewPublicTransactionPoolAPI(apiBackend, nonceLock)
 	publicAccountAPI := NewPublicAccountAPI(apiBackend.AccountManager())
 
-	ethAPI.SetPublicKlayAPI(publicKlayAPI)
+	ethAPI.SetPublicKaiaAPI(publicKaiaAPI)
 	ethAPI.SetPublicBlockChainAPI(publicBlockChainAPI)
 	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
 	ethAPI.SetPublicAccountAPI(publicAccountAPI)
@@ -118,7 +118,7 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   publicKlayAPI,
+			Service:   publicKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "klay",

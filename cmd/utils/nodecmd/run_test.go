@@ -67,7 +67,7 @@ var (
 
 func init() {
 	// Initialize the CLI app and start Kaia
-	app.Action = RunKlaytnNode
+	app.Action = RunKaiaNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
 	app.Commands = []*cli.Command{

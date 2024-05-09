@@ -58,7 +58,7 @@ func TestConsoleWelcome(t *testing.T) {
 
 	// Verify the actual welcome message to the required template
 	kaia.Expect(`
-Welcome to the Klaytn JavaScript console!
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
   datadir: {{datadir}}
@@ -139,7 +139,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 
 	// Verify the actual welcome message to the required template
 	attach.Expect(`
-Welcome to the Klaytn JavaScript console!
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
   datadir: {{datadir}}{{end}}

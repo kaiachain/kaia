@@ -521,13 +521,13 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
 	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
-	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+	ethAPI.SetGovernanceKaiaAPI(governanceKaiaAPI)
 	ethAPI.SetGovernanceAPI(governanceAPI)
 
 	// Append all the local APIs and return
@@ -535,7 +535,7 @@ func (s *CN) APIs() []rpc.API {
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(s),
+			Service:   NewPublicKaiaAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "klay",
@@ -589,7 +589,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   governanceKlayAPI,
+			Service:   governanceKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",

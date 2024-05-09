@@ -151,7 +151,7 @@ func TestMainBridge_basic(t *testing.T) {
 		{
 			Namespace: "klay",
 			Version:   "1.0",
-			Service:   api.NewPublicKlayAPI(&cn.CNAPIBackend{}),
+			Service:   api.NewPublicKaiaAPI(&cn.CNAPIBackend{}),
 			Public:    true,
 		},
 	}

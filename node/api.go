@@ -460,23 +460,23 @@ func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
 	return counters, nil
 }
 
-// PublicKlayAPI offers helper utils
-type PublicKlayAPI struct {
+// PublicKaiaAPI offers helper utils
+type PublicKaiaAPI struct {
 	stack *Node
 }
 
-// NewPublicKlayAPI creates a new Web3Service instance
-func NewPublicKlayAPI(stack *Node) *PublicKlayAPI {
-	return &PublicKlayAPI{stack}
+// NewPublicKaiaAPI creates a new Web3Service instance
+func NewPublicKaiaAPI(stack *Node) *PublicKaiaAPI {
+	return &PublicKaiaAPI{stack}
 }
 
 // ClientVersion returns the node name
-func (s *PublicKlayAPI) ClientVersion() string {
+func (s *PublicKaiaAPI) ClientVersion() string {
 	return s.stack.Server().Name()
 }
 
 // Sha3 applies the Kaia sha3 implementation on the input.
 // It assumes the input is hex encoded.
-func (s *PublicKlayAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
+func (s *PublicKaiaAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)
 }

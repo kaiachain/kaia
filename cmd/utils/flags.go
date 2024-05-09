@@ -87,7 +87,7 @@ var (
 	}
 	NetworkTypeFlag = &cli.StringFlag{
 		Name:    "networktype",
-		Usage:   "Klaytn network type (main-net (mn), service chain-net (scn))",
+		Usage:   "Kaia network type (main-net (mn), service chain-net (scn))",
 		Value:   "mn",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_NETWORKTYPE"},
@@ -1080,7 +1080,7 @@ var (
 	// Network Settings
 	NodeTypeFlag = &cli.StringFlag{
 		Name:    "nodetype",
-		Usage:   "Klaytn node type (consensus node (cn), proxy node (pn), endpoint node (en))",
+		Usage:   "Kaia node type (consensus node (cn), proxy node (pn), endpoint node (en))",
 		Value:   "en",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_NODETYPE"},
@@ -1216,7 +1216,7 @@ var (
 
 	CypressFlag = &cli.BoolFlag{
 		Name:     "cypress",
-		Usage:    "Pre-configured Klaytn Cypress network",
+		Usage:    "Pre-configured Kaia Cypress network",
 		Aliases:  []string{"p2p.cypress"},
 		EnvVars:  []string{"KLAYTN_CYPRESS"},
 		Category: "NETWORK",
@@ -1224,7 +1224,7 @@ var (
 	// Baobab bootnodes setting
 	BaobabFlag = &cli.BoolFlag{
 		Name:     "baobab",
-		Usage:    "Pre-configured Klaytn baobab network",
+		Usage:    "Pre-configured Kaia baobab network",
 		Aliases:  []string{"p2p.baobab"},
 		EnvVars:  []string{"KLAYTN_BAOBAB"},
 		Category: "NETWORK",

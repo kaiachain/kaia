@@ -89,7 +89,7 @@ func TestGasCalculation(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"KlaytnLegacy", genKaiaLegacyAccount(t)},
+		{"KaiaLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
 		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
@@ -242,8 +242,8 @@ func TestGasCalculation(t *testing.T) {
 			toAccount := reservoir
 			senderRole := accountkey.RoleTransaction
 
-			// LegacyTransaction can be used only by the KlaytnAccount with AccountKeyLegacy.
-			if sender.Type != "KlaytnLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
+			// LegacyTransaction can be used only by the KaiaAccount with AccountKeyLegacy.
+			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
 				continue
 			}
 
@@ -892,7 +892,7 @@ func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType typ
 }
 
 func genKaiaLegacyAccount(t *testing.T) TestAccount {
-	// For KlaytnLegacy
+	// For KaiaLegacy
 	kaiaLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
 
