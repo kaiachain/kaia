@@ -39,15 +39,15 @@ var (
 
 // Environment contains metadata provided by the build environment.
 type Environment struct {
-	Name                    string // name of the environment
-	Repo                    string // name of GitHub repo
-	Commit, Branch, Tag     string // Git info
-	Buildnum                string
-	IsPullRequest           bool
-	IsCronJob               bool
-	IsKlaytnRaceDetectionOn bool
-	IsStaticLink            bool
-	IsDisabledSymbolTable   bool
+	Name                  string // name of the environment
+	Repo                  string // name of GitHub repo
+	Commit, Branch, Tag   string // Git info
+	Buildnum              string
+	IsPullRequest         bool
+	IsCronJob             bool
+	IsKaiaRaceDetectionOn bool
+	IsStaticLink          bool
+	IsDisabledSymbolTable bool
 }
 
 func (env Environment) String() string {
@@ -91,7 +91,7 @@ func LocalEnv() Environment {
 	env := applyEnvFlags(Environment{Name: "local", Repo: "klaytn/klaytn"})
 
 	if os.Getenv("KLAYTN_RACE_DETECT") == "1" {
-		env.IsKlaytnRaceDetectionOn = true
+		env.IsKaiaRaceDetectionOn = true
 	}
 	if os.Getenv("KLAYTN_STATIC_LINK") == "1" {
 		env.IsStaticLink = true

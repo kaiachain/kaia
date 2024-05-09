@@ -41,8 +41,8 @@ function finish {
 }
 trap finish EXIT
 
-KLAYTN_VERSION=$(go run build/rpm/main.go version)
-KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+KAIA_VERSION=$(go run build/rpm/main.go version)
+KAIA_RELEASE_NUM=$(go run build/rpm/main.go release_num)
 PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
 
 PACK_NAME=
@@ -52,7 +52,7 @@ PACK_VERSION=
 for b in ${DAEMON_BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        PACK_VERSION=${b}d${BAOBAB_PREFIX}-${KLAYTN_VERSION}
+        PACK_VERSION=${b}d${BAOBAB_PREFIX}-${KAIA_VERSION}
     fi
 done
 
@@ -60,7 +60,7 @@ done
 for b in ${BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        PACK_VERSION=${b}${BAOBAB_PREFIX}-${KLAYTN_VERSION}
+        PACK_VERSION=${b}${BAOBAB_PREFIX}-${KAIA_VERSION}
     fi
 done
 

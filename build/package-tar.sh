@@ -73,19 +73,19 @@ function finish {
 }
 trap finish EXIT
 
-KLAYTN_VERSION=$(go run build/rpm/main.go version)
-KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-PACKAGE_SUFFIX="${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-${PLATFORM_SUFFIX}.tar.gz"
+KAIA_VERSION=$(go run build/rpm/main.go version)
+KAIA_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+PACKAGE_SUFFIX="${KAIA_VERSION}-${KAIA_RELEASE_NUM}-${PLATFORM_SUFFIX}.tar.gz"
 
 PACK_NAME=
-KLAYTN_PACKAGE_NAME=
+KAIA_PACKAGE_NAME=
 DAEMON=
 
 # Search the target from DAEMON_BINARIES.
 for b in ${DAEMON_BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        KLAYTN_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
+        KAIA_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
         DAEMON=1
     fi
 done
@@ -94,7 +94,7 @@ done
 for b in ${BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        KLAYTN_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
+        KAIA_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
     fi
 done
 
@@ -126,4 +126,4 @@ fi
 
 # Compress!
 mkdir -p packages
-tar czf packages/$KLAYTN_PACKAGE_NAME $PACK_NAME
+tar czf packages/$KAIA_PACKAGE_NAME $PACK_NAME
