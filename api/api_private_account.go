@@ -141,7 +141,7 @@ func fetchKeystore(am accounts.AccountManager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
+func parseKaiaWalletKey(k string) (string, string, *common.Address, error) {
 	// if key length is not 110, just return.
 	if len(k) != 110 {
 		return k, "", nil, nil
@@ -149,7 +149,7 @@ func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
 
 	walletKeyType := k[66:68]
 	if walletKeyType != "00" {
-		return "", "", nil, fmt.Errorf("Klaytn wallet key type must be 00.")
+		return "", "", nil, fmt.Errorf("Kaia wallet key type must be 00.")
 	}
 	a := common.HexToAddress(k[70:110])
 
@@ -159,7 +159,7 @@ func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
 // ReplaceRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, newPassphrase string) (common.Address, error) {
-	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -174,7 +174,7 @@ func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, new
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
-	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}

@@ -25,7 +25,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -45,7 +45,7 @@ import (
 //go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 type Backend interface {
 	// General Kaia API
-	Progress() klaytn.SyncProgress
+	Progress() kaia.SyncProgress
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	SuggestTipCap(ctx context.Context) (*big.Int, error)

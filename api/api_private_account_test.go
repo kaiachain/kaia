@@ -74,7 +74,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	// 4. Allowable Wallet key type is 0x00 only.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x010x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
-		require.Equal(t, fmt.Errorf("Klaytn wallet key type must be 00."), err)
+		require.Equal(t, fmt.Errorf("Kaia wallet key type must be 00."), err)
 	}
 
 	// 5. Should return an error if wrong length.

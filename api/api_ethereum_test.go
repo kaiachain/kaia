@@ -2465,9 +2465,9 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		chain  = &testChainContext{header: header}
 
 		// tx arguments
-		KLAY     = hexutil.Big(*big.NewInt(params.KAIA))
-		mKLAY    = hexutil.Big(*big.NewInt(params.KAIA / 1000))
-		KLAY2_1  = hexutil.Big(*big.NewInt(params.KAIA*2 + 1))
+		KAIA     = hexutil.Big(*big.NewInt(params.KAIA))
+		mKAIA    = hexutil.Big(*big.NewInt(params.KAIA / 1000))
+		KAIA2_1  = hexutil.Big(*big.NewInt(params.KAIA*2 + 1))
 		gas1000  = hexutil.Uint64(1000)
 		gas40000 = hexutil.Uint64(40000)
 		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))
@@ -2502,7 +2502,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:  &account1,
 				To:    &account2,
-				Value: &KLAY,
+				Value: &KAIA,
 			},
 			expectGas: 21000,
 		},
@@ -2510,7 +2510,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:  &account2, // sender has 0 KAIA
 				To:    &account1,
-				Value: &KLAY, // transfer 1 KAIA
+				Value: &KAIA, // transfer 1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
@@ -2519,7 +2519,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:  &account1, // sender has 2 KAIA
 				To:    &account2,
-				Value: &KLAY2_1, // transfer 2.0000...1 KAIA
+				Value: &KAIA2_1, // transfer 2.0000...1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
@@ -2527,8 +2527,8 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:     &account2, // sender has 0 KAIA
 				To:       &account1,
-				Value:    &KLAY, // transfer 1 KAIA
-				GasPrice: &mKLAY,
+				Value:    &KAIA, // transfer 1 KAIA
+				GasPrice: &mKAIA,
 			},
 			expectErr: "insufficient funds for transfer",
 		},
@@ -2536,8 +2536,8 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:     &account1, // sender has 2 KAIA
 				To:       &account2,
-				Value:    &KLAY,  // transfer 1 KAIA
-				GasPrice: &mKLAY, // allowance = (2 - 1) / 0.001 = 1000 gas
+				Value:    &KAIA,  // transfer 1 KAIA
+				GasPrice: &mKAIA, // allowance = (2 - 1) / 0.001 = 1000 gas
 			},
 			expectErr: "gas required exceeds allowance",
 		},

@@ -559,7 +559,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 	if len(encodedTx) == 0 {
 		return common.Address{}, fmt.Errorf("Empty input")
 	}
-	if 0 < encodedTx[0] && encodedTx[0] < 0x8 { // TODO: Add helper to distinguish eth vs klay txtypes
+	if 0 < encodedTx[0] && encodedTx[0] < 0x8 { // TODO: Add helper to distinguish eth vs Kaia txtypes
 		ethEnvelope := []byte{byte(types.EthereumTxTypeEnvelope)}
 		encodedTx = append(ethEnvelope, encodedTx...)
 	}
@@ -609,7 +609,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	}
 	key := state.GetKey(address)
 
-	// We cannot identify if the signature has signed with klay or eth prefix without the signer's address.
+	// We cannot identify if the signature has signed with kaia or eth prefix without the signer's address.
 	// Even though a user signed message with eth prefix, it will return invalid something in klayEcRecover.
 	// We should call each rcrecover function separately and the actual result will be checked in ValidateMember.
 	var recoverErr error
