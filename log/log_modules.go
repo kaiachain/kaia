@@ -75,7 +75,7 @@ const (
 	CMDKCN
 	CMDKEN
 	CMDKGEN
-	CMDKlay
+	CMDKaia
 	CMDKPN
 	CMDKSCN
 	CMDUtils
