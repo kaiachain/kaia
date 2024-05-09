@@ -91,7 +91,7 @@ func TestSimpleBlockchain(t *testing.T) {
 func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
-	workspace, err := os.MkdirTemp("", "klaytn-test-state")
+	workspace, err := os.MkdirTemp("", "kaia-test-state-")
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}

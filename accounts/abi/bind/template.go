@@ -159,7 +159,7 @@ var (
 		// Deprecated: Use {{.Type}}MetaData.Bin instead.
 		var {{.Type}}Bin = {{.Type}}MetaData.Bin
 
-		// Deploy{{.Type}} deploys a new Klaytn contract, binding an instance of {{.Type}} to it.
+		// Deploy{{.Type}} deploys a new Kaia contract, binding an instance of {{.Type}} to it.
 		func Deploy{{.Type}}(auth *bind.TransactOpts, backend bind.ContractBackend {{range .Constructor.Inputs}}, {{.Name}} {{bindtype .Type $structs}}{{end}}) (common.Address, *types.Transaction, *{{.Type}}, error) {
 		  parsed, err := {{.Type}}MetaData.GetAbi()
 		  if err != nil {
@@ -180,29 +180,29 @@ var (
 		}
 	{{end}}
 
-	// {{.Type}} is an auto generated Go binding around a Klaytn contract.
+	// {{.Type}} is an auto generated Go binding around a Kaia contract.
 	type {{.Type}} struct {
 	  {{.Type}}Caller     // Read-only binding to the contract
 	  {{.Type}}Transactor // Write-only binding to the contract
 	  {{.Type}}Filterer   // Log filterer for contract events
 	}
 
-	// {{.Type}}Caller is an auto generated read-only Go binding around a Klaytn contract.
+	// {{.Type}}Caller is an auto generated read-only Go binding around a Kaia contract.
 	type {{.Type}}Caller struct {
 	  contract *bind.BoundContract // Generic contract wrapper for the low level calls
 	}
 
-	// {{.Type}}Transactor is an auto generated write-only Go binding around a Klaytn contract.
+	// {{.Type}}Transactor is an auto generated write-only Go binding around a Kaia contract.
 	type {{.Type}}Transactor struct {
 	  contract *bind.BoundContract // Generic contract wrapper for the low level calls
 	}
 
-	// {{.Type}}Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+	// {{.Type}}Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 	type {{.Type}}Filterer struct {
 	  contract *bind.BoundContract // Generic contract wrapper for the low level calls
 	}
 
-	// {{.Type}}Session is an auto generated Go binding around a Klaytn contract,
+	// {{.Type}}Session is an auto generated Go binding around a Kaia contract,
 	// with pre-set call and transact options.
 	type {{.Type}}Session struct {
 	  Contract     *{{.Type}}        // Generic contract binding to set the session for
@@ -210,31 +210,31 @@ var (
 	  TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 	}
 
-	// {{.Type}}CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+	// {{.Type}}CallerSession is an auto generated read-only Go binding around a Kaia contract,
 	// with pre-set call options.
 	type {{.Type}}CallerSession struct {
 	  Contract *{{.Type}}Caller // Generic contract caller binding to set the session for
 	  CallOpts bind.CallOpts    // Call options to use throughout this session
 	}
 
-	// {{.Type}}TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+	// {{.Type}}TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 	// with pre-set transact options.
 	type {{.Type}}TransactorSession struct {
 	  Contract     *{{.Type}}Transactor // Generic contract transactor binding to set the session for
 	  TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 	}
 
-	// {{.Type}}Raw is an auto generated low-level Go binding around a Klaytn contract.
+	// {{.Type}}Raw is an auto generated low-level Go binding around a Kaia contract.
 	type {{.Type}}Raw struct {
 	  Contract *{{.Type}} // Generic contract binding to access the raw methods on
 	}
 
-	// {{.Type}}CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+	// {{.Type}}CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 	type {{.Type}}CallerRaw struct {
 		Contract *{{.Type}}Caller // Generic read-only contract binding to access the raw methods on
 	}
 
-	// {{.Type}}TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+	// {{.Type}}TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 	type {{.Type}}TransactorRaw struct {
 		Contract *{{.Type}}Transactor // Generic write-only contract binding to access the raw methods on
 	}

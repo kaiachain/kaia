@@ -54,7 +54,7 @@ Even if db dir names are changed in srcDB, the original db dir names are used in
 (e.g. use 'statetrie' instead of 'statetrie_migrated_xxxxx')
 If dst db is singleDB, you should set dst.datadir or db.dst.dynamo.tablename
 to the original db dir name.
-(e.g. Data dir : 'chaindata/klay/statetrie', Dynamo table name : 'klaytn-statetrie')
+(e.g. Data dir : 'chaindata/kaia/statetrie', Dynamo table name : 'kaia-statetrie')
 
 Note: This feature is only provided when srcDB is single LevelDB.`,
 			},

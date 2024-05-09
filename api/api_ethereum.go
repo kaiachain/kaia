@@ -518,7 +518,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	header, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -526,7 +526,7 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 		return nil, err
 	}
 	inclMiner := number != rpc.PendingBlockNumber
-	response, err := api.rpcMarshalHeader(klaytnHeader, inclMiner)
+	response, err := api.rpcMarshalHeader(header, inclMiner)
 	if err != nil {
 		return nil, err
 	}
@@ -542,9 +542,9 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
-	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader, true)
+	header, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
+	if header != nil {
+		response, err := api.rpcMarshalHeader(header, true)
 		if err != nil {
 			return nil
 		}
@@ -561,7 +561,7 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	block, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -571,7 +571,7 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 
 	inclMiner := number != rpc.PendingBlockNumber
 	inclTx := true
-	response, err := api.rpcMarshalBlock(klaytnBlock, inclMiner, inclTx, fullTx)
+	response, err := api.rpcMarshalBlock(block, inclMiner, inclTx, fullTx)
 	if err == nil && number == rpc.PendingBlockNumber {
 		// Pending blocks need to nil out a few fields
 		for _, field := range []string{"hash", "nonce", "miner"} {
@@ -586,14 +586,14 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
+	block, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return api.rpcMarshalBlock(klaytnBlock, true, true, fullTx)
+	return api.rpcMarshalBlock(block, true, true, fullTx)
 }
 
 // GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Kaia.
@@ -1516,7 +1516,7 @@ func checkTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 	feeEth := new(big.Float).Quo(new(big.Float).SetInt(new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))), new(big.Float).SetInt(big.NewInt(params.KLAY)))
 	feeFloat, _ := feeEth.Float64()
 	if feeFloat > cap {
-		return fmt.Errorf("tx fee (%.2f klay) exceeds the configured cap (%.2f klay)", feeFloat, cap)
+		return fmt.Errorf("tx fee (%.2f KAIA) exceeds the configured cap (%.2f KAIA)", feeFloat, cap)
 	}
 	return nil
 }

@@ -51,7 +51,7 @@ var testEntries = []testEntry{
 // Sometimes 3) and 4) are omitted if such operation is not possible due to some reasons.
 func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 	for _, entry := range testEntries {
-		tempDir, err := os.MkdirTemp("", "klaytn-db-manager-test")
+		tempDir, err := os.MkdirTemp("", "kaia-test-db-manager-")
 		if err != nil {
 			t.Fatalf("cannot create temporary directory: %v", err)
 		}

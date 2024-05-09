@@ -844,7 +844,7 @@ var (
 	}
 	RPCGlobalEthTxFeeCapFlag = &cli.Float64Flag{
 		Name:     "rpc.ethtxfeecap",
-		Usage:    "Sets a cap on transaction fee (=gasLimit*gasPrice) (in klay) in eth_signTransaction (0 = no cap)",
+		Usage:    "Sets a cap on transaction fee (=gasLimit*gasPrice) (in KAIA) in eth_signTransaction (0 = no cap)",
 		Aliases:  []string{"http-rpc.eth-tx-feecap"},
 		EnvVars:  []string{"KLAYTN_RPC_ETHTXFEECAP"},
 		Category: "API AND CONSOLE",
@@ -1830,7 +1830,7 @@ var (
 	}
 	DstDynamoDBTableNameFlag = &cli.StringFlag{
 		Name:     "db.dst.dynamo.tablename",
-		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'klaytn-misc', 'klaytn-statetrie')",
+		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'kaia-misc', 'kaia-statetrie')",
 		Aliases:  []string{"migration.dst.db.dynamo.table-name"},
 		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_TABLENAME"},
 		Category: "DATABASE MIGRATION",

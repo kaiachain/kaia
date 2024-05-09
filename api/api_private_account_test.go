@@ -34,7 +34,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 
 	// To get JSON files use below.
 	// keydir := filepath.Join(".", "keystore")
-	keydir, err := os.MkdirTemp("", "klay-test")
+	keydir, err := os.MkdirTemp("", "kaia-test-api-")
 	require.NoError(t, err)
 	defer os.RemoveAll(keydir)
 

@@ -157,7 +157,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 }
 
 func (ctx *blockchainTestContext) setWorkspace() {
-	workspace, _ := os.MkdirTemp("", "klaytn-test-state")
+	workspace, _ := os.MkdirTemp("", "kaia-test-state-")
 	ctx.workspace = workspace
 }
 

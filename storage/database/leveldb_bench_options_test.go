@@ -29,7 +29,7 @@ import (
 )
 
 func genTempDirForTestDB(b *testing.B) string {
-	dir, err := os.MkdirTemp("", "klaytn-db-bench")
+	dir, err := os.MkdirTemp("", "kaia-test-db-bench-")
 	if err != nil {
 		b.Fatalf("cannot create temporary directory: %v", err)
 	}

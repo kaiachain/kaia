@@ -89,7 +89,7 @@ func TestGasCalculation(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"KlaytnLegacy", genKlaytnLegacyAccount(t)},
+		{"KlaytnLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
 		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
@@ -891,12 +891,12 @@ func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType typ
 	return values, intrinsic + gasPayload
 }
 
-func genKlaytnLegacyAccount(t *testing.T) TestAccount {
+func genKaiaLegacyAccount(t *testing.T) TestAccount {
 	// For KlaytnLegacy
-	klaytnLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+	kaiaLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
 
-	return klaytnLegacy
+	return kaiaLegacy
 }
 
 func genPublicAccount(t *testing.T) TestAccount {

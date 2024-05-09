@@ -43,7 +43,7 @@ func genDirForMDPTest(b *testing.B, numDisks, numShards int) []string {
 	dirs := make([]string, numShards, numShards)
 	for i := 0; i < numShards; i++ {
 		diskNum := i % numDisks
-		dir, err := os.MkdirTemp(diskPaths[diskNum], "klaytn-db-bench-mdp")
+		dir, err := os.MkdirTemp(diskPaths[diskNum], "kaia-test-db-bench-mdp-")
 		if err != nil {
 			b.Fatalf("cannot create temporary directory: %v", err)
 		}

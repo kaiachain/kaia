@@ -38,7 +38,7 @@ import (
 )
 
 func newTestLDB() (Database, func(), string) {
-	dirName, err := os.MkdirTemp(os.TempDir(), "klay_leveldb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "kaia-test-leveldb-")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -54,7 +54,7 @@ func newTestLDB() (Database, func(), string) {
 }
 
 func newTestBadgerDB() (Database, func(), string) {
-	dirName, err := os.MkdirTemp(os.TempDir(), "klay_badgerdb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "kaia-test-badgerdb-")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
