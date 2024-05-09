@@ -60,9 +60,9 @@ and returns correct stakingInfo to use.
 Kaia distributes the reward of a block to proposer, KFF and KCF.
 The detail information of KFF and KCF is available on Kaia docs.
 
-Token Economy - https://docs.klaytn.foundation/content/klaytn/design/token-economy
+Token Economy - https://docs.kaia.io/docs/learn/token-economy/
 
-Configurations related to the reward system such as mintingAmount, ratio and unitPrice are determined by the Klaytn governance.
+Configurations related to the reward system such as mintingAmount, ratio and unitPrice are determined by the Kaia governance.
 All configurations are saved as rewardConfig on every epoch block (default 604,800 blocks) and managed by a rewardConfigCache.
 
 A proposer which has made a current block will get the reward of the block.
