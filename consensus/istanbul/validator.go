@@ -108,8 +108,11 @@ type ValidatorSet interface {
 
 	IsSubSet() bool
 
+	// Refreshes a list of validators at given blockNum
+	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
+
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
+	RefreshProposer(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
 
 	SetBlockNum(blockNum uint64)
 	SetMixHash(mixHash []byte)

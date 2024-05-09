@@ -694,7 +694,9 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	reward.StakingManagerSubscribe()
+	if !s.chainConfig.IsDragonForkEnabled(s.blockchain.CurrentBlock().Number()) {
+		reward.StakingManagerSubscribe()
+	}
 
 	return nil
 }

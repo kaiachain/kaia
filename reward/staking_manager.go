@@ -80,6 +80,10 @@ var (
 	once           sync.Once
 	stakingManager *StakingManager
 
+	isDragonEnabled = func(blockNum uint64) bool {
+		return stakingManager.blockchain.Config().IsDragonForkEnabled(new(big.Int).SetUint64(blockNum))
+	}
+
 	// errors for staking manager
 	ErrStakingManagerNotSet = errors.New("staking manager is not set")
 	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
@@ -109,6 +113,9 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
 			// The information in state trie is deleted after state trie migration.
 			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
+				if isDragonEnabled(blockNum) {
+					return nil
+				}
 				if err := CheckStakingInfoStored(blockNum); err != nil {
 					return err
 				}
@@ -129,7 +136,10 @@ func GetStakingManager() *StakingManager {
 // GetStakingInfo returns a stakingInfo on the staking block of the given block number.
 // Note that staking block is the block on which the associated staking information is stored and used during an interval.
 func GetStakingInfo(blockNum uint64) *StakingInfo {
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	stakingBlockNumber := blockNum
+	if !isDragonEnabled(blockNum) {
+		stakingBlockNumber = params.CalcStakingBlockNumber(blockNum)
+	}
 	logger.Debug("Staking information is requested", "blockNum", blockNum, "staking block number", stakingBlockNumber)
 	return GetStakingInfoOnStakingBlock(stakingBlockNumber)
 }
@@ -198,15 +208,23 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 		return nil, ErrStakingManagerNotSet
 	}
 
+	isDragon := isDragonEnabled(blockNum)
+
+	if !isDragon && !params.IsStakingUpdateInterval(blockNum) {
+		return nil, fmt.Errorf("not staking block number. blockNum: %d", blockNum)
+	}
+
 	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add to DB before setting Gini; DB will contain {Gini: -1}
-	if err := AddStakingInfoToDB(stakingInfo); err != nil {
-		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
-		return stakingInfo, err
+	if !isDragon {
+		if err := AddStakingInfoToDB(stakingInfo); err != nil {
+			logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
+			return stakingInfo, err
+		}
 	}
 
 	// Fill in Gini coeff before adding to cache
@@ -318,11 +336,15 @@ func CheckStakingInfoStored(blockNum uint64) error {
 		return ErrStakingManagerNotSet
 	}
 
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+	stakingBlockNumber := blockNum
 
-	// skip checking if staking info is stored in DB
-	if _, err := getStakingInfoFromDB(stakingBlockNumber); err == nil {
-		return nil
+	if !isDragonEnabled(blockNum) {
+		stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
+
+		// skip checking if staking info is stored in DB
+		if _, err := getStakingInfoFromDB(stakingBlockNumber); err == nil {
+			return nil
+		}
 	}
 
 	// update staking info in DB and cache from address book

@@ -436,7 +436,7 @@ func (c *ChainConfig) IsKIP160ForkBlock(num *big.Int) bool {
 	return c.Kip160CompatibleBlock.Cmp(num) == 0
 }
 
-// IsRandaoForkBlockParent returns whethere num is one block before the randao block.
+// IsRandaoForkBlockParent returns whether num is one block before the randao block.
 func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
 	if c.RandaoCompatibleBlock == nil || num == nil {
 		return false

@@ -78,6 +78,7 @@ func setTestGovernance(db database.DBManager) {
 			origStakingManager:  reward.GetStakingManager(),
 		}
 
+		reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 		reward.SetTestStakingManagerWithDB(db)
 		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}

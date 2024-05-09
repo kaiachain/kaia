@@ -377,9 +377,14 @@ func (valSet *defaultSet) F() int {
 
 func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-func (valSet *defaultSet) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+func (valSet *defaultSet) RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
 	return nil
 }
+
+func (valSet *defaultSet) RefreshProposer(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
+	return nil
+}
+
 func (valSet *defaultSet) SetBlockNum(blockNum uint64)     { /* Do nothing */ }
 func (valSet *defaultSet) SetMixHash(mixHash []byte)       { /* Do nothing */ }
 func (valSet *defaultSet) Proposers() []istanbul.Validator { return nil }

@@ -207,9 +207,13 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			govNode := pset.GoverningNode()
 			minStaking := pset.MinimumStakeBig().Uint64()
 
+			if err := snap.ValSet.RefreshValSet(number+1, chain.Config(), isSingle, govNode, minStaking); err != nil {
+				logger.Trace("Skip refreshing validators while creating snapshot", "snap.Number", snap.Number, "err", err)
+			}
+
 			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
 			if pHeader != nil {
-				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode, minStaking); err != nil {
+				if err := snap.ValSet.RefreshProposer(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
 					// There are three error cases and they just don't refresh proposers
 					// (1) no validator at all
 					// (2) invalid formatted hash

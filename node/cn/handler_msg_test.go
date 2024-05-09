@@ -500,6 +500,7 @@ func TestHandleStakingInfoRequestMsg(t *testing.T) {
 
 	testBlock := uint64(4)
 	testStakingInfo := newStakingInfo(testBlock)
+	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	reward.SetTestStakingManagerWithStakingInfoCache(testStakingInfo)
 	params.SetStakingUpdateInterval(testBlock)
 
@@ -568,6 +569,7 @@ func TestHandleStakingInfoMsg(t *testing.T) {
 
 	testBlock := uint64(4)
 	testStakingInfo := newStakingInfo(testBlock)
+	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	reward.SetTestStakingManagerWithStakingInfoCache(testStakingInfo)
 	params.SetStakingUpdateInterval(testBlock)
 

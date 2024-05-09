@@ -393,6 +393,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 		},
 	}
 
+	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 
 	for i, tc := range testcases {
@@ -699,6 +700,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		},
 	}
 
+	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 
 	for _, tc := range testcases {
@@ -826,6 +828,8 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		},
 	}
 
+	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
+
 	for i, tc := range testcases {
 		if tc.stakingInfo == nil {
 			SetTestStakingManager(nil)
@@ -905,6 +909,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 		},
 	}
 
+	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 
 	for _, tc := range testcases {
@@ -1288,6 +1293,8 @@ func Benchmark_CalcDeferredReward(b *testing.B) {
 	defer SetTestStakingManager(oldStakingManager)
 
 	header, rules, pset := benchSetup()
+
+	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

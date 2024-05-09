@@ -322,7 +322,9 @@ func makeTestStakingManager(addrs []common.Address, amounts []uint64) *reward.St
 
 	// Save old StakingManager, overwrite with the fake one.
 	oldStakingManager := reward.GetStakingManager()
+	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	reward.SetTestStakingManagerWithStakingInfoCache(info)
+
 	return oldStakingManager
 }
 
