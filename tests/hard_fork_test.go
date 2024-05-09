@@ -152,7 +152,7 @@ func genBlocks(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"KlaytnLegacy", genKaiaLegacyAccount(t)},
+		{"KaiaLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
 		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
@@ -213,7 +213,7 @@ func genBlocks(t *testing.T) {
 			reservoir.AddNonce()
 		}
 
-		// Preparing step. Send KAIA to KlaytnAcounts.
+		// Preparing step. Send KAIA to KaiaAcounts.
 		for i := 1; i < len(accountTypes); i++ {
 			// create an account which account key will be replaced to one of account key types.
 			anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
@@ -432,7 +432,7 @@ func genBlocks(t *testing.T) {
 		for _, sender := range accountTypes {
 			toAccount := reservoir
 
-			// LegacyTransaction can be used only with LegacyAccount and KlaytnAccount with AccountKeyLegacy.
+			// LegacyTransaction can be used only with LegacyAccount and KaiaAccount with AccountKeyLegacy.
 			if !strings.Contains(sender.Type, "Legacy") && strings.Contains(f.Name, "Legacy") {
 				continue
 			}
