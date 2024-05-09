@@ -28,7 +28,7 @@ import (
 	"reflect"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	klaytnApi "github.com/klaytn/klaytn/api"
+	kaiaApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/system"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -312,7 +312,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	if bc, ok := api.chain.(*blockchain.BlockChain); ok {
 		td = bc.GetTd(hash, b.NumberU64())
 	}
-	r, err := klaytnApi.RpcOutputBlock(b, td, false, false, api.chain.Config().Rules(b.Header().Number))
+	r, err := kaiaApi.RpcOutputBlock(b, td, false, false, api.chain.Config().Rules(b.Header().Number))
 	if err != nil {
 		logger.Error("failed to RpcOutputBlock", "err", err)
 		return nil
@@ -323,10 +323,10 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	rpcTransactions := make([]map[string]interface{}, numTxs)
 	for i, tx := range transactions {
 		if len(receipts) == len(transactions) {
-			rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+			rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
 		} else {
 			// fill the transaction output if receipt is not found
-			rpcTransactions[i] = klaytnApi.NewRPCTransaction(b, tx, hash, head.Number.Uint64(), uint64(i))
+			rpcTransactions[i] = kaiaApi.NewRPCTransaction(b, tx, hash, head.Number.Uint64(), uint64(i))
 		}
 	}
 
@@ -352,7 +352,7 @@ func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) (
 	return committers, nil
 }
 
-// TODO-Kaia: This API functions should be managed with API functions with namespace "klay"
+// TODO-Kaia: This API functions should be managed with API functions with namespace "kaia"
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {
