@@ -36,12 +36,12 @@ func genTempDirForTestDB(b *testing.B) string {
 	return dir
 }
 
-func getKlayLDBOptions() *opt.Options {
+func getKaiaLDBOptions() *opt.Options {
 	return getLevelDBOptions(&DBConfig{LevelDBCacheSize: 128, OpenFilesLimit: 128})
 }
 
-func getKlayLDBOptionsForGetX(x int) *opt.Options {
-	opts := getKlayLDBOptions()
+func getKaiaLDBOptionsForGetX(x int) *opt.Options {
+	opts := getKaiaLDBOptions()
 	opts.WriteBuffer *= x
 	opts.BlockCacheCapacity *= x
 	opts.OpenFilesCacheCapacity *= x
@@ -50,8 +50,8 @@ func getKlayLDBOptionsForGetX(x int) *opt.Options {
 	return opts
 }
 
-func getKlayLDBOptionsForPutX(x int) *opt.Options {
-	opts := getKlayLDBOptions()
+func getKaiaLDBOptionsForPutX(x int) *opt.Options {
+	opts := getKaiaLDBOptions()
 	opts.BlockCacheCapacity *= x
 	opts.BlockRestartInterval *= x
 
@@ -66,8 +66,8 @@ func getKlayLDBOptionsForPutX(x int) *opt.Options {
 	return opts
 }
 
-func getKlayLDBOptionsForBatchX(x int) *opt.Options {
-	opts := getKlayLDBOptions()
+func getKaiaLDBOptionsForBatchX(x int) *opt.Options {
+	opts := getKaiaLDBOptions()
 	opts.BlockCacheCapacity *= x
 	opts.BlockRestartInterval *= x
 
@@ -83,7 +83,7 @@ func getKlayLDBOptionsForBatchX(x int) *opt.Options {
 }
 
 // readTypeFunc determines requested index
-func benchmarkKlayOptionsGet(b *testing.B, opts *opt.Options, valueLength, numInsertions, numGets int, readTypeFunc func(int, int) int) {
+func benchmarkKaiaOptionsGet(b *testing.B, opts *opt.Options, valueLength, numInsertions, numGets int, readTypeFunc func(int, int) int) {
 	b.StopTimer()
 	b.ReportAllocs()
 
@@ -128,47 +128,47 @@ func zipfRead(currIndex, numInsertions int) int {
 }
 
 const (
-	getKlayValueLegnth   = 250
-	getKlayNumInsertions = 1000 * 100
-	getKlaynumGets       = 1000
+	getKaiaValueLegnth   = 250
+	getKaiaNumInsertions = 1000 * 100
+	getKaiaNumGets       = 1000
 )
 
-var getKlayOptions = [...]struct {
+var getKaiaOptions = [...]struct {
 	name          string
 	valueLength   int
 	numInsertions int
 	numGets       int
 	opts          *opt.Options
 }{
-	{"X1", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(1)},
-	{"X2", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(2)},
-	{"X4", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(4)},
-	{"X8", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(8)},
-	//{"X16", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(16)},
-	//{"X32", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(32)},
-	//{"X64", getKlayValueLegnth, getKlayNumInsertions, getKlaynumGets, getKlayLDBOptionsForGetX(64)},
+	{"X1", getKaiaValueLegnth, getKaiaNumInsertions, getKaiaNumGets, getKaiaLDBOptionsForGetX(1)},
+	{"X2", getKaiaValueLegnth, getKaiaNumInsertions, getKaiaNumGets, getKaiaLDBOptionsForGetX(2)},
+	{"X4", getKaiaValueLegnth, getKaiaNumInsertions, getKaiaNumGets, getKaiaLDBOptionsForGetX(4)},
+	{"X8", getKaiaValueLegnth, getKaiaNumInsertions, getKaiaNumGets, getKaiaLDBOptionsForGetX(8)},
+	//{"X16", getKaiaValueLegnth, getKaiaNumInsertions, getKaianumGets, getKaiaLDBOptionsForGetX(16)},
+	//{"X32", getKaiaValueLegnth, getKaiaNumInsertions, getKaianumGets, getKaiaLDBOptionsForGetX(32)},
+	//{"X64", getKaiaValueLegnth, getKaiaNumInsertions, getKaianumGets, getKaiaLDBOptionsForGetX(64)},
 }
 
-func Benchmark_KlayOptions_Get_Random(b *testing.B) {
-	for _, bm := range getKlayOptions {
+func Benchmark_KaiaOptions_Get_Random(b *testing.B) {
+	for _, bm := range getKaiaOptions {
 		b.Run(bm.name, func(b *testing.B) {
-			benchmarkKlayOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, randomRead)
+			benchmarkKaiaOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, randomRead)
 		})
 	}
 }
 
-func Benchmark_KlayOptions_Get_Sequential(b *testing.B) {
-	for _, bm := range getKlayOptions {
+func Benchmark_KaiaOptions_Get_Sequential(b *testing.B) {
+	for _, bm := range getKaiaOptions {
 		b.Run(bm.name, func(b *testing.B) {
-			benchmarkKlayOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, sequentialRead)
+			benchmarkKaiaOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, sequentialRead)
 		})
 	}
 }
 
-func Benchmark_KlayOptions_Get_Zipf(b *testing.B) {
-	for _, bm := range getKlayOptions {
+func Benchmark_KaiaOptions_Get_Zipf(b *testing.B) {
+	for _, bm := range getKaiaOptions {
 		b.Run(bm.name, func(b *testing.B) {
-			benchmarkKlayOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, zipfRead)
+			benchmarkKaiaOptionsGet(b, bm.opts, bm.valueLength, bm.numInsertions, bm.numGets, zipfRead)
 		})
 	}
 }
@@ -177,7 +177,7 @@ func Benchmark_KlayOptions_Get_Zipf(b *testing.B) {
 ////////////////////////////// Put Insertion Tests Beginning //////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-func benchmarkKlayOptionsPut(b *testing.B, opts *opt.Options, valueLength, numInsertions int) {
+func benchmarkKaiaOptionsPut(b *testing.B, opts *opt.Options, valueLength, numInsertions int) {
 	b.StopTimer()
 
 	dir := genTempDirForTestDB(b)
@@ -195,31 +195,31 @@ func benchmarkKlayOptionsPut(b *testing.B, opts *opt.Options, valueLength, numIn
 	}
 }
 
-func Benchmark_KlayOptions_Put(b *testing.B) {
+func Benchmark_KaiaOptions_Put(b *testing.B) {
 	b.StopTimer()
 	b.ReportAllocs()
 	const (
-		putKlayValueLegnth   = 250
-		putKlayNumInsertions = 1000 * 10
+		putKaiaValueLegnth   = 250
+		putKaiaNumInsertions = 1000 * 10
 	)
 
-	putKlayOptions := [...]struct {
+	putKaiaOptions := [...]struct {
 		name          string
 		valueLength   int
 		numInsertions int
 		opts          *opt.Options
 	}{
-		{"X1", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(1)},
-		{"X2", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(2)},
-		{"X4", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(4)},
-		{"X8", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(8)},
-		//{"X16", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(16)},
-		//{"X32", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(32)},
-		//{"X64", putKlayValueLegnth, putKlayNumInsertions, getKlayLDBOptionsForPutX(64)},
+		{"X1", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(1)},
+		{"X2", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(2)},
+		{"X4", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(4)},
+		{"X8", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(8)},
+		//{"X16", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(16)},
+		//{"X32", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(32)},
+		//{"X64", putKaiaValueLegnth, putKaiaNumInsertions, getKaiaLDBOptionsForPutX(64)},
 	}
-	for _, bm := range putKlayOptions {
+	for _, bm := range putKaiaOptions {
 		b.Run(bm.name, func(b *testing.B) {
-			benchmarkKlayOptionsPut(b, bm.opts, bm.valueLength, bm.numInsertions)
+			benchmarkKaiaOptionsPut(b, bm.opts, bm.valueLength, bm.numInsertions)
 		})
 	}
 }
@@ -266,7 +266,7 @@ func genKeysAndValues(valueLength, numInsertions int) ([][]byte, [][]byte) {
 ///////////////////////////// Batch Insertion Tests Beginning /////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-func benchmarkKlayOptionsBatch(b *testing.B, opts *opt.Options, valueLength, numInsertions int) {
+func benchmarkKaiaOptionsBatch(b *testing.B, opts *opt.Options, valueLength, numInsertions int) {
 	b.StopTimer()
 	dir := genTempDirForTestDB(b)
 	defer os.RemoveAll(dir)
@@ -287,32 +287,32 @@ func benchmarkKlayOptionsBatch(b *testing.B, opts *opt.Options, valueLength, num
 	}
 }
 
-func Benchmark_KlayOptions_Batch(b *testing.B) {
+func Benchmark_KaiaOptions_Batch(b *testing.B) {
 	b.StopTimer()
 	b.ReportAllocs()
 
 	const (
 		batchValueLength       = 250
-		batchKlayNumInsertions = 1000 * 10
+		batchKaiaNumInsertions = 1000 * 10
 	)
 
-	putKlayOptions := [...]struct {
+	putKaiaOptions := [...]struct {
 		name          string
 		valueLength   int
 		numInsertions int
 		opts          *opt.Options
 	}{
-		{"X1", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(1)},
-		{"X2", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(2)},
-		{"X4", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(4)},
-		{"X8", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(8)},
-		//{"X16", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(16)},
-		//{"X32", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(32)},
-		//{"X64", batchValueLength, batchKlayNumInsertions, getKlayLDBOptionsForBatchX(64)},
+		{"X1", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(1)},
+		{"X2", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(2)},
+		{"X4", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(4)},
+		{"X8", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(8)},
+		//{"X16", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(16)},
+		//{"X32", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(32)},
+		//{"X64", batchValueLength, batchKaiaNumInsertions, getKaiaLDBOptionsForBatchX(64)},
 	}
-	for _, bm := range putKlayOptions {
+	for _, bm := range putKaiaOptions {
 		b.Run(bm.name, func(b *testing.B) {
-			benchmarkKlayOptionsBatch(b, bm.opts, bm.valueLength, bm.numInsertions)
+			benchmarkKaiaOptionsBatch(b, bm.opts, bm.valueLength, bm.numInsertions)
 		})
 	}
 }
@@ -340,7 +340,7 @@ func benchmarkIdealBatchSize(b *testing.B, bm idealBatchBM) {
 	dir := genTempDirForTestDB(b)
 	defer os.RemoveAll(dir)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	db, err := NewLevelDBWithOption(dir, opts)
 	require.NoError(b, err)
 	defer db.Close()

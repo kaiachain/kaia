@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiaMetrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/log"
@@ -103,12 +103,12 @@ type levelDB struct {
 	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
 	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
 
-	compTimer              klaytnmetrics.HybridTimer // Meter for measuring the total time spent in database compaction
-	compReadMeter          metrics.Meter             // Meter for measuring the data read during compaction
-	compWriteMeter         metrics.Meter             // Meter for measuring the data written during compaction
-	diskReadMeter          metrics.Meter             // Meter for measuring the effective amount of data read
-	diskWriteMeter         metrics.Meter             // Meter for measuring the effective amount of data written
-	blockCacheGauge        metrics.Gauge             // Gauge for measuring the current size of block cache
+	compTimer              kaiaMetrics.HybridTimer // Meter for measuring the total time spent in database compaction
+	compReadMeter          metrics.Meter           // Meter for measuring the data read during compaction
+	compWriteMeter         metrics.Meter           // Meter for measuring the data written during compaction
+	diskReadMeter          metrics.Meter           // Meter for measuring the effective amount of data read
+	diskWriteMeter         metrics.Meter           // Meter for measuring the effective amount of data written
+	blockCacheGauge        metrics.Gauge           // Gauge for measuring the current size of block cache
 	openedTablesCountMeter metrics.Meter
 	memCompGauge           metrics.Gauge // Gauge for tracking the number of memory compaction
 	level0CompGauge        metrics.Gauge // Gauge for tracking the number of table compaction in level0
@@ -122,9 +122,9 @@ type levelDB struct {
 	levelDurationsGauge []metrics.Gauge
 
 	perfCheck       bool
-	getTimer        klaytnmetrics.HybridTimer
-	putTimer        klaytnmetrics.HybridTimer
-	batchWriteTimer klaytnmetrics.HybridTimer
+	getTimer        kaiaMetrics.HybridTimer
+	putTimer        kaiaMetrics.HybridTimer
+	batchWriteTimer kaiaMetrics.HybridTimer
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -363,7 +363,7 @@ func (db *levelDB) Meter(prefix string) {
 	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
 	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
 	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
-	db.compTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"compaction/time", nil)
+	db.compTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
@@ -372,9 +372,9 @@ func (db *levelDB) Meter(prefix string) {
 
 	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
 
-	db.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
-	db.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
-	db.batchWriteTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
+	db.getTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	db.putTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	db.batchWriteTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
 
 	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
 	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)

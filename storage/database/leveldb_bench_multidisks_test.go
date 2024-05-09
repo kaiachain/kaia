@@ -58,7 +58,7 @@ func benchmark_MDP_Put_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	dirs := genDirForMDPTest(b, mdo.numDisks, mdo.numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -94,7 +94,7 @@ func benchmark_MDP_Put_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -167,7 +167,7 @@ func benchmark_MDP_Batch_GoRoutine(b *testing.B, mdo *multiDiskOption) {
 	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -222,7 +222,7 @@ func benchmark_MDP_Batch_NoGoRoutine(b *testing.B, mdo *multiDiskOption) {
 	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -318,7 +318,7 @@ func benchmark_MDP_Get_NoGoRotine(b *testing.B, mdo *multiDiskOption, numReads i
 	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -357,7 +357,7 @@ func benchmark_MDP_Get_GoRoutine(b *testing.B, mdo *multiDiskOption, numReads in
 	dirs := genDirForMDPTest(b, numDisks, numShards)
 	defer removeDirs(dirs)
 
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	databases := genDatabases(b, dirs, opts)
 	defer closeDBs(databases)
 
@@ -458,7 +458,7 @@ func Benchmark_MDP_Parallel_Get(b *testing.B) {
 			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
-			opts := getKlayLDBOptions()
+			opts := getKaiaLDBOptions()
 			databases := genDatabases(b, dirs, opts)
 			defer closeDBs(databases)
 
@@ -498,7 +498,7 @@ func Benchmark_MDP_Parallel_Put(b *testing.B) {
 			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
-			opts := getKlayLDBOptions()
+			opts := getKaiaLDBOptions()
 			databases := genDatabases(b, dirs, opts)
 			defer closeDBs(databases)
 
@@ -532,7 +532,7 @@ func Benchmark_MDP_Parallel_Batch(b *testing.B) {
 			dirs := genDirForMDPTest(b, numDisks, numShards)
 			defer removeDirs(dirs)
 
-			opts := getKlayLDBOptions()
+			opts := getKaiaLDBOptions()
 			databases := genDatabases(b, dirs, opts)
 			defer closeDBs(databases)
 

@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiaMetrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -106,8 +106,8 @@ type dynamoDB struct {
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	getTimer klaytnmetrics.HybridTimer
-	putTimer klaytnmetrics.HybridTimer
+	getTimer kaiaMetrics.HybridTimer
+	putTimer kaiaMetrics.HybridTimer
 }
 
 type DynamoData struct {
@@ -442,8 +442,8 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	dynamo.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
-	dynamo.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	dynamo.getTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	dynamo.putTimer = kaiaMetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
