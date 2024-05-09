@@ -19,7 +19,7 @@ package downloader
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/node/cn/snap"
@@ -55,8 +55,8 @@ func (*FakeDownloader) Terminate() {}
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	return nil
 }
-func (*FakeDownloader) Progress() klaytn.SyncProgress { return klaytn.SyncProgress{} }
-func (*FakeDownloader) Cancel()                       {}
+func (*FakeDownloader) Progress() kaia.SyncProgress { return kaia.SyncProgress{} }
+func (*FakeDownloader) Cancel()                     {}
 
 func (*FakeDownloader) GetSnapSyncer() *snap.Syncer                      { return nil }
 func (*FakeDownloader) SyncStakingInfo(id string, from, to uint64) error { return nil }
