@@ -99,7 +99,7 @@ func makeTxsWithNonceMap(isGenerate bool, nonceMap map[common.Address]uint64, fr
 
 	var transferValue *big.Int
 	if isGenerate {
-		transferValue = new(big.Int).Mul(big.NewInt(1e4), big.NewInt(params.KLAY))
+		transferValue = new(big.Int).Mul(big.NewInt(1e4), big.NewInt(params.KAIA))
 	} else {
 		transferValue = new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.Peb))
 	}

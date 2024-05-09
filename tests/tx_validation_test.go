@@ -1998,7 +1998,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 			types.TxValueKeyNonce:    reservoir.GetNonce(),
 			types.TxValueKeyFrom:     reservoir.GetAddr(),
 			types.TxValueKeyTo:       feePayer.Addr,
-			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
+			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(100000)),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: big.NewInt(25 * params.Ston),
 		}

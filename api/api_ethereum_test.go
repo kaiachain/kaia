@@ -2452,7 +2452,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		account2 = common.HexToAddress("0xbbbb")
 		account3 = common.HexToAddress("0xcccc")
 		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-			account1: {Balance: big.NewInt(params.KLAY * 2)},
+			account1: {Balance: big.NewInt(params.KAIA * 2)},
 			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
 		}, Config: chainConfig}
@@ -2465,9 +2465,9 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		chain  = &testChainContext{header: header}
 
 		// tx arguments
-		KLAY     = hexutil.Big(*big.NewInt(params.KLAY))
-		mKLAY    = hexutil.Big(*big.NewInt(params.KLAY / 1000))
-		KLAY2_1  = hexutil.Big(*big.NewInt(params.KLAY*2 + 1))
+		KLAY     = hexutil.Big(*big.NewInt(params.KAIA))
+		mKLAY    = hexutil.Big(*big.NewInt(params.KAIA / 1000))
+		KLAY2_1  = hexutil.Big(*big.NewInt(params.KAIA*2 + 1))
 		gas1000  = hexutil.Uint64(1000)
 		gas40000 = hexutil.Uint64(40000)
 		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))

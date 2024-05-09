@@ -23,7 +23,7 @@ func TestReadRegistry(t *testing.T) {
 
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
-				Balance: big.NewInt(params.KLAY),
+				Balance: big.NewInt(params.KAIA),
 			},
 			RegistryAddr: {
 				Code:    RegistryMockCode,
@@ -74,7 +74,7 @@ func TestAllocRegistry(t *testing.T) {
 
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
-				Balance: big.NewInt(params.KLAY),
+				Balance: big.NewInt(params.KAIA),
 			},
 			RegistryAddr: {
 				Code:    RegistryMockCode,

@@ -146,7 +146,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 	// TxTypeValueTransfer
 	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -168,7 +168,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 	// TxTypeFeeDelegatedValueTransfer
 	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,

@@ -135,7 +135,7 @@ func TestGasCalculation(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.GetNonce(),
 			accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -158,7 +158,7 @@ func TestGasCalculation(t *testing.T) {
 		{
 			var txs types.Transactions
 
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				anon.Addr, amount, gasLimit, gasPrice, []byte{})
 

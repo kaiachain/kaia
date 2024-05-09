@@ -1423,7 +1423,7 @@ func TestAccessListTx(t *testing.T) {
 		gspec        = &Genesis{
 			Config: config,
 			Alloc: GenesisAlloc{
-				senderAddr: {Balance: big.NewInt(params.KLAY)},
+				senderAddr: {Balance: big.NewInt(params.KAIA)},
 				contractAddr: { // SLOAD 0x00 and 0x01
 					Code: []byte{
 						byte(vm.PC),
@@ -1499,7 +1499,7 @@ func TestEIP3651(t *testing.T) {
 		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
-		funds   = new(big.Int).Mul(common.Big1, big.NewInt(params.KLAY))
+		funds   = new(big.Int).Mul(common.Big1, big.NewInt(params.KAIA))
 		gspec   = &Genesis{
 			Config: params.CypressChainConfig.Copy(),
 			Alloc: GenesisAlloc{

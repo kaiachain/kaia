@@ -65,7 +65,7 @@ var blockchainTestChainConfig = &params.ChainConfig{
 	Governance: &params.GovernanceConfig{
 		GovernanceMode: "none",
 		Reward: &params.RewardConfig{
-			MintingAmount:          big.NewInt(params.KLAY * 6.4),
+			MintingAmount:          big.NewInt(params.KAIA * 6.4),
 			Ratio:                  "100/0/0",
 			Kip82Ratio:             "20/80",
 			UseGiniCoeff:           false,
@@ -140,7 +140,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 	vanity := make([]byte, types.IstanbulExtraVanity)
 
 	// Genesis Alloc from overrides.alloc + rich accountAddrs
-	richBalance := new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(10_000_000))
+	richBalance := new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(10_000_000))
 	for _, addr := range ctx.accountAddrs {
 		account := alloc[addr]
 		account.Balance = richBalance

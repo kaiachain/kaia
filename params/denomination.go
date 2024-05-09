@@ -30,10 +30,10 @@ const (
 	Mpeb     = 1e6  // same
 	Gpeb     = 1e9  // same
 	Ston     = 1e9  // official notation 'ston'
-	UKLAY    = 1e12 // official notation 'uKLAY'
-	MiliKLAY = 1e15 // official notation 'mKLAY'
-	KLAY     = 1e18 // same
-	KKLAY    = 1e21 // official notation 'kKLAY'
-	MKLAY    = 1e24 // same
-	GKLAY    = 1e27 // same
+	UKAIA    = 1e12 // official notation 'uKAIA'
+	MiliKAIA = 1e15 // official notation 'mKAIA'
+	KAIA     = 1e18 // same
+	KKAIA    = 1e21 // official notation 'kKAIA'
+	MKAIA    = 1e24 // same
+	GKAIA    = 1e27 // same
 )

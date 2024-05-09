@@ -213,7 +213,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 	// Get balance of stakingAddrs
 	stakingAmounts := make([]uint64, len(stakingAddrs))
 	for i, stakingAddr := range stakingAddrs {
-		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
+		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KAIA))
 		if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
 			tempStakingAmount.SetUint64(maxStakingLimit)
 		}

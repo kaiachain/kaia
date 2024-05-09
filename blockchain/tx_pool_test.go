@@ -281,7 +281,7 @@ func (c *testChain) State() (*state.StateDB, error) {
 		c.statedb, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		// simulate that the new head block included tx0 and tx1
 		c.statedb.SetNonce(c.address, 2)
-		c.statedb.SetBalance(c.address, new(big.Int).SetUint64(params.KLAY))
+		c.statedb.SetBalance(c.address, new(big.Int).SetUint64(params.KAIA))
 		*c.trigger = false
 	}
 	return stdb, nil
@@ -301,7 +301,7 @@ func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 	)
 
 	// setup pool with 2 transaction in it
-	statedb.SetBalance(address, new(big.Int).SetUint64(params.KLAY))
+	statedb.SetBalance(address, new(big.Int).SetUint64(params.KAIA))
 	blockchain := &testChain{&testBlockChain{statedb, 1000000000, new(event.Feed)}, address, &trigger}
 
 	tx0 := transaction(0, 100000, key)
@@ -367,7 +367,7 @@ func TestHomesteadTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1", from.String())
 
-	testAddBalance(pool, from, new(big.Int).Mul(big.NewInt(10), big.NewInt(params.KLAY)))
+	testAddBalance(pool, from, new(big.Int).Mul(big.NewInt(10), big.NewInt(params.KAIA)))
 	err = pool.AddRemote(tx)
 	assert.NoError(t, err)
 }

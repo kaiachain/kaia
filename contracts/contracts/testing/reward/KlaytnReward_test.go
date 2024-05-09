@@ -38,7 +38,7 @@ func TestSmartContract(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	initialValue := big.NewInt(params.KLAY)
+	initialValue := big.NewInt(params.KAIA)
 	withdrawValue := big.NewInt(500000000)
 
 	alloc := blockchain.GenesisAlloc{auth.From: {Balance: initialValue}, auth2.From: {Balance: initialValue}}

@@ -150,9 +150,9 @@ func TestBridgeManager(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		alice.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		alice.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -379,9 +379,9 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		alice.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		alice.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -951,11 +951,11 @@ func TestBasicJournal(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KLAY)},
-		auth2.From:            {Balance: big.NewInt(params.KLAY)},
-		auth4.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KAIA)},
+		auth2.From:            {Balance: big.NewInt(params.KAIA)},
+		auth4.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1032,11 +1032,11 @@ func TestMethodRestoreBridges(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KLAY)},
-		auth2.From:            {Balance: big.NewInt(params.KLAY)},
-		auth4.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KAIA)},
+		auth2.From:            {Balance: big.NewInt(params.KAIA)},
+		auth4.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1257,11 +1257,11 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KLAY)},
-		auth2.From:            {Balance: big.NewInt(params.KLAY)},
-		auth4.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KAIA)},
+		auth2.From:            {Balance: big.NewInt(params.KAIA)},
+		auth4.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1324,11 +1324,11 @@ func TestScenarioSubUnsub(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KLAY)},
-		auth2.From:            {Balance: big.NewInt(params.KLAY)},
-		auth4.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KAIA)},
+		auth2.From:            {Balance: big.NewInt(params.KAIA)},
+		auth4.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1430,11 +1430,11 @@ func TestErrorDupSubscription(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KLAY)},
-		auth2.From:            {Balance: big.NewInt(params.KLAY)},
-		auth4.From:            {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		auth.From:             {Balance: big.NewInt(params.KAIA)},
+		auth2.From:            {Balance: big.NewInt(params.KAIA)},
+		auth4.From:            {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -2022,10 +2022,10 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	bacc.cAccount.chainID = big.NewInt(0)
 
 	alloc := blockchain.GenesisAlloc{
-		alice.From:            {Balance: big.NewInt(params.KLAY)},
-		bob.From:              {Balance: big.NewInt(params.KLAY)},
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		alice.From:            {Balance: big.NewInt(params.KAIA)},
+		bob.From:              {Balance: big.NewInt(params.KAIA)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -2487,8 +2487,8 @@ func TestBridgeAddressType(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -2677,8 +2677,8 @@ func TestGetBridgeContractBalance(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		bacc.pAccount.address: {Balance: big.NewInt(params.KLAY)},
-		bacc.cAccount.address: {Balance: big.NewInt(params.KLAY)},
+		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
+		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()

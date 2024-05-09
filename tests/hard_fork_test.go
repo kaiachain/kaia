@@ -201,7 +201,7 @@ func genBlocks(t *testing.T) {
 		var txs types.Transactions
 		// Preparing step. Send KAIA to LegacyAccount.
 		{
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -222,7 +222,7 @@ func genBlocks(t *testing.T) {
 			accountTypes[i].account.SetAddr(anon.Addr)
 
 			{
-				amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+				amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 				tx := types.NewTransaction(reservoir.GetNonce(),
 					accountTypes[i].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 

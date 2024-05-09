@@ -660,9 +660,9 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 
 	// Alloc genesis and create a simulator.
 	alloc := blockchain.GenesisAlloc{
-		cAcc.From:      {Balance: big.NewInt(params.KLAY)},
-		pAcc.From:      {Balance: big.NewInt(params.KLAY)},
-		aliceAuth.From: {Balance: big.NewInt(params.KLAY)},
+		cAcc.From:      {Balance: big.NewInt(params.KAIA)},
+		pAcc.From:      {Balance: big.NewInt(params.KAIA)},
+		aliceAuth.From: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 

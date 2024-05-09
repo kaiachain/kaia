@@ -173,7 +173,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config 
 		genesis.Config = params.CypressChainConfig.Copy()
 		genesis.Config.Istanbul.SubGroupSize = 1
 		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 	} else {
 		genesis.Config = config
 	}
