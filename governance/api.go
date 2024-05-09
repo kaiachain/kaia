@@ -445,7 +445,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 }
 
 // Disabled APIs
-// func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+// func (api *GovernanceKaiaAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 // 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 // 		// If the value hasn't been set in governance, set it with default value
 // 		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
@@ -469,7 +469,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 // 	}
 // }
 //
-// func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+// func (api *GovernanceKaiaAPI) setDefaultTxGasHumanReadable() (uint64, error) {
 // 	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
 // 	if err != nil {
 // 		return 0, errSetDefaultFailure

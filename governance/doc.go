@@ -30,7 +30,7 @@ In the console of the node, "governance.vote(key, value)" API can be used to cas
 Following keys can be handled as of 7/20/2019.
   - "governance.governancemode"   : To change the governance mode
   - "governance.governingnode"    : To change the governing node if the governance mode is "single"
-  - "governance.unitprice"        : To change the unitprice of Klaytn (Unit price is same as gasprice in Ethereum)
+  - "governance.unitprice"        : To change the unitprice of Kaia (Unit price is same as gasprice in Ethereum)
   - "governance.addvalidator"     : To add new node as a council node
   - "governance.removevalidator"  : To remove a node from the governance council
   - "istanbul.epoch"              : To change Epoch, the period to gather votes
