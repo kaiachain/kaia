@@ -119,7 +119,7 @@ func TestWSAttachWelcome(t *testing.T) {
 	kaia.Kill()
 }
 
-func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
+func testAttachWelcome(t *testing.T, klay *testKaia, endpoint, apis string) {
 	// Attach to a running Kaia node and terminate immediately
 	attach := runKaia(t, "kaia-test", "attach", endpoint)
 	defer attach.ExpectExit()

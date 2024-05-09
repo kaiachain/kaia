@@ -318,7 +318,7 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	cfg := utils.KlayConfig{Node: utils.DefaultNodeConfig()}
+	cfg := utils.KaiaConfig{Node: utils.DefaultNodeConfig()}
 	// Load config file.
 	if file := ctx.String(utils.ConfigFileFlag.Name); file != "" {
 		if err := utils.LoadConfig(file, &cfg); err != nil {

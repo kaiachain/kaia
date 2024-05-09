@@ -47,7 +47,7 @@ func tmpdir(t *testing.T) string {
 	return dir
 }
 
-type testklay struct {
+type testKaia struct {
 	*utils.TestCmd
 
 	// template variables for expect
@@ -69,7 +69,7 @@ func init() {
 	// Initialize the CLI app and start Kaia
 	app.Action = RunKaiaNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Commands = []*cli.Command{
 		// See chaincmd.go:
 		InitCommand,
@@ -119,7 +119,7 @@ func init() {
 		os.Exit(0)
 	})
 	reexec.Register("kaia-test-flag", func() {
-		app.Action = RunTestKlaytnNode
+		app.Action = RunTestKaiaNode
 		if err := app.Run(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -138,8 +138,8 @@ func TestMain(m *testing.M) {
 
 // spawns Kaia with the given command line args. If the args don't set --datadir, the
 // child g gets a temporary data directory.
-func runKaia(t *testing.T, name string, args ...string) *testklay {
-	tt := &testklay{}
+func runKaia(t *testing.T, name string, args ...string) *testKaia {
+	tt := &testKaia{}
 	tt.TestCmd = utils.NewTestCmd(t, tt)
 	for i, arg := range args {
 		switch {
@@ -197,7 +197,7 @@ func waitForEndpoint(t *testing.T, endpoint string, timeout time.Duration) {
 	}
 }
 
-func RunTestKlaytnNode(ctx *cli.Context) error {
+func RunTestKaiaNode(ctx *cli.Context) error {
 	fullNode := MakeFullNode(ctx)
 	fullNode.Wait()
 	return nil

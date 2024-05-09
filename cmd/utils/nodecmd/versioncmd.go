@@ -44,7 +44,7 @@ var VersionCommand = &cli.Command{
 }
 
 func version(ctx *cli.Context) error {
-	fmt.Print("Klaytn ")
+	fmt.Print("Kaia ")
 	if gitTag != "" {
 		// stable version
 		fmt.Println(params.Version)
