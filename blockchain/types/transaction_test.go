@@ -960,101 +960,86 @@ func TestFilterTransactionWithBaseFee(t *testing.T) {
 	assert.Equal(t, len(pending[from3]), 0)
 }
 
-func BenchmarkTxSortByTime30000(b *testing.B) { benchmarkTxSortByTime(b, 30000) }
-func BenchmarkTxSortByTime20000(b *testing.B) { benchmarkTxSortByTime(b, 20000) }
-func benchmarkTxSortByTime(b *testing.B, size int) {
+// go test -bench=BenchmarkSortTxsByPriceAndTime -benchtime=10x
+func BenchmarkSortTxsByPriceAndTime20000(b *testing.B) { benchmarkSortTxsByPriceAndTime(b, 20000) }
+func BenchmarkSortTxsByPriceAndTime10000(b *testing.B) { benchmarkSortTxsByPriceAndTime(b, 10000) }
+func BenchmarkSortTxsByPriceAndTime100(b *testing.B)   { benchmarkSortTxsByPriceAndTime(b, 100) }
+func benchmarkSortTxsByPriceAndTime(b *testing.B, size int) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
-	batches := make(Transactions, size)
 
-	for i := 0; i < size; i++ {
-		batches[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
+	// make size to be even
+	if size%2 == 1 {
+		size += 1
 	}
+	txs := make(Transactions, size)
 
-	// Shuffle transactions.
-	rand.Shuffle(len(batches), func(i, j int) {
-		batches[i], batches[j] = batches[j], batches[i]
-	})
-
-	// Benchmark importing the transactions into the queue
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		sort.Sort(TxByPriceAndTime(batches))
-	}
-}
-
-func BenchmarkTxSortByTimeDynamicFee30000(b *testing.B) { benchmarkTxSortByTimeDynamicFee(b, 30000) }
-func BenchmarkTxSortByTimeDynamicFee20000(b *testing.B) { benchmarkTxSortByTimeDynamicFee(b, 20000) }
-func benchmarkTxSortByTimeDynamicFee(b *testing.B, size int) {
-	signer := LatestSignerForChainID(big.NewInt(1))
-
-	key, _ := crypto.GenerateKey()
-	batches := make(Transactions, size)
-
-	for i := 0; i < size; i++ {
-		gasFeeCap := rand.Intn(50)
-		tx, _ := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
+	for i := 0; i < size; i += 2 {
+		gasFeeCap := rand.Int63n(50)
+		txs[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(25*params.Ston), nil), signer, key)
+		txs[i+1], _ = SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 			AccountNonce: uint64(i),
 			Recipient:    &common.Address{},
 			Amount:       big.NewInt(100),
 			GasLimit:     100,
-			GasFeeCap:    big.NewInt(int64(gasFeeCap)),
-			GasTipCap:    big.NewInt(int64(rand.Intn(gasFeeCap + 1))),
+			GasFeeCap:    big.NewInt(int64(25*params.Ston) + gasFeeCap),
+			GasTipCap:    big.NewInt(gasFeeCap),
 			Payload:      nil,
 		}), signer, key)
-		batches[i] = tx
 	}
-
-	// Should be already shuffled, but shuffle transactions anyway.
-	rand.Seed(time.Now().Unix())
-	rand.Shuffle(len(batches), func(i, j int) {
-		batches[i], batches[j] = batches[j], batches[i]
-	})
 
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		sort.Sort(TxByPriceAndTime(batches))
+		rand.Shuffle(size, func(i, j int) {
+			txs[i], txs[j] = txs[j], txs[i]
+		})
+		txs = SortTxsByPriceAndTime(txs, big.NewInt(25*params.Ston))
 	}
 }
 
-func BenchmarkTxSortByPrice30000(b *testing.B) { benchmarkTxSortByPrice(b, 30000) }
-func BenchmarkTxSortByPrice20000(b *testing.B) { benchmarkTxSortByPrice(b, 20000) }
-func benchmarkTxSortByPrice(b *testing.B, size int) {
+// go test -bench=BenchmarkTxSortByEffectivePriceAndTime -benchtime=10x
+func BenchmarkTxSortByEffectivePriceAndTime20000(b *testing.B) {
+	benchmarkTxSortByEffectivePriceAndTime(b, 20000)
+}
+
+func BenchmarkTxSortByEffectivePriceAndTime10000(b *testing.B) {
+	benchmarkTxSortByEffectivePriceAndTime(b, 10000)
+}
+
+func BenchmarkTxSortByEffectivePriceAndTime100(b *testing.B) {
+	benchmarkTxSortByEffectivePriceAndTime(b, 100)
+}
+
+func benchmarkTxSortByEffectivePriceAndTime(b *testing.B, size int) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
 	batches := make(txByEffectivePriceAndTime, size)
 
 	for i := 0; i < size; i++ {
-		gasFeeCap := rand.Intn(50)
+		gasFeeCap := rand.Int63n(50)
 		tx, _ := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 			AccountNonce: uint64(i),
 			Recipient:    &common.Address{},
 			Amount:       big.NewInt(100),
 			GasLimit:     100,
-			GasFeeCap:    big.NewInt(int64(gasFeeCap)),
-			GasTipCap:    big.NewInt(int64(rand.Intn(gasFeeCap + 1))),
+			GasFeeCap:    big.NewInt(int64(25*params.Ston) + gasFeeCap),
+			GasTipCap:    big.NewInt(gasFeeCap),
 			Payload:      nil,
 		}), signer, key)
-		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, nil)
+		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(25*params.Ston))
 		batches[i] = txWithFee
 	}
 
-	// Should be already shuffled, but shuffle transactions anyway.
-	rand.Seed(time.Now().Unix())
-	rand.Shuffle(len(batches), func(i, j int) {
-		batches[i], batches[j] = batches[j], batches[i]
-	})
-
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		sort.Sort(txByEffectivePriceAndTime(batches))
+		rand.Shuffle(len(batches), func(i, j int) {
+			batches[i], batches[j] = batches[j], batches[i]
+		})
+		sort.Sort(batches)
 	}
 }
 

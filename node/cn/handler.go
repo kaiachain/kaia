@@ -28,7 +28,6 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime/debug"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1295,10 +1294,11 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByTime(txs)) {
-		sort.Sort(types.TxByTime(txs))
+	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
+	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
+		baseFee = pm.blockchain.CurrentHeader().BaseFee
 	}
-
+	txs = types.SortTxsByPriceAndTime(txs, baseFee)
 	switch pm.nodetype {
 	case common.CONSENSUSNODE:
 		pm.broadcastTxsFromCN(txs)
@@ -1381,12 +1381,11 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 		return
 	}
 
-	// This function calls sendTransaction() to broadcast the transactions for each peer.
-	// In that case, transactions are sorted for each peer in sendTransaction().
-	// Therefore, it prevents sorting transactions by each peer.
-	if !sort.IsSorted(types.TxByTime(txs)) {
-		sort.Sort(types.TxByTime(txs))
+	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
+	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
+		baseFee = pm.blockchain.CurrentHeader().BaseFee
 	}
+	txs = types.SortTxsByPriceAndTime(txs, baseFee)
 
 	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {

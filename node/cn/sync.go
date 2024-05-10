@@ -21,6 +21,7 @@
 package cn
 
 import (
+	"math/big"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (
@@ -55,6 +57,11 @@ func (pm *ProtocolManager) syncTransactions(p Peer) {
 	if len(txs) == 0 {
 		return
 	}
+	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
+	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
+		baseFee = pm.blockchain.CurrentHeader().BaseFee
+	}
+	txs = types.SortTxsByPriceAndTime(txs, baseFee)
 	select {
 	case pm.txsyncCh <- &txsync{p, txs}:
 	case <-pm.quitSync:

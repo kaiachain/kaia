@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -898,54 +899,6 @@ func (s TxByNonce) Less(i, j int) bool {
 }
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-type TxByTime Transactions
-
-func (s TxByTime) Len() int { return len(s) }
-func (s TxByTime) Less(i, j int) bool {
-	// Use the time the transaction was first seen for deterministic sorting
-	return s[i].time.Before(s[j].time)
-}
-func (s TxByTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-func (s *TxByTime) Push(x interface{}) {
-	*s = append(*s, x.(*Transaction))
-}
-
-func (s *TxByTime) Pop() interface{} {
-	old := *s
-	n := len(old)
-	x := old[n-1]
-	*s = old[0 : n-1]
-	return x
-}
-
-// TxByPriceAndTime implements both the sort and the heap interface, making it useful
-// for all at once sorting as well as individually adding and removing elements.
-type TxByPriceAndTime Transactions
-
-func (s TxByPriceAndTime) Len() int { return len(s) }
-func (s TxByPriceAndTime) Less(i, j int) bool {
-	// Use the time the transaction was first seen for deterministic sorting
-	cmp := s[i].GasPrice().Cmp(s[j].GasPrice())
-	if cmp == 0 {
-		return s[i].time.Before(s[j].time)
-	}
-	return cmp > 0
-}
-func (s TxByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-func (s *TxByPriceAndTime) Push(x interface{}) {
-	*s = append(*s, x.(*Transaction))
-}
-
-func (s *TxByPriceAndTime) Pop() interface{} {
-	old := *s
-	n := len(old)
-	x := old[n-1]
-	*s = old[0 : n-1]
-	return x
-}
-
 // txWithMinerFee wraps a transaction with its gas price or effective miner gasTipCap
 type txWithMinerFee struct {
 	tx   *Transaction
@@ -1003,6 +956,31 @@ func (s *txByEffectivePriceAndTime) Pop() interface{} {
 	return x
 }
 
+// SortTxsByPriceAndTime is used to sort the txs by expected effectiveGasTip and arrival time.
+// It is called on the process of txs broadcasting. There's three points when this function called.
+// (1) BroadcastTxs: before broadcasting txs to the peers
+// (2) RebroadcastTxs: before rebroadcasting the remaining pending txs to the peers
+// (3) syncTransactions: before sending the all pending txs to the newly connected peer
+func SortTxsByPriceAndTime(txs Transactions, baseFee *big.Int) Transactions {
+	sortedTxsWithMinerFee := make(txByEffectivePriceAndTime, len(txs))
+	for i, tx := range txs {
+		sortedTxsWithMinerFee[i] = &txWithMinerFee{tx, common.Address{}, tx.EffectiveGasTip(baseFee)}
+	}
+
+	// If already sorted, just return original txs.
+	if sort.IsSorted(sortedTxsWithMinerFee) {
+		return txs
+	}
+
+	// Sort the batch of txs and derive sortedTxs to return it.
+	sort.Sort(sortedTxsWithMinerFee)
+	sortedTxs := make(Transactions, len(txs))
+	for i, tx := range sortedTxsWithMinerFee {
+		sortedTxs[i] = tx.tx
+	}
+	return sortedTxs
+}
+
 // TransactionsByPriceAndNonce represents a set of transactions that can return
 // transactions in a profit-maximizing sorted order, while supporting removing
 // entire batches of transactions for non-executable accounts.
@@ -1041,7 +1019,7 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 	}
 }
 
-// Peek returns the next transaction by price.
+// Peek returns the next transaction by price and nonce.
 func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 	if len(t.heads) == 0 {
 		return nil
