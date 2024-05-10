@@ -49,7 +49,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		DragonCompatibleBlock:    nil, // TODO-Klaytn-Dragon: set Cypress DragonCompatibleBlock
+		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Cypress KaiaCompatibleBlock
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -91,7 +91,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		CancunCompatibleBlock:    big.NewInt(141367000),
-		DragonCompatibleBlock:    nil, // TODO-Klaytn-Dragon: set Baobab DragonCompatibleBlock
+		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Baobab KaiaCompatibleBlock
 		RandaoCompatibleBlock:    big.NewInt(141367000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -205,7 +205,7 @@ type ChainConfig struct {
 	KoreCompatibleBlock      *big.Int `json:"koreCompatibleBlock,omitempty"`      // KoreCompatible switch block (nil = no fork, 0 already on Kore)
 	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
-	DragonCompatibleBlock    *big.Int `json:"dragonCompatibleBlock,omitempty"`    // DragonCompatible switch block (nil = no fork, 0 already on Dragon)
+	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -329,7 +329,7 @@ func (c *ChainConfig) String() string {
 	kip160 := fmt.Sprintf("KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
 
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -338,7 +338,7 @@ func (c *ChainConfig) String() string {
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
 			c.CancunCompatibleBlock,
-			c.DragonCompatibleBlock,
+			c.KaiaCompatibleBlock,
 			c.RandaoCompatibleBlock,
 			kip103,
 			kip160,
@@ -348,7 +348,7 @@ func (c *ChainConfig) String() string {
 			engine,
 		)
 	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v DragonCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
+		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
 			c.ChainID,
 			c.IstanbulCompatibleBlock,
 			c.LondonCompatibleBlock,
@@ -357,7 +357,7 @@ func (c *ChainConfig) String() string {
 			c.KoreCompatibleBlock,
 			c.ShanghaiCompatibleBlock,
 			c.CancunCompatibleBlock,
-			c.DragonCompatibleBlock,
+			c.KaiaCompatibleBlock,
 			c.RandaoCompatibleBlock,
 			kip103,
 			kip160,
@@ -410,9 +410,9 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 	return isForked(c.CancunCompatibleBlock, num)
 }
 
-// IsDragonForkEnabled returns whether num is either equal to the dragon block or greater.
-func (c *ChainConfig) IsDragonForkEnabled(num *big.Int) bool {
-	return isForked(c.DragonCompatibleBlock, num)
+// IsKaiaForkEnabled returns whether num is either equal to the kaia block or greater.
+func (c *ChainConfig) IsKaiaForkEnabled(num *big.Int) bool {
+	return isForked(c.KaiaCompatibleBlock, num)
 }
 
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
@@ -489,7 +489,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
 		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
-		{name: "dragonBlock", block: c.DragonCompatibleBlock},
+		{name: "kaiaBlock", block: c.KaiaCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -536,8 +536,8 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock, head) {
 		return newCompatError("Cancun Block", c.CancunCompatibleBlock, newcfg.CancunCompatibleBlock)
 	}
-	if isForkIncompatible(c.DragonCompatibleBlock, newcfg.DragonCompatibleBlock, head) {
-		return newCompatError("Dragon Block", c.DragonCompatibleBlock, newcfg.DragonCompatibleBlock)
+	if isForkIncompatible(c.KaiaCompatibleBlock, newcfg.KaiaCompatibleBlock, head) {
+		return newCompatError("Kaia Block", c.KaiaCompatibleBlock, newcfg.KaiaCompatibleBlock)
 	}
 	if isForkIncompatible(c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock, head) {
 		return newCompatError("Randao Block", c.RandaoCompatibleBlock, newcfg.RandaoCompatibleBlock)
@@ -662,7 +662,7 @@ type Rules struct {
 	IsKore      bool
 	IsShanghai  bool
 	IsCancun    bool
-	IsDragon    bool
+	IsKaia      bool
 	IsRandao    bool
 }
 
@@ -681,7 +681,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsKore:      c.IsKoreForkEnabled(num),
 		IsShanghai:  c.IsShanghaiForkEnabled(num),
 		IsCancun:    c.IsCancunForkEnabled(num),
-		IsDragon:    c.IsDragonForkEnabled(num),
+		IsKaia:      c.IsKaiaForkEnabled(num),
 		IsRandao:    c.IsRandaoForkEnabled(num),
 	}
 }

@@ -80,7 +80,7 @@ func (b *testBackend) teardown() {
 
 // newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
 // after use, otherwise the blockchain instance will mem-leak via goroutines.
-func newTestBackend(t *testing.T, magmaBlock, dragonBlock *big.Int) *testBackend {
+func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -97,10 +97,10 @@ func newTestBackend(t *testing.T, magmaBlock, dragonBlock *big.Int) *testBackend
 	config.EthTxTypeCompatibleBlock = magmaBlock
 	config.IstanbulCompatibleBlock = magmaBlock
 	config.MagmaCompatibleBlock = magmaBlock
-	config.KoreCompatibleBlock = dragonBlock
-	config.ShanghaiCompatibleBlock = dragonBlock
-	config.CancunCompatibleBlock = dragonBlock
-	config.DragonCompatibleBlock = dragonBlock
+	config.KoreCompatibleBlock = kaiaBlock
+	config.ShanghaiCompatibleBlock = kaiaBlock
+	config.CancunCompatibleBlock = kaiaBlock
+	config.KaiaCompatibleBlock = kaiaBlock
 	if magmaBlock != nil {
 		config.Governance = params.GetDefaultGovernanceConfig()
 		config.Istanbul = params.GetDefaultIstanbulConfig()
@@ -240,22 +240,22 @@ func TestSuggestTipCap(t *testing.T) {
 	}
 
 	cases := []struct {
-		magmaBlock  *big.Int // Magma fork block number
-		dragonBlock *big.Int // Dragon fork block number
-		expect      *big.Int // Expected gasprice suggestion
+		magmaBlock *big.Int // Magma fork block number
+		kaiaBlock  *big.Int // Kaia fork block number
+		expect     *big.Int // Expected gasprice suggestion
 	}{
 		{nil, nil, big.NewInt(1)}, // If not Magma forked, should return unitPrice (which is 1 for test)
 
-		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Dragon fork, should return 0
+		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Kaia fork, should return 0
 
-		// After Dragon fork
+		// After Kaia fork
 		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Ston * int64(30))},   // Fork point in genesis
 		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Ston * int64(30))},   // Fork point in first block
 		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Ston * int64(30))}, // Fork point in last block
 		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Ston * int64(30))}, // Fork point in the future
 	}
 	for _, c := range cases {
-		testBackend := newTestBackend(t, c.magmaBlock, c.dragonBlock)
+		testBackend := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
 		chainConfig := testBackend.ChainConfig()
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 		oracle := NewOracle(testBackend, config, txPool)

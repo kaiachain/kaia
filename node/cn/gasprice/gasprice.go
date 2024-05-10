@@ -149,8 +149,8 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	}
 
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsDragonForkEnabled(nextNum) {
-		// After Dragon, include suggested tip
+	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
+		// After Kaia, include suggested tip
 		baseFee := gpo.txPool.GasPrice()
 		suggestedTip, err := gpo.SuggestTipCap(ctx)
 		if err != nil {
@@ -177,8 +177,8 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	}
 
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsDragonForkEnabled(nextNum) {
-		// After Dragon, return using fee history.
+	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
+		// After Kaia, return using fee history.
 		// By default config, this will return 60% percentile of last 20 blocks
 		// See node/cn/config.go for the default config.
 		return gpo.suggestTipCapUsingFeeHistory(ctx)
