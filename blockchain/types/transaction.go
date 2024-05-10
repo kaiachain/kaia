@@ -927,12 +927,12 @@ func newTxWithMinerFee(tx *Transaction, from common.Address, baseFee *big.Int) (
 	}, nil
 }
 
-// txByEffectivePriceAndTime implements both the sort and the heap interface, making it useful
+// txByPriceAndTime implements both the sort and the heap interface, making it useful
 // for all at once sorting as well as individually adding and removing elements.
-type txByEffectivePriceAndTime []*txWithMinerFee
+type txByPriceAndTime []*txWithMinerFee
 
-func (s txByEffectivePriceAndTime) Len() int { return len(s) }
-func (s txByEffectivePriceAndTime) Less(i, j int) bool {
+func (s txByPriceAndTime) Len() int { return len(s) }
+func (s txByPriceAndTime) Less(i, j int) bool {
 	// If the prices are equal, use the time the transaction was first seen for
 	// deterministic sorting
 	cmp := s[i].fees.Cmp(s[j].fees)
@@ -941,13 +941,13 @@ func (s txByEffectivePriceAndTime) Less(i, j int) bool {
 	}
 	return cmp > 0
 }
-func (s txByEffectivePriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s txByPriceAndTime) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
-func (s *txByEffectivePriceAndTime) Push(x interface{}) {
+func (s *txByPriceAndTime) Push(x interface{}) {
 	*s = append(*s, x.(*txWithMinerFee))
 }
 
-func (s *txByEffectivePriceAndTime) Pop() interface{} {
+func (s *txByPriceAndTime) Pop() interface{} {
 	old := *s
 	n := len(old)
 	x := old[n-1]
@@ -956,15 +956,16 @@ func (s *txByEffectivePriceAndTime) Pop() interface{} {
 	return x
 }
 
-// SortTxsByPriceAndTime is used to sort the txs by expected effectiveGasTip and arrival time.
+// SortTxsByPriceAndTime is used to sort the txs by expected effectiveGasTip and then arrival time.
 // It is called on the process of txs broadcasting. There's three points when this function called.
 // (1) BroadcastTxs: before broadcasting txs to the peers
 // (2) RebroadcastTxs: before rebroadcasting the remaining pending txs to the peers
 // (3) syncTransactions: before sending the all pending txs to the newly connected peer
 func SortTxsByPriceAndTime(txs Transactions, baseFee *big.Int) Transactions {
-	sortedTxsWithMinerFee := make(txByEffectivePriceAndTime, len(txs))
+	sortedTxsWithMinerFee := make(txByPriceAndTime, len(txs))
 	for i, tx := range txs {
-		sortedTxsWithMinerFee[i] = &txWithMinerFee{tx, common.Address{}, tx.EffectiveGasTip(baseFee)}
+		// fee cannot be negative
+		sortedTxsWithMinerFee[i] = &txWithMinerFee{tx, common.Address{}, math.BigMax(tx.EffectiveGasTip(baseFee), big.NewInt(0))}
 	}
 
 	// If already sorted, just return original txs.
@@ -986,7 +987,7 @@ func SortTxsByPriceAndTime(txs Transactions, baseFee *big.Int) Transactions {
 // entire batches of transactions for non-executable accounts.
 type TransactionsByPriceAndNonce struct {
 	txs     map[common.Address]Transactions // Per account nonce-sorted list of transactions
-	heads   txByEffectivePriceAndTime       // Next transaction for each unique account (price heap)
+	heads   txByPriceAndTime                // Next transaction for each unique account (price heap)
 	signer  Signer                          // Signer for the set of transactions
 	baseFee *big.Int                        // Current base fee
 }
@@ -998,7 +999,7 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions, baseFee *big.Int) *TransactionsByPriceAndNonce {
 	// Initialize a price and received time based heap with the head transactions
-	heads := make(txByEffectivePriceAndTime, 0, len(txs))
+	heads := make(txByPriceAndTime, 0, len(txs))
 	for from, accTxs := range txs {
 		wrapped, err := newTxWithMinerFee(accTxs[0], from, baseFee)
 		if err != nil {

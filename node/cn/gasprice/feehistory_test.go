@@ -53,8 +53,8 @@ func TestFeeHistory(t *testing.T) {
 		{1000, 1000, 1, rpc.PendingBlockNumber, nil, 0, 0, nil},
 		{1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 1, nil},
 	}
-	magmaBlock, dragonBlock := int64(16), int64(20)
-	backend, gov := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(dragonBlock))
+	magmaBlock, kaiaBlock := int64(16), int64(20)
+	backend, gov := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock))
 	defer backend.teardown()
 	for i, c := range cases {
 		config := Config{
@@ -92,7 +92,7 @@ func TestFeeHistory(t *testing.T) {
 		oracle = NewOracle(backend, config, nil, gov)
 
 		atMagmaGovParams, _    = oracle.gov.EffectiveParams(uint64(magmaBlock))
-		afterMagmaGovParams, _ = oracle.gov.EffectiveParams(uint64(magmaBlock))
+		afterMagmaGovParams, _ = oracle.gov.EffectiveParams(uint64(magmaBlock + 1))
 
 		beforeMagmaExpectedBaseFee = big.NewInt(0)
 		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaGovParams.LowerBoundBaseFee()))
@@ -111,7 +111,7 @@ func TestFeeHistory(t *testing.T) {
 	assert.Equal(t, []*big.Int{beforeMagmaExpectedBaseFee, atMagmaExpectedBaseFee, afterMagmaExpectedBaseFee}, baseFee[14:17])
 	assert.Equal(t, []float64{beforeMagmaExpectedGasUsedRatio, atMagmaExpectedGasUsedRatio, afterMagmaExpectedGasUsedRatio}, ratio[14:17])
 
-	// dragon hardfork
+	// kaia hardfork
 	// check the value of reward
 	// assert.Equal(t, <impl>, gasTip[18:21])
 }

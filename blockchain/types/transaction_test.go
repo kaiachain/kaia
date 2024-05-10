@@ -893,7 +893,7 @@ func TestIsSorted(t *testing.T) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
-	batches := make(txByEffectivePriceAndTime, 10)
+	batches := make(txByPriceAndTime, 10)
 
 	for i := 0; i < 10; i++ {
 		tx, _ := SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
@@ -906,8 +906,8 @@ func TestIsSorted(t *testing.T) {
 		batches[i], batches[j] = batches[j], batches[i]
 	})
 
-	sort.Sort(txByEffectivePriceAndTime(batches))
-	assert.True(t, sort.IsSorted(txByEffectivePriceAndTime(batches)))
+	sort.Sort(txByPriceAndTime(batches))
+	assert.True(t, sort.IsSorted(txByPriceAndTime(batches)))
 }
 
 func TestFilterTransactionWithBaseFee(t *testing.T) {
@@ -999,24 +999,15 @@ func benchmarkSortTxsByPriceAndTime(b *testing.B, size int) {
 	}
 }
 
-// go test -bench=BenchmarkTxSortByEffectivePriceAndTime -benchtime=10x
-func BenchmarkTxSortByEffectivePriceAndTime20000(b *testing.B) {
-	benchmarkTxSortByEffectivePriceAndTime(b, 20000)
-}
-
-func BenchmarkTxSortByEffectivePriceAndTime10000(b *testing.B) {
-	benchmarkTxSortByEffectivePriceAndTime(b, 10000)
-}
-
-func BenchmarkTxSortByEffectivePriceAndTime100(b *testing.B) {
-	benchmarkTxSortByEffectivePriceAndTime(b, 100)
-}
-
-func benchmarkTxSortByEffectivePriceAndTime(b *testing.B, size int) {
+// go test -bench=BenchmarkTxSortByPriceAndTime -benchtime=10x
+func BenchmarkTxSortByPriceAndTime20000(b *testing.B) { benchmarkTxSortByPriceAndTime(b, 20000) }
+func BenchmarkTxSortByPriceAndTime10000(b *testing.B) { benchmarkTxSortByPriceAndTime(b, 10000) }
+func BenchmarkTxSortByPriceAndTime100(b *testing.B)   { benchmarkTxSortByPriceAndTime(b, 100) }
+func benchmarkTxSortByPriceAndTime(b *testing.B, size int) {
 	signer := LatestSignerForChainID(big.NewInt(1))
 
 	key, _ := crypto.GenerateKey()
-	batches := make(txByEffectivePriceAndTime, size)
+	batches := make(txByPriceAndTime, size)
 
 	for i := 0; i < size; i++ {
 		gasFeeCap := rand.Int63n(50)
