@@ -197,7 +197,7 @@ func journalProgress(db database.KeyValueWriter, marker []byte, stats *generator
 	}
 	logger.Debug("Journalled generator progress", "progress", logstr)
 
-	// TODO-Klaytn-Snapshot refactor the following db write
+	// TODO-Kaia-Snapshot refactor the following db write
 	if err := db.Put(database.SnapshotGeneratorKey, blob); err != nil {
 		logger.Crit("Failed to store snapshot generator", "err", err)
 	}
@@ -443,7 +443,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 			snapTrie.Update(key, result.vals[i])
 		}
 		root, _ := snapTrie.Commit(nil)
-		// TODO-Klaytn update proper block number
+		// TODO-Kaia update proper block number
 		snapTrieDb.Commit(root, false, 0)
 	}
 	tr := result.tr

@@ -66,7 +66,7 @@ type View struct {
 	Sequence *big.Int
 }
 
-// EncodeRLP serializes a View into the Klaytn RLP format.
+// EncodeRLP serializes a View into the Kaia RLP format.
 func (v *View) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{v.Round, v.Sequence})
 }
@@ -90,7 +90,9 @@ func (v *View) String() string {
 
 // Cmp compares v and y and returns:
 // -1 if v < y
-//  0 if v == y
+//
+//	0 if v == y
+//
 // +1 if v > y
 func (v *View) Cmp(y *View) int {
 	sdiff := v.Sequence.Cmp(y.Sequence)

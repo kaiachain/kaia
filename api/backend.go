@@ -44,7 +44,7 @@ import (
 //
 //go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 type Backend interface {
-	// General Klaytn API
+	// General Kaia API
 	Progress() klaytn.SyncProgress
 	ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)

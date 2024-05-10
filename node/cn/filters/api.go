@@ -60,7 +60,7 @@ type filter struct {
 }
 
 // PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
-// information related to the Klaytn protocol such als blocks, transactions and logs.
+// information related to the Kaia protocol such als blocks, transactions and logs.
 type PublicFilterAPI struct {
 	backend   Backend
 	mux       *event.TypeMux
@@ -328,7 +328,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 }
 
 // FilterCriteria represents a request to create a new filter.
-// Same as klaytn.FilterQuery but with UnmarshalJSON() method.
+// Same as Kaia.FilterQuery but with UnmarshalJSON() method.
 type FilterCriteria klaytn.FilterQuery
 
 // NewFilter creates a new filter and returns the filter id. It can be

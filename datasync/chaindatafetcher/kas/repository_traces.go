@@ -129,7 +129,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		entryTx := getEntryTx(event.Block, txIdx, tx)
 		offset := int64(0)
 
-		// transforms the result into internal transaction which is associated with KLAY transfer recursively.
+		// transforms the result into internal transaction which is associated with KAIA transfer recursively.
 		if receipt.Status == types.ReceiptStatusSuccessful {
 			internalTx, err := transformToInternalTx(trace, &offset, entryTx, true)
 			if err != nil {

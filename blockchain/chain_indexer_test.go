@@ -39,7 +39,7 @@ func TestChainIndexerSingle(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FailedTest Failed test.
+// TODO-Kaia-FailedTest Failed test.
 /*
 // Runs multiple tests with randomized parameters and different number of
 // chain backends.

@@ -405,7 +405,7 @@ type TxInternalDataBaseFee interface {
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
-// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+// TODO-Kaia-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
 	Create(caller ContractRef, code []byte, gas uint64, value *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
 	CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool, codeFormat params.CodeFormat) ([]byte, common.Address, uint64, error)
@@ -413,7 +413,7 @@ type VM interface {
 }
 
 // Since we cannot access the package `blockchain/state` directly, an interface `StateDB` is introduced.
-// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+// TODO-Kaia-Refactoring: Transaction and related data structures should be a new package.
 type StateDB interface {
 	IncNonce(common.Address)
 	Exist(common.Address) bool

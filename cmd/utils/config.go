@@ -133,7 +133,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
 		ServiceChain:     *sc.DefaultServiceChainConfig(),
 	}
 
-	// NOTE-Klaytn : klaytn loads the flags from yaml, not toml
+	// NOTE-Kaia : Kaia loads the flags from yaml, not toml
 	// Load config file.
 	// if file := ctx.String(ConfigFileFlag.Name); file != "" {
 	// 	if err := LoadConfig(file, &cfg); err != nil {
@@ -507,7 +507,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 
 // setKlayConfig applies klay-related command line flags to the config.
 func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
-	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Kaia's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	cfg := &kCfg.CN
 	raiseFDLimit()
@@ -700,7 +700,7 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `baobab` test network's genesis block
 	/*
 		if ctx.Bool(TestnetFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {
@@ -909,7 +909,7 @@ func (kCfg *KlayConfig) SetChainDataFetcherConfig(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASDBConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASDBHostFlag.Name) {
@@ -926,7 +926,7 @@ func checkKASDBConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASCacheURLFlag.Name) {
@@ -940,7 +940,7 @@ func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 	kasConfig := kas.DefaultKASConfig

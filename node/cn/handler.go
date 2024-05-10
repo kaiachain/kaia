@@ -136,8 +136,8 @@ type ProtocolManager struct {
 	syncStop int32
 }
 
-// NewProtocolManager returns a new Klaytn sub protocol manager. The Klaytn sub protocol manages peers capable
-// with the Klaytn network.
+// NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
+// with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config,
@@ -187,7 +187,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		if mode == downloader.FastSync && version < klay63 {
 			continue
 		}
-		// TODO-Klaytn-Snapsync add snapsync and version check here
+		// TODO-Kaia-Snapsync add snapsync and version check here
 		if mode == downloader.SnapSync && version < klay65 {
 			continue
 		}
@@ -464,7 +464,7 @@ func (pm *ProtocolManager) handleSnapPeer(peer *snap.Peer) error {
 	return snap.Handle(pm.blockchain, pm.downloader, peer)
 }
 
-// handle is the callback invoked to manage the life cycle of a Klaytn peer. When
+// handle is the callback invoked to manage the life cycle of a Kaia peer. When
 // this function terminates, the peer is disconnected.
 func (pm *ProtocolManager) handle(p Peer) error {
 	// If the peer has a `snap` extension, wait for it to connect so we can have
@@ -550,7 +550,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	}
 	addr := crypto.PubkeyToAddress(*pubKey)
 
-	// TODO-Klaytn check global worker and peer worker
+	// TODO-Kaia check global worker and peer worker
 	messageChannel := make(chan p2p.Msg, channelSizePerPeer)
 	defer close(messageChannel)
 	errChannel := make(chan error, channelSizePerPeer)
@@ -579,7 +579,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 		// go pm.handleMsg(p, addr, msg)
 
 		//if err := pm.handleMsg(p); err != nil {
-		//	p.Log().Debug("Klaytn message handling failed", "err", err)
+		//	p.Log().Debug("Kaia message handling failed", "err", err)
 		//	return err
 		//}
 	}
@@ -935,7 +935,7 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// Retrieve the requested state entry, stopping if enough was found
-		// TODO-Klaytn-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
+		// TODO-Kaia-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
 		entry, err := pm.blockchain.TrieNode(hash)
 		if len(entry) == 0 || err != nil {
 			// Read the contract code with prefix only to save unnecessary lookups.
@@ -1262,7 +1262,7 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 		logger.Error("Propagating dangling block", "number", block.Number(), "hash", block.Hash())
 		return
 	}
-	// TODO-Klaytn only send all validators + sub(peer) except subset for this block
+	// TODO-Kaia only send all validators + sub(peer) except subset for this block
 	// transfer := peers[:int(math.Sqrt(float64(len(peers))))]
 
 	// Calculate the TD of the block (it's not imported yet, so block.Td is not valid)
@@ -1320,7 +1320,7 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 			continue
 		}
 
-		// TODO-Klaytn Code Check
+		// TODO-Kaia Code Check
 		// peers = peers[:int(math.Sqrt(float64(len(peers))))]
 		half := (len(peers) / 2) + 2
 		peers = samplingPeers(peers, half)
@@ -1342,10 +1342,10 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 	cnPeersWithoutTxs := make(map[Peer]types.Transactions)
 	peersWithoutTxs := make(map[Peer]types.Transactions)
 	for _, tx := range txs {
-		// TODO-Klaytn drop or missing tx
+		// TODO-Kaia drop or missing tx
 		cnPeers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(cnPeers) > 0 {
-			cnPeers = samplingPeers(cnPeers, 2) // TODO-Klaytn optimize pickSize or propagation way
+			cnPeers = samplingPeers(cnPeers, 2) // TODO-Kaia optimize pickSize or propagation way
 			for _, peer := range cnPeers {
 				cnPeersWithoutTxs[peer] = append(cnPeersWithoutTxs[peer], tx)
 			}
@@ -1472,7 +1472,7 @@ func (pm *ProtocolManager) txResendLoop(period uint64, maxTxCount int) {
 func (pm *ProtocolManager) txResend(pending types.Transactions) {
 	txResendRoutineGauge.Update(txResendRoutineGauge.Value() + 1)
 	defer txResendRoutineGauge.Update(txResendRoutineGauge.Value() - 1)
-	// TODO-Klaytn drop or missing tx
+	// TODO-Kaia drop or missing tx
 	if len(pending) > 0 {
 		logger.Debug("Tx Resend", "count", len(pending))
 		pm.ReBroadcastTxs(pending)
@@ -1486,11 +1486,11 @@ func (pm *ProtocolManager) useTxResend() bool {
 	return false
 }
 
-// NodeInfo represents a short summary of the Klaytn sub-protocol metadata
+// NodeInfo represents a short summary of the Kaia sub-protocol metadata
 // known about the host peer.
 type NodeInfo struct {
-	// TODO-Klaytn describe predefined network ID below
-	Network    uint64              `json:"network"`    // Klaytn network ID
+	// TODO-Kaia describe predefined network ID below
+	Network    uint64              `json:"network"`    // Kaia network ID
 	BlockScore *big.Int            `json:"blockscore"` // Total blockscore of the host's blockchain
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules

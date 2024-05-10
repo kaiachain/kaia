@@ -611,7 +611,7 @@ func (t *discoverTask) Do(srv Server) {
 	srv.SetLastLookupToNow()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.Lookup(target, discover.NodeTypeEN) // TODO-Klaytn Supposed dynamicDial discover only en, but type have to get from argument.
+	t.results = srv.Lookup(target, discover.NodeTypeEN) // TODO-Kaia Supposed dynamicDial discover only en, but type have to get from argument.
 }
 
 func (t *discoverTask) String() string {

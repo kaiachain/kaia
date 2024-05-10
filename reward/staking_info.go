@@ -62,7 +62,7 @@ type StakingInfo struct {
 }
 
 // MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
-// TODO-klaytn-Mantle: remove this marshal function when backward-compatibility for KIR/PoC is not needed
+// TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC is not needed
 func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`

@@ -213,7 +213,7 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 }
 
 func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
-	// TODO-Klaytn-Istanbul: EN/PN should not handle consensus msgs.
+	// TODO-Kaia-Istanbul: EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
 		logger.Trace("PN/EN doesn't need to handle timeout messages",
 			"nodeType", c.backend.NodeType().String())

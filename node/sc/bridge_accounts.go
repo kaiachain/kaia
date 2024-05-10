@@ -201,7 +201,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (*keystore.KeyStore, c
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	// If there is no keystore file, this creates a random account and the corresponded password file.
-	// TODO-Klaytn-Servicechain A test-option will be added and this routine will be only executed with it.
+	// TODO-Kaia-Servicechain A test-option will be added and this routine will be only executed with it.
 	if len(ks.Accounts()) == 0 {
 		password := setup.RandStringRunes(params.PasswordLength)
 		acc, err := ks.NewAccount(password)

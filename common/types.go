@@ -324,7 +324,7 @@ func (h Hash) ExtendZero() ExtHash {
 
 /////////// Address
 
-// Address represents the 20 byte address of a Klaytn account.
+// Address represents the 20 byte address of a Kaia account.
 type Address [AddressLength]byte
 
 func EmptyAddress(a Address) bool {
@@ -357,7 +357,7 @@ func IsPrecompiledContractAddress(addr Address) bool {
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Klaytn address or not.
+// Kaia address or not.
 func IsHexAddress(s string) bool {
 	if hasHexPrefix(s) {
 		s = s[2:]

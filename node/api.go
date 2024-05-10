@@ -67,7 +67,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	if server == nil {
 		return false, ErrNodeStopped
 	}
-	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Kaia Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(server, url, false); err != nil {
 		return false, err
 	} else {
@@ -475,7 +475,7 @@ func (s *PublicKlayAPI) ClientVersion() string {
 	return s.stack.Server().Name()
 }
 
-// Sha3 applies the Klaytn sha3 implementation on the input.
+// Sha3 applies the Kaia sha3 implementation on the input.
 // It assumes the input is hex encoded.
 func (s *PublicKlayAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)

@@ -15,6 +15,6 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package benchmarks contains go-benchmark tests to measure performance of Klaytn.
+Package benchmarks contains go-benchmark tests to measure performance of Kaia.
 */
 package benchmarks

@@ -94,7 +94,7 @@ func TestWatchNewFile(t *testing.T) {
 	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantAccounts))
 }
 
-// TODO-Klaytn Disabled because this test fails intermittently in CI (Issue #833)
+// TODO-Kaia Disabled because this test fails intermittently in CI (Issue #833)
 /*
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()

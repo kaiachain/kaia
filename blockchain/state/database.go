@@ -71,7 +71,7 @@ type Database interface {
 	RUnlockGCCachedNode()
 }
 
-// Trie is a Klaytn Merkle Patricia trie.
+// Trie is a Kaia Merkle Patricia trie.
 type Trie interface {
 	// GetKey returns the sha3 preimage of a hashed key that was previously used
 	// to store a value.

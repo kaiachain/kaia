@@ -54,7 +54,7 @@ var (
 	// pendingRequestCount is a total number of concurrent RPC method calls
 	pendingRequestCount int64 = 0
 
-	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
+	// TODO-Kaia: move websocket configurations to Config struct in /network/rpc/server.go
 	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
 	MaxSubscriptionPerWSConn int32 = 3000
 

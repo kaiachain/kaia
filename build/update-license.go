@@ -109,7 +109,7 @@ var (
 	// this text appears at the start of AUTHORS
 	authorsFileHeader = "# This is the official list of go-ethereum authors for copyright purposes.\n\n"
 
-	// ethereumDir is original path referenced by klaytn
+	// ethereumDir is original path referenced by Kaia
 	ethereumDir = map[string]string{
 		"metrics/meter.go":                                   "metrics/meter.go",
 		"metrics/log.go":                                     "metrics/log.go",
@@ -863,7 +863,7 @@ func externalLicenceFile(path string) bool {
 	return false
 }
 
-// getFiles returns all klaytn files
+// getFiles returns all Kaia files
 func getFiles() []string {
 	cmd := exec.Command("git", "ls-tree", "-r", "--name-only", "HEAD")
 	var files []string

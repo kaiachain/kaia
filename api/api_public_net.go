@@ -53,7 +53,7 @@ func (s *PublicNetAPI) PeerCountByType() map[string]uint {
 	return s.net.PeerCountByType()
 }
 
-// Version returns the current klaytn protocol version.
+// Version returns the current Kaia protocol version.
 func (s *PublicNetAPI) Version() string {
 	return fmt.Sprintf("%d", s.networkVersion)
 }

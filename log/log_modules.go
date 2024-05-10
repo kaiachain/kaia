@@ -29,7 +29,7 @@ const StatsReportLimit = 10 * time.Second
 type ModuleID int
 
 // When printID is true, log prints ModuleID instead of ModuleName.
-// TODO-Klaytn This can be controlled by runtime configuration.
+// TODO-Kaia This can be controlled by runtime configuration.
 var printID = true
 
 func GetModuleName(mi ModuleID) string {
@@ -53,7 +53,7 @@ func (mi ModuleID) String() string {
 	return moduleNames[mi]
 }
 
-// NOTE-Klaytn-Log Please add module in lexicographical order.
+// NOTE-Kaia-Log Please add module in lexicographical order.
 const (
 	// 0
 	BaseLogger ModuleID = iota

@@ -44,7 +44,6 @@ import (
 // * SimNode    - An in-memory node
 // * ExecNode   - A child process node
 // * DockerNode - A Docker container node
-//
 type Node interface {
 	// Addr returns the node's address (e.g. an Enode URL)
 	Addr() []byte
@@ -230,7 +229,7 @@ type ServiceContext struct {
 
 // RPCDialer is used when initialising services which need to connect to
 // other nodes in the network (for example a simulated Swarm node which needs
-// to connect to the Klaytn node to resolve ENS names)
+// to connect to the Kaia node to resolve ENS names)
 type RPCDialer interface {
 	DialRPC(id discover.NodeID) (*rpc.Client, error)
 }

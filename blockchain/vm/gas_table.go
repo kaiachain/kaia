@@ -295,7 +295,7 @@ func gasCreate2Eip3860(evm *EVM, contract *Contract, stack *Stack, mem *Memory, 
 }
 
 // Geth Code contains gasExpFrontier and gasExpEip158 both
-// Since eip158 is default in klaytn, both functions are integrated into gasExp functions.
+// Since eip158 is default in Kaia, both functions are integrated into gasExp functions.
 func gasExp(evm *EVM, contract *Contract, stack *Stack, mem *Memory, memorySize uint64) (uint64, error) {
 	expByteLen := uint64((stack.data[stack.len()-2].BitLen() + 7) / 8)
 

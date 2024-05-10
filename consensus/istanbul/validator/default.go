@@ -152,7 +152,7 @@ func (valSet *defaultSet) DemotedList() []istanbul.Validator {
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *defaultSet) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
-	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value or the proposer should be calculated based on `view`
+	// TODO-Kaia-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value or the proposer should be calculated based on `view`
 	proposer := valSet.GetProposer()
 	if proposer == nil {
 		return valSet.List()
@@ -250,7 +250,7 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, istanbul.Valid
 			return i, val
 		}
 	}
-	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
+	// TODO-Kaia-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
 	// logger.Warn("failed to find an address in the validator list",
 	// 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
 	return -1, nil

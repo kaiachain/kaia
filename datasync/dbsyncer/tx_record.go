@@ -140,7 +140,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			createdTx := sa.txHash
 
 			hra := true
-			// TODO-Klaytn need to use humanreable field
+			// TODO-Kaia need to use humanreable field
 			internalTx, ok := sa.tx.GetTxInternalData().(*types.TxInternalDataAccountCreation)
 			if !ok {
 				logger.Error("fail to convert TxInternalDataAccountCreation", "txhash", sa.tx.Hash().Hex())
@@ -159,7 +159,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			creator := sa.from
 			createdTx := sa.txHash
 
-			// TODO-Klaytn need to use humanreable field
+			// TODO-Kaia need to use humanreable field
 			hra := false
 
 			switch internalTx := sa.tx.GetTxInternalData().(type) {

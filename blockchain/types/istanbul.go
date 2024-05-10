@@ -46,7 +46,7 @@ type IstanbulExtra struct {
 	CommittedSeal [][]byte
 }
 
-// EncodeRLP serializes the istanbul fields into the Klaytn RLP format.
+// EncodeRLP serializes the istanbul fields into the Kaia RLP format.
 func (ist *IstanbulExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,

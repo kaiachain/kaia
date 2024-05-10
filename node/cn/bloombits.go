@@ -93,7 +93,7 @@ const (
 )
 
 // BloomIndexer implements a blockchain.ChainIndexer, building up a rotated bloom bits index
-// for the Klaytn header bloom filters, permitting blazing fast filtering.
+// for the Kaia header bloom filters, permitting blazing fast filtering.
 type BloomIndexer struct {
 	size uint64 // section size to generate bloombits for
 

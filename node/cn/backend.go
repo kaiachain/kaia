@@ -98,7 +98,7 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 }
 
-// CN implements the Klaytn consensus node service.
+// CN implements the Kaia consensus node service.
 type CN struct {
 	config      *Config
 	chainConfig *params.ChainConfig
@@ -323,7 +323,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	// TODO-Klaytn-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
+	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
@@ -374,7 +374,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			istBackend.SetChain(cn.blockchain)
 		}
 	} else {
-		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
+		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
 		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
 	}
 
@@ -385,12 +385,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use latest unitPrice
+	// NOTE-Kaia Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
-	//@TODO Klaytn add core component
+	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
@@ -495,7 +495,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	return ctx.OpenDatabase(dbc)
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
+// CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
@@ -678,7 +678,7 @@ func (s *CN) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (s *CN) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
@@ -700,7 +700,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
 	s.protocolManager.Stop()

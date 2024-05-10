@@ -27,7 +27,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 )
 
-// TODO-Klaytn: move these variables into TxPool when BlockChain struct contains a TxPool interface
+// TODO-Kaia: move these variables into TxPool when BlockChain struct contains a TxPool interface
 // spamThrottler need to be accessed by both of TxPool and BlockChain.
 var (
 	spamThrottler   *throttler = nil

@@ -202,7 +202,7 @@ func (dl *diffLayer) rebloom(origin *diskLayer) {
 	defer dl.lock.Unlock()
 
 	defer func(start time.Time) {
-		// TODO-Klaytn-Snapshot update snapshotBloomIndexTimer
+		// TODO-Kaia-Snapshot update snapshotBloomIndexTimer
 		// snapshotBloomIndexTimer.Update(time.Since(start))
 	}(time.Now())
 

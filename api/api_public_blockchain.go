@@ -45,13 +45,13 @@ import (
 
 var logger = log.NewModuleLogger(log.API)
 
-// PublicBlockChainAPI provides an API to access the Klaytn blockchain.
+// PublicBlockChainAPI provides an API to access the Kaia blockchain.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicBlockChainAPI struct {
 	b Backend
 }
 
-// NewPublicBlockChainAPI creates a new Klaytn blockchain API.
+// NewPublicBlockChainAPI creates a new Kaia blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
 }

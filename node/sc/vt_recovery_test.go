@@ -186,7 +186,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 		}
 	})
 	defer info.sim.Close()
-	// TODO-Klaytn need to remove sleep
+	// TODO-Kaia need to remove sleep
 	time.Sleep(1 * time.Second)
 	info.sim.Commit()
 
@@ -205,7 +205,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	// TODO-Klaytn need to remove sleep
+	// TODO-Kaia need to remove sleep
 	time.Sleep(1 * time.Second)
 	info.sim.Commit()
 
@@ -221,7 +221,7 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal("fail to recover the value transfer")
 	}
-	// TODO-Klaytn need to remove sleep
+	// TODO-Kaia need to remove sleep
 	time.Sleep(1 * time.Second)
 	info.sim.Commit()
 
@@ -274,7 +274,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 }
 
 // TestBasicNFTTransferRecovery tests the NFT transfer recovery.
-// TODO-Klaytn-ServiceChain: implement NFT transfer.
+// TODO-Kaia-ServiceChain: implement NFT transfer.
 func TestBasicNFTTransferRecovery(t *testing.T) {
 	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
@@ -884,7 +884,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransfer
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-// TODO-Klaytn-ServiceChain: use ChildChainEventHandler
+// TODO-Kaia-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
 		handleKLAYTransfer(info, bi, ev.(RequestValueTransferEvent))
@@ -929,7 +929,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransfe
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-// TODO-Klaytn-ServiceChain: use ChildChainEventHandler
+// TODO-Kaia-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
 		handleTokenTransfer(info, bi, ev.(RequestValueTransferEvent))
@@ -944,7 +944,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	var tx *types.Transaction
 
 	opts := bi.account.GenerateTransactOpts()
-	// TODO-Klaytn need to separate child / parent chain nftIndex.
+	// TODO-Kaia need to separate child / parent chain nftIndex.
 	nftIndex := new(big.Int).SetInt64(info.nftIndex)
 
 	var err error
@@ -985,7 +985,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferE
 	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
 }
 
-// TODO-Klaytn-ServiceChain: use ChildChainEventHandler
+// TODO-Kaia-ServiceChain: use ChildChainEventHandler
 func dummyHandleRequestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	for _, ev := range bi.GetPendingRequestEvents() {
 		handleNFTTransfer(info, bi, ev)

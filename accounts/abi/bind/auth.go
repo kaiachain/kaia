@@ -80,7 +80,7 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 	}
 }
 
-// TODO-klaytn: clef related code
+// TODO-Kaia: clef related code
 /*
 // NewClefTransactor is a utility method to easily create a transaction signer
 // with a clef backend.

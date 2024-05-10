@@ -94,7 +94,7 @@ type message struct {
 //
 // define the functions that needs to be provided for rlp Encoder/Decoder.
 
-// EncodeRLP serializes m into the Klaytn RLP format.
+// EncodeRLP serializes m into the Kaia RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }

@@ -55,7 +55,7 @@ type Snapshot struct {
 func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
 	pset, err := gov.EffectiveParams(number)
 	if err != nil {
-		// TODO-Klaytn-Kore: remove err condition
+		// TODO-Kaia-Kore: remove err condition
 		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
 		epoch = params.DefaultEpoch
 		policy = params.DefaultProposerPolicy

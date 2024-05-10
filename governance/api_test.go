@@ -250,13 +250,13 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	assert.NotNil(t, ret)
 
 	// pre-calculated estimated rewards per a block
-	blockMinted, _ := new(big.Int).SetString("9600000000000000000", 10)  // 9.6 KLAY
-	blockProposer, _ := new(big.Int).SetString("960000000000000000", 10) // 0.96 KLAY = 9.6 KLAY * 0.5 * 0.2
-	blockStaking, _ := new(big.Int).SetString("3840000000000000000", 10) // 3.84 KLAY = 9.6 KLAY * 0.5 * 0.8
+	blockMinted, _ := new(big.Int).SetString("9600000000000000000", 10)  // 9.6 KAIA
+	blockProposer, _ := new(big.Int).SetString("960000000000000000", 10) // 0.96 KAIA = 9.6 KAIA * 0.5 * 0.2
+	blockStaking, _ := new(big.Int).SetString("3840000000000000000", 10) // 3.84 KAIA = 9.6 KAIA * 0.5 * 0.8
 	blockTxFee, _ := new(big.Int).SetString("25000000000000", 10)        // 25000 Ston = 1000 * 25 Ston
 	blockTxBurnt := blockTxFee
-	blockKFF, _ := new(big.Int).SetString("1920000000000000000", 10) //  1.92 KLAY = 9.6 KLAY * 0.2
-	blockKCF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KLAY = 9.6 KLAY * 0.3
+	blockKFF, _ := new(big.Int).SetString("1920000000000000000", 10) //  1.92 KAIA = 9.6 KAIA * 0.2
+	blockKCF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KAIA = 9.6 KAIA * 0.3
 
 	// check the execution result
 	assert.Equal(t, time.Unix(blocks[startBlockNum].Time().Int64(), 0).String(), ret.FirstBlockTime)

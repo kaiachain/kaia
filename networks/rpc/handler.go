@@ -428,7 +428,7 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *callback, args []reflect.Value) *jsonrpcMessage {
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
-		// TODO-Klaytn:
+		// TODO-Kaia:
 		// 1. The single URL may be extended to the list of URL.
 		// 2. The URL (list or single) seems not modifiable at runtime.
 		// 3. Any request can be relayed as well as the state lack.

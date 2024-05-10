@@ -354,7 +354,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				continue
 			}
 
-			// TODO-Klaytn drop or missing tx
+			// TODO-Kaia drop or missing tx
 			if self.nodetype != common.CONSENSUSNODE {
 				if !TxResendUseLegacy {
 					continue
@@ -517,14 +517,14 @@ func (self *worker) commitNewWork() {
 	var nextBaseFee *big.Int
 	if self.nodetype == common.CONSENSUSNODE {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
-			// NOTE-klaytn NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
+			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
 			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}
 
-	// TODO-Klaytn drop or missing tx
+	// TODO-Kaia drop or missing tx
 	tstart := time.Now()
 	tstamp := tstart.Unix()
 	if self.nodetype == common.CONSENSUSNODE {
@@ -734,8 +734,8 @@ CommitTransactionLoop:
 		// We use the eip155 signer regardless of the current hf.
 		from, _ := types.Sender(env.signer, tx)
 
-		// NOTE-Klaytn Since Klaytn is always in EIP155, the below replay protection code is not needed.
-		// TODO-Klaytn-RemoveLater Remove the code commented below.
+		// NOTE-Kaia Since Kaia is always in EIP155, the below replay protection code is not needed.
+		// TODO-Kaia-RemoveLater Remove the code commented below.
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
 		//if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
@@ -774,7 +774,7 @@ CommitTransactionLoop:
 				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
 				tooLongTxCounter.Inc(1)
 			}
-			// NOTE-Klaytn Exit for loop immediately without checking abort variable again.
+			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
 		case blockchain.ErrTxTypeNotSupported:

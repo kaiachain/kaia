@@ -98,11 +98,11 @@ func (s sortGasAndReward) Less(i, j int) bool {
 // fills in the rest of the fields.
 func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 	chainconfig := oracle.backend.ChainConfig()
-	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should set it from header, not constant.
+	// TODO-Kaia: If we implement baseFee feature like Ethereum does, we should set it from header, not constant.
 	if bf.results.baseFee = bf.header.BaseFee; bf.results.baseFee == nil {
 		bf.results.baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	// TODO-Klaytn: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
+	// TODO-Kaia: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
 	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1))) {
 		bf.results.nextBaseFee = misc.NextMagmaBlockBaseFee(bf.header, chainconfig.Governance.KIP71)
 	} else {
@@ -111,7 +111,7 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 
 	// Use MaxBlockGasUsedForBaseFee as gasLimit for gasUsedRatio.
 	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber))) {
-		// TODO-Klaytn: Instead of using chainConfig, we should use governance set values.
+		// TODO-Kaia: Instead of using chainConfig, we should use governance set values.
 		if chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee != 0 {
 			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
 		}
@@ -164,7 +164,7 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 
 // resolveBlockRange resolves the specified block range to absolute block numbers while also
 // enforcing backend specific limitations.
-// Pending block does not exist in Klaytn, so there is no logic to look up pending blocks.
+// Pending block does not exist in Kaia, so there is no logic to look up pending blocks.
 // This part has a different implementation with Ethereum.
 // Note: an error is only returned if retrieving the head header has failed. If there are no
 // retrievable blocks in the specified range then zero block count is returned with no error.

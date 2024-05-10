@@ -36,9 +36,9 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// TODO-Klaytn Needs to separate APIs along with each namespaces.
+// TODO-Kaia Needs to separate APIs along with each namespaces.
 
-// Client defines typed wrappers for the Klaytn RPC API.
+// Client defines typed wrappers for the Kaia RPC API.
 type Client struct {
 	c       *rpc.Client
 	chainID *big.Int
@@ -111,7 +111,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	if err := json.Unmarshal(raw, &body); err != nil {
 		return nil, err
 	}
-	// TODO-Klaytn Enable the below error checks after having a way to get the correct EmptyRootHash
+	// TODO-Kaia Enable the below error checks after having a way to get the correct EmptyRootHash
 	// Quick-verify transaction lists. This mostly helps with debugging the server.
 	//if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
 	//	return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
@@ -521,7 +521,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 		GasLimit:  &tGas,
 		Price:     tGasPrice,
 		Amount:    hValue,
-		// Nonce : nonce,	Nonce will be determined by Klay node.
+		// Nonce : nonce,	Nonce will be determined by Kaia node.
 		Data:    &tData,
 		Payload: &tInput,
 	}
@@ -533,7 +533,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Addre
 	return hash, nil
 }
 
-// ImportRawKey can create key store from private key string on Klaytn node.
+// ImportRawKey can create key store from private key string on Kaia node.
 func (ec *Client) ImportRawKey(ctx context.Context, key string, password string) (common.Address, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "personal_importRawKey", key, password)
@@ -541,7 +541,7 @@ func (ec *Client) ImportRawKey(ctx context.Context, key string, password string)
 	return address, err
 }
 
-// UnlockAccount can unlock the account on Klaytn node.
+// UnlockAccount can unlock the account on Kaia node.
 func (ec *Client) UnlockAccount(ctx context.Context, address common.Address, password string, time uint) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "personal_unlockAccount", address, password, time)
@@ -613,14 +613,14 @@ func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
 	return ec.chainID, err
 }
 
-// AddPeer can add a static peer on Klaytn node.
+// AddPeer can add a static peer on Kaia node.
 func (ec *Client) AddPeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_addPeer", url)
 	return result, err
 }
 
-// RemovePeer can remove a static peer on Klaytn node.
+// RemovePeer can remove a static peer on Kaia node.
 func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_removePeer", url)

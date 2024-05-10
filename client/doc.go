@@ -18,5 +18,5 @@
 // This file is derived from ethclient/ethclient.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package client provides a client for the Klaytn RPC API.
+// Package client provides a client for the Kaia RPC API.
 package client

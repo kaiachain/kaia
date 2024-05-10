@@ -52,10 +52,10 @@ const (
 	rpcBufferSize       = 1024
 )
 
-// MainBridgeInfo represents a short summary of the Klaytn sub-protocol metadata
+// MainBridgeInfo represents a short summary of the Kaia sub-protocol metadata
 // known about the host peer.
 type MainBridgeInfo struct {
-	Network    uint64              `json:"network"`    // Klaytn network ID
+	Network    uint64              `json:"network"`    // Kaia network ID
 	BlockScore *big.Int            `json:"blockscore"` // Total blockscore of the host's blockchain
 	Genesis    common.Hash         `json:"genesis"`    // SHA3 hash of the host's genesis block
 	Config     *params.ChainConfig `json:"config"`     // Chain configuration for the fork rules
@@ -191,7 +191,7 @@ func (mb *MainBridge) BridgePeerSet() *bridgePeerSet {
 	return mb.peers
 }
 
-// APIs returns the collection of RPC services the Klaytn sc package offers.
+// APIs returns the collection of RPC services the Kaia sc package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (mb *MainBridge) APIs() []rpc.API {
 	// Append all the local APIs and return
@@ -283,7 +283,7 @@ func (mb *MainBridge) getChainID() *big.Int {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (mb *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig := p2p.Config{}
 	serverConfig.PrivateKey = mb.ctx.NodeKey()
@@ -514,11 +514,11 @@ func (mb *MainBridge) syncer() {
 }
 
 func (mb *MainBridge) synchronise(peer BridgePeer) {
-	// @TODO Klaytn ServiceChain Sync
+	// @TODO Kaia ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (mb *MainBridge) Stop() error {
 	close(mb.quitSync)
 

@@ -103,7 +103,7 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	}
 }
 
-// Test and utils for the key store tests in the Klaytn JSON tests;
+// Test and utils for the key store tests in the Kaia JSON tests;
 // testdataKeyStoreTests/basic_tests.json
 type KeyStoreTestV3 struct {
 	Json     encryptedKeyJSONV3

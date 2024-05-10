@@ -46,9 +46,9 @@ const (
 	// ReceiptStatusSuccessful is the status code of a transaction if execution succeeded.
 	ReceiptStatusSuccessful = uint(1)
 
-	// TODO-Klaytn Enable more error below.
-	// Klaytn specific
-	// NOTE-Klaytn Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
+	// TODO-Kaia Enable more error below.
+	// Kaia specific
+	// NOTE-Kaia Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
 	ReceiptStatusErrDefault                              = uint(0x02) // Default
 	ReceiptStatusErrDepth                                = uint(0x03)

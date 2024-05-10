@@ -33,7 +33,7 @@ const (
 	RoleTransaction RoleType = iota
 	RoleAccountUpdate
 	RoleFeePayer
-	// TODO-Klaytn-Accounts: more roles can be listed here.
+	// TODO-Kaia-Accounts: more roles can be listed here.
 	RoleLast
 )
 
@@ -46,9 +46,7 @@ var (
 // The roles are defined like below:
 // RoleTransaction   - this key is used to verify transactions transferring values.
 // RoleAccountUpdate - this key is used to update keys in the account when using TxTypeAccountUpdate.
-// RoleFeePayer      - this key is used to pay tx fee when using fee-delegated transactions.
-//                     If an account has a key of this role and wants to pay tx fee,
-//                     fee-delegated transactions should be signed by this key.
+// RoleFeePayer      - this key is used to pay tx fee when using fee-delegated transactions. If an account has a key of this role and wants to pay tx fee, fee-delegated transactions should be signed by this key.
 //
 // If RoleAccountUpdate or RoleFeePayer is not set, RoleTransaction will be used instead by default.
 type AccountKeyRoleBased []AccountKey

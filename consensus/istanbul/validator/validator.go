@@ -72,7 +72,7 @@ func ExtractValidators(extraData []byte) []common.Address {
 // ConvertHashToSeed returns a random seed used to calculate proposer.
 // It converts first 7.5 bytes of the given hash to int64.
 func ConvertHashToSeed(hash common.Hash) (int64, error) {
-	// TODO-Klaytn-Istanbul: convert hash.Hex() to int64 directly without string conversion
+	// TODO-Kaia-Istanbul: convert hash.Hex() to int64 directly without string conversion
 	hashstring := strings.TrimPrefix(hash.Hex(), "0x")
 	if len(hashstring) > 15 {
 		hashstring = hashstring[:15]

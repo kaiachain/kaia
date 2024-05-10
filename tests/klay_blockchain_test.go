@@ -103,7 +103,7 @@ func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain
 		t.Fatal(err)
 	}
 
-	// Create a Klaytn node
+	// Create a Kaia node
 	fullNode, node, err := newKlaytnNode(t, workspace, validator, config, genesis)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
@@ -141,7 +141,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 	return richAccount, accounts, contractAccounts
 }
 
-// newKlaytnNode creates a klaytn node
+// newKlaytnNode creates a Kaia node
 func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, error) {
 	var klaytnNode *cn.CN
 

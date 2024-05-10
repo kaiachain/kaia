@@ -20,7 +20,7 @@ import blst "github.com/supranational/blst/bindings/go"
 
 // Aliases to underlying blst go binding symbols
 //
-// Klaytn uses the "minimal-pubkey-size" variant as defined in
+// Kaia uses the "minimal-pubkey-size" variant as defined in
 // draft-irtf-cfrg-bls-signature-05#2.1.
 // Public keys are points in G1 and signatures are points in G2.
 type (

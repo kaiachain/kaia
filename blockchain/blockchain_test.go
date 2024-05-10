@@ -1105,7 +1105,7 @@ func TestEIP155Transition(t *testing.T) {
 	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
-// TODO-Klaytn-FailedTest Failed test. Enable this later.
+// TODO-Kaia-FailedTest Failed test. Enable this later.
 /*
 func TestEIP161AccountRemoval(t *testing.T) {
 	// Configure and generate a sample block chain
@@ -1342,7 +1342,7 @@ func TestStatePruning(t *testing.T) {
 	blockchain.Stop()
 }
 
-// TODO-Klaytn-FailedTest Failed test. Enable this later.
+// TODO-Kaia-FailedTest Failed test. Enable this later.
 /*
 // Tests that doing large reorgs works even if the state associated with the
 // forking point is not available any more.
@@ -1588,7 +1588,7 @@ func TestEIP3651(t *testing.T) {
 
 	state, _ := chain.State()
 
-	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 klay is the total reward)
+	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 KAIA is the total reward)
 	actual := state.GetBalance(params.AuthorAddressForTesting)
 	expected := gxhash.ByzantiumBlockReward
 	if actual.Cmp(expected) != 0 {

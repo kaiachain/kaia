@@ -31,13 +31,13 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// PublicKlayAPI provides an API to access Klaytn related information.
+// PublicKlayAPI provides an API to access Kaia related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicKlayAPI struct {
 	b Backend
 }
 
-// NewPublicKlayAPI creates a new Klaytn protocol API.
+// NewPublicKlayAPI creates a new Kaia protocol API.
 func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
 	return &PublicKlayAPI{b}
 }
@@ -56,7 +56,7 @@ func (s *PublicKlayAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
 	return (*hexutil.Big)(s.b.LowerBoundGasPrice(ctx))
 }
 
-// ProtocolVersion returns the current Klaytn protocol version this node supports.
+// ProtocolVersion returns the current Kaia protocol version this node supports.
 func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }

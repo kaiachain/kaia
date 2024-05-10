@@ -62,7 +62,7 @@ See https://github.com/ethereum/go-ethereum/wiki/JavaScript-Console.`,
 	}
 }
 
-// localConsole starts a new Klaytn node, attaching a JavaScript console to it at the
+// localConsole starts a new Kaia node, attaching a JavaScript console to it at the
 // same time.
 func localConsole(ctx *cli.Context) error {
 	// Create and start the node based on the CLI flags
@@ -158,8 +158,8 @@ func dialRPC(endpoint string) (*rpc.Client, error) {
 	if endpoint == "" {
 		endpoint = node.DefaultIPCEndpoint(utils.ClientIdentifier)
 	} else if strings.HasPrefix(endpoint, "rpc:") || strings.HasPrefix(endpoint, "ipc:") {
-		// TODO-Klaytn-RemoveLater: The below backward compatibility is not related to Klaytn.
-		// Backwards compatibility with klaytn < 1.5 which required
+		// TODO-Kaia-RemoveLater: The below backward compatibility is not related to Kaia.
+		// Backwards compatibility with Klaytn < 1.5 which required
 		// these prefixes.
 		endpoint = endpoint[4:]
 	}

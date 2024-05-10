@@ -299,7 +299,7 @@ type accountTask struct {
 	codeTasks  map[common.Hash]struct{}    // Code hashes that need retrieval
 	stateTasks map[common.Hash]common.Hash // Account hashes->roots that need full state retrieval
 
-	// TODO-Klaytn-Snapsync consider to use stack trie
+	// TODO-Kaia-Snapsync consider to use stack trie
 	genTrie *statedb.Trie // Node generator from storage slots
 	trieDb  *statedb.Database
 
@@ -315,7 +315,7 @@ type storageTask struct {
 	root common.Hash     // Storage root hash for this instance
 	req  *storageRequest // Pending request to fill this task
 
-	// TODO-Klaytn-Snapsync consider to use stack trie
+	// TODO-Kaia-Snapsync consider to use stack trie
 	genTrie *statedb.Trie // Node generator from storage slots
 	trieDb  *statedb.Database
 
@@ -385,7 +385,7 @@ type SyncPeer interface {
 	Log() log.Logger
 }
 
-// Syncer is an Klaytn account and storage trie syncer based on snapshots and
+// Syncer is an Kaia account and storage trie syncer based on snapshots and
 // the snap protocol. It's purpose is to download all the accounts and storage
 // slots from remote peers and reassemble chunks of the state trie, on top of
 // which a state sync can be run to fix any gaps / overlaps.
@@ -902,7 +902,7 @@ func (s *Syncer) assignAccountTasks(success chan *accountResponse, fail chan *ac
 		idlers.caps = append(idlers.caps, s.rates.Capacity(id, AccountRangeMsg, targetTTL))
 	}
 	if len(idlers.ids) == 0 {
-		// TODO-Klaytn-SnapSync enhance logging if necessary
+		// TODO-Kaia-SnapSync enhance logging if necessary
 		return
 	}
 	sort.Sort(sort.Reverse(idlers))
@@ -1324,7 +1324,7 @@ func (s *Syncer) assignTrienodeHealTasks(success chan *trienodeHealResponse, fai
 
 			hashes = append(hashes, hash)
 			paths = append(paths, pathset)
-			pathsets = append(pathsets, [][]byte(pathset)) // TODO-Klaytn-SnapSync group requests by account hash
+			pathsets = append(pathsets, [][]byte(pathset)) // TODO-Kaia-SnapSync group requests by account hash
 
 			if len(hashes) >= cap {
 				break

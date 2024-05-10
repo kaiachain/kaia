@@ -16,7 +16,7 @@
 
 /*
 Package cn implements components related to network management and message handling.
-CN implements the Klaytn consensus node service.
+CN implements the Kaia consensus node service.
 ProtocolManager handles the messages from the peer nodes and manages its peers.
 Peer is the interface used for peer nodes and has two different kinds of implementation
 depending on single or multi channel usage.
@@ -25,7 +25,7 @@ Source Files
 
   - api.go              : provides private debug API related to block and state
   - api_backend.go      : implements CNAPIBackend which is a wrapper of CN to serve API requests
-  - backend.go          : implements CN struct used for the Klaytn consensus node service
+  - backend.go          : implements CN struct used for the Kaia consensus node service
   - bloombits.go        : implements BloomIndexer, an indexer built with bloom bits for fast filtering
   - channel_manager.go  : implements ChannelManager struct, which is used to manage channel for each message
   - config.go           : defines the configuration used by CN struct
@@ -34,7 +34,7 @@ Source Files
   - metrics.go          : includes statistics used in cn package
   - peer.go             : provides the interface and implementation of Peer interface
   - peer_set.go         : provides the interface and implementation of PeerSet interface
-  - protocol.go         : defines the protocol version of Klaytn network and includes errors in cn package
+  - protocol.go         : defines the protocol version of Kaia network and includes errors in cn package
   - sync.go             : includes syncing features of ProtocolManager
 */
 package cn

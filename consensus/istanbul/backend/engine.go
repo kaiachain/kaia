@@ -117,7 +117,7 @@ func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
 	return addr, err
 }
 
-// Author retrieves the Klaytn address of the account that minted the given block.
+// Author retrieves the Kaia address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }
@@ -514,7 +514,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(pset) {
-		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
+		// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
@@ -1018,7 +1018,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)

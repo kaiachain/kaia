@@ -48,29 +48,29 @@ const InterfaceIdentifierBinRuntime = ``
 // Deprecated: Use InterfaceIdentifierMetaData.Sigs instead.
 var InterfaceIdentifierFuncSigs = InterfaceIdentifierMetaData.Sigs
 
-// InterfaceIdentifier is an auto generated Go binding around a Klaytn contract.
+// InterfaceIdentifier is an auto generated Go binding around a Kaia contract.
 type InterfaceIdentifier struct {
 	InterfaceIdentifierCaller     // Read-only binding to the contract
 	InterfaceIdentifierTransactor // Write-only binding to the contract
 	InterfaceIdentifierFilterer   // Log filterer for contract events
 }
 
-// InterfaceIdentifierCaller is an auto generated read-only Go binding around a Klaytn contract.
+// InterfaceIdentifierCaller is an auto generated read-only Go binding around a Kaia contract.
 type InterfaceIdentifierCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InterfaceIdentifierTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// InterfaceIdentifierTransactor is an auto generated write-only Go binding around a Kaia contract.
 type InterfaceIdentifierTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InterfaceIdentifierFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// InterfaceIdentifierFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type InterfaceIdentifierFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InterfaceIdentifierSession is an auto generated Go binding around a Klaytn contract,
+// InterfaceIdentifierSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type InterfaceIdentifierSession struct {
 	Contract     *InterfaceIdentifier // Generic contract binding to set the session for
@@ -78,31 +78,31 @@ type InterfaceIdentifierSession struct {
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// InterfaceIdentifierCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// InterfaceIdentifierCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type InterfaceIdentifierCallerSession struct {
 	Contract *InterfaceIdentifierCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// InterfaceIdentifierTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// InterfaceIdentifierTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type InterfaceIdentifierTransactorSession struct {
 	Contract     *InterfaceIdentifierTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// InterfaceIdentifierRaw is an auto generated low-level Go binding around a Klaytn contract.
+// InterfaceIdentifierRaw is an auto generated low-level Go binding around a Kaia contract.
 type InterfaceIdentifierRaw struct {
 	Contract *InterfaceIdentifier // Generic contract binding to access the raw methods on
 }
 
-// InterfaceIdentifierCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// InterfaceIdentifierCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type InterfaceIdentifierCallerRaw struct {
 	Contract *InterfaceIdentifierCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// InterfaceIdentifierTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// InterfaceIdentifierTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type InterfaceIdentifierTransactorRaw struct {
 	Contract *InterfaceIdentifierTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -196,7 +196,6 @@ func (_InterfaceIdentifier *InterfaceIdentifierTransactorRaw) Transact(opts *bin
 func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *bind.CallOpts, interfaceID [4]byte) (bool, error) {
 	var out []interface{}
 	err := _InterfaceIdentifier.contract.Call(opts, &out, "supportsInterface", interfaceID)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -204,7 +203,6 @@ func (_InterfaceIdentifier *InterfaceIdentifierCaller) SupportsInterface(opts *b
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.

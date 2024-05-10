@@ -131,7 +131,7 @@ var (
 		EnvVars:  []string{"KLAYTN_KEYSTORE"},
 		Category: "ACCOUNT",
 	}
-	// TODO-Klaytn-Bootnode: redefine networkid
+	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
 		Usage:    "Network identifier (integer, 8217=Cypress (Mainnet) , 1000=Aspen, 1001=Baobab)",
@@ -334,7 +334,7 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
-	// TODO-Klaytn-Database LevelDBCompressionTypeFlag should be removed before main-net release.
+	// TODO-Kaia-Database LevelDBCompressionTypeFlag should be removed before main-net release.
 	LevelDBCompressionTypeFlag = &cli.IntFlag{
 		Name:     "db.leveldb.compression",
 		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
@@ -700,7 +700,7 @@ var (
 		EnvVars:  []string{"KLAYTN_TXRESEND_MAX_COUNT"},
 		Category: "TXPOOL",
 	}
-	// TODO-Klaytn-RemoveLater Remove this flag when we are confident with the new transaction resend logic
+	// TODO-Kaia-RemoveLater Remove this flag when we are confident with the new transaction resend logic
 	TxResendUseLegacyFlag = &cli.BoolFlag{
 		Name:     "txresend.use-legacy",
 		Usage:    "Enable the legacy transaction resend logic (For testing only)",
@@ -1059,7 +1059,7 @@ var (
 		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
 		Category: "API AND CONSOLE",
 	}
-	// TODO-klaytn: Consider limiting the non-debug heavy apis.
+	// TODO-Kaia: Consider limiting the non-debug heavy apis.
 	HeavyDebugRequestLimitFlag = &cli.IntFlag{
 		Name:     "rpc.unsafe-debug.heavy-debug.request-limit",
 		Usage:    "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
@@ -1237,7 +1237,7 @@ var (
 		Aliases: []string{"common.authorized-nodes"},
 		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES"},
 	}
-	// TODO-Klaytn-Bootnode the boodnode flags should be updated when it is implemented
+	// TODO-Kaia-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = &cli.StringFlag{
 		Name:    "bnaddr",
 		Usage:   `udp address to use node discovery`,
@@ -1309,7 +1309,7 @@ var (
 	ParentChainIDFlag = &cli.IntFlag{
 		Name:     "parentchainid",
 		Usage:    "parent chain ID",
-		Value:    8217, // Klaytn mainnet chain ID
+		Value:    8217, // Kaia mainnet chain ID
 		Aliases:  []string{"servicechain.parent-chainid"},
 		EnvVars:  []string{"KLAYTN_PARENTCHAINID"},
 		Category: "SERVICECHAIN",
@@ -1359,7 +1359,7 @@ var (
 		EnvVars:  []string{"KLAYTN_ANCHORING"},
 		Category: "SERVICECHAIN",
 	}
-	// TODO-klaytn: need to check if deprecated.
+	// TODO-Kaia: need to check if deprecated.
 	ServiceChainConsensusFlag = &cli.StringFlag{
 		Name:    "scconsensus",
 		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
@@ -1991,8 +1991,8 @@ var (
 		Category: "GAS PRICE ORACLE",
 	}
 
-	// TODO-Klaytn-Bootnode: Add bootnode's metric options
-	// TODO-Klaytn-Bootnode: Implements bootnode's RPC
+	// TODO-Kaia-Bootnode: Add bootnode's metric options
+	// TODO-Kaia-Bootnode: Implements bootnode's RPC
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -2039,7 +2039,7 @@ func MakePasswordList(ctx *cli.Context) []string {
 
 // RegisterCNService adds a CN client to the stack.
 func RegisterCNService(stack *node.Node, cfg *cn.Config) {
-	// TODO-Klaytn add syncMode.LightSync func and add LesServer
+	// TODO-Kaia add syncMode.LightSync func and add LesServer
 
 	err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg.WsEndpoint = stack.WSEndpoint()

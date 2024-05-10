@@ -37,7 +37,7 @@ const (
 	ErrorIncorrectUsage = iota
 	ErrorInvalidValue
 	ErrorFatal
-	// TODO-Klaytn-Node fix the configuration to filter wrong input flags before the klay server is launched
+	// TODO-Kaia-Node fix the configuration to filter wrong input flags before the Kaia server is launched
 	NonError // This error case expects an error, but currently it does not filter the wrong value.
 )
 
@@ -53,7 +53,7 @@ var flagsWithValues = []struct {
 	wrongValues []string
 	errors      []int
 }{
-	// TODO-Klaytn-Node the flag is not defined on any klay binaries
+	// TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:     "--networktype",
 	//	flagType: FlagTypeArgument,
@@ -97,7 +97,7 @@ var flagsWithValues = []struct {
 		wrongValues: []string{},
 		errors:      []int{},
 	},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--docroot",
 	//	flagType:    FlagTypeBoolean,
@@ -181,7 +181,7 @@ var flagsWithValues = []struct {
 		wrongValues: commonTwoErrors,
 		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
 	},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--txpool.keeplocals",
 	//	flagType:    FlagTypeBoolean,
@@ -482,7 +482,7 @@ var flagsWithValues = []struct {
 		wrongValues: []string{},
 		errors:      []int{},
 	},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--nodetype",
 	//	flagType:    FlagTypeArgument,
@@ -586,7 +586,7 @@ var flagsWithValues = []struct {
 		flag:     "--baobab",
 		flagType: FlagTypeBoolean,
 	},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--bnaddr",
 	//	flagType:    FlagTypeArgument,
@@ -594,7 +594,7 @@ var flagsWithValues = []struct {
 	//	wrongValues: []string{},
 	//	errors:      []int{},
 	//},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--genkey",
 	//	flagType:    FlagTypeArgument,
@@ -602,7 +602,7 @@ var flagsWithValues = []struct {
 	//	wrongValues: []string{},
 	//	errors:      []int{},
 	//},
-	//TODO-Klaytn-Node the flag is not defined on any klay binaries
+	//TODO-Kaia-Node the flag is not defined on any Kaia binaries
 	//{
 	//	flag:        "--writeaddress",
 	//	flagType:    FlagTypeBoolean,

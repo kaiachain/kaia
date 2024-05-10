@@ -484,7 +484,7 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
+// TODO-Kaia: To enable logging in the test code, we can use the following function.
 // This function will be moved to somewhere utility functions are located.
 func enableLog() {
 	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"

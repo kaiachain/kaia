@@ -33,7 +33,7 @@ type ChildChainEventHandler struct {
 }
 
 const (
-	// TODO-Klaytn need to define proper value.
+	// TODO-Kaia need to define proper value.
 	errorDiffRequestHandleNonce = 10000
 )
 
@@ -52,17 +52,17 @@ func (cce *ChildChainEventHandler) HandleChainHeadEvent(block *types.Block) erro
 }
 
 func (cce *ChildChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	// TODO-Klaytn event handle
+	// TODO-Kaia event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	// TODO-Klaytn event handle
+	// TODO-Kaia event handle
 	return nil
 }
 
 func (cce *ChildChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
-	// TODO-Klaytn event handle
+	// TODO-Kaia event handle
 	return nil
 }
 
@@ -79,7 +79,7 @@ func (cce *ChildChainEventHandler) ProcessRequestEvent(ev IRequestValueTransferE
 		return fmt.Errorf("there is no counter part bridge info(%v) of the bridge(%v)", handleBridgeAddr.String(), addr.String())
 	}
 
-	// TODO-Klaytn need to manage the size limitation of pending event list.
+	// TODO-Kaia need to manage the size limitation of pending event list.
 	handleBridgeInfo.AddRequestValueTransferEvents([]IRequestValueTransferEvent{ev})
 	return nil
 }

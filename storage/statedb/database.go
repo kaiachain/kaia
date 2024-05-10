@@ -169,7 +169,7 @@ func (n rawShortNode) lenEncoded() uint16        { panic("this should never end 
 // in the memory database write layer.
 type cachedNode struct {
 	node node // Cached collapsed trie node, or raw rlp data
-	// TODO-Klaytn: need to change data type of this if we increase the code size limit
+	// TODO-Kaia: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
 	parents  uint64                    // Number of live nodes referencing this one

@@ -76,7 +76,7 @@ func GetDefaultLevelDBOption() *opt.Options {
 }
 
 // GetOpenFilesLimit raises out the number of allowed file handles per process
-// for Klaytn and returns half of the allowance to assign to the database.
+// for Kaia and returns half of the allowance to assign to the database.
 func GetOpenFilesLimit() int {
 	limit, err := fdlimit.Current()
 	if err != nil {
@@ -228,7 +228,7 @@ func getCompressionType(ct LevelDBCompressionType, dbEntryType DBEntryType) opt.
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
 func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, error) {
-	// TODO-Klaytn-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
+	// TODO-Kaia-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
 
 	localLogger := logger.NewWith("path", dbPath)
 
@@ -399,13 +399,14 @@ func (db *levelDB) Meter(prefix string) {
 // the metrics subsystem.
 //
 // This is how a stats table look like (currently):
-//   Compactions
-//    Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
-//   -------+------------+---------------+---------------+---------------+---------------
-//      0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
-//      1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
-//      2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
-//      3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
+//
+//	Compactions
+//	 Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
+//	-------+------------+---------------+---------------+---------------+---------------
+//	   0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
+//	   1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
+//	   2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
+//	   3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
 //
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712

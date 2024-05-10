@@ -255,7 +255,7 @@ func (gs *Listener) SetRPCServer(handler *rpc.Server) {
 func (gs *Listener) Start() {
 	lis, err := net.Listen("tcp", gs.Addr)
 	if err != nil {
-		// TODO-Klaytn-gRPC Need to handle err
+		// TODO-Kaia-gRPC Need to handle err
 		logger.Error("failed to listen", "err", err)
 	}
 	gs.grpcServer = grpc.NewServer()
@@ -265,7 +265,7 @@ func (gs *Listener) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(gs.grpcServer)
 	if err := gs.grpcServer.Serve(lis); err != nil {
-		// TODO-Klaytn-gRPC Need to handle err
+		// TODO-Kaia-gRPC Need to handle err
 		logger.Error("failed to serve", "err", err)
 	}
 }

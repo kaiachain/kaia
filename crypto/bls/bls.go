@@ -39,7 +39,7 @@ type (
 // Some functions are named after the equivalent functions in prysm Ethereum CL.
 // (https://github.com/prysmaticlabs/prysm/blob/v4.0.2/crypto/bls/bls.go)
 // Such naming should provide compatiblity with prysm code snippets,
-// in case prysm code snippets are integrated to klaytn.
+// in case prysm code snippets are integrated to Kaia.
 //
 // ikm -> SK:  GenerateKey
 // ()  -> SK:  RandKey

@@ -42,17 +42,17 @@ func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error
 }
 
 func (mce *MainChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
 func (mce *MainChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
 func (mce *MainChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
@@ -96,7 +96,7 @@ func (mce *MainChainEventHandler) decodeAndWriteAnchoringTx(tx *types.Transactio
 	logger.Trace("Write anchoring data on chainDB", "blockHash", decodedData.GetBlockNumber().String(), "anchoring txHash", tx.Hash().String())
 }
 
-// TODO-Klaytn-ServiceChain: remove this method and a related option.
+// TODO-Kaia-ServiceChain: remove this method and a related option.
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
 // AnchoringData.
 func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {

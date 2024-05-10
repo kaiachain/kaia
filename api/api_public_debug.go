@@ -28,14 +28,14 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// PublicDebugAPI is the collection of Klaytn APIs exposed over the public
+// PublicDebugAPI is the collection of Kaia APIs exposed over the public
 // debugging endpoint.
 type PublicDebugAPI struct {
 	b Backend
 }
 
 // NewPublicDebugAPI creates a new API definition for the public debug methods
-// of the Klaytn service.
+// of the Kaia service.
 func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
 	return &PublicDebugAPI{b: b}
 }

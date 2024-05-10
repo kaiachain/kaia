@@ -124,7 +124,7 @@ var (
 	}
 
 	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the klaytn developers into the Klaytn consensus.
+	// and accepted by the Kaia developers into the Kaia consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
@@ -136,7 +136,7 @@ var (
 	}
 
 	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the klaytn developers into the Clique consensus.
+	// and accepted by the Kaia developers into the Clique consensus.
 	//
 	// This configuration is intentionally not using keyed fields to force anyone
 	// adding flags to the config to also have to set these fields.
@@ -152,7 +152,7 @@ var (
 		Gxhash:        new(GxhashConfig),
 		Clique:        nil,
 		Istanbul:      nil,
-		UnitPrice:     1, // NOTE-Klaytn Use UnitPrice 1 for tests
+		UnitPrice:     1, // NOTE-Kaia Use UnitPrice 1 for tests
 		DeriveShaImpl: 0,
 	}
 	TestRules = TestChainConfig.Rules(new(big.Int))

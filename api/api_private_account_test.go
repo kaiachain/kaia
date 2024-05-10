@@ -57,13 +57,13 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 		require.Equal(t, common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1"), addr)
 	}
 
-	// 2. Import Klaytn Wallet Key. Since the same address is already registered, it should fail.
+	// 2. Import Kaia Wallet Key. Since the same address is already registered, it should fail.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
 		require.Equal(t, fmt.Errorf("account already exists"), err)
 	}
 
-	// 3. Replace Klaytn Wallet key. It should work.
+	// 3. Replace Kaia Wallet key. It should work.
 	{
 		addr, err := api.ReplaceRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db1", "1234", "1234")
 		require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 		require.Equal(t, fmt.Errorf("invalid hex string"), err)
 	}
 
-	// 7. Import Klaytn Wallet Key.
+	// 7. Import Kaia Wallet Key.
 	{
 		addr, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db2", "1234")
 		require.NoError(t, err)

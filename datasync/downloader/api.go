@@ -99,7 +99,7 @@ func (api *PublicDownloaderAPI) eventLoop() {
 	}
 }
 
-// Syncing provides information when this nodes starts synchronising with the Klaytn network and when it's finished.
+// Syncing provides information when this nodes starts synchronising with the Kaia network and when it's finished.
 func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {

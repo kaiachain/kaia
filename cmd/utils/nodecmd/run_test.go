@@ -66,7 +66,7 @@ var (
 )
 
 func init() {
-	// Initialize the CLI app and start Klay
+	// Initialize the CLI app and start Kaia
 	app.Action = RunKlaytnNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
@@ -136,7 +136,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// spawns klay with the given command line args. If the args don't set --datadir, the
+// spawns Kaia with the given command line args. If the args don't set --datadir, the
 // child g gets a temporary data directory.
 func runKlay(t *testing.T, name string, args ...string) *testklay {
 	tt := &testklay{}
@@ -165,7 +165,7 @@ func runKlay(t *testing.T, name string, args ...string) *testklay {
 		}()
 	}
 
-	// Boot "klay". This actually runs the test binary but the TestMain
+	// Boot "Kaia". This actually runs the test binary but the TestMain
 	// function will prevent any tests from running.
 	tt.Run(name, args...)
 

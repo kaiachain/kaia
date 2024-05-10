@@ -187,7 +187,7 @@ func startNode(node *Node) error {
 }
 
 func main() {
-	// TODO-Klaytn: remove `help` command
+	// TODO-Kaia: remove `help` command
 	app := utils.NewApp("", "the Klaytn's bootnode command line interface")
 	app.Name = "kbn"
 	app.Copyright = "Copyright 2018 The klaytn Authors"

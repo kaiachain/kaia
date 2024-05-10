@@ -49,13 +49,13 @@ var DefaultLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000
 // The BIP-32 spec https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 // defines derivation paths to be of the form:
 //
-//   m / purpose' / coin_type' / account' / change / address_index
+//	m / purpose' / coin_type' / account' / change / address_index
 //
 // The BIP-44 spec https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 // defines that the `purpose` be 44' (or 0x8000002C) for crypto currencies, and
-// Klaytn defined the `coin_type` 8217' (or 0x80002019) internally.
+// Kaia defined the `coin_type` 8217' (or 0x80002019) internally.
 //
-// The root path for Klaytn is m/44'/8217'/0'/0 according to the specification
+// The root path for Kaia is m/44'/8217'/0'/0 according to the specification
 // from https://github.com/ethereum/EIPs/issues/84, albeit it's not set in stone
 // yet whether accounts should increment the last component or the children of
 // that. We will go with the simpler approach of incrementing the last component.

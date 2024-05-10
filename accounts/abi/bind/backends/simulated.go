@@ -61,7 +61,7 @@ var (
 // DeployBackend, GasEstimator, GasPricer, LogFilterer, PendingContractCaller, TransactionReader, and TransactionSender
 type SimulatedBackend struct {
 	database   database.DBManager     // In memory database to store our testing data
-	blockchain *blockchain.BlockChain // Klaytn blockchain to handle the consensus
+	blockchain *blockchain.BlockChain // Kaia blockchain to handle the consensus
 
 	mu           sync.Mutex
 	pendingBlock *types.Block   // Currently pending block that will be imported on request

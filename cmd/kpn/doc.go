@@ -19,13 +19,13 @@
 // Modified and improved for the klaytn development.
 
 /*
-kpn is the command-line client for Klaytn Proxy Node.
+kpn is the command-line client for Kaia Proxy Node.
 
 kpn has the node type of "pn" internally. Please try `kpn -h` to see commands and options list.
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - main.go : Defines available options and initializes the application with given options
+  - main.go : Defines available options and initializes the application with given options
 */
 package main

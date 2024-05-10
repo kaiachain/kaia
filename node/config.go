@@ -54,7 +54,7 @@ const (
 // all registered services.
 type Config struct {
 	// Name sets the instance name of the node. It must not contain the / character and is
-	// used in the devp2p node identifier. The instance name of klaytn is one among "kcn", "ken", and "kpn".
+	// used in the devp2p node identifier. The instance name of Kaia is one among "kcn", "ken", and "kpn".
 	// If no value is specified, the basename of the current executable is used.
 	Name string `toml:"-"`
 
@@ -283,7 +283,7 @@ func DefaultGRPCEndpoint() string {
 // NodeName returns the devp2p node identifier.
 func (c *Config) NodeName() string {
 	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Klaytn", keep that.
+	// Backwards compatibility: previous versions used title-cased "Kaia", keep that.
 	if name == "klay" || name == "klay-testnet" {
 		name = "Klaytn"
 	}

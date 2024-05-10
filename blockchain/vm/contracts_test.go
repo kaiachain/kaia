@@ -69,7 +69,7 @@ var allPrecompiles = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}):    &bn256ScalarMulIstanbul{},
 	common.BytesToAddress([]byte{8}):    &bn256PairingIstanbul{},
 	common.BytesToAddress([]byte{9}):    &blake2F{},
-	// TODO-klaytn import bls-signature precompiled contracts
+	// TODO-Kaia import bls-signature precompiled contracts
 	common.BytesToAddress([]byte{0xa}):    &kzgPointEvaluation{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},

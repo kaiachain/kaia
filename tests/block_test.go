@@ -40,7 +40,7 @@ func TestBlockchain(t *testing.T) {
 	// Still failing tests
 	// bt.skipLoad(`^bcWalletTest.*_Byzantium$`)
 
-	// TODO-Klaytn Update BlockchainTests first to enable this test, since block header has been changed in Klaytn.
+	// TODO-Kaia Update BlockchainTests first to enable this test, since block header has been changed in Kaia.
 	//bt.walk(t, blockTestDir, func(t *testing.T, name string, test *BlockTest) {
 	//	if err := bt.checkFailure(t, name, test.Run()); err != nil {
 	//		t.Error(err)

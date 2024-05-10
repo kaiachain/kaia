@@ -48,29 +48,29 @@ const IRetiredContractBinRuntime = ``
 // Deprecated: Use IRetiredContractMetaData.Sigs instead.
 var IRetiredContractFuncSigs = IRetiredContractMetaData.Sigs
 
-// IRetiredContract is an auto generated Go binding around a Klaytn contract.
+// IRetiredContract is an auto generated Go binding around a Kaia contract.
 type IRetiredContract struct {
 	IRetiredContractCaller     // Read-only binding to the contract
 	IRetiredContractTransactor // Write-only binding to the contract
 	IRetiredContractFilterer   // Log filterer for contract events
 }
 
-// IRetiredContractCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IRetiredContractCaller is an auto generated read-only Go binding around a Kaia contract.
 type IRetiredContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRetiredContractTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IRetiredContractTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IRetiredContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRetiredContractFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IRetiredContractFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IRetiredContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IRetiredContractSession is an auto generated Go binding around a Klaytn contract,
+// IRetiredContractSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IRetiredContractSession struct {
 	Contract     *IRetiredContract // Generic contract binding to set the session for
@@ -78,31 +78,31 @@ type IRetiredContractSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IRetiredContractCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IRetiredContractCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IRetiredContractCallerSession struct {
 	Contract *IRetiredContractCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts           // Call options to use throughout this session
 }
 
-// IRetiredContractTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IRetiredContractTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IRetiredContractTransactorSession struct {
 	Contract     *IRetiredContractTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts           // Transaction auth options to use throughout this session
 }
 
-// IRetiredContractRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IRetiredContractRaw is an auto generated low-level Go binding around a Kaia contract.
 type IRetiredContractRaw struct {
 	Contract *IRetiredContract // Generic contract binding to access the raw methods on
 }
 
-// IRetiredContractCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IRetiredContractCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IRetiredContractCallerRaw struct {
 	Contract *IRetiredContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IRetiredContractTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IRetiredContractTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IRetiredContractTransactorRaw struct {
 	Contract *IRetiredContractTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -196,7 +196,8 @@ func (_IRetiredContract *IRetiredContractTransactorRaw) Transact(opts *bind.Tran
 func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IRetiredContract.contract.Call(opts, &out, "getState")
 
@@ -208,7 +209,6 @@ func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (
 	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -217,7 +217,8 @@ func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (
 func (_IRetiredContract *IRetiredContractSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	return _IRetiredContract.Contract.GetState(&_IRetiredContract.CallOpts)
 }
 
@@ -227,7 +228,8 @@ func (_IRetiredContract *IRetiredContractSession) GetState() (struct {
 func (_IRetiredContract *IRetiredContractCallerSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	return _IRetiredContract.Contract.GetState(&_IRetiredContract.CallOpts)
 }
 
@@ -268,29 +270,29 @@ const ITreasuryRebalanceBinRuntime = ``
 // Deprecated: Use ITreasuryRebalanceMetaData.Sigs instead.
 var ITreasuryRebalanceFuncSigs = ITreasuryRebalanceMetaData.Sigs
 
-// ITreasuryRebalance is an auto generated Go binding around a Klaytn contract.
+// ITreasuryRebalance is an auto generated Go binding around a Kaia contract.
 type ITreasuryRebalance struct {
 	ITreasuryRebalanceCaller     // Read-only binding to the contract
 	ITreasuryRebalanceTransactor // Write-only binding to the contract
 	ITreasuryRebalanceFilterer   // Log filterer for contract events
 }
 
-// ITreasuryRebalanceCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ITreasuryRebalanceCaller is an auto generated read-only Go binding around a Kaia contract.
 type ITreasuryRebalanceCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITreasuryRebalanceTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ITreasuryRebalanceTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ITreasuryRebalanceTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITreasuryRebalanceFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ITreasuryRebalanceFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ITreasuryRebalanceFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ITreasuryRebalanceSession is an auto generated Go binding around a Klaytn contract,
+// ITreasuryRebalanceSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ITreasuryRebalanceSession struct {
 	Contract     *ITreasuryRebalance // Generic contract binding to set the session for
@@ -298,31 +300,31 @@ type ITreasuryRebalanceSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// ITreasuryRebalanceCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ITreasuryRebalanceCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ITreasuryRebalanceCallerSession struct {
 	Contract *ITreasuryRebalanceCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// ITreasuryRebalanceTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ITreasuryRebalanceTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ITreasuryRebalanceTransactorSession struct {
 	Contract     *ITreasuryRebalanceTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// ITreasuryRebalanceRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ITreasuryRebalanceRaw is an auto generated low-level Go binding around a Kaia contract.
 type ITreasuryRebalanceRaw struct {
 	Contract *ITreasuryRebalance // Generic contract binding to access the raw methods on
 }
 
-// ITreasuryRebalanceCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ITreasuryRebalanceCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ITreasuryRebalanceCallerRaw struct {
 	Contract *ITreasuryRebalanceCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ITreasuryRebalanceTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ITreasuryRebalanceTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ITreasuryRebalanceTransactorRaw struct {
 	Contract *ITreasuryRebalanceTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -416,13 +418,11 @@ func (_ITreasuryRebalance *ITreasuryRebalanceTransactorRaw) Transact(opts *bind.
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) CheckRetiredsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "checkRetiredsApproved")
-
 	if err != nil {
 		return err
 	}
 
 	return err
-
 }
 
 // CheckRetiredsApproved is a free data retrieval call binding the contract method 0x966e0794.
@@ -445,7 +445,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) CheckRetiredsApprove
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts, newbieAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getNewbie", newbieAddress)
-
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -454,7 +453,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbie(opts *bind.CallOp
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetNewbie is a free data retrieval call binding the contract method 0xeb5a8e55.
@@ -477,7 +475,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetNewbie(newbieAddr
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbieCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getNewbieCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -485,7 +482,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbieCount(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetNewbieCount is a free data retrieval call binding the contract method 0x91734d86.
@@ -508,7 +504,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetNewbieCount() (*b
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetired(opts *bind.CallOpts, retiredAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getRetired", retiredAddress)
-
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -517,7 +512,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetired(opts *bind.CallO
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
-
 }
 
 // GetRetired is a free data retrieval call binding the contract method 0xbf680590.
@@ -540,7 +534,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetRetired(retiredAd
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetiredCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getRetiredCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -548,7 +541,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetiredCount(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetRetiredCount is a free data retrieval call binding the contract method 0xd1ed33fc.
@@ -571,7 +563,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetRetiredCount() (*
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getTreasuryAmount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -579,7 +570,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetTreasuryAmount(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -602,7 +592,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetTreasuryAmount() 
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "memo")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -610,7 +599,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -633,7 +621,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) Memo() (string, erro
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "rebalanceBlockNumber")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -641,7 +628,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) RebalanceBlockNumber(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -664,7 +650,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) RebalanceBlockNumber
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "status")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -672,7 +657,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Status(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -695,7 +679,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) Status() (uint8, err
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) SumOfRetiredBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "sumOfRetiredBalance")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -703,7 +686,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) SumOfRetiredBalance(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // SumOfRetiredBalance is a free data retrieval call binding the contract method 0x45205a6b.
@@ -988,7 +970,6 @@ type ITreasuryRebalanceApproved struct {
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterApproved(opts *bind.FilterOpts) (*ITreasuryRebalanceApprovedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -1000,7 +981,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterApproved(opts *bind
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceApproved) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -1123,7 +1103,6 @@ type ITreasuryRebalanceContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterContractDeployed(opts *bind.FilterOpts) (*ITreasuryRebalanceContractDeployedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -1135,7 +1114,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterContractDeployed(op
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceContractDeployed) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -1257,7 +1235,6 @@ type ITreasuryRebalanceFinalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterFinalized(opts *bind.FilterOpts) (*ITreasuryRebalanceFinalizedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -1269,7 +1246,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterFinalized(opts *bin
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceFinalized) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -1391,7 +1367,6 @@ type ITreasuryRebalanceNewbieRegistered struct {
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRegistered(opts *bind.FilterOpts) (*ITreasuryRebalanceNewbieRegisteredIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -1403,7 +1378,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRegistered(op
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchNewbieRegistered(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceNewbieRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -1524,7 +1498,6 @@ type ITreasuryRebalanceNewbieRemoved struct {
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRemoved(opts *bind.FilterOpts) (*ITreasuryRebalanceNewbieRemovedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -1536,7 +1509,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRemoved(opts 
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchNewbieRemoved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceNewbieRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -1657,7 +1629,6 @@ type ITreasuryRebalanceRetiredRegistered struct {
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRegistered(opts *bind.FilterOpts) (*ITreasuryRebalanceRetiredRegisteredIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -1669,7 +1640,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRegistered(o
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchRetiredRegistered(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceRetiredRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -1790,7 +1760,6 @@ type ITreasuryRebalanceRetiredRemoved struct {
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRemoved(opts *bind.FilterOpts) (*ITreasuryRebalanceRetiredRemovedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -1802,7 +1771,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRemoved(opts
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchRetiredRemoved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceRetiredRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -1923,7 +1891,6 @@ type ITreasuryRebalanceStatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterStatusChanged(opts *bind.FilterOpts) (*ITreasuryRebalanceStatusChangedIterator, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -1935,7 +1902,6 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterStatusChanged(opts 
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceStatusChanged) (event.Subscription, error) {
-
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -1998,29 +1964,29 @@ const IZeroedContractBinRuntime = ``
 // Deprecated: Use IZeroedContractMetaData.Sigs instead.
 var IZeroedContractFuncSigs = IZeroedContractMetaData.Sigs
 
-// IZeroedContract is an auto generated Go binding around a Klaytn contract.
+// IZeroedContract is an auto generated Go binding around a Kaia contract.
 type IZeroedContract struct {
 	IZeroedContractCaller     // Read-only binding to the contract
 	IZeroedContractTransactor // Write-only binding to the contract
 	IZeroedContractFilterer   // Log filterer for contract events
 }
 
-// IZeroedContractCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IZeroedContractCaller is an auto generated read-only Go binding around a Kaia contract.
 type IZeroedContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IZeroedContractTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IZeroedContractTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IZeroedContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IZeroedContractFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IZeroedContractFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IZeroedContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IZeroedContractSession is an auto generated Go binding around a Klaytn contract,
+// IZeroedContractSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IZeroedContractSession struct {
 	Contract     *IZeroedContract  // Generic contract binding to set the session for
@@ -2028,31 +1994,31 @@ type IZeroedContractSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IZeroedContractCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IZeroedContractCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IZeroedContractCallerSession struct {
 	Contract *IZeroedContractCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// IZeroedContractTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IZeroedContractTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IZeroedContractTransactorSession struct {
 	Contract     *IZeroedContractTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// IZeroedContractRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IZeroedContractRaw is an auto generated low-level Go binding around a Kaia contract.
 type IZeroedContractRaw struct {
 	Contract *IZeroedContract // Generic contract binding to access the raw methods on
 }
 
-// IZeroedContractCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IZeroedContractCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IZeroedContractCallerRaw struct {
 	Contract *IZeroedContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IZeroedContractTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IZeroedContractTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IZeroedContractTransactorRaw struct {
 	Contract *IZeroedContractTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2146,7 +2112,8 @@ func (_IZeroedContract *IZeroedContractTransactorRaw) Transact(opts *bind.Transa
 func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IZeroedContract.contract.Call(opts, &out, "getState")
 
@@ -2158,7 +2125,6 @@ func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (st
 	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -2167,7 +2133,8 @@ func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (st
 func (_IZeroedContract *IZeroedContractSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
 }
 
@@ -2177,7 +2144,8 @@ func (_IZeroedContract *IZeroedContractSession) GetState() (struct {
 func (_IZeroedContract *IZeroedContractCallerSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error) {
+}, error,
+) {
 	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
 }
 
@@ -2208,7 +2176,7 @@ var OwnableFuncSigs = OwnableMetaData.Sigs
 // Deprecated: Use OwnableMetaData.Bin instead.
 var OwnableBin = OwnableMetaData.Bin
 
-// DeployOwnable deploys a new Klaytn contract, binding an instance of Ownable to it.
+// DeployOwnable deploys a new Kaia contract, binding an instance of Ownable to it.
 func DeployOwnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Ownable, error) {
 	parsed, err := OwnableMetaData.GetAbi()
 	if err != nil {
@@ -2225,29 +2193,29 @@ func DeployOwnable(auth *bind.TransactOpts, backend bind.ContractBackend) (commo
 	return address, tx, &Ownable{OwnableCaller: OwnableCaller{contract: contract}, OwnableTransactor: OwnableTransactor{contract: contract}, OwnableFilterer: OwnableFilterer{contract: contract}}, nil
 }
 
-// Ownable is an auto generated Go binding around a Klaytn contract.
+// Ownable is an auto generated Go binding around a Kaia contract.
 type Ownable struct {
 	OwnableCaller     // Read-only binding to the contract
 	OwnableTransactor // Write-only binding to the contract
 	OwnableFilterer   // Log filterer for contract events
 }
 
-// OwnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableSession struct {
 	Contract     *Ownable          // Generic contract binding to set the session for
@@ -2255,31 +2223,31 @@ type OwnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// OwnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableCallerSession struct {
 	Contract *OwnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// OwnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableTransactorSession struct {
 	Contract     *OwnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// OwnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableRaw struct {
 	Contract *Ownable // Generic contract binding to access the raw methods on
 }
 
-// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableCallerRaw struct {
 	Contract *OwnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableTransactorRaw struct {
 	Contract *OwnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2373,7 +2341,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2381,7 +2348,6 @@ func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -2404,7 +2370,6 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2412,7 +2377,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -2549,7 +2513,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2570,7 +2533,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -2676,7 +2638,7 @@ var TreasuryRebalanceFuncSigs = TreasuryRebalanceMetaData.Sigs
 // Deprecated: Use TreasuryRebalanceMetaData.Bin instead.
 var TreasuryRebalanceBin = TreasuryRebalanceMetaData.Bin
 
-// DeployTreasuryRebalance deploys a new Klaytn contract, binding an instance of TreasuryRebalance to it.
+// DeployTreasuryRebalance deploys a new Kaia contract, binding an instance of TreasuryRebalance to it.
 func DeployTreasuryRebalance(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalance, error) {
 	parsed, err := TreasuryRebalanceMetaData.GetAbi()
 	if err != nil {
@@ -2693,29 +2655,29 @@ func DeployTreasuryRebalance(auth *bind.TransactOpts, backend bind.ContractBacke
 	return address, tx, &TreasuryRebalance{TreasuryRebalanceCaller: TreasuryRebalanceCaller{contract: contract}, TreasuryRebalanceTransactor: TreasuryRebalanceTransactor{contract: contract}, TreasuryRebalanceFilterer: TreasuryRebalanceFilterer{contract: contract}}, nil
 }
 
-// TreasuryRebalance is an auto generated Go binding around a Klaytn contract.
+// TreasuryRebalance is an auto generated Go binding around a Kaia contract.
 type TreasuryRebalance struct {
 	TreasuryRebalanceCaller     // Read-only binding to the contract
 	TreasuryRebalanceTransactor // Write-only binding to the contract
 	TreasuryRebalanceFilterer   // Log filterer for contract events
 }
 
-// TreasuryRebalanceCaller is an auto generated read-only Go binding around a Klaytn contract.
+// TreasuryRebalanceCaller is an auto generated read-only Go binding around a Kaia contract.
 type TreasuryRebalanceCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// TreasuryRebalanceTransactor is an auto generated write-only Go binding around a Kaia contract.
 type TreasuryRebalanceTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// TreasuryRebalanceFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type TreasuryRebalanceFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceSession is an auto generated Go binding around a Klaytn contract,
+// TreasuryRebalanceSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type TreasuryRebalanceSession struct {
 	Contract     *TreasuryRebalance // Generic contract binding to set the session for
@@ -2723,31 +2685,31 @@ type TreasuryRebalanceSession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// TreasuryRebalanceCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// TreasuryRebalanceCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type TreasuryRebalanceCallerSession struct {
 	Contract *TreasuryRebalanceCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// TreasuryRebalanceTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// TreasuryRebalanceTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type TreasuryRebalanceTransactorSession struct {
 	Contract     *TreasuryRebalanceTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// TreasuryRebalanceRaw is an auto generated low-level Go binding around a Klaytn contract.
+// TreasuryRebalanceRaw is an auto generated low-level Go binding around a Kaia contract.
 type TreasuryRebalanceRaw struct {
 	Contract *TreasuryRebalance // Generic contract binding to access the raw methods on
 }
 
-// TreasuryRebalanceCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// TreasuryRebalanceCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type TreasuryRebalanceCallerRaw struct {
 	Contract *TreasuryRebalanceCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// TreasuryRebalanceTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// TreasuryRebalanceTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type TreasuryRebalanceTransactorRaw struct {
 	Contract *TreasuryRebalanceTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2841,13 +2803,11 @@ func (_TreasuryRebalance *TreasuryRebalanceTransactorRaw) Transact(opts *bind.Tr
 func (_TreasuryRebalance *TreasuryRebalanceCaller) CheckRetiredsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "checkRetiredsApproved")
-
 	if err != nil {
 		return err
 	}
 
 	return err
-
 }
 
 // CheckRetiredsApproved is a free data retrieval call binding the contract method 0x966e0794.
@@ -2870,7 +2830,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) CheckRetiredsApproved(
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts, _newbieAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbie", _newbieAddress)
-
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -2879,7 +2838,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetNewbie is a free data retrieval call binding the contract method 0xeb5a8e55.
@@ -2902,7 +2860,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbie(_newbieAddre
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbieCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2910,7 +2867,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieCount(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetNewbieCount is a free data retrieval call binding the contract method 0x91734d86.
@@ -2933,7 +2889,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbieCount() (*big
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieIndex(opts *bind.CallOpts, _newbieAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbieIndex", _newbieAddress)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2941,7 +2896,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieIndex(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetNewbieIndex is a free data retrieval call binding the contract method 0x11f5c466.
@@ -2964,7 +2918,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbieIndex(_newbie
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetired(opts *bind.CallOpts, _retiredAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetired", _retiredAddress)
-
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -2973,7 +2926,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetired(opts *bind.CallOpt
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
-
 }
 
 // GetRetired is a free data retrieval call binding the contract method 0xbf680590.
@@ -2996,7 +2948,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetired(_retiredAdd
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetiredCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3004,7 +2955,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredCount(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetRetiredCount is a free data retrieval call binding the contract method 0xd1ed33fc.
@@ -3027,7 +2977,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetiredCount() (*bi
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredIndex(opts *bind.CallOpts, _retiredAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetiredIndex", _retiredAddress)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3035,7 +2984,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredIndex(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetRetiredIndex is a free data retrieval call binding the contract method 0x681f6e7c.
@@ -3058,7 +3006,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetiredIndex(_retir
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getTreasuryAmount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3066,7 +3013,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -3089,7 +3035,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetTreasuryAmount() (*
 func (_TreasuryRebalance *TreasuryRebalanceCaller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "isContractAddr", _addr)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3097,7 +3042,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) IsContractAddr(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -3120,7 +3064,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) IsContractAddr(_addr c
 func (_TreasuryRebalance *TreasuryRebalanceCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3128,7 +3071,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) IsOwner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -3151,7 +3093,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) IsOwner() (bool, error
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "memo")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -3159,7 +3100,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (st
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -3182,7 +3122,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Memo() (string, error)
 func (_TreasuryRebalance *TreasuryRebalanceCaller) NewbieExists(opts *bind.CallOpts, _newbieAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "newbieExists", _newbieAddress)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3190,7 +3129,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) NewbieExists(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // NewbieExists is a free data retrieval call binding the contract method 0x683e13cb.
@@ -3213,7 +3151,8 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) NewbieExists(_newbieAd
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "newbies", arg0)
 
@@ -3225,7 +3164,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, 
 	outstruct.Newbie = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // Newbies is a free data retrieval call binding the contract method 0x94393e11.
@@ -3234,7 +3172,8 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, 
 func (_TreasuryRebalance *TreasuryRebalanceSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	return _TreasuryRebalance.Contract.Newbies(&_TreasuryRebalance.CallOpts, arg0)
 }
 
@@ -3244,7 +3183,8 @@ func (_TreasuryRebalance *TreasuryRebalanceSession) Newbies(arg0 *big.Int) (stru
 func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	return _TreasuryRebalance.Contract.Newbies(&_TreasuryRebalance.CallOpts, arg0)
 }
 
@@ -3254,7 +3194,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Newbies(arg0 *big.Int)
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3262,7 +3201,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3285,7 +3223,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Owner() (common.Addres
 func (_TreasuryRebalance *TreasuryRebalanceCaller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "rebalanceBlockNumber")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3293,7 +3230,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) RebalanceBlockNumber(opts *bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -3316,7 +3252,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) RebalanceBlockNumber()
 func (_TreasuryRebalance *TreasuryRebalanceCaller) RetiredExists(opts *bind.CallOpts, _retiredAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "retiredExists", _retiredAddress)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -3324,7 +3259,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) RetiredExists(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // RetiredExists is a free data retrieval call binding the contract method 0x01784e05.
@@ -3347,7 +3281,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) RetiredExists(_retired
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Retirees(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "retirees", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3355,7 +3288,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Retirees(opts *bind.CallOpts,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Retirees is a free data retrieval call binding the contract method 0x5a12667b.
@@ -3378,7 +3310,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Retirees(arg0 *big.Int
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "status")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -3386,7 +3317,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Status(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -3409,7 +3339,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Status() (uint8, error
 func (_TreasuryRebalance *TreasuryRebalanceCaller) SumOfRetiredBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "sumOfRetiredBalance")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3417,7 +3346,6 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) SumOfRetiredBalance(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // SumOfRetiredBalance is a free data retrieval call binding the contract method 0x45205a6b.
@@ -3765,7 +3693,6 @@ type TreasuryRebalanceApproved struct {
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceApprovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -3777,7 +3704,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterApproved(opts *bind.F
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceApproved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -3900,7 +3826,6 @@ type TreasuryRebalanceContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceContractDeployedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -3912,7 +3837,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterContractDeployed(opts
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceContractDeployed) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -4034,7 +3958,6 @@ type TreasuryRebalanceFinalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceFinalizedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -4046,7 +3969,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterFinalized(opts *bind.
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceFinalized) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -4168,7 +4090,6 @@ type TreasuryRebalanceNewbieRegistered struct {
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceNewbieRegisteredIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -4180,7 +4101,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRegistered(opts
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchNewbieRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceNewbieRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -4301,7 +4221,6 @@ type TreasuryRebalanceNewbieRemoved struct {
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceNewbieRemovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -4313,7 +4232,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRemoved(opts *b
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchNewbieRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceNewbieRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -4435,7 +4353,6 @@ type TreasuryRebalanceOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4456,7 +4373,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4586,7 +4502,6 @@ type TreasuryRebalanceRetiredRegistered struct {
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceRetiredRegisteredIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -4598,7 +4513,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRegistered(opt
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchRetiredRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceRetiredRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -4719,7 +4633,6 @@ type TreasuryRebalanceRetiredRemoved struct {
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceRetiredRemovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -4731,7 +4644,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRemoved(opts *
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchRetiredRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceRetiredRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -4852,7 +4764,6 @@ type TreasuryRebalanceStatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceStatusChangedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -4864,7 +4775,6 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterStatusChanged(opts *b
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceStatusChanged) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -4962,7 +4872,7 @@ var TreasuryRebalanceV2FuncSigs = TreasuryRebalanceV2MetaData.Sigs
 // Deprecated: Use TreasuryRebalanceV2MetaData.Bin instead.
 var TreasuryRebalanceV2Bin = TreasuryRebalanceV2MetaData.Bin
 
-// DeployTreasuryRebalanceV2 deploys a new Klaytn contract, binding an instance of TreasuryRebalanceV2 to it.
+// DeployTreasuryRebalanceV2 deploys a new Kaia contract, binding an instance of TreasuryRebalanceV2 to it.
 func DeployTreasuryRebalanceV2(auth *bind.TransactOpts, backend bind.ContractBackend, _rebalanceBlockNumber *big.Int) (common.Address, *types.Transaction, *TreasuryRebalanceV2, error) {
 	parsed, err := TreasuryRebalanceV2MetaData.GetAbi()
 	if err != nil {
@@ -4979,29 +4889,29 @@ func DeployTreasuryRebalanceV2(auth *bind.TransactOpts, backend bind.ContractBac
 	return address, tx, &TreasuryRebalanceV2{TreasuryRebalanceV2Caller: TreasuryRebalanceV2Caller{contract: contract}, TreasuryRebalanceV2Transactor: TreasuryRebalanceV2Transactor{contract: contract}, TreasuryRebalanceV2Filterer: TreasuryRebalanceV2Filterer{contract: contract}}, nil
 }
 
-// TreasuryRebalanceV2 is an auto generated Go binding around a Klaytn contract.
+// TreasuryRebalanceV2 is an auto generated Go binding around a Kaia contract.
 type TreasuryRebalanceV2 struct {
 	TreasuryRebalanceV2Caller     // Read-only binding to the contract
 	TreasuryRebalanceV2Transactor // Write-only binding to the contract
 	TreasuryRebalanceV2Filterer   // Log filterer for contract events
 }
 
-// TreasuryRebalanceV2Caller is an auto generated read-only Go binding around a Klaytn contract.
+// TreasuryRebalanceV2Caller is an auto generated read-only Go binding around a Kaia contract.
 type TreasuryRebalanceV2Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceV2Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// TreasuryRebalanceV2Transactor is an auto generated write-only Go binding around a Kaia contract.
 type TreasuryRebalanceV2Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceV2Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// TreasuryRebalanceV2Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type TreasuryRebalanceV2Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// TreasuryRebalanceV2Session is an auto generated Go binding around a Klaytn contract,
+// TreasuryRebalanceV2Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type TreasuryRebalanceV2Session struct {
 	Contract     *TreasuryRebalanceV2 // Generic contract binding to set the session for
@@ -5009,31 +4919,31 @@ type TreasuryRebalanceV2Session struct {
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// TreasuryRebalanceV2CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// TreasuryRebalanceV2CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type TreasuryRebalanceV2CallerSession struct {
 	Contract *TreasuryRebalanceV2Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// TreasuryRebalanceV2TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// TreasuryRebalanceV2TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type TreasuryRebalanceV2TransactorSession struct {
 	Contract     *TreasuryRebalanceV2Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// TreasuryRebalanceV2Raw is an auto generated low-level Go binding around a Klaytn contract.
+// TreasuryRebalanceV2Raw is an auto generated low-level Go binding around a Kaia contract.
 type TreasuryRebalanceV2Raw struct {
 	Contract *TreasuryRebalanceV2 // Generic contract binding to access the raw methods on
 }
 
-// TreasuryRebalanceV2CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// TreasuryRebalanceV2CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type TreasuryRebalanceV2CallerRaw struct {
 	Contract *TreasuryRebalanceV2Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// TreasuryRebalanceV2TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// TreasuryRebalanceV2TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type TreasuryRebalanceV2TransactorRaw struct {
 	Contract *TreasuryRebalanceV2Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5127,7 +5037,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorRaw) Transact(opts *bin
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) AllocatedExists(opts *bind.CallOpts, _allocatedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocatedExists", _allocatedAddress)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5135,7 +5044,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) AllocatedExists(opts *bin
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
@@ -5158,7 +5066,8 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) AllocatedExists(_a
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocateds", arg0)
 
@@ -5170,7 +5079,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.Cal
 	outstruct.Addr = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
@@ -5179,7 +5087,8 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.Cal
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
 }
 
@@ -5189,7 +5098,8 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Allocateds(arg0 *big.Int
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error) {
+}, error,
+) {
 	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
 }
 
@@ -5199,13 +5109,11 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Allocateds(arg0 *b
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) CheckZeroedsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "checkZeroedsApproved")
-
 	if err != nil {
 		return err
 	}
 
 	return err
-
 }
 
 // CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
@@ -5228,7 +5136,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) CheckZeroedsApprov
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocated(opts *bind.CallOpts, _allocatedAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocated", _allocatedAddress)
-
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -5237,7 +5144,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocated(opts *bind.C
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
-
 }
 
 // GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
@@ -5260,7 +5166,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocated(_allo
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5268,7 +5173,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedCount(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
@@ -5291,7 +5195,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedCount(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedIndex(opts *bind.CallOpts, _allocatedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedIndex", _allocatedAddress)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5299,7 +5202,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedIndex(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
@@ -5322,7 +5224,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedIndex(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getTreasuryAmount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5330,7 +5231,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetTreasuryAmount(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -5353,7 +5253,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetTreasuryAmount(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroed(opts *bind.CallOpts, _zeroedAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroed", _zeroedAddress)
-
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -5362,7 +5261,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroed(opts *bind.Call
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
-
 }
 
 // GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
@@ -5385,7 +5283,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroed(_zeroedA
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedCount")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5393,7 +5290,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedCount(opts *bind
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
@@ -5416,7 +5312,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedCount() (
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedIndex(opts *bind.CallOpts, _zeroedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedIndex", _zeroedAddress)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5424,7 +5319,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedIndex(opts *bind
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
@@ -5447,7 +5341,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedIndex(_ze
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isContractAddr", _addr)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5455,7 +5348,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsContractAddr(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -5478,7 +5370,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsContractAddr(_ad
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5486,7 +5377,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsOwner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -5509,7 +5399,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsOwner() (bool, e
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "memo")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -5517,7 +5406,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Memo(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -5540,7 +5428,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Memo() (string, er
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5548,7 +5435,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Owner(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -5571,7 +5457,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Owner() (common.Ad
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "rebalanceBlockNumber")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5579,7 +5464,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) RebalanceBlockNumber(opts
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -5602,7 +5486,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) RebalanceBlockNumb
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "status")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -5610,7 +5493,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Status(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -5633,7 +5515,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Status() (uint8, e
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) SumOfZeroedBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "sumOfZeroedBalance")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5641,7 +5522,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) SumOfZeroedBalance(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
@@ -5664,7 +5544,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) SumOfZeroedBalance
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) ZeroedExists(opts *bind.CallOpts, _zeroedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroedExists", _zeroedAddress)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5672,7 +5551,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) ZeroedExists(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
@@ -5695,7 +5573,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) ZeroedExists(_zero
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Zeroeds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroeds", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5703,7 +5580,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Zeroeds(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
@@ -6050,7 +5926,6 @@ type TreasuryRebalanceV2AllocatedRegistered struct {
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRegisteredIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -6062,7 +5937,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRegister
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -6183,7 +6057,6 @@ type TreasuryRebalanceV2AllocatedRemoved struct {
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRemovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -6195,7 +6068,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRemoved(
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -6318,7 +6190,6 @@ type TreasuryRebalanceV2Approved struct {
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ApprovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -6330,7 +6201,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterApproved(opts *bi
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Approved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -6453,7 +6323,6 @@ type TreasuryRebalanceV2ContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceV2ContractDeployedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -6465,7 +6334,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterContractDeployed(
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ContractDeployed) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -6587,7 +6455,6 @@ type TreasuryRebalanceV2Finalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceV2FinalizedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -6599,7 +6466,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterFinalized(opts *b
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Finalized) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -6721,7 +6587,6 @@ type TreasuryRebalanceV2OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceV2OwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6742,7 +6607,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterOwnershipTransfer
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -6872,7 +6736,6 @@ type TreasuryRebalanceV2StatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceV2StatusChangedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -6884,7 +6747,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterStatusChanged(opt
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2StatusChanged) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -7005,7 +6867,6 @@ type TreasuryRebalanceV2ZeroedRegistered struct {
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRegisteredIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -7017,7 +6878,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRegistered(
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -7138,7 +6998,6 @@ type TreasuryRebalanceV2ZeroedRemoved struct {
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRemovedIterator, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err
@@ -7150,7 +7009,6 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRemoved(opt
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRemoved) (event.Subscription, error) {
-
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err

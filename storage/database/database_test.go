@@ -116,7 +116,7 @@ func TestDatabaseTestSuite(t *testing.T) {
 	// If you want to include dynamo test, use below line
 	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
-	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
+	// TODO-Kaia-Database Need to add DynamoDB to the below list.
 	testDatabases = append(testDatabases, newTestLDB, newTestBadgerDB, newTestMemDB)
 	for _, newFn := range testDatabases {
 		suite.Run(t, &commonDatabaseTestSuite{newFn: newFn})

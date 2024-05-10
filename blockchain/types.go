@@ -29,7 +29,6 @@ import (
 // Validator is an interface which defines the standard for block validation. It
 // is only responsible for validating block contents, as the header validation is
 // done by the specific consensus engines.
-//
 type Validator interface {
 	// ValidateBody validates the given block's content.
 	ValidateBody(block *types.Block) error
@@ -41,7 +40,7 @@ type Validator interface {
 
 // Prefetcher is an interface for pre-caching transaction signatures and state.
 type Prefetcher interface {
-	// Prefetch processes the state changes according to the Klaytn rules by running
+	// Prefetch processes the state changes according to the Kaia rules by running
 	// the transaction messages using the statedb, but any changes are discarded. The
 	// only goal is to pre-cache transaction signatures and state trie nodes.
 	Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32)
@@ -50,7 +49,7 @@ type Prefetcher interface {
 
 // Processor is an interface for processing blocks using a given initial state.
 type Processor interface {
-	// Process processes the state changes according to the Klaytn rules by running
+	// Process processes the state changes according to the Kaia rules by running
 	// the transaction messages using the statedb and applying any rewards to
 	// the processor (coinbase).
 	Process(block *types.Block, stateDB *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error)

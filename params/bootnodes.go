@@ -28,7 +28,7 @@ type bootnodesByTypes struct {
 	Addrs []string
 }
 
-// MainnetBootnodes are the URLs of bootnodes running on the Klaytn main network.
+// MainnetBootnodes are the URLs of bootnodes running on the Kaia main network.
 var MainnetBootnodes = map[common.ConnType]bootnodesByTypes{
 	common.CONSENSUSNODE: {
 		[]string{},

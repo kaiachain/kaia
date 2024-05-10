@@ -27,7 +27,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// AccountCommon represents the common data structure of a Klaytn account.
+// AccountCommon represents the common data structure of a Kaia account.
 type AccountCommon struct {
 	nonce         uint64
 	balance       *big.Int

@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	// TODO-Klaytn-MultiSig: Need to fix the maximum number of keys allowed for an account.
-	// NOTE-Klaytn-MultiSig: This value should not be reduced. If it is reduced, there is a case:
+	// TODO-Kaia-MultiSig: Need to fix the maximum number of keys allowed for an account.
+	// NOTE-Kaia-MultiSig: This value should not be reduced. If it is reduced, there is a case:
 	// - the tx validation will be failed if the sender has larger keys.
 	MaxNumKeysForMultiSig = uint64(10)
 )
@@ -95,7 +95,7 @@ func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleT
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.
-	// TODO-Klaytn: find another way for better performance
+	// TODO-Kaia: find another way for better performance
 	pMap := make(map[string]*ecdsa.PublicKey)
 	for _, bk := range recoveredKeys {
 		b, err := rlp.EncodeToBytes((*PublicKeySerializable)(bk))

@@ -76,7 +76,7 @@ type PeerSet interface {
 }
 
 // peerSet represents the collection of active peers currently participating in
-// the Klaytn sub-protocol.
+// the Kaia sub-protocol.
 type peerSet struct {
 	peers   map[string]Peer
 	cnpeers map[common.Address]Peer
@@ -478,7 +478,7 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType common
 }
 
 func (peers *peerSet) SampleResendPeersByType(nodeType common.ConnType) []Peer {
-	// TODO-Klaytn Need to tune pickSize. Currently use 2 for availability and efficiency.
+	// TODO-Kaia Need to tune pickSize. Currently use 2 for availability and efficiency.
 	var sampledPeers []Peer
 	switch nodeType {
 	case common.ENDPOINTNODE:

@@ -31,14 +31,14 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
-// PrivateDebugAPI is the collection of Klaytn APIs exposed over the private
+// PrivateDebugAPI is the collection of Kaia APIs exposed over the private
 // debugging endpoint.
 type PrivateDebugAPI struct {
 	b Backend
 }
 
 // NewPrivateDebugAPI creates a new API definition for the private debug methods
-// of the Klaytn service.
+// of the Kaia service.
 func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
 	return &PrivateDebugAPI{b: b}
 }

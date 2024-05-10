@@ -69,7 +69,7 @@ func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 			testWriteAndReadTd(t, dbManager)
 			testWriteAndReadReceipts(t, dbManager)
 			testWriteAndReadBlock(t, dbManager)
-			// TODO-Klaytn-Storage To implement this test case, error shouldn't be returned.
+			// TODO-Kaia-Storage To implement this test case, error shouldn't be returned.
 			// testWriteAndReadIstanbulSnapshot(t, dbManager)
 		})
 
@@ -292,7 +292,7 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 }
 
 func testWriteAndReadIstanbulSnapshot(t *testing.T, dbManager database.DBManager) {
-	// TODO-Klaytn-Storage To implement this test case, error shouldn't be returned.
+	// TODO-Kaia-Storage To implement this test case, error shouldn't be returned.
 }
 
 func generateHeaderWithBlockNum(blockNum int) (common.Hash, uint64, *types.Header) {

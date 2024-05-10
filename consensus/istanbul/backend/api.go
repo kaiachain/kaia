@@ -195,7 +195,7 @@ func (api *API) Discard(address common.Address) {
 	delete(api.istanbul.candidates, address)
 }
 
-// API extended by Klaytn developers
+// API extended by Kaia developers
 type APIExtension struct {
 	chain    consensus.ChainReader
 	istanbul *backend
@@ -352,7 +352,7 @@ func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) (
 	return committers, nil
 }
 
-// TODO-Klaytn: This API functions should be managed with API functions with namespace "klay"
+// TODO-Kaia: This API functions should be managed with API functions with namespace "klay"
 func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumber) (map[string]interface{}, error) {
 	b, ok := api.chain.(*blockchain.BlockChain)
 	if !ok {

@@ -100,7 +100,7 @@ var (
 	savedTestDataDir        string
 )
 
-// dataExecutionTest is to check the performance of Klaytn with pre-generated data.
+// dataExecutionTest is to check the performance of Kaia with pre-generated data.
 // It generates warmUpTxs and executionTxs first, and then initialize blockchain and database to
 // remove any effects caused by generating transactions. And then it executes warmUpTxs and executionTxs.
 // To run the test, original data directory should be located at "$GOPATH/src/github.com/klaytn/"

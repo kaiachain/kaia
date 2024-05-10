@@ -22,9 +22,9 @@ package client
 
 import "github.com/klaytn/klaytn"
 
-// Verify that Client implements the Klaytn interfaces.
+// Verify that Client implements the Kaia interfaces.
 var (
-	// _ = klaytn.Subscription(&Client{})
+	// _ = Kaia.Subscription(&Client{})
 	_ = klaytn.ChainReader(&Client{})
 	_ = klaytn.TransactionReader(&Client{})
 	_ = klaytn.ChainStateReader(&Client{})
@@ -36,5 +36,5 @@ var (
 	_ = klaytn.PendingStateReader(&Client{})
 	_ = klaytn.PendingContractCaller(&Client{})
 	_ = klaytn.GasEstimator(&Client{})
-	// _ = klaytn.PendingStateEventer(&Client{})
+	// _ = Kaia.PendingStateEventer(&Client{})
 )

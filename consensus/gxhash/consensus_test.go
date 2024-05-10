@@ -63,7 +63,7 @@ func (d *diffTest) UnmarshalJSON(b []byte) (err error) {
 	return nil
 }
 
-// TODO-Klaytn-FailedTest Enable this test later
+// TODO-Kaia-FailedTest Enable this test later
 /*
 func TestCalcBlockScore(t *testing.T) {
 	file, err := os.Open(filepath.Join("..", "..", "tests", "testdata", "BasicTests", "difficulty.json"))

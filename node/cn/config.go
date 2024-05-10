@@ -42,7 +42,7 @@ import (
 
 var logger = log.NewModuleLogger(log.NodeCN)
 
-// GetDefaultConfig returns default settings for use on the Klaytn main net.
+// GetDefaultConfig returns default settings for use on the Kaia main net.
 func GetDefaultConfig() *Config {
 	return &Config{
 		SyncMode:             downloader.FullSync,
@@ -84,7 +84,7 @@ func init() {
 
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
-	// If nil, the Klaytn main net block is used.
+	// If nil, the Kaia main net block is used.
 	Genesis *blockchain.Genesis `toml:",omitempty"`
 
 	// Protocol options
@@ -184,7 +184,7 @@ type Config struct {
 	RPCEVMTimeout time.Duration
 
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
-	// send-transction variants. The unit is klay.
+	// send-transction variants. The unit is KAIA.
 	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
 

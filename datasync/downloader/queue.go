@@ -907,7 +907,7 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.Staking
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		// TODO-Klaytn-Snapsync update validation logic
+		// TODO-Kaia-Snapsync update validation logic
 		return nil
 	}
 

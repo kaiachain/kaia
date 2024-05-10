@@ -37,7 +37,7 @@ import (
 // references to the original version, whereas the latter is important to ensure
 // one single canonical form opposed to many allowed ones by the RFC 3986 spec.
 //
-// As such, these URLs should not be used outside of the scope of a Klaytn
+// As such, these URLs should not be used outside of the scope of a Kaia
 // wallet or account.
 type URL struct {
 	Scheme string // Protocol scheme to identify a capable account backend
@@ -96,10 +96,9 @@ func (u *URL) UnmarshalJSON(input []byte) error {
 
 // Cmp compares x and y and returns:
 //
-//   -1 if x <  y
-//    0 if x == y
-//   +1 if x >  y
-//
+//	-1 if x <  y
+//	 0 if x == y
+//	+1 if x >  y
 func (u URL) Cmp(url URL) int {
 	if u.Scheme == url.Scheme {
 		return strings.Compare(u.Path, url.Path)

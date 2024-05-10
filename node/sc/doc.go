@@ -17,38 +17,36 @@
 /*
 Package sc implements an auxiliary blockchain called Service Chain.
 
-Service Chains in Klaytn are auxiliary blockchains independent from the Klaytn main chain.
-They mostly act like normal Klaytn blockchains but has additional features to connect them to another Klaytn network.
-They can be used as separate public/private blockchains or child chains of a Klaytn chain (or another Service Chain).
+Service Chains in Kaia are auxiliary blockchains independent from the Kaia main chain.
+They mostly act like normal Kaia blockchains but has additional features to connect them to another Kaia network.
+They can be used as separate public/private blockchains or child chains of a Kaia chain (or another Service Chain).
 The followings describe main features of Service chain.
   - Anchoring block data of Service Chain
-  - Value Transfer (KLAY, KCT)
+  - Value Transfer (KAIA, KCT)
   - Various bridge contract configurations
   - Support high availability
 
-
-Service Chain provides the inter-connectivity to another Klaytn chain through two bridges, MainBridge and SubBridge.
+Service Chain provides the inter-connectivity to another Kaia chain through two bridges, MainBridge and SubBridge.
 Each bridge has a bridge contract on different blockchain networks and pairs up with another bridge to interact with.
 They are directly connected on the network layer and communicate with each other through p2p messages enabling inter-chain operations.
 
 MainBridge is configured on the node of a parent chain and SubBridge is configured on the node of a child chain.
-Both of a Klaytn chain and a Service Chain can be a parent chain, but only a Service Chain can be a child chain.
+Both of a Kaia chain and a Service Chain can be a parent chain, but only a Service Chain can be a child chain.
 The block data of a child chain can be anchored to the bridge contract of MainBridge with the chain data anchoring transaction.
 
 Unlike the block data anchoring, user data transfer is bi-directional.
-For example, users can transfer KLAY of Klaytn main chain to an address of a Service Chain or vice versa.
+For example, users can transfer KAIA of Kaia main chain to an address of a Service Chain or vice versa.
 This kind of inter-chain operation requires read/write ability on both chains but does not use MainBridge functions in the process.
 Instead of the MainBridge, the SubBridge in the child chain directly calls read/write operations to the parent chain node through RPC (In the basic configuration, the parent chain node is the same with the MainBridge enabled node).
 Of course, the accounts of both chains should be registered on the SubBridge to generate transactions.
-Following is the process of the KLAY transfer from Klaytn main chain to a Service Chain.
-1. A user executes the inter-chain operation by sending a transaction with KLAY to the bridge contract of Klaytn main chain.
-2. The bridge contract keeps KLAY on its account and creates an event for the inter-chain request.
+Following is the process of the KAIA transfer from Kaia main chain to a Service Chain.
+1. A user executes the inter-chain operation by sending a transaction with KAIA to the bridge contract of Kaia main chain.
+2. The bridge contract keeps KAIA on its account and creates an event for the inter-chain request.
 3. The SubBridge subscribes the event log on the main chain node through RPC.
 4. The SubBridge generates a transaction on the child chain node to the bridge contract of the SubBridge.
-5. Finally, The bridge contract mints (or uses its KLAY) and sends KLAY to the target address.
+5. Finally, The bridge contract mints (or uses its KAIA) and sends KAIA to the target address.
 
-
-Source Files
+# Source Files
 
 Functions and variables related to Service Chain are defined in the files listed below.
   - api_bridge.go : provides APIs for MainBridge or SubBridge.

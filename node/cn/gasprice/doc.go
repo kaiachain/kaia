@@ -16,7 +16,7 @@
 
 /*
 Package gasprice contains Oracle type which recommends gas prices based on recent blocks.
-However, Klaytn uses invariant ChainConfig.UnitPrice and this value will not be changed
+However, Kaia uses invariant ChainConfig.UnitPrice and this value will not be changed
 until ChainConfig.UnitPrice is updated with governance.
 
 Source Files

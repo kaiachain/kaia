@@ -282,9 +282,9 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	for addr := range result.Zeroed {
 		state.SetBalance(addr, big.NewInt(0))
 	}
-	// Execution 2) Distribute KLAY to all newbies
+	// Execution 2) Distribute KAIA to all newbies
 	for addr, balance := range result.Allocated {
-		// if newbie has KLAY before the allocation, it will be burnt
+		// if newbie has KAIA before the allocation, it will be burnt
 		currentBalance := state.GetBalance(addr)
 		result.Burnt.Add(result.Burnt, currentBalance)
 

@@ -49,7 +49,7 @@ func newStatePrefetcher(config *params.ChainConfig, bc *BlockChain, engine conse
 	}
 }
 
-// Prefetch processes the state changes according to the Klaytn rules by running
+// Prefetch processes the state changes according to the Kaia rules by running
 // the transaction messages using the statedb, but any changes are discarded. The
 // only goal is to pre-cache transaction signatures and state trie nodes.
 func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
@@ -68,7 +68,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 	}
 }
 
-// PrefetchTx processes the state changes according to the Klaytn rules by running
+// PrefetchTx processes the state changes according to the Kaia rules by running
 // a single transaction message using the statedb, but any changes are discarded. The
 // only goal is to pre-cache transaction signatures and state trie nodes. It is used
 // when fetcher works, so it fetches only a block.

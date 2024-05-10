@@ -198,7 +198,7 @@ func (c *core) commit() {
 			vrank.HandleCommitted(proposal.Number())
 		}
 	} else {
-		// TODO-Klaytn never happen, but if proposal is nil, mining is not working.
+		// TODO-Kaia never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
 		c.current.UnlockHash() // Unlock block when insertion fails
 		c.sendNextRoundChange("commit failure. proposal is nil")
@@ -365,7 +365,7 @@ func (c *core) stopTimer() {
 func (c *core) newRoundChangeTimer() {
 	c.stopTimer()
 
-	// TODO-Klaytn-Istanbul: Replace &istanbul.DefaultConfig.Timeout to c.config.Timeout
+	// TODO-Kaia-Istanbul: Replace &istanbul.DefaultConfig.Timeout to c.config.Timeout
 	// set timeout based on the round number
 	timeout := time.Duration(atomic.LoadUint64(&istanbul.DefaultConfig.Timeout)) * time.Millisecond
 	round := c.current.Round().Uint64()

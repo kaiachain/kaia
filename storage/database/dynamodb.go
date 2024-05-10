@@ -99,7 +99,7 @@ type batchWriteWorkerInput struct {
 	wg        *sync.WaitGroup
 }
 
-// TODO-Klaytn refactor the structure : there are common configs that are placed separated
+// TODO-Kaia refactor the structure : there are common configs that are placed separated
 type dynamoDB struct {
 	config DynamoDBConfig
 	fdb    fileDB     // where over size items are stored
@@ -118,7 +118,7 @@ type DynamoData struct {
 // CustomRetryer wraps AWS SDK's built in DefaultRetryer adding additional custom features.
 // DefaultRetryer of AWS SDK has its own standard of retryable situation,
 // but it's not proper when network environment is not stable.
-// CustomRetryer conservatively retry in all error cases because DB failure of Klaytn is critical.
+// CustomRetryer conservatively retry in all error cases because DB failure of Kaia is critical.
 type CustomRetryer struct {
 	client.DefaultRetryer
 }
@@ -134,8 +134,9 @@ func (r CustomRetryer) ShouldRetry(req *request.Request) bool {
 //
 // If you use this config, you will be charged for what you use.
 // You need to set AWS credentials to access to dynamoDB.
-//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+//
+//	$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//	$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
@@ -451,7 +452,7 @@ func (dynamo *dynamoDB) TryCatchUpWithPrimary() error {
 }
 
 func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
-	// TODO-Klaytn: implement this later.
+	// TODO-Kaia: implement this later.
 	return nil
 }
 

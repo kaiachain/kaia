@@ -66,13 +66,13 @@ var (
 )
 
 var (
-	// TODO-Klaytn-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
+	// TODO-Kaia-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
 	emptyCodeHash = crypto.Keccak256(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
-// Account is the Klaytn consensus representation of accounts.
+// Account is the Kaia consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account interface {
 	Type() AccountType

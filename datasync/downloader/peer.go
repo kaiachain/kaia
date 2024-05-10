@@ -74,7 +74,7 @@ type peerConnection struct {
 
 	peer Peer
 
-	version int        // Klaytn protocol version number to switch strategies
+	version int        // Kaia protocol version number to switch strategies
 	logger  log.Logger // Contextual logger to add extra infos to peer logs
 	lock    sync.RWMutex
 }
@@ -592,7 +592,7 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 	return ps.idlePeers(63, 65, idleCheck, throughput)
 }
 
-// TODO-Klaytn-Downloader when idlePeers is called magic numbers are used for minProtocol and maxProtocol. Use a constant instead.
+// TODO-Kaia-Downloader when idlePeers is called magic numbers are used for minProtocol and maxProtocol. Use a constant instead.
 // idlePeers retrieves a flat list of all currently idle peers satisfying the
 // protocol version constraints, using the provided function to check idleness.
 // The resulting set of peers are sorted by their measure throughput.

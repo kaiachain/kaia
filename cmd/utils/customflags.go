@@ -38,7 +38,7 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// NOTE-klaytn: The custom directoryFlag deprecated.
+// NOTE-Kaia: The custom directoryFlag deprecated.
 // urfave.v2 new flag, PathFlag, replaced the directoryFlag.
 
 // Custom type which is registered in the flags library which cli uses for

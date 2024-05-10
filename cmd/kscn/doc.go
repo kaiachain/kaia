@@ -19,13 +19,13 @@
 // Modified and improved for the klaytn development.
 
 /*
-kscn is the command-line client for Klaytn ServiceChain Consensus Node.
+kscn is the command-line client for Kaia ServiceChain Consensus Node.
 
 kscn has the node type of "cn" internally. Please try `kscn -h` to see commands and options list.
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - main.go : Defines available options and initializes the application with given options
+  - main.go : Defines available options and initializes the application with given options
 */
 package main

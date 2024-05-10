@@ -55,7 +55,7 @@ type blockchainTestOverrides struct {
 	numNodes    int                     // default: 1
 	numAccounts int                     // default: numNodes
 	config      *params.ChainConfig     // default: blockchainTestChainConfig
-	alloc       blockchain.GenesisAlloc // default: 10_000_000 KLAY for each account
+	alloc       blockchain.GenesisAlloc // default: 10_000_000 KAIA for each account
 }
 
 var blockchainTestChainConfig = &params.ChainConfig{

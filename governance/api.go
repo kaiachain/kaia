@@ -351,7 +351,7 @@ func (api *GovernanceAPI) IdxCacheFromDb() []uint64 {
 	return api.governance.IdxCacheFromDb()
 }
 
-// TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
+// TODO-Kaia: Return error if invalid input is given such as pending or a too big number
 func (api *GovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {

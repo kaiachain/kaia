@@ -142,7 +142,7 @@ func (b *BlockchainContractBackend) callContract(call klaytn.CallMsg, block *typ
 	txContext := blockchain.NewEVMTxContext(msg, block.Header())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
 
-	// EVM demands the sender to have enough KLAY balance (gasPrice * gasLimit) in buyGas()
+	// EVM demands the sender to have enough KAIA balance (gasPrice * gasLimit) in buyGas()
 	// After KIP-71, gasPrice is nonzero baseFee, regardless of the msg.gasPrice (usually 0)
 	// But our sender (usually 0x0) won't have enough balance. Instead we override gasPrice = 0 here
 	txContext.GasPrice = big.NewInt(0)
@@ -173,7 +173,7 @@ func (b *BlockchainContractBackend) getBlockAndState(num *big.Int) (*types.Block
 // bind.ContractTransactor defined methods
 
 func (b *BlockchainContractBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
-	// TODO-Klaytn this is not pending code but latest code
+	// TODO-Kaia this is not pending code but latest code
 	state, err := b.bc.State()
 	if err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func (b *BlockchainContractBackend) PendingNonceAt(ctx context.Context, account 
 	if b.txPool != nil {
 		return b.txPool.GetPendingNonce(account), nil
 	}
-	// TODO-Klaytn this is not pending nonce but latest nonce
+	// TODO-Kaia this is not pending nonce but latest nonce
 	state, err := b.bc.State()
 	if err != nil {
 		return 0, err

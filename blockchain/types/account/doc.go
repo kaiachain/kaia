@@ -15,25 +15,25 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package account implements Account used in Klaytn.
+Package account implements Account used in Kaia.
 
 Inside the package, types, structures, functions, and interfaces associated with the Account are defined.
 
-Type of Account
+# Type of Account
 
-There are three types of Accounts used in Klaytn.
+There are three types of Accounts used in Kaia.
 
   - LegacyAccountType
   - ExternallyOwnedAccountType
   - SmartContractAccountType
 
-AccountCommon implements the structure and functions common to Klaytn Account, which also implements the Account interface.
+AccountCommon implements the structure and functions common to Kaia account, which also implements the Account interface.
 
 EOA (ExternallyOwnedAccount) and SCA (SmartContractAccount) are implemented in a structure that includes AccountCommon.
 
 LegacyAccount is implemented separately according to the account interface.
 
-Source Files
+# Source Files
 
 Account related functions and variables are defined in the files listed below.
   - account.go                  : Defines types, interfaces and functions associated with the Account.

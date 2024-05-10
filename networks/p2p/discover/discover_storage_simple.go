@@ -130,7 +130,7 @@ func (s *simpleStorage) doRevalidate() {
 
 	oldest := s.nodes[len(s.nodes)-1]
 
-	holdingTime := s.tab.db.bondTime(oldest.ID).Add(10 * time.Second) // TODO-Klaytn-Node Make sleep time as configurable
+	holdingTime := s.tab.db.bondTime(oldest.ID).Add(10 * time.Second) // TODO-Kaia-Node Make sleep time as configurable
 	if time.Now().Before(holdingTime) {
 		return
 	}
@@ -216,7 +216,7 @@ func (s *simpleStorage) deleteWithoutLock(n *Node) {
 func (s *simpleStorage) closest(target common.Hash, nresults int) *nodesByDistance {
 	s.nodesMutex.Lock()
 	defer s.nodesMutex.Unlock()
-	// TODO-Klaytn-Node nodesByDistance is not suitable for SimpleStorage. Because there is no concept for distance
+	// TODO-Kaia-Node nodesByDistance is not suitable for SimpleStorage. Because there is no concept for distance
 	// in the SimpleStorage. Change it
 	cNodes := &nodesByDistance{target: target}
 	nodes := s.shuffle(s.nodes)
@@ -250,7 +250,7 @@ func (s *simpleStorage) bumpOrAdd(n *Node) bool {
 	}
 
 	s.localLogger.Trace("Add(New)", "StorageName", s.name(), "node", n)
-	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Klaytn-Node Change Max value for more reasonable one.
+	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Kaia-Node Change Max value for more reasonable one.
 	n.addedAt = time.Now()
 	if s.tab.nodeAddedHook != nil {
 		s.tab.nodeAddedHook(n)

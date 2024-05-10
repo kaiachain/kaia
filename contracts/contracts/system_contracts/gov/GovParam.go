@@ -48,29 +48,29 @@ var ContextABI = ContextMetaData.ABI
 // ContextBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ContextBinRuntime = ``
 
-// Context is an auto generated Go binding around a Klaytn contract.
+// Context is an auto generated Go binding around a Kaia contract.
 type Context struct {
 	ContextCaller     // Read-only binding to the contract
 	ContextTransactor // Write-only binding to the contract
 	ContextFilterer   // Log filterer for contract events
 }
 
-// ContextCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ContextCaller is an auto generated read-only Go binding around a Kaia contract.
 type ContextCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ContextTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ContextTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ContextFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ContextFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextSession is an auto generated Go binding around a Klaytn contract,
+// ContextSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ContextSession struct {
 	Contract     *Context          // Generic contract binding to set the session for
@@ -78,31 +78,31 @@ type ContextSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ContextCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ContextCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ContextCallerSession struct {
 	Contract *ContextCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// ContextTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ContextTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ContextTransactorSession struct {
 	Contract     *ContextTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// ContextRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ContextRaw is an auto generated low-level Go binding around a Kaia contract.
 type ContextRaw struct {
 	Contract *Context // Generic contract binding to access the raw methods on
 }
 
-// ContextCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ContextCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ContextCallerRaw struct {
 	Contract *ContextCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ContextTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ContextTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ContextTransactorRaw struct {
 	Contract *ContextTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -226,7 +226,7 @@ var GovParamFuncSigs = GovParamMetaData.Sigs
 // Deprecated: Use GovParamMetaData.Bin instead.
 var GovParamBin = GovParamMetaData.Bin
 
-// DeployGovParam deploys a new Klaytn contract, binding an instance of GovParam to it.
+// DeployGovParam deploys a new Kaia contract, binding an instance of GovParam to it.
 func DeployGovParam(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GovParam, error) {
 	parsed, err := GovParamMetaData.GetAbi()
 	if err != nil {
@@ -243,29 +243,29 @@ func DeployGovParam(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &GovParam{GovParamCaller: GovParamCaller{contract: contract}, GovParamTransactor: GovParamTransactor{contract: contract}, GovParamFilterer: GovParamFilterer{contract: contract}}, nil
 }
 
-// GovParam is an auto generated Go binding around a Klaytn contract.
+// GovParam is an auto generated Go binding around a Kaia contract.
 type GovParam struct {
 	GovParamCaller     // Read-only binding to the contract
 	GovParamTransactor // Write-only binding to the contract
 	GovParamFilterer   // Log filterer for contract events
 }
 
-// GovParamCaller is an auto generated read-only Go binding around a Klaytn contract.
+// GovParamCaller is an auto generated read-only Go binding around a Kaia contract.
 type GovParamCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// GovParamTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// GovParamTransactor is an auto generated write-only Go binding around a Kaia contract.
 type GovParamTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// GovParamFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// GovParamFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type GovParamFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// GovParamSession is an auto generated Go binding around a Klaytn contract,
+// GovParamSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type GovParamSession struct {
 	Contract     *GovParam         // Generic contract binding to set the session for
@@ -273,31 +273,31 @@ type GovParamSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// GovParamCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// GovParamCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type GovParamCallerSession struct {
 	Contract *GovParamCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// GovParamTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// GovParamTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type GovParamTransactorSession struct {
 	Contract     *GovParamTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// GovParamRaw is an auto generated low-level Go binding around a Klaytn contract.
+// GovParamRaw is an auto generated low-level Go binding around a Kaia contract.
 type GovParamRaw struct {
 	Contract *GovParam // Generic contract binding to access the raw methods on
 }
 
-// GovParamCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// GovParamCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type GovParamCallerRaw struct {
 	Contract *GovParamCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// GovParamTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// GovParamTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type GovParamTransactorRaw struct {
 	Contract *GovParamTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -391,7 +391,6 @@ func (_GovParam *GovParamTransactorRaw) Transact(opts *bind.TransactOpts, method
 func (_GovParam *GovParamCaller) Checkpoints(opts *bind.CallOpts, name string) ([]IGovParamParam, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "checkpoints", name)
-
 	if err != nil {
 		return *new([]IGovParamParam), err
 	}
@@ -399,7 +398,6 @@ func (_GovParam *GovParamCaller) Checkpoints(opts *bind.CallOpts, name string) (
 	out0 := *abi.ConvertType(out[0], new([]IGovParamParam)).(*[]IGovParamParam)
 
 	return out0, err
-
 }
 
 // Checkpoints is a free data retrieval call binding the contract method 0x296451d9.
@@ -422,7 +420,6 @@ func (_GovParam *GovParamCallerSession) Checkpoints(name string) ([]IGovParamPar
 func (_GovParam *GovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]string, [][]IGovParamParam, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllCheckpoints")
-
 	if err != nil {
 		return *new([]string), *new([][]IGovParamParam), err
 	}
@@ -431,7 +428,6 @@ func (_GovParam *GovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]strin
 	out1 := *abi.ConvertType(out[1], new([][]IGovParamParam)).(*[][]IGovParamParam)
 
 	return out0, out1, err
-
 }
 
 // GetAllCheckpoints is a free data retrieval call binding the contract method 0x5516c21c.
@@ -454,7 +450,6 @@ func (_GovParam *GovParamCallerSession) GetAllCheckpoints() ([]string, [][]IGovP
 func (_GovParam *GovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParamNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -462,7 +457,6 @@ func (_GovParam *GovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllParamNames is a free data retrieval call binding the contract method 0xcc4783b6.
@@ -485,7 +479,6 @@ func (_GovParam *GovParamCallerSession) GetAllParamNames() ([]string, error) {
 func (_GovParam *GovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParams")
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -494,7 +487,6 @@ func (_GovParam *GovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, []
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParams is a free data retrieval call binding the contract method 0xa170052e.
@@ -517,7 +509,6 @@ func (_GovParam *GovParamCallerSession) GetAllParams() ([]string, [][]byte, erro
 func (_GovParam *GovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber *big.Int) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getAllParamsAt", blockNumber)
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -526,7 +517,6 @@ func (_GovParam *GovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParamsAt is a free data retrieval call binding the contract method 0x1e31825a.
@@ -549,7 +539,6 @@ func (_GovParam *GovParamCallerSession) GetAllParamsAt(blockNumber *big.Int) ([]
 func (_GovParam *GovParamCaller) GetParam(opts *bind.CallOpts, name string) (bool, []byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getParam", name)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -558,7 +547,6 @@ func (_GovParam *GovParamCaller) GetParam(opts *bind.CallOpts, name string) (boo
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParam is a free data retrieval call binding the contract method 0x5d4f71d4.
@@ -581,7 +569,6 @@ func (_GovParam *GovParamCallerSession) GetParam(name string) (bool, []byte, err
 func (_GovParam *GovParamCaller) GetParamAt(opts *bind.CallOpts, name string, blockNumber *big.Int) (bool, []byte, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "getParamAt", name, blockNumber)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -590,7 +577,6 @@ func (_GovParam *GovParamCaller) GetParamAt(opts *bind.CallOpts, name string, bl
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParamAt is a free data retrieval call binding the contract method 0x6a1ec27c.
@@ -613,7 +599,6 @@ func (_GovParam *GovParamCallerSession) GetParamAt(name string, blockNumber *big
 func (_GovParam *GovParamCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -621,7 +606,6 @@ func (_GovParam *GovParamCaller) Owner(opts *bind.CallOpts) (common.Address, err
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -644,7 +628,6 @@ func (_GovParam *GovParamCallerSession) Owner() (common.Address, error) {
 func (_GovParam *GovParamCaller) ParamNames(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _GovParam.contract.Call(opts, &out, "paramNames", arg0)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -652,7 +635,6 @@ func (_GovParam *GovParamCaller) ParamNames(opts *bind.CallOpts, arg0 *big.Int) 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // ParamNames is a free data retrieval call binding the contract method 0xdb758754.
@@ -831,7 +813,6 @@ type GovParamOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_GovParam *GovParamFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*GovParamOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -852,7 +833,6 @@ func (_GovParam *GovParamFilterer) FilterOwnershipTransferred(opts *bind.FilterO
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_GovParam *GovParamFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *GovParamOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -985,7 +965,6 @@ type GovParamSetParam struct {
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_GovParam *GovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*GovParamSetParamIterator, error) {
-
 	logs, sub, err := _GovParam.contract.FilterLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -997,7 +976,6 @@ func (_GovParam *GovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*GovPa
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_GovParam *GovParamFilterer) WatchSetParam(opts *bind.WatchOpts, sink chan<- *GovParamSetParam) (event.Subscription, error) {
-
 	logs, sub, err := _GovParam.contract.WatchLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1069,29 +1047,29 @@ const IGovParamBinRuntime = ``
 // Deprecated: Use IGovParamMetaData.Sigs instead.
 var IGovParamFuncSigs = IGovParamMetaData.Sigs
 
-// IGovParam is an auto generated Go binding around a Klaytn contract.
+// IGovParam is an auto generated Go binding around a Kaia contract.
 type IGovParam struct {
 	IGovParamCaller     // Read-only binding to the contract
 	IGovParamTransactor // Write-only binding to the contract
 	IGovParamFilterer   // Log filterer for contract events
 }
 
-// IGovParamCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IGovParamCaller is an auto generated read-only Go binding around a Kaia contract.
 type IGovParamCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGovParamTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IGovParamTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IGovParamTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGovParamFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IGovParamFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IGovParamFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IGovParamSession is an auto generated Go binding around a Klaytn contract,
+// IGovParamSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IGovParamSession struct {
 	Contract     *IGovParam        // Generic contract binding to set the session for
@@ -1099,31 +1077,31 @@ type IGovParamSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IGovParamCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IGovParamCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IGovParamCallerSession struct {
 	Contract *IGovParamCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts    // Call options to use throughout this session
 }
 
-// IGovParamTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IGovParamTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IGovParamTransactorSession struct {
 	Contract     *IGovParamTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// IGovParamRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IGovParamRaw is an auto generated low-level Go binding around a Kaia contract.
 type IGovParamRaw struct {
 	Contract *IGovParam // Generic contract binding to access the raw methods on
 }
 
-// IGovParamCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IGovParamCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IGovParamCallerRaw struct {
 	Contract *IGovParamCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IGovParamTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IGovParamTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IGovParamTransactorRaw struct {
 	Contract *IGovParamTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1217,7 +1195,6 @@ func (_IGovParam *IGovParamTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_IGovParam *IGovParamCaller) Checkpoints(opts *bind.CallOpts, name string) ([]IGovParamParam, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "checkpoints", name)
-
 	if err != nil {
 		return *new([]IGovParamParam), err
 	}
@@ -1225,7 +1202,6 @@ func (_IGovParam *IGovParamCaller) Checkpoints(opts *bind.CallOpts, name string)
 	out0 := *abi.ConvertType(out[0], new([]IGovParamParam)).(*[]IGovParamParam)
 
 	return out0, err
-
 }
 
 // Checkpoints is a free data retrieval call binding the contract method 0x296451d9.
@@ -1248,7 +1224,6 @@ func (_IGovParam *IGovParamCallerSession) Checkpoints(name string) ([]IGovParamP
 func (_IGovParam *IGovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]string, [][]IGovParamParam, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllCheckpoints")
-
 	if err != nil {
 		return *new([]string), *new([][]IGovParamParam), err
 	}
@@ -1257,7 +1232,6 @@ func (_IGovParam *IGovParamCaller) GetAllCheckpoints(opts *bind.CallOpts) ([]str
 	out1 := *abi.ConvertType(out[1], new([][]IGovParamParam)).(*[][]IGovParamParam)
 
 	return out0, out1, err
-
 }
 
 // GetAllCheckpoints is a free data retrieval call binding the contract method 0x5516c21c.
@@ -1280,7 +1254,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllCheckpoints() ([]string, [][]IGo
 func (_IGovParam *IGovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParamNames")
-
 	if err != nil {
 		return *new([]string), err
 	}
@@ -1288,7 +1261,6 @@ func (_IGovParam *IGovParamCaller) GetAllParamNames(opts *bind.CallOpts) ([]stri
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
-
 }
 
 // GetAllParamNames is a free data retrieval call binding the contract method 0xcc4783b6.
@@ -1311,7 +1283,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParamNames() ([]string, error) {
 func (_IGovParam *IGovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParams")
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -1320,7 +1291,6 @@ func (_IGovParam *IGovParamCaller) GetAllParams(opts *bind.CallOpts) ([]string, 
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParams is a free data retrieval call binding the contract method 0xa170052e.
@@ -1343,7 +1313,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParams() ([]string, [][]byte, er
 func (_IGovParam *IGovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumber *big.Int) ([]string, [][]byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getAllParamsAt", blockNumber)
-
 	if err != nil {
 		return *new([]string), *new([][]byte), err
 	}
@@ -1352,7 +1321,6 @@ func (_IGovParam *IGovParamCaller) GetAllParamsAt(opts *bind.CallOpts, blockNumb
 	out1 := *abi.ConvertType(out[1], new([][]byte)).(*[][]byte)
 
 	return out0, out1, err
-
 }
 
 // GetAllParamsAt is a free data retrieval call binding the contract method 0x1e31825a.
@@ -1375,7 +1343,6 @@ func (_IGovParam *IGovParamCallerSession) GetAllParamsAt(blockNumber *big.Int) (
 func (_IGovParam *IGovParamCaller) GetParam(opts *bind.CallOpts, name string) (bool, []byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getParam", name)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -1384,7 +1351,6 @@ func (_IGovParam *IGovParamCaller) GetParam(opts *bind.CallOpts, name string) (b
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParam is a free data retrieval call binding the contract method 0x5d4f71d4.
@@ -1407,7 +1373,6 @@ func (_IGovParam *IGovParamCallerSession) GetParam(name string) (bool, []byte, e
 func (_IGovParam *IGovParamCaller) GetParamAt(opts *bind.CallOpts, name string, blockNumber *big.Int) (bool, []byte, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "getParamAt", name, blockNumber)
-
 	if err != nil {
 		return *new(bool), *new([]byte), err
 	}
@@ -1416,7 +1381,6 @@ func (_IGovParam *IGovParamCaller) GetParamAt(opts *bind.CallOpts, name string, 
 	out1 := *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return out0, out1, err
-
 }
 
 // GetParamAt is a free data retrieval call binding the contract method 0x6a1ec27c.
@@ -1439,7 +1403,6 @@ func (_IGovParam *IGovParamCallerSession) GetParamAt(name string, blockNumber *b
 func (_IGovParam *IGovParamCaller) ParamNames(opts *bind.CallOpts, idx *big.Int) (string, error) {
 	var out []interface{}
 	err := _IGovParam.contract.Call(opts, &out, "paramNames", idx)
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -1447,7 +1410,6 @@ func (_IGovParam *IGovParamCaller) ParamNames(opts *bind.CallOpts, idx *big.Int)
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // ParamNames is a free data retrieval call binding the contract method 0xdb758754.
@@ -1586,7 +1548,6 @@ type IGovParamSetParam struct {
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_IGovParam *IGovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*IGovParamSetParamIterator, error) {
-
 	logs, sub, err := _IGovParam.contract.FilterLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1598,7 +1559,6 @@ func (_IGovParam *IGovParamFilterer) FilterSetParam(opts *bind.FilterOpts) (*IGo
 //
 // Solidity: event SetParam(string name, bool exists, bytes value, uint256 activation)
 func (_IGovParam *IGovParamFilterer) WatchSetParam(opts *bind.WatchOpts, sink chan<- *IGovParamSetParam) (event.Subscription, error) {
-
 	logs, sub, err := _IGovParam.contract.WatchLogs(opts, "SetParam")
 	if err != nil {
 		return nil, err
@@ -1663,29 +1623,29 @@ const OwnableBinRuntime = ``
 // Deprecated: Use OwnableMetaData.Sigs instead.
 var OwnableFuncSigs = OwnableMetaData.Sigs
 
-// Ownable is an auto generated Go binding around a Klaytn contract.
+// Ownable is an auto generated Go binding around a Kaia contract.
 type Ownable struct {
 	OwnableCaller     // Read-only binding to the contract
 	OwnableTransactor // Write-only binding to the contract
 	OwnableFilterer   // Log filterer for contract events
 }
 
-// OwnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableSession struct {
 	Contract     *Ownable          // Generic contract binding to set the session for
@@ -1693,31 +1653,31 @@ type OwnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// OwnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableCallerSession struct {
 	Contract *OwnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// OwnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableTransactorSession struct {
 	Contract     *OwnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// OwnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableRaw struct {
 	Contract *Ownable // Generic contract binding to access the raw methods on
 }
 
-// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableCallerRaw struct {
 	Contract *OwnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableTransactorRaw struct {
 	Contract *OwnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1811,7 +1771,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1819,7 +1778,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -1956,7 +1914,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -1977,7 +1934,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)

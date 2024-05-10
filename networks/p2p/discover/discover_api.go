@@ -59,7 +59,7 @@ func (tab *Table) GetReplacements() []*Node {
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	for _, bs := range tab.storages {
-		if _, ok := bs.(*KademliaStorage); ok { // TODO-Klaytn-Node Are there any change SimpleStorage use this method?
+		if _, ok := bs.(*KademliaStorage); ok { // TODO-Kaia-Node Are there any change SimpleStorage use this method?
 			ret = append(ret, bs.(*KademliaStorage).getReplacements()...)
 		}
 	}

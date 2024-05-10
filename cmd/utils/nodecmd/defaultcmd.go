@@ -154,7 +154,7 @@ func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 		log.Fatalf("Klaytn service not running: %v", err)
 	}
 
-	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
+	// TODO-Kaia-NodeCmd disable accept tx before finishing sync.
 	if err := cn.StartMining(false); err != nil {
 		log.Fatalf("Failed to start mining: %v", err)
 	}
@@ -240,11 +240,11 @@ var migrationApplied = map[*cli.Command]struct{}{}
 //
 // Example:
 //
-//    ken account new --keystore /tmp/mykeystore --lightkdf
+//	ken account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-//    ken --keystore /tmp/mykeystore --lightkdf account new
+//	ken --keystore /tmp/mykeystore --lightkdf account new
 //
 // i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
 // will return true even if --lightkdf is set as a global option.

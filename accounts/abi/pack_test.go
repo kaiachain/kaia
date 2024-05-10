@@ -49,7 +49,6 @@ func TestPack(t *testing.T) {
 			}
 			var packed []byte
 			packed, err = inAbi.Pack("method", test.unpacked)
-
 			if err != nil {
 				t.Fatalf("test %d (%v) failed: %v", i, test.def, err)
 			}

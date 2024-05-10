@@ -18,8 +18,8 @@ package kerrors
 
 import "errors"
 
-// TODO-Klaytn: Use integer for error codes.
-// TODO-Klaytn: Integrate all universally accessible errors into kerrors package.
+// TODO-Kaia: Use integer for error codes.
+// TODO-Kaia: Integrate all universally accessible errors into kerrors package.
 var (
 	ErrNotHumanReadableAddress    = errors.New("Human-readable address is not supported now")
 	ErrHumanReadableNotSupported  = errors.New("Human-readable address is not supported now")

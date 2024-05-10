@@ -34,7 +34,7 @@ var NoParentPeerErr = errors.New("no parent peer")
 
 const timeout = 30 * time.Second
 
-// TODO-Klaytn currently RemoteBackend is only for ServiceChain, especially Bridge SmartContract
+// TODO-Kaia currently RemoteBackend is only for ServiceChain, especially Bridge SmartContract
 type RemoteBackend struct {
 	subBridge *SubBridge
 

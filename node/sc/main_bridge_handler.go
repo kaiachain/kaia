@@ -57,7 +57,7 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 		return nil
 	case ServiceChainTxsMsg:
 		logger.Trace("received ServiceChainTxsMsg")
-		// TODO-Klaytn how to check acceptTxs
+		// TODO-Kaia how to check acceptTxs
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		//if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		//	break

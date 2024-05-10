@@ -88,7 +88,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 		return err
 	}
 
-	// NOTE-Klaytn-Issue973 Developing Klaytn token economy
+	// NOTE-Kaia-Issue973 Developing Kaia token economy
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000441")
 	kcfContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000442")
@@ -133,7 +133,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 		a.AddBalance(*to, v)
 		a.SubBalance(from, v)
 
-		// TODO-Klaytn: This gas fee calculation is correct only if the transaction is a value transfer transaction.
+		// TODO-Kaia: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
 		intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 		if err != nil {

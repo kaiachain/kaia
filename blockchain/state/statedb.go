@@ -53,11 +53,11 @@ var (
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 
-	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
+	// TODO-Kaia EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
 	EnabledExpensive = false
 )
 
-// StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
+// StateDBs within the Kaia protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
 type StateDB struct {
 	db       Database
@@ -1137,7 +1137,7 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 //
 // Kore fork:
 // - Add sender to access list (2929)
-// - Add feepayer to access list (only for klaytn)
+// - Add feepayer to access list (only for Kaia)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //

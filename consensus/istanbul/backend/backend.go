@@ -405,7 +405,7 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
 
-	// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
+	// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
 	return validator.NewValidatorSet(nil, nil,
 		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
 		sb.chain.Config().Istanbul.SubGroupSize,
@@ -416,7 +416,7 @@ func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.Valid
 	snap, err := sb.snapshot(sb.chain, number, hash, nil, false)
 	if err != nil {
 		logger.Error("Snapshot not found.", "err", err)
-		// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
+		// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
 		return validator.NewValidatorSet(nil, nil,
 			istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
 			sb.chain.Config().Istanbul.SubGroupSize,

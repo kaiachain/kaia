@@ -512,7 +512,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			fmt.Println("senderAddr = ", sender.Addr.String())
 		}
 
-		// send KLAY to sender
+		// send KAIA to sender
 		{
 			var txs types.Transactions
 
@@ -1655,7 +1655,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 }
 
 // TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
-// Nested RoleBasedKey is not allowed in Klaytn.
+// Nested RoleBasedKey is not allowed in Kaia.
 // 1. Create an account with a RoleBasedKey.
 // 2. Update an accountKey with a nested RoleBasedKey
 func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {

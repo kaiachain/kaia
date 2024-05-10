@@ -18,7 +18,7 @@
 // This file is derived from interfaces.go (2018/06/04).
 // Modified and improved for the klaytn development.
 
-// Package klaytn defines interfaces for interacting with Klaytn.
+// Package Kaia defines interfaces for interacting with Kaia.
 package klaytn
 
 import (
@@ -99,7 +99,7 @@ type ChainStateReader interface {
 }
 
 // SyncProgress gives progress indications when the node is synchronising with
-// the Klaytn network.
+// the Kaia network.
 type SyncProgress struct {
 	StartingBlock uint64 // Block number where sync began
 	CurrentBlock  uint64 // Current block number where sync is at

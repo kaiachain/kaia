@@ -79,7 +79,7 @@ type Backend interface {
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
 // known about the host peer.
 type SubBridgeInfo struct {
-	Network uint64              `json:"network"` // Klaytn network ID
+	Network uint64              `json:"network"` // Kaia network ID
 	Genesis common.Hash         `json:"genesis"` // SHA3 hash of the host's genesis block
 	Config  *params.ChainConfig `json:"config"`  // Chain configuration for the fork rules
 	Head    common.Hash         `json:"head"`    // SHA3 hash of the host's best owned block
@@ -99,7 +99,7 @@ type BridgeTxPool interface {
 	Stop()
 }
 
-// SubBridge implements the Klaytn consensus node service.
+// SubBridge implements the Kaia consensus node service.
 type SubBridge struct {
 	config *SCConfig
 
@@ -204,7 +204,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		bootFail:           false,
 		rpcSendCh:          make(chan []byte),
 	}
-	// TODO-Klaytn change static config to user define config
+	// TODO-Kaia change static config to user define config
 	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
 		ParentChainID: new(big.Int).SetUint64(config.ParentChainID),
 		Journal:       path.Join(config.DataDir, "bridge_transactions.rlp"),
@@ -351,7 +351,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.txPool = v
 			// event from core-service
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
-		// TODO-Klaytn if need pending block, should use miner
+		// TODO-Kaia if need pending block, should use miner
 		case *work.Miner:
 		}
 	}
@@ -423,7 +423,7 @@ func (sb *SubBridge) getChainID() *big.Int {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (sb *SubBridge) Start(srvr p2p.Server) error {
 	if sb.bootFail {
 		return errors.New("subBridge node fail to start")
@@ -751,11 +751,11 @@ func (sb *SubBridge) syncer() {
 }
 
 func (sb *SubBridge) synchronise(peer BridgePeer) {
-	// @TODO Klaytn ServiceChain Sync
+	// @TODO Kaia ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (sb *SubBridge) Stop() error {
 	close(sb.quitSync)
 	sb.bridgeManager.stopAllRecoveries()

@@ -26,7 +26,7 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// TODO-Klaytn: Check whether all flags are registered in utils.FlagGroups
+// TODO-Kaia: Check whether all flags are registered in utils.FlagGroups
 
 func AllNodeFlags() []cli.Flag {
 	nodeFlags := []cli.Flag{}

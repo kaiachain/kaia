@@ -144,7 +144,7 @@ type Downloader struct {
 
 	// for snapsyncer
 	snapSync   bool         // Whether to run state sync over the snap protocol
-	SnapSyncer *snap.Syncer // TODO-Klaytn-Snapsyncer make private! hack for now
+	SnapSyncer *snap.Syncer // TODO-Kaia-Snapsyncer make private! hack for now
 
 	// for stateFetcher
 	pivotHeader *types.Header
@@ -388,7 +388,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if d.synchroniseMock != nil {
 		return d.synchroniseMock(id, hash)
 	}
-	// TODO-Klaytn-Downloader Below code can be replaced by mutex.
+	// TODO-Kaia-Downloader Below code can be replaced by mutex.
 	// Make sure only one goroutine is ever allowed past this point at once
 	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
 		return errBusy

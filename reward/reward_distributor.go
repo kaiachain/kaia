@@ -519,7 +519,7 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 	for _, node := range cns.GetAllNodes() {
 		if node.StakingAmount > minStake {
 			effectiveStake := new(big.Int).SetUint64(node.StakingAmount - minStake)
-			// The KLAY unit will cancel out:
+			// The KAIA unit will cancel out:
 			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KLAY) / totalStakes (KLAY)
 			rewardAmount := new(big.Int).Mul(stakeReward, effectiveStake)
 			rewardAmount = rewardAmount.Div(rewardAmount, totalStakes)
@@ -582,7 +582,7 @@ func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amo
 	m[addr] = m[addr].Add(m[addr], amount)
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
