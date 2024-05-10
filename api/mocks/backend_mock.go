@@ -149,20 +149,6 @@ func (mr *MockBackendMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBackend)(nil).CurrentBlock))
 }
 
-// EffectiveParams mocks base method.
-func (m *MockBackend) EffectiveParams(arg0 uint64) *params.GovParamSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParams", arg0)
-	ret0, _ := ret[0].(*params.GovParamSet)
-	return ret0
-}
-
-// EffectiveParams indicates an expected call of EffectiveParams.
-func (mr *MockBackendMockRecorder) EffectiveParams(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParams", reflect.TypeOf((*MockBackend)(nil).EffectiveParams), arg0)
-}
-
 // Engine mocks base method.
 func (m *MockBackend) Engine() consensus.Engine {
 	m.ctrl.T.Helper()

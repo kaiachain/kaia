@@ -51,7 +51,6 @@ type Backend interface {
 	SuggestTipCap(ctx context.Context) (*big.Int, error)
 	UpperBoundGasPrice(ctx context.Context) *big.Int
 	LowerBoundGasPrice(ctx context.Context) *big.Int
-	EffectiveParams(bn uint64) *params.GovParamSet
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
