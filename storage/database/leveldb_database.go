@@ -26,10 +26,9 @@ import (
 	"sync"
 	"time"
 
-	kaiametrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/log"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/rcrowley/go-metrics"
 	"github.com/syndtr/goleveldb/leveldb"

@@ -33,8 +33,6 @@ import (
 	"sync"
 	"time"
 
-	kaiametrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -43,6 +41,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 )
