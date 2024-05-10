@@ -44,12 +44,12 @@ executors:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
       - name: zookeeper
-        image: wurstmeister/zookeeper
+        image: zookeeper
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
       - name: kafka
-        image: wurstmeister/kafka
+        image: bitnami/kafka
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
