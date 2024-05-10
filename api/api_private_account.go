@@ -149,7 +149,7 @@ func parseKaiaWalletKey(k string) (string, string, *common.Address, error) {
 
 	walletKeyType := k[66:68]
 	if walletKeyType != "00" {
-		return "", "", nil, fmt.Errorf("Kaia wallet key type must be 00.")
+		return "", "", nil, errors.New("Kaia wallet key type must be 00.")
 	}
 	a := common.HexToAddress(k[70:110])
 
@@ -347,7 +347,7 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
 		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
-			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
+			return nil, errors.New("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
 		}
 	}
 
@@ -487,10 +487,10 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid Klaytn signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1

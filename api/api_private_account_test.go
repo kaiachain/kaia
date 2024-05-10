@@ -17,7 +17,7 @@
 package api
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"testing"
 
@@ -60,7 +60,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	// 2. Import Kaia Wallet Key. Since the same address is already registered, it should fail.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
-		require.Equal(t, fmt.Errorf("account already exists"), err)
+		require.Equal(t, errors.New("account already exists"), err)
 	}
 
 	// 3. Replace Kaia Wallet key. It should work.
@@ -74,19 +74,19 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	// 4. Allowable Wallet key type is 0x00 only.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x010x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
-		require.Equal(t, fmt.Errorf("Kaia wallet key type must be 00."), err)
+		require.Equal(t, errors.New("Kaia wallet key type must be 00."), err)
 	}
 
 	// 5. Should return an error if wrong length.
 	{
 		_, err := api.ImportRawKey("1ea7b7bc7f525cc936ec65e0e93f146bd6fad4b3158067ad64560defd9bba0b0x010x3b3d49ebac925797b2471c7b01108ba16bb36950", "1234")
-		require.Equal(t, fmt.Errorf("invalid hex string"), err)
+		require.Equal(t, errors.New("invalid hex string"), err)
 	}
 
 	// 6. Should return an error if wrong length.
 	{
 		_, err := api.ImportRawKey("1ea7b7bc7f525cc936ec65e0e93f146bd6fad4b3158067ad64560defd9bba0b", "1234")
-		require.Equal(t, fmt.Errorf("invalid hex string"), err)
+		require.Equal(t, errors.New("invalid hex string"), err)
 	}
 
 	// 7. Import Kaia Wallet Key.
