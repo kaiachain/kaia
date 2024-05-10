@@ -927,7 +927,7 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_PendingTransactionstests PendingTransactions.
+// TestEthereumAPI_PendingTransactions tests PendingTransactions.
 func TestEthereumAPI_PendingTransactions(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	_, txs, txHashMap, _, _ := createTestData(t, nil)
