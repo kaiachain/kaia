@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -39,7 +40,8 @@ import (
 const testHead = 32
 
 type testBackend struct {
-	chain *blockchain.BlockChain
+	governance governance.Engine
+	chain      *blockchain.BlockChain
 }
 
 func (b *testBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
@@ -74,6 +76,14 @@ func (b *testBackend) CurrentBlock() *types.Block {
 	return b.chain.CurrentBlock()
 }
 
+func (b *testBackend) EffectiveParams(bn uint64) *params.GovParamSet {
+	pSet, err := b.governance.EffectiveParams(bn + 1)
+	if err != nil {
+		return nil
+	}
+	return pSet
+}
+
 func (b *testBackend) teardown() {
 	b.chain.Stop()
 }
@@ -101,18 +111,15 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
 	config.ShanghaiCompatibleBlock = kaiaBlock
 	config.CancunCompatibleBlock = kaiaBlock
 	config.KaiaCompatibleBlock = kaiaBlock
-	if magmaBlock != nil {
-		config.Governance = params.GetDefaultGovernanceConfig()
-		config.Istanbul = params.GetDefaultIstanbulConfig()
-		config.Governance.KIP71.LowerBoundBaseFee = 0
-	}
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
 	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
 		toaddr := common.Address{}
 		// To test fee history, rewardbase should be different from the sender address
 		b.SetRewardbase(toaddr)
 
 		var txdata types.TxInternalData
-		if config.MagmaCompatibleBlock != nil && b.Number().Cmp(config.MagmaCompatibleBlock) >= 0 {
+		if config.IsMagmaForkEnabled(b.Number()) {
 			txdata = &types.TxInternalDataEthereumDynamicFee{
 				ChainID:      gspec.Config.ChainID,
 				AccountNonce: b.TxNonce(addr),
@@ -142,9 +149,11 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}
+	gov := governance.NewMixedEngine(gspec.Config, db)
+	gov.SetBlockchain(chain)
 	chain.InsertChain(blocks)
 
-	return &testBackend{chain: chain}
+	return &testBackend{governance: gov, chain: chain}
 }
 
 func TestGasPrice_NewOracle(t *testing.T) {

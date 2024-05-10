@@ -22,12 +22,13 @@ package gasprice
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFeeHistory(t *testing.T) {
@@ -42,23 +43,25 @@ func TestFeeHistory(t *testing.T) {
 	}{
 		{1000, 1000, 10, 30, nil, 21, 10, nil},
 		{1000, 1000, 10, 30, []float64{0, 10}, 21, 10, nil},
-		{1000, 1000, 10, 30, []float64{20, 10}, 0, 0, errInvalidPercentile},
+		{1000, 1000, 10, 30, []float64{20, 10}, 0, 0, fmt.Errorf("%w: #%d:%f > #%d:%f", errInvalidPercentile, 0, 20.0000, 1, 10.0000)},
 		{1000, 1000, 1000000000, 30, nil, 0, 31, nil},
 		{1000, 1000, 1000000000, rpc.LatestBlockNumber, nil, 0, 33, nil},
-		{1000, 1000, 10, 40, nil, 0, 0, errRequestBeyondHead},
+		{1000, 1000, 10, 40, nil, 0, 0, fmt.Errorf("%w: requested %d, head %d", errRequestBeyondHead, 40, 32)},
 		{20, 2, 100, rpc.LatestBlockNumber, nil, 13, 20, nil},
 		{20, 2, 100, rpc.LatestBlockNumber, []float64{0, 10}, 31, 2, nil},
 		{20, 2, 100, 32, []float64{0, 10}, 31, 2, nil},
 		{1000, 1000, 1, rpc.PendingBlockNumber, nil, 0, 0, nil},
 		{1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 1, nil},
 	}
+	magmaBlock, dragonBlock := int64(16), int64(20)
+	backend := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(dragonBlock))
+	defer backend.teardown()
 	for i, c := range cases {
 		config := Config{
 			MaxHeaderHistory: c.maxHeader,
 			MaxBlockHistory:  c.maxBlock,
+			MaxPrice:         big.NewInt(500000000000),
 		}
-		backend := newTestBackend(t, nil, nil)
-		defer backend.teardown()
 		oracle := NewOracle(backend, config, nil)
 
 		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
@@ -72,52 +75,40 @@ func TestFeeHistory(t *testing.T) {
 			expBaseFee++
 		}
 
-		if first.Uint64() != c.expFirst {
-			t.Fatalf("Test case %d: first block mismatch, want %d, got %d", i, c.expFirst, first)
-		}
-		if len(reward) != expReward {
-			t.Fatalf("Test case %d: reward array length mismatch, want %d, got %d", i, expReward, len(reward))
-		}
-		if len(baseFee) != expBaseFee {
-			t.Fatalf("Test case %d: baseFee array length mismatch, want %d, got %d", i, expBaseFee, len(baseFee))
-		}
-		if len(ratio) != c.expCount {
-			t.Fatalf("Test case %d: gasUsedRatio array length mismatch, want %d, got %d", i, c.expCount, len(ratio))
-		}
-		if err != c.expErr && !errors.Is(err, c.expErr) {
-			t.Fatalf("Test case %d: error mismatch, want %v, got %v", i, c.expErr, err)
-		}
-	}
-}
-
-func TestGasUsedRatioForMagma(t *testing.T) {
-	config := Config{
-		MaxHeaderHistory: 1000,
-		MaxBlockHistory:  1000,
-	}
-	backendNoMagma := newTestBackend(t, nil, nil)
-	defer backendNoMagma.teardown()
-	oracle := NewOracle(backendNoMagma, config, nil)
-
-	expectedRatio := 21000 / float64(params.UpperGasLimit)
-	_, _, _, ratio, _ := oracle.FeeHistory(context.Background(), 1, 30, nil)
-	if len(ratio) != 1 {
-		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))
-	}
-	if ratio[0] != expectedRatio {
-		t.Fatalf("Gas used ratio mismatch, want %f, got %f", expectedRatio, ratio[0])
+		assert.Equal(t, c.expFirst, first.Uint64(), "Test case %d: first block mismatch, want %d, got %d", i, c.expFirst, first.Uint64())
+		assert.Equal(t, expReward, len(reward), "Test case %d: reward array length mismatch, want %d, got %d", i, expReward, len(reward))
+		assert.Equal(t, expBaseFee, len(baseFee), "Test case %d: baseFee array length mismatch, want %d, got %d", i, expBaseFee, len(baseFee))
+		assert.Equal(t, c.expCount, len(ratio), "Test case %d: baseFee array length mismatch, want %d, got %d", i, c.expCount, len(ratio))
+		assert.Equal(t, c.expErr, err, "Test case %d: error mismatch, want %v, got %v", i, c.expErr, err)
 	}
 
-	backendWithMagma := newTestBackend(t, common.Big0, nil)
-	defer backendWithMagma.teardown()
-	oracle = NewOracle(backendWithMagma, config, nil)
+	// Last check. Check the value of Reward, BaseFee and GasUsedRatio of every block.
+	var (
+		config = Config{
+			MaxHeaderHistory: 1000,
+			MaxBlockHistory:  1000,
+			MaxPrice:         big.NewInt(500000000000),
+		}
+		oracle = NewOracle(backend, config, nil)
 
-	expectedRatio = 21000 / float64(backendWithMagma.ChainConfig().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-	_, _, _, ratio, _ = oracle.FeeHistory(context.Background(), 1, 30, nil)
-	if len(ratio) != 1 {
-		t.Fatalf("Wrong number of gas used ratio, want 1, got %d", len(ratio))
-	}
-	if ratio[0] != expectedRatio {
-		t.Fatalf("Gas used ratio mismatch, want %f, got %f", expectedRatio, ratio[0])
-	}
+		beforeMagmaExpectedBaseFee = big.NewInt(0)
+		atMagmaExpectedBaseFee     = big.NewInt(int64(backend.EffectiveParams(16).LowerBoundBaseFee()))
+		afterMagmaExpectedBaseFee  = big.NewInt(int64(backend.EffectiveParams(17).LowerBoundBaseFee()))
+
+		beforeMagmaExpectedGasUsedRatio = float64(21000) / float64(params.UpperGasLimit)
+		atMagmaExpectedGasUsedRatio     = float64(21000) / float64(backend.EffectiveParams(16).MaxBlockGasUsedForBaseFee())
+		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(backend.EffectiveParams(17).MaxBlockGasUsedForBaseFee())
+	)
+
+	first, _, baseFee, ratio, err := oracle.FeeHistory(context.Background(), 32, rpc.LatestBlockNumber, nil)
+	assert.Equal(t, first, big.NewInt(1))
+	assert.Nil(t, err)
+
+	// magma hardfork
+	assert.Equal(t, []*big.Int{beforeMagmaExpectedBaseFee, atMagmaExpectedBaseFee, afterMagmaExpectedBaseFee}, baseFee[14:17])
+	assert.Equal(t, []float64{beforeMagmaExpectedGasUsedRatio, atMagmaExpectedGasUsedRatio, afterMagmaExpectedGasUsedRatio}, ratio[14:17])
+
+	// dragon hardfork
+	// check the value of reward
+	// assert.Equal(t, <impl>, gasTip[18:21])
 }

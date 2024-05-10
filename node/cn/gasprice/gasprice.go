@@ -51,6 +51,7 @@ type OracleBackend interface {
 	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
+	EffectiveParams(bn uint64) *params.GovParamSet
 }
 
 type TxPool interface {

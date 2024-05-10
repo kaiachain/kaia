@@ -320,6 +320,14 @@ func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestTipCap(ctx)
 }
 
+func (b *CNAPIBackend) EffectiveParams(bn uint64) *params.GovParamSet {
+	pSet, err := b.cn.governance.EffectiveParams(bn)
+	if err != nil {
+		return nil
+	}
+	return pSet
+}
+
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
 	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
