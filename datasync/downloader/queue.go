@@ -541,9 +541,10 @@ func (q *queue) ReserveStakingInfos(p *peerConnection, count int) (*fetchRequest
 // to access the queue, so they already need a lock anyway.
 //
 // Returns:
-//   item     - the fetchRequest
-//   progress - whether any progress was made
-//   throttle - if the caller should throttle for a while
+//
+//	item     - the fetchRequest
+//	progress - whether any progress was made
+//	throttle - if the caller should throttle for a while
 func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common.Hash]*types.Header, taskQueue *prque.Prque,
 	pendPool map[string]*fetchRequest, kind uint,
 ) (*fetchRequest, bool, bool) {
@@ -977,7 +978,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		accepted++
 	}
 	// Return all failed or missing fetches to the queue
-	for _, header := range request.Headers {
+	for _, header := range request.Headers[accepted:] {
 		taskQueue.Push(header, -int64(header.Number.Uint64()))
 	}
 	// Wake up WaitResults
