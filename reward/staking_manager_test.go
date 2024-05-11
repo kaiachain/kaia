@@ -90,13 +90,11 @@ func generateStakingManagerTestCases() []stakingManagerTestCase {
 }
 
 func newStakingManagerForTest(t *testing.T) {
-	SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
-
 	// test if nil
 	assert.Nil(t, GetStakingManager())
 	assert.Nil(t, GetStakingInfo(123))
 
-	st, err := updateStakingInfo(456)
+	st, err := updateStakingInfo(456, true)
 	assert.Nil(t, st)
 	assert.EqualError(t, err, ErrStakingManagerNotSet.Error())
 

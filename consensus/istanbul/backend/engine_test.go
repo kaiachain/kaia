@@ -757,20 +757,6 @@ func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []int
 	}
 }
 
-func setCustomTestStakingInfo(amounts []uint64, blockNum uint64, dragonEnabled func(u uint64) bool) *reward.StakingManager {
-	if amounts == nil {
-		amounts = make([]uint64, len(nodeKeys))
-	}
-
-	stakingInfo := stakingInfo(amounts, blockNum)
-
-	// Save old StakingManager, overwrite to the fake one.
-	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerIsDragonEnabled(dragonEnabled)
-	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
-	return oldStakingManager
-}
-
 // Set StakingInfo with given amount for nodeKeys. If amounts == nil, set to 0 amounts.
 // Returns the original (old) StakingManager. Call `reward.SetTestStakingManager(oldStakingManager)`
 func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
@@ -782,7 +768,6 @@ func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
 
 	// Save old StakingManager, overwrite to the fake one.
 	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
 	return oldStakingManager
 }
@@ -998,6 +983,7 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 
 	testcases := []testcase{
 		// The following testcases are the ones before dragon incompatible change
+		// Validators doesn't be changed due to staking interval
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			false,
@@ -1043,16 +1029,11 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
-
-		dragonEnabled := func(u uint64) bool {
-			if tc.isDragonCompatible {
-				return u >= 2
-			}
-			return false
-		}
-
-		oldStakingManager := setCustomTestStakingInfo(genesisStakingAmounts, 0, dragonEnabled)
-		_ = setCustomTestStakingInfo(tc.stakingAmounts, 1, dragonEnabled)
+		// Save old StakingManager, overwrite to the fake one.
+		oldStakingManager := reward.GetStakingManager()
+		reward.SetTestStakingManagerWithChain(chain, engine.governance, nil)
+		reward.AddTestStakingInfoToCache(stakingInfo(genesisStakingAmounts, 0))
+		reward.AddTestStakingInfoToCache(stakingInfo(tc.stakingAmounts, 1))
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})

@@ -797,7 +797,6 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	dummy := reward.StakingInfo{BlockNum: stakingUpdateInterval}
 	blob, err = json.Marshal(dummy)
 	assert.Nil(t, err)
-	reward.SetTestStakingManagerIsDragonEnabled(func(u uint64) bool { return false })
 	reward.SetTestStakingManagerWithStakingInfoCache(&dummy)
 	assert.NotNil(t, reward.GetStakingManager())
 	params.SetStakingUpdateInterval(stakingUpdateInterval)
