@@ -381,7 +381,7 @@ func (valSet *defaultSet) RefreshValSet(blockNum uint64, config *params.ChainCon
 	return nil
 }
 
-func (valSet *defaultSet) RefreshProposer(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
+func (valSet *defaultSet) RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	return nil
 }
 

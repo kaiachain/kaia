@@ -698,7 +698,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsDragonForkEnabled(s.blockchain.CurrentBlock().Number()) {
+	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
 		reward.StakingManagerSubscribe()
 	}
 

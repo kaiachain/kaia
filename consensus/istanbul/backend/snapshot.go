@@ -211,17 +211,21 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 				logger.Trace("Skip refreshing validators while creating snapshot", "snap.Number", snap.Number, "err", err)
 			}
 
-			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
-			if pHeader != nil {
-				if err := snap.ValSet.RefreshProposer(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
-					// There are three error cases and they just don't refresh proposers
-					// (1) no validator at all
-					// (2) invalid formatted hash
-					// (3) no staking info available
-					logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+			// Do not refresh proposers from the kaia fork block.
+			// The proposer is calculated every block in `CalcProposer` function after the randao fork.
+			if !chain.Config().IsKaiaForkEnabled(big.NewInt(int64(number + 1))) {
+				pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
+				if pHeader != nil {
+					if err := snap.ValSet.RefreshProposers(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
+						// There are three error cases and they just don't refresh proposers
+						// (1) no validator at all
+						// (2) invalid formatted hash
+						// (3) no staking info available
+						logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+					}
+				} else {
+					logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 				}
-			} else {
-				logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 			}
 		}
 	}

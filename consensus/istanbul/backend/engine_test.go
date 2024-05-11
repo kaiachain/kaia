@@ -61,7 +61,7 @@ type (
 	koreCompatibleBlock      *big.Int
 	shanghaiCompatibleBlock  *big.Int
 	cancunCompatibleBlock    *big.Int
-	dragonCompatibleBlock    *big.Int
+	kaiaCompatibleBlock      *big.Int
 )
 
 type (
@@ -143,8 +143,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.ShanghaiCompatibleBlock = v
 		case cancunCompatibleBlock:
 			genesis.Config.CancunCompatibleBlock = v
-		case dragonCompatibleBlock:
-			genesis.Config.DragonCompatibleBlock = v
+		case kaiaCompatibleBlock:
+			genesis.Config.KaiaCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -971,10 +971,10 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	}
 }
 
-func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
+func TestSnapshot_Validators_AfterKaia_BasedOnStaking(t *testing.T) {
 	type testcase struct {
 		stakingAmounts     []uint64 // test staking amounts of each validator
-		isDragonCompatible bool     // whether or not if the inserted block is dragon compatible
+		isKaiaCompatible   bool     // whether or not if the inserted block is kaia compatible
 		expectedValidators []int    // the indices of expected validators
 		expectedDemoted    []int    // the indices of expected demoted validators
 	}
@@ -982,7 +982,7 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 	genesisStakingAmounts := []uint64{5000000, 5000000, 5000000, 5000000}
 
 	testcases := []testcase{
-		// The following testcases are the ones before dragon incompatible change
+		// The following testcases are the ones before kaia incompatible change
 		// Validators doesn't be changed due to staking interval
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
@@ -996,7 +996,7 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 			[]int{0, 1, 2, 3},
 			[]int{},
 		},
-		// The following testcases are the ones after dragon incompatible change
+		// The following testcases are the ones after kaia incompatible change
 		{
 			[]uint64{5000000, 5000000, 5000000, 6000000},
 			true,
@@ -1016,7 +1016,7 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 	configItems := makeSnapshotTestConfigItems(10, 10)
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
 	for _, tc := range testcases {
-		if tc.isDragonCompatible {
+		if tc.isKaiaCompatible {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 			configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
 			configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
@@ -1024,7 +1024,7 @@ func TestSnapshot_Validators_AfterDragon_BasedOnStaking(t *testing.T) {
 			configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
 			configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(0)))
 			configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, dragonCompatibleBlock(new(big.Int).SetUint64(2)))
+			configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(2)))
 		} else {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 		}

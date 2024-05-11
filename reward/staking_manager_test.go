@@ -94,11 +94,11 @@ func newStakingManagerForTest(t *testing.T) {
 	assert.Nil(t, GetStakingManager())
 	assert.Nil(t, GetStakingInfo(123))
 
-	st, err := updateStakingInfo(456, true)
+	st, err := updateStakingInfo(456)
 	assert.Nil(t, st)
 	assert.EqualError(t, err, ErrStakingManagerNotSet.Error())
 
-	assert.EqualError(t, CheckStakingInfoStored(789), ErrStakingManagerNotSet.Error())
+	assert.EqualError(t, checkStakingInfoStored(789), ErrStakingManagerNotSet.Error())
 
 	// test if get same
 	stNew := NewStakingManager(&blockchain.BlockChain{}, newDefaultTestGovernance(), nil)

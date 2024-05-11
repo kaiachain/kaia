@@ -112,7 +112,7 @@ type ValidatorSet interface {
 	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	RefreshProposer(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
+	RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
 
 	SetBlockNum(blockNum uint64)
 	SetMixHash(mixHash []byte)

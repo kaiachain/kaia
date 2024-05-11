@@ -293,7 +293,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 		return nil
 	}
 
-	// At RefreshProposer(), proposers is already randomly shuffled considering weights.
+	// At RefreshProposers(), proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
@@ -659,25 +659,15 @@ func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.Cha
 	blockNumBig := new(big.Int).SetUint64(blockNum)
 	chainRules := config.Rules(blockNumBig)
 
-	var newStakingInfo *reward.StakingInfo
-	if !chainRules.IsDragon {
-		stakingBlockNum := params.CalcProposerBlockNumber(blockNum) + 1
-		newStakingInfo = reward.GetStakingInfo(stakingBlockNum)
-	} else {
-		// blockNum is always bigger than 0
-		stakingBlockNum := blockNum - 1
-		if config.DragonCompatibleBlock.Cmp(blockNumBig) == 0 {
-			// Case of the next block is a dragon fork block, which means `stakingBlockNum` is not a dragon block.
-			// `GetStakingInfoFromAddressBook` does not check whether `stakingBlockNum` is staking info interval.
-			newStakingInfo = reward.GetStakingInfoFromAddressBook(stakingBlockNum)
-		} else if chainRules.IsDragon {
-			newStakingInfo = reward.GetStakingInfo(stakingBlockNum)
-		}
+	stakingBlockNum := blockNum
+	if !chainRules.IsKaia {
+		stakingBlockNum = params.CalcProposerBlockNumber(blockNum) + 1
 	}
+	newStakingInfo := reward.GetStakingInfo(stakingBlockNum)
 
 	if newStakingInfo == nil {
-		// Just return without updating proposer
-		return errors.New("skip refreshing proposers due to no staking info")
+		// Just return without refreshing validators
+		return errors.New("skip refreshing validators due to no staking info")
 	}
 	valSet.stakingInfo = newStakingInfo
 
@@ -694,27 +684,30 @@ func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.Cha
 		valSet.setValidators(weightedValidators, demotedValidators)
 	}
 
-	// weight and gini were neutralized after Kore hard fork
+	// Although this is for selecting proposer, update it because
+	// otherwise, all parameters should be re-calculated at `RefreshProposers` method.
 	if chainRules.IsKore {
 		setZeroWeight(weightedValidators)
 	} else {
-		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
+		totalStaking, _ := calcTotalAmount(weightedValidators, valSet.stakingInfo, stakingAmounts)
 		calcWeight(weightedValidators, stakingAmounts, totalStaking)
 	}
 
-	logger.Debug("Refresh valSet done.", "blockNum", blockNum, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+	logger.Debug("Refresh validators done.", "blockNum", blockNum, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
 
 	return nil
 }
 
-// RefreshProposer recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// RefreshProposers recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// This is a legacy function and do not affect to proposer after the randao HF.
+// After the randao HF, the proposer is selected at `CalcProposer` method.
 // It returns an error if it can't make up-to-date proposers
 // - due to wrong parameters
 // - due to lack of staking information
 // It returns no error when weightedCouncil:
 // - already has up-to-date proposers
 // - successfully calculated up-to-date proposers
-func (valSet *weightedCouncil) RefreshProposer(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
+func (valSet *weightedCouncil) RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -738,9 +731,10 @@ func (valSet *weightedCouncil) RefreshProposer(hash common.Hash, blockNum uint64
 		return nil
 	}
 
+	// The weight of validators is already calculated at `RefreshValSet` method.
 	valSet.refreshProposers(seed, blockNum)
 
-	logger.Debug("Refresh proposer done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum)
+	logger.Debug("Refresh proposers done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil
