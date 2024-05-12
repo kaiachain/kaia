@@ -70,7 +70,8 @@ var (
 
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 
-	MultiCallCode = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
+	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
+	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled      = errors.New("Registry contract not installed")
