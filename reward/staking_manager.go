@@ -232,15 +232,14 @@ func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 }
 
 // updateKaiaStakingInfo updates kaia staking info in cache created from given block number.
-// From Kaia fork, not only the staking block number but also the calculation of staking info is changed,
+// From Kaia fork, not only the staking block number but also the calculation of staking amounts is changed,
 // so we need separate update function for kaia staking info.
-// TODO-Kaia: Get staking info from multicall contract to reflect unstaking amounts.
 func updateKaiaStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	if stakingManager == nil {
 		return nil, ErrStakingManagerNotSet
 	}
 
-	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
+	stakingInfo, err := getStakingInfoFromMultiCall(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +273,50 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
+}
+
+// NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
+// getStakingInfoFromMultiCall returns stakingInfo fetched from MultiCall contract.
+// The MultiCall contract gets types and staking addresses from AddressBook contract,
+// and then calculates effective staking amounts by considering the unstaking amounts.
+func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
+	header := stakingManager.blockchain.GetHeaderByNumber(blockNum)
+	if header == nil {
+		return nil, fmt.Errorf("failed to get header by number %d", blockNum)
+	}
+
+	state, err := stakingManager.blockchain.StateAt(header.Root)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get state at %s", header.Root.Hex())
+	}
+
+	// Get staking info from multicall contract
+	caller, err := system.NewMultiCallContractCaller(state, stakingManager.blockchain, header)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create multicall contract caller. root err: %s", err)
+	}
+
+	res, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to call MultiCall contract. root err: %s", err)
+	}
+
+	types := res.TypeList
+	addrs := res.AddressList
+	stakingAmounts := res.StakingAmounts
+
+	if len(types) == 0 && len(addrs) == 0 {
+		// This is an expected behavior when the addressBook contract is not activated yet.
+		// Note that multicall contract calls address book internally.
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
+	if len(types) != len(addrs) {
+		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
+	}
+
+	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, types, addrs, stakingAmounts...)
 }
 
 // NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
@@ -313,43 +356,7 @@ func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
 		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
 	}
 
-	var (
-		nodeIds      = []common.Address{}
-		stakingAddrs = []common.Address{}
-		rewardAddrs  = []common.Address{}
-		pocAddr      = common.Address{}
-		kirAddr      = common.Address{}
-	)
-
-	// Parse and construct node information
-	for i, addrType := range types {
-		switch addrType {
-		case addressTypeNodeID:
-			nodeIds = append(nodeIds, addrs[i])
-		case addressTypeStakingAddr:
-			stakingAddrs = append(stakingAddrs, addrs[i])
-		case addressTypeRewardAddr:
-			rewardAddrs = append(rewardAddrs, addrs[i])
-		case addressTypePoCAddr:
-			pocAddr = addrs[i]
-		case addressTypeKIRAddr:
-			kirAddr = addrs[i]
-		default:
-			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
-		}
-	}
-
-	// validate parsed node information
-	if len(nodeIds) != len(stakingAddrs) ||
-		len(nodeIds) != len(rewardAddrs) ||
-		common.EmptyAddress(pocAddr) ||
-		common.EmptyAddress(kirAddr) {
-		// This is an expected behavior when the addressBook contract is not activated yet.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, nodeIds, stakingAddrs, rewardAddrs, kirAddr, pocAddr)
+	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, types, addrs)
 }
 
 func addStakingInfoToCache(stakingInfo *StakingInfo) {

@@ -198,26 +198,72 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KCFAddr common.Address, KFFAddr common.Address) (*StakingInfo, error) {
-	intervalBlock := bc.GetBlockByNumber(blockNum)
-	if intervalBlock == nil {
-		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
-		return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
+func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, types []uint8, addrs []common.Address, effectiveStakings ...*big.Int) (*StakingInfo, error) {
+	var (
+		nodeIds      = []common.Address{}
+		stakingAddrs = []common.Address{}
+		rewardAddrs  = []common.Address{}
+		pocAddr      = common.Address{}
+		kirAddr      = common.Address{}
+	)
+
+	// Parse and construct node information
+	for i, addrType := range types {
+		switch addrType {
+		case addressTypeNodeID:
+			nodeIds = append(nodeIds, addrs[i])
+		case addressTypeStakingAddr:
+			stakingAddrs = append(stakingAddrs, addrs[i])
+		case addressTypeRewardAddr:
+			rewardAddrs = append(rewardAddrs, addrs[i])
+		case addressTypePoCAddr:
+			pocAddr = addrs[i]
+		case addressTypeKIRAddr:
+			kirAddr = addrs[i]
+		default:
+			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
+		}
 	}
-	statedb, err := bc.StateAt(intervalBlock.Root())
-	if err != nil {
-		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
-		return nil, err
+
+	// validate parsed node information
+	if len(nodeIds) != len(stakingAddrs) ||
+		len(nodeIds) != len(rewardAddrs) ||
+		len(effectiveStakings) > 0 && len(stakingAddrs) != len(effectiveStakings) ||
+		common.EmptyAddress(pocAddr) ||
+		common.EmptyAddress(kirAddr) {
+		// This is an expected behavior when the addressBook contract is not activated yet.
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
 	}
 
 	// Get balance of stakingAddrs
 	stakingAmounts := make([]uint64, len(stakingAddrs))
-	for i, stakingAddr := range stakingAddrs {
-		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KAIA))
-		if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
-			tempStakingAmount.SetUint64(maxStakingLimit)
+	if len(effectiveStakings) == 0 {
+		intervalBlock := bc.GetBlockByNumber(blockNum)
+		if intervalBlock == nil {
+			logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
+			return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
 		}
-		stakingAmounts[i] = tempStakingAmount.Uint64()
+		statedb, err := bc.StateAt(intervalBlock.Root())
+		if err != nil {
+			logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
+			return nil, err
+		}
+		for i, stakingAddr := range stakingAddrs {
+			tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
+			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
+				tempStakingAmount.SetUint64(maxStakingLimit)
+			}
+			stakingAmounts[i] = tempStakingAmount.Uint64()
+		}
+	} else {
+		for i, effectiveStaking := range effectiveStakings {
+			tempStakingAmount := big.NewInt(0).Div(effectiveStaking, big.NewInt(0).SetUint64(params.KLAY))
+			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
+				tempStakingAmount.SetUint64(maxStakingLimit)
+			}
+			stakingAmounts[i] = tempStakingAmount.Uint64()
+		}
 	}
 
 	pset, err := helper.EffectiveParams(blockNum)
@@ -229,11 +275,11 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeAddrs:      nodeAddrs,
+		CouncilNodeAddrs:      nodeIds,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
-		KCFAddr:               KCFAddr,
-		KFFAddr:               KFFAddr,
+		KCFAddr:               kirAddr,
+		KFFAddr:               pocAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
 		UseGini:               useGini,
