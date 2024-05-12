@@ -76,6 +76,7 @@ type rewardConfig struct {
 	cnTotalRatio    *big.Int
 }
 
+// Used in block reward distribution and klay_getReward RPC API
 type RewardSpec struct {
 	Minted   *big.Int                    `json:"minted"`   // the amount newly minted
 	TotalFee *big.Int                    `json:"totalFee"` // total tx fee spent
@@ -112,6 +113,13 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	for addr, amount := range delta.Rewards {
 		incrementRewardsMap(spec.Rewards, addr, amount)
 	}
+}
+
+// Used in klay_totalSupply RPC API
+// A minified version of RewardSpec that contains the total amount only.
+type TotalReward struct {
+	Minted   *big.Int
+	BurntFee *big.Int
 }
 
 // TODO: this is for legacy, will be removed
@@ -191,6 +199,43 @@ func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
 	return num
 }
 
+// GetSupplyDelta returns the total rewards in this block, i.e. (minted - burntFee)
+// Used in klay_totalSupply RPC API
+func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
+	total := new(TotalReward)
+	rc, err := NewRewardConfig(header, rules, pset)
+	if err != nil {
+		return nil, err
+	}
+
+	if IsRewardSimple(pset) {
+		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		if err != nil {
+			return nil, err
+		}
+		total.Minted = spec.Minted
+		total.BurntFee = spec.BurntFee
+	} else {
+		// Lighter version of CalcDeferredReward where only minted and burntFee are calculated.
+		// No need to lookup the staking info here.
+		total.Minted = rc.mintingAmount
+		_, _, burntFee := calcDeferredFee(rc)
+		total.BurntFee = burntFee
+	}
+
+	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
+	// Therefore, there are no fees to distribute here at the end of block processing.
+	// As such, the CalcDeferredRewardSimple() returns zero burntFee.
+	// Here we calculate the fees burnt during the TX execution.
+	if !rc.deferredTxFee && rules.IsMagma {
+		txFee := GetTotalTxFee(header, rules, pset)
+		txFeeBurn := getBurnAmountMagma(txFee)
+		total.BurntFee = total.BurntFee.Add(total.BurntFee, txFeeBurn)
+	}
+
+	return total, nil
+}
+
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in kaia_getReward RPC API
 func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
@@ -232,7 +277,6 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 				return nil, err
 			}
 			incrementRewardsMap(spec.Rewards, proposer, txFee)
-
 		}
 	}
 
@@ -254,7 +298,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 
 	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
 	// Therefore, there are no fees to distribute here at the end of block processing.
-	// However, before Kore, there was a bug that distributed tx fee regardless
+	// However, before Magma, there was a bug that distributed tx fee regardless
 	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
 	// To maintain backward compatibility, we only fix the buggy logic after Magma
 	// and leave the buggy logic before Magma.
@@ -263,7 +307,7 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 	// bug-fixed logic after Magma
 	if !rc.deferredTxFee && rc.rules.IsMagma {
 		proposer := new(big.Int).Set(minted)
-		logger.Debug("CalcDeferredRewardSimple after Kore when deferredTxFee=false returns",
+		logger.Debug("CalcDeferredRewardSimple after Magma when deferredTxFee=false returns",
 			"proposer", proposer)
 		spec := NewRewardSpec()
 		spec.Minted = minted

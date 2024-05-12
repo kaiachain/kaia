@@ -38,11 +38,6 @@ func (governance *testGovernance) EffectiveParams(num uint64) (*params.GovParamS
 	return governance.p, nil
 }
 
-func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) {
-	p, _ := params.NewGovParamSetIntMap(intMap)
-	governance.p = p
-}
-
 func assertEqualRewardSpecs(t *testing.T, expected, actual *RewardSpec, msgAndArgs ...interface{}) {
 	expectedJson, err := json.MarshalIndent(expected, "", "  ")
 	require.Nil(t, err)
@@ -111,16 +106,6 @@ func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[in
 	}
 }
 
-type testBalanceAdder struct {
-	accounts map[common.Address]*big.Int
-}
-
-func newTestBalanceAdder() *testBalanceAdder {
-	balanceAdder := &testBalanceAdder{}
-	balanceAdder.accounts = make(map[common.Address]*big.Int)
-	return balanceAdder
-}
-
 func getTestConfig() *params.ChainConfig {
 	config := &params.ChainConfig{}
 	config.SetDefaults() // To use GovParamSet without having parse errors
@@ -135,15 +120,6 @@ func getTestConfig() *params.ChainConfig {
 	config.Governance.Reward.MinimumStake = big.NewInt(0).SetUint64(minStaking)
 	config.Istanbul.ProposerPolicy = 2
 	return config
-}
-
-func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int) {
-	balance, ok := balanceAdder.accounts[addr]
-	if ok {
-		balanceAdder.accounts[addr] = big.NewInt(0).Add(balance, v)
-	} else {
-		balanceAdder.accounts[addr] = v
-	}
 }
 
 func noMagma(p *params.ChainConfig) *params.ChainConfig {
@@ -165,15 +141,6 @@ func noDeferred(p *params.ChainConfig) *params.ChainConfig {
 func roundrobin(p *params.ChainConfig) *params.ChainConfig {
 	p.Istanbul.ProposerPolicy = 0
 	return p
-}
-
-func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
-	balance, ok := balanceAdder.accounts[addr]
-	if ok {
-		return balance
-	} else {
-		return nil
-	}
 }
 
 func Test_isEmptyAddress(t *testing.T) {
@@ -290,6 +257,77 @@ func TestRewardDistributor_getBurnAmountMagma(t *testing.T) {
 		burnedTxFee := getBurnAmountMagma(txFee)
 		// expectedTotalTxFee = GetTotalTxFee / 2 = BurnedTxFee
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
+	}
+}
+
+func TestRewardDistributor_GetTotalReward(t *testing.T) {
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
+		stakingInfo = genStakingInfo(5, nil, map[int]uint64{ // not needed for GetTotalReward but needed for GetBlockReward
+			0: minStaking + 4,
+			1: minStaking + 3,
+		})
+		rules = params.Rules{
+			IsMagma: true,
+			IsKore:  true,
+		}
+	)
+
+	testcases := []struct {
+		desc          string
+		policy        istanbul.ProposerPolicy
+		deferredTxFee bool
+		expected      *TotalReward
+	}{
+		{
+			policy:        istanbul.RoundRobin,
+			deferredTxFee: true,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(500)},
+		},
+		{
+			policy:        istanbul.RoundRobin,
+			deferredTxFee: false,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(500)},
+		},
+		{
+			policy:        istanbul.WeightedRandom,
+			deferredTxFee: true,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(1000)},
+		},
+	}
+
+	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+	for _, tc := range testcases {
+		config := getTestConfig()
+		if !tc.deferredTxFee {
+			config = noDeferred(config)
+		}
+		config.Istanbul.ProposerPolicy = uint64(tc.policy)
+
+		pset, err := params.NewGovParamSetChainConfig(config)
+		require.Nil(t, err)
+
+		delta, err := GetTotalReward(header, rules, pset)
+		require.Nil(t, err, tc.desc)
+
+		// Compare GetTotalReward with GetBlockReward
+		spec, err := GetBlockReward(header, rules, pset)
+		require.Nil(t, err, tc.desc)
+		assert.Equal(t, spec.Minted.String(), delta.Minted.String(), tc.desc)
+		assert.Equal(t, spec.BurntFee.String(), delta.BurntFee.String(), tc.desc)
+
+		// Compare GetTotalReward with tc.expected
+		assert.Equal(t, tc.expected.Minted.String(), delta.Minted.String(), tc.desc)
+		assert.Equal(t, tc.expected.BurntFee.String(), delta.BurntFee.String(), tc.desc)
 	}
 }
 
