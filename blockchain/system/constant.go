@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	kip113contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
+	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/multicall"
 	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
 	testcontract "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/log"
@@ -54,6 +55,7 @@ var (
 	CypressCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
 	AddressBookAddr   = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
+	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000444") // TOOD: need to be changed
 	// The following addresses are only used for testing.
 	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
@@ -67,6 +69,8 @@ var (
 	Kip113MockCode   = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
 
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
+
+	MultiCallCode = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled      = errors.New("Registry contract not installed")
