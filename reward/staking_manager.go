@@ -141,7 +141,7 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 		if blockNum > 0 {
 			stakingBlockNumber--
 		}
-		stakingInfo = GetKaiaStakingInfo(stakingBlockNumber)
+		stakingInfo = GetStakingInfoForKaiaBlock(stakingBlockNumber)
 	} else {
 		stakingBlockNumber = params.CalcStakingBlockNumber(blockNum)
 		stakingInfo = GetStakingInfoOnStakingBlock(stakingBlockNumber)
@@ -151,16 +151,17 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-// GetKaiaStakingInfo returns a corresponding kaia StakingInfo for a given block number.
-func GetKaiaStakingInfo(blockNum uint64) *StakingInfo {
+// GetStakingInfoForKaiaBlock returns a corresponding kaia StakingInfo for a given block number.
+// Note that the given block number is a kaia staking info for the next block.
+func GetStakingInfoForKaiaBlock(blockNum uint64) *StakingInfo {
 	if stakingManager == nil {
 		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
-	// Allow parent kaia fork block
+	// Check if the next block is a kaia block.
 	if !isKaiaForkEnabled(blockNum + 1) {
-		logger.Error("Kaia fork is not enabled", "block number", blockNum)
+		logger.Error("invalid block number for kaia staking info", "block number", blockNum)
 		return nil
 	}
 
@@ -196,10 +197,8 @@ func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 
 	// Return staking info of a previous block if kaia fork is enabled.
 	if isKaiaForkEnabled(stakingBlockNumber) {
-		if stakingBlockNumber > 0 {
-			stakingBlockNumber--
-		}
-		return GetKaiaStakingInfo(stakingBlockNumber)
+		logger.Error("unable to use GetStakingInfoOnStakingBlock to get staking info for kaia fork", "staking block number", stakingBlockNumber)
+		return nil
 	}
 
 	// shortcut if given block is not on staking update interval
