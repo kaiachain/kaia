@@ -18,6 +18,7 @@ func TestContractCallerForMultiCall(t *testing.T) {
 	originCode := MultiCallCode
 	defer func() {
 		MultiCallCode = originCode
+		backend.Close()
 	}()
 
 	// Temporary code injection

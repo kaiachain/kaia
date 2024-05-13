@@ -387,3 +387,33 @@ contract AddressBookMockOneCN {
         revert("Invalid CN node ID.");
     }
 }
+
+/**
+ * @title AddressBookMockTwoCN
+ */
+
+contract AddressBookMockTwoCN {
+
+    function getAllAddress() external view returns (uint8[] memory typeList, address[] memory addressList) {
+        typeList = new uint8[](8);
+        addressList = new address[](8);
+
+        typeList[0] = 0; // Node address
+        typeList[1] = 1; // Staking address
+        typeList[2] = 2; // Reward address
+        typeList[3] = 0; // Node address
+        typeList[4] = 1; // Staking address
+        typeList[5] = 2; // Reward address
+        typeList[6] = 3; // POC address
+        typeList[7] = 4; // KIR address
+
+        addressList[0] = 0x0000000000000000000000000000000000000F00;
+        addressList[1] = 0x0000000000000000000000000000000000000F01;
+        addressList[2] = 0x0000000000000000000000000000000000000f02;
+        addressList[3] = 0x0000000000000000000000000000000000000F03;
+        addressList[4] = 0x0000000000000000000000000000000000000f04;
+        addressList[5] = 0x0000000000000000000000000000000000000f05;
+        addressList[6] = 0x0000000000000000000000000000000000000F06;
+        addressList[7] = 0x0000000000000000000000000000000000000f07;
+    }
+}

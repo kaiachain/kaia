@@ -25,6 +25,7 @@ import (
 	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
 	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/multicall"
 	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
+	"github.com/klaytn/klaytn/contracts/contracts/testing/reward"
 	testcontract "github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
 	"github.com/klaytn/klaytn/log"
 )
@@ -69,6 +70,8 @@ var (
 	Kip113MockCode   = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
 
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
+
+	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
 
 	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
