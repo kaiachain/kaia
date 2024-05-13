@@ -227,6 +227,16 @@ func (sm *supplyManager) readRebalanceMemo(addr common.Address) (*big.Int, error
 func (sm *supplyManager) catchup() {
 	defer sm.wg.Done()
 
+	var (
+		headNum = sm.chain.CurrentBlock().NumberU64()
+		lastNum = sm.db.ReadLastAccRewardBlockNumber()
+	)
+
+	if sm.db.ReadAccReward(lastNum) == nil {
+		logger.Error("Last accumulated reward not found. Restarting supply catchup")
+		sm.db.WriteLastAccRewardBlockNumber(0) // soft reset to genesis
+	}
+
 	// Store genesis supply if not exists
 	if sm.db.ReadLastAccRewardBlockNumber() == 0 {
 		genesisTotalSupply, err := sm.totalSupplyFromState(0)
@@ -239,14 +249,12 @@ func (sm *supplyManager) catchup() {
 			BurntFee: big.NewInt(0),
 		})
 		sm.db.WriteLastAccRewardBlockNumber(0)
+		lastNum = 0
 		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
 	}
 
-	var (
-		headNum       = sm.chain.CurrentBlock().NumberU64()
-		lastNum       = sm.db.ReadLastAccRewardBlockNumber()
-		lastAccReward = sm.db.ReadAccReward(lastNum)
-	)
+	lastNum = sm.db.ReadLastAccRewardBlockNumber()
+	lastAccReward := sm.db.ReadAccReward(lastNum)
 
 	// Big-step catchup; accumulate until the head block as of now.
 	// The head block can be obsolete by the time catchup finished, so the big-step can end up being a bit short.
