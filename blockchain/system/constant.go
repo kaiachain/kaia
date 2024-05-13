@@ -55,7 +55,7 @@ var (
 	CypressCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
 	AddressBookAddr   = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
-	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000444") // TOOD: need to be changed
+	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	// The following addresses are only used for testing.
 	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
