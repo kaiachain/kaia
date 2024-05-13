@@ -23,6 +23,7 @@ package database
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -128,6 +129,9 @@ var (
 	migrationStatusKey = []byte("migrationStatus")
 
 	stakingInfoPrefix = []byte("stakingInfo")
+
+	accRewardPrefix             = []byte("accReward")
+	lastAccRewardBlockNumberKey = []byte("lastAccRewardBlockNumber")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
 )
@@ -292,4 +296,14 @@ func parsePruningMarkKey(key []byte) PruningMark {
 		Number: binary.BigEndian.Uint64(bNumber),
 		Hash:   common.BytesToExtHash(bHash),
 	}
+}
+
+type AccReward struct {
+	Minted   *big.Int
+	BurntFee *big.Int
+}
+
+// AccRewardKey = accRewardPrefix + blockNumber
+func accRewardKey(blockNumber uint64) []byte {
+	return append(accRewardPrefix, common.Int64ToByteBigEndian(blockNumber)...)
 }
