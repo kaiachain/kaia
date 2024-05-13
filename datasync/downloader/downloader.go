@@ -1685,13 +1685,19 @@ func (d *Downloader) processFullSyncContent() error {
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}
-		if err := d.importBlockResults(results); err != nil {
+		if err := d.importBlockResults(results, d.stakingInfoRemover(results)); err != nil {
 			return err
 		}
 	}
 }
 
-func (d *Downloader) importBlockResults(results []*fetchResult) error {
+func (d *Downloader) importBlockResults(results []*fetchResult, deleteFn func()) error {
+	defer func() {
+		if deleteFn != nil {
+			deleteFn()
+		}
+	}()
+
 	// Check for any early termination requests
 	if len(results) == 0 {
 		return nil
@@ -1836,9 +1842,21 @@ func (d *Downloader) processFastSyncContent() error {
 				continue
 			}
 		}
+
 		// Fast sync done, pivot commit done, full import
-		if err := d.importBlockResults(afterP); err != nil {
+		if err := d.importBlockResults(afterP, d.stakingInfoRemover(results)); err != nil {
 			return err
+		}
+	}
+}
+
+func (d *Downloader) stakingInfoRemover(results []*fetchResult) func() {
+	return func() {
+		for _, result := range results {
+			if result.StakingInfo != nil && d.queue.IsKaiaFork(big.NewInt(int64(result.StakingInfo.BlockNum+1))) {
+				// Ignore error, as we don't want to stop the sync process due to staking info deletion failure
+				reward.DeleteStakingInfoFromDB(result.StakingInfo.BlockNum)
+			}
 		}
 	}
 }

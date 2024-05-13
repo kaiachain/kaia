@@ -170,6 +170,17 @@ func GetStakingInfoForKaiaBlock(blockNum uint64) *StakingInfo {
 		return cachedStakingInfo
 	}
 
+	// Get staking info from DB if it exists.
+	// The staking info stored in DB is for downloader to verify the header.
+	// After downloader verifies all headers, the staking info in DB will be removed.
+	if storedStakingInfo, err := getStakingInfoFromDB(blockNum); storedStakingInfo != nil && err == nil {
+		// Fill in Gini coeff before adding to cache.
+		if err := fillMissingGiniCoefficient(storedStakingInfo, blockNum); err != nil {
+			logger.Warn("Cannot fill in gini coefficient", "staking block number", blockNum, "err", err)
+		}
+		return storedStakingInfo
+	}
+
 	stakingInfo, err := updateKaiaStakingInfo(blockNum)
 	if err != nil {
 		logger.Error("failed to update kaia stakingInfo", "block number", blockNum, "err", err)
