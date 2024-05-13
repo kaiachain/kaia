@@ -45,11 +45,11 @@ type KafkaSuite struct {
 	topic    string
 }
 
-// In order to test KafkaSuite, any available kafka broker must be connectable with "kafka:9094".
+// In order to test KafkaSuite, any available kafka broker must be connectable with "kafka:9092".
 // If no kafka broker is available, the KafkaSuite tests are skipped.
 func (s *KafkaSuite) SetupTest() {
 	s.conf = GetDefaultKafkaConfig()
-	s.conf.Brokers = []string{"kafka:9094"}
+	s.conf.Brokers = []string{"kafka:9092"}
 	kfk, err := NewKafka(s.conf)
 	if err == sarama.ErrOutOfBrokers {
 		s.T().Log("Failed connecting to brokers", s.conf.Brokers)
