@@ -136,7 +136,7 @@ type requestOp struct {
 	ids  []json.RawMessage
 	err  error
 	resp chan *jsonrpcMessage // receives up to len(ids) responses
-	sub  *ClientSubscription  // only set for KlaySubscribe requests
+	sub  *ClientSubscription  // only set for KaiaSubscribe requests
 }
 
 func (op *requestOp) wait(ctx context.Context, c *Client) (*jsonrpcMessage, error) {
@@ -413,9 +413,9 @@ func (c *Client) Notify(ctx context.Context, method string, args ...interface{})
 	}
 }
 
-// KlaySubscribe registers a subscripion under the "klay" namespace.
-func (c *Client) KlaySubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
-	return c.Subscribe(ctx, "klay", channel, args...)
+// KaiaSubscribe registers a subscripion under the "kaia" namespace.
+func (c *Client) KaiaSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "kaia", channel, args...)
 }
 
 // ShhSubscribe registers a subscripion under the "shh" namespace.

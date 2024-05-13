@@ -70,7 +70,7 @@ func subscribeBlocks(client *rpc.Client, subch chan Block) {
 	defer cancel()
 
 	// Subscribe to new blocks.
-	sub, err := client.KlaySubscribe(ctx, subch, "newHeads")
+	sub, err := client.KaiaSubscribe(ctx, subch, "newHeads")
 	if err != nil {
 		fmt.Println("subscribe error:", err)
 		return

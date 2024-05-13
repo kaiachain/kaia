@@ -304,7 +304,7 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) 
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
-	return ec.c.KlaySubscribe(ctx, ch, "newHeads")
+	return ec.c.KaiaSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access
@@ -365,7 +365,7 @@ func (ec *Client) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.L
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return ec.c.KlaySubscribe(ctx, ch, "logs", toFilterArg(q))
+	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 func toFilterArg(q kaia.FilterQuery) interface{} {

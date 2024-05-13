@@ -30,7 +30,7 @@ import (
 	"sort"
 	"testing"
 
-	klaytnapi "github.com/klaytn/klaytn/api"
+	kaiaapi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -205,7 +205,7 @@ func TestTraceCall(t *testing.T) {
 
 	testSuite := []struct {
 		blockNumber rpc.BlockNumber
-		call        klaytnapi.CallArgs
+		call        kaiaapi.CallArgs
 		config      *TraceConfig
 		expectErr   error
 		expect      interface{}
@@ -213,7 +213,7 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the genesis, plain transfer.
 		{
 			blockNumber: rpc.BlockNumber(0),
-			call: klaytnapi.CallArgs{
+			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
 				Value: (hexutil.Big)(*big.NewInt(1000)),
@@ -225,24 +225,24 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the head, plain transfer.
 		{
 			blockNumber: rpc.BlockNumber(genBlocks),
-			call: klaytnapi.CallArgs{
+			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &klaytnapi.ExecutionResult{
+			expect: &kaiaapi.ExecutionResult{
 				Gas:         params.TxGas,
 				Failed:      false,
 				ReturnValue: "",
-				StructLogs:  []klaytnapi.StructLogRes{},
+				StructLogs:  []kaiaapi.StructLogRes{},
 			},
 		},
 		// Standard JSON trace upon the non-existent block, error expects
 		{
 			blockNumber: rpc.BlockNumber(genBlocks + 1),
-			call: klaytnapi.CallArgs{
+			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
 				Value: (hexutil.Big)(*big.NewInt(1000)),
@@ -254,35 +254,35 @@ func TestTraceCall(t *testing.T) {
 		// Standard JSON trace upon the latest block
 		{
 			blockNumber: rpc.LatestBlockNumber,
-			call: klaytnapi.CallArgs{
+			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &klaytnapi.ExecutionResult{
+			expect: &kaiaapi.ExecutionResult{
 				Gas:         params.TxGas,
 				Failed:      false,
 				ReturnValue: "",
-				StructLogs:  []klaytnapi.StructLogRes{},
+				StructLogs:  []kaiaapi.StructLogRes{},
 			},
 		},
 		// Standard JSON trace upon the pending block
 		{
 			blockNumber: rpc.PendingBlockNumber,
-			call: klaytnapi.CallArgs{
+			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &klaytnapi.ExecutionResult{
+			expect: &kaiaapi.ExecutionResult{
 				Gas:         params.TxGas,
 				Failed:      false,
 				ReturnValue: "",
-				StructLogs:  []klaytnapi.StructLogRes{},
+				StructLogs:  []kaiaapi.StructLogRes{},
 			},
 		},
 	}
@@ -316,11 +316,11 @@ func TestTraceTransaction(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to trace transaction %v", err)
 	}
-	if !reflect.DeepEqual(result, &klaytnapi.ExecutionResult{
+	if !reflect.DeepEqual(result, &kaiaapi.ExecutionResult{
 		Gas:         params.TxGas,
 		Failed:      false,
 		ReturnValue: "",
-		StructLogs:  []klaytnapi.StructLogRes{},
+		StructLogs:  []kaiaapi.StructLogRes{},
 	}) {
 		t.Error("Transaction tracing result is different")
 	}
@@ -366,11 +366,11 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
-					Result: &klaytnapi.ExecutionResult{
+					Result: &kaiaapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
 						ReturnValue: "",
-						StructLogs:  []klaytnapi.StructLogRes{},
+						StructLogs:  []kaiaapi.StructLogRes{},
 					},
 				},
 			},
@@ -389,11 +389,11 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
-					Result: &klaytnapi.ExecutionResult{
+					Result: &kaiaapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
 						ReturnValue: "",
-						StructLogs:  []klaytnapi.StructLogRes{},
+						StructLogs:  []kaiaapi.StructLogRes{},
 					},
 				},
 			},
@@ -405,11 +405,11 @@ func TestTraceBlock(t *testing.T) {
 			expectErr:   nil,
 			expect: []*txTraceResult{
 				{
-					Result: &klaytnapi.ExecutionResult{
+					Result: &kaiaapi.ExecutionResult{
 						Gas:         params.TxGas,
 						Failed:      false,
 						ReturnValue: "",
-						StructLogs:  []klaytnapi.StructLogRes{},
+						StructLogs:  []kaiaapi.StructLogRes{},
 					},
 				},
 			},

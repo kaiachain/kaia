@@ -216,17 +216,17 @@ func TestClientSubscribeInvalidArg(t *testing.T) {
 		defer func() {
 			err := recover()
 			if shouldPanic && err == nil {
-				t.Errorf("KlaySubscribe should've panicked for %#v", arg)
+				t.Errorf("KaiaSubscribe should've panicked for %#v", arg)
 			}
 			if !shouldPanic && err != nil {
-				t.Errorf("KlaySubscribe shouldn't have panicked for %#v", arg)
+				t.Errorf("KaiaSubscribe shouldn't have panicked for %#v", arg)
 				buf := make([]byte, 1024*1024)
 				buf = buf[:runtime.Stack(buf, false)]
 				t.Error(err)
 				t.Error(string(buf))
 			}
 		}()
-		client.KlaySubscribe(context.Background(), arg, "foo_bar")
+		client.KaiaSubscribe(context.Background(), arg, "foo_bar")
 	}
 	check(true, nil)
 	check(true, 1)
@@ -237,14 +237,14 @@ func TestClientSubscribeInvalidArg(t *testing.T) {
 }
 
 func TestClientSubscribe(t *testing.T) {
-	server := newTestServer("klay", new(NotificationTestService))
+	server := newTestServer("kaia", new(NotificationTestService))
 	defer server.Stop()
 	client := DialInProc(server)
 	defer client.Close()
 
 	nc := make(chan int)
 	count := 10
-	sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", count, 0)
+	sub, err := client.KaiaSubscribe(context.Background(), nc, "someSubscription", count, 0)
 	if err != nil {
 		t.Fatal("can't subscribe:", err)
 	}
@@ -299,14 +299,14 @@ func TestClientSubscribeCustomNamespace(t *testing.T) {
 	}
 }
 
-// In this test, the connection drops while KlaySubscribe is
+// In this test, the connection drops while KaiaSubscribe is
 // waiting for a response.
 func TestClientSubscribeClose(t *testing.T) {
 	service := &NotificationTestService{
 		gotHangSubscriptionReq:  make(chan struct{}),
 		unblockHangSubscription: make(chan struct{}),
 	}
-	server := newTestServer("klay", service)
+	server := newTestServer("kaia", service)
 	defer server.Stop()
 	client := DialInProc(server)
 	defer client.Close()
@@ -318,7 +318,7 @@ func TestClientSubscribeClose(t *testing.T) {
 		err  error
 	)
 	go func() {
-		sub, err = client.KlaySubscribe(context.Background(), nc, "hangSubscription", 999)
+		sub, err = client.KaiaSubscribe(context.Background(), nc, "hangSubscription", 999)
 		errc <- err
 	}()
 
@@ -329,13 +329,13 @@ func TestClientSubscribeClose(t *testing.T) {
 	select {
 	case err := <-errc:
 		if err == nil {
-			t.Errorf("KlaySubscribe returned nil error after Close")
+			t.Errorf("KaiaSubscribe returned nil error after Close")
 		}
 		if sub != nil {
-			t.Error("KlaySubscribe returned non-nil subscription after Close")
+			t.Error("KaiaSubscribe returned non-nil subscription after Close")
 		}
 	case <-time.After(1 * time.Second):
-		t.Fatalf("KlaySubscribe did not return within 1s after Close")
+		t.Fatalf("KaiaSubscribe did not return within 1s after Close")
 	}
 }
 
@@ -344,13 +344,13 @@ func TestClientSubscribeClose(t *testing.T) {
 // client hangs during shutdown when Unsubscribe races with Client.Close.
 func TestClientCloseUnsubscribeRace(t *testing.T) {
 	service := &NotificationTestService{}
-	server := newTestServer("klay", service)
+	server := newTestServer("kaia", service)
 	defer server.Stop()
 
 	for i := 0; i < 20; i++ {
 		client := DialInProc(server)
 		nc := make(chan int)
-		sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", 3, 1)
+		sub, err := client.KaiaSubscribe(context.Background(), nc, "someSubscription", 3, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -368,7 +368,7 @@ func TestClientCloseUnsubscribeRace(t *testing.T) {
 // This test checks that Client doesn't lock up when a single subscriber
 // doesn't read subscription events.
 func TestClientNotificationStorm(t *testing.T) {
-	server := newTestServer("klay", new(NotificationTestService))
+	server := newTestServer("kaia", new(NotificationTestService))
 	defer server.Stop()
 
 	doTest := func(count int, wantError bool) {
@@ -380,7 +380,7 @@ func TestClientNotificationStorm(t *testing.T) {
 		// Subscribe on the server. It will start sending many notifications
 		// very quickly.
 		nc := make(chan int)
-		sub, err := client.KlaySubscribe(ctx, nc, "someSubscription", count, 0)
+		sub, err := client.KaiaSubscribe(ctx, nc, "someSubscription", count, 0)
 		if err != nil {
 			t.Fatal("can't subscribe:", err)
 		}
@@ -402,7 +402,7 @@ func TestClientNotificationStorm(t *testing.T) {
 				return
 			}
 			var r int
-			err := client.CallContext(ctx, &r, "klay_echo", i)
+			err := client.CallContext(ctx, &r, "kaia_echo", i)
 			if err != nil {
 				if !wantError {
 					t.Fatalf("(%d/%d) call error: %v", i, count, err)
@@ -615,7 +615,7 @@ func httpTestClient(srv *Server, transport string, fl *flakeyListener) (*Client,
 
 func ipcTestClient(srv *Server, fl *flakeyListener) (*Client, net.Listener) {
 	// Listen on a random endpoint.
-	endpoint := fmt.Sprintf("klaytn-test-ipc-%d-%d", os.Getpid(), rand.Int63())
+	endpoint := fmt.Sprintf("kaia-test-ipc-%d-%d", os.Getpid(), rand.Int63())
 	if runtime.GOOS == "windows" {
 		endpoint = `\\.\pipe\` + endpoint
 	} else {
@@ -665,13 +665,13 @@ func (l *flakeyListener) Accept() (net.Conn, error) {
 // client hangs during shutdown when Unsubscribe races with Client.Close.
 func TestClientCloseUnsubscribeRace(t *testing.T) {
 	service := &NotificationTestService{}
-	server := newTestServer("klay", service)
+	server := newTestServer("kaia", service)
 	defer server.Stop()
 
 	for i := 0; i < 20; i++ {
 		client := DialInProc(server)
 		nc := make(chan int)
-		sub, err := client.KlaySubscribe(context.Background(), nc, "someSubscription", 3, 1)
+		sub, err := client.KaiaSubscribe(context.Background(), nc, "someSubscription", 3, 1)
 		if err != nil {
 			t.Fatal(err)
 		}

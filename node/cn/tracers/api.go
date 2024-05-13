@@ -34,7 +34,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnapi "github.com/klaytn/klaytn/api"
+	kaiaapi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -819,10 +819,10 @@ func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, co
 	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
 }
 
-// TraceCall lets you trace a given klay_call. It collects the structured logs
+// TraceCall lets you trace a given kaia_call. It collects the structured logs
 // created during the execution of EVM if the given transaction was added on
 // top of the provided block and returns them as a JSON object.
-func (api *CommonAPI) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -948,8 +948,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				return nil, err
 			}
 		}
-		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
-			return &klaytnapi.ExecutionResult{
+		if logs, err := kaiaapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
+			return &kaiaapi.ExecutionResult{
 				Gas:         ret.UsedGas,
 				Failed:      ret.Failed(),
 				ReturnValue: fmt.Sprintf("%x", ret.Return()),
