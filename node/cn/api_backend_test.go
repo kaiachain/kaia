@@ -181,7 +181,7 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	api.cn.protocolManager = pm
 	api.cn.engine = gxhash.NewFullFaker()
 	api.cn.governance = testGov()
-	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil)
+	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, api.cn.governance)
 
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
@@ -768,7 +768,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 		stakingUpdateInterval uint64 = 1
 		stakingUpdateBlockNum uint64 = 15
 		gov                          = governance.NewMixedEngine(testCfg(epoch), db)
-		gpo                          = gasprice.NewOracle(api, gasprice.Config{}, nil)
+		gpo                          = gasprice.NewOracle(api, gasprice.Config{}, nil, gov)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
 

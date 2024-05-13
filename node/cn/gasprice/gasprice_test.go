@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/consensus/gxhash"
 	"github.com/klaytn/klaytn/crypto"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/storage/database"
@@ -80,7 +81,7 @@ func (b *testBackend) teardown() {
 
 // newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
 // after use, otherwise the blockchain instance will mem-leak via goroutines.
-func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
+func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend, Governance) {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -101,18 +102,15 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
 	config.ShanghaiCompatibleBlock = kaiaBlock
 	config.CancunCompatibleBlock = kaiaBlock
 	config.KaiaCompatibleBlock = kaiaBlock
-	if magmaBlock != nil {
-		config.Governance = params.GetDefaultGovernanceConfig()
-		config.Istanbul = params.GetDefaultIstanbulConfig()
-		config.Governance.KIP71.LowerBoundBaseFee = 0
-	}
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
 	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
 		toaddr := common.Address{}
 		// To test fee history, rewardbase should be different from the sender address
 		b.SetRewardbase(toaddr)
 
 		var txdata types.TxInternalData
-		if config.MagmaCompatibleBlock != nil && b.Number().Cmp(config.MagmaCompatibleBlock) >= 0 {
+		if config.IsMagmaForkEnabled(b.Number()) {
 			txdata = &types.TxInternalDataEthereumDynamicFee{
 				ChainID:      gspec.Config.ChainID,
 				AccountNonce: b.TxNonce(addr),
@@ -142,9 +140,11 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) *testBackend {
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}
+	gov := governance.NewMixedEngine(gspec.Config, db)
+	gov.SetBlockchain(chain)
 	chain.InsertChain(blocks)
 
-	return &testBackend{chain: chain}
+	return &testBackend{chain: chain}, gov
 }
 
 func TestGasPrice_NewOracle(t *testing.T) {
@@ -153,7 +153,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
 	params := Config{}
-	oracle := NewOracle(mockBackend, params, nil)
+	oracle := NewOracle(mockBackend, params, nil, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -162,7 +162,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Blocks: 2}
-	oracle = NewOracle(mockBackend, params, nil)
+	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 2, oracle.checkBlocks)
@@ -171,7 +171,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Percentile: -1}
-	oracle = NewOracle(mockBackend, params, nil)
+	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -180,7 +180,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 0, oracle.percentile)
 
 	params = Config{Percentile: 101}
-	oracle = NewOracle(mockBackend, params, nil)
+	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Nil(t, oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -189,7 +189,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 100, oracle.percentile)
 
 	params = Config{Percentile: 101, Default: big.NewInt(123)}
-	oracle = NewOracle(mockBackend, params, nil)
+	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Equal(t, big.NewInt(123), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
@@ -203,13 +203,13 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	testBackend := newTestBackend(t, nil, nil)
+	testBackend, testGov := newTestBackend(t, nil, nil)
 	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
 	chainConfig.UnitPrice = 0
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
 
-	oracle := NewOracle(mockBackend, params, txPoolWith0)
+	oracle := NewOracle(mockBackend, params, txPoolWith0, testGov)
 
 	currentBlock := testBackend.CurrentBlock()
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
@@ -223,7 +223,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig.UnitPrice = 25
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
 	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-	oracle = NewOracle(mockBackend, params, txPoolWith25)
+	oracle = NewOracle(mockBackend, params, txPoolWith25, testGov)
 
 	price, err = oracle.SuggestPrice(nil)
 	assert.Equal(t, big.NewInt(25), price)
@@ -255,10 +255,10 @@ func TestSuggestTipCap(t *testing.T) {
 		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Ston * int64(30))}, // Fork point in the future
 	}
 	for _, c := range cases {
-		testBackend := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
+		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
 		chainConfig := testBackend.ChainConfig()
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-		oracle := NewOracle(testBackend, config, txPool)
+		oracle := NewOracle(testBackend, config, txPool, testGov)
 
 		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G
 		got, err := oracle.SuggestTipCap(context.Background())

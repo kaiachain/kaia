@@ -576,7 +576,7 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
-		txs := types.NewTransactionsByTimeAndNonce(self.current.signer, pending)
+		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
 		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
 		finishedCommitTx := time.Now()
 
@@ -643,8 +643,7 @@ func (self *worker) updateSnapshot() {
 	)
 	self.snapshotState = self.current.state.Copy()
 }
-
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByTimeAndNonce, bc BlockChain, rewardbase common.Address) {
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
@@ -666,8 +665,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}(cpy, env.tcount)
 	}
 }
-
-func (env *Task) ApplyTransactions(txs *types.TransactionsByTimeAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block

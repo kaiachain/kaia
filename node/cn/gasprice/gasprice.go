@@ -53,6 +53,10 @@ type OracleBackend interface {
 	CurrentBlock() *types.Block
 }
 
+type Governance interface {
+	EffectiveParams(bn uint64) (*params.GovParamSet, error)
+}
+
 type TxPool interface {
 	GasPrice() *big.Int
 }
@@ -67,6 +71,7 @@ type Oracle struct {
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
 	txPool    TxPool
+	gov       Governance
 
 	checkBlocks, maxEmpty, maxBlocks  int
 	percentile                        int
@@ -76,7 +81,7 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend OracleBackend, config Config, txPool TxPool) *Oracle {
+func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance Governance) *Oracle {
 	blocks := config.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -116,6 +121,7 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool) *Oracle {
 		maxHeaderHistory: maxHeaderHistory,
 		maxBlockHistory:  maxBlockHistory,
 		txPool:           txPool,
+		gov:              governance,
 		historyCache:     cache,
 	}
 }

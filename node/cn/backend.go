@@ -389,7 +389,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, cn.governance)
 	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)

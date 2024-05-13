@@ -97,23 +97,30 @@ func (s sortGasAndReward) Less(i, j int) bool {
 // the block field filled in, retrieves the block from the backend if not present yet and
 // fills in the rest of the fields.
 func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
-	chainconfig := oracle.backend.ChainConfig()
-	// TODO-Kaia: If we implement baseFee feature like Ethereum does, we should set it from header, not constant.
+	var (
+		chainconfig      = oracle.backend.ChainConfig()
+		isCurrBlockMagma = chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber)))
+		isNextBlockMagma = chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1)))
+
+		currParamSet, _ = oracle.gov.EffectiveParams(bf.blockNumber + 1)
+		kip71Config     = chainconfig.Governance.KIP71
+	)
+	if currParamSet != nil {
+		kip71Config = currParamSet.ToKIP71Config()
+	}
 	if bf.results.baseFee = bf.header.BaseFee; bf.results.baseFee == nil {
 		bf.results.baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	// TODO-Kaia: If we implement baseFee feature like Ethereum does, we should calculate nextBaseFee from parent block header.
-	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1))) {
-		bf.results.nextBaseFee = misc.NextMagmaBlockBaseFee(bf.header, chainconfig.Governance.KIP71)
+	if isNextBlockMagma {
+		bf.results.nextBaseFee = misc.NextMagmaBlockBaseFee(bf.header, kip71Config)
 	} else {
 		bf.results.nextBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
 	// Use MaxBlockGasUsedForBaseFee as gasLimit for gasUsedRatio.
-	if chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber))) {
-		// TODO-Kaia: Instead of using chainConfig, we should use governance set values.
-		if chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee != 0 {
-			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(chainconfig.Governance.KIP71.MaxBlockGasUsedForBaseFee)
+	if isCurrBlockMagma {
+		if kip71Config.MaxBlockGasUsedForBaseFee != 0 {
+			bf.results.gasUsedRatio = float64(bf.header.GasUsed) / float64(kip71Config.MaxBlockGasUsedForBaseFee)
 		}
 	}
 	if bf.results.gasUsedRatio == 0 {
