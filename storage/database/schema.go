@@ -303,6 +303,13 @@ type AccReward struct {
 	BurntFee *big.Int
 }
 
+func (ar *AccReward) Copy() *AccReward {
+	return &AccReward{
+		Minted:   new(big.Int).Set(ar.Minted),
+		BurntFee: new(big.Int).Set(ar.BurntFee),
+	}
+}
+
 // AccRewardKey = accRewardPrefix + blockNumber
 func accRewardKey(blockNumber uint64) []byte {
 	return append(accRewardPrefix, common.Int64ToByteBigEndian(blockNumber)...)
