@@ -49,7 +49,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/log"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -62,29 +62,29 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
-	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/reads", nil)
-	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/hashes", nil)
-	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/updates", nil)
-	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/commits", nil)
+	accountReadTimer   = kaiametrics.NewRegisteredHybridTimer("state/account/reads", nil)
+	accountHashTimer   = kaiametrics.NewRegisteredHybridTimer("state/account/hashes", nil)
+	accountUpdateTimer = kaiametrics.NewRegisteredHybridTimer("state/account/updates", nil)
+	accountCommitTimer = kaiametrics.NewRegisteredHybridTimer("state/account/commits", nil)
 
-	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/reads", nil)
-	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
-	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/updates", nil)
-	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/commits", nil)
+	storageReadTimer   = kaiametrics.NewRegisteredHybridTimer("state/storage/reads", nil)
+	storageHashTimer   = kaiametrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
+	storageUpdateTimer = kaiametrics.NewRegisteredHybridTimer("state/storage/updates", nil)
+	storageCommitTimer = kaiametrics.NewRegisteredHybridTimer("state/storage/commits", nil)
 
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("state/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("state/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("state/snapshot/commits", nil)
 
 	blockBaseFee        = metrics.NewRegisteredGauge("chain/basefee", nil)
-	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
-	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
-	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
-	blockFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/finalize", nil)
-	blockValidateTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/validate", nil)
-	blockAgeTimer       = klaytnmetrics.NewRegisteredHybridTimer("chain/age", nil)
+	blockInsertTimer    = kaiametrics.NewRegisteredHybridTimer("chain/inserts", nil)
+	blockProcessTimer   = kaiametrics.NewRegisteredHybridTimer("chain/process", nil)
+	blockExecutionTimer = kaiametrics.NewRegisteredHybridTimer("chain/execution", nil)
+	blockFinalizeTimer  = kaiametrics.NewRegisteredHybridTimer("chain/finalize", nil)
+	blockValidateTimer  = kaiametrics.NewRegisteredHybridTimer("chain/validate", nil)
+	blockAgeTimer       = kaiametrics.NewRegisteredHybridTimer("chain/age", nil)
 
-	blockPrefetchExecuteTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
+	blockPrefetchExecuteTimer   = kaiametrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
 	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
@@ -2803,7 +2803,7 @@ func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 func CheckBlockChainVersion(chainDB database.DBManager) error {
 	bcVersion := chainDB.ReadDatabaseVersion()
 	if bcVersion != nil && *bcVersion > BlockChainVersion {
-		return fmt.Errorf("database version is v%d, Klaytn %s only supports v%d", *bcVersion, params.Version, BlockChainVersion)
+		return fmt.Errorf("database version is v%d, Kaia %s only supports v%d", *bcVersion, params.Version, BlockChainVersion)
 	} else if bcVersion == nil || *bcVersion < BlockChainVersion {
 		bcVersionStr := "N/A"
 		if bcVersion != nil {

@@ -151,7 +151,7 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (s *PublicKaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err

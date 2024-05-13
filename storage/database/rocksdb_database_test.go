@@ -29,7 +29,7 @@ func init() {
 }
 
 func newTestRocksDB() (Database, func(), string) {
-	dirName, err := os.MkdirTemp(os.TempDir(), "klay_rocksdb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "kaia-test-rocksdb-")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}

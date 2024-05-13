@@ -32,38 +32,38 @@ type NodeInfo struct {
 var BINARY_TYPE = map[string]NodeInfo{
 	CN: {
 		"kcnd",
-		"Klaytn consensus node daemon",
-		"kcnd is a daemon for Klaytn consensus node (kcn). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia consensus node daemon",
+		"kcnd is a daemon for Kaia consensus node (kcn). For more information, please refer to https://docs.kaia.io.",
 	},
 	PN: {
 		"kpnd",
-		"Klaytn proxy node daemon",
-		"kpnd is a daemon for Klaytn proxy node (kpn). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia proxy node daemon",
+		"kpnd is a daemon for Kaia proxy node (kpn). For more information, please refer to https://docs.kaia.io.",
 	},
 	EN: {
 		"kend",
-		"Klaytn endpoint node daemon",
-		"kend is a daemon for Klaytn endpoint node (ken). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia endpoint node daemon",
+		"kend is a daemon for Kaia endpoint node (ken). For more information, please refer to https://docs.kaia.io.",
 	},
 	SCN: {
 		"kscnd",
-		"Klaytn servicechain consensus node daemon",
-		"kscnd is a daemon for Klaytn servicechain consensus node (kscn). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia servicechain consensus node daemon",
+		"kscnd is a daemon for Kaia servicechain consensus node (kscn). For more information, please refer to https://docs.kaia.io.",
 	},
 	SPN: {
 		"kspnd",
-		"Klaytn servicechain proxy node daemon",
-		"kspnd is a daemon for Klaytn servicechain proxy node (kspn). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia servicechain proxy node daemon",
+		"kspnd is a daemon for Kaia servicechain proxy node (kspn). For more information, please refer to https://docs.kaia.io.",
 	},
 	SEN: {
 		"ksend",
-		"Klaytn servicechain endpoint node daemon",
-		"ksend is a daemon for Klaytn servicechain endpoint node (ksen). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia servicechain endpoint node daemon",
+		"ksend is a daemon for Kaia servicechain endpoint node (ksen). For more information, please refer to https://docs.kaia.io.",
 	},
 	BN: {
 		"kbnd",
-		"Klaytn boot node daemon",
-		"kbnd is a daemon for Klaytn boot node (kbn). For more information, please refer to https://docs.klaytn.com.",
+		"Kaia boot node daemon",
+		"kbnd is a daemon for Kaia boot node (kbn). For more information, please refer to https://docs.kaia.io.",
 	},
 	HOMI: {
 		"homi",
@@ -107,7 +107,7 @@ func (r RpmSpec) String() string {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "klaytn_rpmtool"
+	app.Name = "kaia_rpmtool"
 	app.Version = "0.2"
 	app.Commands = []*cli.Command{
 		{
@@ -117,7 +117,7 @@ func main() {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "binary_type",
-					Usage: "Klaytn binary type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
+					Usage: "Kaia binary type (kcn, kpn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
 				},
 				&cli.BoolFlag{
 					Name:  "devel",
@@ -137,7 +137,7 @@ func main() {
 		{
 			Name:    "version",
 			Aliases: []string{"v"},
-			Usage:   "return klaytn version",
+			Usage:   "return Kaia version",
 			Action: func(c *cli.Context) error {
 				fmt.Print(params.Version)
 				return nil
@@ -146,7 +146,7 @@ func main() {
 		{
 			Name:    "release_num",
 			Aliases: []string{"r"},
-			Usage:   "return klaytn release number",
+			Usage:   "return Kaia release number",
 			Action: func(c *cli.Context) error {
 				fmt.Print(params.ReleaseNum)
 				return nil
@@ -202,7 +202,7 @@ Summary:            {{ .Summary }}
 
 Group:              Application/blockchain
 License:            GNU
-URL:                https://www.klaytn.com
+URL:                https://kaia.io
 Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 

@@ -37,14 +37,14 @@ var (
 	logger = log.NewModuleLogger(log.CMDKCN)
 
 	// The app that holds all commands and flags.
-	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn Consensus Node")
+	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Kaia Consensus Node")
 )
 
 func init() {
 	// Initialize the CLI app and start kcn
-	app.Action = nodecmd.RunKlaytnNode
+	app.Action = nodecmd.RunKaiaNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,

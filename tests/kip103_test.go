@@ -27,7 +27,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 
 	// make a blockchain node
 	fullNode, node, validator, _, workspace := newBlockchain(t, config, nil)
@@ -71,7 +71,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	t.Log("Total Newbie amount: ", totalNewbieAlloc)
 
 	for i := 0; i < numNewbie; i++ {
-		newbieAccs[i] = genKlaytnLegacyAccount(t)
+		newbieAccs[i] = genKaiaLegacyAccount(t)
 		newbieAllocs[i] = new(big.Int).Div(totalNewbieAlloc, big.NewInt(2))
 		totalNewbieAlloc.Sub(totalNewbieAlloc, newbieAllocs[i])
 

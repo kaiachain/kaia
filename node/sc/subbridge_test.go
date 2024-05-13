@@ -36,7 +36,7 @@ import (
 
 // testNewSubBridge returns a test SubBridge.
 func testNewSubBridge(t *testing.T) *SubBridge {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "klaytn-test-sb-")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "kaia-test-sb-")
 	if err != nil {
 		t.Fatal(err)
 	}

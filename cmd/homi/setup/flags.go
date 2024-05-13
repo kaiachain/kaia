@@ -285,35 +285,35 @@ var (
 
 	rpcPortFlag = &cli.IntFlag{
 		Name:    "rpc-port",
-		Usage:   "klay.conf - Klaytn node's rpc port [default: 8551] ",
+		Usage:   "klay.conf - Kaia node's rpc port [default: 8551] ",
 		Value:   8551,
 		Aliases: []string{"deploy.rpc-port"},
 	}
 
 	wsPortFlag = &cli.IntFlag{
 		Name:    "ws-port",
-		Usage:   "klay.conf - Klaytn node's ws port [default: 8552]",
+		Usage:   "klay.conf - Kaia node's ws port [default: 8552]",
 		Value:   8552,
 		Aliases: []string{"deploy.ws-port"},
 	}
 
 	p2pPortFlag = &cli.IntFlag{
 		Name:    "p2p-port",
-		Usage:   "klay.conf - Klaytn node's p2p port [default: 32323]",
+		Usage:   "klay.conf - Kaia node's p2p port [default: 32323]",
 		Value:   32323,
 		Aliases: []string{"deploy.p2p-port"},
 	}
 
 	dataDirFlag = &cli.StringFlag{
 		Name:    "data-dir",
-		Usage:   "klay.conf - Klaytn node's data directory path [default : /var/klay/data]",
+		Usage:   "klay.conf - Kaia node's data directory path [default : /var/klay/data]",
 		Value:   "/var/klay/data",
 		Aliases: []string{"deploy.data-dir"},
 	}
 
 	logDirFlag = &cli.StringFlag{
 		Name:    "log-dir",
-		Usage:   "klay.conf - Klaytn node's log directory path [default : /var/klay/log]",
+		Usage:   "klay.conf - Kaia node's log directory path [default : /var/klay/log]",
 		Value:   "/var/klay/log",
 		Aliases: []string{"deploy.log-dir"},
 	}

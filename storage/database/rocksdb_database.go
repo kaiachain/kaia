@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/klaytn/klaytn/log"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/linxGnu/grocksdb"
 	"github.com/rcrowley/go-metrics"
@@ -73,9 +73,9 @@ type rocksDB struct {
 
 	quitCh          chan struct{}
 	metrics         []metrics.Meter
-	getTimer        klaytnmetrics.HybridTimer
-	putTimer        klaytnmetrics.HybridTimer
-	batchWriteTimer klaytnmetrics.HybridTimer
+	getTimer        kaiametrics.HybridTimer
+	putTimer        kaiametrics.HybridTimer
+	batchWriteTimer kaiametrics.HybridTimer
 
 	prefix string
 	logger log.Logger
@@ -312,9 +312,9 @@ func (db *rocksDB) Meter(prefix string) {
 		name := strings.ReplaceAll(splited[1], "-", "/")
 		db.metrics = append(db.metrics, metrics.NewRegisteredMeter(prefix+name, nil))
 	}
-	db.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
-	db.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
-	db.batchWriteTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
+	db.getTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	db.putTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	db.batchWriteTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
 
 	// Short circuit metering if the metrics system is disabled
 	// Above meters are initialized by NilMeter if metricutils.Enabled == false

@@ -20,9 +20,9 @@ type tagInfo struct {
 }
 
 type DatadogTracer struct {
-	Tags           []tagInfo
-	Service        string
-	KlaytnResponse bool
+	Tags         []tagInfo
+	Service      string
+	KaiaResponse bool
 }
 
 func newDatadogTracer() *DatadogTracer {
@@ -47,10 +47,10 @@ func newDatadogTracer() *DatadogTracer {
 	}
 	service := os.Getenv("DD_SERVICE")
 
-	klaytnResponse := false
+	response := false
 	if v := os.Getenv("DD_KLAYTN_RPC_RESPONSE"); v != "" {
 		var err error
-		klaytnResponse, err = strconv.ParseBool(v)
+		response, err = strconv.ParseBool(v)
 		if err != nil {
 			return nil
 		}
@@ -59,7 +59,7 @@ func newDatadogTracer() *DatadogTracer {
 	tracer.Start()
 	logger.Info("Datadog APM trace is enabled", "serviceName", service)
 
-	return &DatadogTracer{tags, service, klaytnResponse}
+	return &DatadogTracer{tags, service, response}
 }
 
 func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.Handler {
@@ -159,7 +159,7 @@ func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span t
 		span.SetTag("response.code", 0)
 	}
 
-	if dt.KlaytnResponse {
+	if dt.KaiaResponse {
 		var rpcSuccess jsonSuccessResponse
 		if err := json.Unmarshal(response, &rpcSuccess); err == nil && rpcSuccess.Result != nil {
 			successJson, _ := json.Marshal(rpcSuccess.Result)

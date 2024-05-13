@@ -48,7 +48,7 @@ var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
 	fileFlag = &cli.BoolFlag{
 		Name:  "file",
-		Usage: `Generate a nodekey and a Klaytn node information as files`,
+		Usage: `Generate a nodekey and a Kaia node information as files`,
 	}
 	portFlag = &cli.IntFlag{
 		Name:  "port",
@@ -70,8 +70,8 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "kgen"
-	app.Usage = "The command line interface to generate nodekey information for Klaytn"
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Usage = "The command line interface to generate nodekey information for Kaia"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
 		fileFlag,

@@ -128,7 +128,7 @@ func bootnode(ctx *cli.Context) error {
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
 	if bcfg.natm != nil {
 		if !realaddr.IP.IsLoopback() {
-			go nat.Map(bcfg.natm, nil, "udp", realaddr.Port, realaddr.Port, "Klaytn node discovery")
+			go nat.Map(bcfg.natm, nil, "udp", realaddr.Port, realaddr.Port, "Kaia node discovery")
 		}
 		// TODO: react to external IP changes over time.
 		if ext, err := bcfg.natm.ExternalIP(); err == nil {
@@ -188,9 +188,9 @@ func startNode(node *Node) error {
 
 func main() {
 	// TODO-Kaia: remove `help` command
-	app := utils.NewApp("", "the Klaytn's bootnode command line interface")
+	app := utils.NewApp("", "the Kaia's bootnode command line interface")
 	app.Name = "kbn"
-	app.Copyright = "Copyright 2018 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.UsageText = app.Name + " [global options] [commands]"
 	app.Flags = append(app.Flags, utils.BNAppFlags()...)
 	app.Commands = []*cli.Command{

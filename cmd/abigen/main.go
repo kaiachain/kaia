@@ -58,11 +58,11 @@ var (
 	// Flags needed by abigen
 	abiFlag = &cli.StringFlag{
 		Name:  "abi",
-		Usage: "Path to the Klaytn contract ABI json to bind, - for STDIN",
+		Usage: "Path to the Kaia contract ABI json to bind, - for STDIN",
 	}
 	binFlag = &cli.StringFlag{
 		Name:  "bin",
-		Usage: "Path to the Klaytn contract bytecode (generate deploy method)",
+		Usage: "Path to the Kaia contract bytecode (generate deploy method)",
 	}
 	binruntimeFlag = &cli.StringFlag{
 		Name:  "binruntime",
@@ -78,7 +78,7 @@ var (
 	}
 	solFlag = &cli.StringFlag{
 		Name:  "sol",
-		Usage: "Path to the Klaytn contract Solidity source to build and bind",
+		Usage: "Path to the Kaia contract Solidity source to build and bind",
 	}
 	solcFlag = &cli.StringFlag{
 		Name:  "solc",
@@ -109,7 +109,7 @@ var (
 )
 
 func init() {
-	app = utils.NewApp(gitCommit, "klaytn checkpoint helper tool")
+	app = utils.NewApp(gitCommit, "Kaia checkpoint helper tool")
 	app.Flags = []cli.Flag{
 		abiFlag,
 		binFlag,

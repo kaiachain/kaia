@@ -3,7 +3,7 @@
 # kcnd         Startup script for the kcn
 #
 # chkconfig: - 85 15
-# description : kcnd is Klaytn consensus node daemon
+# description : kcnd is Kaia consensus node daemon
 #
 # processname: kcnd
 # config:  /etc/kcnd/conf/kcnd.conf
@@ -101,7 +101,7 @@ status_auto_restart_daemon() {
     fi
 }
 
-#------------------------Related to Klaytn node functions-----------------------------
+#------------------------Related to Kaia node functions-----------------------------
 
 set -f
 OPTIONS=""

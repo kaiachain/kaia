@@ -118,7 +118,7 @@ status_auto_restart_daemon() {
     fi
 }
 
-#------------------------Related to Klaytn node functions-----------------------------
+#------------------------Related to Kaia node functions-----------------------------
 
 __check_option() {
     if [ ! -d $LOG_DIR ]; then

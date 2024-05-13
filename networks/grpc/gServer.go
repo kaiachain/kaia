@@ -57,8 +57,8 @@ func (t *grpcReadWriteNopCloser) Close() error {
 	return nil
 }
 
-// klaytnServer is an implementation of KlaytnNodeServer.
-type klaytnServer struct {
+// kaiaServer is an implementation of KlaytnNodeServer.
+type kaiaServer struct {
 	handler *rpc.Server
 }
 
@@ -94,7 +94,7 @@ func (gw *bufWriter) Write(p []byte) (n int, err error) {
 }
 
 // BiCall handles bidirectional communication between client and server.
-func (kns *klaytnServer) BiCall(stream KlaytnNode_BiCallServer) error {
+func (kns *kaiaServer) BiCall(stream KlaytnNode_BiCallServer) error {
 	for {
 		request, err := stream.Recv()
 		if err == io.EOF {
@@ -134,7 +134,7 @@ func (kns *klaytnServer) BiCall(stream KlaytnNode_BiCallServer) error {
 }
 
 // only server can send message to client repeatedly
-func (kns *klaytnServer) Subscribe(request *RPCRequest, stream KlaytnNode_SubscribeServer) error {
+func (kns *kaiaServer) Subscribe(request *RPCRequest, stream KlaytnNode_SubscribeServer) error {
 	var (
 		writeErr = make(chan error, 1)
 		readErr  = make(chan error, 1)
@@ -188,7 +188,7 @@ loop:
 }
 
 // general RPC call, such as one-to-one communication
-func (kns *klaytnServer) Call(ctx context.Context, request *RPCRequest) (*RPCResponse, error) {
+func (kns *kaiaServer) Call(ctx context.Context, request *RPCRequest) (*RPCResponse, error) {
 	var (
 		err      error
 		writeErr = make(chan error, 1)
@@ -260,7 +260,7 @@ func (gs *Listener) Start() {
 	}
 	gs.grpcServer = grpc.NewServer()
 
-	RegisterKlaytnNodeServer(gs.grpcServer, &klaytnServer{handler: gs.handler})
+	RegisterKlaytnNodeServer(gs.grpcServer, &kaiaServer{handler: gs.handler})
 
 	// Register reflection service on gRPC server.
 	reflection.Register(gs.grpcServer)

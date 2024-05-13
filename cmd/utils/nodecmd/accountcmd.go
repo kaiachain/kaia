@@ -61,7 +61,7 @@ Note that exporting your key in unencrypted format is NOT supported.
 
 Keys are stored under <DATADIR>/keystore.
 It is safe to transfer the entire directory or the individual keys therein
-between klay nodes by simply copying.
+between Kaia nodes by simply copying.
 
 Make sure you backup your keys regularly.`,
 	Before: beforeAccountCmd,
@@ -148,7 +148,7 @@ You must remember this passphrase to unlock your account in the future.
 
 For non-interactive use the passphrase can be specified with the --password flag:
 
-Note, as you can directly copy your encrypted accounts to another klay instance,
+Note, as you can directly copy your encrypted accounts to another Kaia instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
 `,
@@ -318,7 +318,7 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
-	cfg := utils.KlayConfig{Node: utils.DefaultNodeConfig()}
+	cfg := utils.KaiaConfig{Node: utils.DefaultNodeConfig()}
 	// Load config file.
 	if file := ctx.String(utils.ConfigFileFlag.Name); file != "" {
 		if err := utils.LoadConfig(file, &cfg); err != nil {

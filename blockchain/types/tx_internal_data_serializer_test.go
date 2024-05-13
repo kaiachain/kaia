@@ -98,7 +98,7 @@ func TestTransactionSerialization(t *testing.T) {
 	// Below code checks whether serialization for all tx implementations is done or not.
 	// If no serialization, make test failed.
 	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
-		if i == TxTypeKlaytnLast {
+		if i == TxTypeKaiaLast {
 			i = TxTypeEthereumAccessList
 		}
 

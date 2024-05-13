@@ -39,7 +39,7 @@ const (
 
 // getLDBOptionsForTableSize gets default options except for `CompactionTableSize` which equals to `tableSize` * `unit`.
 func getLDBOptionsForTableSize(tableSize, unit int) *opt.Options {
-	opts := getKlayLDBOptions()
+	opts := getKaiaLDBOptions()
 	opts.CompactionTableSize = tableSize * unit
 
 	return opts
@@ -87,7 +87,7 @@ func BenchmarkOptionsLDBTableSizeGet(b *testing.B) {
 	list := getTestLDBOptionsList(getLDBOptionsForTableSize)
 	for _, bm := range list {
 		b.Run(bm.Name, func(b *testing.B) {
-			benchmarkKlayOptionsGet(b, bm.Opts, bm.ValueLength, bm.NumInsertions, bm.NumGets, randomRead)
+			benchmarkKaiaOptionsGet(b, bm.Opts, bm.ValueLength, bm.NumInsertions, bm.NumGets, randomRead)
 		})
 	}
 }
@@ -100,7 +100,7 @@ func BenchmarkOptionsLDBTableSizeMultiplierGet(b *testing.B) {
 	list := getTestLDBOptionsList(getLDBOptionsForTableSizeWithMultiplier)
 	for _, bm := range list {
 		b.Run(bm.Name, func(b *testing.B) {
-			benchmarkKlayOptionsGet(b, bm.Opts, bm.ValueLength, bm.NumInsertions, bm.NumGets, randomRead)
+			benchmarkKaiaOptionsGet(b, bm.Opts, bm.ValueLength, bm.NumInsertions, bm.NumGets, randomRead)
 		})
 	}
 }
@@ -113,7 +113,7 @@ func BenchmarkOptionsLDBTableSizePut(b *testing.B) {
 	list := getTestLDBOptionsList(getLDBOptionsForTableSize)
 	for _, bm := range list {
 		b.Run(bm.Name, func(b *testing.B) {
-			benchmarkKlayOptionsPut(b, bm.Opts, bm.ValueLength, bm.NumInsertions)
+			benchmarkKaiaOptionsPut(b, bm.Opts, bm.ValueLength, bm.NumInsertions)
 		})
 	}
 }
@@ -126,7 +126,7 @@ func BenchmarkOptionsLDBTableSizeMultiplierPut(b *testing.B) {
 	list := getTestLDBOptionsList(getLDBOptionsForTableSizeWithMultiplier)
 	for _, bm := range list {
 		b.Run(bm.Name, func(b *testing.B) {
-			benchmarkKlayOptionsPut(b, bm.Opts, bm.ValueLength, bm.NumInsertions)
+			benchmarkKaiaOptionsPut(b, bm.Opts, bm.ValueLength, bm.NumInsertions)
 		})
 	}
 }

@@ -35,7 +35,7 @@ import (
 )
 
 func tmpKeyStoreIface(t *testing.T, encrypted bool) (dir string, ks keyStore) {
-	d, err := os.MkdirTemp("", "klay-keystore-test")
+	d, err := os.MkdirTemp("", "kaia-test-keystore-")
 	if err != nil {
 		t.Fatal(err)
 	}

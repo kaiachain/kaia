@@ -39,7 +39,7 @@ import (
 
 const (
 	defaultLocalDir  = "/tmp/kdata"
-	clientIdentifier = "klay"
+	clientIdentifier = "kaia"
 )
 
 var logger = log.NewModuleLogger(log.CMDIstanbul)

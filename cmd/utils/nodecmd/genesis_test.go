@@ -172,19 +172,19 @@ func TestCustomGenesis(t *testing.T) {
 		if err := os.WriteFile(json, []byte(tt.genesis), 0o600); err != nil {
 			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 		}
-		runKlay(t, "klay-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
+		runKaia(t, "kaia-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
 
 		// Query the custom genesis block
 		if len(tt.query) != len(tt.result) {
 			t.Errorf("Test cases are wrong, #query: %v, #result, %v", len(tt.query), len(tt.result))
 		}
 		for idx, query := range tt.query {
-			klay := runKlay(t,
-				"klay-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
+			kaia := runKaia(t,
+				"kaia-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
 				"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable",
 				"--exec", query, "--verbosity", "0", "console")
-			klay.ExpectRegexp(tt.result[idx])
-			klay.ExpectExit()
+			kaia.ExpectRegexp(tt.result[idx])
+			kaia.ExpectExit()
 		}
 	}
 }

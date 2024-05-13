@@ -103,7 +103,7 @@ func TestValidationPoolInsert(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -232,7 +232,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -361,7 +361,7 @@ func TestValidationBlockTx(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -567,7 +567,7 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 func TestValidationInvalidSig(t *testing.T) {
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -794,7 +794,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 func TestInvalidBalance(t *testing.T) {
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1187,7 +1187,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1601,7 +1601,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 func TestValidationTxSizeAfterRLP(t *testing.T) {
 	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1767,7 +1767,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1912,7 +1912,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1998,7 +1998,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 			types.TxValueKeyNonce:    reservoir.GetNonce(),
 			types.TxValueKeyFrom:     reservoir.GetAddr(),
 			types.TxValueKeyTo:       feePayer.Addr,
-			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
+			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(100000)),
 			types.TxValueKeyGasLimit: gasLimit,
 			types.TxValueKeyGasPrice: big.NewInt(25 * params.Ston),
 		}

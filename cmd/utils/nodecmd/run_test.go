@@ -40,14 +40,14 @@ import (
 )
 
 func tmpdir(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "klay-test")
+	dir, err := os.MkdirTemp("", "kaia-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	return dir
 }
 
-type testklay struct {
+type testKaia struct {
 	*utils.TestCmd
 
 	// template variables for expect
@@ -57,7 +57,7 @@ type testklay struct {
 
 var (
 	// The app that holds all commands and flags.
-	app = utils.NewApp(GetGitCommit(), "the Klaytn command line interface")
+	app = utils.NewApp(GetGitCommit(), "the Kaia command line interface")
 
 	// flags that configure the node
 	nodeFlags = utils.CommonNodeFlags
@@ -67,9 +67,9 @@ var (
 
 func init() {
 	// Initialize the CLI app and start Kaia
-	app.Action = RunKlaytnNode
+	app.Action = RunKaiaNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Commands = []*cli.Command{
 		// See chaincmd.go:
 		InitCommand,
@@ -110,16 +110,16 @@ func init() {
 		return nil
 	}
 
-	// Run the app if we've been exec'd as "klay-test" in runKlay.
-	reexec.Register("klay-test", func() {
+	// Run the app if we've been exec'd as "kaia-test" in runKaia.
+	reexec.Register("kaia-test", func() {
 		if err := app.Run(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		os.Exit(0)
 	})
-	reexec.Register("klay-test-flag", func() {
-		app.Action = RunTestKlaytnNode
+	reexec.Register("kaia-test-flag", func() {
+		app.Action = RunTestKaiaNode
 		if err := app.Run(os.Args); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -138,8 +138,8 @@ func TestMain(m *testing.M) {
 
 // spawns Kaia with the given command line args. If the args don't set --datadir, the
 // child g gets a temporary data directory.
-func runKlay(t *testing.T, name string, args ...string) *testklay {
-	tt := &testklay{}
+func runKaia(t *testing.T, name string, args ...string) *testKaia {
+	tt := &testKaia{}
 	tt.TestCmd = utils.NewTestCmd(t, tt)
 	for i, arg := range args {
 		switch {
@@ -197,7 +197,7 @@ func waitForEndpoint(t *testing.T, endpoint string, timeout time.Duration) {
 	}
 }
 
-func RunTestKlaytnNode(ctx *cli.Context) error {
+func RunTestKaiaNode(ctx *cli.Context) error {
 	fullNode := MakeFullNode(ctx)
 	fullNode.Wait()
 	return nil

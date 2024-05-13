@@ -53,7 +53,7 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
-	TxTypeKlaytnLast, _, _
+	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
 	TxTypeEthereumLast       = TxType(0x7803)

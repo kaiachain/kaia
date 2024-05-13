@@ -1073,7 +1073,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Kaia peer connected", "name", p.GetP2PPeer().Name())
 
 	pm.peerWg.Add(1)
 	defer pm.peerWg.Done()
@@ -1088,7 +1088,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	)
 
 	if err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash()); err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Kaia peer handshake failed", "err", err)
 		return err
 	}
 	reject := false
@@ -1114,7 +1114,7 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	// Register the peer locally
 	if err := pm.peers.Register(p, snap); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Kaia peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.GetID())

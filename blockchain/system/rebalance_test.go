@@ -71,7 +71,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		}
 
 		alloc = blockchain.GenesisAlloc{
-			senderAddr:         {Balance: big.NewInt(params.KLAY)},
+			senderAddr:         {Balance: big.NewInt(params.KAIA)},
 			rebalanceAddress:   {Code: rebalanceCode, Balance: common.Big0},
 			zeroeds[0].addr:    {Balance: zeroeds[0].balance},
 			zeroeds[1].addr:    {Balance: zeroeds[1].balance},

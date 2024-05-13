@@ -104,7 +104,7 @@ func TestValidateSenderContract(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			multisig.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -147,7 +147,7 @@ func TestValidateSenderContract(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			multisig2.Addr, amount, gasLimit, gasPrice, []byte{})
 

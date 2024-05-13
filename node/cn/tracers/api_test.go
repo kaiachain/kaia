@@ -299,8 +299,8 @@ func TestTraceTransaction(t *testing.T) {
 	// Initialize test accounts
 	accounts := newAccounts(2)
 	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-		accounts[0].addr: {Balance: big.NewInt(params.KLAY)},
-		accounts[1].addr: {Balance: big.NewInt(params.KLAY)},
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[1].addr: {Balance: big.NewInt(params.KAIA)},
 	}}
 	target := common.Hash{}
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
@@ -332,9 +332,9 @@ func TestTraceBlock(t *testing.T) {
 	// Initialize test accounts
 	accounts := newAccounts(3)
 	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-		accounts[0].addr: {Balance: big.NewInt(params.KLAY)},
-		accounts[1].addr: {Balance: big.NewInt(params.KLAY)},
-		accounts[2].addr: {Balance: big.NewInt(params.KLAY)},
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[1].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[2].addr: {Balance: big.NewInt(params.KAIA)},
 	}}
 	genBlocks := 10
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)

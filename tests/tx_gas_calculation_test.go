@@ -89,7 +89,7 @@ func TestGasCalculation(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"KlaytnLegacy", genKlaytnLegacyAccount(t)},
+		{"KaiaLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
 		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
@@ -131,11 +131,11 @@ func TestGasCalculation(t *testing.T) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
 
-	// Preparing step. Send KAIA to a KlaytnAcount.
+	// Preparing step. Send KAIA to a KaiaAcount.
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.GetNonce(),
 			accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -149,7 +149,7 @@ func TestGasCalculation(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// Preparing step. Send KAIA to KlaytnAcounts.
+	// Preparing step. Send KAIA to KaiaAcounts.
 	for i := 1; i < len(accountTypes); i++ {
 		// create an account which account key will be replaced to one of account key types.
 		anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
@@ -158,7 +158,7 @@ func TestGasCalculation(t *testing.T) {
 		{
 			var txs types.Transactions
 
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -242,8 +242,8 @@ func TestGasCalculation(t *testing.T) {
 			toAccount := reservoir
 			senderRole := accountkey.RoleTransaction
 
-			// LegacyTransaction can be used only by the KlaytnAccount with AccountKeyLegacy.
-			if sender.Type != "KlaytnLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
+			// LegacyTransaction can be used only by the KaiaAccount with AccountKeyLegacy.
+			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
 				continue
 			}
 
@@ -891,12 +891,12 @@ func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType typ
 	return values, intrinsic + gasPayload
 }
 
-func genKlaytnLegacyAccount(t *testing.T) TestAccount {
-	// For KlaytnLegacy
-	klaytnLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
+func genKaiaLegacyAccount(t *testing.T) TestAccount {
+	// For KaiaLegacy
+	kaiaLegacy, err := createAnonymousAccount(getRandomPrivateKeyString(t))
 	assert.Equal(t, nil, err)
 
-	return klaytnLegacy
+	return kaiaLegacy
 }
 
 func genPublicAccount(t *testing.T) TestAccount {

@@ -34,7 +34,7 @@ import (
 	"github.com/klaytn/klaytn/consensus"
 	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/event"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
@@ -71,20 +71,20 @@ var (
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
-	blockMiningTimer          = klaytnmetrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
-	blockMiningExecuteTxTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
-	blockMiningCommitTxTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
-	blockMiningFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("miner/block/finalize/time", nil)
+	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/finalize/time", nil)
 
-	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/reads", nil)
-	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/hashes", nil)
-	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/updates", nil)
-	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/account/commits", nil)
+	accountReadTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/account/reads", nil)
+	accountHashTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/account/updates", nil)
+	accountCommitTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/account/commits", nil)
 
-	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/reads", nil)
-	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
-	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
-	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
+	storageReadTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
 
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)

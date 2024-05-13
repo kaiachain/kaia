@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -356,7 +356,7 @@ func testRandao_checkKip114(t *testing.T, ctx *blockchainTestContext, randomAddr
 
 	// Call the contract to check RANDOM opcode result
 	callRandom := func(num uint64) []byte {
-		tx := klaytn.CallMsg{
+		tx := kaia.CallMsg{
 			To:   &randomAddr,
 			Data: hexutil.MustDecode("0x5ec01e4d"), // random()
 		}

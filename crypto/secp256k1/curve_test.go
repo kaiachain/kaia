@@ -25,7 +25,7 @@ import (
 
 func TestAddSamePoint(t *testing.T) {
 	/*
-		This test is intended to highlight the bug in klaytn/crypto/secp256k1/curve.go#affineFromJacobian.
+		This test is intended to highlight the bug in kaia/crypto/secp256k1/curve.go#affineFromJacobian.
 		When passed with same points, BitCurve.Add invokes affineFromJacobian(0, 0, 0) which then invokes
 		(big.Int).Mul(nil, nil).
 

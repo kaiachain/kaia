@@ -65,9 +65,9 @@ var (
 // TODO-Kaia: Removed unused variable
 type EthereumAPI struct {
 	publicFilterAPI   *filters.PublicFilterAPI
-	governanceKlayAPI *governance.GovernanceKlayAPI
+	governanceKaiaAPI *governance.GovernanceKaiaAPI
 
-	publicKlayAPI            *PublicKlayAPI
+	publicKaiaAPI            *PublicKaiaAPI
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
@@ -87,14 +87,14 @@ func (api *EthereumAPI) SetPublicFilterAPI(publicFilterAPI *filters.PublicFilter
 	api.publicFilterAPI = publicFilterAPI
 }
 
-// SetGovernanceKlayAPI sets governanceKlayAPI
-func (api *EthereumAPI) SetGovernanceKlayAPI(governanceKlayAPI *governance.GovernanceKlayAPI) {
-	api.governanceKlayAPI = governanceKlayAPI
+// SetGovernanceKaiaAPI sets governanceKaiaAPI
+func (api *EthereumAPI) SetGovernanceKaiaAPI(governanceKaiaAPI *governance.GovernanceKaiaAPI) {
+	api.governanceKaiaAPI = governanceKaiaAPI
 }
 
-// SetPublicKlayAPI sets publicKlayAPI
-func (api *EthereumAPI) SetPublicKlayAPI(publicKlayAPI *PublicKlayAPI) {
-	api.publicKlayAPI = publicKlayAPI
+// SetPublicKaiaAPI sets publicKaiaAPI
+func (api *EthereumAPI) SetPublicKaiaAPI(publicKaiaAPI *PublicKaiaAPI) {
+	api.publicKaiaAPI = publicKaiaAPI
 }
 
 // SetPublicBlockChainAPI sets publicBlockChainAPI
@@ -304,20 +304,20 @@ func (api *EthereumAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 
 // GasPrice returns a suggestion for a gas price.
 func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKlayAPI.GasPrice(ctx)
+	return api.publicKaiaAPI.GasPrice(ctx)
 }
 
 func (api *EthereumAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
-	return (*hexutil.Big)(api.publicKlayAPI.UpperBoundGasPrice(ctx))
+	return (*hexutil.Big)(api.publicKaiaAPI.UpperBoundGasPrice(ctx))
 }
 
 func (api *EthereumAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
-	return (*hexutil.Big)(api.publicKlayAPI.LowerBoundGasPrice(ctx))
+	return (*hexutil.Big)(api.publicKaiaAPI.LowerBoundGasPrice(ctx))
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
 func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKlayAPI.MaxPriorityFeePerGas(ctx)
+	return api.publicKaiaAPI.MaxPriorityFeePerGas(ctx)
 }
 
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.
@@ -342,7 +342,7 @@ func (dh *DecimalOrHex) UnmarshalJSON(data []byte) error {
 }
 
 func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
-	return api.publicKlayAPI.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
+	return api.publicKaiaAPI.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -353,7 +353,7 @@ func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
 func (api *EthereumAPI) Syncing() (interface{}, error) {
-	return api.publicKlayAPI.Syncing()
+	return api.publicKaiaAPI.Syncing()
 }
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
@@ -518,7 +518,7 @@ func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, st
 // * When blockNr is -2 the pending chain head is returned.
 func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	header, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -526,7 +526,7 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 		return nil, err
 	}
 	inclMiner := number != rpc.PendingBlockNumber
-	response, err := api.rpcMarshalHeader(klaytnHeader, inclMiner)
+	response, err := api.rpcMarshalHeader(header, inclMiner)
 	if err != nil {
 		return nil, err
 	}
@@ -542,9 +542,9 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 // GetHeaderByHash returns the requested header by hash.
 func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	klaytnHeader, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
-	if klaytnHeader != nil {
-		response, err := api.rpcMarshalHeader(klaytnHeader, true)
+	header, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
+	if header != nil {
+		response, err := api.rpcMarshalHeader(header, true)
 		if err != nil {
 			return nil
 		}
@@ -561,7 +561,7 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	block, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -571,7 +571,7 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 
 	inclMiner := number != rpc.PendingBlockNumber
 	inclTx := true
-	response, err := api.rpcMarshalBlock(klaytnBlock, inclMiner, inclTx, fullTx)
+	response, err := api.rpcMarshalBlock(block, inclMiner, inclTx, fullTx)
 	if err == nil && number == rpc.PendingBlockNumber {
 		// Pending blocks need to nil out a few fields
 		for _, field := range []string{"hash", "nonce", "miner"} {
@@ -586,14 +586,14 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	klaytnBlock, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
+	block, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return api.rpcMarshalBlock(klaytnBlock, true, true, fullTx)
+	return api.rpcMarshalBlock(block, true, true, fullTx)
 }
 
 // GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Kaia.
@@ -1303,7 +1303,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 	var proposer common.Address
 	var err error
 
-	b := api.publicKlayAPI.b
+	b := api.publicKaiaAPI.b
 	if head.Number.Sign() != 0 && inclMiner {
 		proposer, err = b.Engine().Author(head)
 		if err != nil {
@@ -1513,10 +1513,10 @@ func checkTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 	if cap == 0 {
 		return nil
 	}
-	feeEth := new(big.Float).Quo(new(big.Float).SetInt(new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))), new(big.Float).SetInt(big.NewInt(params.KLAY)))
+	feeEth := new(big.Float).Quo(new(big.Float).SetInt(new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(gas))), new(big.Float).SetInt(big.NewInt(params.KAIA)))
 	feeFloat, _ := feeEth.Float64()
 	if feeFloat > cap {
-		return fmt.Errorf("tx fee (%.2f klay) exceeds the configured cap (%.2f klay)", feeFloat, cap)
+		return fmt.Errorf("tx fee (%.2f KAIA) exceeds the configured cap (%.2f KAIA)", feeFloat, cap)
 	}
 	return nil
 }
@@ -1549,7 +1549,7 @@ func doCreateAccessList(ctx context.Context, b Backend, args EthTransactionArgs,
 // CreateAccessList creates an EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
 func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
-	return doCreateAccessList(ctx, api.publicKlayAPI.b, args, blockNrOrHash)
+	return doCreateAccessList(ctx, api.publicKaiaAPI.b, args, blockNrOrHash)
 }
 
 // AccessList creates an access list for the given transaction.

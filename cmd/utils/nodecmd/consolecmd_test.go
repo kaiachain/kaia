@@ -43,22 +43,22 @@ const (
 // then terminated by closing the input stream.
 func TestConsoleWelcome(t *testing.T) {
 	// Start a Kaia console, make sure it's cleaned up and terminate the console
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
 		"console")
 
 	// Gather all the infos the welcome message needs to contain
-	klay.SetTemplateFunc("goos", func() string { return runtime.GOOS })
-	klay.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
-	klay.SetTemplateFunc("gover", runtime.Version)
+	kaia.SetTemplateFunc("goos", func() string { return runtime.GOOS })
+	kaia.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
+	kaia.SetTemplateFunc("gover", runtime.Version)
 	// TODO: Fix as in testAttachWelcome()
-	klay.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
-	klay.SetTemplateFunc("apis", func() string { return ipcAPIs })
-	klay.SetTemplateFunc("datadir", func() string { return klay.Datadir })
+	kaia.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
+	kaia.SetTemplateFunc("apis", func() string { return ipcAPIs })
+	kaia.SetTemplateFunc("datadir", func() string { return kaia.Datadir })
 
 	// Verify the actual welcome message to the required template
-	klay.Expect(`
-Welcome to the Klaytn JavaScript console!
+	kaia.Expect(`
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
   datadir: {{datadir}}
@@ -66,7 +66,7 @@ Welcome to the Klaytn JavaScript console!
 
 > {{.InputLine "exit"}}
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 }
 
 // Tests that a console can be attached to a running node via various means.
@@ -82,46 +82,46 @@ func TestIPCAttachWelcome(t *testing.T) {
 	}
 	// Note: we need --shh because testAttachWelcome checks for default
 	// list of ipc modules and shh is included there.
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
 
 	waitForEndpoint(t, ipc, 10*time.Second)
-	testAttachWelcome(t, klay, "ipc:"+ipc, ipcAPIs)
+	testAttachWelcome(t, kaia, "ipc:"+ipc, ipcAPIs)
 
-	klay.Interrupt()
-	klay.Kill()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
 func TestHTTPAttachWelcome(t *testing.T) {
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
 
 	endpoint := "http://127.0.0.1:" + port
 	waitForEndpoint(t, endpoint, 10*time.Second)
-	testAttachWelcome(t, klay, endpoint, httpAPIs)
+	testAttachWelcome(t, kaia, endpoint, httpAPIs)
 
-	klay.Interrupt()
-	klay.Kill()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
 func TestWSAttachWelcome(t *testing.T) {
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
 
 	endpoint := "ws://127.0.0.1:" + port
 	waitForEndpoint(t, endpoint, 10*time.Second)
-	testAttachWelcome(t, klay, endpoint, httpAPIs)
+	testAttachWelcome(t, kaia, endpoint, httpAPIs)
 
-	klay.Interrupt()
-	klay.Kill()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
-func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
+func testAttachWelcome(t *testing.T, klay *testKaia, endpoint, apis string) {
 	// Attach to a running Kaia node and terminate immediately
-	attach := runKlay(t, "klay-test", "attach", endpoint)
+	attach := runKaia(t, "kaia-test", "attach", endpoint)
 	defer attach.ExpectExit()
 	attach.CloseStdin()
 
@@ -139,7 +139,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 
 	// Verify the actual welcome message to the required template
 	attach.Expect(`
-Welcome to the Klaytn JavaScript console!
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
   datadir: {{datadir}}{{end}}

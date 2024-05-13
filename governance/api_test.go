@@ -141,12 +141,12 @@ func TestGetRewards(t *testing.T) {
 			e.headerGov.WriteGovernance(uint64(o.num), gset, override)
 		}
 
-		govKlayApi := NewGovernanceKlayAPI(e, bc)
+		govKaiaApi := NewGovernanceKaiaAPI(e, bc)
 
 		for num := 1; num <= tc.length; num++ {
 			bc.SetBlockNum(uint64(num))
 
-			rewardSpec, err := govKlayApi.GetRewards(&latestNum)
+			rewardSpec, err := govKaiaApi.GetRewards(&latestNum)
 			assert.Nil(t, err)
 
 			minted := new(big.Int).SetUint64(tc.expected[num])

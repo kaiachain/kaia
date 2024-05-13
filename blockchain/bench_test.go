@@ -359,7 +359,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 
 // genTempDirForDB returns temp dir for database
 func genTempDirForDB(b *testing.B) string {
-	dir, err := os.MkdirTemp("", "klay-blockchain-bench")
+	dir, err := os.MkdirTemp("", "kaia-test-bench-blockchain-")
 	if err != nil {
 		b.Fatalf("cannot create temporary directory: %v", err)
 	}

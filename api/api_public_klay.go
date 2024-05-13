@@ -31,38 +31,38 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// PublicKlayAPI provides an API to access Kaia related information.
+// PublicKaiaAPI provides an API to access Kaia related information.
 // It offers only methods that operate on public data that is freely available to anyone.
-type PublicKlayAPI struct {
+type PublicKaiaAPI struct {
 	b Backend
 }
 
-// NewPublicKlayAPI creates a new Kaia protocol API.
-func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
-	return &PublicKlayAPI{b}
+// NewPublicKaiaAPI creates a new Kaia protocol API.
+func NewPublicKaiaAPI(b Backend) *PublicKaiaAPI {
+	return &PublicKaiaAPI{b}
 }
 
 // GasPrice returns a suggestion for a gas price (baseFee * 2).
-func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+func (s *PublicKaiaAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestPrice(ctx)
 	return (*hexutil.Big)(price), err
 }
 
-func (s *PublicKlayAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+func (s *PublicKaiaAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
 	return (*hexutil.Big)(s.b.UpperBoundGasPrice(ctx))
 }
 
-func (s *PublicKlayAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+func (s *PublicKaiaAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
 	return (*hexutil.Big)(s.b.LowerBoundGasPrice(ctx))
 }
 
 // ProtocolVersion returns the current Kaia protocol version this node supports.
-func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
+func (s *PublicKaiaAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
-func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
+func (s *PublicKaiaAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestTipCap(ctx)
 	return (*hexutil.Big)(price), err
 }
@@ -75,7 +75,7 @@ type FeeHistoryResult struct {
 }
 
 // FeeHistory returns data relevant for fee estimation based on the specified range of blocks.
-func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
+func (s *PublicKaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
 	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (s *PublicKlayAPI) Syncing() (interface{}, error) {
+func (s *PublicKaiaAPI) Syncing() (interface{}, error) {
 	progress := s.b.Progress()
 
 	// Return not syncing if the synchronisation already completed
@@ -127,7 +127,7 @@ func (s *PublicKlayAPI) Syncing() (interface{}, error) {
 }
 
 // EncodeAccountKey gets an account key of JSON format and returns RLP encoded bytes of the key.
-func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
+func (s *PublicKaiaAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
 	if accKey.KeyType == nil {
 		return nil, errors.New("key type is not specified")
 	}
@@ -152,7 +152,7 @@ func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexu
 }
 
 // DecodeAccountKey gets an RLP encoded bytes of an account key and returns the decoded account key.
-func (s *PublicKlayAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountkey.AccountKeySerializer, error) {
+func (s *PublicKaiaAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountkey.AccountKeySerializer, error) {
 	dec := accountkey.NewAccountKeySerializer()
 	if err := rlp.DecodeBytes(encodedAccKey, &dec); err != nil {
 		return nil, err

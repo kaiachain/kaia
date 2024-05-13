@@ -21,56 +21,56 @@ import (
 )
 
 func TestURLParsing(t *testing.T) {
-	url, err := parseURL("https://klaytn.com")
+	url, err := parseURL("https://kaia.com")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
-	if url.Path != "klaytn.com" {
-		t.Errorf("expected: %v, got: %v", "klaytn.com", url.Path)
+	if url.Path != "kaia.com" {
+		t.Errorf("expected: %v, got: %v", "kaia.com", url.Path)
 	}
 
-	_, err = parseURL("klaytn.com")
+	_, err = parseURL("kaia.com")
 	if err == nil {
 		t.Error("expected err, got: nil")
 	}
 }
 
 func TestURLString(t *testing.T) {
-	url := URL{Scheme: "https", Path: "klaytn.com"}
-	if url.String() != "https://klaytn.com" {
-		t.Errorf("expected: %v, got: %v", "https://klaytn.com", url.String())
+	url := URL{Scheme: "https", Path: "kaia.com"}
+	if url.String() != "https://kaia.com" {
+		t.Errorf("expected: %v, got: %v", "https://kaia.com", url.String())
 	}
 
-	url = URL{Scheme: "", Path: "klaytn.com"}
-	if url.String() != "klaytn.com" {
-		t.Errorf("expected: %v, got: %v", "klaytn.com", url.String())
+	url = URL{Scheme: "", Path: "kaia.com"}
+	if url.String() != "kaia.com" {
+		t.Errorf("expected: %v, got: %v", "kaia.com", url.String())
 	}
 }
 
 func TestURLMarshalJSON(t *testing.T) {
-	url := URL{Scheme: "https", Path: "klaytn.com"}
+	url := URL{Scheme: "https", Path: "kaia.com"}
 	json, err := url.MarshalJSON()
 	if err != nil {
 		t.Errorf("unexpcted error: %v", err)
 	}
-	if string(json) != "\"https://klaytn.com\"" {
-		t.Errorf("expected: %v, got: %v", "\"https://klaytn.com\"", string(json))
+	if string(json) != "\"https://kaia.com\"" {
+		t.Errorf("expected: %v, got: %v", "\"https://kaia.com\"", string(json))
 	}
 }
 
 func TestURLUnmarshalJSON(t *testing.T) {
 	url := &URL{}
-	err := url.UnmarshalJSON([]byte("\"https://klaytn.com\""))
+	err := url.UnmarshalJSON([]byte("\"https://kaia.com\""))
 	if err != nil {
 		t.Errorf("unexpcted error: %v", err)
 	}
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
-	if url.Path != "klaytn.com" {
+	if url.Path != "kaia.com" {
 		t.Errorf("expected: %v, got: %v", "https", url.Path)
 	}
 }
@@ -81,10 +81,10 @@ func TestURLComparison(t *testing.T) {
 		urlB   URL
 		expect int
 	}{
-		{URL{"https", "klaytn.com"}, URL{"https", "klaytn.com"}, 0},
-		{URL{"http", "klaytn.com"}, URL{"https", "klaytn.com"}, -1},
-		{URL{"https", "klaytn.com/a"}, URL{"https", "klaytn.com"}, 1},
-		{URL{"https", "abc.org"}, URL{"https", "klaytn.com"}, -1},
+		{URL{"https", "kaia.com"}, URL{"https", "kaia.com"}, 0},
+		{URL{"http", "kaia.com"}, URL{"https", "kaia.com"}, -1},
+		{URL{"https", "kaia.com/a"}, URL{"https", "kaia.com"}, 1},
+		{URL{"https", "abc.org"}, URL{"https", "kaia.com"}, -1},
 	}
 
 	for i, tt := range tests {

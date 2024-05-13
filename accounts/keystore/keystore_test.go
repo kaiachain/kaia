@@ -468,7 +468,7 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := os.MkdirTemp("", "klay-keystore-test")
+	d, err := os.MkdirTemp("", "kaia-test-keystore-")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -100,7 +100,7 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 
 		// an error expected on node start
 		stopNode(t, fullNode)
-		_, _, err = newKlaytnNode(t, workspace, validator, nil, nil)
+		_, _, err = newKaiaNode(t, workspace, validator, nil, nil)
 		assert.Error(t, err, "start failure expected, changed state trie db has no data") // error expected
 	}
 }
@@ -211,7 +211,7 @@ func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace strin
 
 func startNode(t *testing.T, workspace string, validator *TestAccountType) (fullNode *node.Node, node *cn.CN) {
 	t.Log("=========== starting node ==============")
-	newFullNode, newNode, err := newKlaytnNode(t, workspace, validator, nil, nil)
+	newFullNode, newNode, err := newKaiaNode(t, workspace, validator, nil, nil)
 	assert.NoError(t, err)
 	if err := newNode.StartMining(false); err != nil {
 		t.Fatal()

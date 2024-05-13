@@ -48,7 +48,7 @@ var SnapshotCommand = &cli.Command{
 			Action:    utils.MigrateFlags(verifyState),
 			Flags:     utils.SnapshotFlags,
 			Description: `
-klay snapshot verify-state <state-root>
+Kaia snapshot verify-state <state-root>
 will traverse the whole accounts and storages set based on the specified
 snapshot and recalculate the root hash of state for verification.
 In other words, this command does the snapshot to trie conversion.
@@ -61,7 +61,7 @@ In other words, this command does the snapshot to trie conversion.
 			Action:    utils.MigrateFlags(traceTrie),
 			Flags:     utils.SnapshotFlags,
 			Description: `
-klaytn statedb trace-trie <state-root>
+Kaia statedb trace-trie <state-root>
 trace all account and storage nodes to find missing data
 during the migration process.
 Start tracing from the state root of the last block,
@@ -75,7 +75,7 @@ reading all nodes and logging the missing nodes.
 			Action:    utils.MigrateFlags(iterateTrie),
 			Flags:     utils.SnapshotFlags,
 			Description: `
-klaytn statedb iterate-triedb
+Kaia statedb iterate-triedb
 Count the number of nodes in the state-trie db.
 `,
 		},

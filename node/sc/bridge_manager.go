@@ -44,7 +44,7 @@ const (
 )
 
 const (
-	KLAY uint8 = iota
+	KAIA uint8 = iota
 	ERC20
 	ERC721
 )
@@ -66,7 +66,7 @@ var (
 )
 
 var handleVTmethods = map[uint8]string{
-	KLAY:   "handleKLAYTransfer",
+	KAIA:   "handleKLAYTransfer",
 	ERC20:  "handleERC20Transfer",
 	ERC721: "handleERC721Transfer",
 }
@@ -300,7 +300,7 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 
 	ctpartTokenAddr := bi.GetCounterPartToken(tokenAddr)
 	// TODO-Kaia-Servicechain Add counterpart token address in requestValueTransferEvent
-	if tokenType != KLAY && ctpartTokenAddr == (common.Address{}) {
+	if tokenType != KAIA && ctpartTokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", ctpartTokenAddr.Hex())
 		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, tokenAddr)
 		if err != nil {
@@ -327,12 +327,12 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	var err error
 
 	switch tokenType {
-	case KLAY:
+	case KAIA:
 		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, txHash, from, to, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
-		handleValueTransferLog(bi.onChildChain, handleVTmethods[KLAY], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[KAIA], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {

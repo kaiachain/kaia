@@ -110,7 +110,7 @@ func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
 		from, _     = createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594389999")
 		feePayer, _ = createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 
-		funds = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY))
+		funds = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KAIA))
 		gspec = &blockchain.Genesis{
 			Config: params.TestChainConfig,
 			Alloc: blockchain.GenesisAlloc{

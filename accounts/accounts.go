@@ -23,7 +23,7 @@ package accounts
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
@@ -88,7 +88,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain klaytn.ChainReader)
+	SelfDerive(base DerivationPath, chain kaia.ChainReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//

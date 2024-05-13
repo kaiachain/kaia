@@ -354,7 +354,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing Klaytn peer", "peer", id)
+	logger.Debug("Removing Kaia peer", "peer", id)
 	if peer.ExistSnapExtension() {
 		pm.downloader.GetSnapSyncer().Unregister(id)
 	}
@@ -393,7 +393,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 }
 
 func (pm *ProtocolManager) Stop() {
-	logger.Info("Stopping Klaytn protocol")
+	logger.Info("Stopping Kaia protocol")
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
@@ -419,7 +419,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
-	logger.Info("Klaytn protocol stopped")
+	logger.Info("Kaia protocol stopped")
 }
 
 // SetSyncStop sets value of syncStop flag. If it's true, peer sync process does not proceed.
@@ -478,7 +478,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Kaia peer connected", "name", p.GetP2PPeer().Name())
 
 	pm.peerWg.Add(1)
 	defer pm.peerWg.Done()
@@ -493,7 +493,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	)
 
 	if err := p.Handshake(pm.networkId, pm.getChainID(), td, hash, genesis.Hash()); err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Kaia peer handshake failed", "err", err)
 		return err
 	}
 	reject := false
@@ -521,7 +521,7 @@ func (pm *ProtocolManager) handle(p Peer) error {
 	// Register the peer locally
 	if err := pm.peers.Register(p, snap); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Kaia peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.GetID())

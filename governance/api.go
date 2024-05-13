@@ -45,13 +45,13 @@ func NewGovernanceAPI(gov Engine) *GovernanceAPI {
 	return &GovernanceAPI{governance: gov}
 }
 
-type GovernanceKlayAPI struct {
+type GovernanceKaiaAPI struct {
 	governance Engine
 	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov Engine, chain blockChain) *GovernanceKlayAPI {
-	return &GovernanceKlayAPI{governance: gov, chain: chain}
+func NewGovernanceKaiaAPI(gov Engine, chain blockChain) *GovernanceKaiaAPI {
+	return &GovernanceKaiaAPI{governance: gov, chain: chain}
 }
 
 var (
@@ -65,24 +65,24 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+func (api *GovernanceKaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	return getStakingInfo(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *GovernanceKaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) NodeAddress() common.Address {
+func (api *GovernanceKaiaAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
 }
 
 // GetRewards returns detailed information of the block reward at a given block number.
-func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
+func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
 		blockNumber = api.chain.CurrentBlock().NumberU64()
@@ -129,7 +129,7 @@ type AccumulatedRewards struct {
 // GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
 func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
 	blockchain := api.governance.BlockChain()
-	govKlayAPI := NewGovernanceKlayAPI(api.governance, blockchain)
+	govKaiaAPI := NewGovernanceKaiaAPI(api.governance, blockchain)
 
 	currentBlock := blockchain.CurrentBlock().NumberU64()
 
@@ -172,7 +172,7 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 			// the minimum digit of request is period to avoid current access to an accArray item
 			for num := range reqCh {
 				bn := rpc.BlockNumber(num)
-				blockReward, err := govKlayAPI.GetRewards(&bn)
+				blockReward, err := govKaiaAPI.GetRewards(&bn)
 				if err != nil {
 					errCh <- err
 					wg.Done()
@@ -445,7 +445,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 }
 
 // Disabled APIs
-// func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+// func (api *GovernanceKaiaAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 // 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 // 		// If the value hasn't been set in governance, set it with default value
 // 		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
@@ -469,7 +469,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 // 	}
 // }
 //
-// func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+// func (api *GovernanceKaiaAPI) setDefaultTxGasHumanReadable() (uint64, error) {
 // 	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
 // 	if err != nil {
 // 		return 0, errSetDefaultFailure

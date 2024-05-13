@@ -1787,17 +1787,17 @@ var KLAY_UNITS = [
     'Mpeb',
     'Gpeb',
     'ston',
-    'uKLAY',
-    'mKLAY',
-    'KLAY',
-    'kKLAY',
-    'MKLAY',
-    'GKLAY',
-    'TKLAY',
-    'PKLAY',
-    'EKLAY',
-    'ZKLAY',
-    'YKLAY',
+    'uKAIA',
+    'mKAIA',
+    'KAIA',
+    'kKAIA',
+    'MKAIA',
+    'GKAIA',
+    'TKAIA',
+    'PKAIA',
+    'EKAIA',
+    'ZKAIA',
+    'YKAIA',
 ];
 
 module.exports = {
@@ -1899,13 +1899,13 @@ var unitMap = {
     'Mpeb':        '1000000',
     'Gpeb':        '1000000000',
     'ston':        '1000000000',
-    'uKLAY':       '1000000000000',
-    'mKLAY':       '1000000000000000',
-    'KLAY':        '1000000000000000000',
-    'kKLAY':       '1000000000000000000000',
-    'MKLAY':       '1000000000000000000000000',
-    'GKLAY':       '1000000000000000000000000000',
-    'TKLAY':       '1000000000000000000000000000000'
+    'uKAIA':       '1000000000000',
+    'mKAIA':       '1000000000000000',
+    'KAIA':        '1000000000000000000',
+    'kKAIA':       '1000000000000000000000',
+    'MKAIA':       '1000000000000000000000000',
+    'GKAIA':       '1000000000000000000000000000',
+    'TKAIA':       '1000000000000000000000000000000'
 };
 
 var unitEthToKlayMap = {
@@ -1924,18 +1924,18 @@ var unitEthToKlayMap = {
     'shannon':      'Gpeb',
     'nanoether':    'Gpeb',
     'nano':         'Gpeb',
-    'szabo':        'uKLAY',
-    'microether':   'uKLAY',
-    'micro':        'uKLAY',
-    'finney':       'mKLAY',
-    'milliether':   'mKLAY',
-    'milli':        'mKLAY',
-    'ether':        'KLAY',
-    'kether':       'kKLAY',
-    'grand':        'kKLAY',
-    'mether':       'MKLAY',
-    'gether':       'GKLAY',
-    'tether':       'TKLAY'
+    'szabo':        'uKAIA',
+    'microether':   'uKAIA',
+    'micro':        'uKAIA',
+    'finney':       'mKAIA',
+    'milliether':   'mKAIA',
+    'milli':        'mKAIA',
+    'ether':        'KAIA',
+    'kether':       'kKAIA',
+    'grand':        'kKAIA',
+    'mether':       'MKAIA',
+    'gether':       'GKAIA',
+    'tether':       'TKAIA'
 };
 
 /**
@@ -2229,13 +2229,13 @@ var fromWei = function(number, unit) {
  * - kpeb
  * - Mpeb
  * - Gpeb
- * - uKLAY
- * - mKLAY
+ * - uKAIA
+ * - mKAIA
  * - KLAY
- * - kKLAY
- * - MKLAY
- * - GKLAY
- * - TKLAY
+ * - kKAIA
+ * - MKAIA
+ * - GKAIA
+ * - TKAIA
  *
  * @method fromPeb
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
@@ -2285,13 +2285,13 @@ var toWei = function(number, unit) {
  * - kpeb
  * - Mpeb
  * - Gpeb
- * - uKLAY
- * - mKLAY
+ * - uKAIA
+ * - mKAIA
  * - KLAY
- * - kKLAY
- * - MKLAY
- * - GKLAY
- * - TKLAY
+ * - kKAIA
+ * - MKAIA
+ * - GKAIA
+ * - TKAIA
  *
  * @method toPeb
  * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal

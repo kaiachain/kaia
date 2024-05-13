@@ -24,7 +24,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
@@ -39,7 +39,7 @@ type PublicDownloaderAPI struct {
 }
 
 type downloader interface {
-	Progress() klaytn.SyncProgress
+	Progress() kaia.SyncProgress
 	SyncStakingInfo(id string, from, to uint64) error
 	SyncStakingInfoStatus() *SyncingStatus
 }
@@ -131,8 +131,8 @@ func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription,
 
 // SyncingResult provides information about the current synchronisation status for this node.
 type SyncingResult struct {
-	Syncing bool                `json:"syncing"`
-	Status  klaytn.SyncProgress `json:"status"`
+	Syncing bool              `json:"syncing"`
+	Status  kaia.SyncProgress `json:"status"`
 }
 
 // uninstallSyncSubscriptionRequest uninstalles a syncing subscription in the API event loop.

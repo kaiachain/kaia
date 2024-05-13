@@ -75,7 +75,7 @@ func TestSimpleBlockchain(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// start full node with previous db
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, nil, nil)
+	fullNode, node, err := newKaiaNode(t, workspace, validator, nil, nil)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -91,7 +91,7 @@ func TestSimpleBlockchain(t *testing.T) {
 func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string) {
 	t.Log("Create a new blockchain")
 	// Prepare workspace
-	workspace, err := os.MkdirTemp("", "klaytn-test-state")
+	workspace, err := os.MkdirTemp("", "kaia-test-state-")
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
@@ -104,7 +104,7 @@ func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain
 	}
 
 	// Create a Kaia node
-	fullNode, node, err := newKlaytnNode(t, workspace, validator, config, genesis)
+	fullNode, node, err := newKaiaNode(t, workspace, validator, config, genesis)
 	assert.NoError(t, err)
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
@@ -141,9 +141,9 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 	return richAccount, accounts, contractAccounts
 }
 
-// newKlaytnNode creates a Kaia node
-func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, error) {
-	var klaytnNode *cn.CN
+// newKaiaNode creates a Kaia node
+func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *params.ChainConfig, genesis *blockchain.Genesis) (*node.Node, *cn.CN, error) {
+	var kaiaNode *cn.CN
 
 	fullNode, err := node.New(&node.Config{
 		DataDir:           dir,
@@ -173,7 +173,7 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config 
 		genesis.Config = params.CypressChainConfig.Copy()
 		genesis.Config.Istanbul.SubGroupSize = 1
 		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 	} else {
 		genesis.Config = config
 	}
@@ -188,18 +188,18 @@ func newKlaytnNode(t *testing.T, dir string, validator *TestAccountType, config 
 	_, _ = ks.ImportECDSA(validator.Keys[0], "") // import a node key
 
 	if err = fullNode.Register(func(ctx *node.ServiceContext) (node.Service, error) { return cn.New(ctx, cnConf) }); err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to register Klaytn protocol")
+		return nil, nil, errors.WithMessage(err, "failed to register Kaia protocol")
 	}
 
 	if err = fullNode.Start(); err != nil {
 		return nil, nil, errors.WithMessage(err, "failed to start test fullNode")
 	}
 
-	if err := fullNode.Service(&klaytnNode); err != nil {
+	if err := fullNode.Service(&kaiaNode); err != nil {
 		return nil, nil, err
 	}
 
-	return fullNode, klaytnNode, nil
+	return fullNode, kaiaNode, nil
 }
 
 // deployRandomTxs creates a random transaction

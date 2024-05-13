@@ -50,22 +50,22 @@ func tmpDatadirWithKeystore(t *testing.T) string {
 }
 
 func TestAccountListEmpty(t *testing.T) {
-	klay := runKlay(t, "klay-test", "account", "list")
-	klay.ExpectExit()
+	kaia := runKaia(t, "kaia-test", "account", "list")
+	kaia.ExpectExit()
 }
 
 func TestAccountList(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test", "account", "list", "--datadir", datadir)
-	defer klay.ExpectExit()
+	kaia := runKaia(t, "kaia-test", "account", "list", "--datadir", datadir)
+	defer kaia.ExpectExit()
 	if runtime.GOOS == "windows" {
-		klay.Expect(`
+		kaia.Expect(`
 Account #0: {7ef5a6135f1fd6a02593eedc869c6d41d934aef8} keystore://{{.Datadir}}\keystore\UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8
 Account #1: {f466859ead1932d743d622cb74fc058882e8648a} keystore://{{.Datadir}}\keystore\aaa
 Account #2: {289d485d9771714cce91d3393d764e1311907acc} keystore://{{.Datadir}}\keystore\zzz
 `)
 	} else {
-		klay.Expect(`
+		kaia.Expect(`
 Account #0: {7ef5a6135f1fd6a02593eedc869c6d41d934aef8} keystore://{{.Datadir}}/keystore/UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8
 Account #1: {f466859ead1932d743d622cb74fc058882e8648a} keystore://{{.Datadir}}/keystore/aaa
 Account #2: {289d485d9771714cce91d3393d764e1311907acc} keystore://{{.Datadir}}/keystore/zzz
@@ -74,21 +74,21 @@ Account #2: {289d485d9771714cce91d3393d764e1311907acc} keystore://{{.Datadir}}/k
 }
 
 func TestAccountNew(t *testing.T) {
-	klay := runKlay(t, "klay-test", "account", "new", "--lightkdf")
-	defer klay.ExpectExit()
-	klay.Expect(`
+	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
+	defer kaia.ExpectExit()
+	kaia.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
 Repeat passphrase: {{.InputLine "foobar"}}
 `)
-	klay.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
+	kaia.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
 }
 
 func TestAccountNewBadRepeat(t *testing.T) {
-	klay := runKlay(t, "klay-test", "account", "new", "--lightkdf")
-	defer klay.ExpectExit()
-	klay.Expect(`
+	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
+	defer kaia.ExpectExit()
+	kaia.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "something"}}
@@ -99,11 +99,11 @@ Fatal: Passphrases do not match
 
 func TestAccountUpdate(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test", "account", "update",
+	kaia := runKaia(t, "kaia-test", "account", "update",
 		"--datadir", datadir, "--lightkdf",
 		"f466859ead1932d743d622cb74fc058882e8648a")
-	defer klay.ExpectExit()
-	klay.Expect(`
+	defer kaia.ExpectExit()
+	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
@@ -115,23 +115,23 @@ Repeat passphrase: {{.InputLine "foobar2"}}
 
 func TestUnlockFlag(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
-	klay.Expect(`
+	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 
 	wantMessages := []string{
 		"Unlocked account",
 		"0xf466859eAD1932D743d622CB74FC058882E8648A",
 	}
 	for _, m := range wantMessages {
-		if !strings.Contains(klay.StderrText(), m) {
+		if !strings.Contains(kaia.StderrText(), m) {
 			t.Errorf("stderr text does not contain %q", m)
 		}
 	}
@@ -139,11 +139,11 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
-	defer klay.ExpectExit()
-	klay.Expect(`
+	defer kaia.ExpectExit()
+	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "wrong1"}}
@@ -158,18 +158,18 @@ Fatal: Failed to unlock account f466859ead1932d743d622cb74fc058882e8648a (could 
 // https://github.com/ethereum/go-ethereum/issues/1785
 func TestUnlockFlagMultiIndex(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "0,2",
 		"js", "testdata/empty.js")
-	klay.Expect(`
+	kaia.Expect(`
 Unlocking account 0 | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
 Unlocking account 2 | Attempt 1/3
 Passphrase: {{.InputLine "foobar"}}
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 
 	wantMessages := []string{
 		"Unlocked account",
@@ -177,7 +177,7 @@ Passphrase: {{.InputLine "foobar"}}
 		"0x289d485D9771714CCe91D3393D764E1311907ACc",
 	}
 	for _, m := range wantMessages {
-		if !strings.Contains(klay.StderrText(), m) {
+		if !strings.Contains(kaia.StderrText(), m) {
 			t.Errorf("stderr text does not contain %q", m)
 		}
 	}
@@ -185,11 +185,11 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagPasswordFile(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/passwords.txt", "--unlock", "0,2",
 		"js", "testdata/empty.js")
-	klay.ExpectExit()
+	kaia.ExpectExit()
 
 	wantMessages := []string{
 		"Unlocked account",
@@ -197,7 +197,7 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 		"0x289d485D9771714CCe91D3393D764E1311907ACc",
 	}
 	for _, m := range wantMessages {
-		if !strings.Contains(klay.StderrText(), m) {
+		if !strings.Contains(kaia.StderrText(), m) {
 			t.Errorf("stderr text does not contain %q", m)
 		}
 	}
@@ -205,29 +205,29 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 
 func TestUnlockFlagPasswordFileWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/wrong-passwords.txt", "--unlock", "0,2")
-	defer klay.ExpectExit()
-	klay.Expect(`
+	defer kaia.ExpectExit()
+	kaia.Expect(`
 Fatal: Failed to unlock account 0 (could not decrypt key with given passphrase)
 `)
 }
 
 func TestUnlockFlagAmbiguous(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
-	defer klay.ExpectExit()
+	defer kaia.ExpectExit()
 
 	// Helper for the expect template, returns absolute keystore path.
-	klay.SetTemplateFunc("keypath", func(file string) string {
+	kaia.SetTemplateFunc("keypath", func(file string) string {
 		abs, _ := filepath.Abs(filepath.Join(store, file))
 		return abs
 	})
-	klay.Expect(`
+	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
@@ -239,14 +239,14 @@ Your passphrase unlocked keystore://{{keypath "1"}}
 In order to avoid this warning, you need to remove the following duplicate key files:
    keystore://{{keypath "2"}}
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 
 	wantMessages := []string{
 		"Unlocked account",
 		"0xf466859eAD1932D743d622CB74FC058882E8648A",
 	}
 	for _, m := range wantMessages {
-		if !strings.Contains(klay.StderrText(), m) {
+		if !strings.Contains(kaia.StderrText(), m) {
 			t.Errorf("stderr text does not contain %q", m)
 		}
 	}
@@ -254,17 +254,17 @@ In order to avoid this warning, you need to remove the following duplicate key f
 
 func TestUnlockFlagAmbiguousWrongPassword(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	klay := runKlay(t, "klay-test",
+	kaia := runKaia(t, "kaia-test",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
-	defer klay.ExpectExit()
+	defer kaia.ExpectExit()
 
 	// Helper for the expect template, returns absolute keystore path.
-	klay.SetTemplateFunc("keypath", func(file string) string {
+	kaia.SetTemplateFunc("keypath", func(file string) string {
 		abs, _ := filepath.Abs(filepath.Join(store, file))
 		return abs
 	})
-	klay.Expect(`
+	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "wrong"}}
@@ -274,7 +274,7 @@ Multiple key files exist for address f466859ead1932d743d622cb74fc058882e8648a:
 Testing your passphrase against all of them...
 Fatal: None of the listed files could be unlocked.
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 }
 
 func TestBlsInfo(t *testing.T) {
@@ -301,12 +301,12 @@ func TestBlsInfo(t *testing.T) {
 	// Save nodekey before node starts
 	assert.Nil(t, os.MkdirAll(filepath.Join(datadir, "klay"), 0o700))
 	assert.Nil(t, os.WriteFile(nodekeyPath, []byte(nodekeyHex), 0o400))
-	server := runKlay(t, "klay-test", "--datadir", datadir,
+	server := runKaia(t, "kaia-test", "--datadir", datadir,
 		"--netrestrict", "127.0.0.1/32", "--port", "0", "--verbosity", "2")
 	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	client := runKlay(t, "klay-test", "account", "bls-info", "--datadir", datadir)
+	client := runKaia(t, "kaia-test", "account", "bls-info", "--datadir", datadir)
 	client.ExpectRegexp(expectPrint)
 
 	content, err := os.ReadFile(outputPath)
@@ -334,9 +334,9 @@ func TestBlsImport(t *testing.T) {
 	defer os.RemoveAll(datadir)
 	t.Logf("datadir: %s", datadir)
 
-	klay := runKlay(t, "klay-test", "account", "bls-import", "--datadir", datadir,
+	kaia := runKaia(t, "kaia-test", "account", "bls-import", "--datadir", datadir,
 		"--bls-nodekeystore", keystorePath, "--password", passwordPath)
-	klay.ExpectRegexp(expectPrint)
+	kaia.ExpectRegexp(expectPrint)
 
 	content, err := os.ReadFile(outputPath)
 	assert.Nil(t, err)
@@ -369,10 +369,10 @@ func TestBlsExport(t *testing.T) {
 	assert.Nil(t, os.WriteFile(blsnodekeyPath, []byte(blsnodekeyHex), 0o400))
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	klay := runKlay(t, "klay-test", "account", "bls-export", "--datadir", datadir)
-	klay.InputLine("1234") // Enter password
-	klay.InputLine("1234") // Confirm password
-	klay.ExpectRegexp(expectPrint)
+	kaia := runKaia(t, "kaia-test", "account", "bls-export", "--datadir", datadir)
+	kaia.InputLine("1234") // Enter password
+	kaia.InputLine("1234") // Confirm password
+	kaia.ExpectRegexp(expectPrint)
 
 	content, err := os.ReadFile(outputPath)
 	assert.Nil(t, err)

@@ -192,7 +192,7 @@ func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
 }
 
 // GetBlockReward returns the actual reward amounts paid in this block
-// Used in klay_getReward RPC API
+// Used in kaia_getReward RPC API
 func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
@@ -240,8 +240,8 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 }
 
 // CalcDeferredRewardSimple distributes rewards to proposer after optional fee burning
-// this behaves similar to the previous MintKLAY
-// MintKLAY has been superseded because we need to split reward distribution
+// this behaves similar to the previous MintKAIA
+// MintKAIA has been superseded because we need to split reward distribution
 // logic into (1) calculation, and (2) actual distribution.
 // CalcDeferredRewardSimple does the former and DistributeBlockReward does the latter
 func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
@@ -507,7 +507,7 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 	totalStakesInt := uint64(0)
 
 	for _, node := range cns.GetAllNodes() {
-		if node.StakingAmount > minStake { // comparison in Klay
+		if node.StakingAmount > minStake { // comparison in KAIA
 			totalStakesInt += (node.StakingAmount - minStake)
 		}
 	}
@@ -520,7 +520,7 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 		if node.StakingAmount > minStake {
 			effectiveStake := new(big.Int).SetUint64(node.StakingAmount - minStake)
 			// The KAIA unit will cancel out:
-			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KLAY) / totalStakes (KLAY)
+			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KAIA) / totalStakes (KAIA)
 			rewardAmount := new(big.Int).Mul(stakeReward, effectiveStake)
 			rewardAmount = rewardAmount.Div(rewardAmount, totalStakes)
 			remaining = remaining.Sub(remaining, rewardAmount)

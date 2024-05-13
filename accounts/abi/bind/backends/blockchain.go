@@ -21,7 +21,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
@@ -106,7 +106,7 @@ func (b *BlockchainContractBackend) CodeAt(ctx context.Context, account common.A
 // - VM revert error
 // - VM other errors (e.g. NotProgramAccount, OutOfGas)
 // - Error outside VM
-func (b *BlockchainContractBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	block, state, err := b.getBlockAndState(blockNumber)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (b *BlockchainContractBackend) CallContract(ctx context.Context, call klayt
 	return res.Return(), res.Unwrap()
 }
 
-func (b *BlockchainContractBackend) callContract(call klaytn.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
+func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
 	if call.Gas == 0 {
 		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
 	}
@@ -205,7 +205,7 @@ func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.I
 	}
 }
 
-func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call klaytn.CallMsg) (uint64, error) {
+func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (uint64, error) {
 	state, err := b.bc.State()
 	if err != nil {
 		return 0, err
@@ -247,7 +247,7 @@ func (b *BlockchainContractBackend) ChainID(ctx context.Context) (*big.Int, erro
 
 // bind.ContractFilterer defined methods
 
-func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) ([]types.Log, error) {
+func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) ([]types.Log, error) {
 	// Convert the current block numbers into internal representations
 	if query.FromBlock == nil {
 		query.FromBlock = big.NewInt(b.bc.CurrentBlock().Number().Int64())
@@ -279,7 +279,7 @@ func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query klaytn
 	return res, nil
 }
 
-func (b *BlockchainContractBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+func (b *BlockchainContractBackend) SubscribeFilterLogs(ctx context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
 	// Subscribe to contract events
 	sink := make(chan []*types.Log)
 

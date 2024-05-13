@@ -59,10 +59,10 @@ func TestGRPC(t *testing.T) {
 func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	kclient, _ := NewgKlaytnClient(addr)
+	kclient, _ := NewgKaiaClient(addr)
 	defer kclient.Close()
 
-	knclient, err := kclient.makeKlaytnClient(timeout)
+	knclient, err := kclient.makeKaiaClient(timeout)
 	assert.NoError(t, err)
 
 	request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
@@ -83,10 +83,10 @@ func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	kclient, _ := NewgKlaytnClient(addr)
+	kclient, _ := NewgKaiaClient(addr)
 	defer kclient.Close()
 
-	knclient, err := kclient.makeKlaytnClient(timeout)
+	knclient, err := kclient.makeKaiaClient(timeout)
 	assert.NoError(t, err)
 
 	stream, _ := knclient.BiCall(kclient.ctx)

@@ -5,7 +5,7 @@
 # To checkout migration status, `tail -f logs-body.out`
 
 # BIN file
-KLAYTN_BIN=~/klaytn/bin/ken
+KAIA_BIN=~/klaytn/bin/ken
 
 # src DB
 SRC_DB_TYPE=LevelDB     # one of "LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3"
@@ -26,7 +26,7 @@ export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 
 # call db migration
-$KLAYTN_BIN db-migration start \
+$KAIA_BIN db-migration start \
   --db.single --db.dst.single \
   --dbtype $SRC_DB_TYPE --dst.dbtype $DST_DB_TYPE \
   --datadir $SRC_DB_DIR  \

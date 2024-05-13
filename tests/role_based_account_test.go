@@ -116,7 +116,7 @@ func TestRoleBasedAccount(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			colin.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -327,7 +327,7 @@ func TestAccountUpdateRoleBasedNil(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -482,7 +482,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 
 	// 2. Test RoleTransfer of the RoleBasedKey
 	{
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -573,7 +573,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 
 	// 5. Test RoleTransfer of the RoleBasedKey with invalid signature
 	{
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -595,7 +595,7 @@ func TestAccountUpdateRoleBasedLegacy(t *testing.T) {
 
 	// 6. Test RoleTransfer of the RoleBasedKey with invalid number of signatures
 	{
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -667,7 +667,7 @@ func TestAccountUpdateRoleBasedWrongLength(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -792,7 +792,7 @@ func TestAccountUpdateRoleBasedTransition(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -976,7 +976,7 @@ func TestAccountUpdateToRoleBasedToPub(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,

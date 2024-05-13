@@ -27,7 +27,7 @@ func TestReadKip113(t *testing.T) {
 
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
-				Balance: big.NewInt(params.KLAY),
+				Balance: big.NewInt(params.KAIA),
 			},
 		}
 		backend = backends.NewSimulatedBackend(alloc)
@@ -87,7 +87,7 @@ func TestAllocKip113(t *testing.T) {
 
 		alloc = blockchain.GenesisAlloc{
 			sender.From: {
-				Balance: big.NewInt(params.KLAY),
+				Balance: big.NewInt(params.KAIA),
 			},
 		}
 		backend = backends.NewSimulatedBackend(alloc)
