@@ -361,10 +361,6 @@ func addStakingInfoToCache(stakingInfo *StakingInfo) {
 }
 
 func getStakingInfoFromCache(blockNum uint64) *StakingInfo {
-	if stakingManager == nil {
-		return nil
-	}
-
 	if cachedStakingInfo, ok := stakingManager.stakingInfoCache.Get(blockNum); ok {
 		logger.Debug("StakingInfoCache hit.", "staking block number", blockNum, "stakingInfo", cachedStakingInfo)
 		// Fill in Gini coeff if not set. Modifies the cached object.
