@@ -55,5 +55,5 @@ func TestContractCallerForMultiCall(t *testing.T) {
 		assert.Equal(t, uint8(i), ret.TypeList[i])
 		assert.Equal(t, expectedAddress[i], ret.AddressList[i])
 	}
-	assert.Equal(t, new(big.Int).Mul(big.NewInt(7_000_000), big.NewInt(params.KLAY)), ret.StakingAmounts[0])
+	assert.Equal(t, new(big.Int).Mul(big.NewInt(7_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[0])
 }

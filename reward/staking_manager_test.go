@@ -214,10 +214,10 @@ func TestStakingManager_GetFromAddressBook(t *testing.T) {
 				Balance: big.NewInt(0),
 			},
 			common.HexToAddress("0x0000000000000000000000000000000000000F01"): {
-				Balance: big.NewInt(0).Mul(big.NewInt(5_000_000), big.NewInt(params.KLAY)),
+				Balance: big.NewInt(0).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA)),
 			},
 			common.HexToAddress("0x0000000000000000000000000000000000000F04"): {
-				Balance: big.NewInt(0).Mul(big.NewInt(5_000_000), big.NewInt(params.KLAY)),
+				Balance: big.NewInt(0).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA)),
 			},
 		}
 		backend = backends.NewSimulatedBackend(alloc)

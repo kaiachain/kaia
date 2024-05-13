@@ -250,7 +250,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, typ
 			return nil, err
 		}
 		for i, stakingAddr := range stakingAddrs {
-			tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
+			tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KAIA))
 			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
 				tempStakingAmount.SetUint64(maxStakingLimit)
 			}
@@ -258,7 +258,7 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, typ
 		}
 	} else {
 		for i, effectiveStaking := range effectiveStakings {
-			tempStakingAmount := big.NewInt(0).Div(effectiveStaking, big.NewInt(0).SetUint64(params.KLAY))
+			tempStakingAmount := big.NewInt(0).Div(effectiveStaking, big.NewInt(0).SetUint64(params.KAIA))
 			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
 				tempStakingAmount.SetUint64(maxStakingLimit)
 			}
