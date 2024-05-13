@@ -354,7 +354,7 @@ func RegisterMigrationPrerequisites(f func(uint64) error) {
 // For tests starting and stopping node instances, clear residual migrationPrerequisites
 // that might no longer work.
 // TODO: remove this function when we have a better way to handle this.
-// e.g. StartStateMigration directly calls CheckStakingInfoStored instead of this callback.
+// e.g. StartStateMigration directly calls checkStakingInfoStored instead of this callback.
 func ClearMigrationPrerequisites() {
 	migrationPrerequisites = nil
 }

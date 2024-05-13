@@ -323,6 +323,7 @@ func makeTestStakingManager(addrs []common.Address, amounts []uint64) *reward.St
 	// Save old StakingManager, overwrite with the fake one.
 	oldStakingManager := reward.GetStakingManager()
 	reward.SetTestStakingManagerWithStakingInfoCache(info)
+
 	return oldStakingManager
 }
 

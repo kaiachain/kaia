@@ -293,7 +293,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 		return nil
 	}
 
-	// At Refresh(), proposers is already randomly shuffled considering weights.
+	// At RefreshProposers(), proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
@@ -551,7 +551,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 		}
 	}
 
-	// TODO-Kaia-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
+	// TODO-Kaia-Governance the new validator is added on validators only and demoted after `RefreshValSet` method. It is better to update here if it is demoted ones.
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
@@ -640,15 +640,74 @@ func (valSet *weightedCouncil) F() int {
 
 func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-// Refresh recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// RefreshValSet recalculates up-to-date validators at the staking block number.
+// It returns an error if it can't make up-to-date validators
+// - due to wrong parameters
+// - due to lack of staking information
+// It returns no error when weightedCouncil:
+// - successfully calculated up-to-date validators
+func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+
+	// Check errors
+	numValidators := len(valSet.validators)
+	if numValidators == 0 {
+		return errors.New("No validator")
+	}
+
+	blockNumBig := new(big.Int).SetUint64(blockNum)
+	chainRules := config.Rules(blockNumBig)
+
+	stakingBlockNum := blockNum
+	if !chainRules.IsKaia {
+		stakingBlockNum = params.CalcProposerBlockNumber(blockNum) + 1
+	}
+	newStakingInfo := reward.GetStakingInfo(stakingBlockNum)
+
+	if newStakingInfo == nil {
+		// Just return without refreshing validators
+		return errors.New("skip refreshing validators due to no staking info")
+	}
+	valSet.stakingInfo = newStakingInfo
+
+	candidates := append(valSet.validators, valSet.demotedValidators...)
+	weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, newStakingInfo)
+	if err != nil {
+		return err
+	}
+
+	if chainRules.IsIstanbul {
+		var demotedValidators []*weightedValidator
+
+		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
+		valSet.setValidators(weightedValidators, demotedValidators)
+	}
+
+	// Although this is for selecting proposer, update it because
+	// otherwise, all parameters should be re-calculated at `RefreshProposers` method.
+	if chainRules.IsKore {
+		setZeroWeight(weightedValidators)
+	} else {
+		totalStaking, _ := calcTotalAmount(weightedValidators, valSet.stakingInfo, stakingAmounts)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	}
+
+	logger.Debug("Refresh validators done.", "blockNum", blockNum, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+
+	return nil
+}
+
+// RefreshProposers recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// This is a legacy function and do not affect to proposer after the randao HF.
+// After the randao HF, the proposer is selected at `CalcProposer` method.
 // It returns an error if it can't make up-to-date proposers
 // - due to wrong parameters
 // - due to lack of staking information
 // It returns no error when weightedCouncil:
-// - already has up-do-date proposers
-// - successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
-	// TODO-Kaia-Governance divide the following logic into two parts: proposers update / validators update
+// - already has up-to-date proposers
+// - successfully calculated up-to-date proposers
+func (valSet *weightedCouncil) RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -667,45 +726,15 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return err
 	}
 
-	newStakingInfo := reward.GetStakingInfo(blockNum + 1)
-	if newStakingInfo == nil {
-		// Just return without updating proposer
-		return errors.New("skip refreshing proposers due to no staking info")
-	}
-	valSet.stakingInfo = newStakingInfo
-
-	blockNumBig := new(big.Int).SetUint64(blockNum)
-	chainRules := config.Rules(blockNumBig)
-
-	candidates := append(valSet.validators, valSet.demotedValidators...)
-	weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, newStakingInfo)
-	if err != nil {
-		return err
-	}
-
-	if chainRules.IsIstanbul {
-		var demotedValidators []*weightedValidator
-
-		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
-		valSet.setValidators(weightedValidators, demotedValidators)
-	}
-
 	if valSet.proposersBlockNum == blockNum {
 		// proposers are already refreshed
 		return nil
 	}
 
-	// weight and gini were neutralized after Kore hard fork
-	if chainRules.IsKore {
-		setZeroWeight(weightedValidators)
-	} else {
-		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-		calcWeight(weightedValidators, stakingAmounts, totalStaking)
-	}
-
+	// The weight of validators is already calculated at `RefreshValSet` method.
 	valSet.refreshProposers(seed, blockNum)
 
-	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+	logger.Debug("Refresh proposers done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil

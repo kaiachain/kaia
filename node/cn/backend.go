@@ -176,6 +176,10 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 }
 
 func checkSyncMode(config *Config) error {
+	// TODO-Kaia: allow snap sync after resolving the staking info sync issue
+	if config.SyncMode == downloader.SnapSync {
+		return errors.New("snap sync is temporarily disabled")
+	}
 	if !config.SyncMode.IsValid() {
 		return fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
@@ -694,7 +698,9 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	reward.StakingManagerSubscribe()
+	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
+		reward.StakingManagerSubscribe()
+	}
 
 	return nil
 }

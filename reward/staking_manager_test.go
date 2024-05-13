@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
@@ -97,7 +98,7 @@ func newStakingManagerForTest(t *testing.T) {
 	assert.Nil(t, st)
 	assert.EqualError(t, err, ErrStakingManagerNotSet.Error())
 
-	assert.EqualError(t, CheckStakingInfoStored(789), ErrStakingManagerNotSet.Error())
+	assert.EqualError(t, checkStakingInfoStored(789), ErrStakingManagerNotSet.Error())
 
 	// test if get same
 	stNew := NewStakingManager(&blockchain.BlockChain{}, newDefaultTestGovernance(), nil)
@@ -113,7 +114,8 @@ func resetStakingManagerForTest(t *testing.T) {
 		sm = GetStakingManager()
 	}
 
-	sm.stakingInfoCache = newStakingInfoCache()
+	cache, _ := lru.NewARC(128)
+	sm.stakingInfoCache = cache
 	sm.stakingInfoDB = database.NewMemoryDBManager()
 }
 
@@ -132,19 +134,19 @@ func checkGetStakingInfo(t *testing.T) {
 	}
 }
 
-// Check that StakinInfo are loaded from cache
+// Check that StakingInfo are loaded from cache
 func TestStakingManager_GetFromCache(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 	resetStakingManagerForTest(t)
 
 	for _, testdata := range stakingManagerTestData {
-		GetStakingManager().stakingInfoCache.add(testdata)
+		GetStakingManager().stakingInfoCache.Add(testdata.BlockNum, testdata)
 	}
 
 	checkGetStakingInfo(t)
 }
 
-// Check that StakinInfo are loaded from database
+// Check that StakingInfo are loaded from database
 func TestStakingManager_GetFromDB(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 	resetStakingManagerForTest(t)
@@ -166,7 +168,7 @@ func TestStakingManager_FillGiniFromCache(t *testing.T) {
 		copydata := &StakingInfo{}
 		json.Unmarshal([]byte(testdata.String()), copydata)
 		copydata.Gini = -1 // Suppose Gini was -1 in the cache
-		GetStakingManager().stakingInfoCache.add(copydata)
+		GetStakingManager().stakingInfoCache.Add(copydata.BlockNum, copydata)
 	}
 
 	checkGetStakingInfo(t)
