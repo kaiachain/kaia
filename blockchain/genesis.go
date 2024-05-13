@@ -234,32 +234,10 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		}
 	}
 
-	// The genesis block is present in the database but the corresponding state is not.
+	// The genesis block is present in the database but the corresponding state might not.
+	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
-	header := db.ReadHeader(stored, 0)
-	if ok, _ := db.HasTrieNode(header.Root.ExtendZero()); !ok { // check for the state root node
-		if genesis == nil {
-			switch {
-			case networkId == params.BaobabNetworkId:
-				genesis = DefaultBaobabGenesisBlock()
-			case networkId == params.CypressNetworkId:
-				fallthrough
-			default:
-				genesis = DefaultGenesisBlock()
-			}
-			if genesis.Config.Governance != nil {
-				genesis.Governance = SetGenesisGovernance(genesis)
-			}
-		}
-		// Run genesis.ToBlock() which calls StateDB.Commit() to write the state trie.
-		// But do not call genesis.Commit() which overwrites HeaderHash.
-		InitDeriveSha(genesis.Config)
-		hash := genesis.ToBlock(common.Hash{}, db).Hash()
-		if hash != stored {
-			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
-		}
-		logger.Info("Restored state trie for the genesis block", "stateRoot", header.Root.Hex())
-	}
+	commitGenesisState(genesis, db, networkId)
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
@@ -456,6 +434,27 @@ func decodePrealloc(data string) GenesisAlloc {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
 	}
 	return ga
+}
+
+func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
+	if genesis == nil {
+		switch {
+		case networkId == params.BaobabNetworkId:
+			genesis = DefaultBaobabGenesisBlock()
+		case networkId == params.CypressNetworkId:
+			fallthrough
+		default:
+			genesis = DefaultGenesisBlock()
+		}
+		if genesis.Config.Governance != nil {
+			genesis.Governance = SetGenesisGovernance(genesis)
+		}
+	}
+	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
+	// But do not run genesis.Commit() which overwrites HeaderHash.
+	InitDeriveSha(genesis.Config)
+	genesis.ToBlock(common.Hash{}, db).Hash()
+	logger.Info("Restored state trie for the genesis block")
 }
 
 type GovernanceSet map[string]interface{}
