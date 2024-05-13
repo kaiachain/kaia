@@ -742,7 +742,7 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewPublicKaiaAPI(n),
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   NewPublicKaiaAPI(n),
 			Public:    true,

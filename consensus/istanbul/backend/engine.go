@@ -666,7 +666,7 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 			Service:   &API{chain: chain, istanbul: sb},
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   &APIExtension{chain: chain, istanbul: sb},
 			Public:    true,

@@ -149,7 +149,7 @@ func TestMainBridge_basic(t *testing.T) {
 	txPool := &blockchain.TxPool{}
 	compAPIs := []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   api.NewPublicKaiaAPI(&cn.CNAPIBackend{}),
 			Public:    true,
@@ -167,13 +167,13 @@ func TestMainBridge_basic(t *testing.T) {
 	// before modification: return type is nil
 	// after modification: return type is "nil, map[nil], map[nil], which equals to service{}"
 	// rpc.GetNullServices() returns service{}
-	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["klay"])
+	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["kaia"])
 
 	// Update and check MainBridge components
 	mBridge.SetComponents(comp)
 	assert.Equal(t, bc, mBridge.blockchain)
 	assert.Equal(t, txPool, mBridge.txPool)
-	assert.NotNil(t, mBridge.rpcServer.GetServices()["klay"])
+	assert.NotNil(t, mBridge.rpcServer.GetServices()["kaia"])
 
 	// Start MainBridge and stop later
 	if err := mBridge.Start(p2p.SingleChannelServer{}); err != nil {

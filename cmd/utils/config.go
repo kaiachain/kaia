@@ -67,7 +67,7 @@ import (
 )
 
 const (
-	ClientIdentifier = "klay" // Client identifier to advertise over the network
+	ClientIdentifier = "kaia" // Client identifier to advertise over the network
 	SCNNetworkType   = "scn"  // Service Chain Network
 	MNNetworkType    = "mn"   // Mainnet Network
 	gitCommit        = ""
@@ -117,8 +117,8 @@ func DefaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = ClientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "klay", "shh", "eth")
-	cfg.WSModules = append(cfg.WSModules, "klay", "shh", "eth")
+	cfg.HTTPModules = append(cfg.HTTPModules, "kaia", "shh", "eth")
+	cfg.WSModules = append(cfg.WSModules, "kaia", "shh", "eth")
 	cfg.IPCPath = "klay.ipc"
 	return cfg
 }

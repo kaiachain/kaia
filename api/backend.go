@@ -116,17 +116,17 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 
 	rpcApi := []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicKaiaAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicBlockChainAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicTransactionPoolAPI,
 			Public:    true,
@@ -141,7 +141,7 @@ func GetAPIs(apiBackend Backend, disableUnsafeDebug bool) ([]rpc.API, *EthereumA
 			Service:   NewPublicDebugAPI(apiBackend),
 			Public:    false,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicAccountAPI,
 			Public:    true,

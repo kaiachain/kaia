@@ -406,7 +406,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--rpcapi",
 		flagType:    FlagTypeArgument,
-		values:      []string{"", "klay", "klay,personal,istanbul,debug,miner"},
+		values:      []string{"", "kaia", "kaia,personal,istanbul,debug,miner"},
 		wrongValues: commonThreeErrors,
 		errors:      []int{NonError, NonError, NonError},
 	},
@@ -457,7 +457,7 @@ var flagsWithValues = []struct {
 	{
 		flag:        "--wsapi",
 		flagType:    FlagTypeArgument,
-		values:      []string{"", "klay", "klay,personal,istanbul,debug,miner"},
+		values:      []string{"", "kaia", "kaia,personal,istanbul,debug,miner"},
 		wrongValues: commonThreeErrors,
 		errors:      []int{NonError, NonError, NonError},
 	},
