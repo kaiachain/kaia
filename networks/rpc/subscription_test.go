@@ -124,7 +124,7 @@ func TestNotifications(t *testing.T) {
 	server := NewServer()
 	service := &NotificationTestService{unsubscribed: make(chan string)}
 
-	if err := server.RegisterName("klay", service); err != nil {
+	if err := server.RegisterName("kaia", service); err != nil {
 		t.Fatalf("unable to register test service %v", err)
 	}
 
@@ -139,7 +139,7 @@ func TestNotifications(t *testing.T) {
 	val := 12345
 	request := map[string]interface{}{
 		"id":      1,
-		"method":  "klay_subscribe",
+		"method":  "kaia_subscribe",
 		"version": "2.0",
 		"params":  []interface{}{"someSubscription", n, val},
 	}
@@ -248,7 +248,7 @@ func TestSubscriptionMultipleNamespaces(t *testing.T) {
 	}()
 
 	var (
-		namespaces        = []string{"klay", "shh", "bzz"}
+		namespaces        = []string{"kaia", "shh", "bzz"}
 		service           = NotificationTestService{}
 		subCount          = len(namespaces) * 2
 		notificationCount = 3

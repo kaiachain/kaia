@@ -54,8 +54,8 @@ type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux
 	AccountManager() accounts.AccountManager
-	RPCEVMTimeout() time.Duration // global timeout for eth/klay_call/estimateGas/estimateComputationCost
-	RPCGasCap() *big.Int          // global gas cap for eth/klay_call/estimateGas/estimateComputationCost
+	RPCEVMTimeout() time.Duration // global timeout for eth/kaia_call/estimateGas/estimateComputationCost
+	RPCGasCap() *big.Int          // global gas cap for eth/kaia_call/estimateGas/estimateComputationCost
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)

@@ -43,7 +43,7 @@ func TestGRPC(t *testing.T) {
 	addr := "127.0.0.1:4000"
 	handler := rpc.NewServer()
 
-	handler.RegisterName("klay", &APIgRPC{})
+	handler.RegisterName("kaia", &APIgRPC{})
 
 	listener := &Listener{Addr: addr}
 	listener.SetRPCServer(handler)
@@ -65,7 +65,7 @@ func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	knclient, err := kclient.makeKaiaClient(timeout)
 	assert.NoError(t, err)
 
-	request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
+	request, err := kclient.makeRPCRequest("kaia", "kaia_blockNumber", nil)
 	assert.NoError(t, err)
 
 	response, err := knclient.Call(kclient.ctx, request)
@@ -91,7 +91,7 @@ func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 
 	stream, _ := knclient.BiCall(kclient.ctx)
 	go kclient.handleBiCall(stream, func() (request *RPCRequest, e error) {
-		request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
+		request, err := kclient.makeRPCRequest("kaia", "kaia_blockNumber", nil)
 		if assert.NoError(t, err) {
 			return request, err
 		}

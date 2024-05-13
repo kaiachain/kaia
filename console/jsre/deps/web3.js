@@ -1781,7 +1781,7 @@ if (typeof XMLHttpRequest === 'undefined') {
 /// required to define ETH_BIGNUMBER_ROUNDING_MODE
 var BigNumber = require('bignumber.js');
 
-var KLAY_UNITS = [
+var KAIA_UNITS = [
     'peb',
     'kpeb',
     'Mpeb',
@@ -1803,7 +1803,7 @@ var KLAY_UNITS = [
 module.exports = {
     ETH_PADDING: 32,
     ETH_SIGNATURE_LENGTH: 4,
-    ETH_UNITS: KLAY_UNITS,
+    ETH_UNITS: KAIA_UNITS,
     ETH_BIGNUMBER_ROUNDING_MODE: { ROUNDING_MODE: BigNumber.ROUND_DOWN },
     ETH_POLLING_TIMEOUT: 1000/2,
     defaultBlock: 'latest',
@@ -1893,7 +1893,7 @@ var sha3 = require('./sha3.js');
 var utf8 = require('utf8');
 
 var unitMap = {
-    'noKLAY':      '0',
+    'noKAIA':      '0',
     'peb':         '1',
     'kpeb':        '1000',
     'Mpeb':        '1000000',
@@ -1908,8 +1908,8 @@ var unitMap = {
     'TKAIA':       '1000000000000000000000000000000'
 };
 
-var unitEthToKlayMap = {
-    'noether':      'noKLAY',
+var unitEthToKaiaMap = {
+    'noether':      'noKAIA',
     'wei':          'peb',
     'kwei':         'kpeb',
     'Kwei':         'kpeb',
@@ -2184,7 +2184,7 @@ function fancyStringify2D(obj) {
  * @throws error if the unit is not correct
  */
 var getValueOfUnit = function (unit) {
-    unit = unit ? unit : 'KLAY';
+    unit = unit ? unit : 'KAIA';
     var unitValue = unitMap[unit];
     if (unitValue === undefined) {
         throw new Error('This unit doesn\'t exist, please use one of the following units\n'
@@ -2215,14 +2215,14 @@ var getValueOfUnit = function (unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var fromWei = function(number, unit) {
-    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
-    var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(klayUnit));
+    var kaiaUnit = unitEthToKaiaMap[unit] ? unitEthToKaiaMap[unit] : unit;
+    var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(kaiaUnit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
 
 /**
- * Takes a number of peb and converts it to any other KLAY unit.
+ * Takes a number of peb and converts it to any other KAIA unit.
  *
  * Possible units are:
  *   SI Short
@@ -2231,7 +2231,7 @@ var fromWei = function(number, unit) {
  * - Gpeb
  * - uKAIA
  * - mKAIA
- * - KLAY
+ * - KAIA
  * - kKAIA
  * - MKAIA
  * - GKAIA
@@ -2239,7 +2239,7 @@ var fromWei = function(number, unit) {
  *
  * @method fromPeb
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert to, default KLAY
+ * @param {String} unit the unit to convert to, default KAIA
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
  */
 var fromPeb = function(number, unit) {
@@ -2271,8 +2271,8 @@ var fromPeb = function(number, unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var toWei = function(number, unit) {
-    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
-    var returnValue = toBigNumber(number).times(getValueOfUnit(klayUnit));
+    var kaiaUnit = unitEthToKaiaMap[unit] ? unitEthToKaiaMap[unit] : unit;
+    var returnValue = toBigNumber(number).times(getValueOfUnit(kaiaUnit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
@@ -2287,7 +2287,7 @@ var toWei = function(number, unit) {
  * - Gpeb
  * - uKAIA
  * - mKAIA
- * - KLAY
+ * - KAIA
  * - kKAIA
  * - MKAIA
  * - GKAIA
@@ -2521,7 +2521,7 @@ var isJson = function (str) {
 };
 
 /**
- * Returns true if given string is a valid Klaytn block header bloom.
+ * Returns true if given string is a valid Kaia block header bloom.
  *
  * @method isBloom
  * @param {String} hex encoded bloom filter
@@ -2622,7 +2622,7 @@ module.exports={
 
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
-var Klay = require('./web3/methods/klay');
+var Kaia = require('./web3/methods/kaia');
 var Eth = require('./web3/methods/eth');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
@@ -2645,7 +2645,7 @@ var BigNumber = require('bignumber.js');
 function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
-    this.klay = new Klay(this);
+    this.kaia = new Kaia(this);
     this.eth = new Eth(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
@@ -2664,23 +2664,23 @@ function Web3 (provider) {
     this._extend({
         properties: properties()
     });
-    this.klay.BigNumber = BigNumber;
-    this.klay.toHex = utils.toHex;
-    this.klay.toAscii = utils.toAscii;
-    this.klay.toUtf8 = utils.toUtf8;
-    this.klay.fromAscii = utils.fromAscii;
-    this.klay.fromUtf8 = utils.fromUtf8;
-    this.klay.toDecimal = utils.toDecimal;
-    this.klay.fromDecimal = utils.fromDecimal;
-    this.klay.toBigNumber = utils.toBigNumber;
-    this.klay.toPeb = utils.toPeb;
-    this.klay.fromPeb = utils.fromPeb;
-    this.klay.isAddress = utils.isAddress;
-    this.klay.isChecksumAddress = utils.isChecksumAddress;
-    this.klay.toChecksumAddress = utils.toChecksumAddress;
-    this.klay.isIBAN = utils.isIBAN;
-    this.klay.padLeft = utils.padLeft;
-    this.klay.padRight = utils.padRight;
+    this.kaia.BigNumber = BigNumber;
+    this.kaia.toHex = utils.toHex;
+    this.kaia.toAscii = utils.toAscii;
+    this.kaia.toUtf8 = utils.toUtf8;
+    this.kaia.fromAscii = utils.fromAscii;
+    this.kaia.fromUtf8 = utils.fromUtf8;
+    this.kaia.toDecimal = utils.toDecimal;
+    this.kaia.fromDecimal = utils.fromDecimal;
+    this.kaia.toBigNumber = utils.toBigNumber;
+    this.kaia.toPeb = utils.toPeb;
+    this.kaia.fromPeb = utils.fromPeb;
+    this.kaia.isAddress = utils.isAddress;
+    this.kaia.isChecksumAddress = utils.isChecksumAddress;
+    this.kaia.toChecksumAddress = utils.toChecksumAddress;
+    this.kaia.isIBAN = utils.isIBAN;
+    this.kaia.padLeft = utils.padLeft;
+    this.kaia.padRight = utils.padRight;
 }
 
 // expose providers on the class
@@ -2736,7 +2736,7 @@ var properties = function () {
     return [
         new Property({
             name: 'version.node',
-            getter: 'klay_clientVersion'
+            getter: 'kaia_clientVersion'
         }),
         new Property({
             name: 'version.network',
@@ -2744,8 +2744,8 @@ var properties = function () {
             inputFormatter: utils.toDecimal
         }),
         new Property({
-            name: 'version.klaytn',
-            getter: 'klay_protocolVersion',
+            name: 'version.kaia',
+            getter: 'kaia_protocolVersion',
             inputFormatter: utils.toDecimal
         }),
         new Property({
@@ -2767,7 +2767,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/klay":38,"./web3/methods/eth":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/kaia":38,"./web3/methods/eth":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -2846,7 +2846,7 @@ AllSolidityEvents.prototype.execute = function (options, callback) {
 
     var o = this.encode(options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
+    return new Filter(o, 'kaia', this._requestManager, watches.kaia(), formatter, callback);
 };
 
 AllSolidityEvents.prototype.attachToContract = function (contract) {
@@ -2984,7 +2984,7 @@ var addFunctionsToContract = function (contract) {
     contract.abi.filter(function (json) {
         return json.type === 'function';
     }).map(function (json) {
-        return new SolidityFunction(contract._klay, json, contract.address);
+        return new SolidityFunction(contract._kaia, json, contract.address);
     }).forEach(function (f) {
         f.attachToContract(contract);
     });
@@ -3002,11 +3002,11 @@ var addEventsToContract = function (contract) {
         return json.type === 'event';
     });
 
-    var All = new AllEvents(contract._klay._requestManager, events, contract.address);
+    var All = new AllEvents(contract._kaia._requestManager, events, contract.address);
     All.attachToContract(contract);
 
     events.map(function (json) {
-        return new SolidityEvent(contract._klay._requestManager, json, contract.address);
+        return new SolidityEvent(contract._kaia._requestManager, json, contract.address);
     }).forEach(function (e) {
         e.attachToContract(contract);
     });
@@ -3026,7 +3026,7 @@ var checkForContractAddress = function(contract, callback){
         callbackFired = false;
 
     // wait for receipt
-    var filter = contract._klay.filter('latest', function(e){
+    var filter = contract._kaia.filter('latest', function(e){
         if (!e && !callbackFired) {
             count++;
 
@@ -3044,10 +3044,10 @@ var checkForContractAddress = function(contract, callback){
 
             } else {
 
-                contract._klay.getTransactionReceipt(contract.transactionHash, function(e, receipt){
+                contract._kaia.getTransactionReceipt(contract.transactionHash, function(e, receipt){
                     if(receipt && !callbackFired) {
 
-                        contract._klay.getCode(receipt.contractAddress, function(e, code){
+                        contract._kaia.getCode(receipt.contractAddress, function(e, code){
                             /*jshint maxcomplexity: 6 */
 
                             if(callbackFired || !code)
@@ -3090,8 +3090,8 @@ var checkForContractAddress = function(contract, callback){
  * @method ContractFactory
  * @param {Array} abi
  */
-var ContractFactory = function (klay, abi) {
-    this.klay = klay;
+var ContractFactory = function (kaia, abi) {
+    this.kaia = kaia;
     this.abi = abi;
 
     /**
@@ -3107,7 +3107,7 @@ var ContractFactory = function (klay, abi) {
     this.new = function () {
         /*jshint maxcomplexity: 7 */
 
-        var contract = new Contract(this.klay, this.abi);
+        var contract = new Contract(this.kaia, this.abi);
 
         // parse arguments
         var options = {}; // required!
@@ -3139,7 +3139,7 @@ var ContractFactory = function (klay, abi) {
         if (callback) {
 
             // wait for the contract address adn check if the code was deployed
-            this.klay.sendTransaction(options, function (err, hash) {
+            this.kaia.sendTransaction(options, function (err, hash) {
                 if (err) {
                     callback(err);
                 } else {
@@ -3153,7 +3153,7 @@ var ContractFactory = function (klay, abi) {
                 }
             });
         } else {
-            var hash = this.klay.sendTransaction(options);
+            var hash = this.kaia.sendTransaction(options);
             // add the transaction hash
             contract.transactionHash = hash;
             checkForContractAddress(contract);
@@ -3188,7 +3188,7 @@ var ContractFactory = function (klay, abi) {
  * otherwise calls callback function (err, contract)
  */
 ContractFactory.prototype.at = function (address, callback) {
-    var contract = new Contract(this.klay, this.abi, address);
+    var contract = new Contract(this.kaia, this.abi, address);
 
     // this functions are not part of prototype,
     // because we dont want to spoil the interface
@@ -3228,8 +3228,8 @@ ContractFactory.prototype.getData = function () {
  * @param {Array} abi
  * @param {Address} contract address
  */
-var Contract = function (klay, abi, address) {
-    this._klay = klay;
+var Contract = function (kaia, abi, address) {
+    this._kaia = kaia;
     this.transactionHash = null;
     this.address = address;
     this.abi = abi;
@@ -3471,7 +3471,7 @@ SolidityEvent.prototype.execute = function (indexed, options, callback) {
 
     var o = this.encode(indexed, options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
+    return new Filter(o, 'kaia', this._requestManager, watches.kaia(), formatter, callback);
 };
 
 /**
@@ -3605,7 +3605,7 @@ var getOptions = function (options, type) {
 
 
     switch(type) {
-        case 'klay':
+        case 'kaia':
 
             // make sure topics, get converted to hex
             options.topics = options.topics || [];
@@ -4136,8 +4136,8 @@ var sha3 = require('../utils/sha3');
 /**
  * This prototype should be used to call/sendTransaction to solidity functions
  */
-var SolidityFunction = function (klay, json, address) {
-    this._klay = klay;
+var SolidityFunction = function (kaia, json, address) {
+    this._kaia = kaia;
     this._inputTypes = json.inputs.map(function (i) {
         return i.type;
     });
@@ -4239,12 +4239,12 @@ SolidityFunction.prototype.call = function () {
 
 
     if (!callback) {
-        var output = this._klay.call(payload, defaultBlock);
+        var output = this._kaia.call(payload, defaultBlock);
         return this.unpackOutput(output);
     }
 
     var self = this;
-    this._klay.call(payload, defaultBlock, function (error, output) {
+    this._kaia.call(payload, defaultBlock, function (error, output) {
         if (error) return callback(error, null);
 
         var unpacked = null;
@@ -4274,10 +4274,10 @@ SolidityFunction.prototype.sendTransaction = function () {
     }
 
     if (!callback) {
-        return this._klay.sendTransaction(payload);
+        return this._kaia.sendTransaction(payload);
     }
 
-    this._klay.sendTransaction(payload, callback);
+    this._kaia.sendTransaction(payload, callback);
 };
 
 /**
@@ -4291,10 +4291,10 @@ SolidityFunction.prototype.estimateGas = function () {
     var payload = this.toPayload(args);
 
     if (!callback) {
-        return this._klay.estimateGas(payload);
+        return this._kaia.estimateGas(payload);
     }
 
-    this._klay.estimateGas(payload, callback);
+    this._kaia.estimateGas(payload, callback);
 };
 
 /**
@@ -4343,7 +4343,7 @@ SolidityFunction.prototype.request = function () {
     var format = this.unpackOutput.bind(this);
 
     return {
-        method: this._constant ? 'klay_call' : 'klay_sendTransaction',
+        method: this._constant ? 'kaia_call' : 'kaia_sendTransaction',
         callback: callback,
         params: [payload],
         format: format
@@ -5347,22 +5347,22 @@ var Iban = require('../iban');
 var transfer = require('../transfer');
 
 var blockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "kaia_getBlockByHash" : "kaia_getBlockByNumber";
 };
 
 var headerCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getHeaderByHash" : "klay_getHeaderByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "kaia_getHeaderByHash" : "kaia_getHeaderByNumber";
 };
 
 var transactionFromBlockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'kaia_getTransactionByBlockHashAndIndex' : 'kaia_getTransactionByBlockNumberAndIndex';
 };
 
 var getBlockTransactionCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'kaia_getBlockTransactionCountByHash' : 'kaia_getBlockTransactionCountByNumber';
 };
 
-function Klay(web3) {
+function Kaia(web3) {
     this._requestManager = web3._requestManager;
 
     var self = this;
@@ -5382,7 +5382,7 @@ function Klay(web3) {
     this.sendIBANTransaction = transfer.bind(null, this);
 }
 
-Object.defineProperty(Klay.prototype, 'defaultBlock', {
+Object.defineProperty(Kaia.prototype, 'defaultBlock', {
     get: function () {
         return c.defaultBlock;
     },
@@ -5392,7 +5392,7 @@ Object.defineProperty(Klay.prototype, 'defaultBlock', {
     }
 });
 
-Object.defineProperty(Klay.prototype, 'defaultAccount', {
+Object.defineProperty(Kaia.prototype, 'defaultAccount', {
     get: function () {
         return c.defaultAccount;
     },
@@ -5405,7 +5405,7 @@ Object.defineProperty(Klay.prototype, 'defaultAccount', {
 var methods = function () {
     var getBalance = new Method({
         name: 'getBalance',
-        call: 'klay_getBalance',
+        call: 'kaia_getBalance',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: formatters.outputBigNumberFormatter
@@ -5413,14 +5413,14 @@ var methods = function () {
 
     var getStorageAt = new Method({
         name: 'getStorageAt',
-        call: 'klay_getStorageAt',
+        call: 'kaia_getStorageAt',
         params: 3,
         inputFormatter: [null, utils.toHex, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var getCode = new Method({
         name: 'getCode',
-        call: 'klay_getCode',
+        call: 'kaia_getCode',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
@@ -5450,14 +5450,14 @@ var methods = function () {
 
     var getTransaction = new Method({
         name: 'getTransaction',
-        call: 'klay_getTransactionByHash',
+        call: 'kaia_getTransactionByHash',
         params: 1,
         outputFormatter: formatters.outputTransactionFormatter
     });
 
     var getDecodedAnchoringTransactionByHash = new Method({
         name: 'getDecodedAnchoringTransactionByHash',
-        call: 'klay_getDecodedAnchoringTransactionByHash',
+        call: 'kaia_getDecodedAnchoringTransactionByHash',
         params: 1
     });
 
@@ -5471,14 +5471,14 @@ var methods = function () {
 
     var getTransactionReceipt = new Method({
         name: 'getTransactionReceipt',
-        call: 'klay_getTransactionReceipt',
+        call: 'kaia_getTransactionReceipt',
         params: 1,
         outputFormatter: formatters.outputTransactionReceiptFormatter
     });
 
     var getTransactionCount = new Method({
         name: 'getTransactionCount',
-        call: 'klay_getTransactionCount',
+        call: 'kaia_getTransactionCount',
         params: 2,
         inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: utils.toDecimal
@@ -5486,42 +5486,42 @@ var methods = function () {
 
     var sendRawTransaction = new Method({
         name: 'sendRawTransaction',
-        call: 'klay_sendRawTransaction',
+        call: 'kaia_sendRawTransaction',
         params: 1,
         inputFormatter: [null]
     });
 
     var sendTransaction = new Method({
         name: 'sendTransaction',
-        call: 'klay_sendTransaction',
+        call: 'kaia_sendTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var signTransaction = new Method({
         name: 'signTransaction',
-        call: 'klay_signTransaction',
+        call: 'kaia_signTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var sign = new Method({
         name: 'sign',
-        call: 'klay_sign',
+        call: 'kaia_sign',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var call = new Method({
         name: 'call',
-        call: 'klay_call',
+        call: 'kaia_call',
         params: 2,
         inputFormatter: [formatters.inputCallFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var estimateGas = new Method({
         name: 'estimateGas',
-        call: 'klay_estimateGas',
+        call: 'kaia_estimateGas',
         params: 1,
         inputFormatter: [formatters.inputCallFormatter],
         outputFormatter: utils.toDecimal
@@ -5553,57 +5553,57 @@ var properties = function () {
     return [
         new Property({
             name: 'syncing',
-            getter: 'klay_syncing',
+            getter: 'kaia_syncing',
             outputFormatter: formatters.outputSyncingFormatter
         }),
         new Property({
             name: 'accounts',
-            getter: 'klay_accounts'
+            getter: 'kaia_accounts'
         }),
         new Property({
             name: 'blockNumber',
-            getter: 'klay_blockNumber',
+            getter: 'kaia_blockNumber',
             outputFormatter: utils.toDecimal
         }),
         new Property({
           name: 'chainID',
-          getter: 'klay_chainID',
+          getter: 'kaia_chainID',
           outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
           name: 'chainId',
-          getter: 'klay_chainId',
+          getter: 'kaia_chainId',
           outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
             name: 'protocolVersion',
-            getter: 'klay_protocolVersion'
+            getter: 'kaia_protocolVersion'
         })
     ];
 };
 
-Klay.prototype.contract = function (abi) {
+Kaia.prototype.contract = function (abi) {
     var factory = new Contract(this, abi);
     return factory;
 };
 
-Klay.prototype.filter = function (options, callback, filterCreationErrorCallback) {
-    return new Filter(options, 'klay', this._requestManager, watches.klay(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
+Kaia.prototype.filter = function (options, callback, filterCreationErrorCallback) {
+    return new Filter(options, 'kaia', this._requestManager, watches.kaia(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
 };
 
-Klay.prototype.namereg = function () {
+Kaia.prototype.namereg = function () {
     return this.contract(namereg.global.abi).at(namereg.global.address);
 };
 
-Klay.prototype.icapNamereg = function () {
+Kaia.prototype.icapNamereg = function () {
     return this.contract(namereg.icap.abi).at(namereg.icap.address);
 };
 
-Klay.prototype.isSyncing = function (callback) {
+Kaia.prototype.isSyncing = function (callback) {
     return new IsSyncing(this._requestManager, callback);
 };
 
-module.exports = Klay;
+module.exports = Kaia;
 
 },{"../../utils/config":18,"../../utils/utils":20,"../contract":25,"../filter":29,"../formatters":30,"../iban":33,"../method":36,"../namereg":44,"../property":45,"../syncing":48,"../transfer":49,"./watches":43}],87:[function(require,module,exports){
 /*
@@ -6423,7 +6423,7 @@ module.exports = Swarm;
 var Method = require('../method');
 
 /// @returns an array of objects describing web3.eth.filter api methods
-var klay = function () {
+var kaia = function () {
     var newFilterCall = function (args) {
         var type = args[0];
 
@@ -6431,13 +6431,13 @@ var klay = function () {
             case 'latest':
                 args.shift();
                 this.params = 0;
-                return 'klay_newBlockFilter';
+                return 'kaia_newBlockFilter';
             case 'pending':
                 args.shift();
                 this.params = 0;
-                return 'klay_newPendingTransactionFilter';
+                return 'kaia_newPendingTransactionFilter';
             default:
-                return 'klay_newFilter';
+                return 'kaia_newFilter';
         }
     };
 
@@ -6449,19 +6449,19 @@ var klay = function () {
 
     var uninstallFilter = new Method({
         name: 'uninstallFilter',
-        call: 'klay_uninstallFilter',
+        call: 'kaia_uninstallFilter',
         params: 1
     });
 
     var getLogs = new Method({
         name: 'getLogs',
-        call: 'klay_getFilterLogs',
+        call: 'kaia_getFilterLogs',
         params: 1
     });
 
     var poll = new Method({
         name: 'poll',
-        call: 'klay_getFilterChanges',
+        call: 'kaia_getFilterChanges',
         params: 1
     });
 
@@ -6553,7 +6553,7 @@ var shh = function () {
 };
 
 module.exports = {
-    klay: klay,
+    kaia: kaia,
     eth: eth,
     shh: shh
 };
@@ -7088,7 +7088,7 @@ var pollSyncing = function(self) {
     };
 
     self.requestManager.startPolling({
-        method: 'klay_syncing',
+        method: 'kaia_syncing',
         params: [],
     }, self.pollId, onMessage, self.stopWatching.bind(self));
 
@@ -7154,23 +7154,23 @@ var exchangeAbi = require('../contracts/SmartExchange.json');
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transfer = function (klay, from, to, value, callback) {
+var transfer = function (kaia, from, to, value, callback) {
     var iban = new Iban(to);
     if (!iban.isValid()) {
         throw new Error('invalid iban address');
     }
 
     if (iban.isDirect()) {
-        return transferToAddress(klay, from, iban.address(), value, callback);
+        return transferToAddress(kaia, from, iban.address(), value, callback);
     }
 
     if (!callback) {
-        var address = klay.icapNamereg().addr(iban.institution());
-        return deposit(klay, from, address, value, iban.client());
+        var address = kaia.icapNamereg().addr(iban.institution());
+        return deposit(kaia, from, address, value, iban.client());
     }
 
-    klay.icapNamereg().addr(iban.institution(), function (err, address) {
-        return deposit(klay, from, address, value, iban.client(), callback);
+    kaia.icapNamereg().addr(iban.institution(), function (err, address) {
+        return deposit(kaia, from, address, value, iban.client(), callback);
     });
 
 };
@@ -7184,8 +7184,8 @@ var transfer = function (klay, from, to, value, callback) {
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transferToAddress = function (klay, from, to, value, callback) {
-    return klay.sendTransaction({
+var transferToAddress = function (kaia, from, to, value, callback) {
+    return kaia.sendTransaction({
         address: to,
         from: from,
         value: value
@@ -7204,7 +7204,7 @@ var transferToAddress = function (klay, from, to, value, callback) {
  */
 var deposit = function (v, from, to, value, client, callback) {
     var abi = exchangeAbi;
-    return klay.contract(abi).at(to).deposit(client, {
+    return kaia.contract(abi).at(to).deposit(client, {
         from: from,
         value: value
     }, callback);

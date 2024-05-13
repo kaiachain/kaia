@@ -351,12 +351,12 @@ func (b *bridge) SleepBlocks(call jsre.Call) (goja.Value, error) {
 	// Poll the current block number until either it or a timeout is reached.
 	deadline := time.Now().Add(time.Duration(sleep) * time.Second)
 	var lastNumber hexutil.Uint64
-	if err := b.client.Call(&lastNumber, "klay_blockNumber"); err != nil {
+	if err := b.client.Call(&lastNumber, "kaia_blockNumber"); err != nil {
 		return nil, err
 	}
 	for time.Now().Before(deadline) {
 		var number hexutil.Uint64
-		if err := b.client.Call(&number, "klay_blockNumber"); err != nil {
+		if err := b.client.Call(&number, "kaia_blockNumber"); err != nil {
 			return nil, err
 		}
 		if number != lastNumber {

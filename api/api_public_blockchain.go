@@ -537,7 +537,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	return formatted, nil
 }
 
-// For klay_getBlockByNumber, klay_getBlockByHash, klay_getBlockWithconsensusInfoByNumber, klay_getBlockWithconsensusInfoByHash APIs
+// For kaia_getBlockByNumber, kaia_getBlockByHash, kaia_getBlockWithconsensusInfoByNumber, kaia_getBlockWithconsensusInfoByHash APIs
 // and Kafka chaindatafetcher.
 func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once

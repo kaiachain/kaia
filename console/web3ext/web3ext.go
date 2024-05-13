@@ -23,7 +23,7 @@ package web3ext
 var Modules = map[string]string{
 	"admin":            Admin_JS,
 	"debug":            Debug_JS,
-	"klay":             Klay_JS,
+	"kaia":             Kaia_JS,
 	"net":              Net_JS,
 	"personal":         Personal_JS,
 	"rpc":              RPC_JS,
@@ -828,21 +828,21 @@ web3._extend({
 });
 `
 
-const Klay_JS = `
+const Kaia_JS = `
 var blockWithConsensusInfoCall = function (args) {
-    return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "klay_getBlockWithConsensusInfoByHash" : "klay_getBlockWithConsensusInfoByNumber";
+    return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? "kaia_getBlockWithConsensusInfoByHash" : "kaia_getBlockWithConsensusInfoByNumber";
 };
 
 web3._extend({
-	property: 'klay',
+	property: 'kaia',
 	methods: [
 		new web3._extend.Method({
 			name: 'clientVersion',
-			call: 'klay_clientVersion',
+			call: 'kaia_clientVersion',
 		}),
 		new web3._extend.Method({
 			name: 'getBlockReceipts',
-			call: 'klay_getBlockReceipts',
+			call: 'kaia_getBlockReceipts',
 			params: 1,
 			outputFormatter: function(receipts) {
 				return receipts.map(web3._extend.formatters.outputTransactionReceiptFormatter);
@@ -850,115 +850,115 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'sign',
-			call: 'klay_sign',
+			call: 'kaia_sign',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'resend',
-			call: 'klay_resend',
+			call: 'kaia_resend',
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter, web3._extend.utils.fromDecimal, web3._extend.utils.fromDecimal]
 		}),
 		new web3._extend.Method({
 			name: 'signTransaction',
-			call: 'klay_signTransaction',
+			call: 'kaia_signTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'signTransactionAsFeePayer',
-			call: 'klay_signTransactionAsFeePayer',
+			call: 'kaia_signTransactionAsFeePayer',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'sendTransactionAsFeePayer',
-			call: 'klay_sendTransactionAsFeePayer',
+			call: 'kaia_sendTransactionAsFeePayer',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getCouncil',
-			call: 'klay_getCouncil',
+			call: 'kaia_getCouncil',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getCouncilSize',
-			call: 'klay_getCouncilSize',
+			call: 'kaia_getCouncilSize',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getCommittee',
-			call: 'klay_getCommittee',
+			call: 'kaia_getCommittee',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getCommitteeSize',
-			call: 'klay_getCommitteeSize',
+			call: 'kaia_getCommitteeSize',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getRewards',
-			call: 'klay_getRewards',
+			call: 'kaia_getRewards',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getStakingInfo',
-			call: 'klay_getStakingInfo',
+			call: 'kaia_getStakingInfo',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getParams',
-			call: 'klay_getParams',
+			call: 'kaia_getParams',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getChainConfig',
-			call: 'klay_getChainConfig',
+			call: 'kaia_getChainConfig',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getActiveAddressFromRegistry',
-			call: 'klay_getActiveAddressFromRegistry',
+			call: 'kaia_getActiveAddressFromRegistry',
 			params: 2,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getAllRecordsFromRegistry',
-			call: 'klay_getAllRecordsFromRegistry',
+			call: 'kaia_getAllRecordsFromRegistry',
 			params: 2,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'accountCreated',
-			call: 'klay_accountCreated',
+			call: 'kaia_accountCreated',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getAccount',
-			call: 'klay_getAccount',
+			call: 'kaia_getAccount',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getHeaderByNumber',
-			call: 'klay_getHeaderByNumber',
+			call: 'kaia_getHeaderByNumber',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getHeaderByHash',
-			call: 'klay_getHeaderByHash',
+			call: 'kaia_getHeaderByHash',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -969,122 +969,122 @@ web3._extend({
 		}),
 		new web3._extend.Method({
 			name: 'getBlockWithConsensusInfoRange',
-			call: 'klay_getBlockWithConsensusInfoByNumberRange',
+			call: 'kaia_getBlockWithConsensusInfoByNumberRange',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getBlsInfos',
-			call: 'klay_getBlsInfos',
+			call: 'kaia_getBlsInfos',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'isContractAccount',
-			call: 'klay_isContractAccount',
+			call: 'kaia_isContractAccount',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'submitTransaction',
-			call: 'klay_submitTransaction',
+			call: 'kaia_submitTransaction',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransaction',
-			call: 'klay_getRawTransactionByHash',
+			call: 'kaia_getRawTransactionByHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'estimateComputationCost',
-			call: 'klay_estimateComputationCost',
+			call: 'kaia_estimateComputationCost',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getAccountKey',
-			call: 'klay_getAccountKey',
+			call: 'kaia_getAccountKey',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, web3._extend.formatters.inputDefaultBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getRawTransactionFromBlock',
 			call: function(args) {
-				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'klay_getRawTransactionByBlockHashAndIndex' : 'klay_getRawTransactionByBlockNumberAndIndex';
+				return (web3._extend.utils.isString(args[0]) && args[0].indexOf('0x') === 0) ? 'kaia_getRawTransactionByBlockHashAndIndex' : 'kaia_getRawTransactionByBlockNumberAndIndex';
 			},
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
 		new web3._extend.Method({
 			name: 'isParallelDBWrite',
-			call: 'klay_isParallelDBWrite',
+			call: 'kaia_isParallelDBWrite',
 		}),
 		new web3._extend.Method({
 			name: 'isSenderTxHashIndexingEnabled',
-			call: 'klay_isSenderTxHashIndexingEnabled',
+			call: 'kaia_isSenderTxHashIndexingEnabled',
 		}),
 		new web3._extend.Method({
 			name: 'getTransactionBySenderTxHash',
-			call: 'klay_getTransactionBySenderTxHash',
+			call: 'kaia_getTransactionBySenderTxHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'getTransactionReceiptBySenderTxHash',
-			call: 'klay_getTransactionReceiptBySenderTxHash',
+			call: 'kaia_getTransactionReceiptBySenderTxHash',
 			params: 1
 		}),
 		new web3._extend.Method({
 			name: 'recoverFromTransaction',
-			call: 'klay_recoverFromTransaction',
+			call: 'kaia_recoverFromTransaction',
 			params: 2
 		}),
 		new web3._extend.Method({
 			name: 'recoverFromMessage',
-			call: 'klay_recoverFromMessage',
+			call: 'kaia_recoverFromMessage',
 			params: 4
 		}),
 		new web3._extend.Method({
 			name: 'getCypressCredit',
-			call: 'klay_getCypressCredit',
+			call: 'kaia_getCypressCredit',
 		}),
 		new web3._extend.Method({
 			name: 'sha3',
-			call: 'klay_sha3',
+			call: 'kaia_sha3',
 			params: 1,
 			inputFormatter: [web3._extend.utils.toHex],
 		}),
 		new web3._extend.Method({
 			name: 'forkStatus',
-			call: 'klay_forkStatus',
+			call: 'kaia_forkStatus',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'encodeAccountKey',
-			call: 'klay_encodeAccountKey',
+			call: 'kaia_encodeAccountKey',
 			params: 1,
 		}),
 		new web3._extend.Method({
 			name: 'decodeAccountKey',
-			call: 'klay_decodeAccountKey',
+			call: 'kaia_decodeAccountKey',
 			params: 1,
 		}),
 		new web3._extend.Method({
 			name: 'createAccessList',
-			call: 'klay_createAccessList',
+			call: 'kaia_createAccessList',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputCallFormatter, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'feeHistory',
-			call: 'klay_feeHistory',
+			call: 'kaia_feeHistory',
 			params: 3,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
 		new web3._extend.Method({
 			name: 'getProof',
-			call: 'klay_getProof',
+			call: 'kaia_getProof',
 			params: 3,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
 		}),
@@ -1092,7 +1092,7 @@ web3._extend({
 	properties: [
 		new web3._extend.Property({
 			name: 'pendingTransactions',
-			getter: 'klay_pendingTransactions',
+			getter: 'kaia_pendingTransactions',
 			outputFormatter: function(txs) {
 				var formatted = [];
 				for (var i = 0; i < txs.length; i++) {
@@ -1104,30 +1104,30 @@ web3._extend({
 		}),
 		new web3._extend.Property({
 			name: 'nodeAddress',
-			getter: 'klay_nodeAddress',
+			getter: 'kaia_nodeAddress',
 		}),
         new web3._extend.Property({
             name : 'rewardbase',
-            getter: 'klay_rewardbase'
+            getter: 'kaia_rewardbase'
         }),
         new web3._extend.Property({
             name : 'gasPrice',
-            getter: 'klay_gasPrice',
+            getter: 'kaia_gasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
         new web3._extend.Property({
             name : 'upperBoundGasPrice',
-            getter: 'klay_upperBoundGasPrice',
+            getter: 'kaia_upperBoundGasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
         new web3._extend.Property({
             name : 'lowerBoundGasPrice',
-            getter: 'klay_lowerBoundGasPrice',
+            getter: 'kaia_lowerBoundGasPrice',
             outputFormatter: web3._extend.formatters.outputBigNumberFormatter
         }),
 		new web3._extend.Property({
 			name: 'maxPriorityFeePerGas',
-			getter: 'klay_maxPriorityFeePerGas',
+			getter: 'kaia_maxPriorityFeePerGas',
 			outputFormatter: web3._extend.utils.toBigNumber
 		}),
 	]
