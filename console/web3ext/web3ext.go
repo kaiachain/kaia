@@ -23,8 +23,8 @@ package web3ext
 var Modules = map[string]string{
 	"admin":            Admin_JS,
 	"debug":            Debug_JS,
-	"kaia":             Kaia_JS,
-	"klay":             Klay_JS,
+	"kaia":             Klay_JS + Kaia_JS,
+	"klay":             Klay_JS + Kaia_JS,
 	"net":              Net_JS,
 	"personal":         Personal_JS,
 	"rpc":              RPC_JS,

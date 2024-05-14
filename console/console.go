@@ -197,8 +197,8 @@ func (c *Console) initExtensions() error {
 		}
 	}
 
-	// Compute aliases from server-provided modules.
-	aliases := map[string]struct{}{"kaia": {}, "eth": {}}
+	// Compute aliases from server-provided modules. (web3.kaia -> kaia)
+	aliases := map[string]struct{}{"kaia": {}, "klay": {}, "eth": {}}
 	for api := range apis {
 		if api == "web3" {
 			continue
