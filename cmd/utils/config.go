@@ -67,7 +67,7 @@ import (
 )
 
 const (
-	ClientIdentifier = "kaia" // Client identifier to advertise over the network
+	ClientIdentifier = "klay" // Client identifier to advertise over the network
 	SCNNetworkType   = "scn"  // Service Chain Network
 	MNNetworkType    = "mn"   // Mainnet Network
 	gitCommit        = ""
