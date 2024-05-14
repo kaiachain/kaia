@@ -285,13 +285,8 @@ func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
 		return nil, fmt.Errorf("failed to get header by number %d", blockNum)
 	}
 
-	state, err := stakingManager.blockchain.StateAt(header.Root)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get state at %s", header.Root.Hex())
-	}
-
 	// Get staking info from multicall contract
-	caller, err := system.NewMultiCallContractCaller(state, stakingManager.blockchain, header)
+	caller, err := system.NewMultiCallContractCaller(stakingManager.blockchain, header)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create multicall contract caller. root err: %s", err)
 	}

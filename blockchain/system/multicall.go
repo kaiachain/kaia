@@ -73,8 +73,11 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 }
 
 // NewMultiCallContractCaller creates a new instance of ContractCaller for MultiCall contract.
-// The state should be a new instance of StateDB obtained from StateAt() or State().
-func NewMultiCallContractCaller(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header) (*multicall.MultiCallContractCaller, error) {
+func NewMultiCallContractCaller(chain backends.BlockChainForCaller, header *types.Header) (*multicall.MultiCallContractCaller, error) {
+	state, err := chain.StateAt(header.Root)
+	if err != nil {
+		return nil, err
+	}
 	c := &ContractCallerForMultiCall{state, chain, header}
 	return multicall.NewMultiCallContractCaller(MultiCallAddr, c)
 }
