@@ -593,7 +593,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 
 func genLegacyValueTransfer(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx := types.NewTransaction(from.Nonce, to.Addr, amount, gasLimit, gasPrice, []byte{})
 	err := tx.SignWithKeys(signer, from.Keys)
 	if err != nil {
@@ -605,7 +605,7 @@ func genLegacyValueTransfer(signer types.Signer, from *TestAccountType, to *Test
 
 func genNewValueTransfer(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.Nonce,
 		types.TxValueKeyTo:       to.Addr,
@@ -628,7 +628,7 @@ func genNewValueTransfer(signer types.Signer, from *TestAccountType, to *TestAcc
 
 func genLegacySmartContractDeploy(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(0)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	data := common.Hex2Bytes("608060405234801561001057600080fd5b506101de806100206000396000f3006080604052600436106100615763ffffffff7c01000000000000000000000000000000000000000000000000000000006000350416631a39d8ef81146100805780636353586b146100a757806370a08231146100ca578063fd6b7ef8146100f8575b3360009081526001602052604081208054349081019091558154019055005b34801561008c57600080fd5b5061009561010d565b60408051918252519081900360200190f35b6100c873ffffffffffffffffffffffffffffffffffffffff60043516610113565b005b3480156100d657600080fd5b5061009573ffffffffffffffffffffffffffffffffffffffff60043516610147565b34801561010457600080fd5b506100c8610159565b60005481565b73ffffffffffffffffffffffffffffffffffffffff1660009081526001602052604081208054349081019091558154019055565b60016020526000908152604090205481565b336000908152600160205260408120805490829055908111156101af57604051339082156108fc029083906000818181858888f193505050501561019c576101af565b3360009081526001602052604090208190555b505600a165627a7a72305820627ca46bb09478a015762806cc00c431230501118c7c26c30ac58c4e09e51c4f0029")
 	tx := types.NewContractCreation(from.Nonce, amount, gasLimit, gasPrice, data)
 	err := tx.SignWithKeys(signer, from.Keys)
@@ -641,7 +641,7 @@ func genLegacySmartContractDeploy(signer types.Signer, from *TestAccountType, to
 
 func genNewSmartContractDeploy(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(0)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
 		types.TxValueKeyAmount:        amount,
@@ -681,7 +681,7 @@ func genAccountKeyWeightedMultisig() (accountkey.AccountKey, []*ecdsa.PrivateKey
 }
 
 func genNewAccountUpdateMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	keys, prvKeys := genAccountKeyWeightedMultisig()
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
@@ -716,7 +716,7 @@ func genAccountKeyRoleBasedSingle() (accountkey.AccountKey, []*ecdsa.PrivateKey)
 }
 
 func genNewAccountUpdateRoleBasedSingle(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	keys, prvKeys := genAccountKeyRoleBasedSingle()
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
@@ -767,7 +767,7 @@ func genAccountKeyRoleBasedMultisig3() (accountkey.AccountKey, []*ecdsa.PrivateK
 }
 
 func genNewAccountUpdateRoleBasedMultisig3(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	keys, prvKeys := genAccountKeyRoleBasedMultisig3()
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:         from.Nonce,
@@ -793,7 +793,7 @@ func genNewAccountUpdateRoleBasedMultisig3(signer types.Signer, from *TestAccoun
 
 func genNewFeeDelegatedValueTransfer(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransfer, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.Nonce,
 		types.TxValueKeyTo:       to.Addr,
@@ -822,7 +822,7 @@ func genNewFeeDelegatedValueTransfer(signer types.Signer, from *TestAccountType,
 
 func genNewFeeDelegatedValueTransferWithRatio(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:              from.Nonce,
 		types.TxValueKeyTo:                 to.Addr,
@@ -852,7 +852,7 @@ func genNewFeeDelegatedValueTransferWithRatio(signer types.Signer, from *TestAcc
 
 func genLegacySmartContractExecution(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	data := common.Hex2Bytes("6353586b000000000000000000000000bc5951f055a85f41a3b62fd6f68ab7de76d299b2")
 	tx := types.NewTransaction(from.Nonce, to.Addr, amount, gasLimit, gasPrice, data)
 	err := tx.SignWithKeys(signer, from.Keys)
@@ -865,7 +865,7 @@ func genLegacySmartContractExecution(signer types.Signer, from *TestAccountType,
 
 func genNewSmartContractExecution(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
 	amount := big.NewInt(100)
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.Nonce,
 		types.TxValueKeyTo:       to.Addr,
@@ -889,7 +889,7 @@ func genNewSmartContractExecution(signer types.Signer, from *TestAccountType, to
 }
 
 func genNewAccountUpdateAccountKeyPublic(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	k, _ := crypto.GenerateKey()
 	tx, err := types.NewTransactionWithMap(types.TxTypeAccountUpdate, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.Nonce,
@@ -914,7 +914,7 @@ func genNewAccountUpdateAccountKeyPublic(signer types.Signer, from *TestAccountT
 }
 
 func genNewCancel(signer types.Signer, from *TestAccountType, to *TestAccountType) *types.Transaction {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
 	tx, err := types.NewTransactionWithMap(types.TxTypeCancel, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.Nonce,
 		types.TxValueKeyGasLimit: gasLimit,

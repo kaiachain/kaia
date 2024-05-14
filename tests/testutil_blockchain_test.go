@@ -61,7 +61,7 @@ type blockchainTestOverrides struct {
 var blockchainTestChainConfig = &params.ChainConfig{
 	ChainID:       big.NewInt(31337),
 	DeriveShaImpl: 2,
-	UnitPrice:     25 * params.Ston,
+	UnitPrice:     25 * params.Gwei,
 	Governance: &params.GovernanceConfig{
 		GovernanceMode: "none",
 		Reward: &params.RewardConfig{

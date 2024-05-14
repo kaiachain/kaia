@@ -92,7 +92,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.UnitPrice = 25 * params.Ston
+	genesis.Config.UnitPrice = 25 * params.Gwei
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {

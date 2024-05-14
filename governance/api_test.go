@@ -229,7 +229,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 			Number:     big.NewInt(int64(i)),
 			Rewardbase: stInfo.CouncilRewardAddrs[i%4], // round-robin way
 			GasUsed:    uint64(1000),
-			BaseFee:    big.NewInt(25 * params.Ston),
+			BaseFee:    big.NewInt(25 * params.Gwei),
 			Time:       big.NewInt(int64(1000 + i)),
 		})
 
@@ -253,7 +253,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	blockMinted, _ := new(big.Int).SetString("9600000000000000000", 10)  // 9.6 KAIA
 	blockProposer, _ := new(big.Int).SetString("960000000000000000", 10) // 0.96 KAIA = 9.6 KAIA * 0.5 * 0.2
 	blockStaking, _ := new(big.Int).SetString("3840000000000000000", 10) // 3.84 KAIA = 9.6 KAIA * 0.5 * 0.8
-	blockTxFee, _ := new(big.Int).SetString("25000000000000", 10)        // 25000 Ston = 1000 * 25 Ston
+	blockTxFee, _ := new(big.Int).SetString("25000000000000", 10)        // 25000 gwei = 1000 * 25 gwei
 	blockTxBurnt := blockTxFee
 	blockKFF, _ := new(big.Int).SetString("1920000000000000000", 10) //  1.92 KAIA = 9.6 KAIA * 0.2
 	blockKCF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KAIA = 9.6 KAIA * 0.3

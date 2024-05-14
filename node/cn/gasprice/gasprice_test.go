@@ -116,8 +116,8 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend,
 				AccountNonce: b.TxNonce(addr),
 				Recipient:    &common.Address{},
 				GasLimit:     30000,
-				GasFeeCap:    big.NewInt(100 * params.Ston),
-				GasTipCap:    big.NewInt(int64(i+1) * params.Ston),
+				GasFeeCap:    big.NewInt(100 * params.Gwei),
+				GasTipCap:    big.NewInt(int64(i+1) * params.Gwei),
 				Payload:      []byte{},
 				Amount:       big.NewInt(100),
 			}
@@ -126,7 +126,7 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend,
 				AccountNonce: b.TxNonce(addr),
 				Recipient:    &common.Address{},
 				GasLimit:     21000,
-				Price:        big.NewInt(int64(i+1) * params.Ston),
+				Price:        big.NewInt(int64(i+1) * params.Gwei),
 				Amount:       big.NewInt(100),
 				Payload:      []byte{},
 			}
@@ -234,7 +234,7 @@ func TestSuggestTipCap(t *testing.T) {
 	config := Config{
 		Blocks:           3,
 		Percentile:       60,
-		Default:          big.NewInt(params.Ston),
+		Default:          big.NewInt(params.Gwei),
 		MaxHeaderHistory: 30,
 		MaxBlockHistory:  30,
 	}
@@ -249,10 +249,10 @@ func TestSuggestTipCap(t *testing.T) {
 		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Kaia fork, should return 0
 
 		// After Kaia fork
-		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Ston * int64(30))},   // Fork point in genesis
-		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Ston * int64(30))},   // Fork point in first block
-		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Ston * int64(30))}, // Fork point in last block
-		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Ston * int64(30))}, // Fork point in the future
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gwei * int64(30))},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gwei * int64(30))},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gwei * int64(30))}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gwei * int64(30))}, // Fork point in the future
 	}
 	for _, c := range cases {
 		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)

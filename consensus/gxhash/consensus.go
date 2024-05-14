@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in peb for successfully mining a block upward from Byzantium
+	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in wei for successfully mining a block upward from Byzantium
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 )
 

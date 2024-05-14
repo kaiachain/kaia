@@ -92,7 +92,7 @@ func TestAccountCreationDisable(t *testing.T) {
 			types.TxValueKeyTo:            anon.Addr,
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gwei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    anon.AccKey,
 		}

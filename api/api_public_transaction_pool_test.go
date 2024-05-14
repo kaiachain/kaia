@@ -50,7 +50,7 @@ var internalDataTypes = map[types.TxType]interface{}{
 var (
 	testNonce         = hexutil.Uint64(0)
 	testGas           = hexutil.Uint64(900000)
-	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Ston))
+	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Gwei))
 	testValue         = (*hexutil.Big)(big.NewInt(1))
 	testTo            = common.StringToAddress("1234")
 	testFeePayer      = common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1")
