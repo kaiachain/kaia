@@ -360,7 +360,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-		reward.NewStakingManager(cn.blockchain, cn.governance, cn.chainDB)
 	}
 	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB, config.TrieBlockInterval)
 
