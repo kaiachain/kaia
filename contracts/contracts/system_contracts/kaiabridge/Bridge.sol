@@ -35,14 +35,14 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     /// @param initGuardian guardian address
     /// @param initJudge Judge contract address
     function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer) public initializer {
-        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridger: Operator contract address does not implement IOperator");
+        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridge: Operator contract address does not implement IOperator");
         __ReentrancyGuard_init();
         greatestConfirmedSeq = 0;
         nProvisioned = 0;
         judge = initJudge;
         addrValidationOn = true;
-        minLockableKAIA = 1 * KAIA_UNIT;       // 1 KLAY
-        maxLockableKAIA = 1000000 * KAIA_UNIT; // 1M KLAY
+        minLockableKAIA = 1 * KAIA_UNIT;       // 1 KAIA
+        maxLockableKAIA = 1000000 * KAIA_UNIT; // 1M KAIA
         seq = 1;
         maxTryTransfer = newMaxTryTransfer;
 
@@ -399,7 +399,7 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
         return EnumerableSetUint64.getRange(claimFailures, range);
     }
 
-    /// @dev Receive KLAY
+    /// @dev Receive KAIA
     receive() external payable {
         emit KAIACharged(msg.sender, msg.value);
     }

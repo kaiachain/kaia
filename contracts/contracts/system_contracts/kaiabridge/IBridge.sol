@@ -154,7 +154,7 @@ abstract contract IBridge {
     /// @param set Enable transfer function if it is true
     function changeTransferEnable(bool set) external virtual;
 
-    /// @dev A gateway function that triggers token swap between FNSA and KLAY
+    /// @dev A gateway function that triggers token swap between FNSA and KAIA
     /// @param prov Burning provision
     function provision(ProvisionData calldata prov) external virtual;
 
