@@ -35,13 +35,13 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     /// @param initGuardian guardian address
     /// @param initJudge Judge contract address
     function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer) public initializer {
-        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "PDT::Bridger: Operator contract address does not implement IOperator");
+        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridger: Operator contract address does not implement IOperator");
         greatestConfirmedSeq = 0;
         nProvisioned = 0;
         judge = initJudge;
         addrValidationOn = true;
-        minLockablePDT = 1 * PDT_UNIT;       // 1 KLAY
-        maxLockablePDT = 1000000 * PDT_UNIT; // 1M KLAY
+        minLockableKAIA = 1 * KAIA_UNIT;       // 1 KLAY
+        maxLockableKAIA = 1000000 * KAIA_UNIT; // 1M KLAY
         seq = 1;
         maxTryTransfer = newMaxTryTransfer;
 
@@ -74,7 +74,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         notPause
     {
         uint64 seq = prov.seq;
-        require(!isProvisioned(seq), "PDT::Bridge: A provision was submitted before");
+        require(!isProvisioned(seq), "KAIA::Bridge: A provision was submitted before");
         provisions[seq] = prov;
         nProvisioned += 1;
         updateGreatestConfirmedSeq(seq);
@@ -89,7 +89,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         IOperator(operator).unmarkRevokeSeq(seq);
     }
 
-    /// @dev request claim(mint) to PDTPool contract
+    /// @dev request claim(mint) to KAIAPool contract
     /// @param seq Sequence number
     /// @param revertOnFail Make reverts if operations fails and the value is true, otherwise no make revert, but record its failure
     function doRequestClaim(uint64 seq, bool revertOnFail) internal returns (bool) {
@@ -107,9 +107,9 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
     /// @dev See {IBridge-requestClaim}
     function requestClaim(uint64 seq) public override returns (bool) {
-        require(isProvisioned(seq), "PDT::Bridge: No provisoned for corresponding sequence");
-        require(!claimed[seq], "PDT::Bridge: A provision corresponding the given sequence was already claimed");
-        require(isPassedTimeLockDuration(seq), "PDT::Bridge: TimeLock duration is not passed over");
+        require(isProvisioned(seq), "KAIA::Bridge: No provisoned for corresponding sequence");
+        require(!claimed[seq], "KAIA::Bridge: A provision corresponding the given sequence was already claimed");
+        require(isPassedTimeLockDuration(seq), "KAIA::Bridge: TimeLock duration is not passed over");
         return doRequestClaim(seq, true);
     }
 
@@ -139,7 +139,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
     /// @dev See {IBridge-removeProvision}
     function removeProvision(uint64 seq) public override onlyGuardian {
-        require(isProvisioned(seq), "PDT::Bridge: No provisoned for corresponding sequence");
+        require(isProvisioned(seq), "KAIA::Bridge: No provisoned for corresponding sequence");
 
         setTransferTimeLock(seq, 0);
         nProvisioned -= 1;
@@ -154,11 +154,11 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
     /// @dev See {IBridge-resolveUnclaimabl}
     function resolveUnclaimable(uint64 seq, address newReceiver) public override onlyGuardian {
-        require(isProvisioned(seq), "PDT::Bridge: No provisoned for corresponding sequence");
-        require(!claimed[seq], "PDT::Bridge: A provision corresponding the given sequence was already claimed");
-        require(isPassedTimeLockDuration(seq), "PDT::Bridge: TimeLock duration is not passed over");
-        require(EnumerableSetUint64.setContains(claimFailures, seq), "PDT::Bridge: Must be in claim failure set");
-        require(!isContract(newReceiver), "PDT::Bridge: newReceiver must not be contract address");
+        require(isProvisioned(seq), "KAIA::Bridge: No provisoned for corresponding sequence");
+        require(!claimed[seq], "KAIA::Bridge: A provision corresponding the given sequence was already claimed");
+        require(isPassedTimeLockDuration(seq), "KAIA::Bridge: TimeLock duration is not passed over");
+        require(EnumerableSetUint64.setContains(claimFailures, seq), "KAIA::Bridge: Must be in claim failure set");
+        require(!isContract(newReceiver), "KAIA::Bridge: newReceiver must not be contract address");
 
         emit ProvisionReceiverChanged(provisions[seq].receiver, newReceiver);
         provisions[seq].receiver = newReceiver;
@@ -175,16 +175,16 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         }
     }
 
-    /// @dev See {IBridge-changeMinLockablePDT}
-    function changeMinLockablePDT(uint256 newMinLockablePDT) public override onlyGuardian {
-        emit MinLockablePDTChange(minLockablePDT, newMinLockablePDT);
-        minLockablePDT = newMinLockablePDT;
+    /// @dev See {IBridge-changeMinLockableKAIA}
+    function changeMinLockableKAIA(uint256 newMinLockableKAIA) public override onlyGuardian {
+        emit MinLockableKAIAChange(minLockableKAIA, newMinLockableKAIA);
+        minLockableKAIA = newMinLockableKAIA;
     }
 
-    /// @dev See {IBridge-changeMaxLockablePDT}
-    function changeMaxLockablePDT(uint256 newMaxLockablePDT) public override onlyGuardian {
-        emit MaxLockablePDTChange(minLockablePDT, newMaxLockablePDT);
-        maxLockablePDT = newMaxLockablePDT;
+    /// @dev See {IBridge-changeMaxLockableKAIA}
+    function changeMaxLockableKAIA(uint256 newMaxLockableKAIA) public override onlyGuardian {
+        emit MaxLockableKAIAChange(minLockableKAIA, newMaxLockableKAIA);
+        maxLockableKAIA = newMaxLockableKAIA;
     }
 
     /// @dev See {IBridge-changeMaxTryTransfer}
@@ -208,10 +208,10 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         notPause
     {
         if (addrValidationOn) {
-            require(verifyAddrFNSA(receiver, false), "PDT::Bridge: Receiver address is invalid");
+            require(verifyAddrFNSA(receiver, false), "KAIA::Bridge: Receiver address is invalid");
         }
-        require(msg.value >= minLockablePDT, "PDT::Bridge: Locked PDT must be larger than minimum");
-        require(msg.value <= maxLockablePDT, "PDT::Bridge: Locked PDT must be less than maximum");
+        require(msg.value >= minLockableKAIA, "KAIA::Bridge: Locked KAIA must be larger than minimum");
+        require(msg.value <= maxLockableKAIA, "KAIA::Bridge: Locked KAIA must be less than maximum");
         seq2BlockNum[seq] = block.number;
         SwapRequest memory swapReq = SwapRequest({
             seq: seq++,
@@ -223,7 +223,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         emit Transfer(swapReq);
     }
 
-    /// @dev Transfer PDT to receiver with the specified amount in the provision
+    /// @dev Transfer KAIA to receiver with the specified amount in the provision
     /// @param prov ProvisionData
     /// @param revertOnFail Make reverts if operations fails and the value is true, otherwise no make revert, but record its failure
     function claim(ProvisionData memory prov, bool revertOnFail)
@@ -239,7 +239,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         }("");
         if (!sent) {
             if (revertOnFail) {
-                revert("PDT::Bridge: Failed to transfer amount of provision");
+                revert("KAIA::Bridge: Failed to transfer amount of provision");
             }
             if (transferFail[prov.seq]++ > maxTryTransfer) {
                 EnumerableSetUint64.setRemove(claimCandidates, prov.seq);
@@ -359,7 +359,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
     /// @dev See {IBridge-getSwapRequests}
     function getSwapRequests(uint256 from, uint256 to) public override view returns (SwapRequest[] memory) {
-        require(to > from, "PDT::Bridge: Invalid from and to");
+        require(to > from, "KAIA::Bridge: Invalid from and to");
         if (to > locked.length) {
             to = locked.length;
         }
@@ -399,7 +399,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
     /// @dev Receive KLAY
     receive() external payable {
-        emit PDTCharged(msg.sender, msg.value);
+        emit KAIACharged(msg.sender, msg.value);
     }
 
     function newFunc() public pure returns (uint) {

@@ -202,7 +202,7 @@ describe("[Bridge Test]", function () {
     let setTime = mintLock - 2;
     await addTime(setTime);
     await expect(bridge.requestClaim(seq))
-      .to.be.revertedWith("PDT::Bridge: TimeLock duration is not passed over")
+      .to.be.revertedWith("KAIA::Bridge: TimeLock duration is not passed over")
     expect(await getBalance(receiver)).to.equal(0n);
 
     setTime = mintLock;
@@ -215,11 +215,11 @@ describe("[Bridge Test]", function () {
     const provision = [seq, sender, receiver, amount];
     let rawTxData = (await bridge.populateTransaction.provision(provision)).data;
     expect(operator.connect(unknown).submitTransaction(bridge.address, rawTxData, 0))
-      .to.be.revertedWith("PDT::Operator: Not an operator");
+      .to.be.revertedWith("KAIA::Operator: Not an operator");
 
     await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
     await expect(operator.connect(unknown).confirmTransaction(txID))
-      .to.be.revertedWith("PDT::Operator: Not an operator");
+      .to.be.revertedWith("KAIA::Operator: Not an operator");
   });
 
   it("#authroization test - requestClaim", async function () {
@@ -230,7 +230,7 @@ describe("[Bridge Test]", function () {
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await expect(guardian.connect(unknown).confirmTransaction(guardianTxID))
-      .to.be.revertedWith("PDT::Guardian: Not an guardian");
+      .to.be.revertedWith("KAIA::Guardian: Not an guardian");
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
     expect(await bridge.TRANSFERLOCK()).to.equal(DAY);
   });
@@ -256,14 +256,14 @@ describe("[Bridge Test]", function () {
     await addTime(mintLock);
     await bridge.requestClaim(seq);
     await expect(bridge.requestClaim(seq))
-      .to.be.revertedWith("PDT::Bridge: A provision corresponding the given sequence was already claimed");
+      .to.be.revertedWith("KAIA::Bridge: A provision corresponding the given sequence was already claimed");
   });
 
   it("#transfer test - not verified provision", async function () {
     const mintLock = Number(await bridge.TRANSFERLOCK());
     await addTime(mintLock);
     await expect(bridge.requestClaim(seq))
-      .to.be.revertedWith("PDT::Bridge: No provisoned for corresponding sequence");
+      .to.be.revertedWith("KAIA::Bridge: No provisoned for corresponding sequence");
   });
 
   it("#transfer test - execution fail by fallback code(contract receiver)", async function () {
@@ -286,7 +286,7 @@ describe("[Bridge Test]", function () {
     expect(await bridge.transferFail(seq)).to.equal(0);
     // `revertOnFail` is fixed with `true` in `requestClaim`
     await expect(bridge.requestClaim(seq, {gasLimit: gasSmall}))
-      .to.be.revertedWith("PDT::Bridge: Failed to transfer amount of provision");
+      .to.be.revertedWith("KAIA::Bridge: Failed to transfer amount of provision");
 
     // `revertOnFail` is fixed with `false` in `requestBatchClaim`
     await bridge.requestBatchClaim(1, {gasLimit: gasSmall})
@@ -396,7 +396,7 @@ describe("[Bridge Test]", function () {
 
   it("#bridge pause - transfer is not available", async function () {
     // `transfer()` is available before paused
-    await expect(bridge.transfer(fnsaReceiver, {value: await bridge.minLockablePDT()}))
+    await expect(bridge.transfer(fnsaReceiver, {value: await bridge.minLockableKAIA()}))
       .to.emit(bridge, "Transfer");
 
     expect(await bridge.pause()).to.equal(false);
@@ -409,8 +409,8 @@ describe("[Bridge Test]", function () {
     expect(await bridge.pause()).to.equal(true);
 
     // `transfer()` is not available after paused
-    await expect(bridge.transfer(fnsaReceiver, {value: await bridge.minLockablePDT()}))
-      .to.revertedWith("PDT::Bridge: Bridge has been paused");
+    await expect(bridge.transfer(fnsaReceiver, {value: await bridge.minLockableKAIA()}))
+      .to.revertedWith("KAIA::Bridge: Bridge has been paused");
   });
 
   it("#bridge pause - provision is not available", async function () {
@@ -424,7 +424,7 @@ describe("[Bridge Test]", function () {
     await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
     await operator.connect(operator2).confirmTransaction(1);
     await expect(operator.connect(operator3).confirmTransaction(1))
-      .to.revertedWith("PDT::Bridge: Bridge has been paused");
+      .to.revertedWith("KAIA::Bridge: Bridge has been paused");
   });
 
   it("#bridge pause - resume", async function () {
@@ -440,7 +440,7 @@ describe("[Bridge Test]", function () {
     await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
     await operator.connect(operator2).confirmTransaction(1);
     await expect(operator.connect(operator3).confirmTransaction(1))
-      .to.revertedWith("PDT::Bridge: Bridge has been paused");
+      .to.revertedWith("KAIA::Bridge: Bridge has been paused");
 
     // resume
     rawTxData = (await bridge.populateTransaction.resumeBridge("Bridge resumed")).data;
@@ -934,28 +934,28 @@ describe("[Bridge Test]", function () {
     expect(await bridge.nProvisioned()).to.be.equal(1);
   });
 
-  it("#change minimum lockable PDT", async function () {
-    const newMinLockablePDT = BigInt((await bridge.PDT_UNIT()) * 2);
-    expect(await bridge.minLockablePDT()).to.not.equal(newMinLockablePDT);
+  it("#change minimum lockable KAIA", async function () {
+    const newMinLockableKAIA = BigInt((await bridge.KAIA_UNIT()) * 2);
+    expect(await bridge.minLockableKAIA()).to.not.equal(newMinLockableKAIA);
 
-    let rawTxData = (await bridge.populateTransaction.changeMinLockablePDT(newMinLockablePDT)).data;
+    let rawTxData = (await bridge.populateTransaction.changeMinLockableKAIA(newMinLockableKAIA)).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
 
-    expect(await bridge.minLockablePDT()).to.equal(newMinLockablePDT);
+    expect(await bridge.minLockableKAIA()).to.equal(newMinLockableKAIA);
   });
 
-  it("#change maximum lockable PDT", async function () {
-    const newMaxLockablePDT = BigInt((await bridge.PDT_UNIT()) * 200);
-    expect(await bridge.maxLockablePDT()).to.not.equal(newMaxLockablePDT);
+  it("#change maximum lockable KAIA", async function () {
+    const newMaxLockableKAIA = BigInt((await bridge.KAIA_UNIT()) * 200);
+    expect(await bridge.maxLockableKAIA()).to.not.equal(newMaxLockableKAIA);
 
-    let rawTxData = (await bridge.populateTransaction.changeMaxLockablePDT(newMaxLockablePDT)).data;
+    let rawTxData = (await bridge.populateTransaction.changeMaxLockableKAIA(newMaxLockableKAIA)).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
 
-    expect(await bridge.maxLockablePDT()).to.equal(newMaxLockablePDT);
+    expect(await bridge.maxLockableKAIA()).to.equal(newMaxLockableKAIA);
   });
 
   it("#change maxTryTransfer", async function () {
@@ -989,23 +989,23 @@ describe("[Bridge Test]", function () {
     expect(await bridge.seq2BlockNum(seq + 3)).to.be.equal(0);
   });
 
-  it("#Transfer PDT (swap request)", async function () {
-    const underMinLockablePDT = BigInt(1);
-    const upperMinLockablePDT = BigInt(1 * 10e18);
-    const upperMaxLockablePDT = BigInt(10000000 * 10e18);
-    await expect(bridge.transfer(fnsaReceiver, {value: underMinLockablePDT}))
-      .revertedWith("PDT::Bridge: Locked PDT must be larger than minimum");
+  it("#Transfer KAIA (swap request)", async function () {
+    const underMinLockableKAIA = BigInt(1);
+    const upperMinLockableKAIA = BigInt(1 * 10e18);
+    const upperMaxLockableKAIA = BigInt(10000000 * 10e18);
+    await expect(bridge.transfer(fnsaReceiver, {value: underMinLockableKAIA}))
+      .revertedWith("KAIA::Bridge: Locked KAIA must be larger than minimum");
 
     expect(await bridge.seq()).to.equal(1);
-    await expect(bridge.transfer(fnsaReceiver, {value: upperMinLockablePDT}))
+    await expect(bridge.transfer(fnsaReceiver, {value: upperMinLockableKAIA}))
       .to.emit(bridge, "Transfer");
     expect(await bridge.seq()).to.equal(2);
-    await expect(bridge.transfer(fnsaReceiver, {value: upperMinLockablePDT}))
+    await expect(bridge.transfer(fnsaReceiver, {value: upperMinLockableKAIA}))
       .to.emit(bridge, "Transfer");
     expect(await bridge.seq()).to.equal(3);
 
-    await expect(bridge.transfer(fnsaReceiver, {value: upperMaxLockablePDT}))
-      .revertedWith("PDT::Bridge: Locked PDT must be less than maximum");
+    await expect(bridge.transfer(fnsaReceiver, {value: upperMaxLockableKAIA}))
+      .revertedWith("KAIA::Bridge: Locked KAIA must be less than maximum");
 
     expect((await bridge.getAllSwapRequests()).length).to.equal(2);
     expect((await bridge.getSwapRequests(0, 1)).length).to.equal(1);
@@ -1111,7 +1111,7 @@ describe("[Bridge Test]", function () {
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await expect(guardian.connect(guardian3).confirmTransaction(guardianTxID))
-      .to.be.revertedWith("PDT::Bridge: Must be in claim failure set");
+      .to.be.revertedWith("KAIA::Bridge: Must be in claim failure set");
 
     await bridge.requestBatchClaim(1, {gasLimit: gasSmall})
     expect(await bridge.getClaimFailures()).to.deep.equal([seq])
@@ -1121,7 +1121,7 @@ describe("[Bridge Test]", function () {
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID + 1);
     await expect(guardian.connect(guardian3).confirmTransaction(guardianTxID + 1))
-      .to.be.revertedWith("PDT::Bridge: newReceiver must not be contract address");
+      .to.be.revertedWith("KAIA::Bridge: newReceiver must not be contract address");
 
     expect(await bridge.getClaimFailures()).to.deep.equal([1])
     newReceiver = "0x0000000000000000000000000000000000000789";

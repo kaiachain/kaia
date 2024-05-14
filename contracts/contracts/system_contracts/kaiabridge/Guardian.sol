@@ -207,7 +207,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(submission2TxID[uniqUserTxIndex] == 0, "PDT::Operator: Submission to txID exists");
+            require(submission2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
             submission2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
@@ -287,7 +287,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         view
         returns (uint256[] memory, uint256[] memory)
     {
-        require(to > from, "PDT::Guardian: Invalid from and to");
+        require(to > from, "KAIA::Guardian: Invalid from and to");
         // Ignore the first dummy transaction
         if (from == 0) {
             from = 1;

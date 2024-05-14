@@ -36,7 +36,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         public
         initializer
     {
-        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "PDT::Judge: Guardian contract address does not implement IGuardian");
+        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "KAIA::Judge: Guardian contract address does not implement IGuardian");
 
         for (uint8 i=0; i<initJudges.length; i++) {
             judges.push(initJudges[i]);
@@ -221,7 +221,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(submission2TxID[uniqUserTxIndex] == 0, "PDT::Operator: Submission to txID exists");
+            require(submission2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
             submission2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
@@ -301,7 +301,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         view
         returns (uint256[] memory, uint256[] memory)
     {
-        require(to > from, "PDT::Judge: Invalid from and to");
+        require(to > from, "KAIA::Judge: Invalid from and to");
         // Ignore the first dummy transaction
         if (from == 0) {
             from = 1;

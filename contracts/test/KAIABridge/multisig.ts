@@ -125,7 +125,7 @@ describe("[Multisig Test]", function () {
     await operator.connect(operator1).submitTransaction(operator.address, rawTxData, 0);
     await operator.connect(operator2).confirmTransaction(txID);
     await expect(operator.connect(operator3).confirmTransaction(txID))
-      .to.revertedWith("PDT::Operator: Sender is not guardian contract");
+      .to.revertedWith("KAIA::Operator: Sender is not guardian contract");
   });
 
   it("#remove operator", async function () {
@@ -137,7 +137,7 @@ describe("[Multisig Test]", function () {
     await guardian.connect(guardian1).submitTransaction(operator.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await expect(guardian.connect(guardian3).confirmTransaction(guardianTxID))
-      .to.be.revertedWith("PDT::Operator: Not an operator");
+      .to.be.revertedWith("KAIA::Operator: Not an operator");
 
     // now try to remove known validator
     const newTxID = guardianTxID + 1;
@@ -323,7 +323,7 @@ describe("[Multisig Test]", function () {
 
     // Owner3 did commit confirmation before
     await expect(guardian.connect(guardian3).revokeConfirmation(guardianTxID))
-      .to.be.revertedWith("PDT::Guardian: No confirmation was committed yet");
+      .to.be.revertedWith("KAIA::Guardian: No confirmation was committed yet");
 
     expect((await guardian.getConfirmations(guardianTxID)).length).to.equal(2);
     await expect(guardian.connect(guardian2).revokeConfirmation(guardianTxID))
@@ -341,7 +341,7 @@ describe("[Multisig Test]", function () {
 
     // Owner3 did commit confirmation before
     await expect(operator.connect(operator3).revokeConfirmation(txID))
-      .to.be.revertedWith("PDT::Operator: No confirmation was committed yet");
+      .to.be.revertedWith("KAIA::Operator: No confirmation was committed yet");
     expect((await operator.getConfirmations(txID)).length).to.equal(2);
     await expect(operator.connect(operator2).revokeConfirmation(txID))
       .to.emit(operator, "Revocation");
@@ -368,7 +368,7 @@ describe("[Multisig Test]", function () {
     await guardian.connect(guardian1).submitTransaction(operator.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await expect(guardian.connect(guardian2).confirmTransaction(guardianTxID))
-      .to.be.revertedWith("PDT::Guardian: Transaction was already confirmed");
+      .to.be.revertedWith("KAIA::Guardian: Transaction was already confirmed");
   });
 
   it("#get transaction count - guardian", async function () {
@@ -471,7 +471,7 @@ describe("[Multisig Test]", function () {
     await guardian.connect(guardian1).submitTransaction(operator.address, addOperatorTx, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await expect(guardian.connect(guardian3).confirmTransaction(guardianTxID))
-      .to.be.revertedWith("PDT::Operator: The address must not be operator");
+      .to.be.revertedWith("KAIA::Operator: The address must not be operator");
 
     let removeOperatorTx = (await operator.populateTransaction.removeOperator(operator4.address)).data;
     await guardian.connect(guardian1).submitTransaction(operator.address, removeOperatorTx, 0);

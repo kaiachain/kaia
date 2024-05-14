@@ -27,42 +27,42 @@ abstract contract IGuardian {
 
     //////////////////// Modifier ////////////////////
     modifier onlyGuardian() {
-        require(msg.sender == address(this), "PDT::Guardian: Sender is not guardian wallet");
+        require(msg.sender == address(this), "KAIA::Guardian: Sender is not guardian wallet");
         _;
     }
 
     modifier guardianDoesNotExist(address guardian) {
-        require(!isGuardian[guardian], "PDT::Guardian: The address must not be guardian");
+        require(!isGuardian[guardian], "KAIA::Guardian: The address must not be guardian");
         _;
     }
 
     modifier guardianExists(address guardian) {
-        require(isGuardian[guardian], "PDT::Guardian: Not an guardian");
+        require(isGuardian[guardian], "KAIA::Guardian: Not an guardian");
         _;
     }
 
     modifier notNull(address addr) {
-        require(addr != address(0), "PDT::Guardian: A zero address is not allowed");
+        require(addr != address(0), "KAIA::Guardian: A zero address is not allowed");
         _;
     }
 
     modifier txExists(uint256 txIdx) {
-        require(txIdx < transactions.length, "PDT::Guardian: Transaction does not exist");
+        require(txIdx < transactions.length, "KAIA::Guardian: Transaction does not exist");
         _;
     }
 
     modifier confirmed(uint256 txID, address guardian) {
-        require(confirmations[txID][guardian], "PDT::Guardian: No confirmation was committed yet");
+        require(confirmations[txID][guardian], "KAIA::Guardian: No confirmation was committed yet");
         _;
     }
 
     modifier notExecuted(uint256 txID) {
-        require(!transactions[txID].executed, "PDT::Guardian: Transaction was already executed");
+        require(!transactions[txID].executed, "KAIA::Guardian: Transaction was already executed");
         _;
     }
 
     modifier notConfirmed(uint256 txID, address guardian) {
-        require(!confirmations[txID][guardian], "PDT::Guardian: Transaction was already confirmed");
+        require(!confirmations[txID][guardian], "KAIA::Guardian: Transaction was already confirmed");
         _;
     }
 

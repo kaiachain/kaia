@@ -30,47 +30,47 @@ abstract contract IOperator {
 
     //////////////////// Modifier ////////////////////
     modifier onlyGuardian() {
-        require(msg.sender == guardian, "PDT::Operator: Sender is not guardian contract");
+        require(msg.sender == guardian, "KAIA::Operator: Sender is not guardian contract");
         _;
     }
 
     modifier onlyBridge() {
-        require(msg.sender == bridge, "PDT::Operator: Sender is not bridge contract");
+        require(msg.sender == bridge, "KAIA::Operator: Sender is not bridge contract");
         _;
     }
 
     modifier operatorDoesNotExist(address operator) {
-        require(!isOperator[operator], "PDT::Operator: The address must not be operator");
+        require(!isOperator[operator], "KAIA::Operator: The address must not be operator");
         _;
     }
 
     modifier operatorExists(address operator) {
-        require(isOperator[operator], "PDT::Operator: Not an operator");
+        require(isOperator[operator], "KAIA::Operator: Not an operator");
         _;
     }
 
     modifier notNull(address addr) {
-        require(addr != address(0), "PDT::Operator: A zero address is not allowed");
+        require(addr != address(0), "KAIA::Operator: A zero address is not allowed");
         _;
     }
 
     modifier txExists(uint64 txIdx) {
-        require(txIdx < transactions.length, "PDT::Operator: Transaction does not exist");
+        require(txIdx < transactions.length, "KAIA::Operator: Transaction does not exist");
         _;
     }
 
     modifier confirmed(uint64 txID, address operator) {
-        require(confirmations[txID][operator], "PDT::Operator: No confirmation was committed yet");
+        require(confirmations[txID][operator], "KAIA::Operator: No confirmation was committed yet");
         _;
     }
 
     modifier notExecuted(uint64 txID) {
-        require(!transactions[txID].executed, "PDT::Operator: Transaction was already executed");
+        require(!transactions[txID].executed, "KAIA::Operator: Transaction was already executed");
         _;
     }
 
     modifier notConfirmed(uint64 txID, address operator) {
-        require(!confirmations[txID][operator], "PDT::Operator: Transaction was already confirmed");
+        require(!confirmations[txID][operator], "KAIA::Operator: Transaction was already confirmed");
         _;
     }
 

@@ -37,7 +37,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         public
         initializer
     {
-        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "PDT::Operator: Operator contract address does not implement IGuardian");
+        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "KAIA::Operator: Operator contract address does not implement IGuardian");
 
         for (uint8 i=0; i<initOperators.length; i++) {
             operators.push(initOperators[i]);
@@ -153,8 +153,8 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         uint64 txID = 0;
 
         try IBridge(bridge).bytes2Provision(data) returns (IBridge.ProvisionData memory provision) {
-            require(bridge == to, "PDT::Operator: Provision transaction must be targeted to known bridge contract address");
-            require(provision.seq > 0 , "PDT::Operator: Provision sequence number must be greater than zero");
+            require(bridge == to, "KAIA::Operator: Provision transaction must be targeted to known bridge contract address");
+            require(provision.seq > 0 , "KAIA::Operator: Provision sequence number must be greater than zero");
 
             seq = provision.seq;
             bytes32 calldataHash = keccak256(data);
@@ -270,7 +270,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(submission2TxID[uniqUserTxIndex] == 0, "PDT::Operator: Submission to txID exists");
+            require(submission2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
             submission2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
@@ -358,7 +358,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         view
         returns (uint64[] memory, uint64[] memory)
     {
-        require(to > from, "PDT::Operator: Invalid from and to");
+        require(to > from, "KAIA::Operator: Invalid from and to");
         // Ignore the first dummy transaction
         if (from == 0) {
             from = 1;
@@ -414,7 +414,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         view
         returns (uint64[] memory)
     {
-        require(seqTo > seqFrom, "PDT::Operator: Invalid from and to");
+        require(seqTo > seqFrom, "KAIA::Operator: Invalid from and to");
         // Ignore the first dummy sequence (sequence number starts from 1.)
         if (seqFrom == 0) {
             seqFrom = 1;
@@ -475,7 +475,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         override
         operatorExists(msg.sender)
     {
-        require(nextUnprovisionedSeq != 0, "PDT::Operator: sequence number must not be zero");
+        require(nextUnprovisionedSeq != 0, "KAIA::Operator: sequence number must not be zero");
         emit UnsubmittedNextSeqUpdate(unsubmittedNextSeq[msg.sender], nextUnprovisionedSeq);
         unsubmittedNextSeq[msg.sender] = nextUnprovisionedSeq;
     }
