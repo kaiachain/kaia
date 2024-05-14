@@ -90,13 +90,13 @@ func Env() Environment {
 func LocalEnv() Environment {
 	env := applyEnvFlags(Environment{Name: "local", Repo: "kaiachain/kaia"})
 
-	if os.Getenv("KLAYTN_RACE_DETECT") == "1" {
+	if os.Getenv("KLAYTN_RACE_DETECT") == "1" || os.Getenv("KAIA_RACE_DETECT") == "1" {
 		env.IsKaiaRaceDetectionOn = true
 	}
-	if os.Getenv("KLAYTN_STATIC_LINK") == "1" {
+	if os.Getenv("KLAYTN_STATIC_LINK") == "1" || os.Getenv("KAIA_STATIC_LINK") == "1" {
 		env.IsStaticLink = true
 	}
-	if os.Getenv("KLAYTN_DISABLE_SYMBOL") == "1" {
+	if os.Getenv("KLAYTN_DISABLE_SYMBOL") == "1" || os.Getenv("KAIA_DISABLE_SYMBOL") == "1" {
 		env.IsDisabledSymbolTable = true
 	}
 
