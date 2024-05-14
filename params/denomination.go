@@ -25,14 +25,7 @@ package params
 //
 //	new(big.Int).Mul(value, big.NewInt(params.Gwei))
 const (
-	Wei      = 1    // official notation 'wei'
-	Kwei     = 1e3  // official notation 'kwei'
-	Mwei     = 1e6  // official notation 'mwei'
-	Gwei     = 1e9  // official notation 'gwei'
-	UKAIA    = 1e12 // official notation 'uKAIA'
-	MiliKAIA = 1e15 // official notation 'mKAIA'
-	KAIA     = 1e18 // same
-	KKAIA    = 1e21 // official notation 'kKAIA'
-	MKAIA    = 1e24 // same
-	GKAIA    = 1e27 // same
+	Wei  = 1
+	Gwei = 1e9
+	KAIA = 1e18
 )
