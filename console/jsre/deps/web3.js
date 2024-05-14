@@ -2645,6 +2645,7 @@ function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
     this.kaia = new Kaia(this);
+    this.klay = new Kaia(this); // for backward compatibility
     this.eth = new Eth(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
@@ -2733,7 +2734,7 @@ var properties = function () {
     return [
         new Property({
             name: 'version.node',
-            getter: 'kaia_clientVersion'
+            getter: 'klay_clientVersion'
         }),
         new Property({
             name: 'version.network',
@@ -2742,7 +2743,7 @@ var properties = function () {
         }),
         new Property({
             name: 'version.kaia',
-            getter: 'kaia_protocolVersion',
+            getter: 'klay_protocolVersion',
             inputFormatter: utils.toDecimal
         }),
         new Property({
@@ -4340,7 +4341,7 @@ SolidityFunction.prototype.request = function () {
     var format = this.unpackOutput.bind(this);
 
     return {
-        method: this._constant ? 'kaia_call' : 'kaia_sendTransaction',
+        method: this._constant ? 'klay_call' : 'klay_sendTransaction',
         callback: callback,
         params: [payload],
         format: format
@@ -5344,19 +5345,19 @@ var Iban = require('../iban');
 var transfer = require('../transfer');
 
 var blockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "kaia_getBlockByHash" : "kaia_getBlockByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getBlockByHash" : "klay_getBlockByNumber";
 };
 
 var headerCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "kaia_getHeaderByHash" : "kaia_getHeaderByNumber";
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? "klay_getHeaderByHash" : "klay_getHeaderByNumber";
 };
 
 var transactionFromBlockCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'kaia_getTransactionByBlockHashAndIndex' : 'kaia_getTransactionByBlockNumberAndIndex';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getTransactionByBlockHashAndIndex' : 'klay_getTransactionByBlockNumberAndIndex';
 };
 
 var getBlockTransactionCountCall = function (args) {
-    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'kaia_getBlockTransactionCountByHash' : 'kaia_getBlockTransactionCountByNumber';
+    return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
 };
 
 function Kaia(web3) {
@@ -5402,7 +5403,7 @@ Object.defineProperty(Kaia.prototype, 'defaultAccount', {
 var methods = function () {
     var getBalance = new Method({
         name: 'getBalance',
-        call: 'kaia_getBalance',
+        call: 'klay_getBalance',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: formatters.outputBigNumberFormatter
@@ -5410,14 +5411,14 @@ var methods = function () {
 
     var getStorageAt = new Method({
         name: 'getStorageAt',
-        call: 'kaia_getStorageAt',
+        call: 'klay_getStorageAt',
         params: 3,
         inputFormatter: [null, utils.toHex, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var getCode = new Method({
         name: 'getCode',
-        call: 'kaia_getCode',
+        call: 'klay_getCode',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
@@ -5447,14 +5448,14 @@ var methods = function () {
 
     var getTransaction = new Method({
         name: 'getTransaction',
-        call: 'kaia_getTransactionByHash',
+        call: 'klay_getTransactionByHash',
         params: 1,
         outputFormatter: formatters.outputTransactionFormatter
     });
 
     var getDecodedAnchoringTransactionByHash = new Method({
         name: 'getDecodedAnchoringTransactionByHash',
-        call: 'kaia_getDecodedAnchoringTransactionByHash',
+        call: 'klay_getDecodedAnchoringTransactionByHash',
         params: 1
     });
 
@@ -5468,14 +5469,14 @@ var methods = function () {
 
     var getTransactionReceipt = new Method({
         name: 'getTransactionReceipt',
-        call: 'kaia_getTransactionReceipt',
+        call: 'klay_getTransactionReceipt',
         params: 1,
         outputFormatter: formatters.outputTransactionReceiptFormatter
     });
 
     var getTransactionCount = new Method({
         name: 'getTransactionCount',
-        call: 'kaia_getTransactionCount',
+        call: 'klay_getTransactionCount',
         params: 2,
         inputFormatter: [null, formatters.inputDefaultBlockNumberFormatter],
         outputFormatter: utils.toDecimal
@@ -5483,42 +5484,42 @@ var methods = function () {
 
     var sendRawTransaction = new Method({
         name: 'sendRawTransaction',
-        call: 'kaia_sendRawTransaction',
+        call: 'klay_sendRawTransaction',
         params: 1,
         inputFormatter: [null]
     });
 
     var sendTransaction = new Method({
         name: 'sendTransaction',
-        call: 'kaia_sendTransaction',
+        call: 'klay_sendTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var signTransaction = new Method({
         name: 'signTransaction',
-        call: 'kaia_signTransaction',
+        call: 'klay_signTransaction',
         params: 1,
         inputFormatter: [formatters.inputTransactionFormatter]
     });
 
     var sign = new Method({
         name: 'sign',
-        call: 'kaia_sign',
+        call: 'klay_sign',
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
 
     var call = new Method({
         name: 'call',
-        call: 'kaia_call',
+        call: 'klay_call',
         params: 2,
         inputFormatter: [formatters.inputCallFormatter, formatters.inputDefaultBlockNumberFormatter]
     });
 
     var estimateGas = new Method({
         name: 'estimateGas',
-        call: 'kaia_estimateGas',
+        call: 'klay_estimateGas',
         params: 1,
         inputFormatter: [formatters.inputCallFormatter],
         outputFormatter: utils.toDecimal
@@ -5550,31 +5551,31 @@ var properties = function () {
     return [
         new Property({
             name: 'syncing',
-            getter: 'kaia_syncing',
+            getter: 'klay_syncing',
             outputFormatter: formatters.outputSyncingFormatter
         }),
         new Property({
             name: 'accounts',
-            getter: 'kaia_accounts'
+            getter: 'klay_accounts'
         }),
         new Property({
             name: 'blockNumber',
-            getter: 'kaia_blockNumber',
+            getter: 'klay_blockNumber',
             outputFormatter: utils.toDecimal
         }),
         new Property({
           name: 'chainID',
-          getter: 'kaia_chainID',
+          getter: 'klay_chainID',
           outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
           name: 'chainId',
-          getter: 'kaia_chainId',
+          getter: 'klay_chainId',
           outputFormatter: formatters.outputBigNumberFormatter
         }),
         new Property({
             name: 'protocolVersion',
-            getter: 'kaia_protocolVersion'
+            getter: 'klay_protocolVersion'
         })
     ];
 };
@@ -6428,13 +6429,13 @@ var kaia = function () {
             case 'latest':
                 args.shift();
                 this.params = 0;
-                return 'kaia_newBlockFilter';
+                return 'klay_newBlockFilter';
             case 'pending':
                 args.shift();
                 this.params = 0;
-                return 'kaia_newPendingTransactionFilter';
+                return 'klay_newPendingTransactionFilter';
             default:
-                return 'kaia_newFilter';
+                return 'klay_newFilter';
         }
     };
 
@@ -6446,19 +6447,19 @@ var kaia = function () {
 
     var uninstallFilter = new Method({
         name: 'uninstallFilter',
-        call: 'kaia_uninstallFilter',
+        call: 'klay_uninstallFilter',
         params: 1
     });
 
     var getLogs = new Method({
         name: 'getLogs',
-        call: 'kaia_getFilterLogs',
+        call: 'klay_getFilterLogs',
         params: 1
     });
 
     var poll = new Method({
         name: 'poll',
-        call: 'kaia_getFilterChanges',
+        call: 'klay_getFilterChanges',
         params: 1
     });
 
@@ -7085,7 +7086,7 @@ var pollSyncing = function(self) {
     };
 
     self.requestManager.startPolling({
-        method: 'kaia_syncing',
+        method: 'klay_syncing',
         params: [],
     }, self.pollId, onMessage, self.stopWatching.bind(self));
 
