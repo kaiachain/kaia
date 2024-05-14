@@ -198,6 +198,7 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
+// newStakingInfo fills stakingAmount from effectiveStakings if set. Otherwise, stakingAmount is filled with the balances of staking contracts at a given block.
 func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, types []uint8, addrs []common.Address, effectiveStakings ...*big.Int) (*StakingInfo, error) {
 	var (
 		nodeIds      = []common.Address{}
