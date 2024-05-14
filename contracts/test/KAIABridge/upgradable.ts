@@ -207,7 +207,7 @@ describe("[Upgradable Test]", function () {
 
     let rawTxData = (await guardian.populateTransaction.upgradeTo(newGuardianImplAddr)).data;
     await expect(upgrades.upgradeProxy(guardian.address, newGuardianFactory))
-      .to.be.revertedWith("PDT::Guardian: Sender is not guardian wallet");
+      .to.be.revertedWith("KAIA::Guardian: Sender is not guardian wallet");
     await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(2);
     await expect(guardian.connect(guardian3).confirmTransaction(2))
@@ -227,7 +227,7 @@ describe("[Upgradable Test]", function () {
 
     let rawTxData = (await judge.populateTransaction.upgradeTo(newJudgeImplAddr)).data;
     await expect(upgrades.upgradeProxy(judge.address, newJudgeFactory))
-      .to.be.revertedWith("PDT::Judge: Sender is not guardian wallet");
+      .to.be.revertedWith("KAIA::Judge: Sender is not guardian wallet");
     await guardian.connect(guardian1).submitTransaction(judge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(2);
     await expect(guardian.connect(guardian3).confirmTransaction(2))

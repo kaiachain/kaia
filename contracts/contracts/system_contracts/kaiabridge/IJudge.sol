@@ -27,42 +27,42 @@ abstract contract IJudge {
 
     //////////////////// Modifier ////////////////////
     modifier onlyGuardian() {
-        require(msg.sender == guardian, "PDT::Judge: Sender is not guardian wallet");
+        require(msg.sender == guardian, "KAIA::Judge: Sender is not guardian wallet");
         _;
     }
 
     modifier judgeDoesNotExist(address judge) {
-        require(!isJudge[judge], "PDT::Judge: The address must not be judge");
+        require(!isJudge[judge], "KAIA::Judge: The address must not be judge");
         _;
     }
 
     modifier judgeExists(address judge) {
-        require(isJudge[judge], "PDT::Judge: Not an judge");
+        require(isJudge[judge], "KAIA::Judge: Not an judge");
         _;
     }
 
     modifier notNull(address addr) {
-        require(addr != address(0), "PDT::Judge: A zero address is not allowed");
+        require(addr != address(0), "KAIA::Judge: A zero address is not allowed");
         _;
     }
 
     modifier txExists(uint256 txIdx) {
-        require(txIdx < transactions.length, "PDT::Judge: Transaction does not exist");
+        require(txIdx < transactions.length, "KAIA::Judge: Transaction does not exist");
         _;
     }
 
     modifier confirmed(uint256 txID, address judge) {
-        require(confirmations[txID][judge], "PDT::Judge: No confirmation was committed yet");
+        require(confirmations[txID][judge], "KAIA::Judge: No confirmation was committed yet");
         _;
     }
 
     modifier notExecuted(uint256 txID) {
-        require(!transactions[txID].executed, "PDT::Judge: Transaction was already executed");
+        require(!transactions[txID].executed, "KAIA::Judge: Transaction was already executed");
         _;
     }
 
     modifier notConfirmed(uint256 txID, address judge) {
-        require(!confirmations[txID][judge], "PDT::Judge: Transaction was already confirmed");
+        require(!confirmations[txID][judge], "KAIA::Judge: Transaction was already confirmed");
         _;
     }
 

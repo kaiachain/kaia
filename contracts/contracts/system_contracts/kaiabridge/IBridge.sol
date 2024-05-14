@@ -54,37 +54,37 @@ abstract contract IBridge {
 
     //////////////////// Modifier ////////////////////
     modifier enoughPoolAmount(uint256 amount) {
-        require(address(this).balance >= amount, "PDT::Pool: Pool's balance is not enough to transfer");
+        require(address(this).balance >= amount, "KAIA::Pool: Pool's balance is not enough to transfer");
         _;
     }
 
     modifier onlyOperator {
-        require(operator == msg.sender, "PDT::Bridge: Not an operator");
+        require(operator == msg.sender, "KAIA::Bridge: Not an operator");
         _;
     }
 
     modifier onlyGuardian {
-        require(guardian == msg.sender, "PDT::Bridge: Not an guardian");
+        require(guardian == msg.sender, "KAIA::Bridge: Not an guardian");
         _;
     }
 
     modifier onlyJudge {
-        require(judge == msg.sender, "PDT::Bridge: Not an judge");
+        require(judge == msg.sender, "KAIA::Bridge: Not an judge");
         _;
     }
 
     modifier notPause {
-        require(!pause, "PDT::Bridge: Bridge has been paused");
+        require(!pause, "KAIA::Bridge: Bridge has been paused");
         _;
     }
 
     modifier inPause {
-        require(pause, "PDT::Bridge: Bridge has not been paused");
+        require(pause, "KAIA::Bridge: Bridge has not been paused");
         _;
     }
 
     modifier transferEnable {
-        require(transferFromKaiaOn, "PDT::Bridge: Swap reqeust from KAIA is disabled");
+        require(transferFromKaiaOn, "KAIA::Bridge: Swap reqeust from KAIA is disabled");
         _;
     }
 
@@ -101,17 +101,17 @@ abstract contract IBridge {
     /// @dev Emitted when a provision is removed
     event RemoveProvision(ProvisionData indexed provision);
 
-    /// @dev Emitted when PDT is charged
-    event PDTCharged(address sender, uint256 amount);
+    /// @dev Emitted when KAIA is charged
+    event KAIACharged(address sender, uint256 amount);
 
     /// @dev Emitted when transfer (swap request) is done
     event Transfer(SwapRequest indexed lockInfo);
 
-    /// @dev Emitted when `minLockablePDT` is changed
-    event MinLockablePDTChange(uint256 indexed beforeMinLock, uint256 indexed newMinLock);
+    /// @dev Emitted when `minLockableKAIA` is changed
+    event MinLockableKAIAChange(uint256 indexed beforeMinLock, uint256 indexed newMinLock);
 
-    /// @dev Emitted when `maxLockablePDT` is changed
-    event MaxLockablePDTChange(uint256 indexed beforeMaxLock, uint256 indexed newMaxLock);
+    /// @dev Emitted when `maxLockableKAIA` is changed
+    event MaxLockableKAIAChange(uint256 indexed beforeMaxLock, uint256 indexed newMaxLock);
 
     /// @dev Emitted when claim is done
     event Claim(ProvisionData indexed provision);
@@ -154,7 +154,7 @@ abstract contract IBridge {
     /// @param set Enable transfer function if it is true
     function changeTransferEnable(bool set) external virtual;
 
-    /// @dev A gateway function that triggers token swap between FNSA and KLAY
+    /// @dev A gateway function that triggers token swap between FNSA and KAIA
     /// @param prov Burning provision
     function provision(ProvisionData calldata prov) external virtual;
 
@@ -200,13 +200,13 @@ abstract contract IBridge {
     /// @param data raw tx data
     function bytes2Provision(bytes calldata data) external virtual pure returns (ProvisionData memory);
 
-    /// @dev Update mintLockablePDT with a new value
-    /// @param newMinLockablePDT new value of mintLockablePDT
-    function changeMinLockablePDT(uint256 newMinLockablePDT) external virtual;
+    /// @dev Update mintLockableKAIA with a new value
+    /// @param newMinLockableKAIA new value of mintLockableKAIA
+    function changeMinLockableKAIA(uint256 newMinLockableKAIA) external virtual;
 
-    /// @dev Update maxtLockablePDT with a new value
-    /// @param newMaxLockablePDT new value of maxtLockablePDT
-    function changeMaxLockablePDT(uint256 newMaxLockablePDT) external virtual;
+    /// @dev Update maxtLockableKAIA with a new value
+    /// @param newMaxLockableKAIA new value of maxtLockableKAIA
+    function changeMaxLockableKAIA(uint256 newMaxLockableKAIA) external virtual;
 
     /// @dev Update bridge address
     /// @param newMaxTryTransfer new value of maxTryTransfer
@@ -267,7 +267,7 @@ abstract contract IBridge {
     function getClaimFailuresRange(uint64 range) external virtual view returns (uint64[] memory);
 
     //////////////////// Constant ////////////////////
-    uint256 constant public PDT_UNIT = 10e18;
+    uint256 constant public KAIA_UNIT = 10e18;
     uint256 constant INFINITE = type(uint64).max;
 
     //////////////////// Storage variables ////////////////////
@@ -278,8 +278,8 @@ abstract contract IBridge {
     uint256 public greatestConfirmedSeq; // Gratest seq, which are known on this contract
     uint256 public nProvisioned;
     uint256 public nClaimed;
-    uint256 public minLockablePDT;
-    uint256 public maxLockablePDT;
+    uint256 public minLockableKAIA;
+    uint256 public maxLockableKAIA;
     uint64 public seq;
     uint256 public maxTryTransfer;
     bool public addrValidationOn;
