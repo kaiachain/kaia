@@ -23,20 +23,22 @@ import (
 
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/misc"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
-// cypressCreditABI is the input ABI used to generate the binding from.
-const cypressCreditABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"getPhoto\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getNames\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"}]"
-
 // CypressCredit contract is stored in the address zero.
-var cypressCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
-
-var errNoCypressCreditContract = errors.New("no cypress credit contract")
+var (
+	cypressCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	latestBlockNrOrHash          = rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	errNoCypressCreditContract   = errors.New("no cypress credit contract")
+)
 
 type CreditOutput struct {
-	Photo string `json:"photo"`
-	Names string `json:"names"`
+	Photo       string `json:"photo"`
+	Names       string `json:"names"`
+	EndingPhoto string `json:"endingPhoto"`
+	EndingNames string `json:"endingNames"`
 }
 
 // callCypressCreditGetFunc executes funcName in CypressCreditContract and returns the output.
@@ -50,7 +52,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 		To:   &cypressCreditContractAddress,
 		Data: abiGet,
 	}
-	ret, err := s.Call(ctx, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+	ret, err := s.Call(ctx, args, latestBlockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -67,32 +69,37 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 // GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
 // and returns all the results as a struct.
 func (s *PublicBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
-	answer, err := s.IsContractAccount(ctx, cypressCreditContractAddress, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
-	if err != nil {
+	if ok, err := s.IsContractAccount(ctx, cypressCreditContractAddress, latestBlockNrOrHash); err != nil {
 		return nil, err
-	}
-	if !answer {
+	} else if !ok {
 		return nil, errNoCypressCreditContract
 	}
 
-	parsed, err := abi.JSON(strings.NewReader(cypressCreditABI))
+	parsed, err := abi.JSON(strings.NewReader(misc.CypressCreditV2ABI))
 	if err != nil {
 		return nil, err
 	}
 
-	photo, err := s.callCypressCreditGetFunc(ctx, &parsed, "getPhoto")
-	if err != nil {
+	output := new(CreditOutput)
+
+	// getPhoto and getNames must exist from the Cypress genesis.
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getPhoto"); err == nil {
+		output.Photo = *str
+	} else {
+		return nil, err
+	}
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getNames"); err == nil {
+		output.Names = *str
+	} else {
 		return nil, err
 	}
 
-	names, err := s.callCypressCreditGetFunc(ctx, &parsed, "getNames")
-	if err != nil {
-		return nil, err
+	// getEndingPhoto and getEndingNames are added at some nonzero block. They are returned if they exist.
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingPhoto"); err == nil {
+		output.EndingPhoto = *str
 	}
-
-	output := &CreditOutput{
-		Photo: *photo,
-		Names: *names,
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingNames"); err == nil {
+		output.EndingNames = *str
 	}
 
 	return output, nil
