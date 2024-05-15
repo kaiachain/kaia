@@ -14,7 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
-// Modified and improved for the Kaia development.]
+// Modified and improved for the Kaia development.
 
 package work
 
