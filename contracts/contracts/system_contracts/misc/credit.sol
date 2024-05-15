@@ -17,3 +17,4 @@
 pragma solidity 0.4.24;
 
 import "./CypressCredit.sol";
+import "./CypressCreditV2.sol";
