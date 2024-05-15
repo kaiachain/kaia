@@ -1044,7 +1044,16 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if header == nil {
 			continue
 		}
-		result := reward.GetStakingInfoOnStakingBlock(header.Number.Uint64())
+		var result *reward.StakingInfo
+		number := header.Number.Uint64()
+		if pm.chainconfig.IsKaiaForkEnabled(header.Number) {
+			if number > 0 {
+				number--
+			}
+			result = reward.GetStakingInfoForKaiaBlock(number)
+		} else {
+			result = reward.GetStakingInfoOnStakingBlock(number)
+		}
 		if result == nil {
 			continue
 		}
