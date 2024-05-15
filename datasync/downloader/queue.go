@@ -59,8 +59,8 @@ var (
 // fetchRequest is a currently running data retrieval operation.
 type fetchRequest struct {
 	Peer    *peerConnection // Peer to which the request was sent
-	From    uint64          // [klay/62] Requested chain element index (used for skeleton fills only)
-	Headers []*types.Header // [klay/62] Requested headers, sorted by request order
+	From    uint64          // [kaia/62] Requested chain element index (used for skeleton fills only)
+	Headers []*types.Header // [kaia/62] Requested headers, sorted by request order
 	Time    time.Time       // Time when the request was made
 }
 
@@ -132,28 +132,28 @@ type queue struct {
 	mode SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
 
 	// Headers are "special", they download in batches, supported by a skeleton chain
-	headerHead      common.Hash                    // [klay/62] Hash of the last queued header to verify order
-	headerTaskPool  map[uint64]*types.Header       // [klay/62] Pending header retrieval tasks, mapping starting indexes to skeleton headers
-	headerTaskQueue *prque.Prque                   // [klay/62] Priority queue of the skeleton indexes to fetch the filling headers for
-	headerPeerMiss  map[string]map[uint64]struct{} // [klay/62] Set of per-peer header batches known to be unavailable
-	headerPendPool  map[string]*fetchRequest       // [klay/62] Currently pending header retrieval operations
-	headerResults   []*types.Header                // [klay/62] Result cache accumulating the completed headers
-	headerProced    int                            // [klay/62] Number of headers already processed from the results
-	headerOffset    uint64                         // [klay/62] Number of the first header in the result cache
-	headerContCh    chan bool                      // [klay/62] Channel to notify when header download finishes
+	headerHead      common.Hash                    // [kaia/62] Hash of the last queued header to verify order
+	headerTaskPool  map[uint64]*types.Header       // [kaia/62] Pending header retrieval tasks, mapping starting indexes to skeleton headers
+	headerTaskQueue *prque.Prque                   // [kaia/62] Priority queue of the skeleton indexes to fetch the filling headers for
+	headerPeerMiss  map[string]map[uint64]struct{} // [kaia/62] Set of per-peer header batches known to be unavailable
+	headerPendPool  map[string]*fetchRequest       // [kaia/62] Currently pending header retrieval operations
+	headerResults   []*types.Header                // [kaia/62] Result cache accumulating the completed headers
+	headerProced    int                            // [kaia/62] Number of headers already processed from the results
+	headerOffset    uint64                         // [kaia/62] Number of the first header in the result cache
+	headerContCh    chan bool                      // [kaia/62] Channel to notify when header download finishes
 
 	// All data retrievals below are based on an already assembles header chain
-	blockTaskPool  map[common.Hash]*types.Header // [klay/62] Pending block (body) retrieval tasks, mapping hashes to headers
-	blockTaskQueue *prque.Prque                  // [klay/62] Priority queue of the headers to fetch the blocks (bodies) for
-	blockPendPool  map[string]*fetchRequest      // [klay/62] Currently pending block (body) retrieval operations
+	blockTaskPool  map[common.Hash]*types.Header // [kaia/62] Pending block (body) retrieval tasks, mapping hashes to headers
+	blockTaskQueue *prque.Prque                  // [kaia/62] Priority queue of the headers to fetch the blocks (bodies) for
+	blockPendPool  map[string]*fetchRequest      // [kaia/62] Currently pending block (body) retrieval operations
 
-	receiptTaskPool  map[common.Hash]*types.Header // [klay/63] Pending receipt retrieval tasks, mapping hashes to headers
-	receiptTaskQueue *prque.Prque                  // [klay/63] Priority queue of the headers to fetch the receipts for
-	receiptPendPool  map[string]*fetchRequest      // [klay/63] Currently pending receipt retrieval operations
+	receiptTaskPool  map[common.Hash]*types.Header // [kaia/63] Pending receipt retrieval tasks, mapping hashes to headers
+	receiptTaskQueue *prque.Prque                  // [kaia/63] Priority queue of the headers to fetch the receipts for
+	receiptPendPool  map[string]*fetchRequest      // [kaia/63] Currently pending receipt retrieval operations
 
-	stakingInfoTaskPool  map[common.Hash]*types.Header // [klay/65] Pending staking info retrieval tasks, mapping hashes to headers
-	stakingInfoTaskQueue *prque.Prque                  // [klay/65] Priority queue of the headers to fetch the staking infos for
-	stakingInfoPendPool  map[string]*fetchRequest      // [klay/65] Currently pending staking info retrieval operations
+	stakingInfoTaskPool  map[common.Hash]*types.Header // [kaia/65] Pending staking info retrieval tasks, mapping hashes to headers
+	stakingInfoTaskQueue *prque.Prque                  // [kaia/65] Priority queue of the headers to fetch the staking infos for
+	stakingInfoPendPool  map[string]*fetchRequest      // [kaia/65] Currently pending staking info retrieval operations
 
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)

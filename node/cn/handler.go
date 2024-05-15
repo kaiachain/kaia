@@ -183,11 +183,11 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
 		// Skip protocol version if incompatible with the mode of operation
-		if mode == downloader.FastSync && version < klay63 {
+		if mode == downloader.FastSync && version < kaia63 {
 			continue
 		}
 		// TODO-Kaia-Snapsync add snapsync and version check here
-		if mode == downloader.SnapSync && version < klay65 {
+		if mode == downloader.SnapSync && version < kaia65 {
 			continue
 		}
 		// Compatible; initialise the sub-protocol
@@ -686,32 +686,32 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 
-	case p.GetVersion() >= klay63 && msg.Code == NodeDataRequestMsg:
+	case p.GetVersion() >= kaia63 && msg.Code == NodeDataRequestMsg:
 		if err := handleNodeDataRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case p.GetVersion() >= klay63 && msg.Code == NodeDataMsg:
+	case p.GetVersion() >= kaia63 && msg.Code == NodeDataMsg:
 		if err := handleNodeDataMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case p.GetVersion() >= klay63 && msg.Code == ReceiptsRequestMsg:
+	case p.GetVersion() >= kaia63 && msg.Code == ReceiptsRequestMsg:
 		if err := handleReceiptsRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case p.GetVersion() >= klay63 && msg.Code == ReceiptsMsg:
+	case p.GetVersion() >= kaia63 && msg.Code == ReceiptsMsg:
 		if err := handleReceiptsMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case p.GetVersion() >= klay65 && msg.Code == StakingInfoRequestMsg:
+	case p.GetVersion() >= kaia65 && msg.Code == StakingInfoRequestMsg:
 		if err := handleStakingInfoRequestMsg(pm, p, msg); err != nil {
 			return err
 		}
 
-	case p.GetVersion() >= klay65 && msg.Code == StakingInfoMsg:
+	case p.GetVersion() >= kaia65 && msg.Code == StakingInfoMsg:
 		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
 			return err
 		}

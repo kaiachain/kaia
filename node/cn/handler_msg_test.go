@@ -162,7 +162,7 @@ func TestNodeDataRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, NodeDataRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -178,7 +178,7 @@ func TestNodeDataRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendNodeData(returnedData).Return(nil).Times(1)
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -189,7 +189,7 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, ReceiptsRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -207,7 +207,7 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -254,7 +254,7 @@ func TestHandleTxMsg(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	txs := types.Transactions{tx1}
 	msg := generateMsg(t, TxMsg, txs)
@@ -282,7 +282,7 @@ func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controll
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	return mockCtrl, mockPeer, mockBlockChain, &ProtocolManager{blockchain: mockBlockChain}
 }
@@ -326,7 +326,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 func prepareTestHandleBlockHeaderFetchResponseMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks2.MockProtocolManagerFetcher, *ProtocolManager) {
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
 	pm := &ProtocolManager{fetcher: mockFetcher}
@@ -340,7 +340,7 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, newBlock(blockNum1)) // use message data as a block, not a header
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
@@ -372,7 +372,7 @@ func preparePeerAndDownloader(t *testing.T) (*gomock.Controller, *MockPeer, *moc
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	pm := &ProtocolManager{downloader: mockDownloader}
@@ -385,7 +385,7 @@ func TestHandleReceiptMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, ReceiptsMsg, newBlock(blockNum1)) // use message data as a block, not a header
@@ -423,7 +423,7 @@ func TestHandleNodeDataMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, NodeDataMsg, newBlock(blockNum1)) // use message data as a block, not a node data
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))

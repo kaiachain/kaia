@@ -63,7 +63,7 @@ var (
 	qosConfidenceCap = 10   // Number of peers above which not to modify RTT confidence
 	qosTuningImpact  = 0.25 // Impact that a new tuning target has on the previous value
 
-	maxQueuedHeaders  = 32 * 1024 // [klay/62] Maximum number of headers to queue for import (DOS protection)
+	maxQueuedHeaders  = 32 * 1024 // [kaia/62] Maximum number of headers to queue for import (DOS protection)
 	maxHeadersProcess = 2048      // Number of header download results to import at once into the chain
 	maxResultsProcess = 2048      // Number of content download results to import at once into the chain
 
@@ -133,14 +133,14 @@ type Downloader struct {
 	committed       int32
 
 	// Channels
-	headerCh          chan dataPack        // [klay/62] Channel receiving inbound block headers
-	bodyCh            chan dataPack        // [klay/62] Channel receiving inbound block bodies
-	receiptCh         chan dataPack        // [klay/63] Channel receiving inbound receipts
-	stakingInfoCh     chan dataPack        // [klay/65] Channel receiving inbound staking infos
-	bodyWakeCh        chan bool            // [klay/62] Channel to signal the block body fetcher of new tasks
-	receiptWakeCh     chan bool            // [klay/63] Channel to signal the receipt fetcher of new tasks
-	stakingInfoWakeCh chan bool            // [klay/65] Channel to signal the staking info fetcher of new tasks
-	headerProcCh      chan []*types.Header // [klay/62] Channel to feed the header processor new tasks
+	headerCh          chan dataPack        // [kaia/62] Channel receiving inbound block headers
+	bodyCh            chan dataPack        // [kaia/62] Channel receiving inbound block bodies
+	receiptCh         chan dataPack        // [kaia/63] Channel receiving inbound receipts
+	stakingInfoCh     chan dataPack        // [kaia/65] Channel receiving inbound staking infos
+	bodyWakeCh        chan bool            // [kaia/62] Channel to signal the block body fetcher of new tasks
+	receiptWakeCh     chan bool            // [kaia/63] Channel to signal the receipt fetcher of new tasks
+	stakingInfoWakeCh chan bool            // [kaia/65] Channel to signal the staking info fetcher of new tasks
+	headerProcCh      chan []*types.Header // [kaia/62] Channel to feed the header processor new tasks
 
 	// for snapsyncer
 	snapSync   bool         // Whether to run state sync over the snap protocol
@@ -152,7 +152,7 @@ type Downloader struct {
 
 	stateSyncStart chan *stateSync
 	trackStateReq  chan *stateReq
-	stateCh        chan dataPack // [klay/63] Channel receiving inbound node state data
+	stateCh        chan dataPack // [kaia/63] Channel receiving inbound node state data
 
 	// Cancellation and termination
 	cancelPeer string         // Identifier of the peer currently being used as the master (cancel on drop)
@@ -484,7 +484,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}
 	mode := d.getMode()
 
-	logger.Debug("Synchronising with the network", "peer", p.id, "klay", p.version, "head", hash, "td", td, "mode", mode)
+	logger.Debug("Synchronising with the network", "peer", p.id, "kaia", p.version, "head", hash, "td", td, "mode", mode)
 	defer func(start time.Time) {
 		logger.Debug("Synchronisation terminated", "elapsed", time.Since(start))
 	}(time.Now())

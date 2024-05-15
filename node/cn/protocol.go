@@ -38,17 +38,17 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	klay62 = 62
-	klay63 = 63
-	klay64 = 64
-	klay65 = 65
+	kaia62 = 62
+	kaia63 = 63
+	kaia64 = 64
+	kaia65 = 65
 )
 
 // ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "klay"
+var ProtocolName = "kaia"
 
-// ProtocolVersions are the upported versions of the klay protocol (first is primary).
-var ProtocolVersions = []uint{klay65, klay64, klay63, klay62}
+// ProtocolVersions are the upported versions of the kaia protocol (first is primary).
+var ProtocolVersions = []uint{kaia65, kaia64, kaia63, kaia62}
 
 // ProtocolLengths are the number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{21, 19, 17, 8}
@@ -58,7 +58,7 @@ const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a prot
 // Kaia protocol message codes
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
 const (
-	// Protocol messages belonging to klay/62
+	// Protocol messages belonging to kaia/62
 	StatusMsg                   = 0x00
 	NewBlockHashesMsg           = 0x01
 	BlockHeaderFetchRequestMsg  = 0x02
@@ -72,17 +72,17 @@ const (
 	BlockBodiesMsg              = 0x0a
 	NewBlockMsg                 = 0x0b
 
-	// Protocol messages belonging to klay/63
+	// Protocol messages belonging to kaia/63
 	NodeDataRequestMsg = 0x0c
 	NodeDataMsg        = 0x0d
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
 
-	// Protocol messages belonging to klay/64
+	// Protocol messages belonging to kaia/64
 	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
 	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
 
-	// Protocol messages belonging to klay/65
+	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg = 0x12
 	StakingInfoMsg        = 0x13
 

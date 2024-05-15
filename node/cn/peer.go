@@ -315,13 +315,13 @@ var ChannelOfMessage = map[uint64]int{
 	BlockBodiesMsg:              p2p.ConnDefault,
 	NewBlockMsg:                 p2p.ConnDefault,
 
-	// Protocol messages belonging to klay/63
+	// Protocol messages belonging to kaia/63
 	NodeDataRequestMsg: p2p.ConnDefault,
 	NodeDataMsg:        p2p.ConnDefault,
 	ReceiptsRequestMsg: p2p.ConnDefault,
 	ReceiptsMsg:        p2p.ConnDefault,
 
-	// Protocol messages belonging to klay/65
+	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg: p2p.ConnDefault,
 	StakingInfoMsg:        p2p.ConnDefault,
 }
@@ -687,7 +687,7 @@ func (p *basePeer) readStatus(network uint64, status *statusData, genesis common
 // String implements fmt.Stringer.
 func (p *basePeer) String() string {
 	return fmt.Sprintf("Peer %s [%s]", p.id,
-		fmt.Sprintf("klay/%2d", p.version),
+		fmt.Sprintf("kaia/%2d", p.version),
 	)
 }
 
