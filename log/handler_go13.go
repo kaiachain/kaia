@@ -1,7 +1,9 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 //
 // This file is derived from log/handler_go13.go (2018/06/04).
 // See LICENSE in the top directory for the original copyright and license.
+// Modified and improved for the Kaia development.
 //go:build !go1.4
 // +build !go1.4
 
