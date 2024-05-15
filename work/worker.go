@@ -615,7 +615,7 @@ func (self *worker) commitNewWork() {
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
 
 			if header.BaseFee != nil {
-				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Ston))
+				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gwei))
 			}
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
@@ -643,6 +643,7 @@ func (self *worker) updateSnapshot() {
 	)
 	self.snapshotState = self.current.state.Copy()
 }
+
 func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
 
@@ -665,6 +666,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}(cpy, env.tcount)
 	}
 }
+
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
 	var coalescedLogs []*types.Log
 

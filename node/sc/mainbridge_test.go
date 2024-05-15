@@ -92,7 +92,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	genesis.Config = params.CypressChainConfig.Copy()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.UnitPrice = 25 * params.Ston
+	genesis.Config.UnitPrice = 25 * params.Gwei
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
@@ -149,7 +149,7 @@ func TestMainBridge_basic(t *testing.T) {
 	txPool := &blockchain.TxPool{}
 	compAPIs := []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   api.NewPublicKaiaAPI(&cn.CNAPIBackend{}),
 			Public:    true,
@@ -167,13 +167,13 @@ func TestMainBridge_basic(t *testing.T) {
 	// before modification: return type is nil
 	// after modification: return type is "nil, map[nil], map[nil], which equals to service{}"
 	// rpc.GetNullServices() returns service{}
-	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["klay"])
+	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["kaia"])
 
 	// Update and check MainBridge components
 	mBridge.SetComponents(comp)
 	assert.Equal(t, bc, mBridge.blockchain)
 	assert.Equal(t, txPool, mBridge.txPool)
-	assert.NotNil(t, mBridge.rpcServer.GetServices()["klay"])
+	assert.NotNil(t, mBridge.rpcServer.GetServices()["kaia"])
 
 	// Start MainBridge and stop later
 	if err := mBridge.Start(p2p.SingleChannelServer{}); err != nil {

@@ -39,7 +39,7 @@ func (c KaiaStats) Host() string {
 }
 
 func (c KaiaStats) String() string {
-	tmpl, err := template.New("klay_stats").Parse(kaiaStatsTemplate)
+	tmpl, err := template.New("kaia_stats").Parse(kaiaStatsTemplate)
 	if err != nil {
 		fmt.Printf("Failed to parse template, %v", err)
 		return ""

@@ -537,17 +537,17 @@ func (s *CN) APIs() []rpc.API {
 	// Append all the local APIs and return
 	apis = append(apis, []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   NewPublicKaiaAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicFilterAPI,
 			Public:    true,
@@ -591,7 +591,7 @@ func (s *CN) APIs() []rpc.API {
 			Service:   governanceAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   governanceKaiaAPI,
 			Public:    true,

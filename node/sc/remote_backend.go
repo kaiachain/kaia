@@ -70,7 +70,7 @@ func (rb *RemoteBackend) CodeAt(ctx context.Context, contract common.Address, bl
 		return nil, NoParentPeerErr
 	}
 	var result hexutil.Bytes
-	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, toBlockNumArg(blockNumber))
+	err := rb.rpcClient.CallContext(ctx, &result, "kaia_getCode", contract, toBlockNumArg(blockNumber))
 	return result, err
 }
 
@@ -79,7 +79,7 @@ func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, 
 		return nil, NoParentPeerErr
 	}
 	var hex hexutil.Big
-	err := rb.rpcClient.CallContext(ctx, &hex, "klay_getBalance", account, toBlockNumArg(blockNumber))
+	err := rb.rpcClient.CallContext(ctx, &hex, "kaia_getBalance", account, toBlockNumArg(blockNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, 
 		return nil, NoParentPeerErr
 	}
 	var hex hexutil.Bytes
-	err := rb.rpcClient.CallContext(ctx, &hex, "klay_call", toCallArg(call), toBlockNumArg(blockNumber))
+	err := rb.rpcClient.CallContext(ctx, &hex, "kaia_call", toCallArg(call), toBlockNumArg(blockNumber))
 	return hex, err
 }
 
@@ -100,7 +100,7 @@ func (rb *RemoteBackend) PendingCodeAt(ctx context.Context, contract common.Addr
 		return nil, NoParentPeerErr
 	}
 	var result hexutil.Bytes
-	err := rb.rpcClient.CallContext(ctx, &result, "klay_getCode", contract, "pending")
+	err := rb.rpcClient.CallContext(ctx, &result, "kaia_getCode", contract, "pending")
 	return result, err
 }
 
@@ -109,7 +109,7 @@ func (rb *RemoteBackend) PendingNonceAt(ctx context.Context, account common.Addr
 		return 0, NoParentPeerErr
 	}
 	var result hexutil.Uint64
-	err := rb.rpcClient.CallContext(ctx, &result, "klay_getTransactionCount", account, "pending")
+	err := rb.rpcClient.CallContext(ctx, &result, "kaia_getTransactionCount", account, "pending")
 	return uint64(result), err
 }
 
@@ -118,7 +118,7 @@ func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) 
 		return nil, NoParentPeerErr
 	}
 	var hex hexutil.Big
-	if err := rb.rpcClient.CallContext(ctx, &hex, "klay_gasPrice"); err != nil {
+	if err := rb.rpcClient.CallContext(ctx, &hex, "kaia_gasPrice"); err != nil {
 		return nil, err
 	}
 	return (*big.Int)(&hex), nil
@@ -130,7 +130,7 @@ func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (u
 	}
 
 	var hex hexutil.Uint64
-	err := rb.rpcClient.CallContext(ctx, &hex, "klay_estimateGas", toCallArg(msg))
+	err := rb.rpcClient.CallContext(ctx, &hex, "kaia_estimateGas", toCallArg(msg))
 	if err != nil {
 		return 0, err
 	}
@@ -149,7 +149,7 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 		return nil, NoParentPeerErr
 	}
 	var r *types.Receipt
-	err := rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	err := rb.rpcClient.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
 		return nil, klaytn.NotFound
 	}
@@ -161,7 +161,7 @@ func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash
 		return nil, NoParentPeerErr
 	}
 
-	err = rb.rpcClient.CallContext(ctx, &r, "klay_getTransactionReceipt", txHash)
+	err = rb.rpcClient.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
 		return nil, klaytn.NotFound
 	}
@@ -177,7 +177,7 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	err = rb.rpcClient.CallContext(ctx, &result, "klay_getLogs", toFilterArg(query))
+	err = rb.rpcClient.CallContext(ctx, &result, "kaia_getLogs", toFilterArg(query))
 	return
 }
 
@@ -185,7 +185,7 @@ func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.F
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
-	return rb.rpcClient.KlaySubscribe(ctx, ch, "logs", toFilterArg(query))
+	return rb.rpcClient.KaiaSubscribe(ctx, ch, "logs", toFilterArg(query))
 }
 
 // CurrentBlockNumber returns a current block number.
@@ -194,7 +194,7 @@ func (rb *RemoteBackend) CurrentBlockNumber(ctx context.Context) (uint64, error)
 		return 0, NoParentPeerErr
 	}
 	var result hexutil.Uint64
-	err := rb.rpcClient.CallContext(ctx, &result, "klay_blockNumber")
+	err := rb.rpcClient.CallContext(ctx, &result, "kaia_blockNumber")
 	return uint64(result), err
 }
 

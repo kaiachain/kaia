@@ -138,7 +138,7 @@ func TestClientWebsocketPing(t *testing.T) {
 		t.Fatalf("client dial error: %v", err)
 	}
 	resultChan := make(chan int)
-	sub, err := client.KlaySubscribe(ctx, resultChan, "foo")
+	sub, err := client.KaiaSubscribe(ctx, resultChan, "foo")
 	if err != nil {
 		t.Fatalf("client subscribe error: %v", err)
 	}

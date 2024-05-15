@@ -390,7 +390,7 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	return block
 }
 
-// GenesisBlockForTesting creates and writes a block in which addr has the given peb balance.
+// GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)

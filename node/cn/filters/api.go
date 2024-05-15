@@ -123,7 +123,7 @@ func (api *PublicFilterAPI) timeoutLoop() {
 // as transactions enter the pending state.
 //
 // It is part of the filter package because this filter can be used through the
-// `klay_getFilterChanges` polling method that is also used for log filters.
+// `kaia_getFilterChanges` polling method that is also used for log filters.
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
 		pendingTxs   = make(chan []common.Hash)
@@ -224,7 +224,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 }
 
 // RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
-// For klay_getHeaderByNumber and klay_getHeaderByHash APIs.
+// For kaia_getHeaderByNumber and kaia_getHeaderByHash APIs.
 func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,

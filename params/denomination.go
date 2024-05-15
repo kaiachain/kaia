@@ -21,19 +21,11 @@
 package params
 
 // These are the multipliers for KAIA denominations.
-// Example: To get the peb value of an amount in 'ston', use
+// Example: To get the wei value of an amount in 'gwei', use
 //
-//	new(big.Int).Mul(value, big.NewInt(params.Ston))
+//	new(big.Int).Mul(value, big.NewInt(params.Gwei))
 const (
-	Peb      = 1    // official notation 'peb'
-	Kpeb     = 1e3  // official notation 'kpeb'
-	Mpeb     = 1e6  // same
-	Gpeb     = 1e9  // same
-	Ston     = 1e9  // official notation 'ston'
-	UKAIA    = 1e12 // official notation 'uKAIA'
-	MiliKAIA = 1e15 // official notation 'mKAIA'
-	KAIA     = 1e18 // same
-	KKAIA    = 1e21 // official notation 'kKAIA'
-	MKAIA    = 1e24 // same
-	GKAIA    = 1e27 // same
+	Wei  = 1
+	Gwei = 1e9
+	KAIA = 1e18
 )

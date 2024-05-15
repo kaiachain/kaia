@@ -29,11 +29,19 @@ func StartHTTPEndpoint(endpoint string, apis []API, modules []string, cors []str
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
+		// for backward compatibility
+		if module == "klay" {
+			module = "kaia"
+		}
 		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
+		if api.Namespace == "klay" {
+			api.Namespace = "kaia"
+		}
+
 		if !api.IPCOnly && (whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
@@ -58,11 +66,18 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 	// Generate the whitelist based on the allowed modules
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
-		whitelist[module] = true
+		// for backward compatibility
+		if module == "klay" {
+			module = "kaia"
+		}
 	}
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
+		if api.Namespace == "klay" {
+			api.Namespace = "kaia"
+		}
+
 		if !api.IPCOnly && (exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public)) {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err

@@ -54,7 +54,7 @@ func GetDefaultConfig() *Config {
 		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
 		TriesInMemory:        blockchain.DefaultTriesInMemory,
 		LivePruningRetention: blockchain.DefaultLivePruningRetention,
-		GasPrice:             big.NewInt(18 * params.Ston),
+		GasPrice:             big.NewInt(18 * params.Gwei),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{

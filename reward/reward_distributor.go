@@ -520,7 +520,7 @@ func calcShares(stakingInfo *StakingInfo, stakeReward *big.Int, minStake uint64)
 		if node.StakingAmount > minStake {
 			effectiveStake := new(big.Int).SetUint64(node.StakingAmount - minStake)
 			// The KAIA unit will cancel out:
-			// rewardAmount (peb) = stakeReward (peb) * effectiveStake (KAIA) / totalStakes (KAIA)
+			// rewardAmount (wei) = stakeReward (wei) * effectiveStake (KAIA) / totalStakes (KAIA)
 			rewardAmount := new(big.Int).Mul(stakeReward, effectiveStake)
 			rewardAmount = rewardAmount.Div(rewardAmount, totalStakes)
 			remaining = remaining.Sub(remaining, rewardAmount)

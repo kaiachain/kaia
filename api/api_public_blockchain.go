@@ -116,7 +116,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHas
 	return fieldsList, nil
 }
 
-// GetBalance returns the amount of peb for the given address in the state of the
+// GetBalance returns the amount of wei for the given address in the state of the
 // given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers and hash are also allowed.
 func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
@@ -537,7 +537,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	return formatted, nil
 }
 
-// For klay_getBlockByNumber, klay_getBlockByHash, klay_getBlockWithconsensusInfoByNumber, klay_getBlockWithconsensusInfoByHash APIs
+// For kaia_getBlockByNumber, kaia_getBlockByHash, kaia_getBlockWithconsensusInfoByNumber, kaia_getBlockWithconsensusInfoByHash APIs
 // and Kafka chaindatafetcher.
 func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once

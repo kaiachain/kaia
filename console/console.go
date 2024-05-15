@@ -197,8 +197,8 @@ func (c *Console) initExtensions() error {
 		}
 	}
 
-	// Compute aliases from server-provided modules.
-	aliases := map[string]struct{}{"klay": {}, "eth": {}}
+	// Compute aliases from server-provided modules. (web3.kaia -> kaia)
+	aliases := map[string]struct{}{"kaia": {}, "klay": {}, "eth": {}}
 	for api := range apis {
 		if api == "web3" {
 			continue
@@ -295,7 +295,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 		return "", nil, ""
 	}
 	// Chunk data to relevant part for autocompletion
-	// E.g. in case of nested lines klay.getBalance(klay.coinb<tab><tab>
+	// E.g. in case of nested lines kaia.getBalance(kaia.coinb<tab><tab>
 	start := pos - 1
 	for ; start > 0; start-- {
 		// Skip all methods and namespaces (i.e. including the dot)
