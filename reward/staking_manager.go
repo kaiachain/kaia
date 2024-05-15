@@ -246,7 +246,7 @@ func updateKaiaStakingInfo(blockNum uint64) (*StakingInfo, error) {
 	}
 
 	addStakingInfoToCache(stakingInfo)
-	logger.Info("Add a new stakingInfo to stakingInfoCache", "blockNum", blockNum)
+	logger.Debug("Add a new stakingInfo to stakingInfoCache", "blockNum", blockNum)
 
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
