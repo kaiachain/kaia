@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/node/cn/snap"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 )
 
@@ -61,3 +62,5 @@ func (*FakeDownloader) Cancel()                     {}
 func (*FakeDownloader) GetSnapSyncer() *snap.Syncer                      { return nil }
 func (*FakeDownloader) SyncStakingInfo(id string, from, to uint64) error { return nil }
 func (*FakeDownloader) SyncStakingInfoStatus() *SyncingStatus            { return nil }
+
+func (*FakeDownloader) Config() *params.ChainConfig { return params.TestChainConfig }
