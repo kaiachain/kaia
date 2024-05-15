@@ -78,6 +78,8 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 		// legacy fields of StakingInfo
 		KIRAddr common.Address `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
 		PoCAddr common.Address `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+		KCFAddr common.Address `json:"kcfAddr"` // KCFAddr -> KEFAddr from Kaia v1.0.0
+		KFFAddr common.Address `json:"kffAddr"` // KFFAddr -> KIFAddr from Kaia v1.0.0
 	}
 
 	var ext extendedSt
@@ -91,7 +93,9 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	ext.Gini = st.Gini
 	ext.CouncilStakingAmounts = st.CouncilStakingAmounts
 
-	// KIRAddr and PoCAddr are for backward-compatibility of database
+	// LHS are for backward-compatibility of database
+	ext.KCFAddr = st.KEFAddr
+	ext.KFFAddr = st.KIFAddr
 	ext.KIRAddr = st.KEFAddr
 	ext.PoCAddr = st.KIFAddr
 
@@ -105,8 +109,8 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
 		CouncilStakingAddrs   []common.Address `json:"councilStakingAddrs"`
 		CouncilRewardAddrs    []common.Address `json:"councilRewardAddrs"`
-		KCFAddr               common.Address   `json:"kcfAddr"`
-		KFFAddr               common.Address   `json:"kffAddr"`
+		KEFAddr               common.Address   `json:"kefAddr"`
+		KIFAddr               common.Address   `json:"kifAddr"`
 		UseGini               bool             `json:"useGini"`
 		Gini                  float64          `json:"gini"`
 		CouncilStakingAmounts []uint64         `json:"councilStakingAmounts"`
@@ -114,6 +118,8 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 		// legacy fields of StakingInfo
 		KIRAddr common.Address `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
 		PoCAddr common.Address `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+		KCFAddr common.Address `json:"kcfAddr"` // KCFAddr -> KEFAddr from Kaia v1.0.0
+		KFFAddr common.Address `json:"kffAddr"` // KFFAddr -> KIFAddr from Kaia v1.0.0
 	}
 
 	var ext extendedSt
@@ -127,17 +133,23 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	st.CouncilNodeAddrs = ext.CouncilNodeAddrs
 	st.CouncilStakingAddrs = ext.CouncilStakingAddrs
 	st.CouncilRewardAddrs = ext.CouncilRewardAddrs
-	st.KEFAddr = ext.KCFAddr
-	st.KIFAddr = ext.KFFAddr
+	st.KEFAddr = ext.KEFAddr
+	st.KIFAddr = ext.KIFAddr
 	st.UseGini = ext.UseGini
 	st.Gini = ext.Gini
 	st.CouncilStakingAmounts = ext.CouncilStakingAmounts
 
 	if st.KEFAddr == emptyAddr {
-		st.KEFAddr = ext.KIRAddr
+		st.KEFAddr = ext.KCFAddr
+		if st.KEFAddr == emptyAddr {
+			st.KEFAddr = ext.KIRAddr
+		}
 	}
 	if st.KIFAddr == emptyAddr {
-		st.KIFAddr = ext.PoCAddr
+		st.KIFAddr = ext.KFFAddr
+		if st.KIFAddr == emptyAddr {
+			st.KIFAddr = ext.PoCAddr
+		}
 	}
 
 	return nil
