@@ -199,7 +199,7 @@ func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
 	return num
 }
 
-// GetSupplyDelta returns the total rewards in this block, i.e. (minted - burntFee)
+// GetTotalReward returns the total rewards in this block, i.e. (minted - burntFee)
 // Used in klay_totalSupply RPC API
 func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
 	total := new(TotalReward)
