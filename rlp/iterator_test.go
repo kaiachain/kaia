@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rlp/iterator_test.go(2022/05/19)
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rlp
 
