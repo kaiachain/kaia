@@ -6,6 +6,8 @@ import {
   StakingTrackerMockReceiver__factory,
   PublicDelegationFactory__factory,
   MultiCallContract__factory,
+  Airdrop__factory,
+  Lockup__factory,
 } from "../../typechain-types";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { deployAddressBook, nowTime, toPeb } from "./helper";
@@ -572,5 +574,51 @@ export async function multiCallTestFixture() {
     AB,
     multiCall,
     deployer,
+  };
+}
+
+export async function airdropTestFixture() {
+  const [deployer, notClaimer, ...claimers] = await ethers.getSigners();
+
+  const claimInfo = [];
+
+  let totalAirdropAmount = 0n;
+
+  for (let i = 0; i < claimers.length; i++) {
+    claimInfo.push({
+      claimer: claimers[i].address,
+      amount: toPeb(100n),
+    });
+    totalAirdropAmount += BigInt(toPeb(100n));
+  }
+
+  const airdrop = await new Airdrop__factory(deployer).deploy();
+
+  return {
+    airdrop,
+    deployer,
+    notClaimer,
+    claimers,
+    claimInfo,
+    totalAirdropAmount,
+  };
+}
+
+export async function LockupTestFixture() {
+  const [deployer, admin, user] = await ethers.getSigners();
+
+  const lockup = await new Lockup__factory(deployer).deploy(
+    admin.address,
+    deployer.address
+  );
+
+  const totalDelegatedAmount = BigInt(toPeb(1_000n));
+
+  return {
+    lockup,
+    deployer, // secretary
+    admin,
+    user,
+    totalDelegatedAmount,
   };
 }
