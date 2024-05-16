@@ -294,8 +294,8 @@ func (s *SupplyTestSuite) SetupSuite() {
 
 	s.oldStakingManager = GetStakingManager()
 	SetTestStakingManagerWithStakingInfoCache(&StakingInfo{
-		KFFAddr: addrFund1,
-		KCFAddr: addrFund2,
+		KIFAddr: addrFund1,
+		KEFAddr: addrFund2,
 	})
 }
 
