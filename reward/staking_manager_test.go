@@ -237,8 +237,8 @@ func TestStakingManager_GetFromAddressBook(t *testing.T) {
 		stakingInfo.CouncilNodeAddrs[1],
 		stakingInfo.CouncilStakingAddrs[1],
 		stakingInfo.CouncilRewardAddrs[1],
-		stakingInfo.KFFAddr,
-		stakingInfo.KCFAddr,
+		stakingInfo.KIFAddr,
+		stakingInfo.KEFAddr,
 	}
 	for i := 0; i < 8; i++ {
 		assert.Equal(t, expectedAddress[i], actualAddress[i])
@@ -279,8 +279,8 @@ func TestStakingManager_GetFromMultiCall(t *testing.T) {
 		stakingInfo.CouncilNodeAddrs[1],
 		stakingInfo.CouncilStakingAddrs[1],
 		stakingInfo.CouncilRewardAddrs[1],
-		stakingInfo.KFFAddr,
-		stakingInfo.KCFAddr,
+		stakingInfo.KIFAddr,
+		stakingInfo.KEFAddr,
 	}
 	for i := 0; i < 8; i++ {
 		assert.Equal(t, expectedAddress[i], actualAddress[i])

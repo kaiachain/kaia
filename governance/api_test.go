@@ -156,8 +156,8 @@ func TestGetRewards(t *testing.T) {
 				BurntFee: common.Big0,
 				Proposer: minted,
 				Stakers:  common.Big0,
-				KFF:      common.Big0,
-				KCF:      common.Big0,
+				KIF:      common.Big0,
+				KEF:      common.Big0,
 				Rewards: map[common.Address]*big.Int{
 					proposer: minted,
 				},
@@ -209,8 +209,8 @@ func TestGetRewardsAccumulated(t *testing.T) {
 		CouncilNodeAddrs:      testAddrList,
 		CouncilStakingAddrs:   testAddrList,
 		CouncilRewardAddrs:    testAddrList,
-		KCFAddr:               common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
-		KFFAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		KEFAddr:               common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
+		KIFAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 		CouncilStakingAmounts: testStakingAmountList,
 	}
 
@@ -270,12 +270,12 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	assert.Equal(t, new(big.Int).Mul(blockTxBurnt, blockCount), ret.TotalBurntTxFee)
 	assert.Equal(t, new(big.Int).Mul(blockProposer, blockCount), ret.TotalProposerRewards)
 	assert.Equal(t, new(big.Int).Mul(blockStaking, blockCount), ret.TotalStakingRewards)
-	assert.Equal(t, new(big.Int).Mul(blockKFF, blockCount), ret.TotalKFFRewards)
-	assert.Equal(t, new(big.Int).Mul(blockKCF, blockCount), ret.TotalKCFRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKFF, blockCount), ret.TotalKIFRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKCF, blockCount), ret.TotalKEFRewards)
 
 	gcReward := big.NewInt(0)
 	for acc, bal := range ret.Rewards {
-		if acc != stInfo.KFFAddr && acc != stInfo.KCFAddr {
+		if acc != stInfo.KIFAddr && acc != stInfo.KEFAddr {
 			gcReward.Add(gcReward, bal)
 		}
 	}

@@ -45,8 +45,8 @@ const (
 	addressTypeNodeID = iota
 	addressTypeStakingAddr
 	addressTypeRewardAddr
-	addressTypePoCAddr // TODO-Kaia: PoC should be changed to KFF after changing AddressBook contract
-	addressTypeKIRAddr // TODO-Kaia: KIR should be changed to KCF after changing AddressBook contract
+	addressTypePoCAddr // TODO-Kaia: PoC should be changed to KIF after changing AddressBook contract
+	addressTypeKIRAddr // TODO-Kaia: KIR should be changed to KEF after changing AddressBook contract
 )
 
 var addressBookContractAddress = system.AddressBookAddr
