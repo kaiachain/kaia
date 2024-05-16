@@ -759,6 +759,7 @@ func Gen(ctx *cli.Context) error {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
 
+	genesisJson.Config.ChainID = new(big.Int).SetUint64(chainid)
 	allocGenesisFund(ctx, genesisJson)
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
