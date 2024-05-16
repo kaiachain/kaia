@@ -565,6 +565,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 	}
 
+	// Replace the Cypress credit contract
+	if chain.Config().IsKaiaForkBlockParent(header.Number) {
+		if chain.Config().ChainID.Uint64() == params.CypressNetworkId && state.GetCode(system.CypressCreditAddr) != nil {
+			if err := state.SetCode(system.CypressCreditAddr, system.CypressCreditV2Code); err != nil {
+				return nil, err
+			}
+			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
+		}
+	}
+
 	header.Root = state.IntermediateRoot(true)
 
 	// Assemble and return the final block for sealing

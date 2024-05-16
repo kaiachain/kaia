@@ -23,6 +23,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	kip113contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip149"
+	misccontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/misc"
 	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/multicall"
 	proxycontract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/proxy"
 	"github.com/klaytn/klaytn/contracts/contracts/testing/reward"
@@ -62,12 +63,14 @@ var (
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
 
 	// System contract binaries to be injected at hardfork or used in testing.
-	RegistryCode     = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
-	RegistryMockCode = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
-	Kip160MockCode   = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)
-	Kip103MockCode   = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockBinRuntime)
-	Kip113Code       = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
-	Kip113MockCode   = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
+	CypressCreditCode   = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
+	CypressCreditV2Code = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
+	RegistryCode        = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
+	RegistryMockCode    = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
+	Kip160MockCode      = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)
+	Kip103MockCode      = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockBinRuntime)
+	Kip113Code          = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
+	Kip113MockCode      = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
 
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 

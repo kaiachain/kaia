@@ -422,35 +422,27 @@ func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
 func (c *ChainConfig) IsKIP103ForkBlock(num *big.Int) bool {
-	if c.Kip103CompatibleBlock == nil || num == nil {
-		return false
-	}
-	return c.Kip103CompatibleBlock.Cmp(num) == 0
+	return isForkBlock(c.Kip103CompatibleBlock, num)
 }
 
 // IsKIP160ForkBlock returns whether num is equal to the kip160 block.
 func (c *ChainConfig) IsKIP160ForkBlock(num *big.Int) bool {
-	if c.Kip160CompatibleBlock == nil || num == nil {
-		return false
-	}
-	return c.Kip160CompatibleBlock.Cmp(num) == 0
+	return isForkBlock(c.Kip160CompatibleBlock, num)
 }
 
 // IsRandaoForkBlockParent returns whether num is one block before the randao block.
 func (c *ChainConfig) IsRandaoForkBlockParent(num *big.Int) bool {
-	if c.RandaoCompatibleBlock == nil || num == nil {
-		return false
-	}
-	nextNum := new(big.Int).Add(num, common.Big1)
-	return c.RandaoCompatibleBlock.Cmp(nextNum) == 0 // randao == num + 1
+	return isForkBlockParent(c.RandaoCompatibleBlock, num)
 }
 
 // IsRandaoForkBlock returns whether num is equal to the randao block.
 func (c *ChainConfig) IsRandaoForkBlock(num *big.Int) bool {
-	if c.RandaoCompatibleBlock == nil || num == nil {
-		return false
-	}
-	return c.RandaoCompatibleBlock.Cmp(num) == 0
+	return isForkBlock(c.RandaoCompatibleBlock, num)
+}
+
+// IsKaiaForkBlockParent returns whether num is equal to the kaia block.
+func (c *ChainConfig) IsKaiaForkBlockParent(num *big.Int) bool {
+	return isForkBlockParent(c.KaiaCompatibleBlock, num)
 }
 
 // CheckCompatible checks whether scheduled fork transitions have been imported
@@ -605,6 +597,22 @@ func isForked(s, head *big.Int) bool {
 		return false
 	}
 	return s.Cmp(head) <= 0
+}
+
+// isForkBlock returns whether given head block is exactly the fork block s.
+func isForkBlock(s, head *big.Int) bool {
+	if s == nil || head == nil {
+		return false
+	}
+	return s.Cmp(head) == 0
+}
+
+func isForkBlockParent(s, head *big.Int) bool {
+	if s == nil || head == nil {
+		return false
+	}
+	nextNum := new(big.Int).Add(head, common.Big1)
+	return s.Cmp(nextNum) == 0
 }
 
 func configNumEqual(x, y *big.Int) bool {
