@@ -1213,6 +1213,8 @@ describe("[Bridge Test]", function () {
   it("Change bridge service period", async function () {
     let uniqOperatorIndex = 123;
     const bridgeBalanceBefore = await getBalance(bridge.address);
+    const deadAddrBalanceBefore = await getBalance("0x000000000000000000000000000000000000dEaD");
+    expect(deadAddrBalanceBefore).to.be.equal(0n);
     expect(bridgeBalanceBefore).to.not.equal(0);
 
     await expect(bridge.connect(unknown).burnBridgeBalance())
@@ -1244,6 +1246,9 @@ describe("[Bridge Test]", function () {
 
     const bridgeBalanceAfter = await getBalance(bridge.address);
     expect(bridgeBalanceAfter).to.be.equal(0n);
+
+    const deadAddrBalanceAfter = await getBalance("0x000000000000000000000000000000000000dEaD");
+    expect(deadAddrBalanceAfter).to.be.equal(bridgeBalanceBefore);
   });
 
   it("Change bridge service period", async function () {
