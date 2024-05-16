@@ -810,6 +810,32 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Kaia-Database Implement this!
 }
 
+func TestDBManager_AccReward(t *testing.T) {
+	for _, dbm := range dbManagers {
+		// AccReward
+		testcases := []struct {
+			Number    uint64
+			AccReward *AccReward
+		}{
+			{1000, &AccReward{big.NewInt(1111), big.NewInt(99)}},
+			{2000, &AccReward{big.NewInt(0), big.NewInt(88)}},
+			{3000, &AccReward{big.NewInt(2222), big.NewInt(0)}},
+			{4000, &AccReward{big.NewInt(0), big.NewInt(0)}},
+		}
+		for _, tc := range testcases {
+			assert.Nil(t, dbm.ReadAccReward(tc.Number))
+			dbm.WriteAccReward(tc.Number, tc.AccReward)
+			assert.Equal(t, tc.AccReward, dbm.ReadAccReward(tc.Number))
+		}
+
+		// LastAccRewardBlockNumber
+		lastNum := uint64(54321)
+		assert.Zero(t, dbm.ReadLastAccRewardBlockNumber())
+		dbm.WriteLastAccRewardBlockNumber(lastNum)
+		assert.Equal(t, lastNum, dbm.ReadLastAccRewardBlockNumber())
+	}
+}
+
 func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {

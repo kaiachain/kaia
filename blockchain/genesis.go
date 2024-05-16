@@ -206,7 +206,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
-		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -227,12 +226,18 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			return genesis.Config, newGenesisBlock.Hash(), err
 		}
 		// This is the usual path which does not overwrite genesis block with the new one.
+		// Make sure the provided genesis is equal to the stored one.
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
+
+	// The genesis block is present in the database but the corresponding state might not.
+	// Because the trie can be partially corrupted, we always commit the trie.
+	// It can happen in a state migrated database or live pruned database.
+	commitGenesisState(genesis, db, networkId)
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
@@ -296,6 +301,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *types.Block {
 	if db == nil {
+		// If db == nil, do not write to the real database. Here we supply a memory database as a placeholder.
 		db = database.NewMemoryDBManager()
 	}
 	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
@@ -428,6 +434,27 @@ func decodePrealloc(data string) GenesisAlloc {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
 	}
 	return ga
+}
+
+func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
+	if genesis == nil {
+		switch {
+		case networkId == params.BaobabNetworkId:
+			genesis = DefaultBaobabGenesisBlock()
+		case networkId == params.CypressNetworkId:
+			fallthrough
+		default:
+			genesis = DefaultGenesisBlock()
+		}
+		if genesis.Config.Governance != nil {
+			genesis.Governance = SetGenesisGovernance(genesis)
+		}
+	}
+	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
+	// But do not run genesis.Commit() which overwrites HeaderHash.
+	InitDeriveSha(genesis.Config)
+	genesis.ToBlock(common.Hash{}, db).Hash()
+	logger.Info("Restored state trie for the genesis block")
 }
 
 type GovernanceSet map[string]interface{}

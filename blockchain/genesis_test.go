@@ -347,6 +347,28 @@ func TestSetupGenesis(t *testing.T) {
 	}
 }
 
+// Test that SetupGenesisBlock writes the genesis state trie if not present.
+func TestGenesisRestoreState(t *testing.T) {
+	db := database.NewMemoryDBManager()
+
+	// Setup first to Commit the Genesis block
+	_, hash, err := SetupGenesisBlock(db, nil, params.CypressNetworkId, false, false)
+	assert.Nil(t, err)
+	assert.Equal(t, params.CypressGenesisHash, hash)
+
+	// Simulate state migration by deleting the state trie root node
+	header := db.ReadHeader(hash, 0)
+	root := header.Root.ExtendZero()
+	db.DeleteTrieNode(root)
+
+	// Setup again to restore the state trie
+	_, hash, err = SetupGenesisBlock(db, nil, params.CypressNetworkId, false, false)
+	assert.Nil(t, err)
+	assert.Equal(t, params.CypressGenesisHash, hash)
+	ok, _ := db.HasTrieNode(root)
+	assert.True(t, ok)
+}
+
 func genCypressGenesisBlock() *Genesis {
 	genesis := DefaultGenesisBlock()
 	genesis.Config = params.CypressChainConfig.Copy()

@@ -36,13 +36,14 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/reward"
 	"github.com/klaytn/klaytn/storage/database"
 )
 
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 //
-//go:generate mockgen -destination=api/mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
+//go:generate mockgen -destination=mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
 type Backend interface {
 	// General Kaia API
 	Progress() kaia.SyncProgress
@@ -59,6 +60,7 @@ type Backend interface {
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
+	GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error)
 
 	// BlockChain API
 	SetHead(number uint64) error

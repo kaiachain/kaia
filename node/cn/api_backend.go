@@ -404,3 +404,11 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
+
+func (b *CNAPIBackend) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
+	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+	return b.cn.supplyManager.GetTotalSupply(block.NumberU64())
+}
