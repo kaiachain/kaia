@@ -91,9 +91,9 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	// NOTE-Kaia-Issue973 Developing Kaia token economy
 	// Add predefined accounts related to reward mechanism
 	rewardContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000441")
-	kcfContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000442")
-	kffContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000443")
-	addrs := append(bcdata.addrs, &rewardContractAddr, &kcfContractAddr, &kffContractAddr)
+	kefContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000442")
+	kifContractAddr := common.HexToAddress("0x0000000000000000000000000000000000000443")
+	addrs := append(bcdata.addrs, &rewardContractAddr, &kefContractAddr, &kifContractAddr)
 
 	for _, addr := range addrs {
 		a.Set(*addr, statedb.GetBalance(*addr), statedb.GetNonce(*addr))

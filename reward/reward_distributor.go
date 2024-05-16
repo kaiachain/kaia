@@ -66,8 +66,8 @@ type rewardConfig struct {
 
 	// parsed ratio
 	cnRatio    *big.Int
-	kffRatio   *big.Int
-	kcfRatio   *big.Int
+	kifRatio   *big.Int
+	kefRatio   *big.Int
 	totalRatio *big.Int
 
 	// parsed KIP82 ratio
@@ -82,8 +82,8 @@ type RewardSpec struct {
 	BurntFee *big.Int                    `json:"burntFee"` // the amount burnt
 	Proposer *big.Int                    `json:"proposer"` // the amount allocated to the block proposer
 	Stakers  *big.Int                    `json:"stakers"`  // total amount allocated to stakers
-	KFF      *big.Int                    `json:"kff"`      // the amount allocated to KFF
-	KCF      *big.Int                    `json:"kcf"`      // the amount allocated to KCF
+	KIF      *big.Int                    `json:"kif"`      // the amount allocated to KIF
+	KEF      *big.Int                    `json:"kef"`      // the amount allocated to KEF
 	Rewards  map[common.Address]*big.Int `json:"rewards"`  // mapping from reward recipient to amounts
 }
 
@@ -94,8 +94,8 @@ func NewRewardSpec() *RewardSpec {
 		BurntFee: big.NewInt(0),
 		Proposer: big.NewInt(0),
 		Stakers:  big.NewInt(0),
-		KFF:      big.NewInt(0),
-		KCF:      big.NewInt(0),
+		KIF:      big.NewInt(0),
+		KEF:      big.NewInt(0),
 		Rewards:  make(map[common.Address]*big.Int),
 	}
 }
@@ -106,8 +106,8 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	spec.BurntFee.Add(spec.BurntFee, delta.BurntFee)
 	spec.Proposer.Add(spec.Proposer, delta.Proposer)
 	spec.Stakers.Add(spec.Stakers, delta.Stakers)
-	spec.KFF.Add(spec.KFF, delta.KFF)
-	spec.KCF.Add(spec.KCF, delta.KCF)
+	spec.KIF.Add(spec.KIF, delta.KIF)
+	spec.KEF.Add(spec.KEF, delta.KEF)
 
 	for addr, amount := range delta.Rewards {
 		incrementRewardsMap(spec.Rewards, addr, amount)
@@ -129,7 +129,7 @@ func DistributeBlockReward(b BalanceAdder, rewards map[common.Address]*big.Int) 
 }
 
 func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
-	cnRatio, kffRatio, kcfRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
+	cnRatio, kifRatio, kefRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
 	if err != nil {
 		return nil, err
 	}
@@ -156,8 +156,8 @@ func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovP
 
 		// parsed ratio
 		cnRatio:    big.NewInt(cnRatio),
-		kffRatio:   big.NewInt(kffRatio),
-		kcfRatio:   big.NewInt(kcfRatio),
+		kifRatio:   big.NewInt(kifRatio),
+		kefRatio:   big.NewInt(kefRatio),
 		totalRatio: big.NewInt(totalRatio),
 
 		// parsed KIP82 ratio
@@ -319,26 +319,26 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	)
 
 	totalFee, rewardFee, burntFee := calcDeferredFee(rc)
-	proposer, stakers, kff, kcf, splitRem := calcSplit(rc, minted, rewardFee)
+	proposer, stakers, kif, kef, splitRem := calcSplit(rc, minted, rewardFee)
 	shares, shareRem := calcShares(stakingInfo, stakers, rc.minimumStake.Uint64())
 
-	// Remainder from (CN, KFF, KCF) split goes to KFF
-	kff = kff.Add(kff, splitRem)
+	// Remainder from (CN, KIF, KEF) split goes to KIF
+	kif = kif.Add(kif, splitRem)
 	// Remainder from staker shares goes to Proposer
-	// Then, deduct it from stakers so that `minted + totalFee - burntFee = proposer + stakers + kff + kcf`
+	// Then, deduct it from stakers so that `minted + totalFee - burntFee = proposer + stakers + kif + kef`
 	proposer = proposer.Add(proposer, shareRem)
 	stakers = stakers.Sub(stakers, shareRem)
 
-	// if KFF or KCF is not set, proposer gets the portion
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KFFAddr) {
-		logger.Debug("KFF empty, proposer gets its portion", "kff", kff)
-		proposer = proposer.Add(proposer, kff)
-		kff = big.NewInt(0)
+	// if KIF or KEF is not set, proposer gets the portion
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KIFAddr) {
+		logger.Debug("KIF empty, proposer gets its portion", "kif", kif)
+		proposer = proposer.Add(proposer, kif)
+		kif = big.NewInt(0)
 	}
-	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KCFAddr) {
-		logger.Debug("KCF empty, proposer gets its portion", "kcf", kcf)
-		proposer = proposer.Add(proposer, kcf)
-		kcf = big.NewInt(0)
+	if stakingInfo == nil || common.EmptyAddress(stakingInfo.KEFAddr) {
+		logger.Debug("KEF empty, proposer gets its portion", "kef", kef)
+		proposer = proposer.Add(proposer, kef)
+		kef = big.NewInt(0)
 	}
 
 	spec := NewRewardSpec()
@@ -347,16 +347,16 @@ func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.G
 	spec.BurntFee = burntFee
 	spec.Proposer = proposer
 	spec.Stakers = stakers
-	spec.KFF = kff
-	spec.KCF = kcf
+	spec.KIF = kif
+	spec.KEF = kef
 
 	incrementRewardsMap(spec.Rewards, header.Rewardbase, proposer)
 
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KFFAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.KFFAddr, kff)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KIFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KIFAddr, kif)
 	}
-	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KCFAddr) {
-		incrementRewardsMap(spec.Rewards, stakingInfo.KCFAddr, kcf)
+	if stakingInfo != nil && !common.EmptyAddress(stakingInfo.KEFAddr) {
+		incrementRewardsMap(spec.Rewards, stakingInfo.KEFAddr, kef)
 	}
 
 	for rewardAddr, rewardAmount := range shares {
@@ -422,21 +422,21 @@ func getBurnAmountKore(rc *rewardConfig, fee *big.Int) *big.Int {
 	}
 }
 
-// calcSplit splits fee into (proposer, stakers, kff, kcf, remaining)
+// calcSplit splits fee into (proposer, stakers, kif, kef, remaining)
 // the sum of the output must be equal to (minted + fee)
 func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int) {
 	totalResource := big.NewInt(0)
 	totalResource = totalResource.Add(minted, fee)
 
 	if rc.rules.IsKore {
-		cn, kff, kcf := splitByRatio(rc, minted)
+		cn, kif, kef := splitByRatio(rc, minted)
 		proposer, stakers := splitByKip82Ratio(rc, cn)
 
 		proposer = proposer.Add(proposer, fee)
 
 		remaining := new(big.Int).Set(totalResource)
-		remaining = remaining.Sub(remaining, kff)
-		remaining = remaining.Sub(remaining, kcf)
+		remaining = remaining.Sub(remaining, kif)
+		remaining = remaining.Sub(remaining, kef)
 		remaining = remaining.Sub(remaining, proposer)
 		remaining = remaining.Sub(remaining, stakers)
 
@@ -445,28 +445,28 @@ func calcSplit(rc *rewardConfig, minted, fee *big.Int) (*big.Int, *big.Int, *big
 			"[in] fee", fee.Uint64(),
 			"[out] proposer", proposer.Uint64(),
 			"[out] stakers", stakers.Uint64(),
-			"[out] kff", kff.Uint64(),
-			"[out] kcf", kcf.Uint64(),
+			"[out] kif", kif.Uint64(),
+			"[out] kef", kef.Uint64(),
 			"[out] remaining", remaining.Uint64(),
 		)
-		return proposer, stakers, kff, kcf, remaining
+		return proposer, stakers, kif, kef, remaining
 	} else {
-		cn, kff, kcf := splitByRatio(rc, totalResource)
+		cn, kif, kef := splitByRatio(rc, totalResource)
 
 		remaining := new(big.Int).Set(totalResource)
-		remaining = remaining.Sub(remaining, kff)
-		remaining = remaining.Sub(remaining, kcf)
+		remaining = remaining.Sub(remaining, kif)
+		remaining = remaining.Sub(remaining, kef)
 		remaining = remaining.Sub(remaining, cn)
 
 		logger.Debug("calcSplit() before kore",
 			"[in] minted", minted.Uint64(),
 			"[in] fee", fee.Uint64(),
 			"[out] cn", cn.Uint64(),
-			"[out] kff", kff.Uint64(),
-			"[out] kcf", kcf.Uint64(),
+			"[out] kif", kif.Uint64(),
+			"[out] kef", kef.Uint64(),
 			"[out] remaining", remaining.Uint64(),
 		)
-		return cn, big.NewInt(0), kff, kcf, remaining
+		return cn, big.NewInt(0), kif, kef, remaining
 	}
 }
 
@@ -475,13 +475,13 @@ func splitByRatio(rc *rewardConfig, source *big.Int) (*big.Int, *big.Int, *big.I
 	cn := new(big.Int).Mul(source, rc.cnRatio)
 	cn = cn.Div(cn, rc.totalRatio)
 
-	kff := new(big.Int).Mul(source, rc.kffRatio)
-	kff = kff.Div(kff, rc.totalRatio)
+	kif := new(big.Int).Mul(source, rc.kifRatio)
+	kif = kif.Div(kif, rc.totalRatio)
 
-	kcf := new(big.Int).Mul(source, rc.kcfRatio)
-	kcf = kcf.Div(kcf, rc.totalRatio)
+	kef := new(big.Int).Mul(source, rc.kefRatio)
+	kef = kef.Div(kef, rc.totalRatio)
 
-	return cn, kff, kcf
+	return cn, kif, kef
 }
 
 // splitByKip82Ratio splits by `kip82ratio`. It ignores any remaining amounts.
@@ -546,14 +546,14 @@ func parseRewardRatio(ratio string) (int64, int64, int64, int64, error) {
 		return 0, 0, 0, 0, errInvalidFormat
 	}
 	cn, err1 := strconv.ParseInt(s[0], 10, 64)
-	kff, err2 := strconv.ParseInt(s[1], 10, 64)
-	kcf, err3 := strconv.ParseInt(s[2], 10, 64)
+	kif, err2 := strconv.ParseInt(s[1], 10, 64)
+	kef, err3 := strconv.ParseInt(s[2], 10, 64)
 
 	if err1 != nil || err2 != nil || err3 != nil {
 		logger.Error("Could not parse ratio", "ratio", ratio)
 		return 0, 0, 0, 0, errParsingRatio
 	}
-	return cn, kff, kcf, cn + kff + kcf, nil
+	return cn, kif, kef, cn + kif + kef, nil
 }
 
 // parseRewardKip82Ratio parses string `kip82ratio` into ints

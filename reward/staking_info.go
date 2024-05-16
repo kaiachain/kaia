@@ -51,8 +51,8 @@ type StakingInfo struct {
 	CouncilStakingAddrs []common.Address `json:"councilStakingAddrs"` // Address of Staking account which holds staking balance
 	CouncilRewardAddrs  []common.Address `json:"councilRewardAddrs"`  // Address of Council account which will get block reward
 
-	KCFAddr common.Address `json:"kcfAddr"` // Address of KCF contract
-	KFFAddr common.Address `json:"kffAddr"` // Address of KFF contract
+	KEFAddr common.Address `json:"kefAddr"` // Address of KEF contract
+	KIFAddr common.Address `json:"kifAddr"` // Address of KIF contract
 
 	UseGini bool    `json:"useGini"`
 	Gini    float64 `json:"gini"` // gini coefficient
@@ -62,15 +62,15 @@ type StakingInfo struct {
 }
 
 // MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
-// TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC is not needed
+// TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC, KCF/KFF is not needed
 func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
 		CouncilStakingAddrs   []common.Address `json:"councilStakingAddrs"`
 		CouncilRewardAddrs    []common.Address `json:"councilRewardAddrs"`
-		KCFAddr               common.Address   `json:"kcfAddr"`
-		KFFAddr               common.Address   `json:"kffAddr"`
+		KEFAddr               common.Address   `json:"kefAddr"`
+		KIFAddr               common.Address   `json:"kifAddr"`
 		UseGini               bool             `json:"useGini"`
 		Gini                  float64          `json:"gini"`
 		CouncilStakingAmounts []uint64         `json:"councilStakingAmounts"`
@@ -85,15 +85,15 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	ext.CouncilNodeAddrs = st.CouncilNodeAddrs
 	ext.CouncilStakingAddrs = st.CouncilStakingAddrs
 	ext.CouncilRewardAddrs = st.CouncilRewardAddrs
-	ext.KCFAddr = st.KCFAddr
-	ext.KFFAddr = st.KFFAddr
+	ext.KEFAddr = st.KEFAddr
+	ext.KIFAddr = st.KIFAddr
 	ext.UseGini = st.UseGini
 	ext.Gini = st.Gini
 	ext.CouncilStakingAmounts = st.CouncilStakingAmounts
 
 	// KIRAddr and PoCAddr are for backward-compatibility of database
-	ext.KIRAddr = st.KCFAddr
-	ext.PoCAddr = st.KFFAddr
+	ext.KIRAddr = st.KEFAddr
+	ext.PoCAddr = st.KIFAddr
 
 	return json.Marshal(&ext)
 }
@@ -127,17 +127,17 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	st.CouncilNodeAddrs = ext.CouncilNodeAddrs
 	st.CouncilStakingAddrs = ext.CouncilStakingAddrs
 	st.CouncilRewardAddrs = ext.CouncilRewardAddrs
-	st.KCFAddr = ext.KCFAddr
-	st.KFFAddr = ext.KFFAddr
+	st.KEFAddr = ext.KCFAddr
+	st.KIFAddr = ext.KFFAddr
 	st.UseGini = ext.UseGini
 	st.Gini = ext.Gini
 	st.CouncilStakingAmounts = ext.CouncilStakingAmounts
 
-	if st.KCFAddr == emptyAddr {
-		st.KCFAddr = ext.KIRAddr
+	if st.KEFAddr == emptyAddr {
+		st.KEFAddr = ext.KIRAddr
 	}
-	if st.KFFAddr == emptyAddr {
-		st.KFFAddr = ext.PoCAddr
+	if st.KIFAddr == emptyAddr {
+		st.KIFAddr = ext.PoCAddr
 	}
 
 	return nil
@@ -176,8 +176,8 @@ type stakingInfoRLP struct {
 	CouncilNodeAddrs      []common.Address
 	CouncilStakingAddrs   []common.Address
 	CouncilRewardAddrs    []common.Address
-	KCFAddr               common.Address
-	KFFAddr               common.Address
+	KEFAddr               common.Address
+	KIFAddr               common.Address
 	UseGini               bool
 	Gini                  uint64
 	CouncilStakingAmounts []uint64
@@ -189,8 +189,8 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 		CouncilNodeAddrs:      make([]common.Address, 0, 0),
 		CouncilStakingAddrs:   make([]common.Address, 0, 0),
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
-		KCFAddr:               common.Address{},
-		KFFAddr:               common.Address{},
+		KEFAddr:               common.Address{},
+		KIFAddr:               common.Address{},
 		CouncilStakingAmounts: make([]uint64, 0, 0),
 		Gini:                  DefaultGiniCoefficient,
 		UseGini:               false,
@@ -279,8 +279,8 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, typ
 		CouncilNodeAddrs:      nodeIds,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
-		KCFAddr:               kirAddr,
-		KFFAddr:               pocAddr,
+		KEFAddr:               kirAddr,
+		KIFAddr:               pocAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
 		UseGini:               useGini,
@@ -315,7 +315,7 @@ func (s *StakingInfo) String() string {
 
 func (s *StakingInfo) EncodeRLP(w io.Writer) error {
 	// float64 is not rlp serializable, so it converts to bytes
-	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KCFAddr, s.KFFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
+	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
 }
 
 func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
@@ -325,7 +325,7 @@ func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
 	}
 	s.BlockNum = dec.BlockNum
 	s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs = dec.CouncilNodeAddrs, dec.CouncilStakingAddrs, dec.CouncilRewardAddrs
-	s.KCFAddr, s.KFFAddr, s.UseGini, s.Gini = dec.KCFAddr, dec.KFFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
+	s.KEFAddr, s.KIFAddr, s.UseGini, s.Gini = dec.KEFAddr, dec.KIFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
 	s.CouncilStakingAmounts = dec.CouncilStakingAmounts
 	return nil
 }

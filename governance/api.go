@@ -115,14 +115,14 @@ type AccumulatedRewards struct {
 	FirstBlock     *big.Int `json:"firstBlock"`
 	LastBlock      *big.Int `json:"lastBlock"`
 
-	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKFFRewards + TotalKCFRewards
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards
 	TotalMinted          *big.Int                    `json:"totalMinted"`
 	TotalTxFee           *big.Int                    `json:"totalTxFee"`
 	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
 	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
 	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
-	TotalKFFRewards      *big.Int                    `json:"totalKFFRewards"`
-	TotalKCFRewards      *big.Int                    `json:"totalKCFRewards"`
+	TotalKIFRewards      *big.Int                    `json:"totalKIFRewards"`
+	TotalKEFRewards      *big.Int                    `json:"totalKEFRewards"`
 	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
@@ -226,8 +226,8 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 	accumRewards.TotalBurntTxFee = blockRewards.BurntFee
 	accumRewards.TotalProposerRewards = blockRewards.Proposer
 	accumRewards.TotalStakingRewards = blockRewards.Stakers
-	accumRewards.TotalKFFRewards = blockRewards.KFF
-	accumRewards.TotalKCFRewards = blockRewards.KCF
+	accumRewards.TotalKIFRewards = blockRewards.KIF
+	accumRewards.TotalKEFRewards = blockRewards.KEF
 
 	return accumRewards, nil
 }
