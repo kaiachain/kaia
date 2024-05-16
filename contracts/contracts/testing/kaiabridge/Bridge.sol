@@ -35,7 +35,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     /// @param initGuardian guardian address
     /// @param initJudge Judge contract address
     function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer) public initializer {
-        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridge: Operator contract address does not implement IOperator");
+        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridger: Operator contract address does not implement IOperator");
         greatestConfirmedSeq = 0;
         nProvisioned = 0;
         judge = initJudge;
@@ -197,6 +197,12 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     function setAddrValidation(bool onOff) public override onlyGuardian {
         emit ChangeAddrValidation(addrValidationOn, onOff);
         addrValidationOn = onOff;
+    }
+
+    /// @dev See {IBridge-changeBridgeServicePeriod}
+    function changeBridgeServicePeriod(uint256 newPeriod) public override onlyGuardian {
+        emit ChangeBridgeServicePeriod(bridgeServicePeriod, newPeriod);
+        bridgeServicePeriod = newPeriod;
     }
 
     /// @dev See {IBridge-transfer}
@@ -400,6 +406,14 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     /// @dev Receive KAIA
     receive() external payable {
         emit KAIACharged(msg.sender, msg.value);
+    }
+
+    function burnBridgeBalance() public override onlyGuardian inPause {
+        require(block.timestamp > bridgeServicePeriod, "KAIA::Bridge: Service period is not expired yet");
+        uint256 bridgeBalance = address(this).balance;
+        (bool sent, ) = BURN_TARGET.call{value: bridgeBalance}("");
+        require(sent, "KAIA::Bridge: Failed to burn bridge balance");
+        emit BridgeBalanceBurned(bridgeBalance);
     }
 
     function newFunc() public pure returns (uint) {

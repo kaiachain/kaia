@@ -1209,4 +1209,59 @@ describe("[Bridge Test]", function () {
 
     expect(await bridge.timelocks(seq)).to.gte(await time.latest() + YEAR * 1000);
   });
+
+  it("Change bridge service period", async function () {
+    let uniqOperatorIndex = 123;
+    const bridgeBalanceBefore = await getBalance(bridge.address);
+    expect(bridgeBalanceBefore).to.not.equal(0);
+
+    await expect(bridge.connect(unknown).burnBridgeBalance())
+      .to.be.revertedWith("KAIA::Bridge: Not an guardian")
+
+    // Bridge not paused yet
+    let rawTxData = (await bridge.populateTransaction.burnBridgeBalance()).data;
+    await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
+    let submission2TxID1 = await guardian.submission2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(submission2TxID1);
+    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID1))
+      .to.be.revertedWith("KAIA::Bridge: Bridge has not been paused");
+
+    // Puase the bridge
+    uniqOperatorIndex++;
+    rawTxData = (await bridge.populateTransaction.pauseBridge("Bridge pause")).data;
+    await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
+    let submission2TxID2 = await guardian.submission2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(submission2TxID2);
+    await guardian.connect(guardian3).confirmTransaction(submission2TxID2);
+
+    // Adjust timestamp
+    const servicePeriodOver = Number(await bridge.bridgeServiceStarted()) + Number(await bridge.bridgeServicePeriod());
+    await addTime(servicePeriodOver);
+
+    // Burn
+    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID1))
+      .to.emit(bridge, "BridgeBalanceBurned");
+
+    const bridgeBalanceAfter = await getBalance(bridge.address);
+    expect(bridgeBalanceAfter).to.be.equal(0n);
+  });
+
+  it("Change bridge service period", async function () {
+    const uniqOperatorIndex = 123;
+    const curPeriodBefore = Number(await bridge.bridgeServicePeriod());
+    const newPeriod = curPeriodBefore * 2;
+
+    await expect(bridge.connect(unknown).changeBridgeServicePeriod(newPeriod))
+      .to.be.revertedWith("KAIA::Bridge: Not an guardian")
+
+    let rawTxData = (await bridge.populateTransaction.changeBridgeServicePeriod(newPeriod)).data;
+    await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
+    let submission2TxID = await guardian.submission2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(submission2TxID);
+    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID))
+      .to.emit(bridge, "ChangeBridgeServicePeriod")
+
+    const curPeriodAfter = Number(await bridge.bridgeServicePeriod());
+    expect(curPeriodBefore * 2).to.be.equal(curPeriodAfter);
+  });
 });

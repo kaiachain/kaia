@@ -149,6 +149,12 @@ abstract contract IBridge {
     /// @dev Emitted when bridge is resumed
     event BridgeResume(string indexed msg);
 
+    /// @dev Emitted when the bridge service period is changed
+    event ChangeBridgeServicePeriod(uint256 indexed bridgeServicePeriod, uint256 indexed newPeriod);
+
+    /// @dev Emitted when the bridge balance is burned
+    event BridgeBalanceBurned(uint256 indexed bridgeBalance);
+
     //////////////////// Exported functions ////////////////////
     /// @dev Set the transferable option from KAIA to FNSA
     /// @param set Enable transfer function if it is true
@@ -244,6 +250,13 @@ abstract contract IBridge {
     /// @param resumeMsg resume message
     function resumeBridge(string calldata resumeMsg) external virtual;
 
+    /// @dev Change the bridge service period
+    /// @param newPeriod New period to be replaced
+    function changeBridgeServicePeriod(uint256 newPeriod) external virtual;
+
+    /// @dev Burn the bridge balance (sending to 0xDEAD address)
+    function burnBridgeBalance() external virtual;
+
     /// @dev Get all locked
     function getAllSwapRequests() external virtual view returns (SwapRequest[] memory);
 
@@ -269,8 +282,12 @@ abstract contract IBridge {
     //////////////////// Constant ////////////////////
     uint256 constant public KAIA_UNIT = 10e18;
     uint256 constant INFINITE = type(uint64).max;
+    address constant BURN_TARGET = 0x000000000000000000000000000000000000dEaD;
 
     //////////////////// Storage variables ////////////////////
+    uint256 public bridgeServiceStarted;
+    uint256 public bridgeServicePeriod;
+
     bool public transferFromKaiaOn;
     address public operator;
     address public guardian;

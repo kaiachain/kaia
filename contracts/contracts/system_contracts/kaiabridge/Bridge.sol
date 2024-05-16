@@ -26,7 +26,7 @@ import "./IGuardian.sol";
 import "./IOperator.sol";
 import "./Bech32.sol";
 
-contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IBridge,  Bech32 {
+contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IBridge, Bech32 {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
 
@@ -35,8 +35,10 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     /// @param initGuardian guardian address
     /// @param initJudge Judge contract address
     function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer) public initializer {
-        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridge: Operator contract address does not implement IOperator");
+        require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridger: Operator contract address does not implement IOperator");
         __ReentrancyGuard_init();
+        bridgeServiceStarted = block.timestamp;
+        bridgeServicePeriod = bridgeServiceStarted + 365 days;
         greatestConfirmedSeq = 0;
         nProvisioned = 0;
         judge = initJudge;
@@ -197,6 +199,12 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     function setAddrValidation(bool onOff) public override onlyGuardian {
         emit ChangeAddrValidation(addrValidationOn, onOff);
         addrValidationOn = onOff;
+    }
+
+    /// @dev See {IBridge-changeBridgeServicePeriod}
+    function changeBridgeServicePeriod(uint256 newPeriod) public override onlyGuardian {
+        emit ChangeBridgeServicePeriod(bridgeServicePeriod, newPeriod);
+        bridgeServicePeriod = newPeriod;
     }
 
     /// @dev See {IBridge-transfer}
@@ -402,6 +410,14 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     /// @dev Receive KAIA
     receive() external payable {
         emit KAIACharged(msg.sender, msg.value);
+    }
+
+    function burnBridgeBalance() public override onlyGuardian inPause {
+        require(block.timestamp > bridgeServicePeriod, "KAIA::Bridge: Service period is not expired yet");
+        uint256 bridgeBalance = address(this).balance;
+        (bool sent, ) = BURN_TARGET.call{value: bridgeBalance}("");
+        require(sent, "KAIA::Bridge: Failed to burn bridge balance");
+        emit BridgeBalanceBurned(bridgeBalance);
     }
 
     /// @dev Return a contract version
