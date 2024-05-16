@@ -155,6 +155,8 @@ type queue struct {
 	stakingInfoTaskQueue *prque.Prque                  // [kaia/65] Priority queue of the headers to fetch the staking infos for
 	stakingInfoPendPool  map[string]*fetchRequest      // [kaia/65] Currently pending staking info retrieval operations
 
+	stakingInfoStoredBlocks []uint64 // Block numbers for which staking info is stored in the DB
+
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
 
@@ -208,6 +210,8 @@ func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 	q.stakingInfoTaskPool = make(map[common.Hash]*types.Header)
 	q.stakingInfoTaskQueue.Reset()
 	q.stakingInfoPendPool = make(map[string]*fetchRequest)
+
+	q.stakingInfoStoredBlocks = []uint64{}
 
 	q.resultCache = newResultStore(blockCacheLimit)
 	q.resultCache.SetThrottleThreshold(uint64(thresholdInitialSize))
@@ -918,6 +922,7 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.Staking
 	}
 
 	reconstruct := func(index int, result *fetchResult) {
+		q.stakingInfoStoredBlocks = append(q.stakingInfoStoredBlocks, result.StakingInfo.BlockNum)
 		result.StakingInfo = stakingInfoList[index]
 		result.SetStakingInfoDone()
 	}

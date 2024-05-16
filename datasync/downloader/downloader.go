@@ -351,6 +351,7 @@ func (d *Downloader) GetSnapSyncer() *snap.Syncer {
 // adding various sanity checks as well as wrapping it with various logger entries.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
+
 	switch err {
 	case nil, errBusy, errCanceled:
 		return err
@@ -422,6 +423,14 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 			d.snapSync = true
 		}
 	}
+
+	// Delete staking info needed after kaia fork
+	for _, blockNum := range d.queue.stakingInfoStoredBlocks {
+		if d.blockchain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNum) + 1)) {
+			reward.DeleteStakingInfoFromDB(blockNum)
+		}
+	}
+
 	// Reset the queue, peer set and wake channels to clean any internal leftover state
 	d.queue.Reset(blockCacheMaxItems, blockCacheInitialItems)
 	d.peers.Reset()
@@ -1685,19 +1694,13 @@ func (d *Downloader) processFullSyncContent() error {
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}
-		if err := d.importBlockResults(results, d.stakingInfoRemover(results)); err != nil {
+		if err := d.importBlockResults(results); err != nil {
 			return err
 		}
 	}
 }
 
-func (d *Downloader) importBlockResults(results []*fetchResult, deleteFn func()) error {
-	defer func() {
-		if deleteFn != nil {
-			deleteFn()
-		}
-	}()
-
+func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	// Check for any early termination requests
 	if len(results) == 0 {
 		return nil
@@ -1844,19 +1847,8 @@ func (d *Downloader) processFastSyncContent() error {
 		}
 
 		// Fast sync done, pivot commit done, full import
-		if err := d.importBlockResults(afterP, d.stakingInfoRemover(results)); err != nil {
+		if err := d.importBlockResults(afterP); err != nil {
 			return err
-		}
-	}
-}
-
-func (d *Downloader) stakingInfoRemover(results []*fetchResult) func() {
-	return func() {
-		for _, result := range results {
-			if result.StakingInfo != nil && d.queue.IsKaiaFork(big.NewInt(int64(result.StakingInfo.BlockNum+1))) {
-				// Ignore error, as we don't want to stop the sync process due to staking info deletion failure
-				reward.DeleteStakingInfoFromDB(result.StakingInfo.BlockNum)
-			}
 		}
 	}
 }
