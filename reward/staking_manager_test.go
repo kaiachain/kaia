@@ -201,8 +201,8 @@ var expectedAddress = []common.Address{
 	common.HexToAddress("0x0000000000000000000000000000000000000F03"), // CN 2's node id
 	common.HexToAddress("0x0000000000000000000000000000000000000F04"), // CN 2's staking address
 	common.HexToAddress("0x0000000000000000000000000000000000000F05"), // CN 2's reward address
-	common.HexToAddress("0x0000000000000000000000000000000000000F06"), // KFF (POC)
-	common.HexToAddress("0x0000000000000000000000000000000000000F07"), // KCF (KIR)
+	common.HexToAddress("0x0000000000000000000000000000000000000F06"), // KIF (POC, KFF)
+	common.HexToAddress("0x0000000000000000000000000000000000000F07"), // KEF (KIR, KCF)
 }
 
 func TestStakingManager_GetFromAddressBook(t *testing.T) {
