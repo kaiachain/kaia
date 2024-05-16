@@ -27,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/p2p"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
@@ -516,6 +517,50 @@ func TestHandleStakingInfoRequestMsg(t *testing.T) {
 		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(int64(5))}).Times(1) // not on staking block
 		data, _ := rlp.EncodeToBytes(testStakingInfo)
 		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq([]rlp.RawValue{data})).Return(nil).Times(1)
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleStakingInfoRequestMsgAfterKaia(t *testing.T) {
+	testChainConfig := params.TestChainConfig
+
+	// Setup governance items for testing
+	orig := reward.GetStakingManager()
+	defer reward.SetTestStakingManager(orig)
+
+	kaiaHFBlock := uint64(5)
+	testBlock := uint64(4)
+	testKaiaBlock := uint64(6) // It needs staking info at block 5, not 4.
+	testStakingInfo := newStakingInfo(testBlock)
+	testStakingInfoKaia := newStakingInfo(kaiaHFBlock)
+	params.SetStakingUpdateInterval(testBlock)
+
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = &params.IstanbulConfig{ProposerPolicy: uint64(istanbul.WeightedRandom)}
+		testChainConfig.KaiaCompatibleBlock = big.NewInt(int64(kaiaHFBlock))
+		pm.chainconfig = testChainConfig
+
+		reward.SetTestStakingManagerWithChain(mockBlockChain, governance.NewGovernance(pm.chainconfig, nil), nil)
+		reward.AddTestStakingInfoToCache(testStakingInfo)
+		reward.AddTestStakingInfoToCache(testStakingInfoKaia)
+
+		msg := generateMsg(t, StakingInfoRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().Config().Return(pm.chainconfig).AnyTimes()
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[0])).Return(&types.Header{Number: big.NewInt(int64(testBlock))}).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(int64(testKaiaBlock))}).Times(1) // not on staking block
+
+		dataBeforeKaia, _ := rlp.EncodeToBytes(testStakingInfo)
+		dataAfterKaia, _ := rlp.EncodeToBytes(testStakingInfoKaia)
+		data := append([]rlp.RawValue{dataBeforeKaia}, dataAfterKaia)
+
+		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq(data)).Return(nil).Times(1)
 
 		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)

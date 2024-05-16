@@ -121,7 +121,7 @@ func TestBasics(t *testing.T) {
 	numOfReceipts := len(chain.blocks) / 2
 	numOfStakingInfos := len(chain.stakingInfos)
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
 	}
@@ -251,6 +251,53 @@ func TestBasics(t *testing.T) {
 	}
 }
 
+func TestScheduleAfterKaia(t *testing.T) {
+	// set test staking update interval
+	orig := params.StakingUpdateInterval()
+	params.SetStakingUpdateInterval(testInterval)
+	defer params.SetStakingUpdateInterval(orig)
+
+	config := params.TestChainConfig
+	config.KaiaCompatibleBlock = big.NewInt(21)
+
+	numOfStakingInfos := 5 // [4, 8, 12, 16, 20]; After kaia fork, it won't be scheduled.
+
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), config)
+	if !q.Idle() {
+		t.Errorf("new queue should be idle")
+	}
+	q.Prepare(1, FastSync)
+	if res := q.Results(false); len(res) != 0 {
+		t.Fatal("new queue should have 0 results")
+	}
+	// Schedule a batch of headers
+	q.Schedule(chain.headers(), 1)
+	if q.Idle() {
+		t.Errorf("queue should not be idle")
+	}
+	// staking info on every 4th block get added to task-queue
+	if got, exp := q.PendingStakingInfos(), numOfStakingInfos; got != exp {
+		t.Errorf("wrong pending receipt count, got %d, exp %d", got, exp)
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos; got != exp {
+		t.Errorf("expected staking info task queue to be %d, got %d", exp, got)
+	}
+	{
+		peer := dummyPeer("peer-1")
+		fetchReq, _, _ := q.ReserveStakingInfos(peer, 50)
+		// But we should still get the first things to fetch
+		if got, exp := len(fetchReq.Headers), 5; got != exp {
+			t.Fatalf("expected %d requests, got %d", exp, got)
+		}
+		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
+			t.Fatalf("expected header %d, got %d", exp, got)
+		}
+	}
+	if got, exp := q.stakingInfoTaskQueue.Size(), 0; got != exp {
+		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
+	}
+}
+
 func TestEmptyBlocks(t *testing.T) {
 	// set test staking update interval
 	orig := params.StakingUpdateInterval()
@@ -260,7 +307,7 @@ func TestEmptyBlocks(t *testing.T) {
 	numOfBlocks := len(emptyChain.blocks)
 	numOfStakingInfos := len(emptyChain.stakingInfos)
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
 
 	q.Prepare(1, FastSync)
 	// Schedule a batch of headers
@@ -368,7 +415,7 @@ func XTestDelivery(t *testing.T) {
 	if false {
 		log.Root().SetHandler(log.StdoutHandler)
 	}
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom))
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
 	var wg sync.WaitGroup
 	q.Prepare(1, FastSync)
 	wg.Add(1)

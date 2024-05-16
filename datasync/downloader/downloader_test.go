@@ -356,6 +356,11 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 	return dl.genesis
 }
 
+// Config retrieves the chain configuration of the tester.
+func (dl *downloadTester) Config() *params.ChainConfig {
+	return params.TestChainConfig
+}
+
 // CurrentFastBlock retrieves the current head fast-sync block from the canonical chain.
 func (dl *downloadTester) CurrentFastBlock() *types.Block {
 	dl.lock.RLock()

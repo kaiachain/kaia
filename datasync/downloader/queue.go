@@ -23,6 +23,7 @@ package downloader
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -74,7 +75,7 @@ type fetchResult struct {
 	StakingInfo  *reward.StakingInfo
 }
 
-func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64) *fetchResult {
+func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, isKaiaFork bool) *fetchResult {
 	var (
 		fastSync = mode == FastSync
 		snapSync = mode == SnapSync
@@ -88,7 +89,7 @@ func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64) 
 	if (fastSync || snapSync) && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !isKaiaFork) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -164,10 +165,12 @@ type queue struct {
 	proposerPolicy uint64
 
 	lastStatLog time.Time
+
+	config *params.ChainConfig
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64, config *params.ChainConfig) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:         make(chan bool),
@@ -177,6 +180,7 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint
 		active:               sync.NewCond(lock),
 		lock:                 lock,
 		proposerPolicy:       proposerPolicy,
+		config:               config,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -374,7 +378,7 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !q.IsKaiaFork(header.Number)) {
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -570,7 +574,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		header := h.(*types.Header)
 		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy)
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy, q.IsKaiaFork(header.Number))
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream
@@ -1005,4 +1009,9 @@ func (q *queue) Prepare(offset uint64, mode SyncMode) {
 	// Prepare the queue for sync results
 	q.resultCache.Prepare(offset)
 	q.mode = mode
+}
+
+// IsKaiaFork checks if the staking info at the given block number is a Kaia block.
+func (q *queue) IsKaiaFork(num *big.Int) bool {
+	return q.config != nil && q.config.IsKaiaForkEnabled(num)
 }

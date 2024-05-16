@@ -219,6 +219,9 @@ type BlockChain interface {
 
 	// Snapshots returns the blockchain snapshot tree.
 	Snapshots() *snapshot.Tree
+
+	// Config retrieves the blockchain configuration.
+	Config() *params.ChainConfig
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
@@ -234,7 +237,7 @@ func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloo
 		mux:                       mux,
 		isStakingInfoRecovery:     false,
 		stakingInfoRecoveryBlocks: []uint64{},
-		queue:                     newQueue(blockCacheMaxItems, blockCacheInitialItems, proposerPolicy),
+		queue:                     newQueue(blockCacheMaxItems, blockCacheInitialItems, proposerPolicy, chain.Config()),
 		peers:                     newPeerSet(),
 		rttEstimate:               uint64(rttMaxEstimate),
 		rttConfidence:             uint64(1000000),
@@ -590,6 +593,11 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 	}
 	logger.Info("start syncing staking infos", "from", from, "to", to)
 	d.isStakingInfoRecovery = true
+
+	config := d.blockchain.Config()
+	if config != nil && (config.IsKaiaForkEnabled(big.NewInt(int64(from))) || config.IsKaiaForkEnabled(big.NewInt(int64(to)))) {
+		return fmt.Errorf("staking info recovery is only available before Kaia fork block (from: %v, to: %v)", from, to)
+	}
 
 	var (
 		blockNums   []uint64
