@@ -6,3 +6,4 @@ pragma solidity ^0.8.18;
 import "./RegistryMock.sol";
 import "./KIP113Mock.sol";
 import "./TreasuryRebalanceMock.sol";
+import "./MultiCallContractMock.sol";

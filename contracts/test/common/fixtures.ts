@@ -5,6 +5,7 @@ import {
   PublicDelegation__factory,
   StakingTrackerMockReceiver__factory,
   PublicDelegationFactory__factory,
+  MultiCallContract__factory,
 } from "../../typechain-types";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { deployAddressBook, nowTime, toPeb } from "./helper";
@@ -555,5 +556,21 @@ export async function cnV3PublicDelegationFixture() {
     user3,
     voterAddress,
     voterAddressMock: voterAddressMock.address,
+  };
+}
+
+export async function multiCallTestFixture() {
+  const AB = await loadFixture(addressBookFixture);
+
+  const [deployer] = await ethers.getSigners();
+
+  await AB.constructContract([deployer.address], 1);
+
+  const multiCall = await new MultiCallContract__factory(deployer).deploy();
+
+  return {
+    AB,
+    multiCall,
+    deployer,
   };
 }
