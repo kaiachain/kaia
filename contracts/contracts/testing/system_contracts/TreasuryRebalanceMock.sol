@@ -29,6 +29,11 @@ contract TreasuryRebalanceMock is TreasuryRebalance {
         rebalanceBlockNumber = _rebalanceBlockNumber;
         status = _status;
     }
+
+    function testFinalize(string calldata _memo) external {
+        // Do not set status to Finalized to allow setting memo before rebalanceBlockNumber.
+        memo = _memo;
+    }
 }
 
 contract TreasuryRebalanceMockV2 is TreasuryRebalanceV2 {
@@ -54,5 +59,10 @@ contract TreasuryRebalanceMockV2 is TreasuryRebalanceV2 {
 
         rebalanceBlockNumber = _rebalanceBlockNumber;
         status = _status;
+    }
+
+    function testFinalize(string calldata _memo) external {
+        // Do not set status to Finalized to allow setting memo before rebalanceBlockNumber.
+        memo = _memo;
     }
 }
