@@ -162,6 +162,25 @@ func TestStakingManager_GetFromDB(t *testing.T) {
 	checkGetStakingInfo(t)
 }
 
+// Check that StakingInfo are deleted from database
+func TestStakingManager_DeleteFromDB(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	resetStakingManagerForTest(t)
+
+	for _, testdata := range stakingManagerTestData {
+		AddStakingInfoToDB(testdata)
+	}
+
+	for _, testdata := range stakingManagerTestData {
+		DeleteStakingInfoFromDB(testdata.BlockNum)
+	}
+
+	for _, testdata := range stakingManagerTestData {
+		res, _ := getStakingInfoFromDB(testdata.BlockNum)
+		assert.Nil(t, res)
+	}
+}
+
 // Even if Gini was -1 in the cache, GetStakingInfo returns valid Gini
 func TestStakingManager_FillGiniFromCache(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)

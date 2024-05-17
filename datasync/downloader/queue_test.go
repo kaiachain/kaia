@@ -80,7 +80,7 @@ func init() {
 	targetBlocks := 128
 
 	var stakingInfos []*reward.StakingInfo
-	for i := 4; i <= 128; i += 4 {
+	for i := 1; i <= 128; i += 1 {
 		stakingInfos = append(stakingInfos, &reward.StakingInfo{BlockNum: uint64(i)})
 	}
 
@@ -112,6 +112,14 @@ func dummyPeer(id string) *peerConnection {
 }
 
 func TestBasics(t *testing.T) {
+	testBasics(t, false)
+}
+
+func TestBasicsKaia(t *testing.T) {
+	testBasics(t, true)
+}
+
+func testBasics(t *testing.T, kaiaFork bool) {
 	// set test staking update interval
 	orig := params.StakingUpdateInterval()
 	params.SetStakingUpdateInterval(testInterval)
@@ -119,9 +127,16 @@ func TestBasics(t *testing.T) {
 
 	numOfBlocks := len(chain.blocks)
 	numOfReceipts := len(chain.blocks) / 2
-	numOfStakingInfos := len(chain.stakingInfos)
+	numOfStakingInfos := len(chain.stakingInfos) / 4
+	effectiveStakingInterval := 4
+	config := params.TestChainConfig
+	if kaiaFork {
+		numOfStakingInfos = len(chain.stakingInfos)
+		effectiveStakingInterval = 1
+		config.KaiaCompatibleBlock = big.NewInt(0)
+	}
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
 	}
@@ -230,10 +245,10 @@ func TestBasics(t *testing.T) {
 			t.Fatal("should throttle")
 		}
 		// But we should still get the first things to fetch
-		if got, exp := len(fetchReq.Headers), 2; got != exp {
+		if got, exp := len(fetchReq.Headers), 10/effectiveStakingInterval; got != exp {
 			t.Fatalf("expected %d requests, got %d", exp, got)
 		}
-		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
+		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(effectiveStakingInterval); got != exp {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
 	}
@@ -243,7 +258,7 @@ func TestBasics(t *testing.T) {
 	if got, exp := q.receiptTaskQueue.Size(), numOfReceipts-5; got != exp {
 		t.Fatalf("expected receipt task queue size %d, got %d", exp, got)
 	}
-	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-2; got != exp {
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-(10/effectiveStakingInterval); got != exp {
 		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
 	}
 	if got, exp := q.resultCache.countCompleted(), 0; got != exp {
@@ -260,7 +275,7 @@ func TestScheduleAfterKaia(t *testing.T) {
 	config := params.TestChainConfig
 	config.KaiaCompatibleBlock = big.NewInt(21)
 
-	numOfStakingInfos := 5 // [4, 8, 12, 16, 20]; After kaia fork, it won't be scheduled.
+	numOfStakingInfos := 113 // [4, 8, 12, 16, 20] + [21, 22, ... , 128]
 
 	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), config)
 	if !q.Idle() {
@@ -286,31 +301,51 @@ func TestScheduleAfterKaia(t *testing.T) {
 		peer := dummyPeer("peer-1")
 		fetchReq, _, _ := q.ReserveStakingInfos(peer, 50)
 		// But we should still get the first things to fetch
-		if got, exp := len(fetchReq.Headers), 5; got != exp {
+		// 35 = [4, 8, 12, 16, 20] + [21, 22, ... , 50]
+		if got, exp := len(fetchReq.Headers), 35; got != exp {
 			t.Fatalf("expected %d requests, got %d", exp, got)
 		}
 		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
 	}
-	if got, exp := q.stakingInfoTaskQueue.Size(), 0; got != exp {
+	// 113 - 35 = 78
+	if got, exp := q.stakingInfoTaskQueue.Size(), 78; got != exp {
 		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
 	}
 }
 
 func TestEmptyBlocks(t *testing.T) {
+	testEmptyBlocks(t, false)
+}
+
+// Empty block doesn't need to fetch body and receipt, but still need to fetch staking info
+// if it's staking update interval or kaia compatible block.
+func TestEmptyBlocksAfterKaia(t *testing.T) {
+	testEmptyBlocks(t, true)
+}
+
+func testEmptyBlocks(t *testing.T, kaiaFork bool) {
 	// set test staking update interval
 	orig := params.StakingUpdateInterval()
 	params.SetStakingUpdateInterval(testInterval)
 	defer params.SetStakingUpdateInterval(orig)
 
 	numOfBlocks := len(emptyChain.blocks)
-	numOfStakingInfos := len(emptyChain.stakingInfos)
+	numOfStakingInfos := len(chain.stakingInfos) / 4
+	effectiveStakingInterval := 4
+	config := params.TestChainConfig
+	if kaiaFork {
+		numOfStakingInfos = len(chain.stakingInfos)
+		effectiveStakingInterval = 1
+		config.KaiaCompatibleBlock = big.NewInt(0)
+	}
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 
 	q.Prepare(1, FastSync)
 	// Schedule a batch of headers
+	// Since it's empty chain, it doesn't schedule receipts
 	q.Schedule(emptyChain.headers(), 1)
 	if q.Idle() {
 		t.Errorf("queue should not be idle")
@@ -329,7 +364,6 @@ func TestEmptyBlocks(t *testing.T) {
 	if got, exp := q.resultCache.countCompleted(), 0; got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
 	}
-
 	// Items are now queued for downloading, next step is that we tell the
 	// queue that a certain peer will deliver them for us
 	// That should trigger all of them to suddenly become 'done'
@@ -380,10 +414,10 @@ func TestEmptyBlocks(t *testing.T) {
 			t.Fatal("should throttle")
 		}
 		// But we should still get the first things to fetch
-		if got, exp := len(fetchReq.Headers), 2; got != exp {
+		if got, exp := len(fetchReq.Headers), (10 / effectiveStakingInterval); got != exp {
 			t.Fatalf("expected %d requests, got %d", exp, got)
 		}
-		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(4); got != exp {
+		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(effectiveStakingInterval); got != exp {
 			t.Fatalf("expected header %d, got %d", exp, got)
 		}
 	}
@@ -393,10 +427,10 @@ func TestEmptyBlocks(t *testing.T) {
 	if q.receiptTaskQueue.Size() != 0 {
 		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
-	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-2; got != exp {
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-(10/effectiveStakingInterval); got != exp {
 		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
 	}
-	if got, exp := q.resultCache.countCompleted(), 3; got != exp {
+	if got, exp := q.resultCache.countCompleted(), (effectiveStakingInterval - 1); got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
 	}
 }
