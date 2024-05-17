@@ -32,15 +32,21 @@ interface IAirdrop {
 
     function claimed(address) external view returns (bool);
 
+    function getBeneficiaries(uint256 start, uint256 end) external view returns (address[] memory);
+
+    function getBeneficiaryAt(uint256 index) external view returns (address);
+
+    function getBeneficiariesLength() external view returns (uint256);
+
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function addClaim(address _beneficiary, uint256 _amount) external;
+    function addClaim(address beneficiary, uint256 amount) external;
 
-    function addBatchClaims(address[] calldata _beneficiaries, uint256[] calldata _amounts) external;
+    function addBatchClaims(address[] calldata beneficiaries, uint256[] calldata amounts) external;
 
     function claim() external;
 
-    function claimFor(address _beneficiary) external;
+    function claimFor(address beneficiary) external;
 
-    function claimBatch(address[] calldata _beneficiaries) external;
+    function claimBatch(address[] calldata beneficiaries) external;
 }

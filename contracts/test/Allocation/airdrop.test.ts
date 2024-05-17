@@ -38,6 +38,15 @@ describe("Airdrop", function () {
         claimInfo[0].amount
       );
     });
+    it("#addClaim: failed to add duplicate beneficiary", async function () {
+      const { airdrop, claimInfo } = fixture;
+
+      await airdrop.addClaim(claimInfo[0].claimer, claimInfo[0].amount);
+
+      await expect(
+        airdrop.addClaim(claimInfo[0].claimer, claimInfo[0].amount)
+      ).to.be.revertedWith("Airdrop: beneficiary already exists");
+    });
     it("#addClaim/addBatchClaims: only owner can add claim", async function () {
       const { airdrop, notClaimer, claimInfo } = fixture;
 
@@ -164,6 +173,50 @@ describe("Airdrop", function () {
           claimInfo[i].amount
         );
       }
+    });
+  });
+  describe("Check view functions", function () {
+    this.beforeEach(async function () {
+      const { airdrop, claimInfo } = fixture;
+
+      for (const claim of claimInfo) {
+        await airdrop.addClaim(claim.claimer, claim.amount);
+      }
+    });
+    it("#getBeneficiariesLength", async function () {
+      const { airdrop, claimInfo } = fixture;
+
+      expect(await airdrop.getBeneficiariesLength()).to.equal(claimInfo.length);
+    });
+    it("#getBeneficiaryAt", async function () {
+      const { airdrop, claimInfo } = fixture;
+
+      expect(await airdrop.getBeneficiaryAt(0)).to.equal(claimInfo[0].claimer);
+    });
+    it("#getBeneficiaries: successfully return beneficiaries", async function () {
+      const { airdrop, claimers } = fixture;
+
+      const beneficiaries = await airdrop.getBeneficiaries(0, claimers.length);
+      for (let i = 0; i < claimers.length; i++) {
+        expect(beneficiaries[i]).to.equal(claimers[i].address);
+      }
+    });
+    it("#getBeneficiaries: end > length", async function () {
+      const { airdrop, claimers } = fixture;
+
+      const beneficiaries = await airdrop.getBeneficiaries(
+        0,
+        claimers.length + 5
+      );
+      for (let i = 0; i < claimers.length; i++) {
+        expect(beneficiaries[i]).to.equal(claimers[i].address);
+      }
+    });
+    it("#getBeneficiaries: start > end", async function () {
+      const { airdrop } = fixture;
+
+      const beneficiaries = await airdrop.getBeneficiaries(5, 4);
+      expect(beneficiaries.length).to.equal(0);
     });
   });
 });
