@@ -922,7 +922,6 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.Staking
 	}
 
 	reconstruct := func(index int, result *fetchResult) {
-		q.stakingInfoStoredBlocks = append(q.stakingInfoStoredBlocks, result.StakingInfo.BlockNum)
 		result.StakingInfo = stakingInfoList[index]
 		result.SetStakingInfoDone()
 	}

@@ -397,7 +397,16 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
 		return errBusy
 	}
-	defer atomic.StoreInt32(&d.synchronising, 0)
+	defer func() {
+		atomic.StoreInt32(&d.synchronising, 0)
+		// Remove staking info for kaia block from DB after syncing
+		for _, blockNum := range d.queue.stakingInfoStoredBlocks {
+			if d.blockchain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNum) + 1)) {
+				reward.DeleteStakingInfoFromDB(blockNum)
+			}
+		}
+		d.queue.stakingInfoStoredBlocks = []uint64{} // Reset stored blocks
+	}()
 
 	// Post a user notification of the sync (only once per session)
 	if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
@@ -421,13 +430,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 			}
 			logger.Warn("Enabling snapshot sync prototype")
 			d.snapSync = true
-		}
-	}
-
-	// Delete staking info needed after kaia fork
-	for _, blockNum := range d.queue.stakingInfoStoredBlocks {
-		if d.blockchain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNum) + 1)) {
-			reward.DeleteStakingInfoFromDB(blockNum)
 		}
 	}
 
@@ -1898,6 +1900,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 				logger.Error("Inserting downloaded staking info is failed", "err", err)
 				return fmt.Errorf("failed to insert the downloaded staking information: %v", err)
 			} else {
+				d.queue.stakingInfoStoredBlocks = append(d.queue.stakingInfoStoredBlocks, result.StakingInfo.BlockNum)
 				logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
 			}
 		}
@@ -1917,6 +1920,7 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 			logger.Error("Inserting downloaded staking info is failed on pivot block", "err", err, "pivot", block.Number())
 			return fmt.Errorf("failed to insert the downloaded staking information on pivot block (%v) : %v", block.Number(), err)
 		} else {
+			d.queue.stakingInfoStoredBlocks = append(d.queue.stakingInfoStoredBlocks, result.StakingInfo.BlockNum)
 			logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
 		}
 	}
