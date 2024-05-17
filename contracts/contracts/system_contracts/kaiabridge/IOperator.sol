@@ -215,6 +215,10 @@ abstract contract IOperator {
     /// @param seq Sequence number
     function getSeq2TxIDs(uint64 seq) external virtual view returns (uint64[] memory);
 
+    /// @dev Return true if the corresponding transaction ID of `hashedData` was not executed and not confrimed by the input operator.
+    /// @param hashedData The input data of `submitTransaction`
+    /// @param operator Operator address
+    function checkProvisionShouldSubmit(bytes32 hashedData, address operator) external virtual view returns (bool);
 
     //////////////////// Storage variables ////////////////////
     address[] public operators;

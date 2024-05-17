@@ -40,7 +40,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         nProvisioned = 0;
         judge = initJudge;
         addrValidationOn = true;
-        minLockableKAIA = 1 * KAIA_UNIT;       // 1 KAIA
+        minLockableKAIA = 5 * KAIA_UNIT;       // 1 KAIA
         maxLockableKAIA = 1000000 * KAIA_UNIT; // 1M KAIA
         seq = 1;
         maxTryTransfer = newMaxTryTransfer;
