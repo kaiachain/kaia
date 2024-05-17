@@ -36,22 +36,12 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// Constants to match up protocol versions and messages
+// `kaia` is the default fallback protocol for all consensus engine types.
+// The name, versions, and lengths are defined in consensus/protocol.go.
 const (
-	kaia62 = 62
 	kaia63 = 63
-	kaia64 = 64
 	kaia65 = 65
 )
-
-// ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "kaia"
-
-// ProtocolVersions are the upported versions of the kaia protocol (first is primary).
-var ProtocolVersions = []uint{kaia65, kaia64, kaia63, kaia62}
-
-// ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{21, 19, 17, 8}
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
