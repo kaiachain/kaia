@@ -972,7 +972,7 @@ describe("[Bridge Test]", function () {
 
   it("#Transfer (case: sequence number is mapped to block number)", async function () {
     const latestBlockNum = (await hre.ethers.provider.getBlock("latest")).number;
-    const amount = BigInt(1 * 10e18);
+    const amount = BigInt(5 * 10e18);
 
     await expect(bridge.transfer(fnsaReceiver, {value: amount})).to.emit(bridge, "Transfer");
     expect(await bridge.seq2BlockNum(seq)).to.gt(latestBlockNum);
@@ -991,7 +991,7 @@ describe("[Bridge Test]", function () {
 
   it("#Transfer KAIA (swap request)", async function () {
     const underMinLockableKAIA = BigInt(1);
-    const upperMinLockableKAIA = BigInt(1 * 10e18);
+    const upperMinLockableKAIA = BigInt(5 * 10e18);
     const upperMaxLockableKAIA = BigInt(10000000 * 10e18);
     await expect(bridge.transfer(fnsaReceiver, {value: underMinLockableKAIA}))
       .revertedWith("KAIA::Bridge: Locked KAIA must be larger than minimum");
@@ -1155,7 +1155,7 @@ describe("[Bridge Test]", function () {
   });
 
   it("#Transfer (address validation)", async function () {
-    const amount = BigInt(1 * 10e18);
+    const amount = BigInt(5 * 10e18);
     let receiver = "link1hpufl3l8g44aaz3qsqw886sjanhhu73ul6tllxuw3pqlhxzq9e4svku69h";
     await expect(bridge.transfer(receiver, {value: amount})).to.emit(bridge, "Transfer");
 
@@ -1268,5 +1268,23 @@ describe("[Bridge Test]", function () {
 
     const curPeriodAfter = Number(await bridge.bridgeServicePeriod());
     expect(curPeriodBefore * 2).to.be.equal(curPeriodAfter);
+  });
+
+  it("#Query the submission of the specific provision", async function () {
+    const provision = [seq, sender, receiver, amount];
+    let rawTxData = (await bridge.populateTransaction.provision(provision)).data;
+    await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
+    await operator.connect(operator2).confirmTransaction(txID);
+
+    const hashedRawTxData = ethers.utils.keccak256(rawTxData);
+    const isOp1Submitted = await operator.checkProvisionShouldSubmit(hashedRawTxData, operator1.address);
+    const isOp2Submitted = await operator.checkProvisionShouldSubmit(hashedRawTxData, operator2.address);
+    const isOp3Submitted = await operator.checkProvisionShouldSubmit(hashedRawTxData, operator3.address);
+    const isOp4Submitted = await operator.checkProvisionShouldSubmit(hashedRawTxData, operator4.address);
+
+    expect(isOp1Submitted).to.be.equal(false);
+    expect(isOp2Submitted).to.be.equal(false);
+    expect(isOp3Submitted).to.be.equal(true);
+    expect(isOp4Submitted).to.be.equal(true);
   });
 });

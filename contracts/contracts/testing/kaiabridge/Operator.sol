@@ -484,6 +484,17 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         return EnumerableSetUint64.getAll(seq2TxID[seq]);
     }
 
+    /// @dev See {IOperator-checkProvisionShouldSubmit}
+    function checkProvisionShouldSubmit(bytes32 hashedData, address operator) public override view returns (bool) {
+        uint64 txID = calldataHashes[hashedData];
+        if (txID > 0 && txID < transactions.length) {
+            bool executed = transactions[txID].executed;
+            bool confirmed = confirmations[txID][operator];
+            return !confirmed && !executed;
+        }
+        return false;
+    }
+
     /// @dev Return a contract version
     function getVersion() public pure returns (string memory) {
         return "0.0.2";
