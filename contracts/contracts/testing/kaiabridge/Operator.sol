@@ -492,6 +492,9 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
             bool confirmed = confirmations[txID][operator];
             return !confirmed && !executed;
         }
+        if (txID == 0) { // not submitted before for this payload
+            return true;
+        }
         return false;
     }
 
