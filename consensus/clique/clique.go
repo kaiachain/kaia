@@ -687,5 +687,5 @@ func (c *Clique) APIs(chain consensus.ChainReader) []rpc.API {
 
 // Protocol implements consensus.Engine.Protocol
 func (c *Clique) Protocol() consensus.Protocol {
-	return consensus.KlayProtocol
+	return consensus.KaiaProtocol
 }
