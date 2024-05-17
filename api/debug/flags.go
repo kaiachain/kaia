@@ -45,7 +45,7 @@ var (
 		Usage:    "Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail",
 		Value:    3,
 		Aliases:  []string{"debug-profile.verbosity"},
-		EnvVars:  []string{"KLAYTN_VERBOSITY"},
+		EnvVars:  []string{"KLAYTN_VERBOSITY", "KAIA_VERBOSITY"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	vmoduleFlag = &cli.StringFlag{
@@ -53,7 +53,7 @@ var (
 		Usage:    "Per-module verbosity: comma-separated list of <pattern>=<level> (e.g. klay/*=5,p2p=4)",
 		Value:    "",
 		Aliases:  []string{"debug-profile.vmodule"},
-		EnvVars:  []string{"KLAYTN_VMODULE"},
+		EnvVars:  []string{"KLAYTN_VMODULE", "KAIA_VMODULE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	backtraceAtFlag = &cli.StringFlag{
@@ -61,14 +61,14 @@ var (
 		Usage:    "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
 		Value:    "",
 		Aliases:  []string{"debug-profile.backtrace"},
-		EnvVars:  []string{"KLAYTN_BACKTRACE"},
+		EnvVars:  []string{"KLAYTN_BACKTRACE", "KAIA_BACKTRACE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	debugFlag = &cli.BoolFlag{
 		Name:     "debug",
 		Usage:    "Prepends log messages with call-site location (file and line number)",
 		Aliases:  []string{"debug-profile.print-site"},
-		EnvVars:  []string{"KLAYTN_DEBUG"},
+		EnvVars:  []string{"KLAYTN_DEBUG", "KAIA_DEBUG"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logFormatFlag = &cli.StringFlag{
@@ -76,21 +76,21 @@ var (
 		Usage:    "Log format to use (json|logfmt|terminal)",
 		Value:    "terminal",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGFORMAT"},
+		EnvVars:  []string{"KLAYTN_LOGFORMAT", "KAIA_LOGFORMAT"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logFileFlag = &cli.StringFlag{
 		Name:     "log.file",
 		Usage:    "Write logs to a file",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGFILE"},
+		EnvVars:  []string{"KLAYTN_LOGFILE", "KAIA_LOGFILE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logRotateFlag = &cli.BoolFlag{
 		Name:     "log.rotate",
 		Usage:    "Enables log file rotation",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGROTATE"},
+		EnvVars:  []string{"KLAYTN_LOGROTATE", "KAIA_LOGROTATE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logMaxSizeMBsFlag = &cli.IntFlag{
@@ -98,7 +98,7 @@ var (
 		Usage:    "Maximum size in MBs of a single log file (use with --log.rotate flag)",
 		Value:    100,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGMAXSIZE"},
+		EnvVars:  []string{"KLAYTN_LOGMAXSIZE", "KAIA_LOGMAXSIZE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logMaxBackupsFlag = &cli.IntFlag{
@@ -106,7 +106,7 @@ var (
 		Usage:    "Maximum number of log files to retain (use with --log.rotate flag)",
 		Value:    10,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGMAXBACKUPS"},
+		EnvVars:  []string{"KLAYTN_LOGMAXBACKUPS", "KAIA_LOGMAXBACKUPS"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logMaxAgeFlag = &cli.IntFlag{
@@ -114,21 +114,21 @@ var (
 		Usage:    "Maximum number of days to retain a log file (use with --log.rotate flag)",
 		Value:    30,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGMAXAGE"},
+		EnvVars:  []string{"KLAYTN_LOGMAXAGE", "KAIA_LOGMAXAGE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	logCompressFlag = &cli.BoolFlag{
 		Name:     "log.compress",
 		Usage:    "Compress the log files (use with --log.rotate flag)",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_LOGCOMPRESS"},
+		EnvVars:  []string{"KLAYTN_LOGCOMPRESS", "KAIA_LOGCOMPRESS"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	pprofFlag = &cli.BoolFlag{
 		Name:     "pprof",
 		Usage:    "Enable the pprof HTTP server",
 		Aliases:  []string{"debug-profile.pprof.enable"},
-		EnvVars:  []string{"KLAYTN_PPROF"},
+		EnvVars:  []string{"KLAYTN_PPROF", "KAIA_PPROF"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	pprofPortFlag = &cli.IntFlag{
@@ -136,7 +136,7 @@ var (
 		Usage:    "pprof HTTP server listening port",
 		Value:    6060,
 		Aliases:  []string{"debug-profile.pprof.port"},
-		EnvVars:  []string{"KLAYTN_PPROFPORT"},
+		EnvVars:  []string{"KLAYTN_PPROFPORT", "KAIA_PPROFPORT"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	pprofAddrFlag = &cli.StringFlag{
@@ -144,14 +144,14 @@ var (
 		Usage:    "pprof HTTP server listening interface",
 		Value:    "127.0.0.1",
 		Aliases:  []string{"debug-profile.pprof.addr"},
-		EnvVars:  []string{"KLAYTN_PPROFADDR"},
+		EnvVars:  []string{"KLAYTN_PPROFADDR", "KAIA_PPROFADDR"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	memprofileFlag = &cli.StringFlag{
 		Name:     "memprofile",
 		Usage:    "Write memory profile to the given file",
 		Aliases:  []string{"debug-profile.mem-profile.file-name"},
-		EnvVars:  []string{"KLAYTN_MEMPROFILE"},
+		EnvVars:  []string{"KLAYTN_MEMPROFILE", "KAIA_MEMPROFILE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	memprofilerateFlag = &cli.IntFlag{
@@ -159,28 +159,28 @@ var (
 		Usage:    "Turn on memory profiling with the given rate",
 		Value:    runtime.MemProfileRate,
 		Aliases:  []string{"debug-profile.mem-profile.rate"},
-		EnvVars:  []string{"KLAYTN_MEMPROFILERATE"},
+		EnvVars:  []string{"KLAYTN_MEMPROFILERATE", "KAIA_MEMPROFILERATE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	blockprofilerateFlag = &cli.IntFlag{
 		Name:     "blockprofilerate",
 		Usage:    "Turn on block profiling with the given rate",
 		Aliases:  []string{"debug-profile.block-profile.rate"},
-		EnvVars:  []string{"KLAYTN_BLOCKPROFILERATE"},
+		EnvVars:  []string{"KLAYTN_BLOCKPROFILERATE", "KAIA_BLOCKPROFILERATE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	cpuprofileFlag = &cli.StringFlag{
 		Name:     "cpuprofile",
 		Usage:    "Write CPU profile to the given file",
 		Aliases:  []string{"debug-profile.cpu-profile.file-name"},
-		EnvVars:  []string{"KLAYTN_CPUPROFILE"},
+		EnvVars:  []string{"KLAYTN_CPUPROFILE", "KAIA_CPUPROFILE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 	traceFlag = &cli.StringFlag{
 		Name:     "trace",
 		Usage:    "Write execution trace to the given file",
 		Aliases:  []string{"debug-profile.trace.file-name"},
-		EnvVars:  []string{"KLAYTN_TRACE"},
+		EnvVars:  []string{"KLAYTN_TRACE", "KAIA_TRACE"},
 		Category: "LOGGING AND DEBUGGING",
 	}
 )

@@ -28,15 +28,15 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	Klay62 = 62
-	Klay63 = 63
-	Klay64 = 64
-	Klay65 = 65
+	Kaia62 = 62
+	Kaia63 = 63
+	Kaia64 = 64
+	Kaia65 = 65
 )
 
-var KlayProtocol = Protocol{
-	Name:     "klay",
-	Versions: []uint{Klay65, Klay64, Klay63, Klay62},
+var KaiaProtocol = Protocol{
+	Name:     "kaia",
+	Versions: []uint{Kaia65, Kaia64, Kaia63, Kaia62},
 	Lengths:  []uint64{21, 19, 17, 8},
 }
 

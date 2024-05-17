@@ -151,9 +151,9 @@ type Fetcher struct {
 	// Testing hooks
 	announceChangeHook func(common.Hash, bool) // Method to call upon adding or deleting a hash from the announce list
 	queueChangeHook    func(common.Hash, bool) // Method to call upon adding or deleting a block from the import queue
-	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (klay/61) or header (klay/62) fetch
-	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (klay/62)
-	importedHook       func(*types.Block)      // Method to call upon successful block import (both klay/61 and klay/62)
+	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (kaia/61) or header (kaia/62) fetch
+	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (kaia/62)
+	importedHook       func(*types.Block)      // Method to call upon successful block import (both kaia/61 and kaia/62)
 
 	insertTasks chan insertTask
 }

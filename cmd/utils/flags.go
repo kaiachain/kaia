@@ -74,61 +74,61 @@ var (
 		Usage:    "Disable checking if the local time is synchronized with ntp server. If this flag is not set, the local time is checked with the time of the server specified by ntp.server.",
 		Value:    false,
 		Aliases:  []string{"common.ntp.disable"},
-		EnvVars:  []string{"KLAYTN_NTP_DISABLE"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_NTP_DISABLE", "KAIA_NTP_DISABLE"},
+		Category: "KAIA",
 	}
 	NtpServerFlag = &cli.StringFlag{
 		Name:     "ntp.server",
 		Usage:    "Remote ntp server:port to get the time",
 		Value:    "pool.ntp.org:123",
 		Aliases:  []string{"common.ntp.server", "ns"},
-		EnvVars:  []string{"KLAYTN_NTP_SERVER"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_NTP_SERVER", "KAIA_NTP_SERVER"},
+		Category: "KAIA",
 	}
 	NetworkTypeFlag = &cli.StringFlag{
 		Name:    "networktype",
 		Usage:   "Kaia network type (main-net (mn), service chain-net (scn))",
 		Value:   "mn",
 		Aliases: []string{},
-		EnvVars: []string{"KLAYTN_NETWORKTYPE"},
+		EnvVars: []string{"KLAYTN_NETWORKTYPE", "KAIA_NETWORKTYPE"},
 	}
 	DbTypeFlag = &cli.StringFlag{
 		Name:     "dbtype",
 		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
 		Value:    "LevelDB",
 		Aliases:  []string{"db.type", "migration.src.dbtype"},
-		EnvVars:  []string{"KLAYTN_DBTYPE"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_DBTYPE", "KAIA_DBTYPE"},
+		Category: "KAIA",
 	}
 	SrvTypeFlag = &cli.StringFlag{
 		Name:     "srvtype",
 		Usage:    `json rpc server type ("http", "fasthttp")`,
 		Value:    "fasthttp",
 		Aliases:  []string{"common.srvtype"},
-		EnvVars:  []string{"KLAYTN_SRVTYPE"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_SRVTYPE", "KAIA_SRVTYPE"},
+		Category: "KAIA",
 	}
 	DataDirFlag = &cli.PathFlag{
 		Name:     "datadir",
 		Value:    node.DefaultDataDir(),
 		Usage:    "Data directory for the databases and keystore. This value is only used in local DB.",
 		Aliases:  []string{"common.datadir", "migration.src.datadir"},
-		EnvVars:  []string{"KLAYTN_DATADIR"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_DATADIR", "KAIA_DATADIR"},
+		Category: "KAIA",
 	}
 	ChainDataDirFlag = &cli.PathFlag{
 		Name:     "chaindatadir",
 		Value:    "",
 		Usage:    "Data directory for chaindata. If this is not specified, chaindata is stored in datadir",
 		Aliases:  []string{"common.chaindatadir"},
-		EnvVars:  []string{"KLAYTN_CHAINDATADIR"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_CHAINDATADIR", "KAIA_CHAINDATADIR"},
+		Category: "KAIA",
 	}
 	KeyStoreDirFlag = &cli.PathFlag{
 		Name:     "keystore",
 		Usage:    "Directory for the keystore (default = inside the datadir)",
 		Aliases:  []string{"common.keystore"},
-		EnvVars:  []string{"KLAYTN_KEYSTORE"},
+		EnvVars:  []string{"KLAYTN_KEYSTORE", "KAIA_KEYSTORE"},
 		Category: "ACCOUNT",
 	}
 	// TODO-Kaia-Bootnode: redefine networkid
@@ -137,15 +137,15 @@ var (
 		Usage:    "Network identifier (integer, 8217=Cypress (Mainnet) , 1000=Aspen, 1001=Baobab)",
 		Value:    cn.GetDefaultConfig().NetworkId,
 		Aliases:  []string{"p2p.network-id"},
-		EnvVars:  []string{"KLAYTN_NETWORKID"},
+		EnvVars:  []string{"KLAYTN_NETWORKID", "KAIA_NETWORKID"},
 		Category: "NETWORK",
 	}
 	IdentityFlag = &cli.StringFlag{
 		Name:     "identity",
 		Usage:    "Custom node name",
 		Aliases:  []string{"common.identity"},
-		EnvVars:  []string{"KLAYTN_IDENTITY"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_IDENTITY", "KAIA_IDENTITY"},
+		Category: "KAIA",
 	}
 	DocRootFlag = &cli.PathFlag{
 		Name:  "docroot",
@@ -153,8 +153,8 @@ var (
 		// Value:   DirectoryString{homeDir()},
 		Value:    homeDir(),
 		Aliases:  []string{"common.docroot"},
-		EnvVars:  []string{"KLAYTN_DOCROOT"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_DOCROOT", "KAIA_DOCROOT"},
+		Category: "KAIA",
 	}
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = &TextMarshalerFlag{
@@ -162,58 +162,58 @@ var (
 		Usage:    `Blockchain sync mode ("full" or "snap")`,
 		Value:    &defaultSyncMode,
 		Aliases:  []string{"common.syncmode"},
-		EnvVars:  []string{"KLAYTN_SYNCMODE"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_SYNCMODE", "KAIA_SYNCMODE"},
+		Category: "KAIA",
 	}
 	GCModeFlag = &cli.StringFlag{
 		Name:     "gcmode",
 		Usage:    `Blockchain garbage collection mode ("full", "archive")`,
 		Value:    "full",
 		Aliases:  []string{"common.garbage-collection-mode"},
-		EnvVars:  []string{"KLAYTN_GCMODE"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_GCMODE", "KAIA_GCMODE"},
+		Category: "KAIA",
 	}
 	LightKDFFlag = &cli.BoolFlag{
 		Name:     "lightkdf",
 		Usage:    "Reduce key-derivation RAM & CPU usage at some expense of KDF strength",
 		Aliases:  []string{"common.light-kdf"},
-		EnvVars:  []string{"KLAYTN_LIGHTKDF"},
+		EnvVars:  []string{"KLAYTN_LIGHTKDF", "KAIA_LIGHTKDF"},
 		Category: "ACCOUNT",
 	}
 	OverwriteGenesisFlag = &cli.BoolFlag{
 		Name:     "overwrite-genesis",
 		Usage:    "Overwrites genesis block with the given new genesis block for testing purpose",
 		Aliases:  []string{"common.overwrite-genesis"},
-		EnvVars:  []string{"KLAYTN_OVERWRITE_GENESIS"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_OVERWRITE_GENESIS", "KAIA_OVERWRITE_GENESIS"},
+		Category: "KAIA",
 	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
 		Name:     "start-block-num",
 		Usage:    "Starts the node from the given block number. Starting from 0 is not supported.",
 		Aliases:  []string{"common.start-block-num"},
-		EnvVars:  []string{"KLAYTN_START_BLOCK_NUM"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_START_BLOCK_NUM", "KAIA_START_BLOCK_NUM"},
+		Category: "KAIA",
 	}
 	// Transaction pool settings
 	TxPoolNoLocalsFlag = &cli.BoolFlag{
 		Name:     "txpool.nolocals",
 		Usage:    "Disables price exemptions for locally submitted transactions",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_NOLOCALS"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NOLOCALS", "KAIA_TXPOOL_NOLOCALS"},
 		Category: "TXPOOL",
 	}
 	TxPoolAllowLocalAnchorTxFlag = &cli.BoolFlag{
 		Name:     "txpool.allow-local-anchortx",
 		Usage:    "Allow locally submitted anchoring transactions",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_ALLOW_LOCAL_ANCHORTX"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_ALLOW_LOCAL_ANCHORTX", "KAIA_TXPOOL_ALLOW_LOCAL_ANCHORTX"},
 		Category: "TXPOOL",
 	}
 	TxPoolDenyRemoteTxFlag = &cli.BoolFlag{
 		Name:     "txpool.deny.remotetx",
 		Usage:    "Deny remote transaction receiving from other peers. Use only for emergency cases",
 		Aliases:  []string{"txpool.deny-remote-tx"},
-		EnvVars:  []string{"KLAYTN_TXPOOL_DENY_REMOTETX"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_DENY_REMOTETX", "KAIA_TXPOOL_DENY_REMOTETX"},
 		Category: "TXPOOL",
 	}
 	TxPoolJournalFlag = &cli.StringFlag{
@@ -221,7 +221,7 @@ var (
 		Usage:    "Disk journal for local transaction to survive node restarts",
 		Value:    blockchain.DefaultTxPoolConfig.Journal,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL", "KAIA_TXPOOL_JOURNAL"},
 		Category: "TXPOOL",
 	}
 	TxPoolJournalIntervalFlag = &cli.DurationFlag{
@@ -229,7 +229,7 @@ var (
 		Usage:    "Time interval to regenerate the local transaction journal",
 		Value:    blockchain.DefaultTxPoolConfig.JournalInterval,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL_INTERVAL"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_JOURNAL_INTERVAL", "KAIA_TXPOOL_JOURNAL_INTERVAL"},
 		Category: "TXPOOL",
 	}
 	TxPoolPriceLimitFlag = &cli.Uint64Flag{
@@ -237,7 +237,7 @@ var (
 		Usage:    "Minimum gas price limit to enforce for acceptance into the pool",
 		Value:    cn.GetDefaultConfig().TxPool.PriceLimit,
 		Aliases:  []string{"txpool.price-limit"},
-		EnvVars:  []string{"KLAYTN_TXPOOL_PRICELIMIT"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_PRICELIMIT", "KAIA_TXPOOL_PRICELIMIT"},
 		Category: "TXPOOL",
 	}
 	TxPoolPriceBumpFlag = &cli.Uint64Flag{
@@ -245,7 +245,7 @@ var (
 		Usage:    "Price bump percentage to replace an already existing transaction",
 		Value:    cn.GetDefaultConfig().TxPool.PriceBump,
 		Aliases:  []string{"txpool.price-bump"},
-		EnvVars:  []string{"KLAYTN_TXPOOL_PRICEBUMP"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_PRICEBUMP", "KAIA_TXPOOL_PRICEBUMP"},
 		Category: "TXPOOL",
 	}
 	TxPoolExecSlotsAccountFlag = &cli.Uint64Flag{
@@ -253,7 +253,7 @@ var (
 		Usage:    "Number of executable transaction slots guaranteed per account",
 		Value:    cn.GetDefaultConfig().TxPool.ExecSlotsAccount,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ACCOUNT"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ACCOUNT", "KAIA_TXPOOL_EXEC_SLOTS_ACCOUNT"},
 		Category: "TXPOOL",
 	}
 	TxPoolExecSlotsAllFlag = &cli.Uint64Flag{
@@ -261,7 +261,7 @@ var (
 		Usage:    "Maximum number of executable transaction slots for all accounts",
 		Value:    cn.GetDefaultConfig().TxPool.ExecSlotsAll,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ALL"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_EXEC_SLOTS_ALL", "KAIA_TXPOOL_EXEC_SLOTS_ALL"},
 		Category: "TXPOOL",
 	}
 	TxPoolNonExecSlotsAccountFlag = &cli.Uint64Flag{
@@ -269,7 +269,7 @@ var (
 		Usage:    "Maximum number of non-executable transaction slots permitted per account",
 		Value:    cn.GetDefaultConfig().TxPool.NonExecSlotsAccount,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ACCOUNT"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ACCOUNT", "KAIA_TXPOOL_NONEXEC_SLOTS_ACCOUNT"},
 		Category: "TXPOOL",
 	}
 	TxPoolNonExecSlotsAllFlag = &cli.Uint64Flag{
@@ -277,14 +277,14 @@ var (
 		Usage:    "Maximum number of non-executable transaction slots for all accounts",
 		Value:    cn.GetDefaultConfig().TxPool.NonExecSlotsAll,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ALL"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_NONEXEC_SLOTS_ALL", "KAIA_TXPOOL_NONEXEC_SLOTS_ALL"},
 		Category: "TXPOOL",
 	}
 	TxPoolKeepLocalsFlag = &cli.BoolFlag{
 		Name:     "txpool.keeplocals",
 		Usage:    "Disables removing timed-out local transactions",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_KEEPLOCALS"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_KEEPLOCALS", "KAIA_TXPOOL_KEEPLOCALS"},
 		Category: "TXPOOL",
 	}
 	TxPoolLifetimeFlag = &cli.DurationFlag{
@@ -292,7 +292,7 @@ var (
 		Usage:    "Maximum amount of time non-executable transaction are queued",
 		Value:    cn.GetDefaultConfig().TxPool.Lifetime,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXPOOL_LIFETIME"},
+		EnvVars:  []string{"KLAYTN_TXPOOL_LIFETIME", "KAIA_TXPOOL_LIFETIME"},
 		Category: "TXPOOL",
 	}
 	// PN specific txpool settings
@@ -300,7 +300,7 @@ var (
 		Name:    "txpool.spamthrottler.disable",
 		Usage:   "Disable txpool spam throttler prototype",
 		Aliases: []string{},
-		EnvVars: []string{"KLAYTN_TXPOOL_SPAMTHROTTLER_DISABLE"},
+		EnvVars: []string{"KLAYTN_TXPOOL_SPAMTHROTTLER_DISABLE", "KAIA_TXPOOL_SPAMTHROTTLER_DISABLE"},
 	}
 
 	// KES
@@ -308,14 +308,14 @@ var (
 		Name:     "kes.nodetype.service",
 		Usage:    "Run as a KES Service Node (Disable fetcher, downloader, and worker)",
 		Aliases:  []string{"common.kes-nodetype-service"},
-		EnvVars:  []string{"KLAYTN_KES_NODETYPE_SERVICE"},
+		EnvVars:  []string{"KLAYTN_KES_NODETYPE_SERVICE", "KAIA_KES_NODETYPE_SERVICE"},
 		Category: "MISC",
 	}
 	SingleDBFlag = &cli.BoolFlag{
 		Name:     "db.single",
 		Usage:    "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
 		Aliases:  []string{"migration.src.single"},
-		EnvVars:  []string{"KLAYTN_DB_SINGLE"},
+		EnvVars:  []string{"KLAYTN_DB_SINGLE", "KAIA_DB_SINGLE"},
 		Category: "DATABASE",
 	}
 	NumStateTrieShardsFlag = &cli.UintFlag{
@@ -323,7 +323,7 @@ var (
 		Usage:    "Number of internal shards of state trie DB shards. Should be power of 2",
 		Value:    4,
 		Aliases:  []string{"migration.src.db.leveldb.num-statetrie-shards"},
-		EnvVars:  []string{"KLAYTN_DB_NUM_STATETRIE_SHARDS"},
+		EnvVars:  []string{"KLAYTN_DB_NUM_STATETRIE_SHARDS", "KAIA_DB_NUM_STATETRIE_SHARDS"},
 		Category: "DATABASE",
 	}
 	LevelDBCacheSizeFlag = &cli.IntFlag{
@@ -331,7 +331,7 @@ var (
 		Usage:    "Size of in-memory cache in LevelDB (MiB)",
 		Value:    768,
 		Aliases:  []string{"migration.src.db.leveldb.cache-size"},
-		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE", "KAIA_DB_LEVELDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
 	// TODO-Kaia-Database LevelDBCompressionTypeFlag should be removed before main-net release.
@@ -340,21 +340,21 @@ var (
 		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
 		Value:    0,
 		Aliases:  []string{"migration.src.db.leveldb.compression"},
-		EnvVars:  []string{"KLAYTN_DB_LEVELDB_COMPRESSION"},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_COMPRESSION", "KAIA_DB_LEVELDB_COMPRESSION"},
 		Category: "DATABASE",
 	}
 	LevelDBNoBufferPoolFlag = &cli.BoolFlag{
 		Name:     "db.leveldb.no-buffer-pool",
 		Usage:    "Disables using buffer pool for LevelDB's block allocation",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_LEVELDB_NO_BUFFER_POOL"},
+		EnvVars:  []string{"KLAYTN_DB_LEVELDB_NO_BUFFER_POOL", "KAIA_DB_LEVELDB_NO_BUFFER_POOL"},
 		Category: "DATABASE",
 	}
 	RocksDBSecondaryFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.secondary",
 		Usage:    "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
 		Aliases:  []string{"migration.src.db.rocksdb.secondary"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_SECONDARY"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_SECONDARY", "KAIA_DB_ROCKSDB_SECONDARY"},
 		Category: "DATABASE",
 	}
 	RocksDBCacheSizeFlag = &cli.Uint64Flag{
@@ -362,14 +362,14 @@ var (
 		Usage:    "Size of in-memory cache in RocksDB (MiB)",
 		Value:    768,
 		Aliases:  []string{"migration.src.db.rocksdb.cache-size"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_SIZE", "KAIA_DB_ROCKSDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
 	RocksDBDumpMallocStatFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.dump-malloc-stat",
 		Usage:    "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
 		Aliases:  []string{"migration.src.db.rocksdb.dump-malloc-stat"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DUMP_MALLOC_STAT", "KAIA_DB_ROCKSDB_DUMP_MALLOC_STAT"},
 		Category: "DATABASE",
 	}
 	RocksDBCompressionTypeFlag = &cli.StringFlag{
@@ -377,7 +377,7 @@ var (
 		Usage:    "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().CompressionType,
 		Aliases:  []string{"migration.src.db.rocksdb.compression-type"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_COMPRESSION_TYPE", "KAIA_DB_ROCKSDB_COMPRESSION_TYPE"},
 		Category: "DATABASE",
 	}
 	RocksDBBottommostCompressionTypeFlag = &cli.StringFlag{
@@ -385,7 +385,7 @@ var (
 		Usage:    "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().BottommostCompressionType,
 		Aliases:  []string{"migration.src.db.rocksdb.bottommost-compression-type"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE", "KAIA_DB_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
 		Category: "DATABASE",
 	}
 	RocksDBFilterPolicyFlag = &cli.StringFlag{
@@ -393,14 +393,14 @@ var (
 		Usage:    "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
 		Value:    database.GetDefaultRocksDBConfig().FilterPolicy,
 		Aliases:  []string{"migration.src.db.rocksdb.filter-policy"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_FILTER_POLICY"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_FILTER_POLICY", "KAIA_DB_ROCKSDB_FILTER_POLICY"},
 		Category: "DATABASE",
 	}
 	RocksDBDisableMetricsFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.disable-metrics",
 		Usage:    "Disable RocksDB metrics",
 		Aliases:  []string{"migration.src.db.rocksdb.disable-metrics"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_DISABLE_METRICS", "KAIA_DB_ROCKSDB_DISABLE_METRICS"},
 		Category: "DATABASE",
 	}
 	RocksDBMaxOpenFilesFlag = &cli.IntFlag{
@@ -408,21 +408,21 @@ var (
 		Usage:    "Set RocksDB max open files. (the value should be greater than 16)",
 		Value:    database.GetDefaultRocksDBConfig().MaxOpenFiles,
 		Aliases:  []string{"migration.src.db.rocksdb.max-open-files"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_MAX_OPEN_FILES", "KAIA_DB_ROCKSDB_MAX_OPEN_FILES"},
 		Category: "DATABASE",
 	}
 	RocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
 		Name:     "db.rocksdb.cache-index-and-filter",
 		Usage:    "Use block cache for index and filter blocks.",
 		Aliases:  []string{"migration.src.db.rocksdb.cache-index-and-filter"},
-		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_INDEX_AND_FILTER"},
+		EnvVars:  []string{"KLAYTN_DB_ROCKSDB_CACHE_INDEX_AND_FILTER", "KAIA_DB_ROCKSDB_CACHE_INDEX_AND_FILTER"},
 		Category: "DATABASE",
 	}
 	DynamoDBTableNameFlag = &cli.StringFlag{
 		Name:     "db.dynamo.tablename",
 		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3)",
 		Aliases:  []string{"migration.src.db.dynamo.table-name", "db.dynamo.table-name"},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_TABLENAME"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_TABLENAME", "KAIA_DB_DYNAMO_TABLENAME"},
 		Category: "DATABASE",
 	}
 	DynamoDBRegionFlag = &cli.StringFlag{
@@ -430,14 +430,14 @@ var (
 		Usage:    "AWS region where the DynamoDB will be created.",
 		Value:    database.GetDefaultDynamoDBConfig().Region,
 		Aliases:  []string{"migration.src.db.dynamo.region"},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_REGION"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_REGION", "KAIA_DB_DYNAMO_REGION"},
 		Category: "DATABASE",
 	}
 	DynamoDBIsProvisionedFlag = &cli.BoolFlag{
 		Name:     "db.dynamo.is-provisioned",
 		Usage:    "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
 		Aliases:  []string{"migration.src.db.dynamo.is-provisioned"},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_IS_PROVISIONED"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_IS_PROVISIONED", "KAIA_DB_DYNAMO_IS_PROVISIONED"},
 		Category: "DATABASE",
 	}
 	DynamoDBReadCapacityFlag = &cli.Int64Flag{
@@ -445,7 +445,7 @@ var (
 		Usage:    "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
 		Value:    database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
 		Aliases:  []string{"migration.src.db.dynamo.read-capacity"},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_CAPACITY"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_CAPACITY", "KAIA_DB_DYNAMO_READ_CAPACITY"},
 		Category: "DATABASE",
 	}
 	DynamoDBWriteCapacityFlag = &cli.Int64Flag{
@@ -453,21 +453,21 @@ var (
 		Usage:    "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
 		Value:    database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 		Aliases:  []string{"migration.src.db.dynamo.write-capacity"},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_WRITE_CAPACITY"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_WRITE_CAPACITY", "KAIA_DB_DYNAMO_WRITE_CAPACITY"},
 		Category: "DATABASE",
 	}
 	DynamoDBReadOnlyFlag = &cli.BoolFlag{
 		Name:     "db.dynamo.read-only",
 		Usage:    "Disables write to DynamoDB. Only read is possible.",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_ONLY"},
+		EnvVars:  []string{"KLAYTN_DB_DYNAMO_READ_ONLY", "KAIA_DB_DYNAMO_READ_ONLY"},
 		Category: "DATABASE",
 	}
 	NoParallelDBWriteFlag = &cli.BoolFlag{
 		Name:     "db.no-parallel-write",
 		Usage:    "Disables parallel writes of block data to persistent database",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_NO_PARALLEL_WRITE"},
+		EnvVars:  []string{"KLAYTN_DB_NO_PARALLEL_WRITE", "KAIA_DB_NO_PARALLEL_WRITE"},
 		Category: "DATABASE",
 	}
 	DBNoPerformanceMetricsFlag = &cli.BoolFlag{
@@ -475,14 +475,14 @@ var (
 		Usage:    "Disables performance metrics of database's read and write operations",
 		Value:    false,
 		Aliases:  []string{"migration.no-perf-metrics"},
-		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS"},
+		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS", "KAIA_DB_NO_PERF_METRICS"},
 		Category: "DATABASE",
 	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",
 		Aliases:  []string{"snapshot-database.enable"},
-		EnvVars:  []string{"KLAYTN_SNAPSHOT"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT", "KAIA_SNAPSHOT"},
 		Category: "MISC",
 	}
 	SnapshotCacheSizeFlag = &cli.IntFlag{
@@ -490,7 +490,7 @@ var (
 		Usage:    "Size of in-memory cache of the state snapshot cache (in MiB)",
 		Value:    512,
 		Aliases:  []string{"snapshot-database.cache-size"},
-		EnvVars:  []string{"KLAYTN_SNAPSHOT_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT_CACHE_SIZE", "KAIA_SNAPSHOT_CACHE_SIZE"},
 		Category: "MISC",
 	}
 	SnapshotAsyncGen = &cli.BoolFlag{
@@ -498,7 +498,7 @@ var (
 		Usage:    "Enables snapshot data generation in background",
 		Value:    true,
 		Aliases:  []string{"snapshot-database.async-gen"},
-		EnvVars:  []string{"KLAYTN_SNAPSHOT_BACKGROUND_GENERATION"},
+		EnvVars:  []string{"KLAYTN_SNAPSHOT_BACKGROUND_GENERATION", "KAIA_SNAPSHOT_BACKGROUND_GENERATION"},
 		Category: "MISC",
 	}
 	TrieMemoryCacheSizeFlag = &cli.IntFlag{
@@ -506,7 +506,7 @@ var (
 		Usage:    "Size of in-memory cache of the global state (in MiB) to flush matured singleton trie nodes to disk",
 		Value:    512,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_STATE_CACHE_SIZE", "KAIA_STATE_CACHE_SIZE"},
 		Category: "STATE",
 	}
 	TrieBlockIntervalFlag = &cli.UintFlag{
@@ -514,7 +514,7 @@ var (
 		Usage:    "An interval in terms of block number to commit the global state to disk",
 		Value:    blockchain.DefaultBlockInterval,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_BLOCK_INTERVAL"},
+		EnvVars:  []string{"KLAYTN_STATE_BLOCK_INTERVAL", "KAIA_STATE_BLOCK_INTERVAL"},
 		Category: "STATE",
 	}
 	TriesInMemoryFlag = &cli.Uint64Flag{
@@ -522,14 +522,14 @@ var (
 		Usage:    "The number of recent state tries residing in the memory",
 		Value:    blockchain.DefaultTriesInMemory,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_TRIES_IN_MEMORY"},
+		EnvVars:  []string{"KLAYTN_STATE_TRIES_IN_MEMORY", "KAIA_STATE_TRIES_IN_MEMORY"},
 		Category: "STATE",
 	}
 	LivePruningFlag = &cli.BoolFlag{
 		Name:     "state.live-pruning",
 		Usage:    "Enable trie live pruning",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING"},
+		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING", "KAIA_STATE_LIVE_PRUNING"},
 		Category: "STATE",
 	}
 	LivePruningRetentionFlag = &cli.Uint64Flag{
@@ -537,7 +537,7 @@ var (
 		Usage:    "Number of blocks from the latest block that are not to be pruned",
 		Value:    blockchain.DefaultLivePruningRetention,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION"},
+		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
 	}
 	CacheTypeFlag = &cli.IntFlag{
@@ -545,28 +545,28 @@ var (
 		Usage:    "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
 		Value:    int(common.DefaultCacheType),
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_CACHE_TYPE"},
+		EnvVars:  []string{"KLAYTN_CACHE_TYPE", "KAIA_CACHE_TYPE"},
 		Category: "CACHE",
 	}
 	CacheScaleFlag = &cli.IntFlag{
 		Name:     "cache.scale",
 		Usage:    "Scale of cache (cache size = preset size * scale of cache(%))",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_CACHE_SCALE"},
+		EnvVars:  []string{"KLAYTN_CACHE_SCALE", "KAIA_CACHE_SCALE"},
 		Category: "CACHE",
 	}
 	CacheUsageLevelFlag = &cli.StringFlag{
 		Name:     "cache.level",
 		Usage:    "Set the cache usage level ('saving', 'normal', 'extreme')",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_CACHE_LEVEL"},
+		EnvVars:  []string{"KLAYTN_CACHE_LEVEL", "KAIA_CACHE_LEVEL"},
 		Category: "CACHE",
 	}
 	MemorySizeFlag = &cli.IntFlag{
 		Name:     "cache.memory",
 		Usage:    "Set the physical RAM size (GB, Default: 16GB)",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_CACHE_MEMORY"},
+		EnvVars:  []string{"KLAYTN_CACHE_MEMORY", "KAIA_CACHE_MEMORY"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheTypeFlag = &cli.StringFlag{
@@ -575,7 +575,7 @@ var (
 			"'HybridCache') (default = 'LocalCache')",
 		Value:    string(statedb.CacheTypeLocal),
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_TYPE"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_TYPE", "KAIA_STATEDB_CACHE_TYPE"},
 		Category: "CACHE",
 	}
 	NumFetcherPrefetchWorkerFlag = &cli.IntFlag{
@@ -583,42 +583,42 @@ var (
 		Usage:    "Number of workers used to prefetch block when fetcher fetches block",
 		Value:    32,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_NUM_FETCHER_PREFETCH_WORKER"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_NUM_FETCHER_PREFETCH_WORKER", "KAIA_STATEDB_CACHE_NUM_FETCHER_PREFETCH_WORKER"},
 		Category: "CACHE",
 	}
 	UseSnapshotForPrefetchFlag = &cli.BoolFlag{
 		Name:     "statedb.cache.use-snapshot-for-prefetch",
 		Usage:    "Use state snapshot functionality while prefetching",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_USE_SNAPSHOT_FOR_PREFETCH"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_USE_SNAPSHOT_FOR_PREFETCH", "KAIA_STATEDB_CACHE_USE_SNAPSHOT_FOR_PREFETCH"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheRedisEndpointsFlag = &cli.StringSliceFlag{
 		Name:     "statedb.cache.redis.endpoints",
 		Usage:    "Set endpoints of redis trie node cache. More than one endpoints can be set",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_ENDPOINTS"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_ENDPOINTS", "KAIA_STATEDB_CACHE_REDIS_ENDPOINTS"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheRedisClusterFlag = &cli.BoolFlag{
 		Name:     "statedb.cache.redis.cluster",
 		Usage:    "Enables cluster-enabled mode of redis trie node cache",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_CLUSTER"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_CLUSTER", "KAIA_STATEDB_CACHE_REDIS_CLUSTER"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheRedisPublishBlockFlag = &cli.BoolFlag{
 		Name:     "statedb.cache.redis.publish",
 		Usage:    "Publishes every committed block to redis trie node cache",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_PUBLISH"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_PUBLISH", "KAIA_STATEDB_CACHE_REDIS_PUBLISH"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheRedisSubscribeBlockFlag = &cli.BoolFlag{
 		Name:     "statedb.cache.redis.subscribe",
 		Usage:    "Subscribes blocks from redis trie node cache",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_SUBSCRIBE"},
+		EnvVars:  []string{"KLAYTN_STATEDB_CACHE_REDIS_SUBSCRIBE", "KAIA_STATEDB_CACHE_REDIS_SUBSCRIBE"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheLimitFlag = &cli.IntFlag{
@@ -626,7 +626,7 @@ var (
 		Usage:    "Memory allowance (MiB) to use for caching trie nodes in memory. -1 is for auto-scaling",
 		Value:    -1,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_LIMIT"},
+		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_LIMIT", "KAIA_STATE_TRIE_CACHE_LIMIT"},
 		Category: "CACHE",
 	}
 	TrieNodeCacheSavePeriodFlag = &cli.DurationFlag{
@@ -634,7 +634,7 @@ var (
 		Usage:    "Period of saving in memory trie cache to file if fastcache is used, 0 means disabled",
 		Value:    0,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_SAVE_PERIOD"},
+		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_SAVE_PERIOD", "KAIA_STATE_TRIE_CACHE_SAVE_PERIOD"},
 		Category: "CACHE",
 	}
 
@@ -642,14 +642,14 @@ var (
 		Name:     "sendertxhashindexing",
 		Usage:    "Enables storing mapping information of senderTxHash to txHash",
 		Aliases:  []string{"common.sender-tx-hash-indexing"},
-		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING"},
+		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
 		Category: "DATABASE",
 	}
 	ChildChainIndexingFlag = &cli.BoolFlag{
 		Name:     "childchainindexing",
 		Usage:    "Enables storing transaction hash of child chain transaction for fast access to child chain data",
 		Aliases:  []string{"common.child-chain-indexing"},
-		EnvVars:  []string{"KLAYTN_CHILDCHAININDEXING"},
+		EnvVars:  []string{"KLAYTN_CHILDCHAININDEXING", "KAIA_CHILDCHAININDEXING"},
 		Category: "SERVICECHAIN",
 	}
 	TargetGasLimitFlag = &cli.Uint64Flag{
@@ -657,7 +657,7 @@ var (
 		Usage:    "Target gas limit sets the artificial target gas floor for the blocks to mine",
 		Value:    params.GenesisGasLimit,
 		Aliases:  []string{"common.target-gaslimit"},
-		EnvVars:  []string{"KLAYTN_TARGETGASLIMIT"},
+		EnvVars:  []string{"KLAYTN_TARGETGASLIMIT", "KAIA_TARGETGASLIMIT"},
 		Category: "NETWORK",
 	}
 	ServiceChainSignerFlag = &cli.StringFlag{
@@ -665,7 +665,7 @@ var (
 		Usage:    "Public address for signing blocks in the service chain (default = first account created)",
 		Value:    "0",
 		Aliases:  []string{"common.scsigner"},
-		EnvVars:  []string{"KLAYTN_SCSIGNER"},
+		EnvVars:  []string{"KLAYTN_SCSIGNER", "KAIA_SCSIGNER"},
 		Category: "CONSENSUS",
 	}
 	RewardbaseFlag = &cli.StringFlag{
@@ -673,15 +673,15 @@ var (
 		Usage:    "Public address for block consensus rewards (default = first account created)",
 		Value:    "0",
 		Aliases:  []string{"common.rewardbase"},
-		EnvVars:  []string{"KLAYTN_REWARDBASE"},
+		EnvVars:  []string{"KLAYTN_REWARDBASE", "KAIA_REWARDBASE"},
 		Category: "CONSENSUS",
 	}
 	ExtraDataFlag = &cli.StringFlag{
 		Name:     "extradata",
 		Usage:    "Block extra data set by the work (default = client version)",
 		Aliases:  []string{"common.block-extra-data"},
-		EnvVars:  []string{"KLAYTN_EXTRADATA"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_EXTRADATA", "KAIA_EXTRADATA"},
+		Category: "KAIA",
 	}
 
 	TxResendIntervalFlag = &cli.Uint64Flag{
@@ -689,7 +689,7 @@ var (
 		Usage:    "Set the transaction resend interval in seconds",
 		Value:    uint64(cn.DefaultTxResendInterval),
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXRESEND_INTERVAL"},
+		EnvVars:  []string{"KLAYTN_TXRESEND_INTERVAL", "KAIA_TXRESEND_INTERVAL"},
 		Category: "TXPOOL",
 	}
 	TxResendCountFlag = &cli.IntFlag{
@@ -697,7 +697,7 @@ var (
 		Usage:    "Set the max count of resending transactions",
 		Value:    cn.DefaultMaxResendTxCount,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXRESEND_MAX_COUNT"},
+		EnvVars:  []string{"KLAYTN_TXRESEND_MAX_COUNT", "KAIA_TXRESEND_MAX_COUNT"},
 		Category: "TXPOOL",
 	}
 	// TODO-Kaia-RemoveLater Remove this flag when we are confident with the new transaction resend logic
@@ -705,7 +705,7 @@ var (
 		Name:     "txresend.use-legacy",
 		Usage:    "Enable the legacy transaction resend logic (For testing only)",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_TXRESEND_USE_LEGACY"},
+		EnvVars:  []string{"KLAYTN_TXRESEND_USE_LEGACY", "KAIA_TXRESEND_USE_LEGACY"},
 		Category: "TXPOOL",
 	}
 	// Account settings
@@ -714,7 +714,7 @@ var (
 		Usage:    "Comma separated list of accounts to unlock",
 		Value:    "",
 		Aliases:  []string{"account-update.unlock"},
-		EnvVars:  []string{"KLAYTN_UNLOCK"},
+		EnvVars:  []string{"KLAYTN_UNLOCK", "KAIA_UNLOCK"},
 		Category: "ACCOUNT",
 	}
 	PasswordFileFlag = &cli.StringFlag{
@@ -722,7 +722,7 @@ var (
 		Usage:    "Password file to use for non-interactive password input",
 		Value:    "",
 		Aliases:  []string{"account-update.password"},
-		EnvVars:  []string{"KLAYTN_PASSWORD"},
+		EnvVars:  []string{"KLAYTN_PASSWORD", "KAIA_PASSWORD"},
 		Category: "ACCOUNT",
 	}
 
@@ -730,7 +730,7 @@ var (
 		Name:     "vmdebug",
 		Usage:    "Record information useful for VM and contract debugging",
 		Aliases:  []string{"vm.debug"},
-		EnvVars:  []string{"KLAYTN_VMDEBUG"},
+		EnvVars:  []string{"KLAYTN_VMDEBUG", "KAIA_VMDEBUG"},
 		Category: "VIRTUAL MACHINE",
 	}
 	VMLogTargetFlag = &cli.IntFlag{
@@ -738,21 +738,21 @@ var (
 		Usage:    "Set the output target of vmlog precompiled contract (0: no output, 1: file, 2: stdout, 3: both)",
 		Value:    0,
 		Aliases:  []string{"vm.log"},
-		EnvVars:  []string{"KLAYTN_VMLOG"},
+		EnvVars:  []string{"KLAYTN_VMLOG", "KAIA_VMLOG"},
 		Category: "VIRTUAL MACHINE",
 	}
 	VMTraceInternalTxFlag = &cli.BoolFlag{
 		Name:     "vm.internaltx",
 		Usage:    "Collect internal transaction data while processing a block",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_VM_INTERNALTX"},
+		EnvVars:  []string{"KLAYTN_VM_INTERNALTX", "KAIA_VM_INTERNALTX"},
 		Category: "VIRTUAL MACHINE",
 	}
 	VMOpDebugFlag = &cli.BoolFlag{
 		Name:     "vm.opdebug",
 		Usage:    "Collect and print the execution time of opcodes when node stops",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_VM_OPDEBUG"},
+		EnvVars:  []string{"KLAYTN_VM_OPDEBUG", "KAIA_VM_OPDEBUG"},
 		Category: "VIRTUAL MACHINE",
 	}
 
@@ -761,14 +761,14 @@ var (
 		Name:     metricutils.MetricsEnabledFlag,
 		Usage:    "Enable metrics collection and reporting",
 		Aliases:  []string{"metrics-collection-reporting.enable"},
-		EnvVars:  []string{"KLAYTN_METRICUTILS_METRICSENABLEDFLAG"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_METRICSENABLEDFLAG", "KAIA_METRICUTILS_METRICSENABLEDFLAG"},
 		Category: "METRIC",
 	}
 	PrometheusExporterFlag = &cli.BoolFlag{
 		Name:     metricutils.PrometheusExporterFlag,
 		Usage:    "Enable prometheus exporter",
 		Aliases:  []string{"metrics-collection-reporting.prometheus"},
-		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERFLAG"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERFLAG", "KAIA_METRICUTILS_PROMETHEUSEXPORTERFLAG"},
 		Category: "METRIC",
 	}
 	PrometheusExporterPortFlag = &cli.IntFlag{
@@ -776,7 +776,7 @@ var (
 		Usage:    "Prometheus exporter listening port",
 		Value:    61001,
 		Aliases:  []string{"metrics-collection-reporting.prometheus-port"},
-		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERPORTFLAG"},
+		EnvVars:  []string{"KLAYTN_METRICUTILS_PROMETHEUSEXPORTERPORTFLAG", "KAIA_METRICUTILS_PROMETHEUSEXPORTERPORTFLAG"},
 		Category: "METRIC",
 	}
 
@@ -785,7 +785,7 @@ var (
 		Name:     "rpc",
 		Usage:    "Enable the HTTP-RPC server",
 		Aliases:  []string{"http-rpc.enable"},
-		EnvVars:  []string{"KLAYTN_RPC"},
+		EnvVars:  []string{"KLAYTN_RPC", "KAIA_RPC"},
 		Category: "API AND CONSOLE",
 	}
 	RPCListenAddrFlag = &cli.StringFlag{
@@ -793,7 +793,7 @@ var (
 		Usage:    "HTTP-RPC server listening interface",
 		Value:    node.DefaultHTTPHost,
 		Aliases:  []string{"http-rpc.addr"},
-		EnvVars:  []string{"KLAYTN_RPCADDR"},
+		EnvVars:  []string{"KLAYTN_RPCADDR", "KAIA_RPCADDR"},
 		Category: "API AND CONSOLE",
 	}
 	RPCPortFlag = &cli.IntFlag{
@@ -801,7 +801,7 @@ var (
 		Usage:    "HTTP-RPC server listening port",
 		Value:    node.DefaultHTTPPort,
 		Aliases:  []string{"http-rpc.port"},
-		EnvVars:  []string{"KLAYTN_RPCPORT"},
+		EnvVars:  []string{"KLAYTN_RPCPORT", "KAIA_RPCPORT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCCORSDomainFlag = &cli.StringFlag{
@@ -809,7 +809,7 @@ var (
 		Usage:    "Comma separated list of domains from which to accept cross origin requests (browser enforced)",
 		Value:    "",
 		Aliases:  []string{"http-rpc.cors-domain"},
-		EnvVars:  []string{"KLAYTN_RPCCORSDOMAIN"},
+		EnvVars:  []string{"KLAYTN_RPCCORSDOMAIN", "KAIA_RPCCORSDOMAIN"},
 		Category: "API AND CONSOLE",
 	}
 	RPCVirtualHostsFlag = &cli.StringFlag{
@@ -817,7 +817,7 @@ var (
 		Usage:    "Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts '*' wildcard.",
 		Value:    strings.Join(node.DefaultConfig.HTTPVirtualHosts, ","),
 		Aliases:  []string{"http-rpc.vhosts"},
-		EnvVars:  []string{"KLAYTN_RPCVHOSTS"},
+		EnvVars:  []string{"KLAYTN_RPCVHOSTS", "KAIA_RPCVHOSTS"},
 		Category: "API AND CONSOLE",
 	}
 	RPCApiFlag = &cli.StringFlag{
@@ -825,28 +825,28 @@ var (
 		Usage:    "API's offered over the HTTP-RPC interface",
 		Value:    "",
 		Aliases:  []string{"http-rpc.api"},
-		EnvVars:  []string{"KLAYTN_RPCAPI"},
+		EnvVars:  []string{"KLAYTN_RPCAPI", "KAIA_RPCAPI"},
 		Category: "API AND CONSOLE",
 	}
 	RPCGlobalGasCap = &cli.Uint64Flag{
 		Name:     "rpc.gascap",
-		Usage:    "Sets a cap on gas in {eth,klay}_{call,estimateGas,estimateComputationCost} (0 = no cap)",
+		Usage:    "Sets a cap on gas in {eth,kaia}_{call,estimateGas,estimateComputationCost} (0 = no cap)",
 		Aliases:  []string{"http-rpc.gascap"},
-		EnvVars:  []string{"KLAYTN_RPC_GASCAP"},
+		EnvVars:  []string{"KLAYTN_RPC_GASCAP", "KAIA_RPC_GASCAP"},
 		Category: "API AND CONSOLE",
 	}
 	RPCGlobalEVMTimeoutFlag = &cli.DurationFlag{
 		Name:     "rpc.evmtimeout",
-		Usage:    "Sets a timeout in {eth,klay}_{call,estimateGas,estimateComputationCost}. (0 = apply http-rpc.execution.timeout)",
+		Usage:    "Sets a timeout in {eth,kaia}_{call,estimateGas,estimateComputationCost}. (0 = apply http-rpc.execution.timeout)",
 		Aliases:  []string{"http-rpc.evmtimeout"},
-		EnvVars:  []string{"KLAYTN_RPC_EVMTIMEOUT"},
+		EnvVars:  []string{"KLAYTN_RPC_EVMTIMEOUT", "KAIA_RPC_EVMTIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCGlobalEthTxFeeCapFlag = &cli.Float64Flag{
 		Name:     "rpc.ethtxfeecap",
 		Usage:    "Sets a cap on transaction fee (=gasLimit*gasPrice) (in KAIA) in eth_signTransaction (0 = no cap)",
 		Aliases:  []string{"http-rpc.eth-tx-feecap"},
-		EnvVars:  []string{"KLAYTN_RPC_ETHTXFEECAP"},
+		EnvVars:  []string{"KLAYTN_RPC_ETHTXFEECAP", "KAIA_RPC_ETHTXFEECAP"},
 		Category: "API AND CONSOLE",
 	}
 	RPCConcurrencyLimit = &cli.IntFlag{
@@ -854,14 +854,14 @@ var (
 		Usage:    "Sets a limit of concurrent connection number of HTTP-RPC server",
 		Value:    rpc.ConcurrencyLimit,
 		Aliases:  []string{"http-rpc.concurrency-limit"},
-		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT"},
+		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT", "KAIA_RPC_CONCURRENCYLIMIT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCNonEthCompatibleFlag = &cli.BoolFlag{
 		Name:     "rpc.eth.noncompatible",
 		Usage:    "Disables the eth namespace API return formatting for compatibility",
 		Aliases:  []string{"http-rpc.eth-noncompatible"},
-		EnvVars:  []string{"KLAYTN_RPC_ETH_NONCOMPATIBLE"},
+		EnvVars:  []string{"KLAYTN_RPC_ETH_NONCOMPATIBLE", "KAIA_RPC_ETH_NONCOMPATIBLE"},
 		Category: "API AND CONSOLE",
 	}
 	RPCReadTimeout = &cli.IntFlag{
@@ -869,7 +869,7 @@ var (
 		Usage:    "HTTP-RPC server read timeout (seconds)",
 		Value:    int(rpc.DefaultHTTPTimeouts.ReadTimeout / time.Second),
 		Aliases:  []string{"http-rpc.read-timeout"},
-		EnvVars:  []string{"KLAYTN_RPCREADTIMEOUT"},
+		EnvVars:  []string{"KLAYTN_RPCREADTIMEOUT", "KAIA_RPCREADTIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCWriteTimeoutFlag = &cli.IntFlag{
@@ -877,7 +877,7 @@ var (
 		Usage:    "HTTP-RPC server write timeout (seconds)",
 		Value:    int(rpc.DefaultHTTPTimeouts.WriteTimeout / time.Second),
 		Aliases:  []string{"http-rpc.write-timeout"},
-		EnvVars:  []string{"KLAYTN_RPCWRITETIMEOUT"},
+		EnvVars:  []string{"KLAYTN_RPCWRITETIMEOUT", "KAIA_RPCWRITETIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCIdleTimeoutFlag = &cli.IntFlag{
@@ -885,7 +885,7 @@ var (
 		Usage:    "HTTP-RPC server idle timeout (seconds)",
 		Value:    int(rpc.DefaultHTTPTimeouts.IdleTimeout / time.Second),
 		Aliases:  []string{"http-rpc.idle-timeout"},
-		EnvVars:  []string{"KLAYTN_RPCIDLETIMEOUT"},
+		EnvVars:  []string{"KLAYTN_RPCIDLETIMEOUT", "KAIA_RPCIDLETIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCExecutionTimeoutFlag = &cli.IntFlag{
@@ -893,14 +893,14 @@ var (
 		Usage:    "HTTP-RPC server execution timeout (seconds)",
 		Value:    int(rpc.DefaultHTTPTimeouts.ExecutionTimeout / time.Second),
 		Aliases:  []string{"http-rpc.execution-timeout"},
-		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT"},
+		EnvVars:  []string{"KLAYTN_RPCEXECUTIONTIMEOUT", "KAIA_RPCEXECUTIONTIMEOUT"},
 		Category: "API AND CONSOLE",
 	}
 	RPCUpstreamArchiveENFlag = &cli.StringFlag{
 		Name:     "upstream-en",
 		Usage:    "upstream archive mode EN endpoint",
 		Aliases:  []string{"rpc.upstream-en"},
-		EnvVars:  []string{"KLAYTN_RPC_UPSTREAM_EN"},
+		EnvVars:  []string{"KLAYTN_RPC_UPSTREAM_EN", "KAIA_RPC_UPSTREAM_EN"},
 		Category: "API AND CONSOLE",
 	}
 
@@ -908,7 +908,7 @@ var (
 		Name:     "ws",
 		Usage:    "Enable the WS-RPC server",
 		Aliases:  []string{"ws-rpc.enable"},
-		EnvVars:  []string{"KLAYTN_WS"},
+		EnvVars:  []string{"KLAYTN_WS", "KAIA_WS"},
 		Category: "API AND CONSOLE",
 	}
 	WSListenAddrFlag = &cli.StringFlag{
@@ -916,7 +916,7 @@ var (
 		Usage:    "WS-RPC server listening interface",
 		Value:    node.DefaultWSHost,
 		Aliases:  []string{"ws-rpc.addr"},
-		EnvVars:  []string{"KLAYTN_WSADDR"},
+		EnvVars:  []string{"KLAYTN_WSADDR", "KAIA_WSADDR"},
 		Category: "API AND CONSOLE",
 	}
 	WSPortFlag = &cli.IntFlag{
@@ -924,7 +924,7 @@ var (
 		Usage:    "WS-RPC server listening port",
 		Value:    node.DefaultWSPort,
 		Aliases:  []string{"ws-rpc.port"},
-		EnvVars:  []string{"KLAYTN_WSPORT"},
+		EnvVars:  []string{"KLAYTN_WSPORT", "KAIA_WSPORT"},
 		Category: "API AND CONSOLE",
 	}
 	WSApiFlag = &cli.StringFlag{
@@ -932,7 +932,7 @@ var (
 		Usage:    "API's offered over the WS-RPC interface",
 		Value:    "",
 		Aliases:  []string{"ws-rpc.api"},
-		EnvVars:  []string{"KLAYTN_WSAPI"},
+		EnvVars:  []string{"KLAYTN_WSAPI", "KAIA_WSAPI"},
 		Category: "API AND CONSOLE",
 	}
 	WSAllowedOriginsFlag = &cli.StringFlag{
@@ -940,7 +940,7 @@ var (
 		Usage:    "Origins from which to accept websockets requests",
 		Value:    "",
 		Aliases:  []string{"ws-rpc.origins"},
-		EnvVars:  []string{"KLAYTN_WSORIGINS"},
+		EnvVars:  []string{"KLAYTN_WSORIGINS", "KAIA_WSORIGINS"},
 		Category: "API AND CONSOLE",
 	}
 	WSMaxSubscriptionPerConn = &cli.IntFlag{
@@ -948,7 +948,7 @@ var (
 		Usage:    "Allowed maximum subscription number per a websocket connection",
 		Value:    int(rpc.MaxSubscriptionPerWSConn),
 		Aliases:  []string{"ws-rpc.max-subscription-per-conn"},
-		EnvVars:  []string{"KLAYTN_WSMAXSUBSCRIPTIONPERCONN"},
+		EnvVars:  []string{"KLAYTN_WSMAXSUBSCRIPTIONPERCONN", "KAIA_WSMAXSUBSCRIPTIONPERCONN"},
 		Category: "API AND CONSOLE",
 	}
 	WSReadDeadLine = &cli.Int64Flag{
@@ -956,7 +956,7 @@ var (
 		Usage:    "Set the read deadline on the underlying network connection in seconds. 0 means read will not timeout",
 		Value:    rpc.WebsocketReadDeadline,
 		Aliases:  []string{"ws-rpc.read-deadline"},
-		EnvVars:  []string{"KLAYTN_WSREADDEADLINE"},
+		EnvVars:  []string{"KLAYTN_WSREADDEADLINE", "KAIA_WSREADDEADLINE"},
 		Category: "API AND CONSOLE",
 	}
 	WSWriteDeadLine = &cli.Int64Flag{
@@ -964,7 +964,7 @@ var (
 		Usage:    "Set the Write deadline on the underlying network connection in seconds. 0 means write will not timeout",
 		Value:    rpc.WebsocketWriteDeadline,
 		Aliases:  []string{"ws-rpc.write-deadline"},
-		EnvVars:  []string{"KLAYTN_WSWRITEDEADLINE"},
+		EnvVars:  []string{"KLAYTN_WSWRITEDEADLINE", "KAIA_WSWRITEDEADLINE"},
 		Category: "API AND CONSOLE",
 	}
 	WSMaxConnections = &cli.IntFlag{
@@ -972,14 +972,14 @@ var (
 		Usage:    "Allowed maximum websocket connection number",
 		Value:    3000,
 		Aliases:  []string{"ws-rpc.max-connections"},
-		EnvVars:  []string{"KLAYTN_WSMAXCONNECTIONS"},
+		EnvVars:  []string{"KLAYTN_WSMAXCONNECTIONS", "KAIA_WSMAXCONNECTIONS"},
 		Category: "API AND CONSOLE",
 	}
 	GRPCEnabledFlag = &cli.BoolFlag{
 		Name:     "grpc",
 		Usage:    "Enable the gRPC server",
 		Aliases:  []string{"g-rpc.enable"},
-		EnvVars:  []string{"KLAYTN_GRPC"},
+		EnvVars:  []string{"KLAYTN_GRPC", "KAIA_GRPC"},
 		Category: "API AND CONSOLE",
 	}
 	GRPCListenAddrFlag = &cli.StringFlag{
@@ -987,7 +987,7 @@ var (
 		Usage:    "gRPC server listening interface",
 		Value:    node.DefaultGRPCHost,
 		Aliases:  []string{"g-rpc.addr"},
-		EnvVars:  []string{"KLAYTN_GRPCADDR"},
+		EnvVars:  []string{"KLAYTN_GRPCADDR", "KAIA_GRPCADDR"},
 		Category: "API AND CONSOLE",
 	}
 	GRPCPortFlag = &cli.IntFlag{
@@ -995,21 +995,21 @@ var (
 		Usage:    "gRPC server listening port",
 		Value:    node.DefaultGRPCPort,
 		Aliases:  []string{"g-rpc.port"},
-		EnvVars:  []string{"KLAYTN_GRPCPORT"},
+		EnvVars:  []string{"KLAYTN_GRPCPORT", "KAIA_GRPCPORT"},
 		Category: "API AND CONSOLE",
 	}
 	IPCDisabledFlag = &cli.BoolFlag{
 		Name:     "ipcdisable",
 		Usage:    "Disable the IPC-RPC server",
 		Aliases:  []string{"ipc.disable"},
-		EnvVars:  []string{"KLAYTN_IPCDISABLE"},
+		EnvVars:  []string{"KLAYTN_IPCDISABLE", "KAIA_IPCDISABLE"},
 		Category: "API AND CONSOLE",
 	}
 	IPCPathFlag = &cli.PathFlag{
 		Name:     "ipcpath",
 		Usage:    "Filename for IPC socket/pipe within the datadir (explicit paths escape it)",
 		Aliases:  []string{"ipc.path"},
-		EnvVars:  []string{"KLAYTN_IPCPATH"},
+		EnvVars:  []string{"KLAYTN_IPCPATH", "KAIA_IPCPATH"},
 		Category: "API AND CONSOLE",
 	}
 
@@ -1019,21 +1019,21 @@ var (
 		Usage:    "JavaScript root path for `loadScript`",
 		Value:    ".",
 		Aliases:  []string{"console.js-path"},
-		EnvVars:  []string{"KLAYTN_JSPATH"},
+		EnvVars:  []string{"KLAYTN_JSPATH", "KAIA_JSPATH"},
 		Category: "API AND CONSOLE",
 	}
 	ExecFlag = &cli.StringFlag{
 		Name:     "exec",
 		Usage:    "Execute JavaScript statement",
 		Aliases:  []string{"console.exec"},
-		EnvVars:  []string{"KLAYTN_EXEC"},
+		EnvVars:  []string{"KLAYTN_EXEC", "KAIA_EXEC"},
 		Category: "API AND CONSOLE",
 	}
 	PreloadJSFlag = &cli.StringFlag{
 		Name:     "preload",
 		Usage:    "Comma separated list of JavaScript files to preload into the console",
 		Aliases:  []string{"console.preload"},
-		EnvVars:  []string{"KLAYTN_PRELOAD"},
+		EnvVars:  []string{"KLAYTN_PRELOAD", "KAIA_PRELOAD"},
 		Category: "API AND CONSOLE",
 	}
 	APIFilterGetLogsDeadlineFlag = &cli.DurationFlag{
@@ -1041,7 +1041,7 @@ var (
 		Usage:    "Execution deadline for log collecting filter APIs",
 		Value:    filters.GetLogsDeadline,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_DEADLINE"},
+		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_DEADLINE", "KAIA_API_FILTER_GETLOGS_DEADLINE"},
 		Category: "API AND CONSOLE",
 	}
 	APIFilterGetLogsMaxItemsFlag = &cli.IntFlag{
@@ -1049,14 +1049,14 @@ var (
 		Usage:    "Maximum allowed number of return items for log collecting filter API",
 		Value:    filters.GetLogsMaxItems,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_MAXITEMS"},
+		EnvVars:  []string{"KLAYTN_API_FILTER_GETLOGS_MAXITEMS", "KAIA_API_FILTER_GETLOGS_MAXITEMS"},
 		Category: "API AND CONSOLE",
 	}
 	UnsafeDebugDisableFlag = &cli.BoolFlag{
 		Name:     "rpc.unsafe-debug.disable",
 		Usage:    "Disable unsafe debug APIs (traceTransaction, traceChain, ...).",
 		Aliases:  []string{"http-rpc.unsafe-debug.disable"},
-		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE"},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_DISABLE", "KAIA_RPC_UNSAFE_DEBUG_DISABLE"},
 		Category: "API AND CONSOLE",
 	}
 	// TODO-Kaia: Consider limiting the non-debug heavy apis.
@@ -1065,7 +1065,7 @@ var (
 		Usage:    "Limit the maximum number of heavy debug api requests. Works with unsafe-debug only.",
 		Value:    500,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT", "KAIA_RPC_UNSAFE_DEBUG_HEAVY_DEBUG_REQUEST_LIMIT"},
 		Category: "API AND CONSOLE",
 	}
 	StateRegenerationTimeLimitFlag = &cli.DurationFlag{
@@ -1073,7 +1073,7 @@ var (
 		Usage:    "Limit the state regeneration time. Works with unsafe-debug only.",
 		Value:    60 * time.Second,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_STATE_REGENERATION_TIME_LIMIT"},
+		EnvVars:  []string{"KLAYTN_RPC_UNSAFE_DEBUG_STATE_REGENERATION_TIME_LIMIT", "KAIA_RPC_UNSAFE_DEBUG_STATE_REGENERATION_TIME_LIMIT"},
 		Category: "API AND CONSOLE",
 	}
 
@@ -1083,14 +1083,14 @@ var (
 		Usage:   "Kaia node type (consensus node (cn), proxy node (pn), endpoint node (en))",
 		Value:   "en",
 		Aliases: []string{},
-		EnvVars: []string{"KLAYTN_NODETYPE"},
+		EnvVars: []string{"KLAYTN_NODETYPE", "KAIA_NODETYPE"},
 	}
 	MaxConnectionsFlag = &cli.IntFlag{
 		Name:     "maxconnections",
 		Usage:    "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
 		Value:    node.DefaultMaxPhysicalConnections,
 		Aliases:  []string{"p2p.max-connections"},
-		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS"},
+		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS", "KAIA_MAXCONNECTIONS"},
 		Category: "NETWORK",
 	}
 	MaxPendingPeersFlag = &cli.IntFlag{
@@ -1098,7 +1098,7 @@ var (
 		Usage:    "Maximum number of pending connection attempts (defaults used if set to 0)",
 		Value:    0,
 		Aliases:  []string{"p2p.max-pend-peers"},
-		EnvVars:  []string{"KLAYTN_MAXPENDPEERS"},
+		EnvVars:  []string{"KLAYTN_MAXPENDPEERS", "KAIA_MAXPENDPEERS"},
 		Category: "NETWORK",
 	}
 	ListenPortFlag = &cli.IntFlag{
@@ -1106,7 +1106,7 @@ var (
 		Usage:    "Network listening port",
 		Value:    node.DefaultP2PPort,
 		Aliases:  []string{"p2p.port"},
-		EnvVars:  []string{"KLAYTN_PORT"},
+		EnvVars:  []string{"KLAYTN_PORT", "KAIA_PORT"},
 		Category: "NETWORK",
 	}
 	SubListenPortFlag = &cli.IntFlag{
@@ -1114,14 +1114,14 @@ var (
 		Usage:    "Network sub listening port",
 		Value:    node.DefaultP2PSubPort,
 		Aliases:  []string{"p2p.sub-port"},
-		EnvVars:  []string{"KLAYTN_SUBPORT"},
+		EnvVars:  []string{"KLAYTN_SUBPORT", "KAIA_SUBPORT"},
 		Category: "NETWORK",
 	}
 	MultiChannelUseFlag = &cli.BoolFlag{
 		Name:     "multichannel",
 		Usage:    "Create a dedicated channel for block propagation",
 		Aliases:  []string{"p2p.multi-channel"},
-		EnvVars:  []string{"KLAYTN_MULTICHANNEL"},
+		EnvVars:  []string{"KLAYTN_MULTICHANNEL", "KAIA_MULTICHANNEL"},
 		Category: "NETWORK",
 	}
 	BootnodesFlag = &cli.StringFlag{
@@ -1129,42 +1129,42 @@ var (
 		Usage:    "Comma separated kni URLs for P2P discovery bootstrap",
 		Value:    "",
 		Aliases:  []string{"p2p.bootnodes"},
-		EnvVars:  []string{"KLAYTN_BOOTNODES"},
+		EnvVars:  []string{"KLAYTN_BOOTNODES", "KAIA_BOOTNODES"},
 		Category: "NETWORK",
 	}
 	NodeKeyFileFlag = &cli.StringFlag{
 		Name:     "nodekey",
 		Usage:    "P2P node key file",
 		Aliases:  []string{"p2p.node-key"},
-		EnvVars:  []string{"KLAYTN_NODEKEY"},
+		EnvVars:  []string{"KLAYTN_NODEKEY", "KAIA_NODEKEY"},
 		Category: "NETWORK",
 	}
 	NodeKeyHexFlag = &cli.StringFlag{
 		Name:     "nodekeyhex",
 		Usage:    "P2P node key as hex (for testing)",
 		Aliases:  []string{"p2p.node-key-hex"},
-		EnvVars:  []string{"KLAYTN_NODEKEYHEX"},
+		EnvVars:  []string{"KLAYTN_NODEKEYHEX", "KAIA_NODEKEYHEX"},
 		Category: "NETWORK",
 	}
 	BlsNodeKeyFileFlag = &cli.StringFlag{
 		Name:     "bls-nodekey",
 		Usage:    "Consensus BLS node key file",
 		Aliases:  []string{"p2p.bls-node-key"},
-		EnvVars:  []string{"KLAYTN_BLS_NODEKEY"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEY", "KAIA_BLS_NODEKEY"},
 		Category: "NETWORK",
 	}
 	BlsNodeKeyHexFlag = &cli.StringFlag{
 		Name:     "bls-nodekeyhex",
 		Usage:    "Consensus BLS node key in hex (for testing)",
 		Aliases:  []string{"p2p.bls-node-key-hex"},
-		EnvVars:  []string{"KLAYTN_BLS_NODEKEYHEX"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYHEX", "KAIA_BLS_NODEKEYHEX"},
 		Category: "NETWORK",
 	}
 	BlsNodeKeystoreFileFlag = &cli.StringFlag{
 		Name:     "bls-nodekeystore",
 		Usage:    "Consensus BLS node keystore JSON file (to be imported)",
 		Aliases:  []string{"p2p.bls-node-keystore"},
-		EnvVars:  []string{"KLAYTN_BLS_NODEKEYSTORE"},
+		EnvVars:  []string{"KLAYTN_BLS_NODEKEYSTORE", "KAIA_BLS_NODEKEYSTORE"},
 		Category: "NETWORK",
 	}
 	NATFlag = &cli.StringFlag{
@@ -1172,21 +1172,21 @@ var (
 		Usage:    "NAT port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value:    "any",
 		Aliases:  []string{"p2p.nat"},
-		EnvVars:  []string{"KLAYTN_NAT"},
+		EnvVars:  []string{"KLAYTN_NAT", "KAIA_NAT"},
 		Category: "NETWORK",
 	}
 	NoDiscoverFlag = &cli.BoolFlag{
 		Name:     "nodiscover",
 		Usage:    "Disables the peer discovery mechanism (manual peer addition)",
 		Aliases:  []string{"p2p.no-discover"},
-		EnvVars:  []string{"KLAYTN_NODISCOVER"},
+		EnvVars:  []string{"KLAYTN_NODISCOVER", "KAIA_NODISCOVER"},
 		Category: "NETWORK",
 	}
 	NetrestrictFlag = &cli.StringFlag{
 		Name:     "netrestrict",
 		Usage:    "Restricts network communication to the given IP network (CIDR masks)",
 		Aliases:  []string{"p2p.net-restrict"},
-		EnvVars:  []string{"KLAYTN_NETRESTRICT"},
+		EnvVars:  []string{"KLAYTN_NETRESTRICT", "KAIA_NETRESTRICT"},
 		Category: "NETWORK",
 	}
 	RWTimerIntervalFlag = &cli.Uint64Flag{
@@ -1194,7 +1194,7 @@ var (
 		Usage:    "Interval of using rw timer to check if it works well",
 		Value:    1000,
 		Aliases:  []string{"p2p.rw-timer-interval"},
-		EnvVars:  []string{"KLAYTN_RWTIMERINTERVAL"},
+		EnvVars:  []string{"KLAYTN_RWTIMERINTERVAL", "KAIA_RWTIMERINTERVAL"},
 		Category: "NETWORK",
 	}
 	RWTimerWaitTimeFlag = &cli.DurationFlag{
@@ -1202,7 +1202,7 @@ var (
 		Usage:    "Wait time the rw timer waits for message writing",
 		Value:    15 * time.Second,
 		Aliases:  []string{"p2p.rw-timer-wait-time"},
-		EnvVars:  []string{"KLAYTN_RWTIMERWAITTIME"},
+		EnvVars:  []string{"KLAYTN_RWTIMERWAITTIME", "KAIA_RWTIMERWAITTIME"},
 		Category: "NETWORK",
 	}
 	MaxRequestContentLengthFlag = &cli.IntFlag{
@@ -1210,7 +1210,7 @@ var (
 		Usage:    "Max request content length in byte for http, websocket and gRPC",
 		Value:    common.MaxRequestContentLength,
 		Aliases:  []string{"p2p.max-request-content-length"},
-		EnvVars:  []string{"KLAYTN_MAXREQUESTCONTENTLENGTH"},
+		EnvVars:  []string{"KLAYTN_MAXREQUESTCONTENTLENGTH", "KAIA_MAXREQUESTCONTENTLENGTH"},
 		Category: "API AND CONSOLE",
 	}
 
@@ -1218,7 +1218,7 @@ var (
 		Name:     "cypress",
 		Usage:    "Pre-configured Kaia Cypress network",
 		Aliases:  []string{"p2p.cypress"},
-		EnvVars:  []string{"KLAYTN_CYPRESS"},
+		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS"},
 		Category: "NETWORK",
 	}
 	// Baobab bootnodes setting
@@ -1226,7 +1226,7 @@ var (
 		Name:     "baobab",
 		Usage:    "Pre-configured Kaia baobab network",
 		Aliases:  []string{"p2p.baobab"},
-		EnvVars:  []string{"KLAYTN_BAOBAB"},
+		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB"},
 		Category: "NETWORK",
 	}
 	// Bootnode's settings
@@ -1235,7 +1235,7 @@ var (
 		Usage:   "Comma separated kni URLs for authorized nodes list",
 		Value:   "",
 		Aliases: []string{"common.authorized-nodes"},
-		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES"},
+		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES", "KAIA_AUTHORIZED_NODES"},
 	}
 	// TODO-Kaia-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = &cli.StringFlag{
@@ -1243,20 +1243,20 @@ var (
 		Usage:   `udp address to use node discovery`,
 		Value:   ":32323",
 		Aliases: []string{"p2p.bn-addr"},
-		EnvVars: []string{"KLAYTN_BNADDR"},
+		EnvVars: []string{"KLAYTN_BNADDR", "KAIA_BNADDR"},
 	}
 	GenKeyFlag = &cli.StringFlag{
 		Name:     "genkey",
 		Usage:    "generate a node private key and write to given filename",
 		Aliases:  []string{"common.gen-key-path"},
-		EnvVars:  []string{"KLAYTN_GENKEY"},
+		EnvVars:  []string{"KLAYTN_GENKEY", "KAIA_GENKEY"},
 		Category: "MISC",
 	}
 	WriteAddressFlag = &cli.BoolFlag{
 		Name:     "writeaddress",
 		Usage:    `write out the node's public key which is given by "--nodekey" or "--nodekeyhex"`,
 		Aliases:  []string{"common.write-address"},
-		EnvVars:  []string{"KLAYTN_WRITEADDRESS"},
+		EnvVars:  []string{"KLAYTN_WRITEADDRESS", "KAIA_WRITEADDRESS"},
 		Category: "MISC",
 	}
 	// ServiceChain's settings
@@ -1265,7 +1265,7 @@ var (
 		Usage:    "The period to make and send a chain transaction to the parent chain",
 		Value:    1,
 		Aliases:  []string{"servicechain.chain-tx-period"},
-		EnvVars:  []string{"KLAYTN_CHAINTXPERIOD"},
+		EnvVars:  []string{"KLAYTN_CHAINTXPERIOD", "KAIA_CHAINTXPERIOD"},
 		Category: "SERVICECHAIN",
 	}
 	SentChainTxsLimit = &cli.Uint64Flag{
@@ -1273,21 +1273,21 @@ var (
 		Usage:    "Number of service chain transactions stored for resending",
 		Value:    100,
 		Aliases:  []string{"servicechain.chain-tx-limit"},
-		EnvVars:  []string{"KLAYTN_CHAINTXLIMIT"},
+		EnvVars:  []string{"KLAYTN_CHAINTXLIMIT", "KAIA_CHAINTXLIMIT"},
 		Category: "SERVICECHAIN",
 	}
 	MainBridgeFlag = &cli.BoolFlag{
 		Name:     "mainbridge",
 		Usage:    "Enable main bridge service for service chain",
 		Aliases:  []string{"servicechain.mainbridge"},
-		EnvVars:  []string{"KLAYTN_MAINBRIDGE"},
+		EnvVars:  []string{"KLAYTN_MAINBRIDGE", "KAIA_MAINBRIDGE"},
 		Category: "SERVICECHAIN",
 	}
 	SubBridgeFlag = &cli.BoolFlag{
 		Name:     "subbridge",
 		Usage:    "Enable sub bridge service for service chain",
 		Aliases:  []string{"servicechain.subbridge"},
-		EnvVars:  []string{"KLAYTN_SUBBRIDGE"},
+		EnvVars:  []string{"KLAYTN_SUBBRIDGE", "KAIA_SUBBRIDGE"},
 		Category: "SERVICECHAIN",
 	}
 	MainBridgeListenPortFlag = &cli.IntFlag{
@@ -1295,7 +1295,7 @@ var (
 		Usage:    "main bridge listen port",
 		Value:    50505,
 		Aliases:  []string{"servicechain.mainbridge-port"},
-		EnvVars:  []string{"KLAYTN_MAINBRIDGEPORT"},
+		EnvVars:  []string{"KLAYTN_MAINBRIDGEPORT", "KAIA_MAINBRIDGEPORT"},
 		Category: "SERVICECHAIN",
 	}
 	SubBridgeListenPortFlag = &cli.IntFlag{
@@ -1303,7 +1303,7 @@ var (
 		Usage:    "sub bridge listen port",
 		Value:    50506,
 		Aliases:  []string{"servicechain.subbridge-port"},
-		EnvVars:  []string{"KLAYTN_SUBBRIDGEPORT"},
+		EnvVars:  []string{"KLAYTN_SUBBRIDGEPORT", "KAIA_SUBBRIDGEPORT"},
 		Category: "SERVICECHAIN",
 	}
 	ParentChainIDFlag = &cli.IntFlag{
@@ -1311,14 +1311,14 @@ var (
 		Usage:    "parent chain ID",
 		Value:    8217, // Kaia mainnet chain ID
 		Aliases:  []string{"servicechain.parent-chainid"},
-		EnvVars:  []string{"KLAYTN_PARENTCHAINID"},
+		EnvVars:  []string{"KLAYTN_PARENTCHAINID", "KAIA_PARENTCHAINID"},
 		Category: "SERVICECHAIN",
 	}
 	VTRecoveryFlag = &cli.BoolFlag{
 		Name:     "vtrecovery",
 		Usage:    "Enable value transfer recovery (default: false)",
 		Aliases:  []string{"servicechain.vt-recovery"},
-		EnvVars:  []string{"KLAYTN_VTRECOVERY"},
+		EnvVars:  []string{"KLAYTN_VTRECOVERY", "KAIA_VTRECOVERY"},
 		Category: "SERVICECHAIN",
 	}
 	VTRecoveryIntervalFlag = &cli.Uint64Flag{
@@ -1326,7 +1326,7 @@ var (
 		Usage:    "Set the value transfer recovery interval (seconds)",
 		Value:    5,
 		Aliases:  []string{"servicechain.vt-recovery-interval"},
-		EnvVars:  []string{"KLAYTN_VTRECOVERYINTERVAL"},
+		EnvVars:  []string{"KLAYTN_VTRECOVERYINTERVAL", "KAIA_VTRECOVERYINTERVAL"},
 		Category: "SERVICECHAIN",
 	}
 	ServiceChainParentOperatorTxGasLimitFlag = &cli.Uint64Flag{
@@ -1334,7 +1334,7 @@ var (
 		Usage:    "Set the default value of gas limit for transactions made by bridge parent operator",
 		Value:    10000000,
 		Aliases:  []string{"servicechain.parent-operator-gaslimit"},
-		EnvVars:  []string{"KLAYTN_SC_PARENTOPERATOR_GASLIMIT"},
+		EnvVars:  []string{"KLAYTN_SC_PARENTOPERATOR_GASLIMIT", "KAIA_SC_PARENTOPERATOR_GASLIMIT"},
 		Category: "SERVICECHAIN",
 	}
 	ServiceChainChildOperatorTxGasLimitFlag = &cli.Uint64Flag{
@@ -1342,21 +1342,21 @@ var (
 		Usage:    "Set the default value of gas limit for transactions made by bridge child operator",
 		Value:    10000000,
 		Aliases:  []string{"servicechain.child-operator-gaslimit"},
-		EnvVars:  []string{"KLAYTN_SC_CHILDOPERATOR_GASLIMIT"},
+		EnvVars:  []string{"KLAYTN_SC_CHILDOPERATOR_GASLIMIT", "KAIA_SC_CHILDOPERATOR_GASLIMIT"},
 		Category: "SERVICECHAIN",
 	}
 	ServiceChainNewAccountFlag = &cli.BoolFlag{
 		Name:     "scnewaccount",
 		Usage:    "Enable account creation for the service chain (default: false). If set true, generated account can't be synced with the parent chain.",
 		Aliases:  []string{"servicechain.new-account"},
-		EnvVars:  []string{"KLAYTN_SCNEWACCOUNT"},
+		EnvVars:  []string{"KLAYTN_SCNEWACCOUNT", "KAIA_SCNEWACCOUNT"},
 		Category: "SERVICECHAIN",
 	}
 	ServiceChainAnchoringFlag = &cli.BoolFlag{
 		Name:     "anchoring",
 		Usage:    "Enable anchoring for service chain",
 		Aliases:  []string{"servicechain.anchoring"},
-		EnvVars:  []string{"KLAYTN_ANCHORING"},
+		EnvVars:  []string{"KLAYTN_ANCHORING", "KAIA_ANCHORING"},
 		Category: "SERVICECHAIN",
 	}
 	// TODO-Kaia: need to check if deprecated.
@@ -1365,7 +1365,7 @@ var (
 		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
 		Value:   "istanbul",
 		Aliases: []string{"servicechain.consensus"},
-		EnvVars: []string{"KLAYTN_SCCONSENSUS"},
+		EnvVars: []string{"KLAYTN_SCCONSENSUS", "KAIA_SCCONSENSUS"},
 	}
 
 	// KAS
@@ -1373,7 +1373,7 @@ var (
 		Name:     "kas.sc.anchor",
 		Usage:    "Enable KAS anchoring for service chain",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR"},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR", "KAIA_KAS_SC_ANCHOR"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainAnchorPeriodFlag = &cli.Uint64Flag{
@@ -1381,21 +1381,21 @@ var (
 		Usage:    "The period to anchor service chain blocks to KAS",
 		Value:    1,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_PERIOD"},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_PERIOD", "KAIA_KAS_SC_ANCHOR_PERIOD"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainAnchorUrlFlag = &cli.StringFlag{
 		Name:     "kas.sc.anchor.url",
 		Usage:    "The url for KAS anchor",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_URL"},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_URL", "KAIA_KAS_SC_ANCHOR_URL"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainAnchorOperatorFlag = &cli.StringFlag{
 		Name:     "kas.sc.anchor.operator",
 		Usage:    "The operator address for KAS anchor",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_OPERATOR"},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_OPERATOR", "KAIA_KAS_SC_ANCHOR_OPERATOR"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainAnchorRequestTimeoutFlag = &cli.DurationFlag{
@@ -1403,28 +1403,28 @@ var (
 		Usage:    "The reuqest timeout for KAS Anchoring API call",
 		Value:    500 * time.Millisecond,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_REQUEST_TIMEOUT"},
+		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_REQUEST_TIMEOUT", "KAIA_KAS_SC_ANCHOR_REQUEST_TIMEOUT"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainXChainIdFlag = &cli.StringFlag{
 		Name:     "kas.x-chain-id",
 		Usage:    "The x-chain-id for KAS",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_X_CHAIN_ID"},
+		EnvVars:  []string{"KLAYTN_KAS_X_CHAIN_ID", "KAIA_KAS_X_CHAIN_ID"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainAccessKeyFlag = &cli.StringFlag{
 		Name:     "kas.accesskey",
 		Usage:    "The access key id for KAS",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_ACCESSKEY"},
+		EnvVars:  []string{"KLAYTN_KAS_ACCESSKEY", "KAIA_KAS_ACCESSKEY"},
 		Category: "SERVICECHAIN",
 	}
 	KASServiceChainSecretKeyFlag = &cli.StringFlag{
 		Name:     "kas.secretkey",
 		Usage:    "The secret key for KAS",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_KAS_SECRETKEY"},
+		EnvVars:  []string{"KLAYTN_KAS_SECRETKEY", "KAIA_KAS_SECRETKEY"},
 		Category: "SERVICECHAIN",
 	}
 
@@ -1433,7 +1433,7 @@ var (
 		Name:     "chaindatafetcher",
 		Usage:    "Enable the ChainDataFetcher Service",
 		Aliases:  []string{"chain-data-fetcher.enable"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER", "KAIA_CHAINDATAFETCHER"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherMode = &cli.StringFlag{
@@ -1441,14 +1441,14 @@ var (
 		Usage:    "The mode of chaindatafetcher (\"kas\", \"kafka\")",
 		Value:    "kas",
 		Aliases:  []string{"chain-data-fetcher.mode"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MODE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MODE", "KAIA_CHAINDATAFETCHER_MODE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherNoDefault = &cli.BoolFlag{
 		Name:     "chaindatafetcher.no.default",
 		Usage:    "Turn off the starting of the chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.no-default"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NO_DEFAULT"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NO_DEFAULT", "KAIA_CHAINDATAFETCHER_NO_DEFAULT"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherNumHandlers = &cli.IntFlag{
@@ -1456,7 +1456,7 @@ var (
 		Usage:    "Number of chaindata handlers",
 		Value:    chaindatafetcher.DefaultNumHandlers,
 		Aliases:  []string{"chain-data-fetcher.num-handlers"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NUM_HANDLERS"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_NUM_HANDLERS", "KAIA_CHAINDATAFETCHER_NUM_HANDLERS"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherJobChannelSize = &cli.IntFlag{
@@ -1464,7 +1464,7 @@ var (
 		Usage:    "Job channel size",
 		Value:    chaindatafetcher.DefaultJobChannelSize,
 		Aliases:  []string{"chain-data-fetcher.job-channel-size"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_JOB_CHANNEL_SIZE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_JOB_CHANNEL_SIZE", "KAIA_CHAINDATAFETCHER_JOB_CHANNEL_SIZE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherChainEventSizeFlag = &cli.IntFlag{
@@ -1472,7 +1472,7 @@ var (
 		Usage:    "Block received channel size",
 		Value:    chaindatafetcher.DefaultJobChannelSize,
 		Aliases:  []string{"chain-data-fetcher.block-channel-size"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_BLOCK_CHANNEL_SIZE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_BLOCK_CHANNEL_SIZE", "KAIA_CHAINDATAFETCHER_BLOCK_CHANNEL_SIZE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherMaxProcessingDataSize = &cli.IntFlag{
@@ -1480,14 +1480,14 @@ var (
 		Usage:    "Maximum size of processing data before requesting range fetching of blocks (in MB)",
 		Value:    chaindatafetcher.DefaultMaxProcessingDataSize,
 		Aliases:  []string{"chain-data-fetcher.max-processing-data-size"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE", "KAIA_CHAINDATAFETCHER_MAX_PROCESSING_DATA_SIZE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASDBHostFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.db.host",
 		Usage:    "KAS specific DB host in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.db.host"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_HOST"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_HOST", "KAIA_CHAINDATAFETCHER_KAS_DB_HOST"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASDBPortFlag = &cli.StringFlag{
@@ -1495,63 +1495,63 @@ var (
 		Usage:    "KAS specific DB port in chaindatafetcher",
 		Value:    chaindatafetcher.DefaultDBPort,
 		Aliases:  []string{"chain-data-fetcher.kas.db.port"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PORT"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PORT", "KAIA_CHAINDATAFETCHER_KAS_DB_PORT"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASDBNameFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.db.name",
 		Usage:    "KAS specific DB name in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.db.name"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_NAME"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_NAME", "KAIA_CHAINDATAFETCHER_KAS_DB_NAME"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASDBUserFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.db.user",
 		Usage:    "KAS specific DB user in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.db.user"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_USER"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_USER", "KAIA_CHAINDATAFETCHER_KAS_DB_USER"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASDBPasswordFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.db.password",
 		Usage:    "KAS specific DB password in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.db.password"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PASSWORD"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_DB_PASSWORD", "KAIA_CHAINDATAFETCHER_KAS_DB_PASSWORD"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASCacheUse = &cli.BoolFlag{
 		Name:     "chaindatafetcher.kas.cache.use",
 		Usage:    "Enable KAS cache invalidation",
 		Aliases:  []string{"chain-data-fetcher.kas.cache.use"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_USE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_USE", "KAIA_CHAINDATAFETCHER_KAS_CACHE_USE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASCacheURLFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.cache.url",
 		Usage:    "KAS specific cache invalidate API endpoint in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.cache.url"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_URL"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_CACHE_URL", "KAIA_CHAINDATAFETCHER_KAS_CACHE_URL"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASXChainIdFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.xchainid",
 		Usage:    "KAS specific header x-chain-id in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.xchainid"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_XCHAINID"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_XCHAINID", "KAIA_CHAINDATAFETCHER_KAS_XCHAINID"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKASBasicAuthParamFlag = &cli.StringFlag{
 		Name:     "chaindatafetcher.kas.basic.auth.param",
 		Usage:    "KAS specific header basic authorization parameter in chaindatafetcher",
 		Aliases:  []string{"chain-data-fetcher.kas.basic.auth.param"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_BASIC_AUTH_PARAM"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAS_BASIC_AUTH_PARAM", "KAIA_CHAINDATAFETCHER_KAS_BASIC_AUTH_PARAM"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaBrokersFlag = &cli.StringSliceFlag{
 		Name:     "chaindatafetcher.kafka.brokers",
 		Usage:    "Kafka broker URL list",
 		Aliases:  []string{"chain-data-fetcher.kafka.brokers"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_BROKERS"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_BROKERS", "KAIA_CHAINDATAFETCHER_KAFKA_BROKERS"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaTopicEnvironmentFlag = &cli.StringFlag{
@@ -1559,7 +1559,7 @@ var (
 		Usage:    "Kafka topic environment prefix",
 		Value:    kafka.DefaultTopicEnvironmentName,
 		Aliases:  []string{"chain-data-fetcher.kafka.topic.environment"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_ENVIRONMENT"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_ENVIRONMENT", "KAIA_CHAINDATAFETCHER_KAFKA_TOPIC_ENVIRONMENT"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaTopicResourceFlag = &cli.StringFlag{
@@ -1567,7 +1567,7 @@ var (
 		Usage:    "Kafka topic resource name",
 		Value:    kafka.DefaultTopicResourceName,
 		Aliases:  []string{"chain-data-fetcher.kafka.topic.resource"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_RESOURCE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_TOPIC_RESOURCE", "KAIA_CHAINDATAFETCHER_KAFKA_TOPIC_RESOURCE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaReplicasFlag = &cli.Int64Flag{
@@ -1575,7 +1575,7 @@ var (
 		Usage:    "Kafka partition replication factor",
 		Value:    kafka.DefaultReplicas,
 		Aliases:  []string{"chain-data-fetcher.kafka.replicas"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REPLICAS"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REPLICAS", "KAIA_CHAINDATAFETCHER_KAFKA_REPLICAS"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaPartitionsFlag = &cli.IntFlag{
@@ -1583,7 +1583,7 @@ var (
 		Usage:    "The number of partitions in a topic",
 		Value:    kafka.DefaultPartitions,
 		Aliases:  []string{"chain-data-fetcher.kafka.partitions"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PARTITIONS"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PARTITIONS", "KAIA_CHAINDATAFETCHER_KAFKA_PARTITIONS"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaMaxMessageBytesFlag = &cli.IntFlag{
@@ -1591,7 +1591,7 @@ var (
 		Usage:    "The max size of a message produced by Kafka producer ",
 		Value:    kafka.DefaultMaxMessageBytes,
 		Aliases:  []string{"chain-data-fetcher.kafka.max-message-bytes"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MAX_MESSAGE_BYTES"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MAX_MESSAGE_BYTES", "KAIA_CHAINDATAFETCHER_KAFKA_MAX_MESSAGE_BYTES"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaSegmentSizeBytesFlag = &cli.IntFlag{
@@ -1599,7 +1599,7 @@ var (
 		Usage:    "The kafka data segment size (in byte)",
 		Value:    kafka.DefaultSegmentSizeBytes,
 		Aliases:  []string{"chain-data-fetcher.kafka.segment-size"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_SEGMENT_SIZE"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_SEGMENT_SIZE", "KAIA_CHAINDATAFETCHER_KAFKA_SEGMENT_SIZE"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaRequiredAcksFlag = &cli.IntFlag{
@@ -1607,7 +1607,7 @@ var (
 		Usage:    "The level of acknowledgement reliability needed from Kafka broker (0: NoResponse, 1: WaitForLocal, -1: WaitForAll)",
 		Value:    kafka.DefaultRequiredAcks,
 		Aliases:  []string{"chain-data-fetcher.kafka.required-acks"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REQUIRED_ACKS"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_REQUIRED_ACKS", "KAIA_CHAINDATAFETCHER_KAFKA_REQUIRED_ACKS"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaMessageVersionFlag = &cli.StringFlag{
@@ -1615,7 +1615,7 @@ var (
 		Usage:    "The version of Kafka message",
 		Value:    kafka.DefaultKafkaMessageVersion,
 		Aliases:  []string{"chain-data-fetcher.kafka.msg-version"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MSG_VERSION"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_MSG_VERSION", "KAIA_CHAINDATAFETCHER_KAFKA_MSG_VERSION"},
 		Category: "CHAINDATAFETCHER",
 	}
 	ChainDataFetcherKafkaProducerIdFlag = &cli.StringFlag{
@@ -1623,7 +1623,7 @@ var (
 		Usage:    "The identifier of kafka message producer",
 		Value:    kafka.GetDefaultProducerId(),
 		Aliases:  []string{"chain-data-fetcher.kafka.producer-id"},
-		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PRODUCER_ID"},
+		EnvVars:  []string{"KLAYTN_CHAINDATAFETCHER_KAFKA_PRODUCER_ID", "KAIA_CHAINDATAFETCHER_KAFKA_PRODUCER_ID"},
 		Category: "CHAINDATAFETCHER",
 	}
 	// DBSyncer
@@ -1631,14 +1631,14 @@ var (
 		Name:     "dbsyncer",
 		Usage:    "Enable the DBSyncer",
 		Aliases:  []string{"db-syncer.enable"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER", "KAIA_DBSYNCER"},
 		Category: "DATABASE SYNCER",
 	}
 	DBHostFlag = &cli.StringFlag{
 		Name:     "dbsyncer.db.host",
 		Usage:    "db.host in dbsyncer",
 		Aliases:  []string{"db-syncer.db.host"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_HOST"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_HOST", "KAIA_DBSYNCER_DB_HOST"},
 		Category: "DATABASE SYNCER",
 	}
 	DBPortFlag = &cli.StringFlag{
@@ -1646,35 +1646,35 @@ var (
 		Usage:    "db.port in dbsyncer",
 		Value:    "3306",
 		Aliases:  []string{"db-syncer.db.port"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PORT"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PORT", "KAIA_DBSYNCER_DB_PORT"},
 		Category: "DATABASE SYNCER",
 	}
 	DBNameFlag = &cli.StringFlag{
 		Name:     "dbsyncer.db.name",
 		Usage:    "db.name in dbsyncer",
 		Aliases:  []string{"db-syncer.db.name"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_NAME"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_NAME", "KAIA_DBSYNCER_DB_NAME"},
 		Category: "DATABASE SYNCER",
 	}
 	DBUserFlag = &cli.StringFlag{
 		Name:     "dbsyncer.db.user",
 		Usage:    "db.user in dbsyncer",
 		Aliases:  []string{"db-syncer.db.user"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_USER"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_USER", "KAIA_DBSYNCER_DB_USER"},
 		Category: "DATABASE SYNCER",
 	}
 	DBPasswordFlag = &cli.StringFlag{
 		Name:     "dbsyncer.db.password",
 		Usage:    "db.password in dbsyncer",
 		Aliases:  []string{"db-syncer.db.password"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PASSWORD"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_PASSWORD", "KAIA_DBSYNCER_DB_PASSWORD"},
 		Category: "DATABASE SYNCER",
 	}
 	EnabledLogModeFlag = &cli.BoolFlag{
 		Name:     "dbsyncer.logmode",
 		Usage:    "Enable the dbsyncer logmode",
 		Aliases:  []string{"db-syncer.log-mode"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_LOGMODE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_LOGMODE", "KAIA_DBSYNCER_LOGMODE"},
 		Category: "DATABASE SYNCER",
 	}
 	MaxIdleConnsFlag = &cli.IntFlag{
@@ -1682,7 +1682,7 @@ var (
 		Usage:    "The maximum number of connections in the idle connection pool",
 		Value:    50,
 		Aliases:  []string{"db-syncer.db.max-idle"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_IDLE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_IDLE", "KAIA_DBSYNCER_DB_MAX_IDLE"},
 		Category: "DATABASE SYNCER",
 	}
 	MaxOpenConnsFlag = &cli.IntFlag{
@@ -1690,7 +1690,7 @@ var (
 		Usage:    "The maximum number of open connections to the database",
 		Value:    30,
 		Aliases:  []string{"db-syncer.db.max-open"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_OPEN"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_OPEN", "KAIA_DBSYNCER_DB_MAX_OPEN"},
 		Category: "DATABASE SYNCER",
 	}
 	ConnMaxLifeTimeFlag = &cli.DurationFlag{
@@ -1698,7 +1698,7 @@ var (
 		Usage:    "The maximum amount of time a connection may be reused (default : 1h), ex: 300ms, 2h45m, 60s, ...",
 		Value:    1 * time.Hour,
 		Aliases:  []string{"db-syncer.db.max-lifetime"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_LIFETIME"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_DB_MAX_LIFETIME", "KAIA_DBSYNCER_DB_MAX_LIFETIME"},
 		Category: "DATABASE SYNCER",
 	}
 	BlockSyncChannelSizeFlag = &cli.IntFlag{
@@ -1706,7 +1706,7 @@ var (
 		Usage:    "Block received channel size",
 		Value:    5,
 		Aliases:  []string{"db-syncer.block-channel-size"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_BLOCK_CHANNEL_SIZE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_BLOCK_CHANNEL_SIZE", "KAIA_DBSYNCER_BLOCK_CHANNEL_SIZE"},
 		Category: "DATABASE SYNCER",
 	}
 	DBSyncerModeFlag = &cli.StringFlag{
@@ -1714,7 +1714,7 @@ var (
 		Usage:    "The mode of dbsyncer is way which handle block/tx data to insert db (multi, single, context)",
 		Value:    "multi",
 		Aliases:  []string{"db-syncer.mode"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_MODE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_MODE", "KAIA_DBSYNCER_MODE"},
 		Category: "DATABASE SYNCER",
 	}
 	GenQueryThreadFlag = &cli.IntFlag{
@@ -1722,7 +1722,7 @@ var (
 		Usage:    "The amount of thread of generation query in multi mode",
 		Value:    50,
 		Aliases:  []string{"db-syncer.genquery-th"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_GENQUERY_TH"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_GENQUERY_TH", "KAIA_DBSYNCER_GENQUERY_TH"},
 		Category: "DATABASE SYNCER",
 	}
 	InsertThreadFlag = &cli.IntFlag{
@@ -1730,7 +1730,7 @@ var (
 		Usage:    "The amount of thread of insert operation in multi mode",
 		Value:    30,
 		Aliases:  []string{"db-syncer.insert-thread"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_INSERT_TH"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_INSERT_TH", "KAIA_DBSYNCER_INSERT_TH"},
 		Category: "DATABASE SYNCER",
 	}
 	BulkInsertSizeFlag = &cli.IntFlag{
@@ -1738,7 +1738,7 @@ var (
 		Usage:    "The amount of row for bulk-insert",
 		Value:    200,
 		Aliases:  []string{"db-syncer.bulk-size"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_BULK_SIZE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_BULK_SIZE", "KAIA_DBSYNCER_BULK_SIZE"},
 		Category: "DATABASE SYNCER",
 	}
 	EventModeFlag = &cli.StringFlag{
@@ -1746,7 +1746,7 @@ var (
 		Usage:    "The way how to sync all block or last block (block, head)",
 		Value:    "head",
 		Aliases:  []string{"db-syncer.event-mode"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_EVENT_MODE"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_EVENT_MODE", "KAIA_DBSYNCER_EVENT_MODE"},
 		Category: "DATABASE SYNCER",
 	}
 	MaxBlockDiffFlag = &cli.Uint64Flag{
@@ -1754,14 +1754,14 @@ var (
 		Usage:    "The maximum difference between current block and event block. 0 means off",
 		Value:    0,
 		Aliases:  []string{"db-syncer.max-block-diff"},
-		EnvVars:  []string{"KLAYTN_DBSYNCER_MAX_BLOCK_DIFF"},
+		EnvVars:  []string{"KLAYTN_DBSYNCER_MAX_BLOCK_DIFF", "KAIA_DBSYNCER_MAX_BLOCK_DIFF"},
 		Category: "DATABASE SYNCER",
 	}
 	AutoRestartFlag = &cli.BoolFlag{
 		Name:     "autorestart.enable",
 		Usage:    "Node can restart itself when there is a problem in making consensus",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_AUTORESTART_ENABLE"},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_ENABLE", "KAIA_AUTORESTART_ENABLE"},
 		Category: "MISC",
 	}
 	RestartTimeOutFlag = &cli.DurationFlag{
@@ -1769,7 +1769,7 @@ var (
 		Usage:    "The elapsed time to wait auto restart (minutes)",
 		Value:    15 * time.Minute,
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_AUTORESTART_TIMEOUT"},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_TIMEOUT", "KAIA_AUTORESTART_TIMEOUT"},
 		Category: "MISC",
 	}
 	DaemonPathFlag = &cli.StringFlag{
@@ -1777,7 +1777,7 @@ var (
 		Usage:    "Path of node daemon. Used to give signal to kill",
 		Value:    "~/klaytn/bin/kcnd",
 		Aliases:  []string{"autorestart.daemon-path"},
-		EnvVars:  []string{"KLAYTN_AUTORESTART_DAEMON_PATH"},
+		EnvVars:  []string{"KLAYTN_AUTORESTART_DAEMON_PATH", "KAIA_AUTORESTART_DAEMON_PATH"},
 		Category: "MISC",
 	}
 
@@ -1787,21 +1787,21 @@ var (
 		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "DynamoDBS3")`,
 		Value:    "LevelDB",
 		Aliases:  []string{"migration.dst.dbtype"},
-		EnvVars:  []string{"KLAYTN_DST_DBTYPE"},
+		EnvVars:  []string{"KLAYTN_DST_DBTYPE", "KAIA_DST_DBTYPE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDataDirFlag = &cli.PathFlag{
 		Name:     "dst.datadir",
 		Usage:    "Data directory for the databases and keystore. This value is only used in local DB.",
 		Aliases:  []string{"migration.dst.datadir"},
-		EnvVars:  []string{"KLAYTN_DST_DATADIR"},
+		EnvVars:  []string{"KLAYTN_DST_DATADIR", "KAIA_DST_DATADIR"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstSingleDBFlag = &cli.BoolFlag{
 		Name:     "db.dst.single",
 		Usage:    "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",
 		Aliases:  []string{"migration.dst.single"},
-		EnvVars:  []string{"KLAYTN_DB_DST_SINGLE"},
+		EnvVars:  []string{"KLAYTN_DB_DST_SINGLE", "KAIA_DB_DST_SINGLE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstLevelDBCacheSizeFlag = &cli.IntFlag{
@@ -1809,7 +1809,7 @@ var (
 		Usage:    "Size of in-memory cache in LevelDB (MiB)",
 		Value:    768,
 		Aliases:  []string{"migration.dst.db.leveldb.cache-size"},
-		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_CACHE_SIZE", "KAIA_DB_DST_LEVELDB_CACHE_SIZE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstLevelDBCompressionTypeFlag = &cli.IntFlag{
@@ -1817,7 +1817,7 @@ var (
 		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
 		Value:    0,
 		Aliases:  []string{"migration.dst.db.leveldb.compression"},
-		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_COMPRESSION"},
+		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_COMPRESSION", "KAIA_DB_DST_LEVELDB_COMPRESSION"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstNumStateTrieShardsFlag = &cli.UintFlag{
@@ -1825,14 +1825,14 @@ var (
 		Usage:    "Number of internal shards of state trie DB shards. Should be power of 2",
 		Value:    4,
 		Aliases:  []string{"migration.dst.db.leveldb.num-statetrie-shards"},
-		EnvVars:  []string{"KLAYTN_DB_DST_NUM_STATETRIE_SHARDS"},
+		EnvVars:  []string{"KLAYTN_DB_DST_NUM_STATETRIE_SHARDS", "KAIA_DB_DST_NUM_STATETRIE_SHARDS"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDynamoDBTableNameFlag = &cli.StringFlag{
 		Name:     "db.dst.dynamo.tablename",
 		Usage:    "Specifies DynamoDB table name. This is mandatory to use dynamoDB. (Set dbtype to use DynamoDBS3). If dstDB is singleDB, tableName should be in form of 'PREFIX-TABLENAME'.(e.g. 'kaia-misc', 'kaia-statetrie')",
 		Aliases:  []string{"migration.dst.db.dynamo.table-name"},
-		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_TABLENAME"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_TABLENAME", "KAIA_DB_DST_DYNAMO_TABLENAME"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDynamoDBRegionFlag = &cli.StringFlag{
@@ -1840,14 +1840,14 @@ var (
 		Usage:    "AWS region where the DynamoDB will be created.",
 		Value:    database.GetDefaultDynamoDBConfig().Region,
 		Aliases:  []string{"migration.dst.db.dynamo.region"},
-		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_REGION"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_REGION", "KAIA_DB_DST_DYNAMO_REGION"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDynamoDBIsProvisionedFlag = &cli.BoolFlag{
 		Name:     "db.dst.dynamo.is-provisioned",
 		Usage:    "Set DynamoDB billing mode to provision. The default billing mode is on-demand.",
 		Aliases:  []string{"migration.dst.db.dynamo.is-provisioned"},
-		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_IS_PROVISIONED"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_IS_PROVISIONED", "KAIA_DB_DST_DYNAMO_IS_PROVISIONED"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDynamoDBReadCapacityFlag = &cli.Int64Flag{
@@ -1855,7 +1855,7 @@ var (
 		Usage:    "Read capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied.",
 		Value:    database.GetDefaultDynamoDBConfig().ReadCapacityUnits,
 		Aliases:  []string{"migration.dst.db.dynamo.read-capacity"},
-		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_READ_CAPACITY"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_READ_CAPACITY", "KAIA_DB_DST_DYNAMO_READ_CAPACITY"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstDynamoDBWriteCapacityFlag = &cli.Int64Flag{
@@ -1863,14 +1863,14 @@ var (
 		Usage:    "Write capacity unit of dynamoDB. If is-provisioned is not set, this flag will not be applied",
 		Value:    database.GetDefaultDynamoDBConfig().WriteCapacityUnits,
 		Aliases:  []string{"migration.dst.db.dynamo.write-capacity"},
-		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_WRITE_CAPACITY"},
+		EnvVars:  []string{"KLAYTN_DB_DST_DYNAMO_WRITE_CAPACITY", "KAIA_DB_DST_DYNAMO_WRITE_CAPACITY"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBSecondaryFlag = &cli.BoolFlag{
 		Name:     "db.dst.rocksdb.secondary",
 		Usage:    "Enable rocksdb secondary mode (read-only and catch-up with primary node dynamically)",
 		Aliases:  []string{"migration.dst.db.rocksdb.secondary"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_SECONDARY"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_SECONDARY", "KAIA_DB_DST_ROCKSDB_SECONDARY"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBCacheSizeFlag = &cli.Uint64Flag{
@@ -1878,14 +1878,14 @@ var (
 		Usage:    "Size of in-memory cache in RocksDB (MiB)",
 		Value:    768,
 		Aliases:  []string{"migration.dst.db.rocksdb.cache-size"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_SIZE"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_SIZE", "KAIA_DB_DST_ROCKSDB_CACHE_SIZE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBDumpMallocStatFlag = &cli.BoolFlag{
 		Name:     "db.dst.rocksdb.dump-memory-stat",
 		Usage:    "Enable to print memory stat together with rocksdb.stat. Works with Jemalloc only.",
 		Aliases:  []string{"migration.dst.db.rocksdb.dump-malloc-stat"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DUMP_MALLOC_STAT"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DUMP_MALLOC_STAT", "KAIA_DB_DST_ROCKSDB_DUMP_MALLOC_STAT"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBCompressionTypeFlag = &cli.StringFlag{
@@ -1893,7 +1893,7 @@ var (
 		Usage:    "RocksDB block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().CompressionType,
 		Aliases:  []string{"migration.dst.db.rocksdb.compression-type"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_COMPRESSION_TYPE"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_COMPRESSION_TYPE", "KAIA_DB_DST_ROCKSDB_COMPRESSION_TYPE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBBottommostCompressionTypeFlag = &cli.StringFlag{
@@ -1901,7 +1901,7 @@ var (
 		Usage:    "RocksDB bottommost block compression type. Supported values are 'no', 'snappy', 'zlib', 'bz2', 'lz4', 'lz4hc', 'xpress', 'zstd'",
 		Value:    database.GetDefaultRocksDBConfig().BottommostCompressionType,
 		Aliases:  []string{"migration.dst.db.rocksdb.bottommost-compression-type"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE", "KAIA_DB_DST_ROCKSDB_BOTTOMMOST_COMPRESSION_TYPE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBFilterPolicyFlag = &cli.StringFlag{
@@ -1909,14 +1909,14 @@ var (
 		Usage:    "RocksDB filter policy. Supported values are 'no', 'bloom', 'ribbon'",
 		Value:    database.GetDefaultRocksDBConfig().FilterPolicy,
 		Aliases:  []string{"migration.dst.db.rocksdb.filter-policy"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_FILTER_POLICY"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_FILTER_POLICY", "KAIA_DB_DST_ROCKSDB_FILTER_POLICY"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBDisableMetricsFlag = &cli.BoolFlag{
 		Name:     "db.dst.rocksdb.disable-metrics",
 		Usage:    "Disable RocksDB metrics",
 		Aliases:  []string{"migration.dst.db.rocksdb.disable-metrics"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DISABLE_METRICS"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_DISABLE_METRICS", "KAIA_DB_DST_ROCKSDB_DISABLE_METRICS"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBMaxOpenFilesFlag = &cli.IntFlag{
@@ -1924,14 +1924,14 @@ var (
 		Usage:    "Set RocksDB max open files. (the value should be greater than 16)",
 		Value:    database.GetDefaultRocksDBConfig().MaxOpenFiles,
 		Aliases:  []string{"migration.dst.db.rocksdb.max-open-files"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_MAX_OPEN_FILES"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_MAX_OPEN_FILES", "KAIA_DB_DST_ROCKSDB_MAX_OPEN_FILES"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstRocksDBCacheIndexAndFilterFlag = &cli.BoolFlag{
 		Name:     "db.dst.rocksdb.cache-index-and-filter",
 		Usage:    "Use block cache for index and filter blocks.",
 		Aliases:  []string{"migration.dst.db.rocksdb.cache-index-and-filter"},
-		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_INDEX_AND_FILTER"},
+		EnvVars:  []string{"KLAYTN_DB_DST_ROCKSDB_CACHE_INDEX_AND_FILTER", "KAIA_DB_DST_ROCKSDB_CACHE_INDEX_AND_FILTER"},
 		Category: "DATABASE MIGRATION",
 	}
 
@@ -1940,8 +1940,8 @@ var (
 		Name:     "config",
 		Usage:    "TOML configuration file",
 		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_CONFIG"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_CONFIG", "KAIA_CONFIG"},
+		Category: "KAIA",
 	}
 	BlockGenerationIntervalFlag = &cli.Int64Flag{
 		Name: "block-generation-interval",
@@ -1949,8 +1949,8 @@ var (
 			"It should be equal or larger than 1. This flag is only applicable to CN.",
 		Value:    params.DefaultBlockGenerationInterval,
 		Aliases:  []string{"experimental.block-generation-interval"},
-		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_INTERVAL"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_INTERVAL", "KAIA_BLOCK_GENERATION_INTERVAL"},
+		Category: "KAIA",
 	}
 	BlockGenerationTimeLimitFlag = &cli.DurationFlag{
 		Name: "block-generation-time-limit",
@@ -1959,16 +1959,16 @@ var (
 			"This flag is only applicable to CN",
 		Value:    params.DefaultBlockGenerationTimeLimit,
 		Aliases:  []string{"experimental.block-generation-time-limit"},
-		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TIME_LIMIT"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TIME_LIMIT", "KAIA_BLOCK_GENERATION_TIME_LIMIT"},
+		Category: "KAIA",
 	}
 	OpcodeComputationCostLimitFlag = &cli.Uint64Flag{
 		Name: "opcode-computation-cost-limit",
 		Usage: "(experimental option) Set the computation cost limit for a tx. " +
 			"Should set the same value within the network",
 		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
-		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT"},
-		Category: "KLAY",
+		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT", "KAIA_OPCODE_COMPUTATION_COST_LIMIT"},
+		Category: "KAIA",
 	}
 
 	// Gas price oracle settings

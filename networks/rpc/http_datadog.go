@@ -54,6 +54,12 @@ func newDatadogTracer() *DatadogTracer {
 		if err != nil {
 			return nil
 		}
+	} else if v := os.Getenv("DD_KAIA_RPC_RESPONSE"); v != "" {
+		var err error
+		response, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil
+		}
 	}
 
 	tracer.Start()
