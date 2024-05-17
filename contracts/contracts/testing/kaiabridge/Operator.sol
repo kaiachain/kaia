@@ -487,7 +487,7 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     /// @dev See {IOperator-checkProvisionShouldSubmit}
     function checkProvisionShouldSubmit(bytes32 hashedData, address operator) public override view returns (bool) {
         uint64 txID = calldataHashes[hashedData];
-        if (txID < transactions.length) {
+        if (txID > 0 && txID < transactions.length) {
             bool executed = transactions[txID].executed;
             bool confirmed = confirmations[txID][operator];
             return !confirmed && !executed;

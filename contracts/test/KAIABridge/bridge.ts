@@ -972,7 +972,7 @@ describe("[Bridge Test]", function () {
 
   it("#Transfer (case: sequence number is mapped to block number)", async function () {
     const latestBlockNum = (await hre.ethers.provider.getBlock("latest")).number;
-    const amount = BigInt(1 * 10e18);
+    const amount = BigInt(5 * 10e18);
 
     await expect(bridge.transfer(fnsaReceiver, {value: amount})).to.emit(bridge, "Transfer");
     expect(await bridge.seq2BlockNum(seq)).to.gt(latestBlockNum);
@@ -991,7 +991,7 @@ describe("[Bridge Test]", function () {
 
   it("#Transfer KAIA (swap request)", async function () {
     const underMinLockableKAIA = BigInt(1);
-    const upperMinLockableKAIA = BigInt(1 * 10e18);
+    const upperMinLockableKAIA = BigInt(5 * 10e18);
     const upperMaxLockableKAIA = BigInt(10000000 * 10e18);
     await expect(bridge.transfer(fnsaReceiver, {value: underMinLockableKAIA}))
       .revertedWith("KAIA::Bridge: Locked KAIA must be larger than minimum");
@@ -1155,7 +1155,7 @@ describe("[Bridge Test]", function () {
   });
 
   it("#Transfer (address validation)", async function () {
-    const amount = BigInt(1 * 10e18);
+    const amount = BigInt(5 * 10e18);
     let receiver = "link1hpufl3l8g44aaz3qsqw886sjanhhu73ul6tllxuw3pqlhxzq9e4svku69h";
     await expect(bridge.transfer(receiver, {value: amount})).to.emit(bridge, "Transfer");
 
