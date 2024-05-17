@@ -360,9 +360,7 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 // Config retrieves the chain configuration of the tester.
 func (dl *downloadTester) Config() *params.ChainConfig {
 	config := params.TestChainConfig
-	if kaiaCompatibleBlock != nil {
-		config.KaiaCompatibleBlock = kaiaCompatibleBlock
-	}
+	config.KaiaCompatibleBlock = kaiaCompatibleBlock
 	return config
 }
 
@@ -1041,16 +1039,13 @@ func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
 }
 
 func testBoundedForkedSync65FastOnKaia(t *testing.T, protocol int, mode SyncMode) {
-	t.Parallel()
-
-	originalKaiaFork := kaiaCompatibleBlock
 	originalStakingUpdateInterval := testStakingUpdateInterval
 	kaiaCompatibleBlock = big.NewInt(0)
 	testStakingUpdateInterval = 1
 	tester := newTester()
 	defer func() {
 		tester.terminate()
-		kaiaCompatibleBlock = originalKaiaFork
+		kaiaCompatibleBlock = nil
 		testStakingUpdateInterval = originalStakingUpdateInterval
 	}()
 

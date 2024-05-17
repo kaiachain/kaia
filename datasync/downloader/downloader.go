@@ -351,7 +351,6 @@ func (d *Downloader) GetSnapSyncer() *snap.Syncer {
 // adding various sanity checks as well as wrapping it with various logger entries.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
-
 	switch err {
 	case nil, errBusy, errCanceled:
 		return err
@@ -432,7 +431,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 			d.snapSync = true
 		}
 	}
-
 	// Reset the queue, peer set and wake channels to clean any internal leftover state
 	d.queue.Reset(blockCacheMaxItems, blockCacheInitialItems)
 	d.peers.Reset()
@@ -1847,7 +1845,6 @@ func (d *Downloader) processFastSyncContent() error {
 				continue
 			}
 		}
-
 		// Fast sync done, pivot commit done, full import
 		if err := d.importBlockResults(afterP); err != nil {
 			return err

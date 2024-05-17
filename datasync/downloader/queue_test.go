@@ -134,6 +134,8 @@ func testBasics(t *testing.T, kaiaFork bool) {
 		numOfStakingInfos = len(chain.stakingInfos)
 		effectiveStakingInterval = 1
 		config.KaiaCompatibleBlock = big.NewInt(0)
+	} else {
+		config.KaiaCompatibleBlock = nil
 	}
 
 	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
@@ -159,7 +161,7 @@ func testBasics(t *testing.T, kaiaFork bool) {
 	}
 	// staking info on every 4th block get added to task-queue
 	if got, exp := q.PendingStakingInfos(), numOfStakingInfos; got != exp {
-		t.Errorf("wrong pending receipt count, got %d, exp %d", got, exp)
+		t.Errorf("wrong pending staking info count, got %d, exp %d", got, exp)
 	}
 	// Items are now queued for downloading, next step is that we tell the
 	// queue that a certain peer will deliver them for us
@@ -333,12 +335,14 @@ func testEmptyBlocks(t *testing.T, kaiaFork bool) {
 
 	numOfBlocks := len(emptyChain.blocks)
 	numOfStakingInfos := len(chain.stakingInfos) / 4
-	effectiveStakingInterval := 4
+	effectiveStakingInterval := testInterval
 	config := params.TestChainConfig
 	if kaiaFork {
 		numOfStakingInfos = len(chain.stakingInfos)
 		effectiveStakingInterval = 1
 		config.KaiaCompatibleBlock = big.NewInt(0)
+	} else {
+		config.KaiaCompatibleBlock = nil
 	}
 
 	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
@@ -414,7 +418,7 @@ func testEmptyBlocks(t *testing.T, kaiaFork bool) {
 			t.Fatal("should throttle")
 		}
 		// But we should still get the first things to fetch
-		if got, exp := len(fetchReq.Headers), (10 / effectiveStakingInterval); got != exp {
+		if got, exp := len(fetchReq.Headers), int(10/effectiveStakingInterval); got != exp {
 			t.Fatalf("expected %d requests, got %d", exp, got)
 		}
 		if got, exp := fetchReq.Headers[0].Number.Uint64(), uint64(effectiveStakingInterval); got != exp {
@@ -427,10 +431,10 @@ func testEmptyBlocks(t *testing.T, kaiaFork bool) {
 	if q.receiptTaskQueue.Size() != 0 {
 		t.Errorf("expected receipt task queue to be %d, got %d", 0, q.receiptTaskQueue.Size())
 	}
-	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-(10/effectiveStakingInterval); got != exp {
+	if got, exp := q.stakingInfoTaskQueue.Size(), numOfStakingInfos-int(10/effectiveStakingInterval); got != exp {
 		t.Fatalf("expected staking info task queue size %d, got %d", exp, got)
 	}
-	if got, exp := q.resultCache.countCompleted(), (effectiveStakingInterval - 1); got != exp {
+	if got, exp := q.resultCache.countCompleted(), int(effectiveStakingInterval-1); got != exp {
 		t.Errorf("wrong processable count, got %d, exp %d", got, exp)
 	}
 }
