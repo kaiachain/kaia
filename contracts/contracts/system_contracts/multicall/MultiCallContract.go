@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -49,29 +49,29 @@ const IAddressBookBinRuntime = ``
 // Deprecated: Use IAddressBookMetaData.Sigs instead.
 var IAddressBookFuncSigs = IAddressBookMetaData.Sigs
 
-// IAddressBook is an auto generated Go binding around a Klaytn contract.
+// IAddressBook is an auto generated Go binding around a Kaia contract.
 type IAddressBook struct {
 	IAddressBookCaller     // Read-only binding to the contract
 	IAddressBookTransactor // Write-only binding to the contract
 	IAddressBookFilterer   // Log filterer for contract events
 }
 
-// IAddressBookCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IAddressBookCaller is an auto generated read-only Go binding around a Kaia contract.
 type IAddressBookCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IAddressBookTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IAddressBookTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IAddressBookFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IAddressBookFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookSession is an auto generated Go binding around a Klaytn contract,
+// IAddressBookSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IAddressBookSession struct {
 	Contract     *IAddressBook     // Generic contract binding to set the session for
@@ -79,31 +79,31 @@ type IAddressBookSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IAddressBookCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IAddressBookCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IAddressBookCallerSession struct {
 	Contract *IAddressBookCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// IAddressBookTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IAddressBookTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IAddressBookTransactorSession struct {
 	Contract     *IAddressBookTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// IAddressBookRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IAddressBookRaw is an auto generated low-level Go binding around a Kaia contract.
 type IAddressBookRaw struct {
 	Contract *IAddressBook // Generic contract binding to access the raw methods on
 }
 
-// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IAddressBookCallerRaw struct {
 	Contract *IAddressBookCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IAddressBookTransactorRaw struct {
 	Contract *IAddressBookTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -284,29 +284,29 @@ const ICnStakingBinRuntime = ``
 // Deprecated: Use ICnStakingMetaData.Sigs instead.
 var ICnStakingFuncSigs = ICnStakingMetaData.Sigs
 
-// ICnStaking is an auto generated Go binding around a Klaytn contract.
+// ICnStaking is an auto generated Go binding around a Kaia contract.
 type ICnStaking struct {
 	ICnStakingCaller     // Read-only binding to the contract
 	ICnStakingTransactor // Write-only binding to the contract
 	ICnStakingFilterer   // Log filterer for contract events
 }
 
-// ICnStakingCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ICnStakingCaller is an auto generated read-only Go binding around a Kaia contract.
 type ICnStakingCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ICnStakingTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ICnStakingTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ICnStakingTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ICnStakingFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ICnStakingFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ICnStakingFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ICnStakingSession is an auto generated Go binding around a Klaytn contract,
+// ICnStakingSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ICnStakingSession struct {
 	Contract     *ICnStaking       // Generic contract binding to set the session for
@@ -314,31 +314,31 @@ type ICnStakingSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ICnStakingCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ICnStakingCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ICnStakingCallerSession struct {
 	Contract *ICnStakingCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts     // Call options to use throughout this session
 }
 
-// ICnStakingTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ICnStakingTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ICnStakingTransactorSession struct {
 	Contract     *ICnStakingTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// ICnStakingRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ICnStakingRaw is an auto generated low-level Go binding around a Kaia contract.
 type ICnStakingRaw struct {
 	Contract *ICnStaking // Generic contract binding to access the raw methods on
 }
 
-// ICnStakingCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ICnStakingCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ICnStakingCallerRaw struct {
 	Contract *ICnStakingCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ICnStakingTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ICnStakingTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ICnStakingTransactorRaw struct {
 	Contract *ICnStakingTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -519,7 +519,7 @@ var MultiCallContractMetaData = &bind.MetaData{
 	Sigs: map[string]string{
 		"adde19c6": "multiCallStakingInfo()",
 	},
-	Bin: "0x6080604052348015600e575f80fd5b506106b48061001c5f395ff3fe608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063adde19c61461002d575b5f80fd5b61003561004d565b60405161004493929190610395565b60405180910390f35b60608060605f6104009050806001600160a01b031663715b208b6040518163ffffffff1660e01b81526004015f60405180830381865afa158015610093573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526100ba9190810190610515565b80519195509350600511156100cf5750909192565b5f600284516100de91906105ed565b90506100eb60038261061a565b156100f7575050909192565b61010260038261062d565b67ffffffffffffffff81111561011a5761011a61042d565b604051908082528060200260200182016040528015610143578160200160208202803683370190505b5092505f5b818110156101b55761017c8561015f836001610640565b8151811061016f5761016f610653565b60200260200101516101bd565b8461018860038461062d565b8151811061019857610198610653565b60209081029190910101526101ae600382610640565b9050610148565b505050909192565b5f808290506002816001600160a01b031663ffa1ad746040518163ffffffff1660e01b8152600401602060405180830381865afa158015610200573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102249190610667565b101561029157806001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015610266573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061028a9190610667565b9392505050565b806001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa1580156102cd573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102f19190610667565b816001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa15801561032d573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906103519190610667565b61028a91906105ed565b5f815180845260208085019450602084015f5b8381101561038a5781518752958201959082019060010161036e565b509495945050505050565b606080825284519082018190525f906020906080840190828801845b828110156103d057815160ff16845292840192908401906001016103b1565b505050838103828501528551808252868301918301905f5b8181101561040d5783516001600160a01b0316835292840192918401916001016103e8565b50508481036040860152610421818761035b565b98975050505050505050565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561046a5761046a61042d565b604052919050565b5f67ffffffffffffffff82111561048b5761048b61042d565b5060051b60200190565b5f82601f8301126104a4575f80fd5b815160206104b96104b483610472565b610441565b8083825260208201915060208460051b8701019350868411156104da575f80fd5b602086015b8481101561050a5780516001600160a01b03811681146104fd575f80fd5b83529183019183016104df565b509695505050505050565b5f8060408385031215610526575f80fd5b825167ffffffffffffffff8082111561053d575f80fd5b818501915085601f830112610550575f80fd5b815160206105606104b483610472565b82815260059290921b8401810191818101908984111561057e575f80fd5b948201945b838610156105aa57855160ff8116811461059b575f80fd5b82529482019490820190610583565b918801519196509093505050808211156105c2575f80fd5b506105cf85828601610495565b9150509250929050565b634e487b7160e01b5f52601160045260245ffd5b81810381811115610600576106006105d9565b92915050565b634e487b7160e01b5f52601260045260245ffd5b5f8261062857610628610606565b500690565b5f8261063b5761063b610606565b500490565b80820180821115610600576106006105d9565b634e487b7160e01b5f52603260045260245ffd5b5f60208284031215610677575f80fd5b505191905056fea26469706673582212203a41bbe35657d767e3a0828db6f4c07a0e81bcc78fb83f99c41cdd1d433dd16164736f6c63430008190033",
+	Bin: "0x6080604052348015600e575f80fd5b5061060d8061001c5f395ff3fe608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063adde19c61461002d575b5f80fd5b61003561004d565b604051610044939291906102ee565b60405180910390f35b60608060605f6104009050806001600160a01b031663715b208b6040518163ffffffff1660e01b81526004015f60405180830381865afa158015610093573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526100ba919081019061046e565b80519195509350600511156100cf5750909192565b5f600284516100de9190610546565b90506100eb600382610573565b156100f7575050909192565b610102600382610586565b67ffffffffffffffff81111561011a5761011a610386565b604051908082528060200260200182016040528015610143578160200160208202803683370190505b5092505f5b818110156101b55761017c8561015f836001610599565b8151811061016f5761016f6105ac565b60200260200101516101bd565b84610188600384610586565b81518110610198576101986105ac565b60209081029190910101526101ae600382610599565b9050610148565b505050909192565b5f808290506002816001600160a01b031663ffa1ad746040518163ffffffff1660e01b8152600401602060405180830381865afa158015610200573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061022491906105c0565b10156102395750506001600160a01b03163190565b806001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015610275573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061029991906105c0565b6102ad906001600160a01b03851631610546565b9392505050565b5f815180845260208085019450602084015f5b838110156102e3578151875295820195908201906001016102c7565b509495945050505050565b606080825284519082018190525f906020906080840190828801845b8281101561032957815160ff168452928401929084019060010161030a565b505050838103828501528551808252868301918301905f5b818110156103665783516001600160a01b031683529284019291840191600101610341565b5050848103604086015261037a81876102b4565b98975050505050505050565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff811182821017156103c3576103c3610386565b604052919050565b5f67ffffffffffffffff8211156103e4576103e4610386565b5060051b60200190565b5f82601f8301126103fd575f80fd5b8151602061041261040d836103cb565b61039a565b8083825260208201915060208460051b870101935086841115610433575f80fd5b602086015b848110156104635780516001600160a01b0381168114610456575f80fd5b8352918301918301610438565b509695505050505050565b5f806040838503121561047f575f80fd5b825167ffffffffffffffff80821115610496575f80fd5b818501915085601f8301126104a9575f80fd5b815160206104b961040d836103cb565b82815260059290921b840181019181810190898411156104d7575f80fd5b948201945b8386101561050357855160ff811681146104f4575f80fd5b825294820194908201906104dc565b9188015191965090935050508082111561051b575f80fd5b50610528858286016103ee565b9150509250929050565b634e487b7160e01b5f52601160045260245ffd5b8181038181111561055957610559610532565b92915050565b634e487b7160e01b5f52601260045260245ffd5b5f826105815761058161055f565b500690565b5f826105945761059461055f565b500490565b8082018082111561055957610559610532565b634e487b7160e01b5f52603260045260245ffd5b5f602082840312156105d0575f80fd5b505191905056fea264697066735822122051a807c62e715d2ccbe20d66d0cfcbae84b1923877e01ceba51697961c6e55ba64736f6c63430008190033",
 }
 
 // MultiCallContractABI is the input ABI used to generate the binding from.
@@ -527,7 +527,7 @@ var MultiCallContractMetaData = &bind.MetaData{
 var MultiCallContractABI = MultiCallContractMetaData.ABI
 
 // MultiCallContractBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const MultiCallContractBinRuntime = `608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063adde19c61461002d575b5f80fd5b61003561004d565b60405161004493929190610395565b60405180910390f35b60608060605f6104009050806001600160a01b031663715b208b6040518163ffffffff1660e01b81526004015f60405180830381865afa158015610093573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526100ba9190810190610515565b80519195509350600511156100cf5750909192565b5f600284516100de91906105ed565b90506100eb60038261061a565b156100f7575050909192565b61010260038261062d565b67ffffffffffffffff81111561011a5761011a61042d565b604051908082528060200260200182016040528015610143578160200160208202803683370190505b5092505f5b818110156101b55761017c8561015f836001610640565b8151811061016f5761016f610653565b60200260200101516101bd565b8461018860038461062d565b8151811061019857610198610653565b60209081029190910101526101ae600382610640565b9050610148565b505050909192565b5f808290506002816001600160a01b031663ffa1ad746040518163ffffffff1660e01b8152600401602060405180830381865afa158015610200573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102249190610667565b101561029157806001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015610266573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061028a9190610667565b9392505050565b806001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa1580156102cd573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906102f19190610667565b816001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa15801561032d573d5f803e3d5ffd5b505050506040513d601f19601f820116820180604052508101906103519190610667565b61028a91906105ed565b5f815180845260208085019450602084015f5b8381101561038a5781518752958201959082019060010161036e565b509495945050505050565b606080825284519082018190525f906020906080840190828801845b828110156103d057815160ff16845292840192908401906001016103b1565b505050838103828501528551808252868301918301905f5b8181101561040d5783516001600160a01b0316835292840192918401916001016103e8565b50508481036040860152610421818761035b565b98975050505050505050565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561046a5761046a61042d565b604052919050565b5f67ffffffffffffffff82111561048b5761048b61042d565b5060051b60200190565b5f82601f8301126104a4575f80fd5b815160206104b96104b483610472565b610441565b8083825260208201915060208460051b8701019350868411156104da575f80fd5b602086015b8481101561050a5780516001600160a01b03811681146104fd575f80fd5b83529183019183016104df565b509695505050505050565b5f8060408385031215610526575f80fd5b825167ffffffffffffffff8082111561053d575f80fd5b818501915085601f830112610550575f80fd5b815160206105606104b483610472565b82815260059290921b8401810191818101908984111561057e575f80fd5b948201945b838610156105aa57855160ff8116811461059b575f80fd5b82529482019490820190610583565b918801519196509093505050808211156105c2575f80fd5b506105cf85828601610495565b9150509250929050565b634e487b7160e01b5f52601160045260245ffd5b81810381811115610600576106006105d9565b92915050565b634e487b7160e01b5f52601260045260245ffd5b5f8261062857610628610606565b500690565b5f8261063b5761063b610606565b500490565b80820180821115610600576106006105d9565b634e487b7160e01b5f52603260045260245ffd5b5f60208284031215610677575f80fd5b505191905056fea26469706673582212203a41bbe35657d767e3a0828db6f4c07a0e81bcc78fb83f99c41cdd1d433dd16164736f6c63430008190033`
+const MultiCallContractBinRuntime = `608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063adde19c61461002d575b5f80fd5b61003561004d565b604051610044939291906102ee565b60405180910390f35b60608060605f6104009050806001600160a01b031663715b208b6040518163ffffffff1660e01b81526004015f60405180830381865afa158015610093573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526100ba919081019061046e565b80519195509350600511156100cf5750909192565b5f600284516100de9190610546565b90506100eb600382610573565b156100f7575050909192565b610102600382610586565b67ffffffffffffffff81111561011a5761011a610386565b604051908082528060200260200182016040528015610143578160200160208202803683370190505b5092505f5b818110156101b55761017c8561015f836001610599565b8151811061016f5761016f6105ac565b60200260200101516101bd565b84610188600384610586565b81518110610198576101986105ac565b60209081029190910101526101ae600382610599565b9050610148565b505050909192565b5f808290506002816001600160a01b031663ffa1ad746040518163ffffffff1660e01b8152600401602060405180830381865afa158015610200573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061022491906105c0565b10156102395750506001600160a01b03163190565b806001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015610275573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061029991906105c0565b6102ad906001600160a01b03851631610546565b9392505050565b5f815180845260208085019450602084015f5b838110156102e3578151875295820195908201906001016102c7565b509495945050505050565b606080825284519082018190525f906020906080840190828801845b8281101561032957815160ff168452928401929084019060010161030a565b505050838103828501528551808252868301918301905f5b818110156103665783516001600160a01b031683529284019291840191600101610341565b5050848103604086015261037a81876102b4565b98975050505050505050565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff811182821017156103c3576103c3610386565b604052919050565b5f67ffffffffffffffff8211156103e4576103e4610386565b5060051b60200190565b5f82601f8301126103fd575f80fd5b8151602061041261040d836103cb565b61039a565b8083825260208201915060208460051b870101935086841115610433575f80fd5b602086015b848110156104635780516001600160a01b0381168114610456575f80fd5b8352918301918301610438565b509695505050505050565b5f806040838503121561047f575f80fd5b825167ffffffffffffffff80821115610496575f80fd5b818501915085601f8301126104a9575f80fd5b815160206104b961040d836103cb565b82815260059290921b840181019181810190898411156104d7575f80fd5b948201945b8386101561050357855160ff811681146104f4575f80fd5b825294820194908201906104dc565b9188015191965090935050508082111561051b575f80fd5b50610528858286016103ee565b9150509250929050565b634e487b7160e01b5f52601160045260245ffd5b8181038181111561055957610559610532565b92915050565b634e487b7160e01b5f52601260045260245ffd5b5f826105815761058161055f565b500690565b5f826105945761059461055f565b500490565b8082018082111561055957610559610532565b634e487b7160e01b5f52603260045260245ffd5b5f602082840312156105d0575f80fd5b505191905056fea264697066735822122051a807c62e715d2ccbe20d66d0cfcbae84b1923877e01ceba51697961c6e55ba64736f6c63430008190033`
 
 // MultiCallContractFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use MultiCallContractMetaData.Sigs instead.
@@ -537,7 +537,7 @@ var MultiCallContractFuncSigs = MultiCallContractMetaData.Sigs
 // Deprecated: Use MultiCallContractMetaData.Bin instead.
 var MultiCallContractBin = MultiCallContractMetaData.Bin
 
-// DeployMultiCallContract deploys a new Klaytn contract, binding an instance of MultiCallContract to it.
+// DeployMultiCallContract deploys a new Kaia contract, binding an instance of MultiCallContract to it.
 func DeployMultiCallContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *MultiCallContract, error) {
 	parsed, err := MultiCallContractMetaData.GetAbi()
 	if err != nil {
@@ -554,29 +554,29 @@ func DeployMultiCallContract(auth *bind.TransactOpts, backend bind.ContractBacke
 	return address, tx, &MultiCallContract{MultiCallContractCaller: MultiCallContractCaller{contract: contract}, MultiCallContractTransactor: MultiCallContractTransactor{contract: contract}, MultiCallContractFilterer: MultiCallContractFilterer{contract: contract}}, nil
 }
 
-// MultiCallContract is an auto generated Go binding around a Klaytn contract.
+// MultiCallContract is an auto generated Go binding around a Kaia contract.
 type MultiCallContract struct {
 	MultiCallContractCaller     // Read-only binding to the contract
 	MultiCallContractTransactor // Write-only binding to the contract
 	MultiCallContractFilterer   // Log filterer for contract events
 }
 
-// MultiCallContractCaller is an auto generated read-only Go binding around a Klaytn contract.
+// MultiCallContractCaller is an auto generated read-only Go binding around a Kaia contract.
 type MultiCallContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MultiCallContractTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// MultiCallContractTransactor is an auto generated write-only Go binding around a Kaia contract.
 type MultiCallContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MultiCallContractFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// MultiCallContractFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type MultiCallContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MultiCallContractSession is an auto generated Go binding around a Klaytn contract,
+// MultiCallContractSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type MultiCallContractSession struct {
 	Contract     *MultiCallContract // Generic contract binding to set the session for
@@ -584,31 +584,31 @@ type MultiCallContractSession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// MultiCallContractCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// MultiCallContractCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type MultiCallContractCallerSession struct {
 	Contract *MultiCallContractCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// MultiCallContractTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// MultiCallContractTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type MultiCallContractTransactorSession struct {
 	Contract     *MultiCallContractTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// MultiCallContractRaw is an auto generated low-level Go binding around a Klaytn contract.
+// MultiCallContractRaw is an auto generated low-level Go binding around a Kaia contract.
 type MultiCallContractRaw struct {
 	Contract *MultiCallContract // Generic contract binding to access the raw methods on
 }
 
-// MultiCallContractCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// MultiCallContractCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type MultiCallContractCallerRaw struct {
 	Contract *MultiCallContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// MultiCallContractTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// MultiCallContractTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type MultiCallContractTransactorRaw struct {
 	Contract *MultiCallContractTransactor // Generic write-only contract binding to access the raw methods on
 }
