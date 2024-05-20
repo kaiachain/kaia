@@ -264,7 +264,7 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 		price = results[(len(results)-1)*oracle.percentile/100]
 	}
 	// NOTE: This maximum suggested gas tip can lead to suggesting insufficient gas tip,
-	//       however, the possibility of gas tip exceeding 500 gwei would be very low given the block capacity of Kaia.
+	//       however, the possibility of gas tip exceeding 500 gkei would be very low given the block capacity of Kaia.
 	//       On the other hand, referencing the user-submitted transactions as-is can lead to suggesting
 	//       very high gas tip when there are only a few transactions with unnecessarily high gas tip.
 	if price.Cmp(oracle.maxPrice) > 0 {

@@ -1792,7 +1792,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	abii, err := abi.JSON(strings.NewReader(internalTxContractAbi))
 	assert.Equal(t, nil, err)
 
-	// the contract method "sendKlay" send 1 wei to address 3 times
+	// the contract method "sendKlay" send 1 kei to address 3 times
 	data, err := abii.Pack("sendKlay", uint32(3), address)
 	assert.Equal(t, nil, err)
 
@@ -1817,7 +1817,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 // TestCallTraceChainEventSubscription tests if the method insertChain posts a chain event correctly.
 // Scenario:
 //  1. Deploy a contract
-//     sendKlay(n uint32, receiver address): send 1 wei to `receiver` address `n` times.
+//     sendKlay(n uint32, receiver address): send 1 kei to `receiver` address `n` times.
 //  2. Send a smart contract execution transaction
 func TestCallTraceChainEventSubscription(t *testing.T) {
 	// configure and generate a sample block chain
@@ -2015,7 +2015,7 @@ func TestDeleteCreateRevert(t *testing.T) {
 					Nonce:   1,
 					Balance: big.NewInt(0),
 				},
-				// The address 0xBBBB send 1 wei to 0xAAAA, then reverts
+				// The address 0xBBBB send 1 kei to 0xAAAA, then reverts
 				bb: {
 					Code: []byte{
 						byte(vm.PC),          // [0]

@@ -196,8 +196,8 @@ func TestTraceCall(t *testing.T) {
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
 		// Transfer from account[1] to account[0]
-		//    value: 1000 wei
-		//    fee:   0 wei
+		//    value: 1000 kei
+		//    fee:   0 kei
 		tx, err := types.SignTx(types.NewTransaction(uint64(i), accounts[0].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[1].key)
 		assert.NoError(t, err)
 		b.AddTx(tx)
@@ -306,8 +306,8 @@ func TestTraceTransaction(t *testing.T) {
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	api := NewAPI(newTestBackend(t, 1, genesis, func(i int, b *blockchain.BlockGen) {
 		// Transfer from account[0] to account[1]
-		//    value: 1000 wei
-		//    fee:   0 wei
+		//    value: 1000 kei
+		//    fee:   0 kei
 		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(1), nil), signer, accounts[0].key)
 		b.AddTx(tx)
 		target = tx.Hash()
@@ -340,8 +340,8 @@ func TestTraceBlock(t *testing.T) {
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 	api := NewAPI(newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
 		// Transfer from account[0] to account[1]
-		//    value: 1000 wei
-		//    fee:   0 wei
+		//    value: 1000 kei
+		//    fee:   0 kei
 		tx, _ := types.SignTx(types.NewTransaction(uint64(i), accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
 		b.AddTx(tx)
 	}))

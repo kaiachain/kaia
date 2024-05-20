@@ -40,7 +40,7 @@ var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
 	IstanbulCompatibleBlock:  new(big.Int).SetUint64(0),
 	LondonCompatibleBlock:    new(big.Int).SetUint64(0),
 	EthTxTypeCompatibleBlock: new(big.Int).SetUint64(0),
-	UnitPrice:                25000000000, // 25 gwei
+	UnitPrice:                25000000000, // 25 gkei
 }
 
 var (
@@ -55,7 +55,7 @@ var (
 		IstanbulCompatibleBlock:  common.Big0,
 		LondonCompatibleBlock:    common.Big0,
 		EthTxTypeCompatibleBlock: common.Big0,
-		UnitPrice:                25000000000, // 25 gwei
+		UnitPrice:                25000000000, // 25 gkei
 	}
 	testRandaoConfig = &params.ChainConfig{
 		ChainID:                  new(big.Int).SetUint64(111111),
@@ -67,7 +67,7 @@ var (
 		ShanghaiCompatibleBlock:  common.Big0,
 		CancunCompatibleBlock:    common.Big0,
 		RandaoCompatibleBlock:    common.Big0,
-		UnitPrice:                25000000000, // 25 gwei
+		UnitPrice:                25000000000, // 25 gkei
 	}
 )
 

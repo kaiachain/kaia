@@ -1782,10 +1782,10 @@ if (typeof XMLHttpRequest === 'undefined') {
 var BigNumber = require('bignumber.js');
 
 var KAIA_UNITS = [
-    'wei',
-    'kwei',
-    'Mwei',
-    'Gwei',
+    'kei',
+    'kkei',
+    'Mkei',
+    'Gkei',
     'uKAIA',
     'mKAIA',
     'KAIA',
@@ -1893,13 +1893,13 @@ var utf8 = require('utf8');
 
 var unitMap = {
     'noKAIA':      '0',
-    'wei':         '1',
-    'kwei':        '1000',
-    'Kwei':        '1000',
-    'mwei':        '1000000',
-    'Mwei':        '1000000',
-    'gwei':        '1000000000',
-    'Gwei':        '1000000000',
+    'kei':         '1',
+    'kkei':        '1000',
+    'Kkei':        '1000',
+    'mkei':        '1000000',
+    'Mkei':        '1000000',
+    'gkei':        '1000000000',
+    'Gkei':        '1000000000',
     'uKAIA':       '1000000000000',
     'mKAIA':       '1000000000000000',
     'KAIA':        '1000000000000000000',
@@ -1911,20 +1911,20 @@ var unitMap = {
 
 var unitEthToKaiaMap = {
     'noether':      'noKAIA',
-    'wei':          'wei',
-    'kwei':         'kwei',
-    'Kwei':         'kwei',
-    'babbage':      'kwei',
-    'femtoether':   'kwei',
-    'mwei':         'mwei',
-    'Mwei':         'mwei',
-    'lovelace':     'mwei',
-    'picoether':    'mwei',
-    'gwei':         'gwei',
-    'Gwei':         'gwei',
-    'shannon':      'gwei',
-    'nanoether':    'gwei',
-    'nano':         'gwei',
+    'wei':          'kei',
+    'kwei':         'kkei',
+    'Kwei':         'kkei',
+    'babbage':      'kkei',
+    'femtoether':   'kkei',
+    'mwei':         'mkei',
+    'Mwei':         'mkei',
+    'lovelace':     'mkei',
+    'picoether':    'mkei',
+    'gwei':         'gkei',
+    'Gwei':         'gkei',
+    'shannon':      'gkei',
+    'nanoether':    'gkei',
+    'nano':         'gkei',
     'szabo':        'uKAIA',
     'microether':   'uKAIA',
     'micro':        'uKAIA',
@@ -2177,11 +2177,11 @@ function fancyStringify2D(obj) {
 };
 
 /**
- * Returns value of unit in wei
+ * Returns value of unit in kei
  *
  * @method getValueOfUnit
  * @param {String} unit the unit to convert to, default ether
- * @returns {BigNumber} value of the unit (in wei)
+ * @returns {BigNumber} value of the unit (in kei)
  * @throws error if the unit is not correct
  */
 var getValueOfUnit = function (unit) {
@@ -2223,13 +2223,13 @@ var fromWei = function(number, unit) {
 };
 
 /**
- * Takes a number of wei and converts it to any other KAIA unit.
+ * Takes a number of kei and converts it to any other KAIA unit.
  *
  * Possible units are:
  *   SI Short
- * - kwei
- * - Mwei
- * - Gwei
+ * - kkei
+ * - Mkei
+ * - Gkei
  * - uKAIA
  * - mKAIA
  * - KAIA
@@ -2238,12 +2238,12 @@ var fromWei = function(number, unit) {
  * - GKAIA
  * - TKAIA
  *
- * @method fromwei
+ * @method fromKei
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
  * @param {String} unit the unit to convert to, default KAIA
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
  */
-var fromWei = function(number, unit) {
+var fromKei = function(number, unit) {
     var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2279,7 +2279,7 @@ var toWei = function(number, unit) {
 };
 
 /**
- * Takes a number of a unit and converts it to peb.
+ * Takes a number of a unit and converts it to kei.
  *
  * Possible units are:
  *   SI Short
@@ -2294,12 +2294,12 @@ var toWei = function(number, unit) {
  * - GKAIA
  * - TKAIA
  *
- * @method toWei
+ * @method toKei
  * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
  * @param {String} unit the unit to convert from, default ether
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
  */
-var toWei = function(number, unit) {
+var toKei = function(number, unit) {
     var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2568,6 +2568,8 @@ module.exports = {
     extractTypeName: extractTypeName,
     toWei: toWei,
     fromWei: fromWei,
+    toKei: toKei,
+    fromKei: fromKei,
     toBigNumber: toBigNumber,
     toTwosComplement: toTwosComplement,
     toAddress: toAddress,
@@ -2673,8 +2675,8 @@ function Web3 (provider) {
     this.kaia.toDecimal = utils.toDecimal;
     this.kaia.fromDecimal = utils.fromDecimal;
     this.kaia.toBigNumber = utils.toBigNumber;
-    this.kaia.toWei = utils.toWei;
-    this.kaia.fromWei = utils.fromWei;
+    this.kaia.toKei = utils.toKei;
+    this.kaia.fromKei = utils.fromKei;
     this.kaia.isAddress = utils.isAddress;
     this.kaia.isChecksumAddress = utils.isChecksumAddress;
     this.kaia.toChecksumAddress = utils.toChecksumAddress;
@@ -2710,6 +2712,8 @@ Web3.prototype.fromDecimal = utils.fromDecimal;
 Web3.prototype.toBigNumber = utils.toBigNumber;
 Web3.prototype.toWei = utils.toWei;
 Web3.prototype.fromWei = utils.fromWei;
+Web3.prototype.toKei = utils.toKei;
+Web3.prototype.fromKei = utils.fromKei;
 Web3.prototype.isAddress = utils.isAddress;
 Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
 Web3.prototype.toChecksumAddress = utils.toChecksumAddress;

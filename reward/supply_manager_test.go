@@ -426,7 +426,7 @@ func (s *SupplyTestSuite) SetupTest() {
 func (s *SupplyTestSuite) setupHistory() {
 	t := s.T()
 
-	var ( // Generate blocks with 1 tx per block. Send 1 wei from Genesis4 to Genesis3.
+	var ( // Generate blocks with 1 tx per block. Send 1 kei from Genesis4 to Genesis3.
 		signer   = types.LatestSignerForChainID(s.config.ChainID)
 		key      = keyGenesis4
 		from     = addrGenesis4
