@@ -1,4 +1,7 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import {
+  loadFixture,
+  setBalance,
+} from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 
 import {
@@ -54,6 +57,10 @@ describe("Multicall", function () {
       CnStakingContract__factory.abi
     );
     setupFunction(cnV1, 1, cnV1.address);
+    await setBalance(
+      cnV1.address,
+      hre.ethers.utils.parseEther(3000n.toString())
+    );
     cnV1.staking.returns(toPeb(3000n));
     cn.push(cnV1.address);
     nodeIds.push(cnV1.address);
@@ -62,6 +69,10 @@ describe("Multicall", function () {
     for (let i = 0; i < 3; i++) {
       const cnV2 = await smock.fake<CnStakingV2>(CnStakingV2__factory.abi);
       setupFunction(cnV2, 2, cnV2.address);
+      await setBalance(
+        cnV2.address,
+        hre.ethers.utils.parseEther((3000n * (BigInt(i) + 1n)).toString())
+      );
       cnV2.staking.returns(toPeb(3000n * (BigInt(i) + 1n)));
       cnV2.unstaking.returns(toPeb(500n * BigInt(i)));
       cn.push(cnV2.address);
@@ -74,6 +85,10 @@ describe("Multicall", function () {
         CnStakingV3MultiSig__factory.abi
       );
       setupFunction(cnV3, 3, cnV3.address);
+      await setBalance(
+        cnV3.address,
+        hre.ethers.utils.parseEther((5000n * (BigInt(i) + 1n)).toString())
+      );
       cnV3.staking.returns(toPeb(5000n * (BigInt(i) + 1n)));
       cnV3.unstaking.returns(toPeb(500n * (BigInt(i) + 1n)));
       cn.push(cnV3.address);

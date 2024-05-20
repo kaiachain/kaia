@@ -70,9 +70,9 @@ contract MultiCallContract {
     function _getCnStakingAmounts(address cnStaking) private view returns (uint256) {
         ICnStaking _staking = ICnStaking(cnStaking);
         if (_staking.VERSION() < 2) {
-            return _staking.staking();
+            return cnStaking.balance;
         } else {
-            return _staking.staking() - _staking.unstaking();
+            return cnStaking.balance - _staking.unstaking();
         }
     }
 
