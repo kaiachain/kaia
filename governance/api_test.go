@@ -229,7 +229,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 			Number:     big.NewInt(int64(i)),
 			Rewardbase: stInfo.CouncilRewardAddrs[i%4], // round-robin way
 			GasUsed:    uint64(1000),
-			BaseFee:    big.NewInt(25 * params.Gwei),
+			BaseFee:    big.NewInt(25 * params.Gkei),
 			Time:       big.NewInt(int64(1000 + i)),
 		})
 		receipts[i] = types.Receipts{

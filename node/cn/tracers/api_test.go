@@ -129,7 +129,7 @@ func (b *testBackend) GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction
 }
 
 func (b *testBackend) RPCGasCap() *big.Int {
-	return big.NewInt(250 * params.Gwei)
+	return big.NewInt(250 * params.Gkei)
 }
 
 func (b *testBackend) ChainConfig() *params.ChainConfig {

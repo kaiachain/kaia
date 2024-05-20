@@ -988,13 +988,13 @@ func benchmarkSortTxsByPriceAndTime(b *testing.B, size int) {
 
 	for i := 0; i < size; i += 2 {
 		gasFeeCap := rand.Int63n(50)
-		txs[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(25*params.Gwei), nil), signer, key)
+		txs[i], _ = SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(25*params.Gkei), nil), signer, key)
 		txs[i+1], _ = SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 			AccountNonce: uint64(i),
 			Recipient:    &common.Address{},
 			Amount:       big.NewInt(100),
 			GasLimit:     100,
-			GasFeeCap:    big.NewInt(int64(25*params.Gwei) + gasFeeCap),
+			GasFeeCap:    big.NewInt(int64(25*params.Gkei) + gasFeeCap),
 			GasTipCap:    big.NewInt(gasFeeCap),
 			Payload:      nil,
 		}), signer, key)
@@ -1006,7 +1006,7 @@ func benchmarkSortTxsByPriceAndTime(b *testing.B, size int) {
 		rand.Shuffle(size, func(i, j int) {
 			txs[i], txs[j] = txs[j], txs[i]
 		})
-		txs = SortTxsByPriceAndTime(txs, big.NewInt(25*params.Gwei))
+		txs = SortTxsByPriceAndTime(txs, big.NewInt(25*params.Gkei))
 	}
 }
 
@@ -1027,11 +1027,11 @@ func benchmarkTxSortByPriceAndTime(b *testing.B, size int) {
 			Recipient:    &common.Address{},
 			Amount:       big.NewInt(100),
 			GasLimit:     100,
-			GasFeeCap:    big.NewInt(int64(25*params.Gwei) + gasFeeCap),
+			GasFeeCap:    big.NewInt(int64(25*params.Gkei) + gasFeeCap),
 			GasTipCap:    big.NewInt(gasFeeCap),
 			Payload:      nil,
 		}), signer, key)
-		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(25*params.Gwei))
+		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(25*params.Gkei))
 		batches[i] = txWithFee
 	}
 

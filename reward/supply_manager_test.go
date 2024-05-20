@@ -344,7 +344,7 @@ func (s *SupplyTestSuite) SetupSuite() {
 	s.config = &params.ChainConfig{
 		ChainID:       big.NewInt(31337),
 		DeriveShaImpl: 2,
-		UnitPrice:     25 * params.Gwei,
+		UnitPrice:     25 * params.Gkei,
 		Governance: &params.GovernanceConfig{
 			GovernanceMode: "none",
 			Reward: &params.RewardConfig{
@@ -437,11 +437,11 @@ func (s *SupplyTestSuite) setupHistory() {
 			num := b.Number().Uint64()
 			var gasPrice *big.Int
 			if num < 100 { // Must be equal to UnitPrice before Magma
-				gasPrice = big.NewInt(25 * params.Gwei)
+				gasPrice = big.NewInt(25 * params.Gkei)
 			} else if num < 300 { // Double the basefee before kaia
-				gasPrice = big.NewInt(50 * params.Gwei)
+				gasPrice = big.NewInt(50 * params.Gkei)
 			} else { // Basefee plus recommended tip since Kaia
-				gasPrice = big.NewInt(27 * params.Gwei)
+				gasPrice = big.NewInt(27 * params.Gkei)
 			}
 			unsignedTx := types.NewTransaction(b.TxNonce(from), to, amount, gasLimit, gasPrice, nil)
 			if unsignedTx != nil {

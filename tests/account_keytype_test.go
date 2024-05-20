@@ -101,11 +101,11 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 // For contract execution Txs, TxValueKeyTo value is set to "contract" as a default.
 // The address "contact" should exist before calling this function.
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType, contractAddr common.Address) (*types.Transaction, *TestAccountType, error) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// For Dynamic fee tx.
-	gasTipCap := new(big.Int).SetUint64(25 * params.Gwei)
-	gasFeeCap := new(big.Int).SetUint64(25 * params.Gwei)
+	gasTipCap := new(big.Int).SetUint64(25 * params.Gkei)
+	gasFeeCap := new(big.Int).SetUint64(25 * params.Gkei)
 
 	gasLimit := uint64(10000000)
 	amount := new(big.Int).SetUint64(1)
@@ -400,7 +400,7 @@ func signTxWithVariousKeyTypes(signer types.Signer, tx *types.Transaction, sende
 // The test creates a default account for each account key type, and generates default Tx for each Tx type.
 // AccountKeyTypeNil is excluded because it cannot be used for account creation.
 func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	gasLimit := uint64(100000000)
 
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
@@ -451,7 +451,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			types.TxValueKeyFrom:          reservoir.Addr,
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      uint64(50 * uint64(params.Gwei)),
+			types.TxValueKeyGasLimit:      uint64(50 * uint64(params.Gkei)),
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
@@ -1804,7 +1804,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2007,7 +2007,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2189,7 +2189,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 }
 
 func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	gasLimit := uint64(1000000)
 
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)

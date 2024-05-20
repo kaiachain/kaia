@@ -614,7 +614,7 @@ func (self *worker) commitNewWork() {
 			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
 
 			if header.BaseFee != nil {
-				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gwei))
+				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gkei))
 			}
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)

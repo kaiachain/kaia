@@ -74,7 +74,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
-	gasPrice := new(big.Int).SetUint64(25 * params.Gwei)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	txAmount := big.NewInt(3)
 	// reservoir account
 	reservoir := &TestAccountType{

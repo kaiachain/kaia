@@ -234,7 +234,7 @@ func TestFeeDelegatedWithSmallBalance(t *testing.T) {
 	}
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
-	gasPrice := big.NewInt(25 * params.Gwei)
+	gasPrice := big.NewInt(25 * params.Gkei)
 
 	// 1. Transfer (reservoir -> anon) using a legacy transaction.
 	{

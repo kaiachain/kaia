@@ -1558,7 +1558,7 @@ func TestEIP3651(t *testing.T) {
 			types.TxValueKeyTo:       bb,
 			types.TxValueKeyAmount:   big.NewInt(0),
 			types.TxValueKeyGasLimit: uint64(20000000),
-			types.TxValueKeyGasPrice: big.NewInt(750 * params.Gwei),
+			types.TxValueKeyGasPrice: big.NewInt(750 * params.Gkei),
 			types.TxValueKeyData:     []byte{},
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, values)
