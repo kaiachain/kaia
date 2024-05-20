@@ -103,22 +103,35 @@ func (s *PublicKaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 }
 
 type TotalSupplyResult struct {
-	TotalSupply *hexutil.Big `json:"totalSupply"` // The total supply of the native token. i.e. Minted - Burnt.
-	TotalMinted *hexutil.Big `json:"totalMinted"` // Total minted amount.
-	TotalBurnt  *hexutil.Big `json:"totalBurnt"`  // Total burnt amount. Sum of all burnt amounts below.
-	BurntFee    *hexutil.Big `json:"burntFee"`    // from tx fee burn. ReadAccReward(num).BurntFee.
-	ZeroBurn    *hexutil.Big `json:"zeroBurn"`    // balance of 0x0 (zero) address.
-	DeadBurn    *hexutil.Big `json:"deadBurn"`    // balance of 0xdead (dead) address.
-	Kip103Burn  *hexutil.Big `json:"kip103Burn"`  // by KIP103 fork. Read from its memo.
-	Kip160Burn  *hexutil.Big `json:"kip160Burn"`  // by KIP160 fork. Read from its memo.
+	Number      *hexutil.Big `json:"number"`          // Block number in which the total supply was calculated.
+	Error       *string      `json:"error,omitempty"` // Errors that occurred while fetching the components, thus failed to deliver the total supply.
+	TotalSupply *hexutil.Big `json:"totalSupply"`     // The total supply of the native token. i.e. Minted - Burnt.
+	TotalMinted *hexutil.Big `json:"totalMinted"`     // Total minted amount.
+	TotalBurnt  *hexutil.Big `json:"totalBurnt"`      // Total burnt amount. Sum of all burnt amounts below.
+	BurntFee    *hexutil.Big `json:"burntFee"`        // from tx fee burn. ReadAccReward(num).BurntFee.
+	ZeroBurn    *hexutil.Big `json:"zeroBurn"`        // balance of 0x0 (zero) address.
+	DeadBurn    *hexutil.Big `json:"deadBurn"`        // balance of 0xdead (dead) address.
+	Kip103Burn  *hexutil.Big `json:"kip103Burn"`      // by KIP103 fork. Read from its memo.
+	Kip160Burn  *hexutil.Big `json:"kip160Burn"`      // by KIP160 fork. Read from its memo.
 }
 
 func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*TotalSupplyResult, error) {
-	ts, err := s.b.GetTotalSupply(ctx, blockNrOrHash)
+	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
 	}
-	return &TotalSupplyResult{
+
+	// Case 1. Failed to fetch essential components. The API fails.
+	ts, err := s.b.GetTotalSupply(ctx, blockNrOrHash)
+	if ts == nil {
+		return nil, err
+	}
+
+	// Case 2. Failed to fetch some components. The API delivers the partial result with the 'error' field set.
+	// Case 3. Succeeded to fetch all components. The API delivers the full result.
+	res := &TotalSupplyResult{
+		Number:      (*hexutil.Big)(block.Number()),
+		Error:       nil,
 		TotalSupply: (*hexutil.Big)(ts.TotalSupply),
 		TotalMinted: (*hexutil.Big)(ts.TotalMinted),
 		TotalBurnt:  (*hexutil.Big)(ts.TotalBurnt),
@@ -127,7 +140,12 @@ func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.Bl
 		DeadBurn:    (*hexutil.Big)(ts.DeadBurn),
 		Kip103Burn:  (*hexutil.Big)(ts.Kip103Burn),
 		Kip160Burn:  (*hexutil.Big)(ts.Kip160Burn),
-	}, nil
+	}
+	if err != nil {
+		errStr := err.Error()
+		res.Error = &errStr
+	}
+	return res, nil
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
