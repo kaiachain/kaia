@@ -398,7 +398,9 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	}
 	defer func() {
 		atomic.StoreInt32(&d.synchronising, 0)
-		// Remove staking info for kaia block from DB after syncing
+		// Staking info for kaia block has been temporarily stored in DB for post-download VerifyHeader.
+		// Now that the download and sync are complete, remove staking info for kaia block from DB
+		// to save space. They might stay in the cache though.
 		for _, blockNum := range d.queue.stakingInfoStoredBlocks {
 			if d.blockchain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNum) + 1)) {
 				reward.DeleteStakingInfoFromDB(blockNum)
