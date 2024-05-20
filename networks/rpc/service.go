@@ -113,7 +113,7 @@ func (r *serviceRegistry) callback(method string) *callback {
 	}
 
 	if namespace == "klay" {
-		return r.services["kaia"].callbacks[method]
+		namespace = "kaia"
 	}
 
 	return r.services[namespace].callbacks[method]
@@ -123,6 +123,11 @@ func (r *serviceRegistry) callback(method string) *callback {
 func (r *serviceRegistry) subscription(service, name string) *callback {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if service == "klay" {
+		service = "kaia"
+	}
+
 	return r.services[service].subscriptions[name]
 }
 
