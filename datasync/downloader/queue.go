@@ -89,7 +89,7 @@ func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, 
 	if (fastSync || snapSync) && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !isKaiaFork) {
+	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) || isKaiaFork) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -155,6 +155,8 @@ type queue struct {
 	stakingInfoTaskQueue *prque.Prque                  // [kaia/65] Priority queue of the headers to fetch the staking infos for
 	stakingInfoPendPool  map[string]*fetchRequest      // [kaia/65] Currently pending staking info retrieval operations
 
+	stakingInfoStoredBlocks []uint64 // Block numbers for which staking info is stored in the DB
+
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
 
@@ -208,6 +210,8 @@ func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 	q.stakingInfoTaskPool = make(map[common.Hash]*types.Header)
 	q.stakingInfoTaskQueue.Reset()
 	q.stakingInfoPendPool = make(map[string]*fetchRequest)
+
+	q.stakingInfoStoredBlocks = []uint64{}
 
 	q.resultCache = newResultStore(blockCacheLimit)
 	q.resultCache.SetThrottleThreshold(uint64(thresholdInitialSize))
@@ -378,12 +382,14 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !q.IsKaiaFork(header.Number)) {
-			if _, ok := q.stakingInfoTaskPool[hash]; ok {
-				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
-			} else {
-				q.stakingInfoTaskPool[hash] = header
-				q.stakingInfoTaskQueue.Push(header, -int64(header.Number.Uint64()))
+		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) {
+			if params.IsStakingUpdateInterval(header.Number.Uint64()) || q.IsKaiaFork(header.Number) {
+				if _, ok := q.stakingInfoTaskPool[hash]; ok {
+					logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
+				} else {
+					q.stakingInfoTaskPool[hash] = header
+					q.stakingInfoTaskQueue.Push(header, -int64(header.Number.Uint64()))
+				}
 			}
 		}
 		inserts = append(inserts, header)

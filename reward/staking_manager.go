@@ -141,7 +141,17 @@ func GetStakingInfo(blockNum uint64) *StakingInfo {
 		if blockNum > 0 {
 			stakingBlockNumber--
 		}
-		stakingInfo = GetStakingInfoForKaiaBlock(stakingBlockNumber)
+		if stakingInfo = GetStakingInfoForKaiaBlock(stakingBlockNumber); stakingInfo == nil {
+			// Get staking info from DB if it exists.
+			// The staking info stored in DB is for downloader to verify the header.
+			// After downloader verifies all headers, the staking info in DB will be removed.
+			if stakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); stakingInfo != nil && err == nil {
+				// Fill in Gini coeff before adding to cache.
+				if err := fillMissingGiniCoefficient(stakingInfo, stakingBlockNumber); err != nil {
+					logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingBlockNumber, "err", err)
+				}
+			}
+		}
 	} else {
 		stakingBlockNumber = params.CalcStakingBlockNumber(blockNum)
 		stakingInfo = GetStakingInfoOnStakingBlock(stakingBlockNumber)

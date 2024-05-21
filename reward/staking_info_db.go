@@ -27,6 +27,7 @@ type stakingInfoDB interface {
 	HasStakingInfo(blockNum uint64) (bool, error)
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
 	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
+	DeleteStakingInfo(blockNum uint64)
 }
 
 // HasStakingInfoFromDB returns existence of staking information from miscdb.
@@ -69,5 +70,14 @@ func AddStakingInfoToDB(stakingInfo *StakingInfo) error {
 		return err
 	}
 
+	return nil
+}
+
+func DeleteStakingInfoFromDB(blockNum uint64) error {
+	if stakingManager.stakingInfoDB == nil {
+		return ErrStakingDBNotSet
+	}
+
+	stakingManager.stakingInfoDB.DeleteStakingInfo(blockNum)
 	return nil
 }

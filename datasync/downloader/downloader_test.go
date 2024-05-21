@@ -58,6 +58,7 @@ var (
 	lock                      sync.Mutex
 	setter                    *govSetter
 	testStakingUpdateInterval = uint64(4)
+	kaiaCompatibleBlock       *big.Int
 )
 
 // govSetter sets governance items for testing purpose
@@ -358,7 +359,9 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 
 // Config retrieves the chain configuration of the tester.
 func (dl *downloadTester) Config() *params.ChainConfig {
-	return params.TestChainConfig
+	config := params.TestChainConfig
+	config.KaiaCompatibleBlock = kaiaCompatibleBlock
+	return config
 }
 
 // CurrentFastBlock retrieves the current head fast-sync block from the canonical chain.
@@ -772,7 +775,12 @@ func assertOwnForkedChain(t *testing.T, tester *downloadTester, common int, leng
 		receipts += length - common - fsMinFullBlocks
 		stakingInfos += length - common - fsMinFullBlocks
 	}
-	stakingInfos = stakingInfos / int(testStakingUpdateInterval) // assuming that staking information update interval is 4
+	stakingInfos = stakingInfos / int(testStakingUpdateInterval) // assuming that staking information update interval is 4 or 1 (kaia fork)
+	if testStakingUpdateInterval == 1 {
+		// Since staking information is a previous block on kaia fork, it needs to be subtracted by 1
+		// [common = 1, 2, 3, 4, 5] => We need staking information at [1, 2, 3, 4], not [1, 2, 3, 4, 5]
+		stakingInfos = stakingInfos - 1
+	}
 	switch tester.downloader.getMode() {
 	case FullSync:
 		receipts, stakingInfos = 1, 0
@@ -1000,6 +1008,11 @@ func TestBoundedForkedSync64Light(t *testing.T) { testBoundedForkedSync(t, 64, L
 func TestBoundedForkedSync65Full(t *testing.T)  { testBoundedForkedSync(t, 65, FullSync) }
 func TestBoundedForkedSync65Fast(t *testing.T)  { testBoundedForkedSync(t, 65, FastSync) }
 
+// The staking info after kaia should be deleted after finishing the sync process.
+func TestBoundedForkedSync65FastOnKaia(t *testing.T) {
+	testBoundedForkedSync65FastOnKaia(t, 65, FastSync)
+}
+
 func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
@@ -1022,6 +1035,37 @@ func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	// Synchronise with the second peer and ensure that the fork is rejected to being too old
 	if err := tester.sync("rewriter", nil, mode); err != errInvalidAncestor {
 		t.Fatalf("sync failure mismatch: have %v, want %v", err, errInvalidAncestor)
+	}
+}
+
+func testBoundedForkedSync65FastOnKaia(t *testing.T, protocol int, mode SyncMode) {
+	originalStakingUpdateInterval := testStakingUpdateInterval
+	kaiaCompatibleBlock = big.NewInt(0)
+	testStakingUpdateInterval = 1
+	tester := newTester()
+	defer func() {
+		tester.terminate()
+		kaiaCompatibleBlock = nil
+		testStakingUpdateInterval = originalStakingUpdateInterval
+	}()
+
+	// Create a long enough forked chain
+	common, fork := 13, int(MaxForkAncestry+17)
+	hashesA, _, headersA, _, blocksA, _, receiptsA, _, stakingInfoA, _ := tester.makeChainFork(common+fork, fork, tester.genesis, nil, true)
+
+	tester.newPeer("original", protocol, hashesA, headersA, blocksA, receiptsA, stakingInfoA)
+
+	// Synchronise with the peer and make sure all blocks were retrieved
+	if err := tester.sync("original", nil, mode); err != nil {
+		t.Fatalf("failed to synchronise blocks: %v", err)
+	}
+	assertOwnChain(t, tester, common+fork+1)
+
+	for _, stakingInfo := range tester.ownStakingInfo {
+		has, _ := reward.HasStakingInfoFromDB(stakingInfo.BlockNum)
+		if has {
+			t.Fatalf("staking info should be deleted after sync process")
+		}
 	}
 }
 
