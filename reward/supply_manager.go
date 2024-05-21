@@ -175,7 +175,7 @@ func (sm *supplyManager) GetCanonicalBurn(num uint64) (zero *big.Int, dead *big.
 func (sm *supplyManager) GetRebalanceBurn(num uint64, forkNum *big.Int, addr common.Address) (*big.Int, error) {
 	bigNum := new(big.Int).SetUint64(num)
 
-	if forkNum == nil || forkNum.Cmp(bigNum) > 0 {
+	if forkNum == nil || forkNum.Sign() == 0 || (addr == common.Address{}) || forkNum.Cmp(bigNum) > 0 {
 		// 1. rebalance is not configured or the rebalance forkNum has not passed (at the given block number).
 		return big.NewInt(0), nil
 	}
