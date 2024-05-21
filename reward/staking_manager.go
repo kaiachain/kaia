@@ -277,8 +277,7 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 // NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
 // getStakingInfoFromMultiCall returns stakingInfo fetched from MultiCall contract.
-// The MultiCall contract gets types and staking addresses from AddressBook contract,
-// and then calculates effective staking amounts by considering the unstaking amounts.
+// The MultiCall contract gets types and staking addresses from AddressBook contract, and balances of staking addresses.
 func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
 	header := stakingManager.blockchain.GetHeaderByNumber(blockNum)
 	if header == nil {

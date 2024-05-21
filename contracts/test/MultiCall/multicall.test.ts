@@ -24,11 +24,11 @@ describe("Multicall", function () {
   const expectedStakingAmounts = [
     toPeb(3000n),
     toPeb(3000n),
-    toPeb(5500n),
-    toPeb(8000n),
-    toPeb(4500n),
+    toPeb(6000n),
     toPeb(9000n),
-    toPeb(13500n),
+    toPeb(5000n),
+    toPeb(10000n),
+    toPeb(15000n),
   ];
   beforeEach(async function () {
     fixture = await loadFixture(multiCallTestFixture);
@@ -41,6 +41,7 @@ describe("Multicall", function () {
     const rewardAddresses = [];
 
     // Prepare following CNStaking contracts
+    // Note that unstaking amount will be ignored
     // V1: 1 - 3000 KAIA
     // V2: 3 - 3000 KAIA, 6000 KAIA, 9000 KAIA
     //            0 KAIA,  500 KAIA, 1000 KAIA
