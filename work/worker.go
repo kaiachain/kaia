@@ -496,16 +496,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork() {
-	var pending map[common.Address]types.Transactions
-	var err error
-	if self.nodetype == common.CONSENSUSNODE {
-		// Check any fork transitions needed
-		pending, err = self.backend.TxPool().Pending()
-		if err != nil {
-			logger.Error("Failed to fetch pending transactions", "err", err)
-			return
-		}
-	}
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -514,15 +504,6 @@ func (self *worker) commitNewWork() {
 
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
-	var nextBaseFee *big.Int
-	if self.nodetype == common.CONSENSUSNODE {
-		if self.config.IsMagmaForkEnabled(nextBlockNum) {
-			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
-			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
-			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
-		}
-	}
 
 	// TODO-Kaia drop or missing tx
 	tstart := time.Now()
@@ -536,7 +517,6 @@ func (self *worker) commitNewWork() {
 			wait := ideal.Sub(tstart)
 			logger.Debug("Mining too far in the future", "wait", common.PrettyDuration(wait))
 			time.Sleep(wait)
-
 			tstart = time.Now()    // refresh for metrics
 			tstamp = tstart.Unix() // refresh for block timestamp
 		} else if tstart.After(ideal) {
@@ -546,6 +526,25 @@ func (self *worker) commitNewWork() {
 				"parentBlockTimestamp", parentTimestamp,
 				"nextBlockTimestamp", tstamp,
 			)
+		}
+	}
+
+	var pending map[common.Address]types.Transactions
+	var err error
+	var nextBaseFee *big.Int
+	if self.nodetype == common.CONSENSUSNODE {
+		// Check any fork transitions needed
+		pending, err = self.backend.TxPool().Pending()
+		if err != nil {
+			logger.Error("Failed to fetch pending transactions", "err", err)
+			return
+		}
+
+		if self.config.IsMagmaForkEnabled(nextBlockNum) {
+			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
+			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
+			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
+			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}
 
