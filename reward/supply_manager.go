@@ -267,39 +267,6 @@ func (sm *supplyManager) GetTotalSupply(num uint64) (*TotalSupply, error) {
 	return ts, errors.Join(errs...)
 }
 
-func (sm *supplyManager) readRebalanceMemo(addr common.Address) (*big.Int, error) {
-	if burnt, ok := sm.memoCache.Get(addr); ok {
-		return burnt.(*big.Int), nil
-	}
-
-	// Load the latest state, not the rebalance hardfork block state.
-	// The memo is manually stored in the contract after-the-fact by calling the finalizeContract function.
-	// Therefore it's safest to read from the latest state.
-	backend := backends.NewBlockchainContractBackend(sm.chain, nil, nil)
-	caller, err := rebalance.NewTreasuryRebalanceV2Caller(addr, backend)
-	if err != nil {
-		return nil, err
-	}
-
-	memo, err := caller.Memo(nil)
-	if err != nil {
-		return nil, err
-	}
-	if memo == "" {
-		return nil, errNoRebalanceMemo
-	}
-
-	result := struct {
-		Burnt *big.Int `json:"burnt"`
-	}{}
-	if err := json.Unmarshal([]byte(memo), &result); err != nil {
-		return nil, err
-	}
-
-	sm.memoCache.Add(addr, result.Burnt)
-	return result.Burnt, nil
-}
-
 // catchup accumulates the block rewards until the current block.
 // The result will be written to the database.
 func (sm *supplyManager) catchup() {
@@ -440,17 +407,4 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 		}
 	}
 	return accReward, nil
-}
-
-func (sm *supplyManager) getTotalReward(num uint64) (*TotalReward, error) {
-	var (
-		header    = sm.chain.GetHeaderByNumber(num)
-		rules     = sm.chain.Config().Rules(new(big.Int).SetUint64(num))
-		pset, err = sm.gov.EffectiveParams(num)
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return GetTotalReward(header, rules, pset)
 }
