@@ -1287,4 +1287,31 @@ describe("[Bridge Test]", function () {
     expect(isOp3Submitted).to.be.equal(true);
     expect(isOp4Submitted).to.be.equal(true);
   });
+
+  it("#Query the operator and bridge next provision sequence", async function () {
+    expect(await bridge.nextProvisionSeq()).to.be.equal(0)
+    expect(await operator.nextProvisionSeq(operator1.address)).to.be.equal(0)
+
+    let provision = [1, sender, receiver, amount];
+    let rawTxData = (await bridge.provision.populateTransaction(provision)).data;
+    await operator.connect(operator1).submitTransaction(bridge.target, rawTxData, 0);
+    await operator.connect(operator2).confirmTransaction(txID);
+    await operator.connect(operator3).confirmTransaction(txID);
+
+    expect(await bridge.nextProvisionSeq()).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator1.address)).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator2.address)).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator3.address)).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator4.address)).to.be.equal(0)
+
+    provision = [2, sender, receiver, amount];
+    rawTxData = (await bridge.provision.populateTransaction(provision)).data;
+    await operator.connect(operator1).submitTransaction(bridge.target, rawTxData, 0);
+
+    expect(await bridge.nextProvisionSeq()).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator1.address)).to.be.equal(2)
+    expect(await operator.nextProvisionSeq(operator2.address)).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator3.address)).to.be.equal(1)
+    expect(await operator.nextProvisionSeq(operator4.address)).to.be.equal(0)
+  });
 });

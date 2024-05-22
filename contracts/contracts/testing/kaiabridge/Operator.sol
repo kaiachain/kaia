@@ -188,6 +188,7 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         if (provision.seq != 0) {
             EnumerableSetUint64.setAdd(seq2TxID[provision.seq], txID);
             updateGreatestSubmittedSeq(provision.seq);
+            updateNextSeq(provision.seq);
             emit IBridge.Provision(IBridge.ProvisionIndividualEvent({
                 seq: provision.seq,
                 sender: provision.sender,
@@ -280,6 +281,14 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     function updateGreatestSubmittedSeq(uint64 seq) internal operatorExists(msg.sender) {
         if (greatestSubmittedSeq[msg.sender] < seq) {
             greatestSubmittedSeq[msg.sender] = seq;
+        }
+    }
+
+    /// @dev Update next sequence per operator
+    /// @param seq ProvisionData sequence number
+    function updateNextSeq(uint64 seq) internal operatorExists(msg.sender) {
+        if (seq > 0 && nextProvisionSeq[msg.sender] == seq - 1) {
+            nextProvisionSeq[msg.sender] = seq;
         }
     }
 
