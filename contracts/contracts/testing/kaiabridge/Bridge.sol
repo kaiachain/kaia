@@ -40,9 +40,10 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         nProvisioned = 0;
         judge = initJudge;
         addrValidationOn = true;
-        minLockableKAIA = 5 * KAIA_UNIT;       // 1 KAIA
+        minLockableKAIA = 5 * KAIA_UNIT;       // 5 KAIA
         maxLockableKAIA = 1000000 * KAIA_UNIT; // 1M KAIA
         seq = 1;
+        nextProvisionSeq = 0;
         maxTryTransfer = newMaxTryTransfer;
 
 
@@ -78,6 +79,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         provisions[seq] = prov;
         nProvisioned += 1;
         updateGreatestConfirmedSeq(seq);
+        updateNextSeq(seq, false);
         setTransferTimeLock(seq, TRANSFERLOCK);
         EnumerableSetUint64.setAdd(claimCandidates, seq);
         emit ProvisionConfirm(ProvisionConfirmedEvent({
@@ -144,6 +146,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         setTransferTimeLock(seq, 0);
         nProvisioned -= 1;
         updateGreatestConfirmedSeq(seq - 1);
+        updateNextSeq(seq - 1, true);
         EnumerableSetUint64.setRemove(claimCandidates, seq);
         EnumerableSetUint64.setRemove(claimFailures, seq);
         transferFail[seq] = 0;
@@ -172,6 +175,18 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     function updateGreatestConfirmedSeq(uint256 seq) internal {
         if (greatestConfirmedSeq < seq) {
             greatestConfirmedSeq = seq;
+        }
+    }
+
+    /// @dev Update next sequence per operator
+    /// @param seq ProvisionData sequence number
+    function updateNextSeq(uint64 seq, bool forceUpdate) internal {
+        if (forceUpdate) {
+            nextProvisionSeq = seq;
+            return;
+        }
+        if (seq > 0 && nextProvisionSeq == seq - 1) {
+            nextProvisionSeq = seq;
         }
     }
 

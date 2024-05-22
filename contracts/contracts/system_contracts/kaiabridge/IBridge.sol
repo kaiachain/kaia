@@ -298,6 +298,7 @@ abstract contract IBridge {
     uint256 public minLockableKAIA;
     uint256 public maxLockableKAIA;
     uint64 public seq;
+    uint64 public nextProvisionSeq;
     uint256 public maxTryTransfer;
     bool public addrValidationOn;
     uint256 public TRANSFERLOCK;
