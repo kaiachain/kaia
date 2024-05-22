@@ -134,7 +134,7 @@ var (
 	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
-		Usage:    "Network identifier (integer, 8217=Cypress (Mainnet) , 1000=Aspen, 1001=Baobab)",
+		Usage:    "Network identifier (integer, 8217=Mainnet , 1000=Aspen, 1001=Testnet)",
 		Value:    cn.GetDefaultConfig().NetworkId,
 		Aliases:  []string{"p2p.network-id"},
 		EnvVars:  []string{"KLAYTN_NETWORKID", "KAIA_NETWORKID"},
@@ -1214,17 +1214,17 @@ var (
 		Category: "API AND CONSOLE",
 	}
 
-	CypressFlag = &cli.BoolFlag{
+	MainnetFlag = &cli.BoolFlag{
 		Name:     "cypress",
-		Usage:    "Pre-configured Kaia Cypress network",
+		Usage:    "Pre-configured Kaia Mainnet network",
 		Aliases:  []string{"p2p.cypress"},
 		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS"},
 		Category: "NETWORK",
 	}
-	// Baobab bootnodes setting
-	BaobabFlag = &cli.BoolFlag{
+	// Testnet bootnodes setting
+	TestnetFlag = &cli.BoolFlag{
 		Name:     "baobab",
-		Usage:    "Pre-configured Kaia baobab network",
+		Usage:    "Pre-configured Kaia Testnet network",
 		Aliases:  []string{"p2p.baobab"},
 		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB"},
 		Category: "NETWORK",
@@ -2000,7 +2000,7 @@ var (
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.String(DataDirFlag.Name); path != "" {
-		if ctx.Bool(BaobabFlag.Name) {
+		if ctx.Bool(TestnetFlag.Name) {
 			return filepath.Join(path, "baobab")
 		}
 		return path

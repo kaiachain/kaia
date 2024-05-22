@@ -1097,7 +1097,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 		}
 	}
 
-	// original cypress params
+	// original Mainnet params
 	if config.Governance != nil {
 		governance := config.Governance
 		governanceMap := map[int]interface{}{

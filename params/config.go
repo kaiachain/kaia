@@ -31,17 +31,17 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	CypressGenesisHash      = common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e") // cypress genesis hash to enforce below configs on
-	BaobabGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // baobab genesis hash to enforce below configs on
+	MainnetGenesisHash      = common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e") // mainnet genesis hash to enforce below configs on
+	TestnetGenesisHash      = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // testnet genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 	logger                  = log.NewModuleLogger(log.Governance)
 )
 
 var (
-	// CypressChainConfig is the chain parameters to run a node on the cypress main network.
-	CypressChainConfig = &ChainConfig{
-		ChainID:                  big.NewInt(int64(CypressNetworkId)),
+	// MainnetChainConfig is the chain parameters to run a node on the main network.
+	MainnetChainConfig = &ChainConfig{
+		ChainID:                  big.NewInt(int64(MainnetNetworkId)),
 		IstanbulCompatibleBlock:  big.NewInt(86816005),
 		LondonCompatibleBlock:    big.NewInt(86816005),
 		EthTxTypeCompatibleBlock: big.NewInt(86816005),
@@ -49,7 +49,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Cypress KaiaCompatibleBlock
+		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Mainnet KaiaCompatibleBlock
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -81,9 +81,9 @@ var (
 		UnitPrice: 25000000000,
 	}
 
-	// BaobabChainConfig contains the chain parameters to run a node on the Baobab test network.
-	BaobabChainConfig = &ChainConfig{
-		ChainID:                  big.NewInt(int64(BaobabNetworkId)),
+	// TestnetChainConfig contains the chain parameters to run a node on the Testnet.
+	TestnetChainConfig = &ChainConfig{
+		ChainID:                  big.NewInt(int64(TestnetNetworkId)),
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),
@@ -91,7 +91,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		CancunCompatibleBlock:    big.NewInt(141367000),
-		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Baobab KaiaCompatibleBlock
+		KaiaCompatibleBlock:      nil, // TODO-Klaytn-Kaia: set Testnet KaiaCompatibleBlock
 		RandaoCompatibleBlock:    big.NewInt(141367000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -694,7 +694,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 	}
 }
 
-// cypress genesis config
+// Mainnet genesis config
 func GetDefaultGovernanceConfigForGenesis() *GovernanceConfig {
 	gov := &GovernanceConfig{
 		GovernanceMode: DefaultGovernanceMode,

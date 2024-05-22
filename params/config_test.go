@@ -24,17 +24,17 @@ import (
 )
 
 func TestChainConfig_CheckConfigForkOrder(t *testing.T) {
-	assert.Nil(t, BaobabChainConfig.CheckConfigForkOrder())
-	assert.Nil(t, CypressChainConfig.CheckConfigForkOrder())
+	assert.Nil(t, TestnetChainConfig.CheckConfigForkOrder())
+	assert.Nil(t, MainnetChainConfig.CheckConfigForkOrder())
 }
 
 func TestChainConfig_Copy(t *testing.T) {
-	// Temporarily modify CypressChainConfig to simulate copying `nil` field.
-	savedBlock := CypressChainConfig.LondonCompatibleBlock
-	CypressChainConfig.LondonCompatibleBlock = nil
-	defer func() { CypressChainConfig.LondonCompatibleBlock = savedBlock }()
+	// Temporarily modify MainnetChainConfig to simulate copying `nil` field.
+	savedBlock := MainnetChainConfig.LondonCompatibleBlock
+	MainnetChainConfig.LondonCompatibleBlock = nil
+	defer func() { MainnetChainConfig.LondonCompatibleBlock = savedBlock }()
 
-	a := CypressChainConfig
+	a := MainnetChainConfig
 	b := a.Copy()
 
 	// simple field
@@ -71,7 +71,7 @@ func TestChainConfig_Copy(t *testing.T) {
 }
 
 func BenchmarkChainConfig_Copy(b *testing.B) {
-	a := CypressChainConfig
+	a := MainnetChainConfig
 	for i := 0; i < b.N; i++ {
 		a.Copy()
 	}

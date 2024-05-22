@@ -194,7 +194,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 }
 
 // Clique is the proof-of-authority consensus engine proposed to support the
-// Kaia testnet following the Baobab attacks.
+// Kaia testnet following the Testnet attacks.
 type Clique struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
 	db     database.DBManager   // Database to store and retrieve snapshot checkpoints

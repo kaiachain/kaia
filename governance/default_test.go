@@ -629,29 +629,29 @@ func TestVoteValueNilInterface(t *testing.T) {
 	}
 }
 
-func TestBaoBabGenesisHash(t *testing.T) {
-	baobabHash := params.BaobabGenesisHash
-	genesis := blockchain.DefaultBaobabGenesisBlock()
+func TestTestnetGenesisHash(t *testing.T) {
+	testnetHash := params.TestnetGenesisHash
+	genesis := blockchain.DefaultTestnetGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
-	if block.Hash() != baobabHash {
-		t.Errorf("Generated hash is not equal to Baobab's hash. Want %v, Have %v", baobabHash.String(), block.Hash().String())
+	if block.Hash() != testnetHash {
+		t.Errorf("Generated hash is not equal to Testnet's hash. Want %v, Have %v", testnetHash.String(), block.Hash().String())
 	}
 }
 
-func TestCypressGenesisHash(t *testing.T) {
-	cypressHash := params.CypressGenesisHash
+func TestMainnetGenesisHash(t *testing.T) {
+	mainnetHash := params.MainnetGenesisHash
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
-	if block.Hash() != cypressHash {
-		t.Errorf("Generated hash is not equal to Cypress's hash. Want %v, Have %v", cypressHash.String(), block.Hash().String())
+	if block.Hash() != mainnetHash {
+		t.Errorf("Generated hash is not equal to Mainnet's hash. Want %v, Have %v", mainnetHash.String(), block.Hash().String())
 	}
 }
 

@@ -41,24 +41,24 @@ var (
 		Aliases: []string{},
 	}
 
-	cypressTestFlag = &cli.BoolFlag{
+	mainnetTestFlag = &cli.BoolFlag{
 		Name:    "cypress-test",
-		Usage:   "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet with shorter intervals for testing",
 		Aliases: []string{},
 	}
-	cypressFlag = &cli.BoolFlag{
+	mainnetFlag = &cli.BoolFlag{
 		Name:    "cypress",
-		Usage:   "Generate genesis.json similar to the one used for Cypress",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet",
 		Aliases: []string{},
 	}
-	baobabTestFlag = &cli.BoolFlag{
+	testnetTestFlag = &cli.BoolFlag{
 		Name:    "baobab-test",
-		Usage:   "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
+		Usage:   "Generate genesis.json similar to the one used for Testnet with shorter intervals for testing",
 		Aliases: []string{},
 	}
-	baobabFlag = &cli.BoolFlag{
+	testnetFlag = &cli.BoolFlag{
 		Name:    "baobab",
-		Usage:   "Generate genesis.json similar to the one used for Baobab",
+		Usage:   "Generate genesis.json similar to the one used for Testnet",
 		Aliases: []string{},
 	}
 	serviceChainFlag = &cli.BoolFlag{

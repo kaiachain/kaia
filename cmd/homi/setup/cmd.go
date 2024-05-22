@@ -63,10 +63,10 @@ type GrafanaFile struct {
 var HomiFlags = []cli.Flag{
 	homiYamlFlag,
 	altsrc.NewStringFlag(genTypeFlag),
-	altsrc.NewBoolFlag(cypressTestFlag),
-	altsrc.NewBoolFlag(cypressFlag),
-	altsrc.NewBoolFlag(baobabTestFlag),
-	altsrc.NewBoolFlag(baobabFlag),
+	altsrc.NewBoolFlag(mainnetTestFlag),
+	altsrc.NewBoolFlag(mainnetFlag),
+	altsrc.NewBoolFlag(testnetTestFlag),
+	altsrc.NewBoolFlag(testnetFlag),
 	altsrc.NewBoolFlag(serviceChainFlag),
 	altsrc.NewBoolFlag(serviceChainTestFlag),
 	altsrc.NewBoolFlag(cliqueFlag),
@@ -160,8 +160,8 @@ Args :
 }
 
 const (
-	baobabOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
-	baobabOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
+	testnetOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
+	testnetOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
 )
 
 const (
@@ -364,7 +364,7 @@ func genRewardKeystore(account accounts.Account, i int) {
 	os.Remove(account.URL.Path)
 }
 
-func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+func genMainnetCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -396,13 +396,13 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 	return genesisJson
 }
 
-func genCypressGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+func genMainnetGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genMainnetCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithCypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithMainnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
@@ -444,18 +444,18 @@ func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockcha
 	return genesisJson
 }
 
-func genCypressTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genCypressCommonGenesis(nodeAddrs, testAddrs)
+func genMainnetTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genMainnetCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithPrecypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPremainnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	return testGenesis
 }
 
-func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+func genTestnetCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -487,27 +487,27 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 	return genesisJson
 }
 
-func genBaobabGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genBaobabCommonGenesis(nodeAddrs, testAddrs)
+func genTestnetGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genTestnetCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithBaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithTestnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
 
-func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genBaobabCommonGenesis(nodeAddrs, testAddrs)
+func genTestnetTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genTestnetCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithPrebaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPretestnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
-	WriteFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
-	WriteFile([]byte(baobabOperatorKey), "baobab_operator", "private")
+	WriteFile([]byte(testnetOperatorAddress), "baobab_operator", "address")
+	WriteFile([]byte(testnetOperatorKey), "baobab_operator", "private")
 	return testGenesis
 }
 
@@ -654,10 +654,10 @@ func Gen(ctx *cli.Context) error {
 	spnNum := ctx.Int(numOfSPNsFlag.Name)
 	senNum := ctx.Int(numOfSENsFlag.Name)
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
-	baobab := ctx.Bool(baobabFlag.Name)
-	baobabTest := ctx.Bool(baobabTestFlag.Name)
-	cypress := ctx.Bool(cypressFlag.Name)
-	cypressTest := ctx.Bool(cypressTestFlag.Name)
+	testnet := ctx.Bool(testnetFlag.Name)
+	testnetTest := ctx.Bool(testnetTestFlag.Name)
+	mainnet := ctx.Bool(mainnetFlag.Name)
+	mainnetTest := ctx.Bool(mainnetTestFlag.Name)
 	clique := ctx.Bool(cliqueFlag.Name)
 	serviceChain := ctx.Bool(serviceChainFlag.Name)
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
@@ -665,16 +665,16 @@ func Gen(ctx *cli.Context) error {
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
 	// NOTE-Kaia : the following code that seems unnecessary is for the priority to flags, not yaml
-	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
+	if !testnet && !testnetTest && !mainnet && !mainnetTest && !serviceChain && !serviceChainTest && !clique {
 		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
 		case "baobab":
-			baobab = true
+			testnet = true
 		case "baobab-test":
-			baobabTest = true
+			testnetTest = true
 		case "cypress":
-			cypress = true
+			mainnet = true
 		case "cypress-test":
-			cypressTest = true
+			mainnetTest = true
 		case "servicechain":
 			serviceChain = true
 		case "servicechain-test":
@@ -741,14 +741,14 @@ func Gen(ctx *cli.Context) error {
 	validatorNodeAddrs := make([]common.Address, numValidators)
 	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
 
-	if cypressTest {
-		genesisJson = genCypressTestGenesis(validatorNodeAddrs, testAddrs)
-	} else if cypress {
-		genesisJson = genCypressGenesis(validatorNodeAddrs, testAddrs)
-	} else if baobabTest {
-		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
-	} else if baobab {
-		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
+	if mainnetTest {
+		genesisJson = genMainnetTestGenesis(validatorNodeAddrs, testAddrs)
+	} else if mainnet {
+		genesisJson = genMainnetGenesis(validatorNodeAddrs, testAddrs)
+	} else if testnetTest {
+		genesisJson = genTestnetTestGenesis(validatorNodeAddrs, testAddrs)
+	} else if testnet {
+		genesisJson = genTestnetGenesis(validatorNodeAddrs, testAddrs)
 	} else if clique {
 		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {

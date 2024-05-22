@@ -43,7 +43,7 @@ import (
 func TestGovernance_Engines(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
-	config := params.CypressChainConfig.Copy()
+	config := params.MainnetChainConfig.Copy()
 	config.IstanbulCompatibleBlock = new(big.Int).SetUint64(0)
 	config.LondonCompatibleBlock = new(big.Int).SetUint64(0)
 	config.EthTxTypeCompatibleBlock = new(big.Int).SetUint64(0)

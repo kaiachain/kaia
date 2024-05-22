@@ -329,8 +329,8 @@ var BNFlags = []cli.Flag{
 
 var KCNFlags = []cli.Flag{
 	altsrc.NewStringFlag(RewardbaseFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 }
@@ -339,15 +339,15 @@ var KPNFlags = []cli.Flag{
 	altsrc.NewUint64Flag(TxResendIntervalFlag),
 	altsrc.NewIntFlag(TxResendCountFlag),
 	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
 }
 
 var KENFlags = []cli.Flag{
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewBoolFlag(ChildChainIndexingFlag),
 	altsrc.NewBoolFlag(MainBridgeFlag),
 	altsrc.NewIntFlag(MainBridgeListenPortFlag),

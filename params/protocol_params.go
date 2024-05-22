@@ -171,8 +171,8 @@ const (
 	// Network Id
 	UnusedNetworkId              uint64 = 0
 	AspenNetworkId               uint64 = 1000
-	BaobabNetworkId              uint64 = 1001
-	CypressNetworkId             uint64 = 8217
+	TestnetNetworkId             uint64 = 1001
+	MainnetNetworkId             uint64 = 8217
 	ServiceChainDefaultNetworkId uint64 = 3000
 
 	TxGasValueTransfer     uint64 = 21000

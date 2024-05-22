@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test full Randao hardfork scenario under the condition similar to the Cypress network.
+// Test full Randao hardfork scenario under the condition similar to the Mainnet network.
 func TestRandao_Deploy(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
@@ -60,10 +60,10 @@ func TestRandao_Deploy(t *testing.T) {
 	ctx.WaitBlock(t, 1)
 
 	// Deploy KIP113 before hardfork.
-	// Note: this test has a minor difference from Cypress scenario.
+	// Note: this test has a minor difference from Mainnet scenario.
 	// In this test, RandaoRegistry[KIP113] is configured in before deployment
-	// but in Cypress RandaoRegistry[KIP113] will be configured after deployment.
-	// following assert ensures the equivalence of this test and Cypress scenario.
+	// but in Mainnet RandaoRegistry[KIP113] will be configured after deployment.
+	// following assert ensures the equivalence of this test and Mainnet scenario.
 	_, actualKip113Addr := testRandao_deployKip113(t, ctx, owner)
 	assert.Equal(t, kip113Addr, actualKip113Addr) // check the prediced address
 

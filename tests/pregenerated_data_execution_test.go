@@ -39,13 +39,13 @@ func BenchmarkDataExecution_Aspen(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Baobab generates the data with Baobab network's database configurations.
-func BenchmarkDataExecution_Baobab(b *testing.B) {
+// BenchmarkDataExecution_Testnet generates the data with Testnet network's database configurations.
+func BenchmarkDataExecution_Testnet(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Baobab"
-	tc.originalDataDir = baobab500_orig
+	tc.testName = "BenchmarkDataExecution_Testnet"
+	tc.originalDataDir = testnet500_orig
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	dataExecutionTest(b, tc)
 }
@@ -74,14 +74,14 @@ func BenchmarkDataExecution_CandidateBadgerDB(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Baobab_ControlGroup generates the data with Baobab network's database configurations.
+// BenchmarkDataExecution_Testnet_ControlGroup generates the data with Testnet network's database configurations.
 // To work as a control group, it only generates 10,000 accounts.
-func BenchmarkDataExecution_Baobab_ControlGroup(b *testing.B) {
+func BenchmarkDataExecution_Testnet_ControlGroup(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Baobab_ControlGroup"
-	tc.originalDataDir = baobab1_orig
+	tc.testName = "BenchmarkDataExecution_Testnet_ControlGroup"
+	tc.originalDataDir = testnet1_orig
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	// ControlGroup specific setting
 	tc.numReceiversPerRun = 10000

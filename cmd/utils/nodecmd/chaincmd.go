@@ -85,8 +85,8 @@ It expects the genesis file as argument.`,
 		Usage:     "Dumps genesis block JSON configuration to stdout",
 		ArgsUsage: "",
 		Flags: []cli.Flag{
-			utils.CypressFlag,
-			utils.BaobabFlag,
+			utils.MainnetFlag,
+			utils.TestnetFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -225,10 +225,10 @@ func dumpGenesis(ctx *cli.Context) error {
 func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 	var genesis *blockchain.Genesis
 	switch {
-	case ctx.Bool(utils.CypressFlag.Name):
+	case ctx.Bool(utils.MainnetFlag.Name):
 		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.Bool(utils.BaobabFlag.Name):
-		genesis = blockchain.DefaultBaobabGenesisBlock()
+	case ctx.Bool(utils.TestnetFlag.Name):
+		genesis = blockchain.DefaultTestnetGenesisBlock()
 	}
 	return genesis
 }

@@ -170,7 +170,7 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 	}
 
 	if config == nil {
-		genesis.Config = params.CypressChainConfig.Copy()
+		genesis.Config = params.MainnetChainConfig.Copy()
 		genesis.Config.Istanbul.SubGroupSize = 1
 		genesis.Config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
 		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))

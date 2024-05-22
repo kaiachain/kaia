@@ -45,15 +45,15 @@ const (
 	// All databases are compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
 	aspen500_orig = "aspen500_orig"
 	// All databases are compressed by Snappy, CompactionTableSize = 4MiB, CompactionTableSizeMultiplier = 2.0
-	baobab500_orig = "baobab500_orig"
+	testnet500_orig = "testnet500_orig"
 
 	// Only receipt database is compressed by Snappy, CompactionTableSize = 2MiB, CompactionTableSizeMultiplier = 1.0
 	candidate500LevelDB_orig = "candidate500LevelDB_orig"
 	// Using BadgerDB with its default options.
 	candidate500BadgerDB_orig = "candidate500BadgerDB_orig"
 
-	// Same configuration as Baobab network, however only 10,000 accounts exist.
-	baobab1_orig = "baobab1_orig"
+	// Same configuration as Testnet network, however only 10,000 accounts exist.
+	testnet1_orig = "testnet1_orig"
 )
 
 // randomIndex is used to access data with random index.
@@ -194,15 +194,15 @@ func BenchmarkDataGeneration_Aspen(b *testing.B) {
 	dataGenerationTest(b, tc)
 }
 
-// BenchmarkDataGeneration_Baobab generates the data with Baobab network's database configurations.
-func BenchmarkDataGeneration_Baobab(b *testing.B) {
+// BenchmarkDataGeneration_Testnet generates the data with Testnet network's database configurations.
+func BenchmarkDataGeneration_Testnet(b *testing.B) {
 	tc := getGenerationTestDefaultTC()
-	tc.testName = "BenchmarkDataGeneration_Baobab"
-	tc.originalDataDir = baobab500_orig
+	tc.testName = "BenchmarkDataGeneration_Testnet"
+	tc.originalDataDir = testnet500_orig
 
 	tc.cacheConfig = defaultCacheConfig()
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	dataGenerationTest(b, tc)
 }
@@ -235,17 +235,17 @@ func BenchmarkDataGeneration_CandidateBadgerDB(b *testing.B) {
 	dataGenerationTest(b, tc)
 }
 
-// BenchmarkDataGeneration_Baobab_ControlGroup generates the data with Baobab network's database configurations.
+// BenchmarkDataGeneration_Testnet_ControlGroup generates the data with Testnet network's database configurations.
 // To work as a control group, it only generates 10,000 accounts.
-func BenchmarkDataGeneration_Baobab_ControlGroup(b *testing.B) {
+func BenchmarkDataGeneration_Testnet_ControlGroup(b *testing.B) {
 	tc := getGenerationTestDefaultTC()
-	tc.testName = "BenchmarkDataGeneration_Baobab_ControlGroup"
-	tc.originalDataDir = baobab1_orig
+	tc.testName = "BenchmarkDataGeneration_Testnet_ControlGroup"
+	tc.originalDataDir = testnet1_orig
 	tc.numTotalAccountsToGenerate = 10000
 
 	tc.cacheConfig = defaultCacheConfig()
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	dataGenerationTest(b, tc)
 }

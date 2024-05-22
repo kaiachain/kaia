@@ -46,7 +46,7 @@ var logger = log.NewModuleLogger(log.NodeCN)
 func GetDefaultConfig() *Config {
 	return &Config{
 		SyncMode:             downloader.FullSync,
-		NetworkId:            params.CypressNetworkId,
+		NetworkId:            params.MainnetNetworkId,
 		LevelDBCacheSize:     768,
 		TrieCacheSize:        512,
 		TrieTimeout:          5 * time.Minute,
@@ -169,7 +169,7 @@ type Config struct {
 	// Service Chain
 	NoAccountCreation bool
 
-	// use separate network different from baobab or cypress
+	// use separate network different from Testnet or Mainnet
 	IsPrivate bool
 
 	// Restart
