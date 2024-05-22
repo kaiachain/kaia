@@ -280,11 +280,12 @@ func (sm *supplyManager) catchup() {
 	if lastNum > 0 && sm.db.ReadAccReward(lastNum) == nil {
 		logger.Error("Last accumulated reward not found. Restarting supply catchup", "last", lastNum, "head", headNum)
 		sm.db.WriteLastAccRewardBlockNumber(0) // soft reset to genesis
+		lastNum = 0
 	}
 
 	// Store genesis supply if not exists
-	// ReadLastAccRewardBlockNumber is 0 when either (a) the database is empty or (b) was soft reset to 0.
-	if sm.db.ReadLastAccRewardBlockNumber() == 0 {
+	// lastNum is 0 when either (a) the database was empty or (b) was soft reset to 0.
+	if lastNum == 0 {
 		genesisTotalSupply, err := sm.totalSupplyFromState(0)
 		if err != nil {
 			logger.Error("totalSupplyFromState failed", "number", 0, "err", err)
