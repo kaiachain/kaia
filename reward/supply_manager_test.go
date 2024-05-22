@@ -92,17 +92,56 @@ func (s *SupplyTestSuite) TestFromState() {
 	}
 }
 
+// Test reading canonical burn amounts from the state.
+func (s *SupplyTestSuite) TestCanonicalBurn() {
+	t := s.T()
+	s.setupHistory()
+
+	// Delete state at 199
+	root := s.db.ReadBlockByNumber(199).Root()
+	s.db.DeleteTrieNode(root.ExtendZero())
+
+	// State unavailable at 199
+	zero, dead, err := s.sm.GetCanonicalBurn(199)
+	assert.Error(t, err)
+	assert.Nil(t, zero)
+	assert.Nil(t, dead)
+
+	// State available at 200
+	zero, dead, err = s.sm.GetCanonicalBurn(200)
+	assert.NoError(t, err)
+	assert.Equal(t, "1000000000000000000000000000", zero.String())
+	assert.Equal(t, "2000000000000000000000000000", dead.String())
+}
+
+// Test reading rebalance memo from the contract.
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
 	s.setupHistory()
 
-	kip103BurnMemo, err := s.sm.readRebalanceMemo(addrKip103)
+	// rebalance not configured
+	amount, err := s.sm.GetRebalanceBurn(199, nil, common.Address{})
 	require.NoError(t, err)
-	assert.Equal(t, "650511428500000000000", kip103BurnMemo.String())
+	assert.Equal(t, "0", amount.String())
 
-	kip160BurnMemo, err := s.sm.readRebalanceMemo(addrKip160)
+	// num < forkNum
+	amount, err = s.sm.GetRebalanceBurn(199, big.NewInt(200), addrKip103)
 	require.NoError(t, err)
-	assert.Equal(t, "120800000000000000000", kip160BurnMemo.String())
+	assert.Equal(t, "0", amount.String())
+
+	// num >= forkNum
+	amount, err = s.sm.GetRebalanceBurn(200, big.NewInt(200), addrKip103)
+	require.NoError(t, err)
+	assert.Equal(t, "650511428500000000000", amount.String())
+
+	amount, err = s.sm.GetRebalanceBurn(300, big.NewInt(300), addrKip160)
+	require.NoError(t, err)
+	assert.Equal(t, "120800000000000000000", amount.String())
+
+	// call failed: bad contract address
+	amount, err = s.sm.GetRebalanceBurn(200, big.NewInt(200), addrFund1)
+	require.Error(t, err)
+	require.Nil(t, amount)
 }
 
 // Tests sm.Stop() does not block.
@@ -125,11 +164,9 @@ func (s *SupplyTestSuite) TestStop() {
 	}
 }
 
-// Tests catchup finishes with the correct final accumulated reward when lagging behind.
-// This accounts for (genesis supply + accRewards) but not (kip103Burn + kip160Burn + zeroBurn + deadBurn).
+// Tests the insertBlock -> go catchup, where the catchup enters the big-step mode.
 func (s *SupplyTestSuite) TestCatchupBigStep() {
 	t := s.T()
-	// create block -> start catchup -> wait catchup
 	s.setupHistory() // head block is already 400
 	s.sm.Start()     // start catchup
 	defer s.sm.Stop()
@@ -144,11 +181,9 @@ func (s *SupplyTestSuite) TestCatchupBigStep() {
 	}
 }
 
-// Tests catchup finishes with the correct final accumulated reward when following the chain head.
-// This accounts for (genesis supply + accRewards) but not (kip103Burn + kip160Burn + zeroBurn + deadBurn).
+// Tests go catchup -> insertBlock case, where the catchup follows the chain head event.
 func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	t := s.T()
-	// start catchup -> create block -> wait catchup
 	s.sm.Start() // start catchup
 	defer s.sm.Stop()
 	time.Sleep(10 * time.Millisecond) // yield to the catchup goroutine to start
@@ -164,6 +199,7 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	}
 }
 
+// Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
 	t := s.T()
 	s.setupHistory()
@@ -187,6 +223,61 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 		bigEqual(t, expected.Kip103Burn, actual.Kip103Burn, tc.number)
 		bigEqual(t, expected.Kip160Burn, actual.Kip160Burn, tc.number)
 	}
+}
+
+// Test that when some data are missing, GetTotalSupply leaves some fields nil and returns an error.
+func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
+	t := s.T()
+	s.setupHistory()
+	s.sm.Start()
+	s.waitAccReward()
+	s.sm.Stop()
+
+	var num uint64 = 200
+	var expected *TotalSupply
+	for _, tc := range s.testcases() {
+		if tc.number == num {
+			expected = tc.expectTotalSupply
+			break
+		}
+	}
+
+	// Missing state trie; no canonical burn amounts
+	root := s.db.ReadBlockByNumber(num).Root()
+	s.db.DeleteTrieNode(root.ExtendZero())
+
+	ts, err := s.sm.GetTotalSupply(num)
+	assert.ErrorContains(t, err, "missing trie node")
+	assert.Nil(t, ts.TotalSupply)
+	assert.Equal(t, expected.TotalMinted, ts.TotalMinted)
+	assert.Nil(t, ts.TotalBurnt)
+	assert.Equal(t, expected.BurntFee, ts.BurntFee)
+	assert.Nil(t, ts.ZeroBurn)
+	assert.Nil(t, ts.DeadBurn)
+	assert.Equal(t, expected.Kip103Burn, ts.Kip103Burn)
+	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
+
+	// Misconfigured KIP-103
+	s.chain.Config().Kip103ContractAddress = addrFund1
+
+	ts, err = s.sm.GetTotalSupply(num)
+	assert.ErrorContains(t, err, "missing trie node") // Errors are concatenated
+	assert.ErrorContains(t, err, "no contract code")
+	assert.Nil(t, ts.TotalSupply)
+	assert.Equal(t, expected.TotalMinted, ts.TotalMinted)
+	assert.Nil(t, ts.TotalBurnt)
+	assert.Equal(t, expected.BurntFee, ts.BurntFee)
+	assert.Nil(t, ts.ZeroBurn)
+	assert.Nil(t, ts.DeadBurn)
+	assert.Nil(t, ts.Kip103Burn)
+	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
+
+	// No AccReward
+	s.db.WriteLastAccRewardBlockNumber(num - 1)
+	s.sm.accRewardCache.Purge()
+	ts, err = s.sm.GetTotalSupply(num)
+	assert.ErrorIs(t, err, errNoAccReward)
+	assert.Nil(t, ts)
 }
 
 func (s *SupplyTestSuite) waitAccReward() {
@@ -248,7 +339,7 @@ func bigMult(a, b *big.Int) *big.Int {
 }
 
 func (s *SupplyTestSuite) SetupSuite() {
-	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 
 	s.config = &params.ChainConfig{
 		ChainID:       big.NewInt(31337),

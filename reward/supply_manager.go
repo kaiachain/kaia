@@ -19,11 +19,13 @@ package reward
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/common"
@@ -43,6 +45,14 @@ var (
 	errNoBlock           = errors.New("block not found")
 	errNoRebalanceMemo   = errors.New("rebalance memo not yet stored")
 )
+
+func errNoCanonicalBurn(err error) error {
+	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %v", err)
+}
+
+func errNoRebalanceBurn(err error) error {
+	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %v", err)
+}
 
 // SupplyManager tracks the total supply of native tokens.
 // Note that SupplyManager only deals with the block rewards.
@@ -125,18 +135,97 @@ func (sm *supplyManager) GetAccReward(num uint64) (*database.AccReward, error) {
 		return accReward.(*database.AccReward), nil
 	}
 
-	if accReward := sm.db.ReadAccReward(num); accReward != nil {
-		sm.accRewardCache.Add(num, accReward.Copy())
-		return accReward, nil
+	lastNum := sm.db.ReadLastAccRewardBlockNumber()
+	if lastNum < num { // soft deleted
+		return nil, errNoAccReward
 	}
 
-	return nil, errNoAccReward
+	accReward := sm.db.ReadAccReward(num)
+	if accReward == nil {
+		return nil, errNoAccReward
+	}
+
+	sm.accRewardCache.Add(num, accReward.Copy())
+	return accReward, nil
+}
+
+func (sm *supplyManager) GetCanonicalBurn(num uint64) (zero *big.Int, dead *big.Int, err error) {
+	header := sm.chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, nil, errNoCanonicalBurn(errNoBlock)
+	}
+	state, err := sm.chain.StateAt(header.Root)
+	if err != nil {
+		return nil, nil, errNoCanonicalBurn(err)
+	}
+	return state.GetBalance(zeroBurnAddress), state.GetBalance(deadBurnAddress), nil
+}
+
+// GetRebalanceBurn attempts to read the burnt amount from the rebalance memo.
+// 1. Rebalance is not configured or the fork block is not reached: return 0.
+// 2. Found the memo: return the burnt amount.
+// 3. Rebalance is configured but the memo is not found: return nil.
+// - 3a. the rebalance is misconfigured so that system.RebalanceTreasury did not change the state.
+// - 3b. the memo is not yet submitted to the contract.
+// 4. Something else went wrong: return nil.
+//
+// The case 3a returning 0 would be more accurate representation of the rebalance burn amount,
+// but 3a is indistinguishable from 3b or 4. Therefore it returns nil and an error for safety.
+// If we actually create case 3a by accident (i.e. rebalance skipped at the fork block), fix this function to return 0.
+func (sm *supplyManager) GetRebalanceBurn(num uint64, forkNum *big.Int, addr common.Address) (*big.Int, error) {
+	bigNum := new(big.Int).SetUint64(num)
+
+	if forkNum == nil || forkNum.Sign() == 0 || (addr == common.Address{}) || forkNum.Cmp(bigNum) > 0 {
+		// 1. rebalance is not configured or the rebalance forkNum has not passed (at the given block number).
+		return big.NewInt(0), nil
+	}
+
+	if burnt, ok := sm.memoCache.Get(addr); ok {
+		// 2. memo is in cache.
+		return burnt.(*big.Int), nil
+	}
+
+	// Load the state at latest block, not the rebalance fork block.
+	// The memo is manually stored in the contract after-the-fact by calling the finalizeContract function.
+	// Therefore it's safest to read from the latest state.
+	backend := backends.NewBlockchainContractBackend(sm.chain, nil, nil)
+	caller, err := rebalance.NewTreasuryRebalanceV2Caller(addr, backend)
+	if err != nil {
+		// 4. contract call failed.
+		return nil, errNoRebalanceBurn(err)
+	}
+	memo, err := caller.Memo(&bind.CallOpts{BlockNumber: nil}) // call at the latest block
+	if err != nil {
+		// 3a. the contract reverted or the contract is not there.
+		// 4. contract call failed for other unknown reasons.
+		return nil, errNoRebalanceBurn(err)
+	}
+	if memo == "" {
+		// 3a. the contract is intact but the rebalance did not happen due to e.g. insufficient funds.
+		// 3b. the memo is not yet submitted to the contract.
+		// Return nil to prevent totalSupply calculation, therefore prevents misinformation.
+		return nil, errNoRebalanceBurn(errNoRebalanceMemo)
+	}
+
+	result := struct { // See system.rebalanceResult struct
+		Burnt *big.Int `json:"burnt"`
+	}{}
+	if err := json.Unmarshal([]byte(memo), &result); err != nil {
+		// 4. memo is malformed
+		return nil, errNoRebalanceBurn(err)
+	}
+
+	// 2. found the memo
+	sm.memoCache.Add(addr, result.Burnt)
+	return result.Burnt, nil
 }
 
 func (sm *supplyManager) GetTotalSupply(num uint64) (*TotalSupply, error) {
-	ts := &TotalSupply{}
+	errs := make([]error, 0)
+	ts := new(TotalSupply)
 
 	// Read accumulated rewards (minted, burntFee)
+	// This is an essential component, so failure to read it immediately aborts the function.
 	accReward, err := sm.GetAccReward(num)
 	if err != nil {
 		return nil, err
@@ -145,81 +234,37 @@ func (sm *supplyManager) GetTotalSupply(num uint64) (*TotalSupply, error) {
 	ts.BurntFee = accReward.BurntFee
 
 	// Read canonical burn address balances
-	header := sm.chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errNoBlock
-	}
-	state, err := sm.chain.StateAt(header.Root)
+	// Leave them nil if the historic state isn't available.
+	ts.ZeroBurn, ts.DeadBurn, err = sm.GetCanonicalBurn(num)
 	if err != nil {
-		return nil, err
+		errs = append(errs, err)
 	}
-	ts.ZeroBurn = state.GetBalance(zeroBurnAddress)
-	ts.DeadBurn = state.GetBalance(deadBurnAddress)
 
 	// Read KIP103 and KIP160 burns
-	bigNum := new(big.Int).SetUint64(num)
+	// 1. Leave them zero if the rebalance is not configured or the fork block is not reached.
+	// 2. Leave them nil if the rebalance should have been executed but rebalance memo isn't available yet.
 	config := sm.chain.Config()
-
-	ts.Kip103Burn = big.NewInt(0)
-	if config.Kip103CompatibleBlock != nil && config.Kip103CompatibleBlock.Cmp(bigNum) <= 0 {
-		burn, err := sm.readRebalanceMemo(config.Kip103ContractAddress)
-		if err != nil {
-			return nil, err
-		}
-		ts.Kip103Burn = burn
-	}
-
-	ts.Kip160Burn = big.NewInt(0)
-	if config.Kip160CompatibleBlock != nil && config.Kip160CompatibleBlock.Cmp(bigNum) <= 0 {
-		burn, err := sm.readRebalanceMemo(config.Kip160ContractAddress)
-		if err != nil {
-			return nil, err
-		}
-		ts.Kip160Burn = burn
-	}
-
-	ts.TotalBurnt = new(big.Int)
-	ts.TotalBurnt.Add(ts.TotalBurnt, ts.BurntFee)
-	ts.TotalBurnt.Add(ts.TotalBurnt, ts.ZeroBurn)
-	ts.TotalBurnt.Add(ts.TotalBurnt, ts.DeadBurn)
-	ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip103Burn)
-	ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip160Burn)
-
-	ts.TotalSupply = new(big.Int).Sub(ts.TotalMinted, ts.TotalBurnt)
-	return ts, nil
-}
-
-func (sm *supplyManager) readRebalanceMemo(addr common.Address) (*big.Int, error) {
-	if burnt, ok := sm.memoCache.Get(addr); ok {
-		return burnt.(*big.Int), nil
-	}
-
-	// Load the latest state, not the rebalance hardfork block state.
-	// The memo is manually stored in the contract after-the-fact by calling the finalizeContract function.
-	// Therefore it's safest to read from the latest state.
-	backend := backends.NewBlockchainContractBackend(sm.chain, nil, nil)
-	caller, err := rebalance.NewTreasuryRebalanceV2Caller(addr, backend)
+	ts.Kip103Burn, err = sm.GetRebalanceBurn(num, config.Kip103CompatibleBlock, config.Kip103ContractAddress)
 	if err != nil {
-		return nil, err
+		errs = append(errs, err)
 	}
-
-	memo, err := caller.Memo(nil)
+	ts.Kip160Burn, err = sm.GetRebalanceBurn(num, config.Kip160CompatibleBlock, config.Kip160ContractAddress)
 	if err != nil {
-		return nil, err
-	}
-	if memo == "" {
-		return nil, errNoRebalanceMemo
+		errs = append(errs, err)
 	}
 
-	result := struct {
-		Burnt *big.Int `json:"burnt"`
-	}{}
-	if err := json.Unmarshal([]byte(memo), &result); err != nil {
-		return nil, err
+	// TotalBurnt and TotalSupply is only calculated if all components are available.
+	if ts.BurntFee != nil && ts.ZeroBurn != nil && ts.DeadBurn != nil && ts.Kip103Burn != nil && ts.Kip160Burn != nil {
+		ts.TotalBurnt = new(big.Int)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.BurntFee)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.ZeroBurn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.DeadBurn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip103Burn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip160Burn)
+		ts.TotalSupply = new(big.Int).Sub(ts.TotalMinted, ts.TotalBurnt)
 	}
 
-	sm.memoCache.Add(addr, result.Burnt)
-	return result.Burnt, nil
+	return ts, errors.Join(errs...)
 }
 
 // catchup accumulates the block rewards until the current block.
@@ -232,13 +277,15 @@ func (sm *supplyManager) catchup() {
 		lastNum = sm.db.ReadLastAccRewardBlockNumber()
 	)
 
-	if sm.db.ReadAccReward(lastNum) == nil {
-		logger.Error("Last accumulated reward not found. Restarting supply catchup")
+	if lastNum > 0 && sm.db.ReadAccReward(lastNum) == nil {
+		logger.Error("Last accumulated reward not found. Restarting supply catchup", "last", lastNum, "head", headNum)
 		sm.db.WriteLastAccRewardBlockNumber(0) // soft reset to genesis
+		lastNum = 0
 	}
 
 	// Store genesis supply if not exists
-	if sm.db.ReadLastAccRewardBlockNumber() == 0 {
+	// lastNum is 0 when either (a) the database was empty or (b) was soft reset to 0.
+	if lastNum == 0 {
 		genesisTotalSupply, err := sm.totalSupplyFromState(0)
 		if err != nil {
 			logger.Error("totalSupplyFromState failed", "number", 0, "err", err)
@@ -361,17 +408,4 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 		}
 	}
 	return accReward, nil
-}
-
-func (sm *supplyManager) getTotalReward(num uint64) (*TotalReward, error) {
-	var (
-		header    = sm.chain.GetHeaderByNumber(num)
-		rules     = sm.chain.Config().Rules(new(big.Int).SetUint64(num))
-		pset, err = sm.gov.EffectiveParams(num)
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return GetTotalReward(header, rules, pset)
 }
