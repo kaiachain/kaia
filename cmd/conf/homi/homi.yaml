@@ -46,7 +46,7 @@ deploy:
 #                       For genesis.json                             #
 ######################################################################
 genesis: 
-  # cypress-test, cypress, baobab-test, baobab, servicechain, servicechain-test, clique, default
+  # mainnet-test, mainnet, testnet-test, testnet, servicechain, servicechain-test, clique, default
   type: "default"
   chain-id: 1000
   service-chain-id: 1001 

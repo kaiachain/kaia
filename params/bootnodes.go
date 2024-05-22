@@ -53,17 +53,17 @@ var MainnetBootnodes = map[common.ConnType]bootnodesByTypes{
 var TestnetBootnodes = map[common.ConnType]bootnodesByTypes{
 	common.CONSENSUSNODE: {
 		[]string{
-			"kni://d8adb5a300d7ee0fcde4d6777362c1e0e03d208a2f3978d6d3993a2ada4a64af2580b97d4b4bf21201b1596cea761ecf53f196153bae8bbb0948b3c6397303b2@ston98.baobab.klaytn.net:32323?ntype=bn",
+			"kni://d8adb5a300d7ee0fcde4d6777362c1e0e03d208a2f3978d6d3993a2ada4a64af2580b97d4b4bf21201b1596cea761ecf53f196153bae8bbb0948b3c6397303b2@ston98.baobab.klaytn.net:32323?ntype=bn", // TODO: rename baobab
 		},
 	},
 	common.ENDPOINTNODE: {
 		[]string{
-			"kni://779d766628247ebda5f3e108e9303bd8efdb8eba9fd8d6c529e2614aec7207ebf6614fe7e61d0d99b75e8b23dd3a679b112fd0de7e4e71a7008f0718710da48f@ston45.baobab.klaytn.net:32323?ntype=bn",
+			"kni://779d766628247ebda5f3e108e9303bd8efdb8eba9fd8d6c529e2614aec7207ebf6614fe7e61d0d99b75e8b23dd3a679b112fd0de7e4e71a7008f0718710da48f@ston45.baobab.klaytn.net:32323?ntype=bn", // TODO: rename baobab
 		},
 	},
 	common.PROXYNODE: {
 		[]string{
-			"kni://779d766628247ebda5f3e108e9303bd8efdb8eba9fd8d6c529e2614aec7207ebf6614fe7e61d0d99b75e8b23dd3a679b112fd0de7e4e71a7008f0718710da48f@ston45.baobab.klaytn.net:32323?ntype=bn",
+			"kni://779d766628247ebda5f3e108e9303bd8efdb8eba9fd8d6c529e2614aec7207ebf6614fe7e61d0d99b75e8b23dd3a679b112fd0de7e4e71a7008f0718710da48f@ston45.baobab.klaytn.net:32323?ntype=bn", // TODO: rename baobab
 		},
 	},
 }

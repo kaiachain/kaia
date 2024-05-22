@@ -667,13 +667,13 @@ func Gen(ctx *cli.Context) error {
 	// NOTE-Kaia : the following code that seems unnecessary is for the priority to flags, not yaml
 	if !testnet && !testnetTest && !mainnet && !mainnetTest && !serviceChain && !serviceChainTest && !clique {
 		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
-		case "baobab":
+		case "testnet":
 			testnet = true
-		case "baobab-test":
+		case "testnet-test":
 			testnetTest = true
-		case "cypress":
+		case "mainnet":
 			mainnet = true
-		case "cypress-test":
+		case "mainnet-test":
 			mainnetTest = true
 		case "servicechain":
 			serviceChain = true

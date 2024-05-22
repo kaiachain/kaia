@@ -1215,18 +1215,18 @@ var (
 	}
 
 	MainnetFlag = &cli.BoolFlag{
-		Name:     "cypress",
+		Name:     "mainnet",
 		Usage:    "Pre-configured Kaia Mainnet network",
-		Aliases:  []string{"p2p.cypress"},
-		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS"},
+		Aliases:  []string{"p2p.cypress", "p2p.mainnet"},                     // TODO: remove cypress
+		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS", "KAIA_MAINNET"}, // TODO: remove cypress
 		Category: "NETWORK",
 	}
 	// Testnet bootnodes setting
 	TestnetFlag = &cli.BoolFlag{
-		Name:     "baobab",
+		Name:     "testnet",
 		Usage:    "Pre-configured Kaia Testnet network",
-		Aliases:  []string{"p2p.baobab"},
-		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB"},
+		Aliases:  []string{"p2p.baobab", "p2p.testnet"},                    // TODO: remove baobab
+		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_TESTNET"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}
 	// Bootnode's settings
@@ -1996,12 +1996,12 @@ var (
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
-// if none (or the empty string) is specified. If the node is starting a baobab,
+// if none (or the empty string) is specified. If the node is starting a Testnet,
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.String(DataDirFlag.Name); path != "" {
 		if ctx.Bool(TestnetFlag.Name) {
-			return filepath.Join(path, "baobab")
+			return filepath.Join(path, "baobab") // TODO: rename to Testnet
 		}
 		return path
 	}

@@ -143,7 +143,7 @@ func rpcEndpoint(ctx *cli.Context) string {
 		}
 		if path != "" {
 			if ctx.Bool(utils.TestnetFlag.Name) {
-				path = filepath.Join(path, "baobab")
+				path = filepath.Join(path, "baobab") // TODO: rename to Testnet
 			}
 		}
 		endpoint = fmt.Sprintf("%s/klay.ipc", path)

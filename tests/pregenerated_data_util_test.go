@@ -426,7 +426,7 @@ func genAspenOptions() (*database.DBConfig, *opt.Options) {
 	return aspenDBConfig, aspenLevelDBOptions
 }
 
-// genTestnetOptions returns database configurations of Baobab network.
+// genTestnetOptions returns database configurations of Testnet network.
 func genTestnetOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 

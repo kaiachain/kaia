@@ -316,7 +316,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 	case ctx.Bool(TestnetFlag.Name):
 		logger.Info("Testnet bootnodes are set")
-		// set pre-configured bootnodes when 'baobab' option was enabled
+		// set pre-configured bootnodes when 'testnet' option was enabled
 		urls = params.TestnetBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
@@ -700,13 +700,13 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Kaia-Bootnode: Discuss and add `baobab` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `testnet` test network's genesis block
 	/*
 		if ctx.Bool(TestnetFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {
 				cfg.NetworkId = 3
 			}
-			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
+			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 		}
 	*/
 	// Set the Tx resending related configuration variables
@@ -828,13 +828,13 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 // getNetworkId returns the associated network ID with whether or not the network is private.
 func getNetworkId(ctx *cli.Context) (uint64, bool) {
 	if ctx.Bool(TestnetFlag.Name) && ctx.Bool(MainnetFlag.Name) {
-		log.Fatalf("--baobab and --cypress must not be set together")
+		log.Fatalf("--testnet and --mainnet must not be set together")
 	}
 	if ctx.Bool(TestnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--baobab and --networkid must not be set together")
+		log.Fatalf("--testnet and --networkid must not be set together")
 	}
 	if ctx.Bool(MainnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--cypress and --networkid must not be set together")
+		log.Fatalf("--mainnet and --networkid must not be set together")
 	}
 
 	switch {

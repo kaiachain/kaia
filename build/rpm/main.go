@@ -180,10 +180,10 @@ func genspec(c *cli.Context) error {
 		}
 		rpmSpec.BuildNumber = buildNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-devel"
-	} else if c.Bool("baobab") {
+	} else if c.Bool("testnet") {
 		rpmSpec.BuildNumber = params.ReleaseNum
-		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-baobab"
-		rpmSpec.PostFix = "_baobab"
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-testnet"
+		rpmSpec.PostFix = "_testnet"
 	} else {
 		rpmSpec.BuildNumber = params.ReleaseNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon
