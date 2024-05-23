@@ -301,11 +301,15 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 }
 
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
-	if tx.Type() == TxTypeEthereumDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-		return math.BigMin(te.GetGasTipCap(), new(big.Int).Sub(te.GetGasFeeCap(), baseFee))
+	// effectiveGasPrice - baseFee = min(baseFee + tipCap, feeCap) - baseFee = min(tipCap, feeCap - baseFee)
+	if baseFee != nil {
+		// For EthereumDynamicFee TxType: min(GasTipCap, Sub(GasFeeCap,baseFee))
+		// For Non-EthereumDynamicFee TxType: min(GasPrice, Sub(gasPrice, baseFee)
+		tip := math.BigMax(big.NewInt(0), new(big.Int).Sub(tx.GasFeeCap(), baseFee))
+		return math.BigMin(tx.GasTipCap(), tip)
 	}
-	return tx.GasPrice()
+
+	return new(big.Int).Set(tx.GasTipCap())
 }
 
 func (tx *Transaction) EffectiveGasPrice(header *Header, config *params.ChainConfig) *big.Int {

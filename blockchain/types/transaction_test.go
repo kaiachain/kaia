@@ -391,19 +391,18 @@ func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
-	// before magma hardfork
+	// after magma hardfork
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
-	want := big.NewInt(1000)
+	want := big.NewInt(0) // from kaia codebase, legacyTxType also give a tip.
 	assert.Equal(t, want, have)
 
-	baseFee = big.NewInt(2000)
 	have = dynamicTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
 	// before magma hardfork
-	baseFee = big.NewInt(0)
+	baseFee = nil
 	have = legacyTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
