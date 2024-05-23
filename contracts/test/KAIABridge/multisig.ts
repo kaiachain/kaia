@@ -20,6 +20,7 @@ describe("[Multisig Test]", function () {
   let judgeCandidate1;
   let judgeCandidate2;
   let judge1;
+  let judge2;
   let txID;
   let guardianTxID;
 
@@ -39,7 +40,7 @@ describe("[Multisig Test]", function () {
     const [
       _operator1, _operator2, _operator3, _operator4, p1,
       _guardian1, _guardian2, _guardian3, _guardian4, p2,
-      _judge1, _judgeCandidate1, _judgeCandidate2
+      _judge1, _judge2, _judgeCandidate1, _judgeCandidate2
     ] = await ethers.getSigners();
 
     operator1 = _operator1;
@@ -52,6 +53,7 @@ describe("[Multisig Test]", function () {
     guardian4 = _guardian4;
 
     judge1 = _judge1;
+    judge2 = _judge2;
     judgeCandidate1 = _judgeCandidate1;
     judgeCandidate2 = _judgeCandidate2;
 
@@ -87,8 +89,8 @@ describe("[Multisig Test]", function () {
 
     const judgeFactory = await ethers.getContractFactory("Judge");
     judge = await upgrades.deployProxy(judgeFactory, [[
-      judge1.address
-    ], guardian.address, 1]);
+      judge1.address, judge2.address
+    ], guardian.address, 2]);
 
     const bridgeFactory = await ethers.getContractFactory("KAIABridge");
     bridge = await upgrades.deployProxy(bridgeFactory, [
@@ -198,7 +200,7 @@ describe("[Multisig Test]", function () {
     expect((await operator.getOperators()).length).to.equal(initialOperatorLen + 1);
   });
 
-  it("#change guardian requirement - operator", async function () {
+  it("#change operator requirement - operator", async function () {
     expect(await operator.minOperatorRequiredConfirm()).to.equal(3);
 
     let rawTxData = (await operator.populateTransaction.changeRequirement(2)).data;
@@ -207,6 +209,18 @@ describe("[Multisig Test]", function () {
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
 
     expect(await operator.minOperatorRequiredConfirm()).to.equal(2);
+  });
+
+  it("#change judge requirement - judge", async function () {
+    expect(await judge.minJudgeRequiredConfirm()).to.equal(2);
+
+    let rawTxData = (await judge.populateTransaction.changeRequirement(1)).data;
+    await guardian.connect(guardian1).submitTransaction(judge.address, rawTxData, 0);
+    await guardian.connect(guardian2).confirmTransaction(guardianTxID);
+    await expect(guardian.connect(guardian3).confirmTransaction(guardianTxID))
+      .to.emit(judge, "RequirementChange")
+
+    expect(await judge.minJudgeRequiredConfirm()).to.equal(1);
   });
 
   it("#add guardian", async function () {
@@ -261,7 +275,7 @@ describe("[Multisig Test]", function () {
   });
 
   it("#add judge", async function () {
-    const initJudgeLen = 1;
+    const initJudgeLen = 2;
     expect((await judge.getJudges()).length).to.equal(initJudgeLen);
 
     let rawTxData = (await judge.populateTransaction.addJudge(judgeCandidate1.address)).data;
@@ -278,7 +292,7 @@ describe("[Multisig Test]", function () {
   });
 
   it("#remove judge", async function () {
-    const initJudgeLen = 1;
+    const initJudgeLen = 2;
     expect((await judge.getJudges()).length).to.equal(initJudgeLen);
 
     let rawTxData = (await judge.populateTransaction.addJudge(judgeCandidate1.address)).data;
@@ -350,6 +364,18 @@ describe("[Multisig Test]", function () {
       .to.emit(operator, "Revocation");
     expect((await operator.getConfirmations(txID)).length).to.equal(0);
   });
+  
+  it("#revoke transaction - judge", async function () {
+    let rawTxData = (await judge.populateTransaction.changeRequirement(1)).data;
+    await judge.connect(judge1).submitTransaction(judge.address, rawTxData, 0);
+
+    await expect(judge.connect(judge2).revokeConfirmation(txID))
+      .to.be.revertedWith("KAIA::Judge: No confirmation was committed yet");
+    expect((await judge.getConfirmations(txID)).length).to.equal(1);
+    await expect(judge.connect(judge1).revokeConfirmation(txID))
+      .to.emit(judge, "Revocation");
+    expect((await judge.getConfirmations(txID)).length).to.equal(0);
+  });
 
   it("#change guardian in operator contract", async function () {
     expect(await operator.guardian()).to.equal(guardian.address);
@@ -414,12 +440,41 @@ describe("[Multisig Test]", function () {
     await expect(nExecuted).to.equal(1);
   });
 
+  it("#get transaction count - judge", async function () {
+    let [nPending, nExecuted] = await judge.getTransactionCount(true, true);
+    await expect(nPending).to.equal(0);
+    await expect(nExecuted).to.equal(0);
+
+    let rawTxData = (await bridge.populateTransaction.holdClaim(1)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+    await judge.connect(judge2).confirmTransaction(txID);
+
+    rawTxData = (await bridge.populateTransaction.holdClaim(2)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+    rawTxData = (await bridge.populateTransaction.holdClaim(3)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+
+    [nPending, nExecuted] = await judge.getTransactionCount(true, true);
+    await expect(nPending).to.equal(2);
+    await expect(nExecuted).to.equal(1);
+  });
+
   it("#get confirmation count - guardian", async function () {
     expect(await guardian.getConfirmationCount(0)).to.equal(0);
     let rawTxData = (await guardian.populateTransaction.changeRequirement(2)).data;
     await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     expect(await guardian.getConfirmationCount(guardianTxID)).to.equal(2);
+  });
+
+  it("#get confirmation count - judge", async function () {
+    expect(await judge.getConfirmationCount(txID)).to.equal(0);
+
+    let rawTxData = (await bridge.populateTransaction.holdClaim(1)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+    await judge.connect(judge2).confirmTransaction(txID);
+
+    expect(await judge.getConfirmationCount(txID)).to.equal(2);
   });
 
   it("#get transaction IDs - guardian", async function () {
@@ -461,6 +516,25 @@ describe("[Multisig Test]", function () {
     await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
 
     [nPending, nExecuted] = await operator.getTransactionIds(0, 100, true, true);
+    await expect(nPending.length).to.equal(2);
+    await expect(nExecuted.length).to.equal(1);
+  });
+
+  it("#get transaction IDs - judge", async function () {
+    let [nPending, nExecuted] = await judge.getTransactionIds(0, 100, true, true);
+    await expect(nPending.length).to.equal(0);
+    await expect(nExecuted.length).to.equal(0);
+
+    let rawTxData = (await bridge.populateTransaction.holdClaim(1)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+    await judge.connect(judge2).confirmTransaction(txID);
+
+    rawTxData = (await bridge.populateTransaction.holdClaim(2)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+    rawTxData = (await bridge.populateTransaction.holdClaim(3)).data;
+    await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
+
+    [nPending, nExecuted] = await judge.getTransactionIds(0, 100, true, true);
     await expect(nPending.length).to.equal(2);
     await expect(nExecuted.length).to.equal(1);
   });
