@@ -56,7 +56,8 @@ type rewardConfig struct {
 	// hardfork rules
 	rules params.Rules
 
-	// values calculated from block header
+	// values calculated from block header and transactions
+	// since kaia, tip is added to the totalFee
 	totalFee *big.Int
 
 	// values from GovParamSet
@@ -136,7 +137,7 @@ func DistributeBlockReward(b BalanceAdder, rewards map[common.Address]*big.Int) 
 	}
 }
 
-func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
+func NewRewardConfig(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
 	cnRatio, kifRatio, kefRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
 	if err != nil {
 		return nil, err
@@ -155,7 +156,7 @@ func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovP
 		rules: rules,
 
 		// values calculated from block header
-		totalFee: GetTotalTxFee(header, rules, pset),
+		totalFee: new(big.Int).Add(GetTotalTxFee(header, rules, pset), GetTotalTip(header, txs, receipts, rules)),
 
 		// values from GovParamSet
 		mintingAmount: new(big.Int).Set(pset.MintingAmountBig()),
@@ -185,6 +186,20 @@ func GetTotalTxFee(header *types.Header, rules params.Rules, pset *params.GovPar
 	return totalFee
 }
 
+func GetTotalTip(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules) *big.Int {
+	totalTip := big.NewInt(0)
+	if txs == nil || receipts == nil {
+		return totalTip
+	}
+	for i, tx := range txs {
+		if rules.IsKaia && tx.Type() == types.TxTypeEthereumDynamicFee {
+			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
+			totalTip = new(big.Int).Add(totalTip, tip)
+		}
+	}
+	return totalTip
+}
+
 // config.Istanbul must have been set
 func IsRewardSimple(pset *params.GovParamSet) bool {
 	return pset.Policy() != uint64(istanbul.WeightedRandom)
@@ -201,15 +216,15 @@ func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
 
 // GetTotalReward returns the total rewards in this block, i.e. (minted - burntFee)
 // Used in klay_totalSupply RPC API
-func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
+func GetTotalReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
 	total := new(TotalReward)
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}
 
 	if IsRewardSimple(pset) {
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
@@ -238,17 +253,17 @@ func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovPa
 
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in kaia_getReward RPC API
-func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 
 	if IsRewardSimple(pset) {
-		spec, err = CalcDeferredRewardSimple(header, rules, pset)
+		spec, err = CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		spec, err = CalcDeferredReward(header, rules, pset)
+		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
@@ -288,8 +303,8 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 // MintKAIA has been superseded because we need to split reward distribution
 // logic into (1) calculation, and (2) actual distribution.
 // CalcDeferredRewardSimple does the former and DistributeBlockReward does the latter
-func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
-	rc, err := NewRewardConfig(header, rules, pset)
+func CalcDeferredRewardSimple(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}
@@ -347,12 +362,12 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
-func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	defer func(start time.Time) {
 		CalcDeferredRewardTimer = time.Since(start)
 	}(time.Now())
 
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}

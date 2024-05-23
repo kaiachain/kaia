@@ -97,6 +97,7 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend,
 
 	config.EthTxTypeCompatibleBlock = magmaBlock
 	config.IstanbulCompatibleBlock = magmaBlock
+	config.LondonCompatibleBlock = magmaBlock
 	config.MagmaCompatibleBlock = magmaBlock
 	config.KoreCompatibleBlock = kaiaBlock
 	config.ShanghaiCompatibleBlock = kaiaBlock

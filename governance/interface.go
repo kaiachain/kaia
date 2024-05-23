@@ -118,6 +118,7 @@ type blockChain interface {
 	CurrentHeader() *types.Header
 	GetHeaderByNumber(val uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
 	State() (*state.StateDB, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
 

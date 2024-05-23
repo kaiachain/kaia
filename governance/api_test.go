@@ -289,7 +289,17 @@ func (bc *testBlockChain) GetHeaderByNumber(val uint64) *types.Header {
 		Number: new(big.Int).SetUint64(val),
 	}
 }
-func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { return nil }
+
+func (bc *testBlockChain) GetReceiptsByBlockHash(hash common.Hash) types.Receipts {
+	return types.Receipts{
+		&types.Receipt{GasUsed: 10},
+		&types.Receipt{GasUsed: 10},
+	}
+}
+
+func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block {
+	return types.NewBlockWithHeader(bc.GetHeaderByNumber(num))
+}
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
 func (bc *testBlockChain) State() (*state.StateDB, error)                   { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {

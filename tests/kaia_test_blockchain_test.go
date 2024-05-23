@@ -329,7 +329,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 		return err
 	}
 	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(header, rules, pset)
+	spec, err := reward.CalcDeferredRewardSimple(header, b.Transactions(), receipts, rules, pset)
 	if err != nil {
 		return err
 	}
@@ -369,7 +369,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Mine a block!
 	start = time.Now()
-	b, _, err := bcdata.MineABlock(transactions, signer, prof)
+	b, receipts, err := bcdata.MineABlock(transactions, signer, prof)
 	if err != nil {
 		return err
 	}
@@ -402,7 +402,7 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 		return err
 	}
 	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), rules, pset)
+	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), txs, receipts, rules, pset)
 	if err != nil {
 		return err
 	}

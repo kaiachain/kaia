@@ -755,7 +755,7 @@ func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.H
 
 	rules := s.config.Rules(header.Number)
 	pset, _ := s.gov.EffectiveParams(header.Number.Uint64())
-	rewardSpec, err := CalcDeferredReward(header, rules, pset)
+	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}

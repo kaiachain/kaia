@@ -25,6 +25,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -279,8 +280,15 @@ func TestRewardDistributor_GetTotalReward(t *testing.T) {
 			IsMagma: true,
 			IsKore:  true,
 		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
 	)
-
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		desc          string
 		policy        istanbul.ProposerPolicy
@@ -316,11 +324,11 @@ func TestRewardDistributor_GetTotalReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		delta, err := GetTotalReward(header, rules, pset)
+		delta, err := GetTotalReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, tc.desc)
 
 		// Compare GetTotalReward with GetBlockReward
-		spec, err := GetBlockReward(header, rules, pset)
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, spec.Minted.String(), delta.Minted.String(), tc.desc)
 		assert.Equal(t, spec.BurntFee.String(), delta.BurntFee.String(), tc.desc)
@@ -342,6 +350,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			BaseFee:    big.NewInt(1),
 			Rewardbase: proposerAddr,
 		}
+		txs         []*types.Transaction
+		receipts    []*types.Receipt
 		stakingInfo = genStakingInfo(5, nil, map[int]uint64{
 			0: minStaking + 4,
 			1: minStaking + 3,
@@ -351,6 +361,12 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			IsKore:  true,
 		}
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	testcases := []struct {
 		policy        istanbul.ProposerPolicy
@@ -443,18 +459,28 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := GetBlockReward(header, rules, pset)
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
 }
 
 func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
-	header := &types.Header{
-		Number:     big.NewInt(1),
-		GasUsed:    1000,
-		BaseFee:    big.NewInt(1),
-		Rewardbase: proposerAddr,
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
 	}
 
 	testcases := []struct {
@@ -503,7 +529,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
@@ -515,13 +541,23 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 // To maintain backward compatibility, we only fix the buggy logic after Magma
 // and leave the buggy logic before Kore.
 func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
-	header := &types.Header{
-		Number:     big.NewInt(1),
-		GasUsed:    1000,
-		BaseFee:    big.NewInt(1),
-		Rewardbase: proposerAddr,
-	}
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
 
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		isMagma  bool
 		isKore   bool
@@ -589,7 +625,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 		rules := config.Rules(header.Number)
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
@@ -603,7 +639,16 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		0: minStaking + 4,
 		1: minStaking + 3,
 	})
-
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -759,7 +804,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
 		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
@@ -776,10 +821,18 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			BaseFee:    big.NewInt(1),
 			Rewardbase: proposerAddr,
 		}
-		config  = getTestConfig()
-		rules   = config.Rules(header.Number)
-		pset, _ = params.NewGovParamSetChainConfig(config)
+		config   = getTestConfig()
+		rules    = config.Rules(header.Number)
+		pset, _  = params.NewGovParamSetChainConfig(config)
+		txs      []*types.Transaction
+		receipts []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	testcases := []struct {
 		desc        string
@@ -870,7 +923,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		} else {
 			SetTestStakingManagerWithStakingInfoCache(tc.stakingInfo)
 		}
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed: %s", i, tc.desc)
 	}
@@ -893,7 +946,15 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 			1: minStaking + 3,
 		})
 		splitRemainingConfig = getTestConfig()
+		txs                  []*types.Transaction
+		receipts             []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	splitRemainingConfig.Governance.Reward.MintingAmount = big.NewInt(333)
 
 	testcases := []struct {
@@ -950,15 +1011,24 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(tc.config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
 		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
 }
 
 func TestRewardDistributor_calcDeferredFee(t *testing.T) {
-	type Result struct{ total, reward, burnt uint64 }
-
+	type Result struct{ total, reward, burnt, totalTip uint64 }
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -972,9 +1042,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: false,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 1000,
-				burnt:  0,
+				total:    1000,
+				reward:   1000,
+				burnt:    0,
+				totalTip: 0,
 			},
 		},
 		{
@@ -983,9 +1054,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: false,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 10e18,
-				burnt:  0,
+				total:    10e18,
+				reward:   10e18,
+				burnt:    0,
+				totalTip: 0,
 			},
 		},
 		{
@@ -994,9 +1066,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 500,
-				burnt:  500,
+				total:    1000,
+				reward:   500,
+				burnt:    500,
+				totalTip: 0,
 			},
 		},
 		{
@@ -1005,9 +1078,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 5e18,
-				burnt:  5e18,
+				total:    10e18,
+				reward:   5e18,
+				burnt:    5e18,
+				totalTip: 0,
 			},
 		},
 		{
@@ -1016,9 +1090,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 0,
-				burnt:  1000,
+				total:    1000,
+				reward:   0,
+				burnt:    1000,
+				totalTip: 0,
 			},
 		},
 		{
@@ -1027,9 +1102,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 4.3472e18, // 5 - minted*0.34*0.2
-				burnt:  5.6528e18, // 5 + minted*0.34*0.8
+				total:    10e18,
+				reward:   4.3472e18, // 5 - minted*0.34*0.2
+				burnt:    5.6528e18, // 5 + minted*0.34*0.8
+				totalTip: 0,
 			},
 		},
 	}
@@ -1054,7 +1130,7 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		rc, err := NewRewardConfig(header, rules, pset)
+		rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 		require.Nil(t, err)
 
 		total, reward, burnt := calcDeferredFee(rc)
@@ -1078,12 +1154,20 @@ func TestRewardDistributor_calcDeferredFee_nodeferred(t *testing.T) {
 		rules = params.Rules{
 			IsMagma: true,
 		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	pset, err := params.NewGovParamSetChainConfig(noDeferred(getTestConfig()))
 	require.Nil(t, err)
 
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	require.Nil(t, err)
 
 	total, reward, burnt := calcDeferredFee(rc)
@@ -1095,11 +1179,20 @@ func TestRewardDistributor_calcDeferredFee_nodeferred(t *testing.T) {
 func TestRewardDistributor_calcSplit(t *testing.T) {
 	type Result struct{ proposer, stakers, kif, kef, remaining uint64 }
 
-	header := &types.Header{
-		Number:  big.NewInt(1),
-		BaseFee: big.NewInt(0), // placeholder
+	var (
+		header = &types.Header{
+			Number:  big.NewInt(1),
+			BaseFee: big.NewInt(0), // placeholder
+		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
 	}
-
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -1166,7 +1259,7 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		rc, err := NewRewardConfig(header, rules, pset)
+		rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 		require.Nil(t, err)
 
 		fee := new(big.Int).SetUint64(tc.fee)
@@ -1297,7 +1390,7 @@ func TestRewardDistributor_calcShares(t *testing.T) {
 	}
 }
 
-func benchSetup() (*types.Header, params.Rules, *params.GovParamSet) {
+func benchSetup() (*types.Header, []*types.Transaction, []*types.Receipt, params.Rules, *params.GovParamSet) {
 	// in the worst case, distribute stake shares among N
 	amounts := make(map[int]uint64)
 	N := 50
@@ -1317,19 +1410,28 @@ func benchSetup() (*types.Header, params.Rules, *params.GovParamSet) {
 
 	rules := config.Rules(header.Number)
 	pset, _ := params.NewGovParamSetChainConfig(config)
-
-	return header, rules, pset
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
+	return header, txs, receipts, rules, pset
 }
 
 func Benchmark_CalcDeferredReward(b *testing.B) {
 	oldStakingManager := GetStakingManager()
 	defer SetTestStakingManager(oldStakingManager)
 
-	header, rules, pset := benchSetup()
+	header, txs, receipts, rules, pset := benchSetup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		CalcDeferredReward(header, rules, pset)
+		CalcDeferredReward(header, txs, receipts, rules, pset)
 	}
 }
 
@@ -1398,4 +1500,18 @@ func TestRewardConfigCache_parseRewardKip82Ratio(t *testing.T) {
 		expectedTotal := testCases[i].proposer + testCases[i].staking
 		assert.Equal(t, expectedTotal, total)
 	}
+}
+
+func genDynamicFeeTransaction(gasTipCap int64) *types.Transaction {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	signer := types.NewLondonSigner(big.NewInt(10))
+	tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+		GasFeeCap: big.NewInt(int64(params.LowerBoundBaseFee)),
+		GasTipCap: big.NewInt(gasTipCap),
+		GasLimit:  100,
+		Recipient: &addr,
+	}), signer, key)
+	return tx
 }

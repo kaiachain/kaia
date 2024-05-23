@@ -55,6 +55,7 @@ var addressBookContractAddress = system.AddressBookAddr
 type blockChain interface {
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
 	GetBlockByNumber(number uint64) *types.Block
+	GetReceiptsByBlockHash(hash common.Hash) types.Receipts
 	StateAt(root common.Hash) (*state.StateDB, error)
 	Config() *params.ChainConfig
 	CurrentHeader() *types.Header

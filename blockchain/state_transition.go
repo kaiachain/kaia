@@ -189,6 +189,7 @@ func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
+	// after kaia hardfork, effectiveGasPrice is BaseFee + effectiveGasTip
 	effectiveGasPrice := evm.GasPrice
 
 	return &StateTransition{
@@ -377,12 +378,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		if rules.IsMagma {
-			effectiveGasPrice := st.gasPrice
-			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
-			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
+			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 		} else {
-			effectiveGasPrice := msg.EffectiveGasPrice(nil, st.evm.ChainConfig())
-			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 		}
 	}
 

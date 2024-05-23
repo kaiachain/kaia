@@ -536,9 +536,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 	}
 
 	if err != nil {
