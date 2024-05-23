@@ -98,7 +98,7 @@ type Message interface {
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int
-	EffectiveGasPrice(header *types.Header) *big.Int
+	EffectiveGasPrice(header *types.Header, config *params.ChainConfig) *big.Int
 
 	Gas() uint64
 	Value() *big.Int
@@ -381,7 +381,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
 		} else {
-			effectiveGasPrice := msg.EffectiveGasPrice(nil)
+			effectiveGasPrice := msg.EffectiveGasPrice(nil, st.evm.ChainConfig())
 			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
 		}
 	}

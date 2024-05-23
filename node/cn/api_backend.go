@@ -238,7 +238,7 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
-	txContext := blockchain.NewEVMTxContext(msg, header)
+	txContext := blockchain.NewEVMTxContext(msg, header, b.ChainConfig())
 	blockContext := blockchain.NewEVMBlockContext(header, b.cn.BlockChain(), nil)
 
 	return vm.NewEVM(blockContext, txContext, state, b.cn.chainConfig, &vmCfg), vmError, nil

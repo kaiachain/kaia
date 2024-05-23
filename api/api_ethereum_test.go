@@ -842,7 +842,7 @@ func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -859,6 +859,7 @@ func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 
 	// Get transaction by block hash and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -883,6 +884,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -909,6 +911,7 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransaction(gomock.Any()).DoAndReturn(
 		func(hash common.Hash) *types.Transaction {
 			return txHashMap[hash]
@@ -934,7 +937,7 @@ func TestEthereumAPI_PendingTransactions(t *testing.T) {
 
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager)
-
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransactions().Return(txs, nil)
 
 	wallets := make([]accounts.Wallet, 1)
@@ -968,6 +971,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -976,7 +980,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 		txIdx := uint64(i)
-		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()]), txIdx)
+		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestChainConfig), txIdx)
 	}
 
 	mockCtrl.Finish()
@@ -2482,7 +2486,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	getEVM := func(_ context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmConfig vm.Config) (*vm.EVM, func() error, error) {
 		// Taken from node/cn/api_backend.go
 		vmError := func() error { return nil }
-		txContext := blockchain.NewEVMTxContext(msg, header)
+		txContext := blockchain.NewEVMTxContext(msg, header, chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(header, chain, nil)
 		return vm.NewEVM(blockContext, txContext, state, chainConfig, &vmConfig), vmError, nil
 	}

@@ -798,20 +798,20 @@ type ethTxJSON struct {
 }
 
 // newEthRPCTransactionFromBlockIndex creates an EthRPCTransaction from block and index parameters.
-func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64) *EthRPCTransaction {
+func newEthRPCTransactionFromBlockIndex(b *types.Block, index uint64, config *params.ChainConfig) *EthRPCTransaction {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		logger.Error("invalid transaction index", "given index", index, "length of txs", len(txs))
 		return nil
 	}
-	return newEthRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index)
+	return newEthRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index, config)
 }
 
 // newEthRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
-func newEthRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) *EthRPCTransaction {
+func newEthRPCTransactionFromBlockHash(b *types.Block, hash common.Hash, config *params.ChainConfig) *EthRPCTransaction {
 	for idx, tx := range b.Transactions() {
 		if tx.Hash() == hash {
-			return newEthRPCTransactionFromBlockIndex(b, uint64(idx))
+			return newEthRPCTransactionFromBlockIndex(b, uint64(idx), config)
 		}
 	}
 	return nil
@@ -833,7 +833,7 @@ func resolveToField(tx *types.Transaction) *common.Address {
 }
 
 // newEthRPCTransaction creates an EthRPCTransaction from Kaia transaction.
-func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64) *EthRPCTransaction {
+func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber, index uint64, config *params.ChainConfig) *EthRPCTransaction {
 	// When an unknown transaction is requested through rpc call,
 	// nil is returned by Kaia API, and it is handled.
 	if tx == nil {
@@ -881,18 +881,18 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
 		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
 		if block != nil {
-			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header()))
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header(), config))
 		} else {
 			// transaction is not processed yet
-			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil))
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
 	}
 	return result
 }
 
 // newEthRPCPendingTransaction creates an EthRPCTransaction for pending tx.
-func newEthRPCPendingTransaction(tx *types.Transaction) *EthRPCTransaction {
-	return newEthRPCTransaction(nil, tx, common.Hash{}, 0, 0)
+func newEthRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig) *EthRPCTransaction {
+	return newEthRPCTransaction(nil, tx, common.Hash{}, 0, 0, config)
 }
 
 // formatTxToEthTxJSON formats types.Transaction to ethTxJSON.
@@ -954,7 +954,7 @@ func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 		return nil
 	}
 
-	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
@@ -963,7 +963,7 @@ func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 	if err != nil || block == nil {
 		return nil
 	}
-	return newEthRPCTransactionFromBlockIndex(block, uint64(index))
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
@@ -1008,11 +1008,11 @@ func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Ha
 		if block == nil {
 			return nil, errNotFoundBlock
 		}
-		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index), nil
+		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index, api.publicBlockChainAPI.b.ChainConfig()), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := txpoolAPI.GetPoolTransaction(hash); tx != nil {
-		return newEthRPCPendingTransaction(tx), nil
+		return newEthRPCPendingTransaction(tx, api.publicBlockChainAPI.b.ChainConfig()), nil
 	}
 	// Transaction unknown, return as such
 	return nil, nil
@@ -1122,7 +1122,7 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	// After EthTxType hard fork : use zero baseFee to calculate effective gas price for EthereumDynamicFeeTx :
 	//  return gas price of tx.
 	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header, b.ChainConfig()).Uint64())
 
 	// Always use the "status" field and Ignore the "root" field.
 	if receipt.Status != types.ReceiptStatusSuccessful {
@@ -1276,7 +1276,7 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 	for _, tx := range pending {
 		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
-			ethTx := newEthRPCPendingTransaction(tx)
+			ethTx := newEthRPCPendingTransaction(tx, api.publicBlockChainAPI.b.ChainConfig())
 			if ethTx == nil {
 				return nil, nil
 			}
@@ -1364,7 +1364,7 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, f
 		}
 		if fullTx {
 			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newEthRPCTransactionFromBlockHash(block, tx.Hash()), nil
+				return newEthRPCTransactionFromBlockHash(block, tx.Hash(), api.publicBlockChainAPI.b.ChainConfig()), nil
 			}
 		}
 		txs := block.Transactions()

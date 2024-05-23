@@ -347,30 +347,30 @@ func TestEffectiveGasPrice(t *testing.T) {
 
 	header := new(Header)
 
-	have := legacyTx.EffectiveGasPrice(header)
+	have := legacyTx.EffectiveGasPrice(header, params.TestChainConfig)
 	want := gasPrice
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(header)
+	have = dynamicTx.EffectiveGasPrice(header, params.TestChainConfig)
 	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
 	want = te.GetGasFeeCap()
 	assert.Equal(t, want, have)
 
 	header.BaseFee = big.NewInt(2000)
-	have = legacyTx.EffectiveGasPrice(header)
+	have = legacyTx.EffectiveGasPrice(header, params.TestChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(header)
+	have = dynamicTx.EffectiveGasPrice(header, params.TestChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 
 	header.BaseFee = big.NewInt(0)
-	have = legacyTx.EffectiveGasPrice(header)
+	have = legacyTx.EffectiveGasPrice(header, params.TestChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(header)
+	have = dynamicTx.EffectiveGasPrice(header, params.TestChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 }

@@ -316,7 +316,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 						break
 					}
 
-					txCtx := blockchain.NewEVMTxContext(msg, task.block.Header())
+					txCtx := blockchain.NewEVMTxContext(msg, task.block.Header(), api.backend.ChainConfig())
 					blockCtx := blockchain.NewEVMBlockContext(task.block.Header(), newChainContext(localctx, api.backend), nil)
 
 					res, err := api.traceTx(localctx, msg, blockCtx, txCtx, task.statedb, config)
@@ -629,7 +629,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 					continue
 				}
 
-				txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+				txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 				blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 				res, err := api.traceTx(ctx, msg, blockCtx, txCtx, task.statedb, config)
 				if err != nil {
@@ -654,7 +654,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 			break
 		}
 
-		txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+		txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 		blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{})
 		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
@@ -726,7 +726,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 		}
 
 		var (
-			txCtx    = blockchain.NewEVMTxContext(msg, block.Header())
+			txCtx    = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 			blockCtx = blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
 			vmConf vm.Config
@@ -876,7 +876,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
 	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
 
-	txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
 	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)

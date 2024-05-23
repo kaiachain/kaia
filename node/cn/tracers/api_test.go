@@ -168,7 +168,7 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 	signer := types.MakeSigner(b.chainConfig, block.Number())
 	for idx, tx := range block.Transactions() {
 		msg, _ := tx.AsMessageWithAccountKeyPicker(signer, statedb, block.NumberU64())
-		txContext := blockchain.NewEVMTxContext(msg, block.Header())
+		txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(block.Header(), b.chain, nil)
 		if idx == txIndex {
 			return msg, blockContext, txContext, statedb, nil
