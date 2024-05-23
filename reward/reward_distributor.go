@@ -57,7 +57,8 @@ type rewardConfig struct {
 	rules params.Rules
 
 	// values calculated from block header and transactions
-	// since kaia, tip is added to the totalFee
+	// sum of actual fees paid. sum( tx.effectiveGasPrice * tx.gasUsed )
+	// can be optimized before Kaia (baseFee * blockGasUsed), before Magma (unitPrice * blockGasUsed)
 	totalFee *big.Int
 
 	// values from GovParamSet
