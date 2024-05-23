@@ -222,7 +222,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	startBlockNum := 0
 	endBlockNum := 10
 	blocks := make([]*types.Block, endBlockNum-startBlockNum+1)
-
+	receipts := make([]types.Receipts, endBlockNum-startBlockNum+1)
 	// set testing data for mock instances
 	for i := startBlockNum; i <= endBlockNum; i++ {
 		blocks[i] = types.NewBlockWithHeader(&types.Header{
@@ -232,8 +232,12 @@ func TestGetRewardsAccumulated(t *testing.T) {
 			BaseFee:    big.NewInt(25 * params.Gwei),
 			Time:       big.NewInt(int64(1000 + i)),
 		})
-
+		receipts[i] = types.Receipts{
+			&types.Receipt{GasUsed: uint64(1000)},
+		}
+		mockBlockchain.EXPECT().GetBlock(blocks[i].Hash(), uint64(i)).Return(blocks[i]).AnyTimes()
 		mockBlockchain.EXPECT().GetHeaderByNumber(uint64(i)).Return(blocks[i].Header()).AnyTimes()
+		mockBlockchain.EXPECT().GetReceiptsByBlockHash(blocks[i].Hash()).Return(receipts[i]).AnyTimes()
 	}
 
 	mockBlockchain.EXPECT().Config().Return(chainConfig).AnyTimes()
