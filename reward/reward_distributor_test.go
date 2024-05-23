@@ -218,7 +218,7 @@ func TestRewardDistributor_GetTotalTxFee(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		result := GetTotalTxFee(header, rules, pset)
+		result := GetTotalTxFee(header, nil, nil, rules, pset)
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
 	}
 }
@@ -254,7 +254,7 @@ func TestRewardDistributor_getBurnAmountMagma(t *testing.T) {
 	for _, testCase := range testCases {
 		header.GasUsed = testCase.gasUsed
 		header.BaseFee = testCase.baseFee
-		txFee := GetTotalTxFee(header, rules, pset)
+		txFee := GetTotalTxFee(header, nil, nil, rules, pset)
 		burnedTxFee := getBurnAmountMagma(txFee)
 		// expectedTotalTxFee = GetTotalTxFee / 2 = BurnedTxFee
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())

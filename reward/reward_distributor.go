@@ -156,7 +156,7 @@ func NewRewardConfig(header *types.Header, txs []*types.Transaction, receipts []
 		rules: rules,
 
 		// values calculated from block header
-		totalFee: new(big.Int).Add(GetTotalTxFee(header, rules, pset), GetTotalTip(header, txs, receipts, rules)),
+		totalFee: GetTotalTxFee(header, txs, receipts, rules, pset),
 
 		// values from GovParamSet
 		mintingAmount: new(big.Int).Set(pset.MintingAmountBig()),
@@ -176,28 +176,25 @@ func NewRewardConfig(header *types.Header, txs []*types.Transaction, receipts []
 	}, nil
 }
 
-func GetTotalTxFee(header *types.Header, rules params.Rules, pset *params.GovParamSet) *big.Int {
+func GetTotalTxFee(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) *big.Int {
 	totalFee := new(big.Int).SetUint64(header.GasUsed)
 	if rules.IsMagma {
 		totalFee = totalFee.Mul(totalFee, header.BaseFee)
 	} else {
 		totalFee = totalFee.Mul(totalFee, new(big.Int).SetUint64(pset.UnitPrice()))
 	}
-	return totalFee
-}
 
-func GetTotalTip(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules) *big.Int {
-	totalTip := big.NewInt(0)
-	if txs == nil || receipts == nil {
-		return totalTip
+	if txs == nil || receipts == nil || !rules.IsKaia {
+		return totalFee
 	}
+
+	// Since kaia, tip is added
 	for i, tx := range txs {
-		if rules.IsKaia && tx.Type() == types.TxTypeEthereumDynamicFee {
-			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
-			totalTip = new(big.Int).Add(totalTip, tip)
-		}
+		tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
+		totalFee = totalFee.Add(totalFee, tip)
 	}
-	return totalTip
+
+	return totalFee
 }
 
 // config.Istanbul must have been set
@@ -243,7 +240,7 @@ func GetTotalReward(header *types.Header, txs []*types.Transaction, receipts []*
 	// As such, the CalcDeferredRewardSimple() returns zero burntFee.
 	// Here we calculate the fees burnt during the TX execution.
 	if !rc.deferredTxFee && rules.IsMagma {
-		txFee := GetTotalTxFee(header, rules, pset)
+		txFee := GetTotalTxFee(header, txs, receipts, rules, pset)
 		txFeeBurn := getBurnAmountMagma(txFee)
 		total.BurntFee = total.BurntFee.Add(total.BurntFee, txFeeBurn)
 	}
@@ -274,7 +271,7 @@ func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
 		if rules.IsMagma {
-			txFee := GetTotalTxFee(header, rules, pset)
+			txFee := GetTotalTxFee(header, txs, receipts, rules, pset)
 			txFeeBurn := getBurnAmountMagma(txFee)
 			txFeeRemained := new(big.Int).Sub(txFee, txFeeBurn)
 			spec.BurntFee = txFeeBurn
@@ -283,7 +280,7 @@ func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
 		} else {
-			txFee := GetTotalTxFee(header, rules, pset)
+			txFee := GetTotalTxFee(header, nil, nil, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			// get the proposer of this block.
