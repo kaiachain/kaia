@@ -33,6 +33,7 @@ import (
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -71,7 +72,7 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Co
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil && err == nil {
-		return newRPCTransactionFromBlockIndex(block, uint64(index)), nil
+		return newRPCTransactionFromBlockIndex(block, uint64(index), s.b.ChainConfig()), nil
 	}
 	return nil, err
 }
@@ -80,7 +81,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
 	block, err := s.b.BlockByHash(ctx, blockHash)
 	if block != nil && err == nil {
-		return newRPCTransactionFromBlockIndex(block, uint64(index)), nil
+		return newRPCTransactionFromBlockIndex(block, uint64(index), s.b.ChainConfig()), nil
 	}
 	return nil, err
 }
@@ -132,11 +133,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Cont
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newRPCTransaction(nil, tx, blockHash, blockNumber, index)
+		return newRPCTransaction(nil, tx, blockHash, blockNumber, index, s.b.ChainConfig())
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := s.b.GetPoolTransaction(hash); tx != nil {
-		return newRPCPendingTransaction(tx)
+		return newRPCPendingTransaction(tx, s.b.ChainConfig())
 	}
 	// Transaction unknown, return as such
 	return nil
@@ -202,12 +203,12 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, 
 
 // RpcOutputReceipt converts a receipt to the RPC output with the associated information regarding to the
 // block in which the receipt is included, the transaction that outputs the receipt, and the receipt itself.
-func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt) map[string]interface{} {
+func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, receipt *types.Receipt, config *params.ChainConfig) map[string]interface{} {
 	if tx == nil || receipt == nil {
 		return nil
 	}
 
-	fields := newRPCTransaction(nil, tx, blockHash, blockNumber, index)
+	fields := newRPCTransaction(nil, tx, blockHash, blockNumber, index, config)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
@@ -219,7 +220,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	fields["logsBloom"] = receipt.Bloom
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
-	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header).Uint64())
+	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header, config).Uint64())
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}
@@ -267,7 +268,7 @@ func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx
 	// No error handling is required here.
 	// Header is checked in the following RpcOutputReceipt function
 	header, _ := s.b.HeaderByHash(ctx, blockHash)
-	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt), nil
+	return RpcOutputReceipt(header, tx, blockHash, blockNumber, index, receipt, s.b.ChainConfig()), nil
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.
@@ -493,7 +494,7 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 	for _, tx := range pending {
 		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
-			transactions = append(transactions, newRPCPendingTransaction(tx))
+			transactions = append(transactions, newRPCPendingTransaction(tx, s.b.ChainConfig()))
 		}
 	}
 	return transactions, nil

@@ -107,7 +107,7 @@ func callContract(bcdata *BCData, tx *types.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	txContext := blockchain.NewEVMTxContext(msg, header)
+	txContext := blockchain.NewEVMTxContext(msg, header, bcdata.bc.Config())
 	blockContext := blockchain.NewEVMBlockContext(header, bcdata.bc, nil)
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, bcdata.bc.Config(), &vm.Config{})
 

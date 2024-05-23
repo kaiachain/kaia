@@ -110,7 +110,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHas
 	}
 	fieldsList := make([]map[string]interface{}, 0, len(receipts))
 	for index, receipt := range receipts {
-		fields := RpcOutputReceipt(block.Header(), txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
+		fields := RpcOutputReceipt(block.Header(), txs[index], blockHash, block.NumberU64(), uint64(index), receipt, s.b.ChainConfig())
 		fieldsList = append(fieldsList, fields)
 	}
 	return fieldsList, nil
@@ -539,7 +539,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 
 // For kaia_getBlockByNumber, kaia_getBlockByHash, kaia_getBlockWithconsensusInfoByNumber, kaia_getBlockWithconsensusInfoByHash APIs
 // and Kafka chaindatafetcher.
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, config *params.ChainConfig) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -568,7 +568,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 
 		if fullTx {
 			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newRPCTransactionFromBlockHash(b, tx.Hash()), nil
+				return newRPCTransactionFromBlockHash(b, tx.Hash(), config), nil
 			}
 		}
 
@@ -583,6 +583,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 		fields["transactions"] = transactions
 	}
 
+	rules := config.Rules(b.Number())
 	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
@@ -602,7 +603,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().Rules(b.Header().Number))
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig())
 }
 
 func getFrom(tx *types.Transaction) common.Address {
@@ -616,13 +617,13 @@ func getFrom(tx *types.Transaction) common.Address {
 	return from
 }
 
-func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
-	return newRPCTransaction(b, tx, blockHash, blockNumber, index)
+func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
+	return newRPCTransaction(b, tx, blockHash, blockNumber, index, config)
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
-func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
 	output := tx.MakeRPCOutput()
 	output["senderTxHash"] = tx.SenderTxHashAll()
 	output["blockHash"] = blockHash
@@ -632,10 +633,10 @@ func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.H
 	output["transactionIndex"] = hexutil.Uint(index)
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		if b != nil {
-			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(b.Header()))
+			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(b.Header(), config))
 		} else {
 			// transaction is not processed yet
-			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(nil))
+			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
 	}
 
@@ -643,17 +644,17 @@ func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.H
 }
 
 // newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
-func newRPCPendingTransaction(tx *types.Transaction) map[string]interface{} {
-	return newRPCTransaction(nil, tx, common.Hash{}, 0, 0)
+func newRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig) map[string]interface{} {
+	return newRPCTransaction(nil, tx, common.Hash{}, 0, 0, config)
 }
 
 // newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) map[string]interface{} {
+func newRPCTransactionFromBlockIndex(b *types.Block, index uint64, config *params.ChainConfig) map[string]interface{} {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		return nil
 	}
-	return newRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index)
+	return newRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index, config)
 }
 
 // newRPCRawTransactionFromBlockIndex returns the bytes of a transaction given a block and a transaction index.
@@ -667,10 +668,10 @@ func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) hexutil.By
 }
 
 // newRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string]interface{} {
+func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash, config *params.ChainConfig) map[string]interface{} {
 	for idx, tx := range b.Transactions() {
 		if tx.Hash() == hash {
-			return newRPCTransactionFromBlockIndex(b, uint64(idx))
+			return newRPCTransactionFromBlockIndex(b, uint64(idx), config)
 		}
 	}
 	return nil

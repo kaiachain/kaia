@@ -164,7 +164,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, err
 	}
-	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	txContext := blockchain.NewEVMTxContext(msg, block.Header(), config)
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
 	blockContext.GetHash = vmTestBlockHash
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)

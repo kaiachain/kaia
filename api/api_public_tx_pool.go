@@ -22,6 +22,7 @@ package api
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -49,7 +50,7 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]
 	for account, txs := range pending {
 		dump := make(map[string]map[string]interface{})
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[strconv.FormatUint(tx.Nonce(), 10)] = newRPCPendingTransaction(tx, s.b.ChainConfig())
 		}
 		content["pending"][account.Hex()] = dump
 	}
@@ -57,7 +58,7 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]
 	for account, txs := range queue {
 		dump := make(map[string]map[string]interface{})
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[strconv.FormatUint(tx.Nonce(), 10)] = newRPCPendingTransaction(tx, s.b.ChainConfig())
 		}
 		content["queued"][account.Hex()] = dump
 	}

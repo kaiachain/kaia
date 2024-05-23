@@ -184,7 +184,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 
-		txContext := blockchain.NewEVMTxContext(msg, block.Header())
+		txContext := blockchain.NewEVMTxContext(msg, block.Header(), cn.chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(block.Header(), cn.blockchain, nil)
 		if idx == txIndex {
 			return msg, blockContext, txContext, statedb, nil

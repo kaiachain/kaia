@@ -139,7 +139,7 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, call.GasPrice, call.Data,
 		false, intrinsicGas, accessList)
 
-	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
 
 	// EVM demands the sender to have enough KAIA balance (gasPrice * gasLimit) in buyGas()

@@ -468,7 +468,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, bl
 	}
 	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas, accessList)
 
-	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.config)
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.blockchain, nil)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.

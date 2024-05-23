@@ -39,6 +39,7 @@ import (
 	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/kerrors"
+	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 )
 
@@ -308,16 +309,14 @@ func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
 	return tx.GasPrice()
 }
 
-func (tx *Transaction) EffectiveGasPrice(header *Header) *big.Int {
-	if header != nil && header.BaseFee != nil {
-		return header.BaseFee
+func (tx *Transaction) EffectiveGasPrice(header *Header, config *params.ChainConfig) *big.Int {
+	if header == nil || header.BaseFee == nil {
+		return tx.GasPrice()
 	}
-	// Only enters if Magma is not enabled. If Magma is enabled, it will return BaseFee in the above if statement.
-	if tx.Type() == TxTypeEthereumDynamicFee {
-		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
-		return te.GetGasFeeCap()
+	if config.Rules(header.Number).IsKaia {
+		// TODO-kaia: add kaia hard-fork
 	}
-	return tx.GasPrice()
+	return new(big.Int).Set(header.BaseFee)
 }
 
 func (tx *Transaction) AccessList() AccessList {

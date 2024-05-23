@@ -67,14 +67,14 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 	hash := head.Hash()
 
 	td := blockchain.GetTd(hash, block.NumberU64())
-	r, _ := kaiaApi.RpcOutputBlock(block, td, false, false, blockchain.Config().Rules(block.Header().Number))
+	r, _ := kaiaApi.RpcOutputBlock(block, td, false, false, blockchain.Config())
 
 	// make transactions
 	transactions := block.Transactions()
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
 	for i, tx := range transactions {
-		rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+		rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], blockchain.Config())
 	}
 
 	r["committee"] = cInfo.Committee
