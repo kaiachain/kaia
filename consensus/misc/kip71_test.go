@@ -11,7 +11,7 @@ import (
 )
 
 func getTestConfig(forkedBlockNum *big.Int) *params.ChainConfig {
-	testConfig := params.CypressChainConfig
+	testConfig := params.MainnetChainConfig
 	testConfig.UnitPrice = uint64(25000000000)
 	testConfig.MagmaCompatibleBlock = forkedBlockNum
 	testConfig.Governance = &params.GovernanceConfig{

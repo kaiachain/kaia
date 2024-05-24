@@ -1,35 +1,35 @@
-common: 
-  # identity: 
+common:
+  # identity:
   light-kdf: false
-  # datadir: 
+  # datadir:
   overwrite-genesis: false
   start-block-num: 0
-  # keystore: 
+  # keystore:
   syncmode: snap
   garbage-collection-mode: full
   sender-tx-hash-indexing: false
   target-gaslimit: 4712388
-  # block-extra-data: 
+  # block-extra-data:
   srvtype: http
   # rewardbase: 0
   write-address: false
   child-chain-indexing: false
   kes-nodetype-service: false
-  ntp: 
+  ntp:
     disable: false
     server: "pool.ntp.org:123"
-  # authorized-nodes: 
-  # gen-key-path: 
-  # scsigner: 
+  # authorized-nodes:
+  # gen-key-path:
+  # scsigner:
 
-txresend: 
+txresend:
   interval: 4
   max-count: 1000
   use-legacy: false
 
-p2p: 
-  cypress: false
-  baobab: false
+p2p:
+  mainnet: false
+  testnet: false
   network-id: 8217
   bootnodes: ""
   rw-timer-wait-time: 15s
@@ -43,9 +43,9 @@ p2p:
   bn-addr: ":32323"
   nat: any
   no-discover: false
-  # net-restrict: 
-  # node-key: 
-  # node-key-hex: 
+  # net-restrict:
+  # node-key:
+  # node-key-hex:
 
 experimental:
   opcode-computation-cost-limit: 100000000
@@ -57,28 +57,28 @@ account-update:
   unlock: ""
   password: ""
 
-vm: 
+vm:
   debug: false
   log: 0
   internaltx: false
 
-metrics-collection-reporting: 
+metrics-collection-reporting:
   enable: false
   prometheus: false
   prometheus-port: 61001
 
-autorestart: 
+autorestart:
   enable: false
   timeout: 15m0s
   daemon-path: ~/klaytn/bin/kcnd
 
 api:
   filter:
-    getLogs: 
+    getLogs:
       maxitems: 10000
       deadline: 10s
 
-db: 
+db:
   type: "levelDB"
   single: true
   num-statetrie-shards: 4
@@ -88,7 +88,7 @@ db:
     compression: 0
     no-buffer-pool: false
     cache-size: 768
-  dynamo: 
+  dynamo:
     table-name: ""
     region: ap-northeast-2
     is-provisioned: false
@@ -105,12 +105,12 @@ db:
     filter-policy: "ribbon"
     disable-metrics: false
 
-snapshot-database: 
+snapshot-database:
   enable: false
   cache-size: 512
   async-gen: true
 
-state: 
+state:
   cache-size: 512
   block-interval: 128
   tries-in-memory: 128
@@ -119,18 +119,18 @@ state:
   live-pruning: false
   live-pruning-retention: 172800
 
-cache: 
+cache:
   type: 2
   # scale: 0
-  # level: 
+  # level:
   # memory: 0
-  
-statedb: 
-  cache: 
+
+statedb:
+  cache:
     type: LocalCache
     num-fetcher-prefetch-worker: 32
     use-snapshot-for-prefetch: false
-    redis: 
+    redis:
       endpoints: ["192.168.11.12"]
       cluster: false
       publish: false
@@ -152,7 +152,7 @@ servicechain:
   child-operator-gaslimit: 10000000
   consensus: istanbul
 
-txpool: 
+txpool:
   nolocals: false
   allow-local-anchortx: false
   deny-remote-tx: false
@@ -160,18 +160,18 @@ txpool:
   journal-interval: 1h0m0s
   price-limit: 1
   price-bump: 10
-  exec-slots: 
+  exec-slots:
     account: 16
     all: 4096
-  nonexec-slots: 
+  nonexec-slots:
     account: 64
     all: 1024
   lifetime: 5m0s
   keeplocals: false
-  spamthrottler: 
+  spamthrottler:
     disable: false
 
-http-rpc: 
+http-rpc:
   enable: false
   addr: localhost
   port: 8551
@@ -187,7 +187,7 @@ http-rpc:
   vhosts: localhost
   eth-noncompatible: false
 
-ws-rpc: 
+ws-rpc:
   enable: false
   addr: localhost
   port: 8552
@@ -199,50 +199,50 @@ ws-rpc:
   write-deadline: 0
   max-connections: 3000
 
-g-rpc: 
+g-rpc:
   enable: false
   addr: localhost
   port: 8553
 
-ipc: 
+ipc:
   disable: false
   path: ""
 
 console:
   js-path: .
-  # exec: 
-  # preload: 
+  # exec:
+  # preload:
 
-debug-profile: 
+debug-profile:
   verbosity: 3
   vmodule: ""
   backtrace: ""
   print-site: false
-  pprof: 
+  pprof:
     enable: false
     addr: 127.0.0.1
     port: 6060
-  mem-profile: 
+  mem-profile:
     file-name: ""
     rate: 524288
-  block-profile: 
+  block-profile:
     rate: 0
-  cpu-profile: 
+  cpu-profile:
     file-name: ""
-  trace: 
+  trace:
     file-name: ""
 
-db-syncer: 
+db-syncer:
   enable: false
   log-mode: false
   mode: multi
   genquery-th: 50
   insert-thread: 30
-  bulk-size: 20 
+  bulk-size: 20
   event-mode: head
   block-channel-size: 5
   max-block-diff: 0
-  db: 
+  db:
     host: ""
     port: "3306"
     name: ""
@@ -252,7 +252,7 @@ db-syncer:
     max-open: 30
     max-lifetime: 1h
 
-chain-data-fetcher: 
+chain-data-fetcher:
   enable: false
   mode: kafka
   no-default: false
@@ -260,16 +260,16 @@ chain-data-fetcher:
   job-channel-size: 50
   block-channel-size: 50
   max-processing-data-size: 500
-  kafka: 
+  kafka:
     # will be added again after bugfix
     # replicas: 1
     brokers: ["192.168.11.12"]
     partitions: 1
-    topic: 
+    topic:
       resource: en-0
       environment: local
     max-message-bytes: 1000000
     segment-size: 1000000
     required-acks: 1
     msg-version: "1.0"
-    # producer-id: 
+    # producer-id:

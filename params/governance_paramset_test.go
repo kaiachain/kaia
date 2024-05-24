@@ -145,7 +145,7 @@ func TestGovParamSet_Get(t *testing.T) {
 }
 
 func TestGovParamSet_Nominal(t *testing.T) {
-	c := CypressChainConfig.Copy()
+	c := MainnetChainConfig.Copy()
 	c.Governance.KIP71 = &KIP71Config{
 		LowerBoundBaseFee:         12340000,
 		UpperBoundBaseFee:         56780000,
@@ -204,7 +204,7 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.Equal(t, uint64(0x1234), v)
 	assert.True(t, ok)
 
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err = NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 	v, ok = p.Get(Epoch)
@@ -280,7 +280,7 @@ func TestGovParamSet_RegressDb(t *testing.T) {
 	// slightly wrong during unmarshal because we unmarshal into interface{}.
 	// Namely, JSON integers can be converted to float64.
 
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err := NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 
@@ -295,7 +295,7 @@ func TestGovParamSet_RegressDb(t *testing.T) {
 }
 
 func TestGovParamSet_GetMap(t *testing.T) {
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err := NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 

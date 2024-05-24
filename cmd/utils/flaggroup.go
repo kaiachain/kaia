@@ -244,8 +244,8 @@ var FlagGroups = []FlagGroup{
 			NodeKeyFileFlag,
 			NodeKeyHexFlag,
 			NetworkIdFlag,
-			BaobabFlag,
-			CypressFlag,
+			TestnetFlag,
+			MainnetFlag,
 		},
 	},
 	{

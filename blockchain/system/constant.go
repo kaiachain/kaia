@@ -54,7 +54,7 @@ var (
 	ImplementationSlot = common.Hex2Bytes("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
 
 	// Some system contracts are allocated at special addresses.
-	CypressCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	MainnetCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
 	AddressBookAddr   = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
 	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000402")
@@ -63,8 +63,8 @@ var (
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
 
 	// System contract binaries to be injected at hardfork or used in testing.
-	CypressCreditCode   = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
-	CypressCreditV2Code = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
+	MainnetCreditCode   = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
+	MainnetCreditV2Code = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
 	RegistryCode        = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
 	RegistryMockCode    = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
 	Kip160MockCode      = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)

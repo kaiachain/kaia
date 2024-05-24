@@ -27,11 +27,11 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
-// CypressCredit contract is stored in the address zero.
+// MainnetCredit contract is stored in the address zero.
 var (
-	cypressCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	mainnetCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
 	latestBlockNrOrHash          = rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
-	errNoCypressCreditContract   = errors.New("no cypress credit contract")
+	errNoCypressCreditContract   = errors.New("no mainnet credit contract")
 )
 
 type CreditOutput struct {
@@ -49,7 +49,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 	}
 
 	args := CallArgs{
-		To:   &cypressCreditContractAddress,
+		To:   &mainnetCreditContractAddress,
 		Data: abiGet,
 	}
 	ret, err := s.Call(ctx, args, latestBlockNrOrHash)
@@ -69,7 +69,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 // GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
 // and returns all the results as a struct.
 func (s *PublicBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
-	if ok, err := s.IsContractAccount(ctx, cypressCreditContractAddress, latestBlockNrOrHash); err != nil {
+	if ok, err := s.IsContractAccount(ctx, mainnetCreditContractAddress, latestBlockNrOrHash); err != nil {
 		return nil, err
 	} else if !ok {
 		return nil, errNoCypressCreditContract

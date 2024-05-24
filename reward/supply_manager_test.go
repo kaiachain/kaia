@@ -45,7 +45,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// A test suite with the blockchain having a reward-related history similar to Cypress.
+// A test suite with the blockchain having a reward-related history similar to Mainnet.
 // | Block     	| Fork  	| Minting 	| Ratio    	| KIP82 	| Event                      	|
 // |-----------	|-------	|---------	|----------	|-------	|----------------------------	|
 // | Genesis   	| None  	| 9.6     	| 34/54/12 	| n/a   	| Launch                     	|

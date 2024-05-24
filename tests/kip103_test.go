@@ -19,7 +19,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlInfo)
 
 	// prepare chain configuration
-	config := params.CypressChainConfig.Copy()
+	config := params.MainnetChainConfig.Copy()
 	config.LondonCompatibleBlock = big.NewInt(0)
 	config.IstanbulCompatibleBlock = big.NewInt(0)
 	config.EthTxTypeCompatibleBlock = big.NewInt(0)

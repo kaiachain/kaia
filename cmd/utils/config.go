@@ -311,18 +311,18 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.IsSet(BootnodesFlag.Name):
 		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.String(BootnodesFlag.Name), ",")
-	case ctx.Bool(CypressFlag.Name):
-		logger.Info("Cypress bootnodes are set")
+	case ctx.Bool(MainnetFlag.Name):
+		logger.Info("Mainnet bootnodes are set")
 		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-	case ctx.Bool(BaobabFlag.Name):
-		logger.Info("Baobab bootnodes are set")
-		// set pre-configured bootnodes when 'baobab' option was enabled
-		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
+	case ctx.Bool(TestnetFlag.Name):
+		logger.Info("Testnet bootnodes are set")
+		// set pre-configured bootnodes when 'testnet' option was enabled
+		urls = params.TestnetBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
 		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
-			logger.Info("Cypress bootnodes are set")
+			logger.Info("Mainnet bootnodes are set")
 			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 		}
 	}
@@ -700,13 +700,13 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Kaia-Bootnode: Discuss and add `baobab` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `testnet` test network's genesis block
 	/*
 		if ctx.Bool(TestnetFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {
 				cfg.NetworkId = 3
 			}
-			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
+			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 		}
 	*/
 	// Set the Tx resending related configuration variables
@@ -827,23 +827,23 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 // getNetworkId returns the associated network ID with whether or not the network is private.
 func getNetworkId(ctx *cli.Context) (uint64, bool) {
-	if ctx.Bool(BaobabFlag.Name) && ctx.Bool(CypressFlag.Name) {
-		log.Fatalf("--baobab and --cypress must not be set together")
+	if ctx.Bool(TestnetFlag.Name) && ctx.Bool(MainnetFlag.Name) {
+		log.Fatalf("--testnet and --mainnet must not be set together")
 	}
-	if ctx.Bool(BaobabFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--baobab and --networkid must not be set together")
+	if ctx.Bool(TestnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--testnet and --networkid must not be set together")
 	}
-	if ctx.Bool(CypressFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--cypress and --networkid must not be set together")
+	if ctx.Bool(MainnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--mainnet and --networkid must not be set together")
 	}
 
 	switch {
-	case ctx.Bool(CypressFlag.Name):
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
-	case ctx.Bool(BaobabFlag.Name):
-		logger.Info("Baobab network ID is set", "networkid", params.BaobabNetworkId)
-		return params.BaobabNetworkId, false
+	case ctx.Bool(MainnetFlag.Name):
+		logger.Info("Mainnet network ID is set", "networkid", params.MainnetNetworkId)
+		return params.MainnetNetworkId, false
+	case ctx.Bool(TestnetFlag.Name):
+		logger.Info("Testnet network ID is set", "networkid", params.TestnetNetworkId)
+		return params.TestnetNetworkId, false
 	case ctx.IsSet(NetworkIdFlag.Name):
 		networkId := ctx.Uint64(NetworkIdFlag.Name)
 		logger.Info("A private network ID is set", "networkid", networkId)
@@ -853,8 +853,8 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
 			return params.ServiceChainDefaultNetworkId, true
 		}
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
+		logger.Info("Mainnet network ID is set", "networkid", params.MainnetNetworkId)
+		return params.MainnetNetworkId, false
 	}
 }
 

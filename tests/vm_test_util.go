@@ -158,7 +158,7 @@ func (t *VMTest) newEVM(statedb *state.StateDB, vmconfig vm.Config) *vm.EVM {
 		BlockScore:  t.json.Env.BlockScore,
 	}
 	vmconfig.NoRecursion = true
-	return vm.NewEVM(blockContext, txContext, statedb, params.CypressChainConfig, &vmconfig)
+	return vm.NewEVM(blockContext, txContext, statedb, params.MainnetChainConfig, &vmconfig)
 }
 
 func vmTestBlockHash(n uint64) common.Hash {

@@ -31,7 +31,7 @@ func newTestBlockchain(config *params.ChainConfig) *testBlockChain {
 }
 
 func newTestGovernanceApi() *GovernanceAPI {
-	config := params.CypressChainConfig
+	config := params.MainnetChainConfig
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
@@ -176,7 +176,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	db := database.NewMemoryDBManager()
 
 	// prepare configurations and data for the test environment
-	chainConfig := params.CypressChainConfig.Copy()
+	chainConfig := params.MainnetChainConfig.Copy()
 	chainConfig.KoreCompatibleBlock = big.NewInt(0)
 	chainConfig.Governance.Reward.Ratio = "50/20/30"
 	chainConfig.Governance.Reward.Kip82Ratio = params.DefaultKip82Ratio

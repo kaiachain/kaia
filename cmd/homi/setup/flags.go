@@ -41,25 +41,25 @@ var (
 		Aliases: []string{},
 	}
 
-	cypressTestFlag = &cli.BoolFlag{
-		Name:    "cypress-test",
-		Usage:   "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
-		Aliases: []string{},
+	mainnetTestFlag = &cli.BoolFlag{
+		Name:    "mainnet-test",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet with shorter intervals for testing",
+		Aliases: []string{"cypress-test"}, // TODO: remove
 	}
-	cypressFlag = &cli.BoolFlag{
-		Name:    "cypress",
-		Usage:   "Generate genesis.json similar to the one used for Cypress",
-		Aliases: []string{},
+	mainnetFlag = &cli.BoolFlag{
+		Name:    "mainnet",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet",
+		Aliases: []string{"cypress"}, // TODO: remove
 	}
-	baobabTestFlag = &cli.BoolFlag{
-		Name:    "baobab-test",
-		Usage:   "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
-		Aliases: []string{},
+	testnetTestFlag = &cli.BoolFlag{
+		Name:    "testnet-test",
+		Usage:   "Generate genesis.json similar to the one used for Testnet with shorter intervals for testing",
+		Aliases: []string{"baobab-test"}, // TODO: remove
 	}
-	baobabFlag = &cli.BoolFlag{
-		Name:    "baobab",
-		Usage:   "Generate genesis.json similar to the one used for Baobab",
-		Aliases: []string{},
+	testnetFlag = &cli.BoolFlag{
+		Name:    "testnet",
+		Usage:   "Generate genesis.json similar to the one used for Testnet",
+		Aliases: []string{"baobab"}, // TODO: remove
 	}
 	serviceChainFlag = &cli.BoolFlag{
 		Name:    "servicechain",
@@ -128,7 +128,7 @@ var (
 
 	genesisTypeFlag = &cli.StringFlag{
 		Name:    "genesis-type",
-		Usage:   "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
+		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, testnet-test, testnet, clique, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
 

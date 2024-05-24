@@ -134,7 +134,7 @@ var (
 	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
-		Usage:    "Network identifier (integer, 8217=Cypress (Mainnet) , 1000=Aspen, 1001=Baobab)",
+		Usage:    "Network identifier (integer, 8217=Mainnet , 1000=Aspen, 1001=Testnet)",
 		Value:    cn.GetDefaultConfig().NetworkId,
 		Aliases:  []string{"p2p.network-id"},
 		EnvVars:  []string{"KLAYTN_NETWORKID", "KAIA_NETWORKID"},
@@ -1214,19 +1214,19 @@ var (
 		Category: "API AND CONSOLE",
 	}
 
-	CypressFlag = &cli.BoolFlag{
-		Name:     "cypress",
-		Usage:    "Pre-configured Kaia Cypress network",
-		Aliases:  []string{"p2p.cypress"},
-		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS"},
+	MainnetFlag = &cli.BoolFlag{
+		Name:     "mainnet",
+		Usage:    "Pre-configured Kaia Mainnet network",
+		Aliases:  []string{"p2p.cypress", "p2p.mainnet"},                     // TODO: remove cypress
+		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS", "KAIA_MAINNET"}, // TODO: remove cypress
 		Category: "NETWORK",
 	}
-	// Baobab bootnodes setting
-	BaobabFlag = &cli.BoolFlag{
-		Name:     "baobab",
-		Usage:    "Pre-configured Kaia baobab network",
-		Aliases:  []string{"p2p.baobab"},
-		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB"},
+	// Testnet bootnodes setting
+	TestnetFlag = &cli.BoolFlag{
+		Name:     "testnet",
+		Usage:    "Pre-configured Kaia Testnet network",
+		Aliases:  []string{"p2p.baobab", "p2p.testnet"},                    // TODO: remove baobab
+		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_TESTNET"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}
 	// Bootnode's settings
@@ -1996,12 +1996,12 @@ var (
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
-// if none (or the empty string) is specified. If the node is starting a baobab,
+// if none (or the empty string) is specified. If the node is starting a Testnet,
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.String(DataDirFlag.Name); path != "" {
-		if ctx.Bool(BaobabFlag.Name) {
-			return filepath.Join(path, "baobab")
+		if ctx.Bool(TestnetFlag.Name) {
+			return filepath.Join(path, "baobab") // TODO: rename to Testnet
 		}
 		return path
 	}

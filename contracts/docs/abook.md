@@ -2,12 +2,12 @@
 
 ## Purpose
 
-- In Cypress mainnet and Baobab testnet, a contract is deployed since the genesis block at a special address:
+- In Mainnet and Testnet, a contract is deployed since the genesis block at a special address:
   ```
   0x0000000000000000000000000000000000000400
   ```
-  - [Cypress AddressBook](https://scope.klaytn.com/account/0x0000000000000000000000000000000000000400?tabId=contractCode)
-  - [Baobab AddressBook](https://baobab.scope.klaytn.com/account/0x0000000000000000000000000000000000000400?tabId=contractCode)
+  - [Mainnet AddressBook](https://scope.klaytn.com/account/0x0000000000000000000000000000000000000400?tabId=contractCode)
+  - [Testnet AddressBook](https://baobab.scope.klaytn.com/account/0x0000000000000000000000000000000000000400?tabId=contractCode)
   - [Source code](../contracts/legacy/AddressBook.sol)
 - It is the official directory for Klaytn [Consensus Nodes (CNs)](https://docs.klaytn.foundation/content/klaytn/design/consensus-mechanism#consensus-mechanism-in-klaytn). Klaytn nodes perceive CNs by reading the AddressBook contract.
 - For an entity to become a Klaytn Governance Council (GC) member, they must be registered to the AddressBook by Klaytn team.

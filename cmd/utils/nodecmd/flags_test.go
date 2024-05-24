@@ -59,7 +59,7 @@ var flagsWithValues = []struct {
 	//	flagType: FlagTypeArgument,
 	//	// values: []string{"mn", "scn"},
 	//	values: []string{},
-	//	wrongValues: []string{"baobab", "abcdefg", "1234567", "!@#$%^&"},
+	//	wrongValues: []string{"testnet", "abcdefg", "1234567", "!@#$%^&"},
 	//	errors: []string{},
 	//},
 	{
@@ -583,7 +583,7 @@ var flagsWithValues = []struct {
 		errors:      []int{NonError, NonError, NonError},
 	},
 	{
-		flag:     "--baobab",
+		flag:     "--testnet",
 		flagType: FlagTypeBoolean,
 	},
 	//TODO-Kaia-Node the flag is not defined on any Kaia binaries

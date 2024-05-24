@@ -85,7 +85,7 @@ type RpmSpec struct {
 	MakeTarget  string
 	ProgramName string // kcn, kpn, ken, kscn, kspn, ksen, kbn
 	DaemonName  string // kcnd, kpnd, kend, kscnd, kspnd, ksend, kbnd
-	PostFix     string // baobab
+	PostFix     string // testnet
 	Description string
 }
 
@@ -124,8 +124,8 @@ func main() {
 					Usage: "generate spec for devel version",
 				},
 				&cli.BoolFlag{
-					Name:  "baobab",
-					Usage: "generate spec for baobab version",
+					Name:  "testnet",
+					Usage: "generate spec for testnet version",
 				},
 				&cli.IntFlag{
 					Name:  "build_num",
@@ -180,10 +180,10 @@ func genspec(c *cli.Context) error {
 		}
 		rpmSpec.BuildNumber = buildNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-devel"
-	} else if c.Bool("baobab") {
+	} else if c.Bool("testnet") {
 		rpmSpec.BuildNumber = params.ReleaseNum
-		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-baobab"
-		rpmSpec.PostFix = "_baobab"
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-testnet"
+		rpmSpec.PostFix = "_testnet"
 	} else {
 		rpmSpec.BuildNumber = params.ReleaseNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon
