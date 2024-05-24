@@ -42,24 +42,24 @@ var (
 	}
 
 	mainnetTestFlag = &cli.BoolFlag{
-		Name:    "cypress-test", // TODO: rename to Mainnet
+		Name:    "mainnet-test",
 		Usage:   "Generate genesis.json similar to the one used for Mainnet with shorter intervals for testing",
-		Aliases: []string{},
+		Aliases: []string{"cypress-test"}, // TODO: remove
 	}
 	mainnetFlag = &cli.BoolFlag{
-		Name:    "cypress", // TODO: rename to Mainnet
+		Name:    "mainnet",
 		Usage:   "Generate genesis.json similar to the one used for Mainnet",
-		Aliases: []string{},
+		Aliases: []string{"cypress"}, // TODO: remove
 	}
 	testnetTestFlag = &cli.BoolFlag{
-		Name:    "baobab-test", // TODO: rename to Testnet
+		Name:    "testnet-test",
 		Usage:   "Generate genesis.json similar to the one used for Testnet with shorter intervals for testing",
-		Aliases: []string{},
+		Aliases: []string{"baobab-test"}, // TODO: remove
 	}
 	testnetFlag = &cli.BoolFlag{
-		Name:    "baobab", // TODO: rename to Testnet
+		Name:    "testnet",
 		Usage:   "Generate genesis.json similar to the one used for Testnet",
-		Aliases: []string{},
+		Aliases: []string{"baobab"}, // TODO: remove
 	}
 	serviceChainFlag = &cli.BoolFlag{
 		Name:    "servicechain",
