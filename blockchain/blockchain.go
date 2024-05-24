@@ -2099,7 +2099,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			if block.Header().BaseFee != nil {
-				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Gwei))
+				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Gkei))
 			}
 			blockProcessTimer.Update(time.Duration(processTxsTime))
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)

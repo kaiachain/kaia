@@ -62,7 +62,7 @@ func TestAddressBookConnector(t *testing.T) {
 			types.TxValueKeyNonce:         sender.GetNonce(),
 			types.TxValueKeyAmount:        new(big.Int).SetUint64(0),
 			types.TxValueKeyGasLimit:      uint64(1e9),
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gwei),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyFrom:          sender.GetAddr(),
 			types.TxValueKeyData:          common.FromHex(rewardcontract.AddressBookBin),

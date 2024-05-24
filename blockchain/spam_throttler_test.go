@@ -56,7 +56,7 @@ func TestThrottler_updateThrottlerState(t *testing.T) {
 	txNum := 1000
 	amount := big.NewInt(0)
 	gasLimit := uint64(10000)
-	gasPrice := big.NewInt(25 * params.Gwei)
+	gasPrice := big.NewInt(25 * params.Gkei)
 	toFail := common.BytesToAddress(common.MakeRandomBytes(20))
 	toSuccess := common.BytesToAddress(common.MakeRandomBytes(20))
 

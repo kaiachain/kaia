@@ -49,7 +49,7 @@ func TestRepository_TransformToTxs_Success(t *testing.T) {
 	to := crypto.PubkeyToAddress(randKey.PublicKey)
 	amount := new(big.Int).SetUint64(100)
 	gasLimit := big.NewInt(500000)
-	gasPrice := new(big.Int).SetUint64(1 * params.Wei)
+	gasPrice := new(big.Int).SetUint64(1 * params.Kei)
 
 	// make a chain event including a value transfer transaction
 	numBlocks := 1
@@ -131,7 +131,7 @@ func createChainEventsWithTooManyTxs() ([]blockchain.ChainEvent, error) {
 	to := crypto.PubkeyToAddress(randKey.PublicKey)
 	amount := new(big.Int).SetUint64(100)
 	gasLimit := big.NewInt(500000)
-	gasPrice := new(big.Int).SetUint64(1 * params.Wei)
+	gasPrice := new(big.Int).SetUint64(1 * params.Kei)
 
 	// make a chain event including a value transfer transaction
 	numBlocks := 1

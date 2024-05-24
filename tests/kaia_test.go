@@ -477,7 +477,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
 			txtype,
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			wrongEncodedKey,
@@ -506,7 +506,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 		err = rlp.Encode(buffer, []interface{}{
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			wrongEncodedKey,
@@ -527,7 +527,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
 			txtype,
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			wrongEncodedKey,
@@ -556,7 +556,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 		err = rlp.Encode(buffer, []interface{}{
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			wrongEncodedKey,
@@ -579,7 +579,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 		serializedBytes, err := rlp.EncodeToBytes([]interface{}{
 			txtype,
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			types.FeeRatio(10),
@@ -609,7 +609,7 @@ func TestWronglyEncodedAccountKey(t *testing.T) {
 
 		err = rlp.Encode(buffer, []interface{}{
 			uint64(0),
-			new(big.Int).SetUint64(25 * params.Gwei),
+			new(big.Int).SetUint64(25 * params.Gkei),
 			uint64(100000),
 			*bcdata.addrs[0],
 			wrongEncodedKey,

@@ -116,7 +116,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHas
 	return fieldsList, nil
 }
 
-// GetBalance returns the amount of wei for the given address in the state of the
+// GetBalance returns the amount of kei for the given address in the state of the
 // given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers and hash are also allowed.
 func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {

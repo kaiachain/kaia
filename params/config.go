@@ -181,7 +181,7 @@ const (
 	UpperGasLimit = uint64(999999999999)
 
 	// Default max price for gas price oracle
-	DefaultGPOMaxPrice = 500 * Gwei
+	DefaultGPOMaxPrice = 500 * Gkei
 )
 
 const (
@@ -254,7 +254,7 @@ type RewardConfig struct {
 	DeferredTxFee          bool     `json:"deferredTxFee"`          // Decide if TX fee will be handled instantly or handled later at block finalization
 	StakingUpdateInterval  uint64   `json:"stakingUpdateInterval"`  // Interval when staking information is updated
 	ProposerUpdateInterval uint64   `json:"proposerUpdateInterval"` // Interval when proposer information is updated
-	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of wei to join CCO
+	MinimumStake           *big.Int `json:"minimumStake"`           // Minimum amount of kei to join CCO
 }
 
 // Magma governance parameters

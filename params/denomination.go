@@ -21,11 +21,11 @@
 package params
 
 // These are the multipliers for KAIA denominations.
-// Example: To get the wei value of an amount in 'gwei', use
+// Example: To get the kei value of an amount in 'gkei', use
 //
-//	new(big.Int).Mul(value, big.NewInt(params.Gwei))
+//	new(big.Int).Mul(value, big.NewInt(params.Gkei))
 const (
-	Wei  = 1
-	Gwei = 1e9
+	Kei  = 1   // kei
+	Gkei = 1e9 // gkei
 	KAIA = 1e18
 )

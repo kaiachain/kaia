@@ -491,7 +491,7 @@ func testTx() (*ecdsa.PrivateKey, *ecdsa.PrivateKey, *types.Transaction) {
 		types.TxValueKeyTo:       common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
 		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
 		types.TxValueKeyGasLimit: uint64(100000),
-		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25 * params.Gwei),
+		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25 * params.Gkei),
 		types.TxValueKeyFeePayer: common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
 	}
 

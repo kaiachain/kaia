@@ -409,7 +409,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 //     zero or emptyCodeHash.
 //
 // It is worth noting that in order to avoid unnecessary create and clean, all precompile
-// accounts on mainnet have been transferred 1 wei, so the return here should be
+// accounts on mainnet have been transferred 1 kei, so the return here should be
 // emptyCodeHash. If the precompile account is not transferred any amount on a private or
 // customized chain, the return value will be zero.
 //
