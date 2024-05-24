@@ -170,7 +170,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 //
 //	                     genesis == nil                             genesis != nil
 //	                  +-------------------------------------------------------------------
-//	db has no genesis |  main-net default, Testnet if specified  |  genesis
+//	db has no genesis |  Mainnet default, Testnet if specified   |  genesis
 //	db has genesis    |  from DB                                 |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
