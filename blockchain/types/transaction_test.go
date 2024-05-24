@@ -106,6 +106,19 @@ var (
 		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752101"))
 )
 
+var testKaiaChainConfig = &params.ChainConfig{
+	ChainID:                  new(big.Int).SetUint64(111111),
+	IstanbulCompatibleBlock:  common.Big0,
+	LondonCompatibleBlock:    common.Big0,
+	EthTxTypeCompatibleBlock: common.Big0,
+	MagmaCompatibleBlock:     common.Big0,
+	KoreCompatibleBlock:      common.Big0,
+	ShanghaiCompatibleBlock:  common.Big0,
+	CancunCompatibleBlock:    common.Big0,
+	KaiaCompatibleBlock:      common.Big0,
+	UnitPrice:                25000000000, // 25 ston
+}
+
 func TestTransactionSigHash(t *testing.T) {
 	signer := LatestSignerForChainID(common.Big1)
 	if signer.Hash(emptyTx) != common.HexToHash("a715f8447b97e3105d2cc0a8aca1466fa3a02f7cc6d2f9a3fe89f2581c9111c5") {
@@ -346,22 +359,21 @@ func TestEffectiveGasPrice(t *testing.T) {
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: gasFeeCap, GasTipCap: gasTipCap})
 
 	header := new(Header)
-
-	have := legacyTx.EffectiveGasPrice(header, params.TestChainConfig)
+	have := legacyTx.EffectiveGasPrice(header, testKaiaChainConfig)
 	want := gasPrice
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(header, params.TestChainConfig)
+	have = dynamicTx.EffectiveGasPrice(header, testKaiaChainConfig)
 	te := dynamicTx.GetTxInternalData().(TxInternalDataBaseFee)
 	want = te.GetGasFeeCap()
 	assert.Equal(t, want, have)
 
 	header.BaseFee = big.NewInt(2000)
-	have = legacyTx.EffectiveGasPrice(header, params.TestChainConfig)
+	have = legacyTx.EffectiveGasPrice(header, testKaiaChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 
-	have = dynamicTx.EffectiveGasPrice(header, params.TestChainConfig)
+	have = dynamicTx.EffectiveGasPrice(header, testKaiaChainConfig)
 	want = header.BaseFee
 	assert.Equal(t, want, have)
 
@@ -379,19 +391,18 @@ func TestEffectiveGasTip(t *testing.T) {
 	legacyTx := NewTx(&TxInternalDataLegacy{Price: big.NewInt(1000)})
 	dynamicTx := NewTx(&TxInternalDataEthereumDynamicFee{GasFeeCap: big.NewInt(4000), GasTipCap: big.NewInt(1000)})
 
-	// before magma hardfork
+	// after magma hardfork
 	baseFee := big.NewInt(2000)
 	have := legacyTx.EffectiveGasTip(baseFee)
-	want := big.NewInt(1000)
+	want := big.NewInt(0) // from kaia codebase, legacyTxType also give a tip.
 	assert.Equal(t, want, have)
 
-	baseFee = big.NewInt(2000)
 	have = dynamicTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)
 
 	// before magma hardfork
-	baseFee = big.NewInt(0)
+	baseFee = nil
 	have = legacyTx.EffectiveGasTip(baseFee)
 	want = big.NewInt(1000)
 	assert.Equal(t, want, have)

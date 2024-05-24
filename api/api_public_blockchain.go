@@ -333,14 +333,9 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if err != nil {
 		return nil, 0, err
 	}
-	var balanceBaseFee *big.Int
-	if header.BaseFee != nil {
-		balanceBaseFee = baseFee
-	} else {
-		balanceBaseFee = msg.GasPrice()
-	}
+
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.EffectiveGasPrice(header, b.ChainConfig())))
 
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
@@ -704,20 +699,14 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 
 	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If baseFee is zero, then it must be a magma hardfork
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			gasPrice = args.MaxFeePerGas.ToInt()
-		}
-	} else {
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			// User specified 1559 gas fields (or none), use those
-			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		gasPrice = args.MaxFeePerGas.ToInt()
+	}
+
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) != 0 {
+		if args.GasPrice == nil && args.MaxFeePerGas == nil {
 			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
 			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}

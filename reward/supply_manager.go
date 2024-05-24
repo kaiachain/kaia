@@ -384,13 +384,15 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 		// Accumulate one block
 		var (
 			header    = sm.chain.GetHeaderByNumber(num)
+			block     = sm.chain.GetBlockByNumber(num)
+			receipts  = sm.chain.GetReceiptsByBlockHash(block.Hash())
 			rules     = sm.chain.Config().Rules(new(big.Int).SetUint64(num))
 			pset, err = sm.gov.EffectiveParams(num)
 		)
 		if err != nil {
 			return nil, err
 		}
-		blockTotal, err := GetTotalReward(header, rules, pset)
+		blockTotal, err := GetTotalReward(header, block.Transactions(), receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}

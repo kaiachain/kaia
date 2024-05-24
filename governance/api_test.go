@@ -222,7 +222,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	startBlockNum := 0
 	endBlockNum := 10
 	blocks := make([]*types.Block, endBlockNum-startBlockNum+1)
-
+	receipts := make([]types.Receipts, endBlockNum-startBlockNum+1)
 	// set testing data for mock instances
 	for i := startBlockNum; i <= endBlockNum; i++ {
 		blocks[i] = types.NewBlockWithHeader(&types.Header{
@@ -232,8 +232,12 @@ func TestGetRewardsAccumulated(t *testing.T) {
 			BaseFee:    big.NewInt(25 * params.Gwei),
 			Time:       big.NewInt(int64(1000 + i)),
 		})
-
+		receipts[i] = types.Receipts{
+			&types.Receipt{GasUsed: uint64(1000)},
+		}
+		mockBlockchain.EXPECT().GetBlock(blocks[i].Hash(), uint64(i)).Return(blocks[i]).AnyTimes()
 		mockBlockchain.EXPECT().GetHeaderByNumber(uint64(i)).Return(blocks[i].Header()).AnyTimes()
+		mockBlockchain.EXPECT().GetReceiptsByBlockHash(blocks[i].Hash()).Return(receipts[i]).AnyTimes()
 	}
 
 	mockBlockchain.EXPECT().Config().Return(chainConfig).AnyTimes()
@@ -289,7 +293,17 @@ func (bc *testBlockChain) GetHeaderByNumber(val uint64) *types.Header {
 		Number: new(big.Int).SetUint64(val),
 	}
 }
-func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { return nil }
+
+func (bc *testBlockChain) GetReceiptsByBlockHash(hash common.Hash) types.Receipts {
+	return types.Receipts{
+		&types.Receipt{GasUsed: 10},
+		&types.Receipt{GasUsed: 10},
+	}
+}
+
+func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block {
+	return types.NewBlockWithHeader(bc.GetHeaderByNumber(num))
+}
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
 func (bc *testBlockChain) State() (*state.StateDB, error)                   { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {

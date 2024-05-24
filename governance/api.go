@@ -91,6 +91,11 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	}
 
 	header := api.chain.GetHeaderByNumber(blockNumber)
+	block := api.chain.GetBlock(header.Hash(), blockNumber)
+	if block == nil {
+		return nil, errors.New("not found block")
+	}
+	txs, receipts := block.Transactions(), api.chain.GetReceiptsByBlockHash(header.Hash())
 	if header == nil {
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
 	}
@@ -106,7 +111,7 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 		return nil, err
 	}
 
-	return reward.GetBlockReward(header, rules, rewardParamSet)
+	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet)
 }
 
 type AccumulatedRewards struct {

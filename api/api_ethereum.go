@@ -1420,14 +1420,9 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if err != nil {
 		return nil, err
 	}
-	var balanceBaseFee *big.Int
-	if header.BaseFee != nil {
-		balanceBaseFee = baseFee
-	} else {
-		balanceBaseFee = msg.GasPrice()
-	}
+
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.EffectiveGasPrice(header, b.ChainConfig())))
 
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible

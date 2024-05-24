@@ -158,43 +158,47 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			args.ChainID = (*hexutil.Big)(b.ChainConfig().ChainID)
 		}
 	}
+
+	// b.SuggestTipCap = unitPrice  		for before Magma
+	//                 = zero				for after Magma
+	//                 = tipFromFeeHistory  for after Kaia
+	tip, err := b.SuggestTipCap(ctx)
+	if err != nil {
+		return err
+	}
+
+	// b.SuggestPrice = unitPrice, for before Magma
+	//                = baseFee * 2,   for after Magma
+	//                = baseFee * 2 + tip         for after Kaia
+	price, err := b.SuggestPrice(ctx)
+	if err != nil {
+		return err
+	}
+
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
 	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
-		// b.SuggestPrice = unitPrice, for before Magma
-		//                = baseFee * 2,   for after Magma
-		price, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
 		args.Price = (*hexutil.Big)(price)
 	}
 
 	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
-		gasPrice, err := b.SuggestPrice(ctx)
-		if err != nil {
-			return err
-		}
 		if args.MaxPriorityFeePerGas == nil {
-			args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
+			args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
 		}
 		if args.MaxFeePerGas == nil {
 			// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
-			gasFeeCap := new(big.Int).Add(
-				(*big.Int)(args.MaxPriorityFeePerGas),
-				new(big.Int).Mul(new(big.Int).SetUint64(params.ZeroBaseFee), big.NewInt(2)),
-			)
+			gasFeeCap := new(big.Int).Set((*big.Int)(args.MaxPriorityFeePerGas))
 			if isMagma {
 				// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
-				gasFeeCap = gasPrice
+				gasFeeCap = price
 			}
 			args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 		}
 		if isMagma {
-			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
-				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
+			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(price, common.Big2)) < 0 {
+				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, price)
 			}
-		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(gasPrice) != 0 || args.MaxFeePerGas.ToInt().Cmp(gasPrice) != 0 {
-			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", gasPrice.Text(16))
+		} else if args.MaxPriorityFeePerGas.ToInt().Cmp(price) != 0 || args.MaxFeePerGas.ToInt().Cmp(price) != 0 {
+			return fmt.Errorf("only %s is allowed to be used as maxFeePerGas and maxPriorityPerGas", price.Text(16))
 		}
 		if args.MaxFeePerGas.ToInt().Cmp(args.MaxPriorityFeePerGas.ToInt()) < 0 {
 			return fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", args.MaxFeePerGas, args.MaxPriorityFeePerGas)
@@ -598,13 +602,19 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 		return errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	}
 	// After london, default to 1559 uncles gasPrice is set
-	head := b.CurrentBlock().Header()
-	isMagma := head.BaseFee != nil
+	rules := b.ChainConfig().Rules(b.CurrentBlock().Header().Number)
 
-	fixedBaseFee := new(big.Int).SetUint64(params.ZeroBaseFee)
+	// b.SuggestTipCap = unitPrice  		for before Magma
+	//                 = zero				for after Magma
+	//                 = tipFromFeeHistory  for after Kaia
+	tip, err := b.SuggestTipCap(ctx)
+	if err != nil {
+		return err
+	}
 
-	// b.SuggestPrice = unitPrice, for before Magma
-	//                = baseFee,   for after Magma
+	// b.SuggestPrice = unitPrice,                for before Magma
+	//                = baseFee * 2,              for after Magma
+	//                = baseFee * 2 + tip         for
 	gasPrice, err := b.SuggestPrice(ctx)
 	if err != nil {
 		return err
@@ -613,23 +623,21 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 	// If user specifies both maxPriorityFee and maxFee, then we do not
 	// need to consult the chain for defaults. It's definitely a London tx.
 	if args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil {
-		if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) && args.GasPrice == nil {
+		if rules.IsEthTxType && args.GasPrice == nil {
 			if args.MaxPriorityFeePerGas == nil {
-				args.MaxPriorityFeePerGas = (*hexutil.Big)(gasPrice)
+				args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
 			}
 			if args.MaxFeePerGas == nil {
 				// Before Magma hard fork, `gasFeeCap` was set to `baseFee*2 + maxPriorityFeePerGas` by default.
-				gasFeeCap := new(big.Int).Add(
-					(*big.Int)(args.MaxPriorityFeePerGas),
-					new(big.Int).Mul(fixedBaseFee, big.NewInt(2)),
-				)
-				if isMagma {
+				gasFeeCap := new(big.Int).Set((*big.Int)(args.MaxPriorityFeePerGas))
+				if rules.IsMagma {
 					// After Magma hard fork, `gasFeeCap` was set to `baseFee*2` by default.
+					// After Kaia hard fork, `gasFeeCap` was set to `baseFee*2+suggestTipForHistory` by default.
 					gasFeeCap = gasPrice
 				}
 				args.MaxFeePerGas = (*hexutil.Big)(gasFeeCap)
 			}
-			if isMagma {
+			if rules.IsMagma {
 				if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 					return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 				}
@@ -644,20 +652,12 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 				return errors.New("maxFeePerGas or maxPriorityFeePerGas specified but london is not active yet")
 			}
 			if args.GasPrice == nil {
-				// TODO-Kaia: Original logic of Ethereum uses b.SuggestTipCap which suggests TipCap, not a GasPrice.
-				// But Kaia currently uses fixed unit price determined by Governance, so using b.SuggestPrice
-				// is fine as now.
-				if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
-					// TODO-Kaia: Kaia is using fixed BaseFee(0) as now but
-					// if we apply dynamic BaseFee, we should add calculated BaseFee instead of params.ZeroBaseFee.
-					gasPrice.Add(gasPrice, new(big.Int).SetUint64(params.ZeroBaseFee))
-				}
 				args.GasPrice = (*hexutil.Big)(gasPrice)
 			}
 		}
 	} else {
 		// Both maxPriorityFee and maxFee set by caller. Sanity-check their internal relation
-		if isMagma {
+		if rules.IsMagma {
 			if args.MaxFeePerGas.ToInt().Cmp(new(big.Int).Div(gasPrice, common.Big2)) < 0 {
 				return fmt.Errorf("maxFeePerGas (%v) < BaseFee (%v)", args.MaxFeePerGas, gasPrice)
 			}
@@ -742,20 +742,15 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 
 	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If there's no basefee, then it must be a non-1559 execution
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			gasPrice = args.MaxFeePerGas.ToInt()
-		}
-	} else {
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			// User specified 1559 gas fields (or none), use those
-			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		gasPrice = args.MaxFeePerGas.ToInt()
+	}
+
+	// If there's basefee, then it must be after magma
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) != 0 {
+		if args.GasPrice == nil && args.MaxFeePerGas == nil {
 			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
 			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}

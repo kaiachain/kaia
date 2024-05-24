@@ -372,7 +372,7 @@ func (s *SupplyTestSuite) SetupSuite() {
 		KoreCompatibleBlock:      big.NewInt(200),
 		ShanghaiCompatibleBlock:  big.NewInt(300),
 		CancunCompatibleBlock:    big.NewInt(300),
-		// KaiaCompatibleBlock:    big.NewInt(300), // TODO: uncomment
+		KaiaCompatibleBlock:      big.NewInt(300),
 
 		Kip103CompatibleBlock: big.NewInt(200),
 		Kip103ContractAddress: addrKip103,
@@ -473,7 +473,7 @@ func (s *SupplyTestSuite) testcases() []supplyTestTC {
 	var (
 		halfFee = big.NewInt(262500000000000) // Magma burn amount (gasPrice=50, baseFee=25 -> effectivePrice=25)
 		fullFee = big.NewInt(525000000000000) // Kore burn amount (gasPrice=50, baseFee=25 -> effectivePrice=25)
-		// withTip = big.NewInt(283500000000000) // Kaia burn amount (gasPrice=27, baseFee=25 -> effectivePrice=27)
+		withTip = big.NewInt(567000000000000) // Kaia burn amount (gasPrice=27, baseFee=25 -> effectivePrice=27)
 
 		// Fund1 has 769254566500000000000, Fund2 has 178056862000000000000 at block 199 but burnt
 		// Fund1 get   1280000000000000000, Fund2 get   1920000000000000000 at block 200 minted from reward but burnt
@@ -512,7 +512,7 @@ func (s *SupplyTestSuite) testcases() []supplyTestTC {
 	}
 	for i := uint64(300); i <= 400; i++ {
 		minted[i] = bigAdd(minted[i-1], amount80)
-		burntFee[i] = bigAdd(burntFee[i-1], fullFee) // TODO: withTip with KIP-162
+		burntFee[i] = bigAdd(burntFee[i-1], withTip)
 	}
 
 	nums := []uint64{0, 1, 99, 100, 199, 200, 299, 300, 399, 400}
@@ -755,7 +755,7 @@ func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.H
 
 	rules := s.config.Rules(header.Number)
 	pset, _ := s.gov.EffectiveParams(header.Number.Uint64())
-	rewardSpec, err := CalcDeferredReward(header, rules, pset)
+	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}

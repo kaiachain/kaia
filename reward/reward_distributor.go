@@ -56,7 +56,9 @@ type rewardConfig struct {
 	// hardfork rules
 	rules params.Rules
 
-	// values calculated from block header
+	// values calculated from block header and transactions
+	// sum of actual fees paid. sum( tx.effectiveGasPrice * tx.gasUsed )
+	// can be optimized before Kaia (baseFee * blockGasUsed), before Magma (unitPrice * blockGasUsed)
 	totalFee *big.Int
 
 	// values from GovParamSet
@@ -136,7 +138,7 @@ func DistributeBlockReward(b BalanceAdder, rewards map[common.Address]*big.Int) 
 	}
 }
 
-func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
+func NewRewardConfig(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*rewardConfig, error) {
 	cnRatio, kifRatio, kefRatio, totalRatio, err := parseRewardRatio(pset.Ratio())
 	if err != nil {
 		return nil, err
@@ -155,7 +157,7 @@ func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovP
 		rules: rules,
 
 		// values calculated from block header
-		totalFee: GetTotalTxFee(header, rules, pset),
+		totalFee: GetTotalTxFee(header, txs, receipts, rules, pset),
 
 		// values from GovParamSet
 		mintingAmount: new(big.Int).Set(pset.MintingAmountBig()),
@@ -175,13 +177,28 @@ func NewRewardConfig(header *types.Header, rules params.Rules, pset *params.GovP
 	}, nil
 }
 
-func GetTotalTxFee(header *types.Header, rules params.Rules, pset *params.GovParamSet) *big.Int {
+func GetTotalTxFee(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) *big.Int {
 	totalFee := new(big.Int).SetUint64(header.GasUsed)
 	if rules.IsMagma {
 		totalFee = totalFee.Mul(totalFee, header.BaseFee)
 	} else {
 		totalFee = totalFee.Mul(totalFee, new(big.Int).SetUint64(pset.UnitPrice()))
 	}
+
+	if txs == nil || receipts == nil || !rules.IsKaia {
+		return totalFee
+	}
+
+	if len(txs) != len(receipts) {
+		logger.Error("GetTotalTxFee: txs and receipts length mismatch", "txs", len(txs), "receipts", len(receipts))
+		return totalFee
+	}
+	// Since kaia, tip is added
+	for i, tx := range txs {
+		tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
+		totalFee = totalFee.Add(totalFee, tip)
+	}
+
 	return totalFee
 }
 
@@ -201,15 +218,15 @@ func CalcRewardParamBlock(num, epoch uint64, rules params.Rules) uint64 {
 
 // GetTotalReward returns the total rewards in this block, i.e. (minted - burntFee)
 // Used in klay_totalSupply RPC API
-func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
+func GetTotalReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*TotalReward, error) {
 	total := new(TotalReward)
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}
 
 	if IsRewardSimple(pset) {
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +245,7 @@ func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// As such, the CalcDeferredRewardSimple() returns zero burntFee.
 	// Here we calculate the fees burnt during the TX execution.
 	if !rc.deferredTxFee && rules.IsMagma {
-		txFee := GetTotalTxFee(header, rules, pset)
+		txFee := GetTotalTxFee(header, txs, receipts, rules, pset)
 		txFeeBurn := getBurnAmountMagma(txFee)
 		total.BurntFee = total.BurntFee.Add(total.BurntFee, txFeeBurn)
 	}
@@ -238,17 +255,17 @@ func GetTotalReward(header *types.Header, rules params.Rules, pset *params.GovPa
 
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in kaia_getReward RPC API
-func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 
 	if IsRewardSimple(pset) {
-		spec, err = CalcDeferredRewardSimple(header, rules, pset)
+		spec, err = CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		spec, err = CalcDeferredReward(header, rules, pset)
+		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +276,7 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 	// some non-zero fee already has been paid to the proposer.
 	if !pset.DeferredTxFee() {
 		if rules.IsMagma {
-			txFee := GetTotalTxFee(header, rules, pset)
+			txFee := GetTotalTxFee(header, txs, receipts, rules, pset)
 			txFeeBurn := getBurnAmountMagma(txFee)
 			txFeeRemained := new(big.Int).Sub(txFee, txFeeBurn)
 			spec.BurntFee = txFeeBurn
@@ -268,7 +285,7 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			incrementRewardsMap(spec.Rewards, header.Rewardbase, txFeeRemained)
 		} else {
-			txFee := GetTotalTxFee(header, rules, pset)
+			txFee := GetTotalTxFee(header, nil, nil, rules, pset)
 			spec.Proposer = spec.Proposer.Add(spec.Proposer, txFee)
 			spec.TotalFee = spec.TotalFee.Add(spec.TotalFee, txFee)
 			// get the proposer of this block.
@@ -288,8 +305,8 @@ func GetBlockReward(header *types.Header, rules params.Rules, pset *params.GovPa
 // MintKAIA has been superseded because we need to split reward distribution
 // logic into (1) calculation, and (2) actual distribution.
 // CalcDeferredRewardSimple does the former and DistributeBlockReward does the latter
-func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
-	rc, err := NewRewardConfig(header, rules, pset)
+func CalcDeferredRewardSimple(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}
@@ -347,12 +364,12 @@ func CalcDeferredRewardSimple(header *types.Header, rules params.Rules, pset *pa
 
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
-func CalcDeferredReward(header *types.Header, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
 	defer func(start time.Time) {
 		CalcDeferredRewardTimer = time.Since(start)
 	}(time.Now())
 
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
 	}

@@ -971,7 +971,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(testRandaoConfig).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -2366,6 +2366,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 		mockBackend.EXPECT().CurrentBlock().Return(
 			types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)}),
 		)
+		mockBackend.EXPECT().SuggestTipCap(gomock.Any()).Return(unitPrice, nil)
 		mockBackend.EXPECT().SuggestPrice(gomock.Any()).Return(unitPrice, nil)
 		if !test.dynamicFeeParamsSet {
 			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
@@ -2450,6 +2451,10 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	chainConfig.LondonCompatibleBlock = common.Big0
 	chainConfig.EthTxTypeCompatibleBlock = common.Big0
 	chainConfig.MagmaCompatibleBlock = common.Big0
+	chainConfig.KoreCompatibleBlock = common.Big0
+	chainConfig.ShanghaiCompatibleBlock = common.Big0
+	chainConfig.CancunCompatibleBlock = common.Big0
+	chainConfig.KaiaCompatibleBlock = common.Big0
 	var (
 		// genesis
 		account1 = common.HexToAddress("0xaaaa")
