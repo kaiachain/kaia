@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,10 +18,12 @@
 //
 // This file is derived from eth/sync.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package cn
 
 import (
+	"math/big"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -29,6 +32,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
 	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/klaytn/klaytn/params"
 )
 
 const (
@@ -55,6 +59,11 @@ func (pm *ProtocolManager) syncTransactions(p Peer) {
 	if len(txs) == 0 {
 		return
 	}
+	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
+	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
+		baseFee = pm.blockchain.CurrentHeader().BaseFee
+	}
+	txs = types.SortTxsByPriceAndTime(txs, baseFee)
 	select {
 	case pm.txsyncCh <- &txsync{p, txs}:
 	case <-pm.quitSync:

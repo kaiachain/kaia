@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2021 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 //go:build race
 // +build race
@@ -110,7 +112,7 @@ func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
 		from, _     = createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae594389999")
 		feePayer, _ = createAnonymousAccount("ed580f5bd71a2ee4dae5cb43e331b7d0318596e561e6add7844271ed94156b20")
 
-		funds = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KLAY))
+		funds = new(big.Int).Mul(big.NewInt(1e16), big.NewInt(params.KAIA))
 		gspec = &blockchain.Genesis{
 			Config: params.TestChainConfig,
 			Alloc: blockchain.GenesisAlloc{

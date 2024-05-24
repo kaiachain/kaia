@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from internal/ethapi/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package api
 
@@ -141,7 +143,7 @@ func fetchKeystore(am accounts.AccountManager) *keystore.KeyStore {
 	return am.Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
 }
 
-func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
+func parseKaiaWalletKey(k string) (string, string, *common.Address, error) {
 	// if key length is not 110, just return.
 	if len(k) != 110 {
 		return k, "", nil, nil
@@ -149,7 +151,7 @@ func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
 
 	walletKeyType := k[66:68]
 	if walletKeyType != "00" {
-		return "", "", nil, fmt.Errorf("Klaytn wallet key type must be 00.")
+		return "", "", nil, errors.New("Kaia wallet key type must be 00.")
 	}
 	a := common.HexToAddress(k[70:110])
 
@@ -159,7 +161,7 @@ func parseKlaytnWalletKey(k string) (string, string, *common.Address, error) {
 // ReplaceRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, newPassphrase string) (common.Address, error) {
-	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -174,7 +176,7 @@ func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, new
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
 func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
-	privkey, _, address, err := parseKlaytnWalletKey(privkey)
+	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -208,7 +210,7 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
-// signTransactions sets defaults and signs the given transaction.
+// signTransaction sets defaults and signs the given transaction.
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool.
 func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
@@ -347,7 +349,7 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
 		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
-			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
+			return nil, errors.New("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
 		}
 	}
 
@@ -407,7 +409,8 @@ func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args 
 // safely used to calculate a signature from.
 //
 // The hash is calulcated as
-//   keccak256("\x19Klaytn Signed Message:\n"${message length}${message}).
+//
+//	keccak256("\x19Klaytn Signed Message:\n"${message length}${message}).
 //
 // This gives context to the signed message and prevents signing of transactions.
 func signHash(data []byte) []byte {
@@ -448,7 +451,7 @@ func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, t
 	return wallet.SignTxAsFeePayerWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
-// Sign calculates a Klaytn ECDSA signature for:
+// Sign calculates a Kaia ECDSA signature for:
 // keccack256("\x19Klaytn Signed Message:\n" + len(message) + message))
 //
 // Note, the produced signature conforms to the secp256k1 curve R, S and V values,
@@ -486,10 +489,10 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid Klaytn signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1

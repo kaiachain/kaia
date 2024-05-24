@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from internal/ethapi/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package api
 
@@ -31,14 +33,14 @@ import (
 	"github.com/klaytn/klaytn/networks/rpc"
 )
 
-// PrivateDebugAPI is the collection of Klaytn APIs exposed over the private
+// PrivateDebugAPI is the collection of Kaia APIs exposed over the private
 // debugging endpoint.
 type PrivateDebugAPI struct {
 	b Backend
 }
 
 // NewPrivateDebugAPI creates a new API definition for the private debug methods
-// of the Klaytn service.
+// of the Kaia service.
 func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
 	return &PrivateDebugAPI{b: b}
 }

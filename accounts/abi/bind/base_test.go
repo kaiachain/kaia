@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/abi/bind/base_test.go (2019/07/22).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package bind_test
 
@@ -27,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -49,7 +51,7 @@ func (mc *mockCaller) CodeAt(ctx context.Context, contract common.Address, block
 	return []byte{1, 2, 3}, nil
 }
 
-func (mc *mockCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (mc *mockCaller) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	mc.callContractBlockNumber = blockNumber
 	return nil, nil
 }
@@ -59,7 +61,7 @@ func (mc *mockCaller) PendingCodeAt(ctx context.Context, contract common.Address
 	return nil, nil
 }
 
-func (mc *mockCaller) PendingCallContract(ctx context.Context, call klaytn.CallMsg) ([]byte, error) {
+func (mc *mockCaller) PendingCallContract(ctx context.Context, call kaia.CallMsg) ([]byte, error) {
 	mc.pendingCallContractCalled = true
 	return nil, nil
 }

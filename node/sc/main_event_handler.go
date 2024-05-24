@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -42,17 +44,17 @@ func (mce *MainChainEventHandler) HandleChainHeadEvent(block *types.Block) error
 }
 
 func (mce *MainChainEventHandler) HandleTxEvent(tx *types.Transaction) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
 func (mce *MainChainEventHandler) HandleTxsEvent(txs []*types.Transaction) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
 func (mce *MainChainEventHandler) HandleLogsEvent(logs []*types.Log) error {
-	//@TODO-Klaytn event handle
+	//@TODO-Kaia event handle
 	return nil
 }
 
@@ -96,7 +98,7 @@ func (mce *MainChainEventHandler) decodeAndWriteAnchoringTx(tx *types.Transactio
 	logger.Trace("Write anchoring data on chainDB", "blockHash", decodedData.GetBlockNumber().String(), "anchoring txHash", tx.Hash().String())
 }
 
-// TODO-Klaytn-ServiceChain: remove this method and a related option.
+// TODO-Kaia-ServiceChain: remove this method and a related option.
 // writeChildChainTxHashFromBlock writes transaction hashes of transactions which contain
 // AnchoringData.
 func (mce *MainChainEventHandler) writeChildChainTxHashFromBlock(block *types.Block) {

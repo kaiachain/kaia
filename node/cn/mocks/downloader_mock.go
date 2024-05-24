@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	klaytn "github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	types "github.com/klaytn/klaytn/blockchain/types"
 	common "github.com/klaytn/klaytn/common"
 	downloader "github.com/klaytn/klaytn/datasync/downloader"
@@ -151,10 +151,10 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) GetSnapSyncer() *gomock.Cal
 }
 
 // Progress mocks base method.
-func (m *MockProtocolManagerDownloader) Progress() klaytn.SyncProgress {
+func (m *MockProtocolManagerDownloader) Progress() kaia.SyncProgress {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Progress")
-	ret0, _ := ret[0].(klaytn.SyncProgress)
+	ret0, _ := ret[0].(kaia.SyncProgress)
 	return ret0
 }
 

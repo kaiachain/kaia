@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -34,6 +36,7 @@ import (
 	mocks3 "github.com/klaytn/klaytn/event/mocks"
 	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/klaytn/klaytn/node/cn/gasprice"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
@@ -180,6 +183,7 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	api.cn.protocolManager = pm
 	api.cn.engine = gxhash.NewFullFaker()
 	api.cn.governance = testGov()
+	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, api.cn.governance)
 
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
@@ -757,6 +761,8 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	}
 	defer chain.Stop()
 
+	_, _, _, api := newCNAPIBackend(t)
+
 	var (
 		epoch                 uint64 = 5
 		govBlockNum                  = 10
@@ -764,6 +770,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 		stakingUpdateInterval uint64 = 1
 		stakingUpdateBlockNum uint64 = 15
 		gov                          = governance.NewMixedEngine(testCfg(epoch), db)
+		gpo                          = gasprice.NewOracle(api, gasprice.Config{}, nil, gov)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
 
@@ -784,8 +791,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	snap := backend.Snapshot{Number: params.CheckpointInterval, Hash: chain.GetHeaderByNumber(params.CheckpointInterval).Hash()}
 	blob, err := json.Marshal(snap)
 	assert.Nil(t, err)
-	err = db.WriteIstanbulSnapshot(snap.Hash, blob)
-	assert.Nil(t, err)
+	db.WriteIstanbulSnapshot(snap.Hash, blob)
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
 	assert.Nil(t, err)
 
@@ -807,7 +813,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
 
 	// Set the head of the chain back to the requested number
-	err = doSetHead(chain, chain.Engine(), gov, tt.setheadBlock)
+	err = doSetHead(chain, chain.Engine(), gov, gpo, tt.setheadBlock)
 	assert.Nil(t, err)
 
 	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {

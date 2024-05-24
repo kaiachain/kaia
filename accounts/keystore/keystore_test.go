@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/keystore/keystore_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package keystore
 
@@ -346,19 +348,19 @@ func TestImportRace(t *testing.T) {
 	}
 	dir2, ks2 := tmpKeyStore(t, true)
 	defer os.RemoveAll(dir2)
-	var atom uint32
+	var errCnt uint32
 	var wg sync.WaitGroup
 	wg.Add(2)
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
 			if _, err := ks2.Import(json, "new", "new"); err != nil {
-				atomic.AddUint32(&atom, 1)
+				atomic.AddUint32(&errCnt, 1)
 			}
 		}()
 	}
 	wg.Wait()
-	if atom != 1 {
+	if errCnt != 1 {
 		t.Errorf("Import is racy")
 	}
 }
@@ -468,7 +470,7 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
-	d, err := os.MkdirTemp("", "klay-keystore-test")
+	d, err := os.MkdirTemp("", "kaia-test-keystore-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +493,7 @@ func testTx() (*ecdsa.PrivateKey, *ecdsa.PrivateKey, *types.Transaction) {
 		types.TxValueKeyTo:       common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
 		types.TxValueKeyAmount:   new(big.Int).SetUint64(0),
 		types.TxValueKeyGasLimit: uint64(100000),
-		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25 * params.Ston),
+		types.TxValueKeyGasPrice: new(big.Int).SetUint64(25 * params.Gkei),
 		types.TxValueKeyFeePayer: common.HexToAddress("0xF9Fad0E94B216faFFfEfB99Ef02CE44F994A3DE8"),
 	}
 

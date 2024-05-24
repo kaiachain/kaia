@@ -8,7 +8,7 @@ set -e
 
 function printUsage {
     echo "Usage: ${0} [-b] <arch> <target>"
-    echo "         -b: use baobab configuration"
+    echo "         -b: use testnet configuration"
     echo "     <arch>:  linux-386 | linux-amd64 | darwin-amd64 | windows-386 | windows-amd64"
     echo "   <target>:  kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     echo ""
@@ -17,12 +17,12 @@ function printUsage {
 }
 
 # Parse options.
-BAOBAB=
+TESTNET=
 while getopts "b" opt; do
     case ${opt} in
         b)
-            echo "Using baobab configuration..."
-            BAOBAB="-baobab"
+            echo "Using testnet configuration..."
+            TESTNET="-testnet"
             ;;
     esac
 done
@@ -73,19 +73,19 @@ function finish {
 }
 trap finish EXIT
 
-KLAYTN_VERSION=$(go run build/rpm/main.go version)
-KLAYTN_RELEASE_NUM=$(go run build/rpm/main.go release_num)
-PACKAGE_SUFFIX="${KLAYTN_VERSION}-${KLAYTN_RELEASE_NUM}-${PLATFORM_SUFFIX}.tar.gz"
+KAIA_VERSION=$(go run build/rpm/main.go version)
+KAIA_RELEASE_NUM=$(go run build/rpm/main.go release_num)
+PACKAGE_SUFFIX="${KAIA_VERSION}-${KAIA_RELEASE_NUM}-${PLATFORM_SUFFIX}.tar.gz"
 
 PACK_NAME=
-KLAYTN_PACKAGE_NAME=
+KAIA_PACKAGE_NAME=
 DAEMON=
 
 # Search the target from DAEMON_BINARIES.
 for b in ${DAEMON_BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        KLAYTN_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
+        KAIA_PACKAGE_NAME="${b}${TESTNET}-${PACKAGE_SUFFIX}"
         DAEMON=1
     fi
 done
@@ -94,7 +94,7 @@ done
 for b in ${BINARIES[*]}; do
     if [ "$TARGET" == "$b" ]; then
         PACK_NAME=${b}-${PLATFORM_SUFFIX}
-        KLAYTN_PACKAGE_NAME="${b}${BAOBAB}-${PACKAGE_SUFFIX}"
+        KAIA_PACKAGE_NAME="${b}${TESTNET}-${PACKAGE_SUFFIX}"
     fi
 done
 
@@ -112,12 +112,12 @@ cp build/bin/${TARGET} ${PACK_NAME}/bin/${TARGET}
 if [ ! -z "$DAEMON" ]; then
     mkdir -p ${PACK_NAME}/conf
     CONF_FILE=build/packaging/linux/conf/${TARGET}d.conf
-    if [ ! -z "$BAOBAB" ]; then
-        BAOBAB_CONF_FILE=build/packaging/linux/conf/${TARGET}d_baobab.conf
-        if [ -e "$BAOBAB_CONF_FILE" ]; then
-            CONF_FILE=$BAOBAB_CONF_FILE
+    if [ ! -z "$TESTNET" ]; then
+        TESTNET_CONF_FILE=build/packaging/linux/conf/${TARGET}d_baobab.conf # TODO: rename to Testnet
+        if [ -e "$TESTNET_CONF_FILE" ]; then
+            CONF_FILE=$TESTNET_CONF_FILE
         else
-            echo "Since $BAOBAB_CONF_FILE does not exist, using $CONF_FILE."
+            echo "Since $TESTNET_CONF_FILE does not exist, using $CONF_FILE."
         fi
     fi
 	cp build/packaging/linux/bin/${TARGET}d ${PACK_NAME}/bin/
@@ -126,4 +126,4 @@ fi
 
 # Compress!
 mkdir -p packages
-tar czf packages/$KLAYTN_PACKAGE_NAME $PACK_NAME
+tar czf packages/$KAIA_PACKAGE_NAME $PACK_NAME

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/config.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -43,7 +45,7 @@ const (
 var logger = log.NewModuleLogger(log.ServiceChain)
 
 func DefaultServiceChainConfig() *SCConfig {
-	// DefaultConfig contains default settings for use on the Klaytn main net.
+	// DefaultConfig contains default settings for use on the Kaia main net.
 	return &SCConfig{
 		NetworkId: 1,
 		MaxPeer:   1, // Only a single main-bridge and sub-bridge pair is allowed.
@@ -113,7 +115,7 @@ type SCConfig struct {
 // NodeName returns the devp2p node identifier.
 func (c *SCConfig) NodeName() string {
 	name := c.name()
-	// Backwards compatibility: previous versions used title-cased "Klaytn", keep that.
+	// Backwards compatibility: previous versions used title-cased "Kaia", keep that.
 	if name == "klay" || name == "klay-testnet" {
 		name = "Klaytn"
 	}

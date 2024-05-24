@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/types/receipt.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -46,9 +48,9 @@ const (
 	// ReceiptStatusSuccessful is the status code of a transaction if execution succeeded.
 	ReceiptStatusSuccessful = uint(1)
 
-	// TODO-Klaytn Enable more error below.
-	// Klaytn specific
-	// NOTE-Klaytn Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
+	// TODO-Kaia Enable more error below.
+	// Kaia specific
+	// NOTE-Kaia Value should be consecutive from ReceiptStatusFailed to the last ReceiptStatusLast
 	//         Add a new ReceiptStatusErrXXX before ReceiptStatusLast
 	ReceiptStatusErrDefault                              = uint(0x02) // Default
 	ReceiptStatusErrDepth                                = uint(0x03)

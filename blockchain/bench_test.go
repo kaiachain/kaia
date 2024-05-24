@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/bench_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -130,7 +132,7 @@ func init() {
 	}
 }
 
-// genTxRing returns a block generator that sends KLAY in a ring
+// genTxRing returns a block generator that sends KAIA in a ring
 // among n accounts. This is creates n entries in the state database
 // and fills the blocks with many small transactions.
 func genTxRing(naccounts int) func(int, *BlockGen) {
@@ -359,7 +361,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 
 // genTempDirForDB returns temp dir for database
 func genTempDirForDB(b *testing.B) string {
-	dir, err := os.MkdirTemp("", "klay-blockchain-bench")
+	dir, err := os.MkdirTemp("", "kaia-test-bench-blockchain-")
 	if err != nil {
 		b.Fatalf("cannot create temporary directory: %v", err)
 	}

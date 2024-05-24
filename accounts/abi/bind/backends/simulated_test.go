@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2020 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/abi/bind/backends/simulated_test.go(2020/11/24).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package backends
 
@@ -30,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain"
@@ -56,8 +58,8 @@ func TestSimulatedBackend(t *testing.T) {
 	if isPending {
 		t.Fatal("transaction should not be pending")
 	}
-	if err != klaytn.NotFound {
-		t.Fatalf("err should be `klaytn.NotFound` but received %v", err)
+	if err != kaia.NotFound {
+		t.Fatalf("err should be `kaia.NotFound` but received %v", err)
 	}
 
 	// generate a transaction and confirm you can retrieve it
@@ -92,17 +94,17 @@ func TestSimulatedBackend(t *testing.T) {
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 
-//  the following is based on this contract:
-//  contract T {
-//  	event received(address sender, uint amount, bytes memo);
-//  	event receivedAddr(address sender);
+//	 the following is based on this contract:
+//	 contract T {
+//	 	event received(address sender, uint amount, bytes memo);
+//	 	event receivedAddr(address sender);
 //
-//  	function receive(bytes calldata memo) external payable returns (string memory res) {
-//  		emit received(msg.sender, msg.value, memo);
-//  		emit receivedAddr(msg.sender);
-//		    return "hello world";
-//  	}
-//  }
+//	 	function receive(bytes calldata memo) external payable returns (string memory res) {
+//	 		emit received(msg.sender, msg.value, memo);
+//	 		emit receivedAddr(msg.sender);
+//			    return "hello world";
+//	 	}
+//	 }
 const abiJSON = `[ { "constant": false, "inputs": [ { "name": "memo", "type": "bytes" } ], "name": "receive", "outputs": [ { "name": "res", "type": "string" } ], "payable": true, "stateMutability": "payable", "type": "function" }, { "anonymous": false, "inputs": [ { "indexed": false, "name": "sender", "type": "address" }, { "indexed": false, "name": "amount", "type": "uint256" }, { "indexed": false, "name": "memo", "type": "bytes" } ], "name": "received", "type": "event" }, { "anonymous": false, "inputs": [ { "indexed": false, "name": "sender", "type": "address" } ], "name": "receivedAddr", "type": "event" } ]`
 
 const (
@@ -424,12 +426,12 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 
 	cases := []struct {
 		name        string
-		message     klaytn.CallMsg
+		message     kaia.CallMsg
 		expect      uint64
 		expectError error
 		expectData  interface{}
 	}{
-		{"plain transfer(valid)", klaytn.CallMsg{
+		{"plain transfer(valid)", kaia.CallMsg{
 			From:     addr,
 			To:       &addr,
 			Gas:      0,
@@ -438,7 +440,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     nil,
 		}, params.TxGas, nil, nil},
 
-		{"plain transfer(invalid)", klaytn.CallMsg{
+		{"plain transfer(invalid)", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -447,7 +449,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     nil,
 		}, 0, errors.New("evm: execution reverted"), nil},
 
-		{"Revert", klaytn.CallMsg{
+		{"Revert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -456,7 +458,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("d8b98391"),
 		}, 0, errors.New("execution reverted: revert reason"), "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d72657665727420726561736f6e00000000000000000000000000000000000000"},
 
-		{"PureRevert", klaytn.CallMsg{
+		{"PureRevert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      0,
@@ -465,7 +467,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("aa8b1d30"),
 		}, 0, errors.New("evm: execution reverted"), nil},
 
-		{"OOG", klaytn.CallMsg{
+		{"OOG", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -474,7 +476,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("50f6fe34"),
 		}, 0, errors.New("gas required exceeds allowance (100000)"), nil},
 
-		{"Assert", klaytn.CallMsg{
+		{"Assert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -483,7 +485,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("b9b046f9"),
 		}, 0, errors.New("VM error occurs while running smart contract"), nil},
 
-		{"Valid", klaytn.CallMsg{
+		{"Valid", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,
 			Gas:      100000,
@@ -879,7 +881,8 @@ func TestSimulatedBackend_CodeAt(t *testing.T) {
 }
 
 // When receive("X") is called with sender 0x00... and value 1, it produces this tx receipt:
-//   receipt{status=1 cgas=23949 bloom=00000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000040200000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 logs=[log: b6818c8064f645cd82d99b59a1a267d6d61117ef [75fd880d39c1daf53b6547ab6cb59451fc6452d27caa90e5b6649dd8293b9eed] 000000000000000000000000376c47978271565f56deb45495afa69e59c16ab200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000158 9ae378b6d4409eada347a5dc0c180f186cb62dc68fcc0f043425eb917335aa28 0 95d429d309bb9d753954195fe2d69bd140b4ae731b9b5b605c34323de162cf00 0]}
+//
+//	receipt{status=1 cgas=23949 bloom=00000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000040200000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 logs=[log: b6818c8064f645cd82d99b59a1a267d6d61117ef [75fd880d39c1daf53b6547ab6cb59451fc6452d27caa90e5b6649dd8293b9eed] 000000000000000000000000376c47978271565f56deb45495afa69e59c16ab200000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000158 9ae378b6d4409eada347a5dc0c180f186cb62dc68fcc0f043425eb917335aa28 0 95d429d309bb9d753954195fe2d69bd140b4ae731b9b5b605c34323de162cf00 0]}
 func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
 	sim := simTestBackend(testAddr)
@@ -902,7 +905,7 @@ func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 	}
 
 	// make sure you can call the contract in pending state
-	res, err := sim.PendingCallContract(bgCtx, klaytn.CallMsg{
+	res, err := sim.PendingCallContract(bgCtx, kaia.CallMsg{
 		From: testAddr,
 		To:   &addr,
 		Data: input,
@@ -922,7 +925,7 @@ func TestSimulatedBackend_PendingAndCallContract(t *testing.T) {
 	sim.Commit()
 
 	// make sure you can call the contract
-	res, err = sim.CallContract(bgCtx, klaytn.CallMsg{
+	res, err = sim.CallContract(bgCtx, kaia.CallMsg{
 		From: testAddr,
 		To:   &addr,
 		Data: input,
@@ -993,14 +996,14 @@ func TestSimulatedBackend_CallContractRevert(t *testing.T) {
 
 	call := make([]func([]byte) ([]byte, error), 2)
 	call[0] = func(input []byte) ([]byte, error) {
-		return sim.PendingCallContract(bgCtx, klaytn.CallMsg{
+		return sim.PendingCallContract(bgCtx, kaia.CallMsg{
 			From: testAddr,
 			To:   &addr,
 			Data: input,
 		})
 	}
 	call[1] = func(input []byte) ([]byte, error) {
-		return sim.CallContract(bgCtx, klaytn.CallMsg{
+		return sim.CallContract(bgCtx, kaia.CallMsg{
 			From: testAddr,
 			To:   &addr,
 			Data: input,

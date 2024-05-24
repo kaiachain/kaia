@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -45,7 +47,7 @@ func TestFeePayerContract(t *testing.T) {
 // TestFeePayerContract tests an indirect call of precompiled contract 0xa (feepayer).
 // - It tests a contract `FeePayerIndirect` in fee_payer_indirect_test.sol.
 // - It calls a deployed contract calling the precompiled contract 0xa.
-// TODO-Klaytn-FeePayer: need more test cases for other calls such as delegatecall, etc.
+// TODO-Kaia-FeePayer: need more test cases for other calls such as delegatecall, etc.
 func TestFeePayerContractIndirect(t *testing.T) {
 	contractFunctions := []string{"TestCall"}
 

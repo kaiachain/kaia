@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -52,7 +54,7 @@ func toBasicType(txType types.TxType) types.TxType {
 func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (txValueMap, uint64) {
 	var valueMap txValueMap
 	gas := uint64(0)
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := big.NewInt(25 * params.Gkei)
 	newAccount, err := createDefaultAccount(accountkey.AccountKeyTypePublic)
 	if err != nil {
 		return nil, 0
@@ -103,7 +105,7 @@ func TestValidationPoolInsert(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -166,7 +168,7 @@ func TestValidationPoolInsert(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -232,7 +234,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -291,7 +293,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -303,7 +305,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		// TODO-Klaytn: fix GenABlockWithTransactions and related testcases
+		// TODO-Kaia: fix GenABlockWithTransactions and related testcases
 		/*
 			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
 				t.Fatal(err)
@@ -361,7 +363,7 @@ func TestValidationBlockTx(t *testing.T) {
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -422,7 +424,7 @@ func TestValidationBlockTx(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -567,7 +569,7 @@ func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.A
 func TestValidationInvalidSig(t *testing.T) {
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -626,7 +628,7 @@ func TestValidationInvalidSig(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -790,11 +792,11 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	assert.Equal(t, types.ErrSender(kerrors.ErrLegacyTransactionMustBeWithLegacyKey), err)
 }
 
-// TestInvalidBalance generates invalid txs which don't have enough KLAY, and will be invalidated during txPool insert process.
+// TestInvalidBalance generates invalid txs which don't have enough KAIA, and will be invalidated during txPool insert process.
 func TestInvalidBalance(t *testing.T) {
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -835,13 +837,13 @@ func TestInvalidBalance(t *testing.T) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
-	// test account will be lack of KLAY
+	// test account will be lack of KAIA
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
 	gasLimit := uint64(100000000000)
-	gasPrice := big.NewInt(25 * params.Ston)
-	amount := uint64(25 * params.Ston)
+	gasPrice := big.NewInt(25 * params.Gkei)
+	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
 	cost.Add(cost, new(big.Int).SetUint64(amount))
 
@@ -855,7 +857,7 @@ func TestInvalidBalance(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -878,7 +880,7 @@ func TestInvalidBalance(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// generate a test account with a specific amount of KLAY
+	// generate a test account with a specific amount of KAIA
 	{
 		var txs types.Transactions
 
@@ -907,7 +909,7 @@ func TestInvalidBalance(t *testing.T) {
 		txType := testTxType.txType
 
 		if !txType.IsFeeDelegatedTransaction() {
-			// tx with a specific amount or a gasLimit requiring more KLAY than the sender has.
+			// tx with a specific amount or a gasLimit requiring more KAIA than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -930,7 +932,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, blockchain.ErrInsufficientFundsFrom, err)
 			}
 
-			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
+			// tx with a specific amount or a gasLimit requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -950,7 +952,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, nil, err)
 
 				// Since `txpool.AddRemote` does not make a block,
-				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
+				// the sender can send txs to txpool in multiple times (by the for loop) with limited KAIA.
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, nil, err)
 				testAcc.AddNonce()
@@ -958,7 +960,7 @@ func TestInvalidBalance(t *testing.T) {
 		}
 
 		if txType.IsFeeDelegatedTransaction() && !txType.IsFeeDelegatedWithRatioTransaction() {
-			// tx with a specific amount requiring more KLAY than the sender has.
+			// tx with a specific amount requiring more KAIA than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -982,7 +984,7 @@ func TestInvalidBalance(t *testing.T) {
 				}
 			}
 
-			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
+			// tx with a specific gasLimit (or amount) requiring more KAIA than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1004,7 +1006,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, blockchain.ErrInsufficientFundsFeePayer, err)
 			}
 
-			// tx with a specific amount requiring the exact KLAY the sender has.
+			// tx with a specific amount requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1024,14 +1026,14 @@ func TestInvalidBalance(t *testing.T) {
 					assert.Equal(t, nil, err)
 
 					// Since `txpool.AddRemote` does not make a block,
-					// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
+					// the sender can send txs to txpool in multiple times (by the for loop) with limited KAIA.
 					err = txpool.AddRemote(tx)
 					assert.Equal(t, nil, err)
 					testAcc.AddNonce()
 				}
 			}
 
-			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
+			// tx with a specific gasLimit (or amount) requiring the exact KAIA the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1050,7 +1052,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, nil, err)
 
 				// Since `txpool.AddRemote` does not make a block,
-				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
+				// the sender can send txs to txpool in multiple times (by the for loop) with limited KAIA.
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, nil, err)
 				reservoir.AddNonce()
@@ -1058,7 +1060,7 @@ func TestInvalidBalance(t *testing.T) {
 		}
 
 		if txType.IsFeeDelegatedWithRatioTransaction() {
-			// tx with a specific amount and a gasLimit requiring more KLAY than the sender has.
+			// tx with a specific amount and a gasLimit requiring more KAIA than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1090,7 +1092,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, blockchain.ErrInsufficientFundsFrom, err)
 			}
 
-			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
+			// tx with a specific amount and a gasLimit requiring more KAIA than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1115,7 +1117,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, blockchain.ErrInsufficientFundsFeePayer, err)
 			}
 
-			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
+			// tx with a specific amount and a gasLimit requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1144,13 +1146,13 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, nil, err)
 
 				// Since `txpool.AddRemote` does not make a block,
-				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
+				// the sender can send txs to txpool in multiple times (by the for loop) with limited KAIA.
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, nil, err)
 				testAcc.AddNonce()
 			}
 
-			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
+			// tx with a specific amount and a gasLimit requiring the exact KAIA the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, testAcc, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1172,7 +1174,7 @@ func TestInvalidBalance(t *testing.T) {
 				assert.Equal(t, nil, err)
 
 				// Since `txpool.AddRemote` does not make a block,
-				// the sender can send txs to txpool in multiple times (by the for loop) with limited KLAY.
+				// the sender can send txs to txpool in multiple times (by the for loop) with limited KAIA.
 				err = txpool.AddRemote(tx)
 				assert.Equal(t, nil, err)
 				reservoir.AddNonce()
@@ -1181,13 +1183,13 @@ func TestInvalidBalance(t *testing.T) {
 	}
 }
 
-// TestInvalidBalanceBlockTx generates invalid txs which don't have enough KLAY, and will be invalidated during block insert process.
+// TestInvalidBalanceBlockTx generates invalid txs which don't have enough KAIA, and will be invalidated during block insert process.
 func TestInvalidBalanceBlockTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	testTxTypes := []testTxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1232,13 +1234,13 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	assert.Equal(t, nil, err)
 
-	// test account will be lack of KLAY
+	// test account will be lack of KAIA
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
 	gasLimit := uint64(100000000000)
-	gasPrice := big.NewInt(25 * params.Ston)
-	amount := uint64(25 * params.Ston)
+	gasPrice := big.NewInt(25 * params.Gkei)
+	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
 	cost.Add(cost, new(big.Int).SetUint64(amount))
 
@@ -1252,7 +1254,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -1275,7 +1277,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// generate a test account with a specific amount of KLAY
+	// generate a test account with a specific amount of KAIA
 	{
 		var txs types.Transactions
 
@@ -1301,7 +1303,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		txType := testTxType.txType
 
 		if !txType.IsFeeDelegatedTransaction() {
-			// tx with a specific amount or a gasLimit requiring more KLAY than the sender has.
+			// tx with a specific amount or a gasLimit requiring more KAIA than the sender has.
 			{
 				var expectedErr error
 
@@ -1331,7 +1333,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
 
-			// tx with a specific amount or a gasLimit requiring the exact KLAY the sender has.
+			// tx with a specific amount or a gasLimit requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1362,7 +1364,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		}
 
 		if txType.IsFeeDelegatedTransaction() && !txType.IsFeeDelegatedWithRatioTransaction() {
-			// tx with a specific amount requiring more KLAY than the sender has.
+			// tx with a specific amount requiring more KAIA than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1387,7 +1389,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				}
 			}
 
-			// tx with a specific gasLimit (or amount) requiring more KLAY than the feePayer has.
+			// tx with a specific gasLimit (or amount) requiring more KAIA than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1410,7 +1412,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
 
-			// tx with a specific amount requiring the exact KLAY the sender has.
+			// tx with a specific amount requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1440,7 +1442,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				}
 			}
 
-			// tx with a specific gasLimit (or amount) requiring the exact KLAY the feePayer has.
+			// tx with a specific gasLimit (or amount) requiring the exact KAIA the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1465,7 +1467,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		}
 
 		if txType.IsFeeDelegatedWithRatioTransaction() {
-			// tx with a specific amount and a gasLimit requiring more KLAY than the sender has.
+			// tx with a specific amount and a gasLimit requiring more KAIA than the sender has.
 			{
 				var expectedErr error
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
@@ -1503,7 +1505,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
 
-			// tx with a specific amount and a gasLimit requiring more KLAY than the feePayer has.
+			// tx with a specific amount and a gasLimit requiring more KAIA than the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1529,7 +1531,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				assert.Equal(t, (*types.Receipt)(nil), receipt)
 			}
 
-			// tx with a specific amount and a gasLimit requiring the exact KLAY the sender has.
+			// tx with a specific amount and a gasLimit requiring the exact KAIA the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1567,7 +1569,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 				}
 			}
 
-			// tx with a specific amount and a gasLimit requiring the exact KLAY the feePayer has.
+			// tx with a specific amount and a gasLimit requiring the exact KAIA the feePayer has.
 			{
 				valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
 				if toBasicType(txType) == types.TxTypeSmartContractExecution {
@@ -1601,7 +1603,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 func TestValidationTxSizeAfterRLP(t *testing.T) {
 	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1655,7 +1657,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -1767,7 +1769,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1912,7 +1914,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1967,7 +1969,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
@@ -1990,7 +1992,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
-	// transfer KLAY to fee payer
+	// transfer KAIA to fee payer
 	{
 		var txs types.Transactions
 
@@ -1998,9 +2000,9 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 			types.TxValueKeyNonce:    reservoir.GetNonce(),
 			types.TxValueKeyFrom:     reservoir.GetAddr(),
 			types.TxValueKeyTo:       feePayer.Addr,
-			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(100000)),
+			types.TxValueKeyAmount:   new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(100000)),
 			types.TxValueKeyGasLimit: gasLimit,
-			types.TxValueKeyGasPrice: big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice: big.NewInt(25 * params.Gkei),
 		}
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, values)

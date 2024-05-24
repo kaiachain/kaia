@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/backend.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -79,7 +81,7 @@ type Backend interface {
 // NodeInfo represents a short summary of the ServiceChain sub-protocol metadata
 // known about the host peer.
 type SubBridgeInfo struct {
-	Network uint64              `json:"network"` // Klaytn network ID
+	Network uint64              `json:"network"` // Kaia network ID
 	Genesis common.Hash         `json:"genesis"` // SHA3 hash of the host's genesis block
 	Config  *params.ChainConfig `json:"config"`  // Chain configuration for the fork rules
 	Head    common.Hash         `json:"head"`    // SHA3 hash of the host's best owned block
@@ -99,7 +101,7 @@ type BridgeTxPool interface {
 	Stop()
 }
 
-// SubBridge implements the Klaytn consensus node service.
+// SubBridge implements the Kaia consensus node service.
 type SubBridge struct {
 	config *SCConfig
 
@@ -204,7 +206,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		bootFail:           false,
 		rpcSendCh:          make(chan []byte),
 	}
-	// TODO-Klaytn change static config to user define config
+	// TODO-Kaia change static config to user define config
 	bridgetxConfig := bridgepool.BridgeTxPoolConfig{
 		ParentChainID: new(big.Int).SetUint64(config.ParentChainID),
 		Journal:       path.Join(config.DataDir, "bridge_transactions.rlp"),
@@ -212,7 +214,7 @@ func NewSubBridge(ctx *node.ServiceContext, config *SCConfig) (*SubBridge, error
 		GlobalQueue:   8192,
 	}
 
-	logger.Info("Initialising Klaytn-Bridge protocol", "network", config.NetworkId)
+	logger.Info("Initialising Kaia-Bridge protocol", "network", config.NetworkId)
 	sb.APIBackend = &SubBridgeAPI{sb}
 
 	sb.bridgeTxPool = bridgepool.NewBridgeTxPool(bridgetxConfig)
@@ -351,7 +353,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 			sb.txPool = v
 			// event from core-service
 			// sb.txSub = sb.txPool.SubscribeNewTxsEvent(sb.txCh)
-		// TODO-Klaytn if need pending block, should use miner
+		// TODO-Kaia if need pending block, should use miner
 		case *work.Miner:
 		}
 	}
@@ -423,7 +425,7 @@ func (sb *SubBridge) getChainID() *big.Int {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (sb *SubBridge) Start(srvr p2p.Server) error {
 	if sb.bootFail {
 		return errors.New("subBridge node fail to start")
@@ -512,7 +514,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	if sb.peers.Len() >= sb.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
 		return p2p.DiscTooManyPeers
 	}
-	p.GetP2PPeer().Log().Debug("Klaytn peer connected", "name", p.GetP2PPeer().Name())
+	p.GetP2PPeer().Log().Debug("Kaia peer connected", "name", p.GetP2PPeer().Name())
 
 	// Execute the handshake
 	var (
@@ -524,7 +526,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 
 	err := p.Handshake(sb.networkId, sb.getChainID(), td, hash)
 	if err != nil {
-		p.GetP2PPeer().Log().Debug("Klaytn peer handshake failed", "err", err)
+		p.GetP2PPeer().Log().Debug("Kaia peer handshake failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -532,7 +534,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	// Register the peer locally
 	if err := sb.peers.Register(p); err != nil {
 		// if starting node with unlock account, can't register peer until finish unlock
-		p.GetP2PPeer().Log().Info("Klaytn peer registration failed", "err", err)
+		p.GetP2PPeer().Log().Info("Kaia peer registration failed", "err", err)
 		fmt.Println(err)
 		return err
 	}
@@ -545,7 +547,7 @@ func (sb *SubBridge) handle(p BridgePeer) error {
 	// main loop. handle incoming messages.
 	for {
 		if err := sb.handleMsg(p); err != nil {
-			p.GetP2PPeer().Log().Debug("Klaytn message handling failed", "err", err)
+			p.GetP2PPeer().Log().Debug("Kaia message handling failed", "err", err)
 			return err
 		}
 	}
@@ -694,7 +696,7 @@ func (sb *SubBridge) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	logger.Debug("Removing Klaytn peer", "peer", id)
+	logger.Debug("Removing Kaia peer", "peer", id)
 
 	if err := sb.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
@@ -751,11 +753,11 @@ func (sb *SubBridge) syncer() {
 }
 
 func (sb *SubBridge) synchronise(peer BridgePeer) {
-	// @TODO Klaytn ServiceChain Sync
+	// @TODO Kaia ServiceChain Sync
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (sb *SubBridge) Stop() error {
 	close(sb.quitSync)
 	sb.bridgeManager.stopAllRecoveries()

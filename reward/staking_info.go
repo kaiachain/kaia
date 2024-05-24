@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package reward
 
@@ -51,8 +53,8 @@ type StakingInfo struct {
 	CouncilStakingAddrs []common.Address `json:"councilStakingAddrs"` // Address of Staking account which holds staking balance
 	CouncilRewardAddrs  []common.Address `json:"councilRewardAddrs"`  // Address of Council account which will get block reward
 
-	KCFAddr common.Address `json:"kcfAddr"` // Address of KCF contract
-	KFFAddr common.Address `json:"kffAddr"` // Address of KFF contract
+	KEFAddr common.Address `json:"kefAddr"` // Address of KEF contract
+	KIFAddr common.Address `json:"kifAddr"` // Address of KIF contract
 
 	UseGini bool    `json:"useGini"`
 	Gini    float64 `json:"gini"` // gini coefficient
@@ -62,15 +64,15 @@ type StakingInfo struct {
 }
 
 // MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
-// TODO-klaytn-Mantle: remove this marshal function when backward-compatibility for KIR/PoC is not needed
+// TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC, KCF/KFF is not needed
 func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
 		CouncilStakingAddrs   []common.Address `json:"councilStakingAddrs"`
 		CouncilRewardAddrs    []common.Address `json:"councilRewardAddrs"`
-		KCFAddr               common.Address   `json:"kcfAddr"`
-		KFFAddr               common.Address   `json:"kffAddr"`
+		KEFAddr               common.Address   `json:"kefAddr"`
+		KIFAddr               common.Address   `json:"kifAddr"`
 		UseGini               bool             `json:"useGini"`
 		Gini                  float64          `json:"gini"`
 		CouncilStakingAmounts []uint64         `json:"councilStakingAmounts"`
@@ -78,6 +80,8 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 		// legacy fields of StakingInfo
 		KIRAddr common.Address `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
 		PoCAddr common.Address `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+		KCFAddr common.Address `json:"kcfAddr"` // KCFAddr -> KEFAddr from Kaia v1.0.0
+		KFFAddr common.Address `json:"kffAddr"` // KFFAddr -> KIFAddr from Kaia v1.0.0
 	}
 
 	var ext extendedSt
@@ -85,15 +89,17 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	ext.CouncilNodeAddrs = st.CouncilNodeAddrs
 	ext.CouncilStakingAddrs = st.CouncilStakingAddrs
 	ext.CouncilRewardAddrs = st.CouncilRewardAddrs
-	ext.KCFAddr = st.KCFAddr
-	ext.KFFAddr = st.KFFAddr
+	ext.KEFAddr = st.KEFAddr
+	ext.KIFAddr = st.KIFAddr
 	ext.UseGini = st.UseGini
 	ext.Gini = st.Gini
 	ext.CouncilStakingAmounts = st.CouncilStakingAmounts
 
-	// KIRAddr and PoCAddr are for backward-compatibility of database
-	ext.KIRAddr = st.KCFAddr
-	ext.PoCAddr = st.KFFAddr
+	// LHS are for backward-compatibility of database
+	ext.KCFAddr = st.KEFAddr
+	ext.KFFAddr = st.KIFAddr
+	ext.KIRAddr = st.KEFAddr
+	ext.PoCAddr = st.KIFAddr
 
 	return json.Marshal(&ext)
 }
@@ -105,8 +111,8 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
 		CouncilStakingAddrs   []common.Address `json:"councilStakingAddrs"`
 		CouncilRewardAddrs    []common.Address `json:"councilRewardAddrs"`
-		KCFAddr               common.Address   `json:"kcfAddr"`
-		KFFAddr               common.Address   `json:"kffAddr"`
+		KEFAddr               common.Address   `json:"kefAddr"`
+		KIFAddr               common.Address   `json:"kifAddr"`
 		UseGini               bool             `json:"useGini"`
 		Gini                  float64          `json:"gini"`
 		CouncilStakingAmounts []uint64         `json:"councilStakingAmounts"`
@@ -114,6 +120,8 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 		// legacy fields of StakingInfo
 		KIRAddr common.Address `json:"KIRAddr"` // KIRAddr -> KCFAddr from v1.10.2
 		PoCAddr common.Address `json:"PoCAddr"` // PoCAddr -> KFFAddr from v1.10.2
+		KCFAddr common.Address `json:"kcfAddr"` // KCFAddr -> KEFAddr from Kaia v1.0.0
+		KFFAddr common.Address `json:"kffAddr"` // KFFAddr -> KIFAddr from Kaia v1.0.0
 	}
 
 	var ext extendedSt
@@ -127,17 +135,23 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	st.CouncilNodeAddrs = ext.CouncilNodeAddrs
 	st.CouncilStakingAddrs = ext.CouncilStakingAddrs
 	st.CouncilRewardAddrs = ext.CouncilRewardAddrs
-	st.KCFAddr = ext.KCFAddr
-	st.KFFAddr = ext.KFFAddr
+	st.KEFAddr = ext.KEFAddr
+	st.KIFAddr = ext.KIFAddr
 	st.UseGini = ext.UseGini
 	st.Gini = ext.Gini
 	st.CouncilStakingAmounts = ext.CouncilStakingAmounts
 
-	if st.KCFAddr == emptyAddr {
-		st.KCFAddr = ext.KIRAddr
+	if st.KEFAddr == emptyAddr {
+		st.KEFAddr = ext.KCFAddr
+		if st.KEFAddr == emptyAddr {
+			st.KEFAddr = ext.KIRAddr
+		}
 	}
-	if st.KFFAddr == emptyAddr {
-		st.KFFAddr = ext.PoCAddr
+	if st.KIFAddr == emptyAddr {
+		st.KIFAddr = ext.KFFAddr
+		if st.KIFAddr == emptyAddr {
+			st.KIFAddr = ext.PoCAddr
+		}
 	}
 
 	return nil
@@ -176,8 +190,8 @@ type stakingInfoRLP struct {
 	CouncilNodeAddrs      []common.Address
 	CouncilStakingAddrs   []common.Address
 	CouncilRewardAddrs    []common.Address
-	KCFAddr               common.Address
-	KFFAddr               common.Address
+	KEFAddr               common.Address
+	KIFAddr               common.Address
 	UseGini               bool
 	Gini                  uint64
 	CouncilStakingAmounts []uint64
@@ -189,8 +203,8 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 		CouncilNodeAddrs:      make([]common.Address, 0, 0),
 		CouncilStakingAddrs:   make([]common.Address, 0, 0),
 		CouncilRewardAddrs:    make([]common.Address, 0, 0),
-		KCFAddr:               common.Address{},
-		KFFAddr:               common.Address{},
+		KEFAddr:               common.Address{},
+		KIFAddr:               common.Address{},
 		CouncilStakingAmounts: make([]uint64, 0, 0),
 		Gini:                  DefaultGiniCoefficient,
 		UseGini:               false,
@@ -198,26 +212,74 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 	return stakingInfo
 }
 
-func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nodeAddrs []common.Address, stakingAddrs []common.Address, rewardAddrs []common.Address, KCFAddr common.Address, KFFAddr common.Address) (*StakingInfo, error) {
-	intervalBlock := bc.GetBlockByNumber(blockNum)
-	if intervalBlock == nil {
-		logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
-		return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
+// newStakingInfo fills stakingAmount from effectiveStakings if set. Otherwise, stakingAmount is filled with the balances of staking contracts at a given block.
+// Currently, effectiveStakings are same as `statedb.GetBalance(stakingAddr)`, which is the balance of staking contracts.
+func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, types []uint8, addrs []common.Address, effectiveStakings ...*big.Int) (*StakingInfo, error) {
+	var (
+		nodeIds      = []common.Address{}
+		stakingAddrs = []common.Address{}
+		rewardAddrs  = []common.Address{}
+		pocAddr      = common.Address{}
+		kirAddr      = common.Address{}
+	)
+
+	// Parse and construct node information
+	for i, addrType := range types {
+		switch addrType {
+		case addressTypeNodeID:
+			nodeIds = append(nodeIds, addrs[i])
+		case addressTypeStakingAddr:
+			stakingAddrs = append(stakingAddrs, addrs[i])
+		case addressTypeRewardAddr:
+			rewardAddrs = append(rewardAddrs, addrs[i])
+		case addressTypePoCAddr:
+			pocAddr = addrs[i]
+		case addressTypeKIRAddr:
+			kirAddr = addrs[i]
+		default:
+			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
+		}
 	}
-	statedb, err := bc.StateAt(intervalBlock.Root())
-	if err != nil {
-		logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
-		return nil, err
+
+	// validate parsed node information
+	if len(nodeIds) != len(stakingAddrs) ||
+		len(nodeIds) != len(rewardAddrs) ||
+		len(effectiveStakings) > 0 && len(stakingAddrs) != len(effectiveStakings) ||
+		common.EmptyAddress(pocAddr) ||
+		common.EmptyAddress(kirAddr) {
+		// This is an expected behavior when the addressBook contract is not activated yet.
+		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
 	}
 
 	// Get balance of stakingAddrs
 	stakingAmounts := make([]uint64, len(stakingAddrs))
-	for i, stakingAddr := range stakingAddrs {
-		tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KLAY))
-		if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
-			tempStakingAmount.SetUint64(maxStakingLimit)
+	if len(effectiveStakings) == 0 {
+		intervalBlock := bc.GetBlockByNumber(blockNum)
+		if intervalBlock == nil {
+			logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
+			return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
 		}
-		stakingAmounts[i] = tempStakingAmount.Uint64()
+		statedb, err := bc.StateAt(intervalBlock.Root())
+		if err != nil {
+			logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
+			return nil, err
+		}
+		for i, stakingAddr := range stakingAddrs {
+			tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KAIA))
+			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
+				tempStakingAmount.SetUint64(maxStakingLimit)
+			}
+			stakingAmounts[i] = tempStakingAmount.Uint64()
+		}
+	} else {
+		for i, effectiveStaking := range effectiveStakings {
+			tempStakingAmount := big.NewInt(0).Div(effectiveStaking, big.NewInt(0).SetUint64(params.KAIA))
+			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
+				tempStakingAmount.SetUint64(maxStakingLimit)
+			}
+			stakingAmounts[i] = tempStakingAmount.Uint64()
+		}
 	}
 
 	pset, err := helper.EffectiveParams(blockNum)
@@ -229,11 +291,11 @@ func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, nod
 
 	stakingInfo := &StakingInfo{
 		BlockNum:              blockNum,
-		CouncilNodeAddrs:      nodeAddrs,
+		CouncilNodeAddrs:      nodeIds,
 		CouncilStakingAddrs:   stakingAddrs,
 		CouncilRewardAddrs:    rewardAddrs,
-		KCFAddr:               KCFAddr,
-		KFFAddr:               KFFAddr,
+		KEFAddr:               kirAddr,
+		KIFAddr:               pocAddr,
 		CouncilStakingAmounts: stakingAmounts,
 		Gini:                  gini,
 		UseGini:               useGini,
@@ -268,7 +330,7 @@ func (s *StakingInfo) String() string {
 
 func (s *StakingInfo) EncodeRLP(w io.Writer) error {
 	// float64 is not rlp serializable, so it converts to bytes
-	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KCFAddr, s.KFFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
+	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
 }
 
 func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
@@ -278,7 +340,7 @@ func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
 	}
 	s.BlockNum = dec.BlockNum
 	s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs = dec.CouncilNodeAddrs, dec.CouncilStakingAddrs, dec.CouncilRewardAddrs
-	s.KCFAddr, s.KFFAddr, s.UseGini, s.Gini = dec.KCFAddr, dec.KFFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
+	s.KEFAddr, s.KIFAddr, s.UseGini, s.Gini = dec.KEFAddr, dec.KIFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
 	s.CouncilStakingAmounts = dec.CouncilStakingAmounts
 	return nil
 }

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,22 +18,23 @@
 //
 // This file is derived from eth/fetcher/metrics.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package fetcher
 
 import (
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 
 var (
 	propAnnounceInMeter   = metrics.NewRegisteredMeter("cn/fetcher/prop/announces/in", nil)
-	propAnnounceOutTimer  = klaytnmetrics.NewRegisteredHybridTimer("cn/fetcher/prop/announces/out", nil)
+	propAnnounceOutTimer  = kaiametrics.NewRegisteredHybridTimer("cn/fetcher/prop/announces/out", nil)
 	propAnnounceDropMeter = metrics.NewRegisteredMeter("cn/fetcher/prop/announces/drop", nil)
 	propAnnounceDOSMeter  = metrics.NewRegisteredMeter("cn/fetcher/prop/announces/dos", nil)
 
 	propBroadcastInMeter   = metrics.NewRegisteredMeter("cn/fetcher/prop/broadcasts/in", nil)
-	propBroadcastOutTimer  = klaytnmetrics.NewRegisteredHybridTimer("cn/fetcher/prop/broadcasts/out", nil)
+	propBroadcastOutTimer  = kaiametrics.NewRegisteredHybridTimer("cn/fetcher/prop/broadcasts/out", nil)
 	propBroadcastDropMeter = metrics.NewRegisteredMeter("cn/fetcher/prop/broadcasts/drop", nil)
 	propBroadcastDOSMeter  = metrics.NewRegisteredMeter("cn/fetcher/prop/broadcasts/dos", nil)
 

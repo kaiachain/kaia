@@ -34,7 +34,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	klaytnapi "github.com/klaytn/klaytn/api"
+	kaiaapi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/state"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -67,7 +67,7 @@ const (
 	// on top of memory.
 	// For non-archive nodes, this limit _will_ be overblown, as disk-backed tries
 	// will only be found every ~15K blocks or so.
-	// For klaytn, this value is set to a value 4 times larger compared to the ethereum setting.
+	// For Kaia, this value is set to a value 4 times larger compared to the ethereum setting.
 	defaultTracechainMemLimit = common.StorageSize(4 * 500 * 1024 * 1024)
 
 	// fastCallTracer is the go-version callTracer which is lighter and faster than
@@ -76,7 +76,7 @@ const (
 )
 
 var (
-	HeavyAPIRequestLimit int32 = 500
+	HeavyAPIRequestLimit int32 = 500 // WARN: changing this value will have no effect. This value is for test. See HeavyDebugRequestLimitFlag
 	heavyAPIRequestCount int32 = 0
 )
 
@@ -316,7 +316,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 						break
 					}
 
-					txCtx := blockchain.NewEVMTxContext(msg, task.block.Header())
+					txCtx := blockchain.NewEVMTxContext(msg, task.block.Header(), api.backend.ChainConfig())
 					blockCtx := blockchain.NewEVMBlockContext(task.block.Header(), newChainContext(localctx, api.backend), nil)
 
 					res, err := api.traceTx(localctx, msg, blockCtx, txCtx, task.statedb, config)
@@ -629,7 +629,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 					continue
 				}
 
-				txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+				txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 				blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 				res, err := api.traceTx(ctx, msg, blockCtx, txCtx, task.statedb, config)
 				if err != nil {
@@ -654,7 +654,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 			break
 		}
 
-		txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+		txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 		blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 		vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{})
 		if _, err = blockchain.ApplyMessage(vmenv, msg); err != nil {
@@ -726,7 +726,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 		}
 
 		var (
-			txCtx    = blockchain.NewEVMTxContext(msg, block.Header())
+			txCtx    = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 			blockCtx = blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
 			vmConf vm.Config
@@ -819,10 +819,10 @@ func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, co
 	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
 }
 
-// TraceCall lets you trace a given klay_call. It collects the structured logs
+// TraceCall lets you trace a given kaia_call. It collects the structured logs
 // created during the execution of EVM if the given transaction was added on
 // top of the provided block and returns them as a JSON object.
-func (api *CommonAPI) TraceCall(ctx context.Context, args klaytnapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, blockNrOrHash rpc.BlockNumberOrHash, config *TraceConfig) (interface{}, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
 			return nil, fmt.Errorf("heavy debug api requests exceed the limit: %d", int64(HeavyAPIRequestLimit))
@@ -876,7 +876,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args klaytnapi.CallArgs, bl
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
 	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
 
-	txCtx := blockchain.NewEVMTxContext(msg, block.Header())
+	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
 	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
@@ -948,8 +948,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				return nil, err
 			}
 		}
-		if logs, err := klaytnapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
-			return &klaytnapi.ExecutionResult{
+		if logs, err := kaiaapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
+			return &kaiaapi.ExecutionResult{
 				Gas:         ret.UsedGas,
 				Failed:      ret.Failed(),
 				ReturnValue: fmt.Sprintf("%x", ret.Return()),

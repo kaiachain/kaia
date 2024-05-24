@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package statedb
 
@@ -47,8 +49,9 @@ func (c *TrieNodeCacheConfig) DumpPeriodically() bool {
 	return false
 }
 
-//go:generate mockgen -destination=storage/statedb/mocks/trie_node_cache_mock.go github.com/klaytn/klaytn/storage/statedb TrieNodeCache
 // TrieNodeCache interface the cache of stateDB
+//
+//go:generate mockgen -destination=storage/statedb/mocks/trie_node_cache_mock.go github.com/klaytn/klaytn/storage/statedb TrieNodeCache
 type TrieNodeCache interface {
 	Set(k, v []byte)
 	Get(k []byte) []byte

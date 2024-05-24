@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package tests
 
 import (
@@ -9,7 +24,7 @@ import (
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip103"
+	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/rebalance"
 	"github.com/klaytn/klaytn/log"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +34,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlInfo)
 
 	// prepare chain configuration
-	config := params.CypressChainConfig.Copy()
+	config := params.MainnetChainConfig.Copy()
 	config.LondonCompatibleBlock = big.NewInt(0)
 	config.IstanbulCompatibleBlock = big.NewInt(0)
 	config.EthTxTypeCompatibleBlock = big.NewInt(0)
@@ -27,7 +42,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 
 	// make a blockchain node
 	fullNode, node, validator, _, workspace := newBlockchain(t, config, nil)
@@ -41,7 +56,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
 	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
 
-	contractAddr, tx, contract, err := kip103.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
+	contractAddr, tx, contract, err := rebalance.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +86,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	t.Log("Total Newbie amount: ", totalNewbieAlloc)
 
 	for i := 0; i < numNewbie; i++ {
-		newbieAccs[i] = genKlaytnLegacyAccount(t)
+		newbieAccs[i] = genKaiaLegacyAccount(t)
 		newbieAllocs[i] = new(big.Int).Div(totalNewbieAlloc, big.NewInt(2))
 		totalNewbieAlloc.Sub(totalNewbieAlloc, newbieAllocs[i])
 

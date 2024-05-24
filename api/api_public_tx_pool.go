@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,11 +18,13 @@
 //
 // This file is derived from internal/ethapi/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package api
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -49,7 +52,7 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]
 	for account, txs := range pending {
 		dump := make(map[string]map[string]interface{})
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[strconv.FormatUint(tx.Nonce(), 10)] = newRPCPendingTransaction(tx, s.b.ChainConfig())
 		}
 		content["pending"][account.Hex()] = dump
 	}
@@ -57,7 +60,7 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]
 	for account, txs := range queue {
 		dump := make(map[string]map[string]interface{})
 		for _, tx := range txs {
-			dump[fmt.Sprintf("%d", tx.Nonce())] = newRPCPendingTransaction(tx)
+			dump[strconv.FormatUint(tx.Nonce(), 10)] = newRPCPendingTransaction(tx, s.b.ChainConfig())
 		}
 		content["queued"][account.Hex()] = dump
 	}
@@ -85,9 +88,9 @@ func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
 	// Define a formatter to flatten a transaction into a string
 	format := func(tx *types.Transaction) string {
 		if to := tx.To(); to != nil {
-			return fmt.Sprintf("%s: %v peb + %v gas × %v peb", tx.To().Hex(), tx.Value(), tx.Gas(), tx.GasPrice())
+			return fmt.Sprintf("%s: %v kei + %v gas × %v kei", tx.To().Hex(), tx.Value(), tx.Gas(), tx.GasPrice())
 		}
-		return fmt.Sprintf("contract creation: %v peb + %v gas × %v peb", tx.Value(), tx.Gas(), tx.GasPrice())
+		return fmt.Sprintf("contract creation: %v kei + %v gas × %v kei", tx.Value(), tx.Gas(), tx.GasPrice())
 	}
 	// Flatten the pending transactions
 	for account, txs := range pending {

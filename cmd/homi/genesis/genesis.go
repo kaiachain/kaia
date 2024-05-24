@@ -59,7 +59,7 @@ func NewClique(options ...Option) *blockchain.Genesis {
 		BlockScore: big.NewInt(InitBlockScore),
 		Alloc:      make(blockchain.GenesisAlloc),
 		Config: &params.ChainConfig{
-			ChainID: big.NewInt(3000), // TODO-Klaytn Needs Optional chainID
+			ChainID: big.NewInt(3000), // TODO-Kaia Needs Optional chainID
 		},
 	}
 

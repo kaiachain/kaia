@@ -7,7 +7,7 @@ import {
   ABOOK_ADDRESS,
   nowBlock,
   padUtils,
-} from "../helper";
+} from "../common/helper";
 import { ethers, upgrades } from "hardhat";
 
 // TODO: Manage addresses for system contracts in a single file

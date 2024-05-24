@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state/statedb.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package state
 
@@ -53,11 +55,11 @@ var (
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 
-	// TODO-Klaytn EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
+	// TODO-Kaia EnabledExpensive and DBConfig.EnableDBPerfMetrics will be merged
 	EnabledExpensive = false
 )
 
-// StateDBs within the Klaytn protocol are used to cache stateObjects from Merkle Patricia Trie
+// StateDBs within the Kaia protocol are used to cache stateObjects from Merkle Patricia Trie
 // and mediate the operations to them.
 type StateDB struct {
 	db       Database
@@ -1137,7 +1139,7 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 //
 // Kore fork:
 // - Add sender to access list (2929)
-// - Add feepayer to access list (only for klaytn)
+// - Add feepayer to access list (only for Kaia)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 //

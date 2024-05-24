@@ -1781,29 +1781,28 @@ if (typeof XMLHttpRequest === 'undefined') {
 /// required to define ETH_BIGNUMBER_ROUNDING_MODE
 var BigNumber = require('bignumber.js');
 
-var KLAY_UNITS = [
-    'peb',
-    'kpeb',
-    'Mpeb',
-    'Gpeb',
-    'ston',
-    'uKLAY',
-    'mKLAY',
-    'KLAY',
-    'kKLAY',
-    'MKLAY',
-    'GKLAY',
-    'TKLAY',
-    'PKLAY',
-    'EKLAY',
-    'ZKLAY',
-    'YKLAY',
+var KAIA_UNITS = [
+    'kei',
+    'kkei',
+    'Mkei',
+    'Gkei',
+    'uKAIA',
+    'mKAIA',
+    'KAIA',
+    'kKAIA',
+    'MKAIA',
+    'GKAIA',
+    'TKAIA',
+    'PKAIA',
+    'EKAIA',
+    'ZKAIA',
+    'YKAIA',
 ];
 
 module.exports = {
     ETH_PADDING: 32,
     ETH_SIGNATURE_LENGTH: 4,
-    ETH_UNITS: KLAY_UNITS,
+    ETH_UNITS: KAIA_UNITS,
     ETH_BIGNUMBER_ROUNDING_MODE: { ROUNDING_MODE: BigNumber.ROUND_DOWN },
     ETH_POLLING_TIMEOUT: 1000/2,
     defaultBlock: 'latest',
@@ -1893,49 +1892,51 @@ var sha3 = require('./sha3.js');
 var utf8 = require('utf8');
 
 var unitMap = {
-    'noKLAY':      '0',
-    'peb':         '1',
-    'kpeb':        '1000',
-    'Mpeb':        '1000000',
-    'Gpeb':        '1000000000',
-    'ston':        '1000000000',
-    'uKLAY':       '1000000000000',
-    'mKLAY':       '1000000000000000',
-    'KLAY':        '1000000000000000000',
-    'kKLAY':       '1000000000000000000000',
-    'MKLAY':       '1000000000000000000000000',
-    'GKLAY':       '1000000000000000000000000000',
-    'TKLAY':       '1000000000000000000000000000000'
+    'noKAIA':      '0',
+    'kei':         '1',
+    'kkei':        '1000',
+    'Kkei':        '1000',
+    'mkei':        '1000000',
+    'Mkei':        '1000000',
+    'gkei':        '1000000000',
+    'Gkei':        '1000000000',
+    'uKAIA':       '1000000000000',
+    'mKAIA':       '1000000000000000',
+    'KAIA':        '1000000000000000000',
+    'kKAIA':       '1000000000000000000000',
+    'MKAIA':       '1000000000000000000000000',
+    'GKAIA':       '1000000000000000000000000000',
+    'TKAIA':       '1000000000000000000000000000000'
 };
 
-var unitEthToKlayMap = {
-    'noether':      'noKLAY',
-    'wei':          'peb',
-    'kwei':         'kpeb',
-    'Kwei':         'kpeb',
-    'babbage':      'kpeb',
-    'femtoether':   'kpeb',
-    'mwei':         'Mpeb',
-    'Mwei':         'Mpeb',
-    'lovelace':     'Mpeb',
-    'picoether':    'Mpeb',
-    'gwei':         'Gpeb',
-    'Gwei':         'Gpeb',
-    'shannon':      'Gpeb',
-    'nanoether':    'Gpeb',
-    'nano':         'Gpeb',
-    'szabo':        'uKLAY',
-    'microether':   'uKLAY',
-    'micro':        'uKLAY',
-    'finney':       'mKLAY',
-    'milliether':   'mKLAY',
-    'milli':        'mKLAY',
-    'ether':        'KLAY',
-    'kether':       'kKLAY',
-    'grand':        'kKLAY',
-    'mether':       'MKLAY',
-    'gether':       'GKLAY',
-    'tether':       'TKLAY'
+var unitEthToKaiaMap = {
+    'noether':      'noKAIA',
+    'wei':          'kei',
+    'kwei':         'kkei',
+    'Kwei':         'kkei',
+    'babbage':      'kkei',
+    'femtoether':   'kkei',
+    'mwei':         'mkei',
+    'Mwei':         'mkei',
+    'lovelace':     'mkei',
+    'picoether':    'mkei',
+    'gwei':         'gkei',
+    'Gwei':         'gkei',
+    'shannon':      'gkei',
+    'nanoether':    'gkei',
+    'nano':         'gkei',
+    'szabo':        'uKAIA',
+    'microether':   'uKAIA',
+    'micro':        'uKAIA',
+    'finney':       'mKAIA',
+    'milliether':   'mKAIA',
+    'milli':        'mKAIA',
+    'ether':        'KAIA',
+    'kether':       'kKAIA',
+    'grand':        'kKAIA',
+    'mether':       'MKAIA',
+    'gether':       'GKAIA',
+    'tether':       'TKAIA'
 };
 
 /**
@@ -2176,15 +2177,15 @@ function fancyStringify2D(obj) {
 };
 
 /**
- * Returns value of unit in peb
+ * Returns value of unit in kei
  *
  * @method getValueOfUnit
  * @param {String} unit the unit to convert to, default ether
- * @returns {BigNumber} value of the unit (in peb)
+ * @returns {BigNumber} value of the unit (in kei)
  * @throws error if the unit is not correct
  */
 var getValueOfUnit = function (unit) {
-    unit = unit ? unit : 'KLAY';
+    unit = unit ? unit : 'KAIA';
     var unitValue = unitMap[unit];
     if (unitValue === undefined) {
         throw new Error('This unit doesn\'t exist, please use one of the following units\n'
@@ -2215,34 +2216,34 @@ var getValueOfUnit = function (unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var fromWei = function(number, unit) {
-    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
-    var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(klayUnit));
+    var kaiaUnit = unitEthToKaiaMap[unit] ? unitEthToKaiaMap[unit] : unit;
+    var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(kaiaUnit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
 
 /**
- * Takes a number of peb and converts it to any other KLAY unit.
+ * Takes a number of kei and converts it to any other KAIA unit.
  *
  * Possible units are:
  *   SI Short
- * - kpeb
- * - Mpeb
- * - Gpeb
- * - uKLAY
- * - mKLAY
- * - KLAY
- * - kKLAY
- * - MKLAY
- * - GKLAY
- * - TKLAY
+ * - kkei
+ * - Mkei
+ * - Gkei
+ * - uKAIA
+ * - mKAIA
+ * - KAIA
+ * - kKAIA
+ * - MKAIA
+ * - GKAIA
+ * - TKAIA
  *
- * @method fromPeb
+ * @method fromKei
  * @param {Number|String} number can be a number, number string or a HEX of a decimal
- * @param {String} unit the unit to convert to, default KLAY
+ * @param {String} unit the unit to convert to, default KAIA
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
  */
-var fromPeb = function(number, unit) {
+var fromKei = function(number, unit) {
     var returnValue = toBigNumber(number).dividedBy(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2271,34 +2272,34 @@ var fromPeb = function(number, unit) {
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
 */
 var toWei = function(number, unit) {
-    var klayUnit = unitEthToKlayMap[unit] ? unitEthToKlayMap[unit] : unit;
-    var returnValue = toBigNumber(number).times(getValueOfUnit(klayUnit));
+    var kaiaUnit = unitEthToKaiaMap[unit] ? unitEthToKaiaMap[unit] : unit;
+    var returnValue = toBigNumber(number).times(getValueOfUnit(kaiaUnit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
 };
 
 /**
- * Takes a number of a unit and converts it to peb.
+ * Takes a number of a unit and converts it to kei.
  *
  * Possible units are:
  *   SI Short
  * - kpeb
  * - Mpeb
  * - Gpeb
- * - uKLAY
- * - mKLAY
- * - KLAY
- * - kKLAY
- * - MKLAY
- * - GKLAY
- * - TKLAY
+ * - uKAIA
+ * - mKAIA
+ * - KAIA
+ * - kKAIA
+ * - MKAIA
+ * - GKAIA
+ * - TKAIA
  *
- * @method toPeb
+ * @method toKei
  * @param {Number|String|BigNumber} number can be a number, number string or a HEX of a decimal
  * @param {String} unit the unit to convert from, default ether
  * @return {String|Object} When given a BigNumber object it returns one as well, otherwise a number
  */
-var toPeb = function(number, unit) {
+var toKei = function(number, unit) {
     var returnValue = toBigNumber(number).times(getValueOfUnit(unit));
 
     return isBigNumber(number) ? returnValue : returnValue.toString(10);
@@ -2521,7 +2522,7 @@ var isJson = function (str) {
 };
 
 /**
- * Returns true if given string is a valid Klaytn block header bloom.
+ * Returns true if given string is a valid Kaia block header bloom.
  *
  * @method isBloom
  * @param {String} hex encoded bloom filter
@@ -2567,8 +2568,8 @@ module.exports = {
     extractTypeName: extractTypeName,
     toWei: toWei,
     fromWei: fromWei,
-    toPeb: toPeb,
-    fromPeb: fromPeb,
+    toKei: toKei,
+    fromKei: fromKei,
     toBigNumber: toBigNumber,
     toTwosComplement: toTwosComplement,
     toAddress: toAddress,
@@ -2622,7 +2623,7 @@ module.exports={
 
 var RequestManager = require('./web3/requestmanager');
 var Iban = require('./web3/iban');
-var Klay = require('./web3/methods/klay');
+var Kaia = require('./web3/methods/kaia');
 var Eth = require('./web3/methods/eth');
 var DB = require('./web3/methods/db');
 var Shh = require('./web3/methods/shh');
@@ -2645,7 +2646,8 @@ var BigNumber = require('bignumber.js');
 function Web3 (provider) {
     this._requestManager = new RequestManager(provider);
     this.currentProvider = provider;
-    this.klay = new Klay(this);
+    this.kaia = new Kaia(this);
+    this.klay = new Kaia(this); // for backward compatibility
     this.eth = new Eth(this);
     this.db = new DB(this);
     this.shh = new Shh(this);
@@ -2664,23 +2666,23 @@ function Web3 (provider) {
     this._extend({
         properties: properties()
     });
-    this.klay.BigNumber = BigNumber;
-    this.klay.toHex = utils.toHex;
-    this.klay.toAscii = utils.toAscii;
-    this.klay.toUtf8 = utils.toUtf8;
-    this.klay.fromAscii = utils.fromAscii;
-    this.klay.fromUtf8 = utils.fromUtf8;
-    this.klay.toDecimal = utils.toDecimal;
-    this.klay.fromDecimal = utils.fromDecimal;
-    this.klay.toBigNumber = utils.toBigNumber;
-    this.klay.toPeb = utils.toPeb;
-    this.klay.fromPeb = utils.fromPeb;
-    this.klay.isAddress = utils.isAddress;
-    this.klay.isChecksumAddress = utils.isChecksumAddress;
-    this.klay.toChecksumAddress = utils.toChecksumAddress;
-    this.klay.isIBAN = utils.isIBAN;
-    this.klay.padLeft = utils.padLeft;
-    this.klay.padRight = utils.padRight;
+    this.kaia.BigNumber = BigNumber;
+    this.kaia.toHex = utils.toHex;
+    this.kaia.toAscii = utils.toAscii;
+    this.kaia.toUtf8 = utils.toUtf8;
+    this.kaia.fromAscii = utils.fromAscii;
+    this.kaia.fromUtf8 = utils.fromUtf8;
+    this.kaia.toDecimal = utils.toDecimal;
+    this.kaia.fromDecimal = utils.fromDecimal;
+    this.kaia.toBigNumber = utils.toBigNumber;
+    this.kaia.toKei = utils.toKei;
+    this.kaia.fromKei = utils.fromKei;
+    this.kaia.isAddress = utils.isAddress;
+    this.kaia.isChecksumAddress = utils.isChecksumAddress;
+    this.kaia.toChecksumAddress = utils.toChecksumAddress;
+    this.kaia.isIBAN = utils.isIBAN;
+    this.kaia.padLeft = utils.padLeft;
+    this.kaia.padRight = utils.padRight;
 }
 
 // expose providers on the class
@@ -2710,8 +2712,8 @@ Web3.prototype.fromDecimal = utils.fromDecimal;
 Web3.prototype.toBigNumber = utils.toBigNumber;
 Web3.prototype.toWei = utils.toWei;
 Web3.prototype.fromWei = utils.fromWei;
-Web3.prototype.toPeb = utils.toPeb;
-Web3.prototype.fromPeb = utils.fromPeb;
+Web3.prototype.toKei = utils.toKei;
+Web3.prototype.fromKei = utils.fromKei;
 Web3.prototype.isAddress = utils.isAddress;
 Web3.prototype.isChecksumAddress = utils.isChecksumAddress;
 Web3.prototype.toChecksumAddress = utils.toChecksumAddress;
@@ -2744,7 +2746,7 @@ var properties = function () {
             inputFormatter: utils.toDecimal
         }),
         new Property({
-            name: 'version.klaytn',
+            name: 'version.kaia',
             getter: 'klay_protocolVersion',
             inputFormatter: utils.toDecimal
         }),
@@ -2767,7 +2769,7 @@ Web3.prototype.createBatch = function () {
 module.exports = Web3;
 
 
-},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/klay":38,"./web3/methods/eth":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
+},{"./utils/sha3":19,"./utils/utils":20,"./version.json":21,"./web3/batch":24,"./web3/extend":28,"./web3/httpprovider":32,"./web3/iban":33,"./web3/ipcprovider":34,"./web3/methods/db":37,"./web3/methods/kaia":38,"./web3/methods/eth":87,"./web3/methods/net":39,"./web3/methods/personal":40,"./web3/methods/shh":41,"./web3/methods/swarm":42,"./web3/property":45,"./web3/requestmanager":46,"./web3/settings":47,"bignumber.js":"bignumber.js"}],23:[function(require,module,exports){
 /*
     This file is part of web3.js.
 
@@ -2846,7 +2848,7 @@ AllSolidityEvents.prototype.execute = function (options, callback) {
 
     var o = this.encode(options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
+    return new Filter(o, 'kaia', this._requestManager, watches.kaia(), formatter, callback);
 };
 
 AllSolidityEvents.prototype.attachToContract = function (contract) {
@@ -2984,7 +2986,7 @@ var addFunctionsToContract = function (contract) {
     contract.abi.filter(function (json) {
         return json.type === 'function';
     }).map(function (json) {
-        return new SolidityFunction(contract._klay, json, contract.address);
+        return new SolidityFunction(contract._kaia, json, contract.address);
     }).forEach(function (f) {
         f.attachToContract(contract);
     });
@@ -3002,11 +3004,11 @@ var addEventsToContract = function (contract) {
         return json.type === 'event';
     });
 
-    var All = new AllEvents(contract._klay._requestManager, events, contract.address);
+    var All = new AllEvents(contract._kaia._requestManager, events, contract.address);
     All.attachToContract(contract);
 
     events.map(function (json) {
-        return new SolidityEvent(contract._klay._requestManager, json, contract.address);
+        return new SolidityEvent(contract._kaia._requestManager, json, contract.address);
     }).forEach(function (e) {
         e.attachToContract(contract);
     });
@@ -3026,7 +3028,7 @@ var checkForContractAddress = function(contract, callback){
         callbackFired = false;
 
     // wait for receipt
-    var filter = contract._klay.filter('latest', function(e){
+    var filter = contract._kaia.filter('latest', function(e){
         if (!e && !callbackFired) {
             count++;
 
@@ -3044,10 +3046,10 @@ var checkForContractAddress = function(contract, callback){
 
             } else {
 
-                contract._klay.getTransactionReceipt(contract.transactionHash, function(e, receipt){
+                contract._kaia.getTransactionReceipt(contract.transactionHash, function(e, receipt){
                     if(receipt && !callbackFired) {
 
-                        contract._klay.getCode(receipt.contractAddress, function(e, code){
+                        contract._kaia.getCode(receipt.contractAddress, function(e, code){
                             /*jshint maxcomplexity: 6 */
 
                             if(callbackFired || !code)
@@ -3090,8 +3092,8 @@ var checkForContractAddress = function(contract, callback){
  * @method ContractFactory
  * @param {Array} abi
  */
-var ContractFactory = function (klay, abi) {
-    this.klay = klay;
+var ContractFactory = function (kaia, abi) {
+    this.kaia = kaia;
     this.abi = abi;
 
     /**
@@ -3107,7 +3109,7 @@ var ContractFactory = function (klay, abi) {
     this.new = function () {
         /*jshint maxcomplexity: 7 */
 
-        var contract = new Contract(this.klay, this.abi);
+        var contract = new Contract(this.kaia, this.abi);
 
         // parse arguments
         var options = {}; // required!
@@ -3139,7 +3141,7 @@ var ContractFactory = function (klay, abi) {
         if (callback) {
 
             // wait for the contract address adn check if the code was deployed
-            this.klay.sendTransaction(options, function (err, hash) {
+            this.kaia.sendTransaction(options, function (err, hash) {
                 if (err) {
                     callback(err);
                 } else {
@@ -3153,7 +3155,7 @@ var ContractFactory = function (klay, abi) {
                 }
             });
         } else {
-            var hash = this.klay.sendTransaction(options);
+            var hash = this.kaia.sendTransaction(options);
             // add the transaction hash
             contract.transactionHash = hash;
             checkForContractAddress(contract);
@@ -3188,7 +3190,7 @@ var ContractFactory = function (klay, abi) {
  * otherwise calls callback function (err, contract)
  */
 ContractFactory.prototype.at = function (address, callback) {
-    var contract = new Contract(this.klay, this.abi, address);
+    var contract = new Contract(this.kaia, this.abi, address);
 
     // this functions are not part of prototype,
     // because we dont want to spoil the interface
@@ -3228,8 +3230,8 @@ ContractFactory.prototype.getData = function () {
  * @param {Array} abi
  * @param {Address} contract address
  */
-var Contract = function (klay, abi, address) {
-    this._klay = klay;
+var Contract = function (kaia, abi, address) {
+    this._kaia = kaia;
     this.transactionHash = null;
     this.address = address;
     this.abi = abi;
@@ -3471,7 +3473,7 @@ SolidityEvent.prototype.execute = function (indexed, options, callback) {
 
     var o = this.encode(indexed, options);
     var formatter = this.decode.bind(this);
-    return new Filter(o, 'klay', this._requestManager, watches.klay(), formatter, callback);
+    return new Filter(o, 'kaia', this._requestManager, watches.kaia(), formatter, callback);
 };
 
 /**
@@ -3605,7 +3607,7 @@ var getOptions = function (options, type) {
 
 
     switch(type) {
-        case 'klay':
+        case 'kaia':
 
             // make sure topics, get converted to hex
             options.topics = options.topics || [];
@@ -4136,8 +4138,8 @@ var sha3 = require('../utils/sha3');
 /**
  * This prototype should be used to call/sendTransaction to solidity functions
  */
-var SolidityFunction = function (klay, json, address) {
-    this._klay = klay;
+var SolidityFunction = function (kaia, json, address) {
+    this._kaia = kaia;
     this._inputTypes = json.inputs.map(function (i) {
         return i.type;
     });
@@ -4239,12 +4241,12 @@ SolidityFunction.prototype.call = function () {
 
 
     if (!callback) {
-        var output = this._klay.call(payload, defaultBlock);
+        var output = this._kaia.call(payload, defaultBlock);
         return this.unpackOutput(output);
     }
 
     var self = this;
-    this._klay.call(payload, defaultBlock, function (error, output) {
+    this._kaia.call(payload, defaultBlock, function (error, output) {
         if (error) return callback(error, null);
 
         var unpacked = null;
@@ -4274,10 +4276,10 @@ SolidityFunction.prototype.sendTransaction = function () {
     }
 
     if (!callback) {
-        return this._klay.sendTransaction(payload);
+        return this._kaia.sendTransaction(payload);
     }
 
-    this._klay.sendTransaction(payload, callback);
+    this._kaia.sendTransaction(payload, callback);
 };
 
 /**
@@ -4291,10 +4293,10 @@ SolidityFunction.prototype.estimateGas = function () {
     var payload = this.toPayload(args);
 
     if (!callback) {
-        return this._klay.estimateGas(payload);
+        return this._kaia.estimateGas(payload);
     }
 
-    this._klay.estimateGas(payload, callback);
+    this._kaia.estimateGas(payload, callback);
 };
 
 /**
@@ -5362,7 +5364,7 @@ var getBlockTransactionCountCall = function (args) {
     return (utils.isString(args[0]) && args[0].indexOf('0x') === 0 && args[0].length === 66) ? 'klay_getBlockTransactionCountByHash' : 'klay_getBlockTransactionCountByNumber';
 };
 
-function Klay(web3) {
+function Kaia(web3) {
     this._requestManager = web3._requestManager;
 
     var self = this;
@@ -5382,7 +5384,7 @@ function Klay(web3) {
     this.sendIBANTransaction = transfer.bind(null, this);
 }
 
-Object.defineProperty(Klay.prototype, 'defaultBlock', {
+Object.defineProperty(Kaia.prototype, 'defaultBlock', {
     get: function () {
         return c.defaultBlock;
     },
@@ -5392,7 +5394,7 @@ Object.defineProperty(Klay.prototype, 'defaultBlock', {
     }
 });
 
-Object.defineProperty(Klay.prototype, 'defaultAccount', {
+Object.defineProperty(Kaia.prototype, 'defaultAccount', {
     get: function () {
         return c.defaultAccount;
     },
@@ -5582,28 +5584,28 @@ var properties = function () {
     ];
 };
 
-Klay.prototype.contract = function (abi) {
+Kaia.prototype.contract = function (abi) {
     var factory = new Contract(this, abi);
     return factory;
 };
 
-Klay.prototype.filter = function (options, callback, filterCreationErrorCallback) {
-    return new Filter(options, 'klay', this._requestManager, watches.klay(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
+Kaia.prototype.filter = function (options, callback, filterCreationErrorCallback) {
+    return new Filter(options, 'kaia', this._requestManager, watches.kaia(), formatters.outputLogFormatter, callback, filterCreationErrorCallback);
 };
 
-Klay.prototype.namereg = function () {
+Kaia.prototype.namereg = function () {
     return this.contract(namereg.global.abi).at(namereg.global.address);
 };
 
-Klay.prototype.icapNamereg = function () {
+Kaia.prototype.icapNamereg = function () {
     return this.contract(namereg.icap.abi).at(namereg.icap.address);
 };
 
-Klay.prototype.isSyncing = function (callback) {
+Kaia.prototype.isSyncing = function (callback) {
     return new IsSyncing(this._requestManager, callback);
 };
 
-module.exports = Klay;
+module.exports = Kaia;
 
 },{"../../utils/config":18,"../../utils/utils":20,"../contract":25,"../filter":29,"../formatters":30,"../iban":33,"../method":36,"../namereg":44,"../property":45,"../syncing":48,"../transfer":49,"./watches":43}],87:[function(require,module,exports){
 /*
@@ -6423,7 +6425,7 @@ module.exports = Swarm;
 var Method = require('../method');
 
 /// @returns an array of objects describing web3.eth.filter api methods
-var klay = function () {
+var kaia = function () {
     var newFilterCall = function (args) {
         var type = args[0];
 
@@ -6553,7 +6555,7 @@ var shh = function () {
 };
 
 module.exports = {
-    klay: klay,
+    kaia: kaia,
     eth: eth,
     shh: shh
 };
@@ -7154,23 +7156,23 @@ var exchangeAbi = require('../contracts/SmartExchange.json');
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transfer = function (klay, from, to, value, callback) {
+var transfer = function (kaia, from, to, value, callback) {
     var iban = new Iban(to);
     if (!iban.isValid()) {
         throw new Error('invalid iban address');
     }
 
     if (iban.isDirect()) {
-        return transferToAddress(klay, from, iban.address(), value, callback);
+        return transferToAddress(kaia, from, iban.address(), value, callback);
     }
 
     if (!callback) {
-        var address = klay.icapNamereg().addr(iban.institution());
-        return deposit(klay, from, address, value, iban.client());
+        var address = kaia.icapNamereg().addr(iban.institution());
+        return deposit(kaia, from, address, value, iban.client());
     }
 
-    klay.icapNamereg().addr(iban.institution(), function (err, address) {
-        return deposit(klay, from, address, value, iban.client(), callback);
+    kaia.icapNamereg().addr(iban.institution(), function (err, address) {
+        return deposit(kaia, from, address, value, iban.client(), callback);
     });
 
 };
@@ -7184,8 +7186,8 @@ var transfer = function (klay, from, to, value, callback) {
  * @param {Value} value to be tranfered
  * @param {Function} callback, callback
  */
-var transferToAddress = function (klay, from, to, value, callback) {
-    return klay.sendTransaction({
+var transferToAddress = function (kaia, from, to, value, callback) {
+    return kaia.sendTransaction({
         address: to,
         from: from,
         value: value
@@ -7204,7 +7206,7 @@ var transferToAddress = function (klay, from, to, value, callback) {
  */
 var deposit = function (v, from, to, value, client, callback) {
     var abi = exchangeAbi;
-    return klay.contract(abi).at(to).deposit(client, {
+    return kaia.contract(abi).at(to).deposit(client, {
         from: from,
         value: value
     }, callback);

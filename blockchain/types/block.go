@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/types/block.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -45,7 +47,7 @@ var EngineType = Engine_IBFT
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
 
-// Header represents a block header in the Klaytn blockchain.
+// Header represents a block header in the Kaia blockchain.
 type Header struct {
 	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
 	Rewardbase  common.Address `json:"reward"           gencodec:"required"`
@@ -175,7 +177,7 @@ type Body struct {
 	Transactions []*Transaction
 }
 
-// Block represents an entire block in the Klaytn blockchain.
+// Block represents an entire block in the Kaia blockchain.
 type Block struct {
 	header       *Header
 	transactions Transactions
@@ -198,7 +200,7 @@ type Result struct {
 	Round int64
 }
 
-// extblock represents external block encoding used for Klaytn protocol, etc.
+// extblock represents external block encoding used for Kaia protocol, etc.
 type extblock struct {
 	Header *Header
 	Txs    []*Transaction
@@ -279,7 +281,7 @@ func CopyHeader(h *Header) *Header {
 	return &cpy
 }
 
-// DecodeRLP decodes the Klaytn
+// DecodeRLP decodes the Kaia
 func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	var eb extblock
 	_, size, _ := s.Kind()
@@ -291,7 +293,7 @@ func (b *Block) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes a block into the Klaytn RLP block format.
+// EncodeRLP serializes a block into the Kaia RLP block format.
 func (b *Block) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, extblock{
 		Header: b.header,

@@ -72,52 +72,52 @@ func Alloc(addrs []common.Address, balance *big.Int) Option {
 	}
 }
 
-func AllocWithPrecypressContract(addrs []common.Address, balance *big.Int) Option {
+func AllocWithPremainnetContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[system.CypressCreditAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(CypressCreditBin),
+		alloc[system.MainnetCreditAddr] = blockchain.GenesisAccount{
+			Code:    common.FromHex(MainnetCreditBin),
 			Balance: big.NewInt(0),
 		}
 		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(PreCypressAddressBookBin),
+			Code:    common.FromHex(PremainnetAddressBookBin),
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
 	}
 }
 
-func AllocWithCypressContract(addrs []common.Address, balance *big.Int) Option {
+func AllocWithMainnetContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[system.CypressCreditAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(CypressCreditBin),
+		alloc[system.MainnetCreditAddr] = blockchain.GenesisAccount{
+			Code:    common.FromHex(MainnetCreditBin),
 			Balance: big.NewInt(0),
 		}
 		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(CypressAddressBookBin),
-			Balance: big.NewInt(0),
-		}
-		genesis.Alloc = alloc
-	}
-}
-
-func AllocWithPrebaobabContract(addrs []common.Address, balance *big.Int) Option {
-	return func(genesis *blockchain.Genesis) {
-		alloc := makeGenesisAccount(addrs, balance)
-		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(PrebaobabAddressBookBin),
+			Code:    common.FromHex(MainnetAddressBookBin),
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
 	}
 }
 
-func AllocWithBaobabContract(addrs []common.Address, balance *big.Int) Option {
+func AllocWithPretestnetContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
 		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(BaobabAddressBookBin),
+			Code:    common.FromHex(PretestnetAddressBookBin),
+			Balance: big.NewInt(0),
+		}
+		genesis.Alloc = alloc
+	}
+}
+
+func AllocWithTestnetContract(addrs []common.Address, balance *big.Int) Option {
+	return func(genesis *blockchain.Genesis) {
+		alloc := makeGenesisAccount(addrs, balance)
+		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
+			Code:    common.FromHex(TestnetAddressBookBin),
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
@@ -136,11 +136,11 @@ func PatchAddressBook(addr common.Address) Option {
 		codeHex := hexutil.Encode(contractAccount.Code)
 		var oldAddr string
 		switch codeHex {
-		case CypressAddressBookBin:
+		case MainnetAddressBookBin:
 			oldAddr = "854ca8508c8be2bb1f3c244045786410cb7d5d0a"
-		case BaobabAddressBookBin:
+		case TestnetAddressBookBin:
 			oldAddr = "88bb3838aa0a140acb73eeb3d4b25a8d3afd58d4"
-		case PreCypressAddressBookBin, PrebaobabAddressBookBin:
+		case PremainnetAddressBookBin, PretestnetAddressBookBin:
 			oldAddr = "fe1ffd5293fc94857a33dcd284fe82bc106be4c7"
 		}
 
@@ -202,7 +202,7 @@ func RegistryMock() Option {
 	}
 }
 
-func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, proxyStorage, logicStorage map[common.Hash]common.Hash) Option {
+func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, owner common.Address, proxyStorage, logicStorage map[common.Hash]common.Hash) Option {
 	return func(genesis *blockchain.Genesis) {
 		proxyCode := system.ERC1967ProxyCode
 		logicCode := system.Kip113Code
@@ -217,6 +217,12 @@ func AllocateKip113(kip113ProxyAddr, kip113LogicAddr common.Address, proxyStorag
 			Storage: logicStorage,
 			Balance: big.NewInt(0),
 		}
+		genesis.Config.RandaoRegistry = &params.RegistryConfig{
+			Records: map[string]common.Address{
+				system.Kip113Name: kip113ProxyAddr,
+			},
+			Owner: owner,
+		}
 	}
 }
 
@@ -228,11 +234,16 @@ func Kip113Mock(kip113LogicAddr common.Address) Option {
 		if !ok {
 			log.Fatalf("No kip113 to patch")
 		}
+		_, ok = genesis.Config.RandaoRegistry.Records[system.Kip113Name]
+		if !ok {
+			log.Fatalf("No kip113 record to patch")
+		}
 
 		genesis.Alloc[kip113LogicAddr] = blockchain.GenesisAccount{
 			Code:    kip113MockCode,
 			Balance: big.NewInt(0),
 		}
+		genesis.Config.RandaoRegistry.Records[system.Kip113Name] = kip113LogicAddr
 	}
 }
 

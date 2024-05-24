@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from crypto/crypto.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package crypto
 
@@ -91,7 +93,7 @@ func Keccak512(data ...[]byte) []byte {
 	return d.Sum(nil)
 }
 
-// CreateAddress creates a Klaytn address given the bytes and the nonce
+// CreateAddress creates a Kaia address given the bytes and the nonce
 func CreateAddress(b common.Address, nonce uint64) common.Address {
 	data, _ := rlp.EncodeToBytes(struct {
 		Addr  common.Address
@@ -100,7 +102,7 @@ func CreateAddress(b common.Address, nonce uint64) common.Address {
 	return common.BytesToAddress(Keccak256(data)[12:])
 }
 
-// CreateAddress2 creates a Klaytn address given the address bytes, initial
+// CreateAddress2 creates a Kaia address given the address bytes, initial
 // contract code hash and a salt.
 func CreateAddress2(b common.Address, salt [32]byte, inithash []byte) common.Address {
 	return common.BytesToAddress(Keccak256([]byte{0xff}, b.Bytes(), salt[:], inithash)[12:])

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,17 +18,16 @@
 //
 // This file is derived from core/mkalloc.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 //go:build none
 // +build none
 
 /*
+The mkalloc tool creates the genesis allocation constants in genesis_alloc.go
+It outputs a const declaration that contains an RLP-encoded list of (address, balance) tuples.
 
-   The mkalloc tool creates the genesis allocation constants in genesis_alloc.go
-   It outputs a const declaration that contains an RLP-encoded list of (address, balance) tuples.
-
-       go run mkalloc.go genesis.json
-
+	go run mkalloc.go genesis.json
 */
 package main
 

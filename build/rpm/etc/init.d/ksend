@@ -3,7 +3,7 @@
 # ksend         Startup script for the ksen
 #
 # chkconfig: - 85 15
-# description : ksend is the Klaytn endpoint node daemon
+# description : ksend is the Kaia endpoint node daemon
 #
 # processname: ksend
 # config:  /etc/ksend/conf/ksend.conf
@@ -101,7 +101,7 @@ status_auto_restart_daemon() {
     fi
 }
 
-#------------------------Related to Klaytn node functions-----------------------------
+#------------------------Related to Kaia node functions-----------------------------
 
 set -f
 OPTIONS=""

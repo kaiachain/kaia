@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/utils/flags.go (2022/10/19).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package utils
 
@@ -90,7 +92,7 @@ var TomlSettings = toml.Config{
 	},
 }
 
-type KlayConfig struct {
+type KaiaConfig struct {
 	CN               cn.Config
 	Node             node.Config
 	DB               dbsyncer.DBConfig
@@ -98,7 +100,7 @@ type KlayConfig struct {
 	ServiceChain     sc.SCConfig
 }
 
-func LoadConfig(file string, cfg *KlayConfig) error {
+func LoadConfig(file string, cfg *KaiaConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -117,15 +119,15 @@ func DefaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = ClientIdentifier
 	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "klay", "shh", "eth")
-	cfg.WSModules = append(cfg.WSModules, "klay", "shh", "eth")
+	cfg.HTTPModules = append(cfg.HTTPModules, "kaia", "shh", "eth")
+	cfg.WSModules = append(cfg.WSModules, "kaia", "shh", "eth")
 	cfg.IPCPath = "klay.ipc"
 	return cfg
 }
 
-func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
+func MakeConfigNode(ctx *cli.Context) (*node.Node, KaiaConfig) {
 	// Load defaults.
-	cfg := KlayConfig{
+	cfg := KaiaConfig{
 		CN:               *cn.GetDefaultConfig(),
 		Node:             DefaultNodeConfig(),
 		DB:               *dbsyncer.DefaultDBConfig(),
@@ -133,7 +135,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
 		ServiceChain:     *sc.DefaultServiceChainConfig(),
 	}
 
-	// NOTE-Klaytn : klaytn loads the flags from yaml, not toml
+	// NOTE-Kaia : Kaia loads the flags from yaml, not toml
 	// Load config file.
 	// if file := ctx.String(ConfigFileFlag.Name); file != "" {
 	// 	if err := LoadConfig(file, &cfg); err != nil {
@@ -147,7 +149,7 @@ func MakeConfigNode(ctx *cli.Context) (*node.Node, KlayConfig) {
 	if err != nil {
 		log.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	cfg.SetKlayConfig(ctx, stack)
+	cfg.SetKaiaConfig(ctx, stack)
 
 	cfg.SetDBSyncerConfig(ctx)
 	cfg.SetChainDataFetcherConfig(ctx)
@@ -311,18 +313,18 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.IsSet(BootnodesFlag.Name):
 		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.String(BootnodesFlag.Name), ",")
-	case ctx.Bool(CypressFlag.Name):
-		logger.Info("Cypress bootnodes are set")
+	case ctx.Bool(MainnetFlag.Name):
+		logger.Info("Mainnet bootnodes are set")
 		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-	case ctx.Bool(BaobabFlag.Name):
-		logger.Info("Baobab bootnodes are set")
-		// set pre-configured bootnodes when 'baobab' option was enabled
-		urls = params.BaobabBootnodes[cfg.ConnectionType].Addrs
+	case ctx.Bool(TestnetFlag.Name):
+		logger.Info("Testnet bootnodes are set")
+		// set pre-configured bootnodes when 'testnet' option was enabled
+		urls = params.TestnetBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
 		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
-			logger.Info("Cypress bootnodes are set")
+			logger.Info("Mainnet bootnodes are set")
 			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 		}
 	}
@@ -344,7 +346,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 }
 
 // setNodeConfig applies node-related command line flags to the config.
-func (kCfg *KlayConfig) SetNodeConfig(ctx *cli.Context) {
+func (kCfg *KaiaConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	// ntp check enable with remote server
 	if ctx.Bool(NtpDisableFlag.Name) {
@@ -505,9 +507,9 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
-// setKlayConfig applies klay-related command line flags to the config.
-func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
-	// TODO-Klaytn-Bootnode: better have to check conflicts about network flags when we add Klaytn's `mainnet` parameter
+// SetKaiaConfig applies klay-related command line flags to the config.
+func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
+	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Kaia's `mainnet` parameter
 	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
 	cfg := &kCfg.CN
 	raiseFDLimit()
@@ -700,17 +702,22 @@ func (kCfg *KlayConfig) SetKlayConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Klaytn-Bootnode: Discuss and add `baobab` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `testnet` test network's genesis block
 	/*
 		if ctx.Bool(TestnetFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {
 				cfg.NetworkId = 3
 			}
-			cfg.Genesis = blockchain.DefaultBaobabGenesisBlock()
+			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
 		}
 	*/
 	// Set the Tx resending related configuration variables
 	setTxResendConfig(ctx, cfg)
+
+	// Set gas price oracle configs
+	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
+	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
+	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value
@@ -822,23 +829,23 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 // getNetworkId returns the associated network ID with whether or not the network is private.
 func getNetworkId(ctx *cli.Context) (uint64, bool) {
-	if ctx.Bool(BaobabFlag.Name) && ctx.Bool(CypressFlag.Name) {
-		log.Fatalf("--baobab and --cypress must not be set together")
+	if ctx.Bool(TestnetFlag.Name) && ctx.Bool(MainnetFlag.Name) {
+		log.Fatalf("--testnet and --mainnet must not be set together")
 	}
-	if ctx.Bool(BaobabFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--baobab and --networkid must not be set together")
+	if ctx.Bool(TestnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--testnet and --networkid must not be set together")
 	}
-	if ctx.Bool(CypressFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--cypress and --networkid must not be set together")
+	if ctx.Bool(MainnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--mainnet and --networkid must not be set together")
 	}
 
 	switch {
-	case ctx.Bool(CypressFlag.Name):
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
-	case ctx.Bool(BaobabFlag.Name):
-		logger.Info("Baobab network ID is set", "networkid", params.BaobabNetworkId)
-		return params.BaobabNetworkId, false
+	case ctx.Bool(MainnetFlag.Name):
+		logger.Info("Mainnet network ID is set", "networkid", params.MainnetNetworkId)
+		return params.MainnetNetworkId, false
+	case ctx.Bool(TestnetFlag.Name):
+		logger.Info("Testnet network ID is set", "networkid", params.TestnetNetworkId)
+		return params.TestnetNetworkId, false
 	case ctx.IsSet(NetworkIdFlag.Name):
 		networkId := ctx.Uint64(NetworkIdFlag.Name)
 		logger.Info("A private network ID is set", "networkid", networkId)
@@ -848,8 +855,8 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
 			return params.ServiceChainDefaultNetworkId, true
 		}
-		logger.Info("Cypress network ID is set", "networkid", params.CypressNetworkId)
-		return params.CypressNetworkId, false
+		logger.Info("Mainnet network ID is set", "networkid", params.MainnetNetworkId)
+		return params.MainnetNetworkId, false
 	}
 }
 
@@ -868,7 +875,7 @@ func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
 	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
 }
 
-func (kCfg *KlayConfig) SetChainDataFetcherConfig(ctx *cli.Context) {
+func (kCfg *KaiaConfig) SetChainDataFetcherConfig(ctx *cli.Context) {
 	cfg := &kCfg.ChainDataFetcher
 	if ctx.Bool(EnableChainDataFetcherFlag.Name) {
 		cfg.EnabledChainDataFetcher = true
@@ -904,7 +911,7 @@ func (kCfg *KlayConfig) SetChainDataFetcherConfig(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASDBConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASDBHostFlag.Name) {
@@ -921,7 +928,7 @@ func checkKASDBConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	if !ctx.IsSet(ChainDataFetcherKASCacheURLFlag.Name) {
@@ -935,7 +942,7 @@ func checkKASCacheInvalidationConfigs(ctx *cli.Context) {
 	}
 }
 
-// NOTE-klaytn
+// NOTE-Kaia
 // Deprecated: KASConfig is not used anymore.
 func makeKASConfig(ctx *cli.Context) *kas.KASConfig {
 	kasConfig := kas.DefaultKASConfig
@@ -980,7 +987,7 @@ func makeKafkaConfig(ctx *cli.Context) *kafka.KafkaConfig {
 	return kafkaConfig
 }
 
-func (kCfg *KlayConfig) SetDBSyncerConfig(ctx *cli.Context) {
+func (kCfg *KaiaConfig) SetDBSyncerConfig(ctx *cli.Context) {
 	cfg := &kCfg.DB
 	if ctx.Bool(EnableDBSyncerFlag.Name) {
 		cfg.EnabledDBSyncer = true
@@ -1049,7 +1056,7 @@ func (kCfg *KlayConfig) SetDBSyncerConfig(ctx *cli.Context) {
 	}
 }
 
-func (kCfg *KlayConfig) SetServiceChainConfig(ctx *cli.Context) {
+func (kCfg *KaiaConfig) SetServiceChainConfig(ctx *cli.Context) {
 	cfg := &kCfg.ServiceChain
 
 	// bridge service

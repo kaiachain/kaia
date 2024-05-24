@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,24 +18,16 @@
 //
 // This file is derived from params/denomination.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package params
 
-// These are the multipliers for KLAY denominations.
-// Example: To get the peb value of an amount in 'ston', use
+// These are the multipliers for KAIA denominations.
+// Example: To get the kei value of an amount in 'gkei', use
 //
-//    new(big.Int).Mul(value, big.NewInt(params.Ston))
-//
+//	new(big.Int).Mul(value, big.NewInt(params.Gkei))
 const (
-	Peb      = 1    // official notation 'peb'
-	Kpeb     = 1e3  // official notation 'kpeb'
-	Mpeb     = 1e6  // same
-	Gpeb     = 1e9  // same
-	Ston     = 1e9  // official notation 'ston'
-	UKLAY    = 1e12 // official notation 'uKLAY'
-	MiliKLAY = 1e15 // official notation 'mKLAY'
-	KLAY     = 1e18 // same
-	KKLAY    = 1e21 // official notation 'kKLAY'
-	MKLAY    = 1e24 // same
-	GKLAY    = 1e27 // same
+	Kei  = 1   // kei
+	Gkei = 1e9 // gkei
+	KAIA = 1e18
 )

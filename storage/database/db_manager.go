@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package database
 
@@ -132,7 +134,7 @@ type DBManager interface {
 	FindCommonAncestor(a, b *types.Header) *types.Header
 
 	ReadIstanbulSnapshot(hash common.Hash) ([]byte, error)
-	WriteIstanbulSnapshot(hash common.Hash, blob []byte) error
+	WriteIstanbulSnapshot(hash common.Hash, blob []byte)
 	DeleteIstanbulSnapshot(hash common.Hash)
 
 	WriteMerkleProof(key, value []byte)
@@ -191,11 +193,11 @@ type DBManager interface {
 	ReadTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	NewSenderTxHashToTxHashBatch() Batch
-	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error
+	PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash)
 	ReadTxHashFromSenderTxHash(senderTxHash common.Hash) common.Hash
 
 	ReadBloomBits(bloomBitsKey []byte) ([]byte, error)
-	WriteBloomBits(bloomBitsKey []byte, bits []byte) error
+	WriteBloomBits(bloomBitsKey []byte, bits []byte)
 
 	ReadValidSections() ([]byte, error)
 	WriteValidSections(encodedSections []byte)
@@ -278,7 +280,7 @@ type DBManager interface {
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
 
 	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error
+	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte)
 	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 
 	// Governance related functions
@@ -287,10 +289,10 @@ type DBManager interface {
 	ReadGovernance(num uint64) (map[string]interface{}, error)
 	ReadRecentGovernanceIdx(count int) ([]uint64, error)
 	ReadGovernanceAtNumber(num uint64, epoch uint64) (uint64, map[string]interface{}, error)
-	WriteGovernanceState(b []byte) error
+	WriteGovernanceState(b []byte)
 	ReadGovernanceState() ([]byte, error)
 	DeleteGovernance(num uint64)
-	// TODO-Klaytn implement governance DB deletion methods.
+	// TODO-Kaia implement governance DB deletion methods.
 
 	// StakingInfo related functions
 	ReadStakingInfo(blockNum uint64) ([]byte, error)
@@ -298,11 +300,17 @@ type DBManager interface {
 	HasStakingInfo(blockNum uint64) (bool, error)
 	DeleteStakingInfo(blockNum uint64)
 
+	// Accumulated block rewards functions
+	ReadAccReward(blockNum uint64) *AccReward
+	WriteAccReward(blockNum uint64, accReward *AccReward)
+	ReadLastAccRewardBlockNumber() uint64
+	WriteLastAccRewardBlockNumber(blockNum uint64)
+
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
 	// ChainDataFetcher checkpoint function
-	WriteChainDataFetcherCheckpoint(checkpoint uint64) error
+	WriteChainDataFetcherCheckpoint(checkpoint uint64)
 	ReadChainDataFetcherCheckpoint() (uint64, error)
 
 	TryCatchUpWithPrimary() error
@@ -425,7 +433,7 @@ type databaseManager struct {
 	dbs    []Database
 	cm     *cacheManager
 
-	// TODO-Klaytn need to refine below.
+	// TODO-Kaia need to refine below.
 	// -merge status variable
 	lockInMigration      sync.RWMutex
 	inMigration          bool
@@ -960,7 +968,7 @@ func (dbm *databaseManager) Close() {
 	}
 }
 
-// TODO-Klaytn Some of below need to be invisible outside database package
+// TODO-Kaia Some of below need to be invisible outside database package
 // Canonical Hash operations.
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func (dbm *databaseManager) ReadCanonicalHash(number uint64) common.Hash {
@@ -1690,7 +1698,7 @@ func (dbm *databaseManager) WriteBadBlock(block *types.Block) {
 func (dbm *databaseManager) DeleteBadBlocks() {
 	db := dbm.getDatabase(MiscDB)
 	if err := db.Delete(badBlockKey); err != nil {
-		logger.Error("Failed to delete bad blocks", "err", err)
+		logger.Crit("Failed to delete bad blocks", "err", err)
 	}
 }
 
@@ -1728,9 +1736,11 @@ func (dbm *databaseManager) ReadIstanbulSnapshot(hash common.Hash) ([]byte, erro
 	return db.Get(snapshotKey(hash))
 }
 
-func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) error {
+func (dbm *databaseManager) WriteIstanbulSnapshot(hash common.Hash, blob []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(snapshotKey(hash), blob)
+	if err := db.Put(snapshotKey(hash), blob); err != nil {
+		logger.Crit("Failed to write istanbul snapshot", "err", err)
+	}
 }
 
 func (dbm *databaseManager) DeleteIstanbulSnapshot(hash common.Hash) {
@@ -1753,7 +1763,7 @@ func (dbm *databaseManager) ReadCode(hash common.Hash) []byte {
 	// Try with the legacy code scheme first, if not then try with current
 	// scheme. Since most of the code will be found with legacy scheme.
 	//
-	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	// TODO-Kaia-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
 	if data, _ := db.Get(hash[:]); len(data) > 0 {
 		return data
@@ -1777,7 +1787,7 @@ func (dbm *databaseManager) HasCode(hash common.Hash) bool {
 	// Try with the prefixed code scheme first, if not then try with legacy
 	// scheme.
 	//
-	// TODO-Klaytn-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
+	// TODO-Kaia-Snapsync change the order when we forcibly upgrade the code scheme with snapshot.
 	db := dbm.getDatabase(StateTrieDB)
 	if ok, _ := db.Has(hash.Bytes()); ok {
 		return true
@@ -1833,13 +1843,13 @@ func (dbm *databaseManager) ReadTrieNode(hash common.ExtHash) ([]byte, error) {
 		if val, err := dbm.ReadTrieNodeFromNew(hash); err == nil {
 			return val, nil
 		} else if err != dataNotFoundErr {
-			// TODO-Klaytn-Database Need to be properly handled
+			// TODO-Kaia-Database Need to be properly handled
 			logger.Error("Unexpected error while reading cached trie node from state migration database", "err", err)
 		}
 	}
 	val, err := dbm.ReadTrieNodeFromOld(hash)
 	if err != nil && err != dataNotFoundErr {
-		// TODO-Klaytn-Database Need to be properly handled
+		// TODO-Kaia-Database Need to be properly handled
 		logger.Error("Unexpected error while reading cached trie node", "err", err)
 	}
 	return val, err
@@ -2119,7 +2129,7 @@ func (dbm *databaseManager) WriteAndCacheTxLookupEntries(block *types.Block) err
 		dbm.cm.writeTxAndLookupInfoCache(tx.Hash(), &TransactionLookup{tx, &entry})
 	}
 	if err := batch.Write(); err != nil {
-		logger.Error("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
+		logger.Crit("Failed to write TxLookupEntries in batch", "err", err, "blockNumber", block.Number())
 		return err
 	}
 	return nil
@@ -2149,7 +2159,9 @@ func putTxLookupEntriesToPutter(putter KeyValueWriter, block *types.Block) {
 // DeleteTxLookupEntry removes all transaction data associated with a hash.
 func (dbm *databaseManager) DeleteTxLookupEntry(hash common.Hash) {
 	db := dbm.getDatabase(TxLookUpEntryDB)
-	db.Delete(TxLookupKey(hash))
+	if err := db.Delete(TxLookupKey(hash)); err != nil {
+		logger.Crit("Failed to delete tx lookup key", "err", err)
+	}
 }
 
 // ReadTxAndLookupInfo retrieves a specific transaction from the database, along with
@@ -2174,19 +2186,19 @@ func (dbm *databaseManager) NewSenderTxHashToTxHashBatch() Batch {
 
 // PutSenderTxHashToTxHashToBatch 1) puts the given senderTxHash and txHash to the given batch and
 // 2) writes the information to the cache.
-func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) error {
+func (dbm *databaseManager) PutSenderTxHashToTxHashToBatch(batch Batch, senderTxHash, txHash common.Hash) {
 	if err := batch.Put(SenderTxHashToTxHashKey(senderTxHash), txHash.Bytes()); err != nil {
-		return err
+		logger.Crit("Failed to write sender tx hash", "err", err)
 	}
 
 	dbm.cm.writeSenderTxHashToTxHashCache(senderTxHash, txHash)
 
 	if batch.ValueSize() > IdealBatchSize {
-		batch.Write()
+		if err := batch.Write(); err != nil {
+			logger.Crit("Failed to write sender tx hash", "err", err)
+		}
 		batch.Reset()
 	}
-
-	return nil
 }
 
 // ReadTxHashFromSenderTxHash retrieves a txHash corresponding to the given senderTxHash.
@@ -2215,9 +2227,11 @@ func (dbm *databaseManager) ReadBloomBits(bloomBitsKey []byte) ([]byte, error) {
 
 // WriteBloomBits stores the compressed bloom bits vector belonging to the given
 // section and bit index.
-func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) error {
+func (dbm *databaseManager) WriteBloomBits(bloomBitsKey, bits []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(bloomBitsKey, bits)
+	if err := db.Put(bloomBitsKey, bits); err != nil {
+		logger.Crit("Failed to write bloom bits", "err", err)
+	}
 }
 
 // ValidSections operation.
@@ -2228,7 +2242,9 @@ func (dbm *databaseManager) ReadValidSections() ([]byte, error) {
 
 func (dbm *databaseManager) WriteValidSections(encodedSections []byte) {
 	db := dbm.getDatabase(MiscDB)
-	db.Put(validSectionKey, encodedSections)
+	if err := db.Put(validSectionKey, encodedSections); err != nil {
+		logger.Crit("Failed to write section data", "err", err)
+	}
 }
 
 // SectionHead operation.
@@ -2239,12 +2255,16 @@ func (dbm *databaseManager) ReadSectionHead(encodedSection []byte) ([]byte, erro
 
 func (dbm *databaseManager) WriteSectionHead(encodedSection []byte, hash common.Hash) {
 	db := dbm.getDatabase(MiscDB)
-	db.Put(sectionHeadKey(encodedSection), hash.Bytes())
+	if err := db.Put(sectionHeadKey(encodedSection), hash.Bytes()); err != nil {
+		logger.Crit("Failed to write section head", "err", err)
+	}
 }
 
 func (dbm *databaseManager) DeleteSectionHead(encodedSection []byte) {
 	db := dbm.getDatabase(MiscDB)
-	db.Delete(sectionHeadKey(encodedSection))
+	if err := db.Delete(sectionHeadKey(encodedSection)); err != nil {
+		logger.Crit("Failed to delete section head", "err", err)
+	}
 }
 
 // ReadDatabaseVersion retrieves the version number of the database.
@@ -2694,9 +2714,11 @@ func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Rece
 	return dbm.cm.readTxReceiptInCache(txHash)
 }
 
-func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) error {
+func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot)
+	if err := db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot); err != nil {
+		logger.Crit("Failed to write clique snapshot", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
@@ -2834,9 +2856,11 @@ func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (ui
 	return 0, nil, errors.New("No governance data found")
 }
 
-func (dbm *databaseManager) WriteGovernanceState(b []byte) error {
+func (dbm *databaseManager) WriteGovernanceState(b []byte) {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(governanceStateKey, b)
+	if err := db.Put(governanceStateKey, b); err != nil {
+		logger.Crit("Failed to write governance state", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
@@ -2844,9 +2868,71 @@ func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	return db.Get(governanceStateKey)
 }
 
-func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) error {
+// ReadAccReward retrieves the accumulated reward (minted, burntFee) up to a specific block number.
+// Returns nil if the accumulated reward is not stored.
+func (dbm *databaseManager) ReadAccReward(blockNum uint64) *AccReward {
 	db := dbm.getDatabase(MiscDB)
-	return db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint))
+	data, err := db.Get(accRewardKey(blockNum))
+	if len(data) == 0 || err != nil {
+		return nil
+	}
+	stored := struct {
+		Minted   []byte
+		BurntFee []byte
+	}{}
+	if err := rlp.DecodeBytes(data, &stored); err != nil {
+		logger.Crit("Corrupt accumulated reward", "err", err)
+	}
+	return &AccReward{
+		Minted:   new(big.Int).SetBytes(stored.Minted),
+		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
+	}
+}
+
+// WriteAccReward stores the accumulated reward (minted, burntFee) up to a specific block number.
+func (dbm *databaseManager) WriteAccReward(blockNum uint64, accReward *AccReward) {
+	db := dbm.getDatabase(MiscDB)
+	stored := struct {
+		Minted   []byte
+		BurntFee []byte
+	}{
+		Minted:   accReward.Minted.Bytes(),
+		BurntFee: accReward.BurntFee.Bytes(),
+	}
+	data, err := rlp.EncodeToBytes(stored)
+	if err != nil {
+		logger.Crit("Failed to write accumulated reward", "err", err)
+	}
+	if err := db.Put(accRewardKey(blockNum), data); err != nil {
+		logger.Crit("Failed to write accumulated reward", "err", err)
+	}
+}
+
+// ReadLastAccRewardBlockNumber retrieves the last block number for which the accumulated reward is stored.
+func (dbm *databaseManager) ReadLastAccRewardBlockNumber() uint64 {
+	db := dbm.getDatabase(MiscDB)
+	data, err := db.Get(lastAccRewardBlockNumberKey)
+	if len(data) == 0 || err != nil {
+		return 0
+	} else {
+		return binary.BigEndian.Uint64(data)
+	}
+}
+
+// WriteLastAccRewardBlockNumber stores the last block number for which the accumulated reward is stored.
+func (dbm *databaseManager) WriteLastAccRewardBlockNumber(blockNum uint64) {
+	db := dbm.getDatabase(MiscDB)
+	data := common.Int64ToByteBigEndian(blockNum)
+	if err := db.Put(lastAccRewardBlockNumberKey, data); err != nil {
+		logger.Crit("Failed to write last accumulated reward block number", "err", err)
+	}
+}
+
+func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Put(chaindatafetcherCheckpointKey, common.Int64ToByteBigEndian(checkpoint)); err != nil {
+		logger.Crit("Failed to wrtie chaindata fetcher checkpoint", "err", err)
+	}
 }
 
 func (dbm *databaseManager) ReadChainDataFetcherCheckpoint() (uint64, error) {

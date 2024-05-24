@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/backend/handler.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package backend
 
@@ -40,7 +42,7 @@ var (
 	errNoChainReader      = errors.New("sb.chain is nil! --mine option might be missing")
 	errInvalidPeerAddress = errors.New("invalid address")
 
-	// TODO-Klaytn-Istanbul: define Versions and Lengths with correct values.
+	// TODO-Kaia-Istanbul: define Versions and Lengths with correct values.
 	IstanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
 		Versions: []uint{65, 64},

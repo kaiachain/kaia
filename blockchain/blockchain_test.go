@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/blockchain_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -1105,7 +1107,7 @@ func TestEIP155Transition(t *testing.T) {
 	assert.Equal(t, types.ErrSender(types.ErrInvalidChainId), err)
 }
 
-// TODO-Klaytn-FailedTest Failed test. Enable this later.
+// TODO-Kaia-FailedTest Failed test. Enable this later.
 /*
 func TestEIP161AccountRemoval(t *testing.T) {
 	// Configure and generate a sample block chain
@@ -1342,7 +1344,7 @@ func TestStatePruning(t *testing.T) {
 	blockchain.Stop()
 }
 
-// TODO-Klaytn-FailedTest Failed test. Enable this later.
+// TODO-Kaia-FailedTest Failed test. Enable this later.
 /*
 // Tests that doing large reorgs works even if the state associated with the
 // forking point is not available any more.
@@ -1423,7 +1425,7 @@ func TestAccessListTx(t *testing.T) {
 		gspec        = &Genesis{
 			Config: config,
 			Alloc: GenesisAlloc{
-				senderAddr: {Balance: big.NewInt(params.KLAY)},
+				senderAddr: {Balance: big.NewInt(params.KAIA)},
 				contractAddr: { // SLOAD 0x00 and 0x01
 					Code: []byte{
 						byte(vm.PC),
@@ -1499,9 +1501,9 @@ func TestEIP3651(t *testing.T) {
 		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
-		funds   = new(big.Int).Mul(common.Big1, big.NewInt(params.KLAY))
+		funds   = new(big.Int).Mul(common.Big1, big.NewInt(params.KAIA))
 		gspec   = &Genesis{
-			Config: params.CypressChainConfig.Copy(),
+			Config: params.MainnetChainConfig.Copy(),
 			Alloc: GenesisAlloc{
 				addr1: {Balance: funds},
 				addr2: {Balance: funds},
@@ -1558,7 +1560,7 @@ func TestEIP3651(t *testing.T) {
 			types.TxValueKeyTo:       bb,
 			types.TxValueKeyAmount:   big.NewInt(0),
 			types.TxValueKeyGasLimit: uint64(20000000),
-			types.TxValueKeyGasPrice: big.NewInt(750 * params.Ston),
+			types.TxValueKeyGasPrice: big.NewInt(750 * params.Gkei),
 			types.TxValueKeyData:     []byte{},
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, values)
@@ -1588,7 +1590,7 @@ func TestEIP3651(t *testing.T) {
 
 	state, _ := chain.State()
 
-	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 klay is the total reward)
+	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 KAIA is the total reward)
 	actual := state.GetBalance(params.AuthorAddressForTesting)
 	expected := gxhash.ByzantiumBlockReward
 	if actual.Cmp(expected) != 0 {
@@ -1792,7 +1794,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 	abii, err := abi.JSON(strings.NewReader(internalTxContractAbi))
 	assert.Equal(t, nil, err)
 
-	// the contract method "sendKlay" send 1 peb to address 3 times
+	// the contract method "sendKlay" send 1 kei to address 3 times
 	data, err := abii.Pack("sendKlay", uint32(3), address)
 	assert.Equal(t, nil, err)
 
@@ -1817,7 +1819,7 @@ func genInternalTxTransaction(t *testing.T, block *BlockGen, address common.Addr
 // TestCallTraceChainEventSubscription tests if the method insertChain posts a chain event correctly.
 // Scenario:
 //  1. Deploy a contract
-//     sendKlay(n uint32, receiver address): send 1 peb to `receiver` address `n` times.
+//     sendKlay(n uint32, receiver address): send 1 kei to `receiver` address `n` times.
 //  2. Send a smart contract execution transaction
 func TestCallTraceChainEventSubscription(t *testing.T) {
 	// configure and generate a sample block chain
@@ -2015,7 +2017,7 @@ func TestDeleteCreateRevert(t *testing.T) {
 					Nonce:   1,
 					Balance: big.NewInt(0),
 				},
-				// The address 0xBBBB send 1 peb to 0xAAAA, then reverts
+				// The address 0xBBBB send 1 kei to 0xAAAA, then reverts
 				bb: {
 					Code: []byte{
 						byte(vm.PC),          // [0]

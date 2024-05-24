@@ -52,7 +52,7 @@ const AddressUpgradeableBinRuntime = `730000000000000000000000000000000000000000
 // Deprecated: Use AddressUpgradeableMetaData.Bin instead.
 var AddressUpgradeableBin = AddressUpgradeableMetaData.Bin
 
-// DeployAddressUpgradeable deploys a new Klaytn contract, binding an instance of AddressUpgradeable to it.
+// DeployAddressUpgradeable deploys a new Kaia contract, binding an instance of AddressUpgradeable to it.
 func DeployAddressUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AddressUpgradeable, error) {
 	parsed, err := AddressUpgradeableMetaData.GetAbi()
 	if err != nil {
@@ -69,29 +69,29 @@ func DeployAddressUpgradeable(auth *bind.TransactOpts, backend bind.ContractBack
 	return address, tx, &AddressUpgradeable{AddressUpgradeableCaller: AddressUpgradeableCaller{contract: contract}, AddressUpgradeableTransactor: AddressUpgradeableTransactor{contract: contract}, AddressUpgradeableFilterer: AddressUpgradeableFilterer{contract: contract}}, nil
 }
 
-// AddressUpgradeable is an auto generated Go binding around a Klaytn contract.
+// AddressUpgradeable is an auto generated Go binding around a Kaia contract.
 type AddressUpgradeable struct {
 	AddressUpgradeableCaller     // Read-only binding to the contract
 	AddressUpgradeableTransactor // Write-only binding to the contract
 	AddressUpgradeableFilterer   // Log filterer for contract events
 }
 
-// AddressUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// AddressUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressUpgradeableSession struct {
 	Contract     *AddressUpgradeable // Generic contract binding to set the session for
@@ -99,31 +99,31 @@ type AddressUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// AddressUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressUpgradeableCallerSession struct {
 	Contract *AddressUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// AddressUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressUpgradeableTransactorSession struct {
 	Contract     *AddressUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// AddressUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressUpgradeableRaw struct {
 	Contract *AddressUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// AddressUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressUpgradeableCallerRaw struct {
 	Contract *AddressUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressUpgradeableTransactorRaw struct {
 	Contract *AddressUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -223,29 +223,29 @@ var ContextUpgradeableABI = ContextUpgradeableMetaData.ABI
 // ContextUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ContextUpgradeableBinRuntime = ``
 
-// ContextUpgradeable is an auto generated Go binding around a Klaytn contract.
+// ContextUpgradeable is an auto generated Go binding around a Kaia contract.
 type ContextUpgradeable struct {
 	ContextUpgradeableCaller     // Read-only binding to the contract
 	ContextUpgradeableTransactor // Write-only binding to the contract
 	ContextUpgradeableFilterer   // Log filterer for contract events
 }
 
-// ContextUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ContextUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ContextUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ContextUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ContextUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ContextUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ContextUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ContextUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// ContextUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ContextUpgradeableSession struct {
 	Contract     *ContextUpgradeable // Generic contract binding to set the session for
@@ -253,31 +253,31 @@ type ContextUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// ContextUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ContextUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ContextUpgradeableCallerSession struct {
 	Contract *ContextUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// ContextUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ContextUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ContextUpgradeableTransactorSession struct {
 	Contract     *ContextUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// ContextUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ContextUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ContextUpgradeableRaw struct {
 	Contract *ContextUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// ContextUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ContextUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ContextUpgradeableCallerRaw struct {
 	Contract *ContextUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ContextUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ContextUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ContextUpgradeableTransactorRaw struct {
 	Contract *ContextUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -442,7 +442,6 @@ type ContextUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ContextUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _ContextUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -454,7 +453,6 @@ func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ContextUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _ContextUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -510,29 +508,29 @@ var ERC1967UpgradeUpgradeableABI = ERC1967UpgradeUpgradeableMetaData.ABI
 // ERC1967UpgradeUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ERC1967UpgradeUpgradeableBinRuntime = ``
 
-// ERC1967UpgradeUpgradeable is an auto generated Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeable is an auto generated Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeable struct {
 	ERC1967UpgradeUpgradeableCaller     // Read-only binding to the contract
 	ERC1967UpgradeUpgradeableTransactor // Write-only binding to the contract
 	ERC1967UpgradeUpgradeableFilterer   // Log filterer for contract events
 }
 
-// ERC1967UpgradeUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC1967UpgradeUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC1967UpgradeUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC1967UpgradeUpgradeableSession struct {
 	Contract     *ERC1967UpgradeUpgradeable // Generic contract binding to set the session for
@@ -540,31 +538,31 @@ type ERC1967UpgradeUpgradeableSession struct {
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC1967UpgradeUpgradeableCallerSession struct {
 	Contract *ERC1967UpgradeUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                    // Call options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC1967UpgradeUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC1967UpgradeUpgradeableTransactorSession struct {
 	Contract     *ERC1967UpgradeUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                    // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableRaw struct {
 	Contract *ERC1967UpgradeUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableCallerRaw struct {
 	Contract *ERC1967UpgradeUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC1967UpgradeUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC1967UpgradeUpgradeableTransactorRaw struct {
 	Contract *ERC1967UpgradeUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -730,7 +728,6 @@ type ERC1967UpgradeUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -742,7 +739,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdmin
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -863,7 +859,6 @@ type ERC1967UpgradeUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeUpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -880,7 +875,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaco
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -1006,7 +1000,6 @@ type ERC1967UpgradeUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1018,7 +1011,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterIniti
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1139,7 +1131,6 @@ type ERC1967UpgradeUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1156,7 +1147,6 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgra
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1248,29 +1238,29 @@ const IAddressBookBinRuntime = ``
 // Deprecated: Use IAddressBookMetaData.Sigs instead.
 var IAddressBookFuncSigs = IAddressBookMetaData.Sigs
 
-// IAddressBook is an auto generated Go binding around a Klaytn contract.
+// IAddressBook is an auto generated Go binding around a Kaia contract.
 type IAddressBook struct {
 	IAddressBookCaller     // Read-only binding to the contract
 	IAddressBookTransactor // Write-only binding to the contract
 	IAddressBookFilterer   // Log filterer for contract events
 }
 
-// IAddressBookCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IAddressBookCaller is an auto generated read-only Go binding around a Kaia contract.
 type IAddressBookCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IAddressBookTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IAddressBookTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IAddressBookFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IAddressBookFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAddressBookSession is an auto generated Go binding around a Klaytn contract,
+// IAddressBookSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IAddressBookSession struct {
 	Contract     *IAddressBook     // Generic contract binding to set the session for
@@ -1278,31 +1268,31 @@ type IAddressBookSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IAddressBookCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IAddressBookCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IAddressBookCallerSession struct {
 	Contract *IAddressBookCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// IAddressBookTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IAddressBookTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IAddressBookTransactorSession struct {
 	Contract     *IAddressBookTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// IAddressBookRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IAddressBookRaw is an auto generated low-level Go binding around a Kaia contract.
 type IAddressBookRaw struct {
 	Contract *IAddressBook // Generic contract binding to access the raw methods on
 }
 
-// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IAddressBookCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IAddressBookCallerRaw struct {
 	Contract *IAddressBookCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IAddressBookTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IAddressBookTransactorRaw struct {
 	Contract *IAddressBookTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1396,7 +1386,8 @@ func (_IAddressBook *IAddressBookTransactorRaw) Transact(opts *bind.TransactOpts
 func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddress")
 
@@ -1408,7 +1399,6 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 	outstruct.TypeList = *abi.ConvertType(out[0], new([]uint8)).(*[]uint8)
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	return *outstruct, err
-
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -1417,7 +1407,8 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1427,7 +1418,8 @@ func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1440,7 +1432,8 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddressInfo")
 
@@ -1458,7 +1451,6 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	outstruct.PocContractAddress = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
 	outstruct.KirContractAddress = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 	return *outstruct, err
-
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -1470,7 +1462,8 @@ func (_IAddressBook *IAddressBookSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1483,7 +1476,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1494,7 +1488,8 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
 
@@ -1508,7 +1503,6 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	outstruct.CnStakingcontract = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
 	outstruct.CnRewardAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 	return *outstruct, err
-
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -1518,7 +1512,8 @@ func (_IAddressBook *IAddressBookSession) GetCnInfo(_cnNodeId common.Address) (s
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1529,7 +1524,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1539,7 +1535,6 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getPendingRequestList")
-
 	if err != nil {
 		return *new([][32]byte), err
 	}
@@ -1547,7 +1542,6 @@ func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
 
 	return out0, err
-
 }
 
 // GetPendingRequestList is a free data retrieval call binding the contract method 0xda34a0bd.
@@ -1575,7 +1569,8 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfo", _id)
 
@@ -1597,7 +1592,6 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	outstruct.InitialProposedTime = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[6], new(uint8)).(*uint8)
 	return *outstruct, err
-
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x82d67e5a.
@@ -1611,7 +1605,8 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfo(_id [32]byte) (struct {
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1626,7 +1621,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfo(_id [32]byte) (st
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1638,7 +1634,8 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfoByArgs", _functionId, _firstArg, _secondArg, _thirdArg)
 
@@ -1654,7 +1651,6 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	outstruct.InitialProposedTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[3], new(uint8)).(*uint8)
 	return *outstruct, err
-
 }
 
 // GetRequestInfoByArgs is a free data retrieval call binding the contract method 0x407091eb.
@@ -1665,7 +1661,8 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfoByArgs(_functionId uint8
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1677,7 +1674,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1687,7 +1685,8 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getState")
 
@@ -1699,7 +1698,6 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.Requirement = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	return *outstruct, err
-
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -1708,7 +1706,8 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 func (_IAddressBook *IAddressBookSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1718,7 +1717,8 @@ func (_IAddressBook *IAddressBookSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error) {
+}, error,
+) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1728,7 +1728,6 @@ func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isActivated")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1736,7 +1735,6 @@ func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -1759,7 +1757,6 @@ func (_IAddressBook *IAddressBookCallerSession) IsActivated() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isConstructed")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1767,7 +1764,6 @@ func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (boo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -1790,7 +1786,6 @@ func (_IAddressBook *IAddressBookCallerSession) IsConstructed() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "kirContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1798,7 +1793,6 @@ func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -1821,7 +1815,6 @@ func (_IAddressBook *IAddressBookCallerSession) KirContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "pocContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1829,7 +1822,6 @@ func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -1852,7 +1844,6 @@ func (_IAddressBook *IAddressBookCallerSession) PocContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "spareContractAddress")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1860,7 +1851,6 @@ func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -2169,29 +2159,29 @@ const IBeaconUpgradeableBinRuntime = ``
 // Deprecated: Use IBeaconUpgradeableMetaData.Sigs instead.
 var IBeaconUpgradeableFuncSigs = IBeaconUpgradeableMetaData.Sigs
 
-// IBeaconUpgradeable is an auto generated Go binding around a Klaytn contract.
+// IBeaconUpgradeable is an auto generated Go binding around a Kaia contract.
 type IBeaconUpgradeable struct {
 	IBeaconUpgradeableCaller     // Read-only binding to the contract
 	IBeaconUpgradeableTransactor // Write-only binding to the contract
 	IBeaconUpgradeableFilterer   // Log filterer for contract events
 }
 
-// IBeaconUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IBeaconUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IBeaconUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IBeaconUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IBeaconUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IBeaconUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IBeaconUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IBeaconUpgradeableSession struct {
 	Contract     *IBeaconUpgradeable // Generic contract binding to set the session for
@@ -2199,31 +2189,31 @@ type IBeaconUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// IBeaconUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IBeaconUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IBeaconUpgradeableCallerSession struct {
 	Contract *IBeaconUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// IBeaconUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IBeaconUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IBeaconUpgradeableTransactorSession struct {
 	Contract     *IBeaconUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// IBeaconUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IBeaconUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IBeaconUpgradeableRaw struct {
 	Contract *IBeaconUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// IBeaconUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IBeaconUpgradeableCallerRaw struct {
 	Contract *IBeaconUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IBeaconUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IBeaconUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IBeaconUpgradeableTransactorRaw struct {
 	Contract *IBeaconUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2317,7 +2307,6 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableTransactorRaw) Transact(opts *bind.
 func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IBeaconUpgradeable.contract.Call(opts, &out, "implementation")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2325,7 +2314,6 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
@@ -2361,29 +2349,29 @@ const IERC1822ProxiableUpgradeableBinRuntime = ``
 // Deprecated: Use IERC1822ProxiableUpgradeableMetaData.Sigs instead.
 var IERC1822ProxiableUpgradeableFuncSigs = IERC1822ProxiableUpgradeableMetaData.Sigs
 
-// IERC1822ProxiableUpgradeable is an auto generated Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeable is an auto generated Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeable struct {
 	IERC1822ProxiableUpgradeableCaller     // Read-only binding to the contract
 	IERC1822ProxiableUpgradeableTransactor // Write-only binding to the contract
 	IERC1822ProxiableUpgradeableFilterer   // Log filterer for contract events
 }
 
-// IERC1822ProxiableUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC1822ProxiableUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC1822ProxiableUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1822ProxiableUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC1822ProxiableUpgradeableSession struct {
 	Contract     *IERC1822ProxiableUpgradeable // Generic contract binding to set the session for
@@ -2391,31 +2379,31 @@ type IERC1822ProxiableUpgradeableSession struct {
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC1822ProxiableUpgradeableCallerSession struct {
 	Contract *IERC1822ProxiableUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                       // Call options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC1822ProxiableUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC1822ProxiableUpgradeableTransactorSession struct {
 	Contract     *IERC1822ProxiableUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                       // Transaction auth options to use throughout this session
 }
 
-// IERC1822ProxiableUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableRaw struct {
 	Contract *IERC1822ProxiableUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// IERC1822ProxiableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableCallerRaw struct {
 	Contract *IERC1822ProxiableUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC1822ProxiableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC1822ProxiableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC1822ProxiableUpgradeableTransactorRaw struct {
 	Contract *IERC1822ProxiableUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2509,7 +2497,6 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableTransactorRaw) 
 func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IERC1822ProxiableUpgradeable.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -2517,7 +2504,6 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) Proxiab
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -2546,29 +2532,29 @@ var IERC1967UpgradeableABI = IERC1967UpgradeableMetaData.ABI
 // IERC1967UpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC1967UpgradeableBinRuntime = ``
 
-// IERC1967Upgradeable is an auto generated Go binding around a Klaytn contract.
+// IERC1967Upgradeable is an auto generated Go binding around a Kaia contract.
 type IERC1967Upgradeable struct {
 	IERC1967UpgradeableCaller     // Read-only binding to the contract
 	IERC1967UpgradeableTransactor // Write-only binding to the contract
 	IERC1967UpgradeableFilterer   // Log filterer for contract events
 }
 
-// IERC1967UpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC1967UpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC1967UpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC1967UpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC1967UpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC1967UpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// IERC1967UpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC1967UpgradeableSession struct {
 	Contract     *IERC1967Upgradeable // Generic contract binding to set the session for
@@ -2576,31 +2562,31 @@ type IERC1967UpgradeableSession struct {
 	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// IERC1967UpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC1967UpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC1967UpgradeableCallerSession struct {
 	Contract *IERC1967UpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// IERC1967UpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC1967UpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC1967UpgradeableTransactorSession struct {
 	Contract     *IERC1967UpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// IERC1967UpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC1967UpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC1967UpgradeableRaw struct {
 	Contract *IERC1967Upgradeable // Generic contract binding to access the raw methods on
 }
 
-// IERC1967UpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC1967UpgradeableCallerRaw struct {
 	Contract *IERC1967UpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC1967UpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC1967UpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC1967UpgradeableTransactorRaw struct {
 	Contract *IERC1967UpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2766,7 +2752,6 @@ type IERC1967UpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*IERC1967UpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _IERC1967Upgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2778,7 +2763,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _IERC1967Upgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2899,7 +2883,6 @@ type IERC1967UpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*IERC1967UpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2916,7 +2899,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(op
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -3042,7 +3024,6 @@ type IERC1967UpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*IERC1967UpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3059,7 +3040,6 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bi
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3127,29 +3107,29 @@ const IKIP113BinRuntime = ``
 // Deprecated: Use IKIP113MetaData.Sigs instead.
 var IKIP113FuncSigs = IKIP113MetaData.Sigs
 
-// IKIP113 is an auto generated Go binding around a Klaytn contract.
+// IKIP113 is an auto generated Go binding around a Kaia contract.
 type IKIP113 struct {
 	IKIP113Caller     // Read-only binding to the contract
 	IKIP113Transactor // Write-only binding to the contract
 	IKIP113Filterer   // Log filterer for contract events
 }
 
-// IKIP113Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IKIP113Caller is an auto generated read-only Go binding around a Kaia contract.
 type IKIP113Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IKIP113Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IKIP113Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IKIP113Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IKIP113Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IKIP113Session is an auto generated Go binding around a Klaytn contract,
+// IKIP113Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IKIP113Session struct {
 	Contract     *IKIP113          // Generic contract binding to set the session for
@@ -3157,31 +3137,31 @@ type IKIP113Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IKIP113CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IKIP113CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IKIP113CallerSession struct {
 	Contract *IKIP113Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IKIP113TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IKIP113TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IKIP113TransactorSession struct {
 	Contract     *IKIP113Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IKIP113Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IKIP113Raw is an auto generated low-level Go binding around a Kaia contract.
 type IKIP113Raw struct {
 	Contract *IKIP113 // Generic contract binding to access the raw methods on
 }
 
-// IKIP113CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IKIP113CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IKIP113CallerRaw struct {
 	Contract *IKIP113Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IKIP113TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IKIP113TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IKIP113TransactorRaw struct {
 	Contract *IKIP113Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3275,7 +3255,8 @@ func (_IKIP113 *IKIP113TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IKIP113.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -3287,7 +3268,6 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
-
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -3296,7 +3276,8 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3306,7 +3287,8 @@ func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 func (_IKIP113 *IKIP113CallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3322,29 +3304,29 @@ var InitializableABI = InitializableMetaData.ABI
 // InitializableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const InitializableBinRuntime = ``
 
-// Initializable is an auto generated Go binding around a Klaytn contract.
+// Initializable is an auto generated Go binding around a Kaia contract.
 type Initializable struct {
 	InitializableCaller     // Read-only binding to the contract
 	InitializableTransactor // Write-only binding to the contract
 	InitializableFilterer   // Log filterer for contract events
 }
 
-// InitializableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// InitializableCaller is an auto generated read-only Go binding around a Kaia contract.
 type InitializableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// InitializableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type InitializableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// InitializableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type InitializableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// InitializableSession is an auto generated Go binding around a Klaytn contract,
+// InitializableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type InitializableSession struct {
 	Contract     *Initializable    // Generic contract binding to set the session for
@@ -3352,31 +3334,31 @@ type InitializableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// InitializableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// InitializableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type InitializableCallerSession struct {
 	Contract *InitializableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts        // Call options to use throughout this session
 }
 
-// InitializableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// InitializableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type InitializableTransactorSession struct {
 	Contract     *InitializableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
 }
 
-// InitializableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// InitializableRaw is an auto generated low-level Go binding around a Kaia contract.
 type InitializableRaw struct {
 	Contract *Initializable // Generic contract binding to access the raw methods on
 }
 
-// InitializableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// InitializableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type InitializableCallerRaw struct {
 	Contract *InitializableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// InitializableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// InitializableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type InitializableTransactorRaw struct {
 	Contract *InitializableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3541,7 +3523,6 @@ type InitializableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.FilterOpts) (*InitializableInitializedIterator, error) {
-
 	logs, sub, err := _Initializable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3553,7 +3534,6 @@ func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.Filter
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *InitializableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _Initializable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3618,29 +3598,29 @@ const OwnableUpgradeableBinRuntime = ``
 // Deprecated: Use OwnableUpgradeableMetaData.Sigs instead.
 var OwnableUpgradeableFuncSigs = OwnableUpgradeableMetaData.Sigs
 
-// OwnableUpgradeable is an auto generated Go binding around a Klaytn contract.
+// OwnableUpgradeable is an auto generated Go binding around a Kaia contract.
 type OwnableUpgradeable struct {
 	OwnableUpgradeableCaller     // Read-only binding to the contract
 	OwnableUpgradeableTransactor // Write-only binding to the contract
 	OwnableUpgradeableFilterer   // Log filterer for contract events
 }
 
-// OwnableUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableUpgradeableSession struct {
 	Contract     *OwnableUpgradeable // Generic contract binding to set the session for
@@ -3648,31 +3628,31 @@ type OwnableUpgradeableSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// OwnableUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableUpgradeableCallerSession struct {
 	Contract *OwnableUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// OwnableUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableUpgradeableTransactorSession struct {
 	Contract     *OwnableUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// OwnableUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableUpgradeableRaw struct {
 	Contract *OwnableUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// OwnableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableUpgradeableCallerRaw struct {
 	Contract *OwnableUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableUpgradeableTransactorRaw struct {
 	Contract *OwnableUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3766,7 +3746,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableTransactorRaw) Transact(opts *bind.
 func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _OwnableUpgradeable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3774,7 +3753,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3910,7 +3888,6 @@ type OwnableUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*OwnableUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _OwnableUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3922,7 +3899,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _OwnableUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -4044,7 +4020,6 @@ type OwnableUpgradeableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableUpgradeableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4065,7 +4040,6 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4156,7 +4130,7 @@ var SimpleBlsRegistryFuncSigs = SimpleBlsRegistryMetaData.Sigs
 // Deprecated: Use SimpleBlsRegistryMetaData.Bin instead.
 var SimpleBlsRegistryBin = SimpleBlsRegistryMetaData.Bin
 
-// DeploySimpleBlsRegistry deploys a new Klaytn contract, binding an instance of SimpleBlsRegistry to it.
+// DeploySimpleBlsRegistry deploys a new Kaia contract, binding an instance of SimpleBlsRegistry to it.
 func DeploySimpleBlsRegistry(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SimpleBlsRegistry, error) {
 	parsed, err := SimpleBlsRegistryMetaData.GetAbi()
 	if err != nil {
@@ -4173,29 +4147,29 @@ func DeploySimpleBlsRegistry(auth *bind.TransactOpts, backend bind.ContractBacke
 	return address, tx, &SimpleBlsRegistry{SimpleBlsRegistryCaller: SimpleBlsRegistryCaller{contract: contract}, SimpleBlsRegistryTransactor: SimpleBlsRegistryTransactor{contract: contract}, SimpleBlsRegistryFilterer: SimpleBlsRegistryFilterer{contract: contract}}, nil
 }
 
-// SimpleBlsRegistry is an auto generated Go binding around a Klaytn contract.
+// SimpleBlsRegistry is an auto generated Go binding around a Kaia contract.
 type SimpleBlsRegistry struct {
 	SimpleBlsRegistryCaller     // Read-only binding to the contract
 	SimpleBlsRegistryTransactor // Write-only binding to the contract
 	SimpleBlsRegistryFilterer   // Log filterer for contract events
 }
 
-// SimpleBlsRegistryCaller is an auto generated read-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryCaller is an auto generated read-only Go binding around a Kaia contract.
 type SimpleBlsRegistryCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistryTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryTransactor is an auto generated write-only Go binding around a Kaia contract.
 type SimpleBlsRegistryTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistryFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// SimpleBlsRegistryFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type SimpleBlsRegistryFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SimpleBlsRegistrySession is an auto generated Go binding around a Klaytn contract,
+// SimpleBlsRegistrySession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type SimpleBlsRegistrySession struct {
 	Contract     *SimpleBlsRegistry // Generic contract binding to set the session for
@@ -4203,31 +4177,31 @@ type SimpleBlsRegistrySession struct {
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// SimpleBlsRegistryCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// SimpleBlsRegistryCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type SimpleBlsRegistryCallerSession struct {
 	Contract *SimpleBlsRegistryCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts            // Call options to use throughout this session
 }
 
-// SimpleBlsRegistryTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// SimpleBlsRegistryTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type SimpleBlsRegistryTransactorSession struct {
 	Contract     *SimpleBlsRegistryTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
 }
 
-// SimpleBlsRegistryRaw is an auto generated low-level Go binding around a Klaytn contract.
+// SimpleBlsRegistryRaw is an auto generated low-level Go binding around a Kaia contract.
 type SimpleBlsRegistryRaw struct {
 	Contract *SimpleBlsRegistry // Generic contract binding to access the raw methods on
 }
 
-// SimpleBlsRegistryCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type SimpleBlsRegistryCallerRaw struct {
 	Contract *SimpleBlsRegistryCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// SimpleBlsRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// SimpleBlsRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type SimpleBlsRegistryTransactorRaw struct {
 	Contract *SimpleBlsRegistryTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -4321,7 +4295,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryTransactorRaw) Transact(opts *bind.Tr
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO48HASH")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4329,7 +4302,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -4352,7 +4324,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO48HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO96HASH")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4360,7 +4331,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -4383,7 +4353,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO96HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "abook")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4391,7 +4360,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -4414,7 +4382,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Abook() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "allNodeIds", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4422,7 +4389,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -4445,7 +4411,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) AllNodeIds(arg0 *big.I
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -4457,7 +4424,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 	return *outstruct, err
-
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -4466,7 +4432,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4476,7 +4443,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4486,7 +4454,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struc
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4494,7 +4461,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -4517,7 +4483,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Owner() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4525,7 +4490,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -4548,7 +4512,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ProxiableUUID() ([32]b
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "record", arg0)
 
@@ -4560,7 +4525,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 	outstruct.PublicKey = *abi.ConvertType(out[0], new([]byte)).(*[]byte)
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 	return *outstruct, err
-
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -4569,7 +4533,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4579,7 +4544,8 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) 
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error) {
+}, error,
+) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4808,7 +4774,6 @@ type SimpleBlsRegistryAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*SimpleBlsRegistryAdminChangedIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4820,7 +4785,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bi
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4941,7 +4905,6 @@ type SimpleBlsRegistryBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*SimpleBlsRegistryBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -4958,7 +4921,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -5084,7 +5046,6 @@ type SimpleBlsRegistryInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bind.FilterOpts) (*SimpleBlsRegistryInitializedIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5096,7 +5057,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bin
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5218,7 +5178,6 @@ type SimpleBlsRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*SimpleBlsRegistryOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5239,7 +5198,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5371,7 +5329,6 @@ type SimpleBlsRegistryRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind.FilterOpts) (*SimpleBlsRegistryRegisteredIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5383,7 +5340,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryRegistered) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5506,7 +5462,6 @@ type SimpleBlsRegistryUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bind.FilterOpts) (*SimpleBlsRegistryUnregisteredIterator, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5518,7 +5473,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bi
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUnregistered) (event.Subscription, error) {
-
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5639,7 +5593,6 @@ type SimpleBlsRegistryUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*SimpleBlsRegistryUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -5656,7 +5609,6 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.F
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -5722,7 +5674,7 @@ const StorageSlotUpgradeableBinRuntime = `73000000000000000000000000000000000000
 // Deprecated: Use StorageSlotUpgradeableMetaData.Bin instead.
 var StorageSlotUpgradeableBin = StorageSlotUpgradeableMetaData.Bin
 
-// DeployStorageSlotUpgradeable deploys a new Klaytn contract, binding an instance of StorageSlotUpgradeable to it.
+// DeployStorageSlotUpgradeable deploys a new Kaia contract, binding an instance of StorageSlotUpgradeable to it.
 func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *StorageSlotUpgradeable, error) {
 	parsed, err := StorageSlotUpgradeableMetaData.GetAbi()
 	if err != nil {
@@ -5739,29 +5691,29 @@ func DeployStorageSlotUpgradeable(auth *bind.TransactOpts, backend bind.Contract
 	return address, tx, &StorageSlotUpgradeable{StorageSlotUpgradeableCaller: StorageSlotUpgradeableCaller{contract: contract}, StorageSlotUpgradeableTransactor: StorageSlotUpgradeableTransactor{contract: contract}, StorageSlotUpgradeableFilterer: StorageSlotUpgradeableFilterer{contract: contract}}, nil
 }
 
-// StorageSlotUpgradeable is an auto generated Go binding around a Klaytn contract.
+// StorageSlotUpgradeable is an auto generated Go binding around a Kaia contract.
 type StorageSlotUpgradeable struct {
 	StorageSlotUpgradeableCaller     // Read-only binding to the contract
 	StorageSlotUpgradeableTransactor // Write-only binding to the contract
 	StorageSlotUpgradeableFilterer   // Log filterer for contract events
 }
 
-// StorageSlotUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// StorageSlotUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type StorageSlotUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// StorageSlotUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// StorageSlotUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type StorageSlotUpgradeableSession struct {
 	Contract     *StorageSlotUpgradeable // Generic contract binding to set the session for
@@ -5769,31 +5721,31 @@ type StorageSlotUpgradeableSession struct {
 	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// StorageSlotUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// StorageSlotUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type StorageSlotUpgradeableCallerSession struct {
 	Contract *StorageSlotUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                 // Call options to use throughout this session
 }
 
-// StorageSlotUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// StorageSlotUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type StorageSlotUpgradeableTransactorSession struct {
 	Contract     *StorageSlotUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
 }
 
-// StorageSlotUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// StorageSlotUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type StorageSlotUpgradeableRaw struct {
 	Contract *StorageSlotUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// StorageSlotUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableCallerRaw struct {
 	Contract *StorageSlotUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// StorageSlotUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// StorageSlotUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type StorageSlotUpgradeableTransactorRaw struct {
 	Contract *StorageSlotUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5902,29 +5854,29 @@ const UUPSUpgradeableBinRuntime = ``
 // Deprecated: Use UUPSUpgradeableMetaData.Sigs instead.
 var UUPSUpgradeableFuncSigs = UUPSUpgradeableMetaData.Sigs
 
-// UUPSUpgradeable is an auto generated Go binding around a Klaytn contract.
+// UUPSUpgradeable is an auto generated Go binding around a Kaia contract.
 type UUPSUpgradeable struct {
 	UUPSUpgradeableCaller     // Read-only binding to the contract
 	UUPSUpgradeableTransactor // Write-only binding to the contract
 	UUPSUpgradeableFilterer   // Log filterer for contract events
 }
 
-// UUPSUpgradeableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// UUPSUpgradeableCaller is an auto generated read-only Go binding around a Kaia contract.
 type UUPSUpgradeableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// UUPSUpgradeableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type UUPSUpgradeableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// UUPSUpgradeableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type UUPSUpgradeableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// UUPSUpgradeableSession is an auto generated Go binding around a Klaytn contract,
+// UUPSUpgradeableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type UUPSUpgradeableSession struct {
 	Contract     *UUPSUpgradeable  // Generic contract binding to set the session for
@@ -5932,31 +5884,31 @@ type UUPSUpgradeableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// UUPSUpgradeableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// UUPSUpgradeableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type UUPSUpgradeableCallerSession struct {
 	Contract *UUPSUpgradeableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// UUPSUpgradeableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// UUPSUpgradeableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type UUPSUpgradeableTransactorSession struct {
 	Contract     *UUPSUpgradeableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// UUPSUpgradeableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// UUPSUpgradeableRaw is an auto generated low-level Go binding around a Kaia contract.
 type UUPSUpgradeableRaw struct {
 	Contract *UUPSUpgradeable // Generic contract binding to access the raw methods on
 }
 
-// UUPSUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// UUPSUpgradeableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type UUPSUpgradeableCallerRaw struct {
 	Contract *UUPSUpgradeableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// UUPSUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// UUPSUpgradeableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type UUPSUpgradeableTransactorRaw struct {
 	Contract *UUPSUpgradeableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -6050,7 +6002,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transact(opts *bind.Transa
 func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _UUPSUpgradeable.contract.Call(opts, &out, "proxiableUUID")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6058,7 +6009,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -6195,7 +6145,6 @@ type UUPSUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*UUPSUpgradeableAdminChangedIterator, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6207,7 +6156,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.F
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableAdminChanged) (event.Subscription, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6328,7 +6276,6 @@ type UUPSUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*UUPSUpgradeableBeaconUpgradedIterator, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6345,7 +6292,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6471,7 +6417,6 @@ type UUPSUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*UUPSUpgradeableInitializedIterator, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6483,7 +6428,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.Fi
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableInitialized) (event.Subscription, error) {
-
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6604,7 +6548,6 @@ type UUPSUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*UUPSUpgradeableUpgradedIterator, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -6621,7 +6564,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.Filte
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
-
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)

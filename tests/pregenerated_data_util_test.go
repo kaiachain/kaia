@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -261,7 +263,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 		return errEmptyPending
 	}
 
-	pooltxs := types.NewTransactionsByTimeAndNonce(signer, pending)
+	pooltxs := types.NewTransactionsByPriceAndNonce(signer, pending, nil)
 
 	// Set the block header
 	header, err := bcdata.prepareHeader()
@@ -426,8 +428,8 @@ func genAspenOptions() (*database.DBConfig, *opt.Options) {
 	return aspenDBConfig, aspenLevelDBOptions
 }
 
-// genBaobabOptions returns database configurations of Baobab network.
-func genBaobabOptions() (*database.DBConfig, *opt.Options) {
+// genTestnetOptions returns database configurations of Testnet network.
+func genTestnetOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 
 	opts.CompactionTableSize = 4 * opt.MiB

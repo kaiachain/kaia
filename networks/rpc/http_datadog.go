@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package rpc
 
 import (
@@ -20,9 +35,9 @@ type tagInfo struct {
 }
 
 type DatadogTracer struct {
-	Tags           []tagInfo
-	Service        string
-	KlaytnResponse bool
+	Tags         []tagInfo
+	Service      string
+	KaiaResponse bool
 }
 
 func newDatadogTracer() *DatadogTracer {
@@ -47,10 +62,16 @@ func newDatadogTracer() *DatadogTracer {
 	}
 	service := os.Getenv("DD_SERVICE")
 
-	klaytnResponse := false
+	response := false
 	if v := os.Getenv("DD_KLAYTN_RPC_RESPONSE"); v != "" {
 		var err error
-		klaytnResponse, err = strconv.ParseBool(v)
+		response, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil
+		}
+	} else if v := os.Getenv("DD_KAIA_RPC_RESPONSE"); v != "" {
+		var err error
+		response, err = strconv.ParseBool(v)
 		if err != nil {
 			return nil
 		}
@@ -59,7 +80,7 @@ func newDatadogTracer() *DatadogTracer {
 	tracer.Start()
 	logger.Info("Datadog APM trace is enabled", "serviceName", service)
 
-	return &DatadogTracer{tags, service, klaytnResponse}
+	return &DatadogTracer{tags, service, response}
 }
 
 func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.Handler {
@@ -159,7 +180,7 @@ func (dt *DatadogTracer) traceRpcResponse(response []byte, method string, span t
 		span.SetTag("response.code", 0)
 	}
 
-	if dt.KlaytnResponse {
+	if dt.KaiaResponse {
 		var rpcSuccess jsonSuccessResponse
 		if err := json.Unmarshal(response, &rpcSuccess); err == nil && rpcSuccess.Result != nil {
 			successJson, _ := json.Marshal(rpcSuccess.Result)

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/geth/consolecmd_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package nodecmd
 
@@ -35,30 +37,30 @@ import (
 )
 
 const (
-	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 governance:1.0 istanbul:1.0 klay:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0"
-	httpAPIs = "eth:1.0 klay:1.0 net:1.0 rpc:1.0 web3:1.0"
+	ipcAPIs  = "admin:1.0 debug:1.0 eth:1.0 governance:1.0 istanbul:1.0 kaia:1.0 net:1.0 personal:1.0 rpc:1.0 txpool:1.0 web3:1.0"
+	httpAPIs = "eth:1.0 kaia:1.0 net:1.0 rpc:1.0 web3:1.0"
 )
 
 // Tests that a node embedded within a console can be started up properly and
 // then terminated by closing the input stream.
 func TestConsoleWelcome(t *testing.T) {
-	// Start a klay console, make sure it's cleaned up and terminate the console
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
+	// Start a Kaia console, make sure it's cleaned up and terminate the console
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
 		"console")
 
 	// Gather all the infos the welcome message needs to contain
-	klay.SetTemplateFunc("goos", func() string { return runtime.GOOS })
-	klay.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
-	klay.SetTemplateFunc("gover", runtime.Version)
+	kaia.SetTemplateFunc("goos", func() string { return runtime.GOOS })
+	kaia.SetTemplateFunc("goarch", func() string { return runtime.GOARCH })
+	kaia.SetTemplateFunc("gover", runtime.Version)
 	// TODO: Fix as in testAttachWelcome()
-	klay.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
-	klay.SetTemplateFunc("apis", func() string { return ipcAPIs })
-	klay.SetTemplateFunc("datadir", func() string { return klay.Datadir })
+	kaia.SetTemplateFunc("klayver", func() string { return params.VersionWithCommit("") })
+	kaia.SetTemplateFunc("apis", func() string { return ipcAPIs })
+	kaia.SetTemplateFunc("datadir", func() string { return kaia.Datadir })
 
 	// Verify the actual welcome message to the required template
-	klay.Expect(`
-Welcome to the Klaytn JavaScript console!
+	kaia.Expect(`
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
   datadir: {{datadir}}
@@ -66,7 +68,7 @@ Welcome to the Klaytn JavaScript console!
 
 > {{.InputLine "exit"}}
 `)
-	klay.ExpectExit()
+	kaia.ExpectExit()
 }
 
 // Tests that a console can be attached to a running node via various means.
@@ -82,44 +84,46 @@ func TestIPCAttachWelcome(t *testing.T) {
 	}
 	// Note: we need --shh because testAttachWelcome checks for default
 	// list of ipc modules and shh is included there.
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, klay, "ipc:"+ipc, ipcAPIs)
+	waitForEndpoint(t, ipc, 10*time.Second)
+	testAttachWelcome(t, kaia, "ipc:"+ipc, ipcAPIs)
 
-	klay.Interrupt()
-	klay.ExpectExit()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
 func TestHTTPAttachWelcome(t *testing.T) {
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, klay, "http://localhost:"+port, httpAPIs)
+	endpoint := "http://127.0.0.1:" + port
+	waitForEndpoint(t, endpoint, 10*time.Second)
+	testAttachWelcome(t, kaia, endpoint, httpAPIs)
 
-	klay.Interrupt()
-	klay.ExpectExit()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
 func TestWSAttachWelcome(t *testing.T) {
 	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
 
-	klay := runKlay(t,
-		"klay-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
+	kaia := runKaia(t,
+		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
 
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
-	testAttachWelcome(t, klay, "ws://localhost:"+port, httpAPIs)
+	endpoint := "ws://127.0.0.1:" + port
+	waitForEndpoint(t, endpoint, 10*time.Second)
+	testAttachWelcome(t, kaia, endpoint, httpAPIs)
 
-	klay.Interrupt()
-	klay.ExpectExit()
+	kaia.Interrupt()
+	kaia.Kill()
 }
 
-func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
-	// Attach to a running Klaytn node and terminate immediately
-	attach := runKlay(t, "klay-test", "attach", endpoint)
+func testAttachWelcome(t *testing.T, klay *testKaia, endpoint, apis string) {
+	// Attach to a running Kaia node and terminate immediately
+	attach := runKaia(t, "kaia-test", "attach", endpoint)
 	defer attach.ExpectExit()
 	attach.CloseStdin()
 
@@ -137,7 +141,7 @@ func testAttachWelcome(t *testing.T, klay *testklay, endpoint, apis string) {
 
 	// Verify the actual welcome message to the required template
 	attach.Expect(`
-Welcome to the Klaytn JavaScript console!
+Welcome to the Kaia JavaScript console!
 
  instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
   datadir: {{datadir}}{{end}}

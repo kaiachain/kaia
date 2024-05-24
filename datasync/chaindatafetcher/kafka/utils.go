@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,11 +14,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kafka
 
 import (
-	klaytnApi "github.com/klaytn/klaytn/api"
+	kaiaApi "github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
@@ -67,14 +69,14 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 	hash := head.Hash()
 
 	td := blockchain.GetTd(hash, block.NumberU64())
-	r, _ := klaytnApi.RpcOutputBlock(block, td, false, false, blockchain.Config().Rules(block.Header().Number))
+	r, _ := kaiaApi.RpcOutputBlock(block, td, false, false, blockchain.Config())
 
 	// make transactions
 	transactions := block.Transactions()
 	numTxs := len(transactions)
 	rpcTransactions := make([]map[string]interface{}, numTxs)
 	for i, tx := range transactions {
-		rpcTransactions[i] = klaytnApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i])
+		rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], blockchain.Config())
 	}
 
 	r["committee"] = cInfo.Committee

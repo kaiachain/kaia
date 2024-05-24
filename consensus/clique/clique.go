@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from go-ethereum/consensus/clique/clique.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package clique
 
@@ -168,7 +170,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 	// If the signature's already cached, return that
 	hash := header.Hash()
@@ -181,7 +183,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	}
 	signature := header.Extra[len(header.Extra)-ExtraSeal:]
 
-	// Recover the public key and the Klaytn address
+	// Recover the public key and the Kaia address
 	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
 	if err != nil {
 		return common.Address{}, err
@@ -194,7 +196,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 }
 
 // Clique is the proof-of-authority consensus engine proposed to support the
-// Klaytn testnet following the Baobab attacks.
+// Kaia testnet following the Testnet attacks.
 type Clique struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
 	db     database.DBManager   // Database to store and retrieve snapshot checkpoints
@@ -204,7 +206,7 @@ type Clique struct {
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
-	signer common.Address // Klaytn address of the signing key
+	signer common.Address // Kaia address of the signing key
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 
@@ -233,7 +235,7 @@ func New(config *params.CliqueConfig, db database.DBManager) *Clique {
 	}
 }
 
-// Author implements consensus.Engine, returning the Klaytn address recovered
+// Author implements consensus.Engine, returning the Kaia address recovered
 // from the signature in the header's extra-data section.
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)
@@ -687,5 +689,5 @@ func (c *Clique) APIs(chain consensus.ChainReader) []rpc.API {
 
 // Protocol implements consensus.Engine.Protocol
 func (c *Clique) Protocol() consensus.Protocol {
-	return consensus.KlayProtocol
+	return consensus.KaiaProtocol
 }

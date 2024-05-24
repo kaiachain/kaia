@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -53,7 +55,7 @@ const (
 	TxTypeCancel, TxTypeFeeDelegatedCancel, TxTypeFeeDelegatedCancelWithRatio
 	TxTypeBatch, _, _
 	TxTypeChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoring, TxTypeFeeDelegatedChainDataAnchoringWithRatio
-	TxTypeKlaytnLast, _, _
+	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
 	TxTypeEthereumLast       = TxType(0x7803)
@@ -405,7 +407,7 @@ type TxInternalDataBaseFee interface {
 }
 
 // Since we cannot access the package `blockchain/vm` directly, an interface `VM` is introduced.
-// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+// TODO-Kaia-Refactoring: Transaction and related data structures should be a new package.
 type VM interface {
 	Create(caller ContractRef, code []byte, gas uint64, value *big.Int, codeFormat params.CodeFormat) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error)
 	CreateWithAddress(caller ContractRef, code []byte, gas uint64, value *big.Int, contractAddr common.Address, humanReadable bool, codeFormat params.CodeFormat) ([]byte, common.Address, uint64, error)
@@ -413,7 +415,7 @@ type VM interface {
 }
 
 // Since we cannot access the package `blockchain/state` directly, an interface `StateDB` is introduced.
-// TODO-Klaytn-Refactoring: Transaction and related data structures should be a new package.
+// TODO-Kaia-Refactoring: Transaction and related data structures should be a new package.
 type StateDB interface {
 	IncNonce(common.Address)
 	Exist(common.Address) bool

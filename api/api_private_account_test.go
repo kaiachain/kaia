@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,11 +14,12 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package api
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"testing"
 
@@ -34,7 +36,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 
 	// To get JSON files use below.
 	// keydir := filepath.Join(".", "keystore")
-	keydir, err := os.MkdirTemp("", "klay-test")
+	keydir, err := os.MkdirTemp("", "kaia-test-api-")
 	require.NoError(t, err)
 	defer os.RemoveAll(keydir)
 
@@ -57,13 +59,13 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 		require.Equal(t, common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1"), addr)
 	}
 
-	// 2. Import Klaytn Wallet Key. Since the same address is already registered, it should fail.
+	// 2. Import Kaia Wallet Key. Since the same address is already registered, it should fail.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
-		require.Equal(t, fmt.Errorf("account already exists"), err)
+		require.Equal(t, errors.New("account already exists"), err)
 	}
 
-	// 3. Replace Klaytn Wallet key. It should work.
+	// 3. Replace Kaia Wallet key. It should work.
 	{
 		addr, err := api.ReplaceRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db1", "1234", "1234")
 		require.NoError(t, err)
@@ -74,22 +76,22 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 	// 4. Allowable Wallet key type is 0x00 only.
 	{
 		_, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x010x819104a190255e0cedbdd9d5f59a557633d79db1", "1234")
-		require.Equal(t, fmt.Errorf("Klaytn wallet key type must be 00."), err)
+		require.Equal(t, errors.New("Kaia wallet key type must be 00."), err)
 	}
 
 	// 5. Should return an error if wrong length.
 	{
 		_, err := api.ImportRawKey("1ea7b7bc7f525cc936ec65e0e93f146bd6fad4b3158067ad64560defd9bba0b0x010x3b3d49ebac925797b2471c7b01108ba16bb36950", "1234")
-		require.Equal(t, fmt.Errorf("invalid hex string"), err)
+		require.Equal(t, errors.New("invalid hex string"), err)
 	}
 
 	// 6. Should return an error if wrong length.
 	{
 		_, err := api.ImportRawKey("1ea7b7bc7f525cc936ec65e0e93f146bd6fad4b3158067ad64560defd9bba0b", "1234")
-		require.Equal(t, fmt.Errorf("invalid hex string"), err)
+		require.Equal(t, errors.New("invalid hex string"), err)
 	}
 
-	// 7. Import Klaytn Wallet Key.
+	// 7. Import Kaia Wallet Key.
 	{
 		addr, err := api.ImportRawKey("f8cc7c3813ad23817466b1802ee805ee417001fcce9376ab8728c92dd8ea0a6b0x000x819104a190255e0cedbdd9d5f59a557633d79db2", "1234")
 		require.NoError(t, err)

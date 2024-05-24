@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package tests
 
 import (
@@ -5,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
 	"github.com/klaytn/klaytn/blockchain"
@@ -25,7 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test full Randao hardfork scenario under the condition similar to the Cypress network.
+// Test full Randao hardfork scenario under the condition similar to the Mainnet network.
 func TestRandao_Deploy(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
@@ -60,10 +75,10 @@ func TestRandao_Deploy(t *testing.T) {
 	ctx.WaitBlock(t, 1)
 
 	// Deploy KIP113 before hardfork.
-	// Note: this test has a minor difference from Cypress scenario.
+	// Note: this test has a minor difference from Mainnet scenario.
 	// In this test, RandaoRegistry[KIP113] is configured in before deployment
-	// but in Cypress RandaoRegistry[KIP113] will be configured after deployment.
-	// following assert ensures the equivalence of this test and Cypress scenario.
+	// but in Mainnet RandaoRegistry[KIP113] will be configured after deployment.
+	// following assert ensures the equivalence of this test and Mainnet scenario.
 	_, actualKip113Addr := testRandao_deployKip113(t, ctx, owner)
 	assert.Equal(t, kip113Addr, actualKip113Addr) // check the prediced address
 
@@ -356,7 +371,7 @@ func testRandao_checkKip114(t *testing.T, ctx *blockchainTestContext, randomAddr
 
 	// Call the contract to check RANDOM opcode result
 	callRandom := func(num uint64) []byte {
-		tx := klaytn.CallMsg{
+		tx := kaia.CallMsg{
 			To:   &randomAddr,
 			Data: hexutil.MustDecode("0x5ec01e4d"), // random()
 		}

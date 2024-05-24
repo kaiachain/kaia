@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/fetcher/fetcher.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package fetcher
 
@@ -37,7 +39,7 @@ const (
 	gatherSlack         = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
 	fetchTimeout        = 5 * time.Second        // Maximum allotted time to return an explicitly requested block
 	insertTasksWaitTime = 100 * time.Millisecond // Waiting time when the insertTasks channel is full
-	// TODO-Klaytn Klaytn is 20 times faster than ethereum, so check block height is 20 times
+	// TODO-Kaia Kaia is 20 times faster than ethereum, so check block height is 20 times
 	maxQueueDist = 32 * 20  // Maximum allowed distance from the chain head to queue
 	hashLimit    = 256 * 20 // Maximum number of unique blocks a peer may have announced
 	blockLimit   = 64 * 20  // Maximum number of unique blocks a peer may have delivered
@@ -151,9 +153,9 @@ type Fetcher struct {
 	// Testing hooks
 	announceChangeHook func(common.Hash, bool) // Method to call upon adding or deleting a hash from the announce list
 	queueChangeHook    func(common.Hash, bool) // Method to call upon adding or deleting a block from the import queue
-	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (klay/61) or header (klay/62) fetch
-	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (klay/62)
-	importedHook       func(*types.Block)      // Method to call upon successful block import (both klay/61 and klay/62)
+	fetchingHook       func([]common.Hash)     // Method to call upon starting a block (kaia/61) or header (kaia/62) fetch
+	completingHook     func([]common.Hash)     // Method to call upon starting a block body fetch (kaia/62)
+	importedHook       func(*types.Block)      // Method to call upon successful block import (both kaia/61 and kaia/62)
 
 	insertTasks chan insertTask
 }

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2021 The klaytn Authors
 // Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from trie/stacktrie.go (2021/11/23).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package statedb
 
@@ -366,11 +368,12 @@ func (st *StackTrie) insert(key, value []byte) {
 // hash() hashes the node 'st' and converts it into 'hashedNode', if possible.
 // Possible outcomes:
 // 1. The rlp-encoded value was >= 32 bytes:
-//  - Then the 32-byte `hash` will be accessible in `st.val`.
-//  - And the 'st.type' will be 'hashedNode'
+//   - Then the 32-byte `hash` will be accessible in `st.val`.
+//   - And the 'st.type' will be 'hashedNode'
+//
 // 2. The rlp-encoded value was < 32 bytes
-//  - Then the <32 byte rlp-encoded value will be accessible in 'st.val'.
-//  - And the 'st.type' will be 'hashedNode' AGAIN
+//   - Then the <32 byte rlp-encoded value will be accessible in 'st.val'.
+//   - And the 'st.type' will be 'hashedNode' AGAIN
 //
 // This method will also:
 // set 'st.type' to hashedNode

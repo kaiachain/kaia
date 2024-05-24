@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/discover/table.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package discover
 
@@ -169,7 +171,7 @@ func (s *KademliaStorage) nodeAll() (nodes []*Node) {
 
 // The caller must hold s.bucketMu
 func (s *KademliaStorage) bucketByIdx(bi int) *bucket {
-	// TODO-Klaytn-Node range check
+	// TODO-Kaia-Node range check
 	return s.buckets[bi]
 }
 
@@ -276,7 +278,7 @@ func (s *KademliaStorage) delete(n *Node) {
 // The caller must hold tab.mutex.
 func (s *KademliaStorage) deleteInBucket(b *bucket, n *Node) {
 	b.entries = deleteNode(b.entries, n)
-	s.removeIP(b, n.IP) // TODO-Klaytn-Node Does the IP is not lock?
+	s.removeIP(b, n.IP) // TODO-Kaia-Node Does the IP is not lock?
 }
 
 // closest returns the n nodes in the table that are closest to the
@@ -285,7 +287,7 @@ func (s *KademliaStorage) closest(target common.Hash, nresults int) *nodesByDist
 	// This is a very wasteful way to find the closest nodes but
 	// obviously correct. I believe that tree-based buckets would make
 	// this easier to implement efficiently.
-	// TODO-Klaytn-Node more efficient ways to obtain the closest nodes could be considered.
+	// TODO-Kaia-Node more efficient ways to obtain the closest nodes could be considered.
 	close := &nodesByDistance{target: target}
 	s.bucketsMu.Lock()
 	defer s.bucketsMu.Unlock()

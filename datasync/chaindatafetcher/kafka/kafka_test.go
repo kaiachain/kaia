@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kafka
 
@@ -45,11 +47,11 @@ type KafkaSuite struct {
 	topic    string
 }
 
-// In order to test KafkaSuite, any available kafka broker must be connectable with "kafka:9094".
+// In order to test KafkaSuite, any available kafka broker must be connectable with "kafka:9092".
 // If no kafka broker is available, the KafkaSuite tests are skipped.
 func (s *KafkaSuite) SetupTest() {
 	s.conf = GetDefaultKafkaConfig()
-	s.conf.Brokers = []string{"kafka:9094"}
+	s.conf.Brokers = []string{"kafka:9092"}
 	kfk, err := NewKafka(s.conf)
 	if err == sarama.ErrOutOfBrokers {
 		s.T().Log("Failed connecting to brokers", s.conf.Brokers)
@@ -176,10 +178,15 @@ func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	// deleted a topic successfully
 	s.Nil(s.kfk.DeleteTopic(s.topic))
 
-	topics, err := s.kfk.ListTopics()
-	if _, exist := topics[s.topic]; exist {
-		s.Fail("topic must not exist")
+	for i := 0; i < 10; i++ {
+		topics, err := s.kfk.ListTopics()
+		s.NoError(err)
+		if _, exist := topics[s.topic]; !exist {
+			return // success
+		}
+		time.Sleep(time.Second)
 	}
+	s.Fail("topic must not exist")
 }
 
 type kafkaData struct {
@@ -466,7 +473,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 	}()
 
 	// checkout the returned error is buffer overflow error
-	timeout := time.NewTimer(3 * time.Second)
+	timeout := time.NewTimer(5 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")
@@ -501,7 +508,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments_ErrCallBack() {
 	}()
 
 	// checkout the returned error is callback error
-	timeout := time.NewTimer(3 * time.Second)
+	timeout := time.NewTimer(5 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")
@@ -543,7 +550,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments_MessageTimeout() {
 	}()
 
 	// checkout the returned error is callback error
-	timeout := time.NewTimer(3 * time.Second)
+	timeout := time.NewTimer(5 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")

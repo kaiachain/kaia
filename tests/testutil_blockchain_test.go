@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package tests
 
 import (
@@ -55,17 +70,17 @@ type blockchainTestOverrides struct {
 	numNodes    int                     // default: 1
 	numAccounts int                     // default: numNodes
 	config      *params.ChainConfig     // default: blockchainTestChainConfig
-	alloc       blockchain.GenesisAlloc // default: 10_000_000 KLAY for each account
+	alloc       blockchain.GenesisAlloc // default: 10_000_000 KAIA for each account
 }
 
 var blockchainTestChainConfig = &params.ChainConfig{
 	ChainID:       big.NewInt(31337),
 	DeriveShaImpl: 2,
-	UnitPrice:     25 * params.Ston,
+	UnitPrice:     25 * params.Gkei,
 	Governance: &params.GovernanceConfig{
 		GovernanceMode: "none",
 		Reward: &params.RewardConfig{
-			MintingAmount:          big.NewInt(params.KLAY * 6.4),
+			MintingAmount:          big.NewInt(params.KAIA * 6.4),
 			Ratio:                  "100/0/0",
 			Kip82Ratio:             "20/80",
 			UseGiniCoeff:           false,
@@ -140,7 +155,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 	vanity := make([]byte, types.IstanbulExtraVanity)
 
 	// Genesis Alloc from overrides.alloc + rich accountAddrs
-	richBalance := new(big.Int).Mul(big.NewInt(params.KLAY), big.NewInt(10_000_000))
+	richBalance := new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(10_000_000))
 	for _, addr := range ctx.accountAddrs {
 		account := alloc[addr]
 		account.Balance = richBalance
@@ -157,7 +172,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 }
 
 func (ctx *blockchainTestContext) setWorkspace() {
-	workspace, _ := os.MkdirTemp("", "klaytn-test-state")
+	workspace, _ := os.MkdirTemp("", "kaia-test-state-")
 	ctx.workspace = workspace
 }
 

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from internal/ethapi/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package api
 
@@ -31,38 +33,38 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// PublicKlayAPI provides an API to access Klaytn related information.
+// PublicKaiaAPI provides an API to access Kaia related information.
 // It offers only methods that operate on public data that is freely available to anyone.
-type PublicKlayAPI struct {
+type PublicKaiaAPI struct {
 	b Backend
 }
 
-// NewPublicKlayAPI creates a new Klaytn protocol API.
-func NewPublicKlayAPI(b Backend) *PublicKlayAPI {
-	return &PublicKlayAPI{b}
+// NewPublicKaiaAPI creates a new Kaia protocol API.
+func NewPublicKaiaAPI(b Backend) *PublicKaiaAPI {
+	return &PublicKaiaAPI{b}
 }
 
 // GasPrice returns a suggestion for a gas price (baseFee * 2).
-func (s *PublicKlayAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+func (s *PublicKaiaAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestPrice(ctx)
 	return (*hexutil.Big)(price), err
 }
 
-func (s *PublicKlayAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+func (s *PublicKaiaAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
 	return (*hexutil.Big)(s.b.UpperBoundGasPrice(ctx))
 }
 
-func (s *PublicKlayAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+func (s *PublicKaiaAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
 	return (*hexutil.Big)(s.b.LowerBoundGasPrice(ctx))
 }
 
-// ProtocolVersion returns the current Klaytn protocol version this node supports.
-func (s *PublicKlayAPI) ProtocolVersion() hexutil.Uint {
+// ProtocolVersion returns the current Kaia protocol version this node supports.
+func (s *PublicKaiaAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
-func (s *PublicKlayAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
+func (s *PublicKaiaAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
 	price, err := s.b.SuggestTipCap(ctx)
 	return (*hexutil.Big)(price), err
 }
@@ -75,7 +77,7 @@ type FeeHistoryResult struct {
 }
 
 // FeeHistory returns data relevant for fee estimation based on the specified range of blocks.
-func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
+func (s *PublicKaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
 	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
 	if err != nil {
 		return nil, err
@@ -102,6 +104,52 @@ func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 	return results, nil
 }
 
+type TotalSupplyResult struct {
+	Number      *hexutil.Big `json:"number"`          // Block number in which the total supply was calculated.
+	Error       *string      `json:"error,omitempty"` // Errors that occurred while fetching the components, thus failed to deliver the total supply.
+	TotalSupply *hexutil.Big `json:"totalSupply"`     // The total supply of the native token. i.e. Minted - Burnt.
+	TotalMinted *hexutil.Big `json:"totalMinted"`     // Total minted amount.
+	TotalBurnt  *hexutil.Big `json:"totalBurnt"`      // Total burnt amount. Sum of all burnt amounts below.
+	BurntFee    *hexutil.Big `json:"burntFee"`        // from tx fee burn. ReadAccReward(num).BurntFee.
+	ZeroBurn    *hexutil.Big `json:"zeroBurn"`        // balance of 0x0 (zero) address.
+	DeadBurn    *hexutil.Big `json:"deadBurn"`        // balance of 0xdead (dead) address.
+	Kip103Burn  *hexutil.Big `json:"kip103Burn"`      // by KIP103 fork. Read from its memo.
+	Kip160Burn  *hexutil.Big `json:"kip160Burn"`      // by KIP160 fork. Read from its memo.
+}
+
+func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*TotalSupplyResult, error) {
+	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// Case 1. Failed to fetch essential components. The API fails.
+	ts, err := s.b.GetTotalSupply(ctx, blockNrOrHash)
+	if ts == nil {
+		return nil, err
+	}
+
+	// Case 2. Failed to fetch some components. The API delivers the partial result with the 'error' field set.
+	// Case 3. Succeeded to fetch all components. The API delivers the full result.
+	res := &TotalSupplyResult{
+		Number:      (*hexutil.Big)(block.Number()),
+		Error:       nil,
+		TotalSupply: (*hexutil.Big)(ts.TotalSupply),
+		TotalMinted: (*hexutil.Big)(ts.TotalMinted),
+		TotalBurnt:  (*hexutil.Big)(ts.TotalBurnt),
+		BurntFee:    (*hexutil.Big)(ts.BurntFee),
+		ZeroBurn:    (*hexutil.Big)(ts.ZeroBurn),
+		DeadBurn:    (*hexutil.Big)(ts.DeadBurn),
+		Kip103Burn:  (*hexutil.Big)(ts.Kip103Burn),
+		Kip160Burn:  (*hexutil.Big)(ts.Kip160Burn),
+	}
+	if err != nil {
+		errStr := err.Error()
+		res.Error = &errStr
+	}
+	return res, nil
+}
+
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
 // - startingBlock: block number this node started to synchronise from
@@ -109,7 +157,7 @@ func (s *PublicKlayAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (s *PublicKlayAPI) Syncing() (interface{}, error) {
+func (s *PublicKaiaAPI) Syncing() (interface{}, error) {
 	progress := s.b.Progress()
 
 	// Return not syncing if the synchronisation already completed
@@ -127,7 +175,7 @@ func (s *PublicKlayAPI) Syncing() (interface{}, error) {
 }
 
 // EncodeAccountKey gets an account key of JSON format and returns RLP encoded bytes of the key.
-func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
+func (s *PublicKaiaAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexutil.Bytes, error) {
 	if accKey.KeyType == nil {
 		return nil, errors.New("key type is not specified")
 	}
@@ -152,7 +200,7 @@ func (s *PublicKlayAPI) EncodeAccountKey(accKey accountkey.AccountKeyJSON) (hexu
 }
 
 // DecodeAccountKey gets an RLP encoded bytes of an account key and returns the decoded account key.
-func (s *PublicKlayAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountkey.AccountKeySerializer, error) {
+func (s *PublicKaiaAPI) DecodeAccountKey(encodedAccKey hexutil.Bytes) (*accountkey.AccountKeySerializer, error) {
 	dec := accountkey.NewAccountKeySerializer()
 	if err := rlp.DecodeBytes(encodedAccKey, &dec); err != nil {
 		return nil, err

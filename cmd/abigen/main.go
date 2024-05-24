@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/abigen/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package main
 
@@ -58,11 +60,11 @@ var (
 	// Flags needed by abigen
 	abiFlag = &cli.StringFlag{
 		Name:  "abi",
-		Usage: "Path to the Klaytn contract ABI json to bind, - for STDIN",
+		Usage: "Path to the Kaia contract ABI json to bind, - for STDIN",
 	}
 	binFlag = &cli.StringFlag{
 		Name:  "bin",
-		Usage: "Path to the Klaytn contract bytecode (generate deploy method)",
+		Usage: "Path to the Kaia contract bytecode (generate deploy method)",
 	}
 	binruntimeFlag = &cli.StringFlag{
 		Name:  "binruntime",
@@ -78,7 +80,7 @@ var (
 	}
 	solFlag = &cli.StringFlag{
 		Name:  "sol",
-		Usage: "Path to the Klaytn contract Solidity source to build and bind",
+		Usage: "Path to the Kaia contract Solidity source to build and bind",
 	}
 	solcFlag = &cli.StringFlag{
 		Name:  "solc",
@@ -109,7 +111,7 @@ var (
 )
 
 func init() {
-	app = utils.NewApp(gitCommit, "klaytn checkpoint helper tool")
+	app = utils.NewApp(gitCommit, "Kaia checkpoint helper tool")
 	app.Flags = []cli.Flag{
 		abiFlag,
 		binFlag,

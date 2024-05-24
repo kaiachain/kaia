@@ -1,7 +1,9 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 //
 // This file is derived from metrics/prometheus/prometheusmetrics.go (2018/06/04).
 // See LICENSE in the top directory for the original copyright and license.
+// Modified and improved for the Kaia development.
 
 package prometheusmetrics
 
@@ -10,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rcrowley/go-metrics"
@@ -70,7 +72,7 @@ func (c *PrometheusConfig) gaugeFromNameAndValue(name string, val float64) {
 func (c *PrometheusConfig) UpdatePrometheusMetrics() {
 	for range time.Tick(c.FlushInterval) {
 		c.UpdatePrometheusMetricsOnce()
-		klaytnmetrics.ResetMaxGauges()
+		kaiametrics.ResetMaxGauges()
 	}
 }
 

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -43,7 +45,7 @@ import (
 func TestGovernance_Engines(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
-	config := params.CypressChainConfig.Copy()
+	config := params.MainnetChainConfig.Copy()
 	config.IstanbulCompatibleBlock = new(big.Int).SetUint64(0)
 	config.LondonCompatibleBlock = new(big.Int).SetUint64(0)
 	config.EthTxTypeCompatibleBlock = new(big.Int).SetUint64(0)
@@ -53,7 +55,7 @@ func TestGovernance_Engines(t *testing.T) {
 	config.Istanbul.Epoch = 2
 	config.Istanbul.SubGroupSize = 1
 	config.Istanbul.ProposerPolicy = uint64(istanbul.RoundRobin)
-	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KLAY))
+	config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 	config.Governance.Reward.Kip82Ratio = params.DefaultKip82Ratio
 
 	config.Governance.GovParamContract = common.Address{}
@@ -238,7 +240,7 @@ func deployGovParamTx_batchSetParamIn(t *testing.T, node *cn.CN, owner *TestAcco
 	return txs
 }
 
-// Klaytn node only decodes the byte-array param values (refer to params/governance_paramset.go).
+// Kaia node only decodes the byte-array param values (refer to params/governance_paramset.go).
 // Encoding is the job of transaction senders (i.e. clients and dApps).
 // This is a reference implementation of such encoder.
 func chainConfigToBytesMap(t *testing.T, config *params.ChainConfig) map[string][]byte {

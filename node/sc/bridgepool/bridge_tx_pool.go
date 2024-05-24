@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/tx_pool.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package bridgepool
 
@@ -41,7 +43,7 @@ var (
 	ErrDuplicatedNonceTx = errors.New("Duplicated Nonce Transaction")
 )
 
-// TODO-Klaytn-Servicechain Add Metrics
+// TODO-Kaia-Servicechain Add Metrics
 var (
 	// Metrics for the pending pool
 	refusedTxCounter = metrics.NewRegisteredCounter("bridgeTxpool/refuse", nil)
@@ -85,15 +87,15 @@ func (config *BridgeTxPoolConfig) sanitize() BridgeTxPoolConfig {
 // BridgeTxPool contains all currently known chain transactions.
 type BridgeTxPool struct {
 	config BridgeTxPoolConfig
-	// TODO-Klaytn-Servicechain consider to remove singer. For now, caused of value transfer tx which don't have `from` value, I leave it.
+	// TODO-Kaia-Servicechain consider to remove singer. For now, caused of value transfer tx which don't have `from` value, I leave it.
 	signer types.Signer
 	mu     sync.RWMutex
-	// txMu   sync.RWMutex // TODO-Klaytn-Servicechain: implement fine-grained locks
+	// txMu   sync.RWMutex // TODO-Kaia-Servicechain: implement fine-grained locks
 
 	journal *bridgeTxJournal // Journal of transaction to back up to disk
 
 	queue map[common.Address]*ItemSortedMap // Queued but non-processable transactions
-	// TODO-Klaytn-Servicechain refine heartbeat for the tx not for account.
+	// TODO-Kaia-Servicechain refine heartbeat for the tx not for account.
 	all map[common.Hash]*types.Transaction // All transactions to allow lookups
 
 	wg     sync.WaitGroup // for shutdown sync

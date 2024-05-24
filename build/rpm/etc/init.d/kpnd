@@ -3,7 +3,7 @@
 # kpnd         Startup script for the kpn
 #
 # chkconfig: - 85 15
-# description : kpnd is the Klaytn proxy node daemon
+# description : kpnd is the Kaia proxy node daemon
 #
 # processname: kpnd
 # config:  /etc/kpnd/conf/kpnd.conf
@@ -101,7 +101,7 @@ status_auto_restart_daemon() {
     fi
 }
 
-#------------------------Related to Klaytn node functions-----------------------------
+#------------------------Related to Kaia node functions-----------------------------
 
 set -f
 OPTIONS=""
@@ -159,18 +159,18 @@ if [[ ! -z $WS_ENABLE ]] && [[ $WS_ENABLE -eq 1 ]]; then
     fi
 fi
 
-# Cypress network => NETWORK_ID is null && NETWORK = "cypress"
-# Baobab network => NETWORK_ID is null && NETWORK = "baobab"
+# Mainnet network => NETWORK_ID is null && NETWORK = "mainnet"
+# Testnet network => NETWORK_ID is null && NETWORK = "testnet"
 # Else => private network
 if [[ -z $NETWORK_ID ]]; then
-    if [[ $NETWORK == "baobab" ]]; then
-        OPTIONS="$OPTIONS --baobab"
-    elif [[ $NETWORK == "cypress" ]]; then
-        OPTIONS="$OPTIONS --cypress"
+    if [[ $NETWORK == "testnet" || $NETWORK == "baobab" ]]; then
+        OPTIONS="$OPTIONS --testnet"
+    elif [[ $NETWORK == "mainnet" || $NETWORK == "cypress" ]]; then
+        OPTIONS="$OPTIONS --mainnet"
     else
         echo
         echo "[ERROR] network id is not specified and network is not available."
-        echo "Available network: baobab, cypress"
+        echo "Available network: testnet, mainnet"
         exit 1
     fi
 else

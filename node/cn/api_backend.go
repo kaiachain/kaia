@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/api_backend.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -26,7 +28,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/bloombits"
@@ -79,7 +81,7 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, targetBlkNum uint64) error {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
@@ -90,6 +92,7 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, t
 	}
 	gov.InitGovCache()
 	gov.InitLastGovStateBlkNum()
+	gpo.PurgeCache()
 	return nil
 }
 
@@ -97,7 +100,7 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
-	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, number)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
@@ -237,7 +240,7 @@ func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
-	txContext := blockchain.NewEVMTxContext(msg, header)
+	txContext := blockchain.NewEVMTxContext(msg, header, b.ChainConfig())
 	blockContext := blockchain.NewEVMBlockContext(header, b.cn.BlockChain(), nil)
 
 	return vm.NewEVM(blockContext, txContext, state, b.cn.chainConfig, &vmCfg), vmError, nil
@@ -299,7 +302,7 @@ func (b *CNAPIBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) ev
 	return b.cn.TxPool().SubscribeNewTxsEvent(ch)
 }
 
-func (b *CNAPIBackend) Progress() klaytn.SyncProgress {
+func (b *CNAPIBackend) Progress() kaia.SyncProgress {
 	return b.cn.Progress()
 }
 
@@ -402,4 +405,12 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
+}
+
+func (b *CNAPIBackend) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
+	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+	return b.cn.supplyManager.GetTotalSupply(block.NumberU64())
 }

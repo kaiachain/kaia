@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2020 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/abi/abi_test.go (2020/12/14).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package abi
 
@@ -38,6 +40,7 @@ type ABI struct {
 	Constructor Method
 	Methods     map[string]Method
 	Events      map[string]Event
+	Errors      map[string]Error
 
 	// Additional "special" functions introduced in solidity v0.6.0.
 	// It's separated from the original default fallback. Each contract
@@ -161,12 +164,13 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 	}
 	abi.Methods = make(map[string]Method)
 	abi.Events = make(map[string]Event)
+	abi.Errors = make(map[string]Error)
 	for _, field := range fields {
 		switch field.Type {
 		case "constructor":
 			abi.Constructor = NewMethod("", "", Constructor, field.StateMutability, field.Constant, field.Payable, field.Inputs, nil)
 		case "function":
-			name := abi.overloadedMethodName(field.Name)
+			name := overloadedName(field.Name, func(s string) bool { _, ok := abi.Methods[s]; return ok })
 			abi.Methods[name] = NewMethod(name, field.Name, Function, field.StateMutability, field.Constant, field.Payable, field.Inputs, field.Outputs)
 		case "fallback":
 			// New introduced function type in v0.6.0, check more detail
@@ -186,8 +190,10 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 			}
 			abi.Receive = NewMethod("", "", Receive, field.StateMutability, field.Constant, field.Payable, nil, nil)
 		case "event":
-			name := abi.overloadedEventName(field.Name)
+			name := overloadedName(field.Name, func(s string) bool { _, ok := abi.Events[s]; return ok })
 			abi.Events[name] = NewEvent(name, field.Name, field.Anonymous, field.Inputs)
+		case "error":
+			abi.Errors[field.Name] = NewError(field.Name, field.Inputs)
 		default:
 			return fmt.Errorf("abi: could not recognize type %v of field %v", field.Type, field.Name)
 		}
@@ -195,32 +201,19 @@ func (abi *ABI) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// overloadedMethodName returns the next available name for a given function.
-// Needed since solidity allows for function overload.
+// overloadedName returns the next available name for a given thing.
+// Needed since solidity allows for overloading.
 //
 // e.g. if the abi contains Methods send, send1
-// overloadedMethodName would return send2 for input send.
-func (abi *ABI) overloadedMethodName(rawName string) string {
-	name := rawName
-	_, ok := abi.Methods[name]
-	for idx := 0; ok; idx++ {
-		name = fmt.Sprintf("%s%d", rawName, idx)
-		_, ok = abi.Methods[name]
-	}
-	return name
-}
-
-// overloadedEventName returns the next available name for a given event.
-// Needed since solidity allows for event overload.
+// overloadedName would return send2 for input send.
 //
-// e.g. if the abi contains events received, received1
-// overloadedEventName would return received2 for input received.
-func (abi *ABI) overloadedEventName(rawName string) string {
+// overloadedName works for methods, events and errors.
+func overloadedName(rawName string, isAvail func(string) bool) string {
 	name := rawName
-	_, ok := abi.Events[name]
+	ok := isAvail(name)
 	for idx := 0; ok; idx++ {
 		name = fmt.Sprintf("%s%d", rawName, idx)
-		_, ok = abi.Events[name]
+		ok = isAvail(name)
 	}
 	return name
 }

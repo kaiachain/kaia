@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from tests/state_test_util.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -164,7 +166,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, err
 	}
-	txContext := blockchain.NewEVMTxContext(msg, block.Header())
+	txContext := blockchain.NewEVMTxContext(msg, block.Header(), config)
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
 	blockContext.GetHash = vmTestBlockHash
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)

@@ -139,7 +139,7 @@ func TestPrestateTracerCreate2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create call tracer: %v", err)
 	}
-	evm := vm.NewEVM(blockContext, txContext, statedb, params.CypressChainConfig, &vm.Config{Debug: true, Tracer: tracer})
+	evm := vm.NewEVM(blockContext, txContext, statedb, params.MainnetChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, blockContext.BlockNumber.Uint64())

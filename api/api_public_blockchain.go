@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from internal/ethapi/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package api
 
@@ -45,13 +47,13 @@ import (
 
 var logger = log.NewModuleLogger(log.API)
 
-// PublicBlockChainAPI provides an API to access the Klaytn blockchain.
+// PublicBlockChainAPI provides an API to access the Kaia blockchain.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicBlockChainAPI struct {
 	b Backend
 }
 
-// NewPublicBlockChainAPI creates a new Klaytn blockchain API.
+// NewPublicBlockChainAPI creates a new Kaia blockchain API.
 func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
 	return &PublicBlockChainAPI{b}
 }
@@ -110,13 +112,13 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHas
 	}
 	fieldsList := make([]map[string]interface{}, 0, len(receipts))
 	for index, receipt := range receipts {
-		fields := RpcOutputReceipt(block.Header(), txs[index], blockHash, block.NumberU64(), uint64(index), receipt)
+		fields := RpcOutputReceipt(block.Header(), txs[index], blockHash, block.NumberU64(), uint64(index), receipt, s.b.ChainConfig())
 		fieldsList = append(fieldsList, fields)
 	}
 	return fieldsList, nil
 }
 
-// GetBalance returns the amount of peb for the given address in the state of the
+// GetBalance returns the amount of kei for the given address in the state of the
 // given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers and hash are also allowed.
 func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
@@ -151,7 +153,7 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-func (s *PublicKlayAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (s *PublicKaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
@@ -333,14 +335,9 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if err != nil {
 		return nil, 0, err
 	}
-	var balanceBaseFee *big.Int
-	if header.BaseFee != nil {
-		balanceBaseFee = baseFee
-	} else {
-		balanceBaseFee = msg.GasPrice()
-	}
+
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), balanceBaseFee))
+	state.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.EffectiveGasPrice(header, b.ChainConfig())))
 
 	// The intrinsicGas is checked again later in the blockchain.ApplyMessage function,
 	// but we check in advance here in order to keep StateTransition.TransactionDb method as unchanged as possible
@@ -537,9 +534,9 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 	return formatted, nil
 }
 
-// For klay_getBlockByNumber, klay_getBlockByHash, klay_getBlockWithconsensusInfoByNumber, klay_getBlockWithconsensusInfoByHash APIs
+// For kaia_getBlockByNumber, kaia_getBlockByHash, kaia_getBlockWithconsensusInfoByNumber, kaia_getBlockWithconsensusInfoByHash APIs
 // and Kafka chaindatafetcher.
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules params.Rules) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, config *params.ChainConfig) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -568,7 +565,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 
 		if fullTx {
 			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newRPCTransactionFromBlockHash(b, tx.Hash()), nil
+				return newRPCTransactionFromBlockHash(b, tx.Hash(), config), nil
 			}
 		}
 
@@ -583,6 +580,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 		fields["transactions"] = transactions
 	}
 
+	rules := config.Rules(b.Number())
 	if rules.IsEthTxType {
 		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
@@ -602,7 +600,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, rules
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig().Rules(b.Header().Number))
+	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig())
 }
 
 func getFrom(tx *types.Transaction) common.Address {
@@ -616,13 +614,13 @@ func getFrom(tx *types.Transaction) common.Address {
 	return from
 }
 
-func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
-	return newRPCTransaction(b, tx, blockHash, blockNumber, index)
+func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
+	return newRPCTransaction(b, tx, blockHash, blockNumber, index, config)
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
-func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) map[string]interface{} {
+func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
 	output := tx.MakeRPCOutput()
 	output["senderTxHash"] = tx.SenderTxHashAll()
 	output["blockHash"] = blockHash
@@ -632,10 +630,10 @@ func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.H
 	output["transactionIndex"] = hexutil.Uint(index)
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		if b != nil {
-			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(b.Header()))
+			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(b.Header(), config))
 		} else {
 			// transaction is not processed yet
-			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(nil))
+			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
 	}
 
@@ -643,17 +641,17 @@ func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.H
 }
 
 // newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
-func newRPCPendingTransaction(tx *types.Transaction) map[string]interface{} {
-	return newRPCTransaction(nil, tx, common.Hash{}, 0, 0)
+func newRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig) map[string]interface{} {
+	return newRPCTransaction(nil, tx, common.Hash{}, 0, 0, config)
 }
 
 // newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) map[string]interface{} {
+func newRPCTransactionFromBlockIndex(b *types.Block, index uint64, config *params.ChainConfig) map[string]interface{} {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		return nil
 	}
-	return newRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index)
+	return newRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index, config)
 }
 
 // newRPCRawTransactionFromBlockIndex returns the bytes of a transaction given a block and a transaction index.
@@ -667,10 +665,10 @@ func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) hexutil.By
 }
 
 // newRPCTransactionFromBlockHash returns a transaction that will serialize to the RPC representation.
-func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash) map[string]interface{} {
+func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash, config *params.ChainConfig) map[string]interface{} {
 	for idx, tx := range b.Transactions() {
 		if tx.Hash() == hash {
-			return newRPCTransactionFromBlockIndex(b, uint64(idx))
+			return newRPCTransactionFromBlockIndex(b, uint64(idx), config)
 		}
 	}
 	return nil
@@ -691,7 +689,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// Set default gas & gas price if none were set
 	gas := globalGasCap
 	if gas == 0 {
-		gas = uint64(math.MaxUint64 / 2)
+		gas = params.UpperGasLimit
 	}
 	if args.Gas != 0 {
 		gas = uint64(args.Gas)
@@ -703,20 +701,14 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 
 	// Do not update gasPrice unless any of args.GasPrice and args.MaxFeePerGas is specified.
 	gasPrice := new(big.Int)
-	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) == 0 {
-		// If baseFee is zero, then it must be a magma hardfork
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			gasPrice = args.MaxFeePerGas.ToInt()
-		}
-	} else {
-		if args.GasPrice != nil {
-			gasPrice = args.GasPrice.ToInt()
-		} else if args.MaxFeePerGas != nil {
-			// User specified 1559 gas fields (or none), use those
-			gasPrice = args.MaxFeePerGas.ToInt()
-		} else {
+	if args.GasPrice != nil {
+		gasPrice = args.GasPrice.ToInt()
+	} else if args.MaxFeePerGas != nil {
+		gasPrice = args.MaxFeePerGas.ToInt()
+	}
+
+	if baseFee.Cmp(new(big.Int).SetUint64(params.ZeroBaseFee)) != 0 {
+		if args.GasPrice == nil && args.MaxFeePerGas == nil {
 			// User specified neither GasPrice nor MaxFeePerGas, use baseFee
 			gasPrice = new(big.Int).Mul(baseFee, common.Big2)
 		}

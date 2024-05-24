@@ -46,7 +46,7 @@ const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604
 // Deprecated: Use AddressMetaData.Bin instead.
 var AddressBin = AddressMetaData.Bin
 
-// DeployAddress deploys a new Klaytn contract, binding an instance of Address to it.
+// DeployAddress deploys a new Kaia contract, binding an instance of Address to it.
 func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Address, error) {
 	parsed, err := AddressMetaData.GetAbi()
 	if err != nil {
@@ -63,29 +63,29 @@ func DeployAddress(auth *bind.TransactOpts, backend bind.ContractBackend) (commo
 	return address, tx, &Address{AddressCaller: AddressCaller{contract: contract}, AddressTransactor: AddressTransactor{contract: contract}, AddressFilterer: AddressFilterer{contract: contract}}, nil
 }
 
-// Address is an auto generated Go binding around a Klaytn contract.
+// Address is an auto generated Go binding around a Kaia contract.
 type Address struct {
 	AddressCaller     // Read-only binding to the contract
 	AddressTransactor // Write-only binding to the contract
 	AddressFilterer   // Log filterer for contract events
 }
 
-// AddressCaller is an auto generated read-only Go binding around a Klaytn contract.
+// AddressCaller is an auto generated read-only Go binding around a Kaia contract.
 type AddressCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// AddressTransactor is an auto generated write-only Go binding around a Kaia contract.
 type AddressTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// AddressFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type AddressFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// AddressSession is an auto generated Go binding around a Klaytn contract,
+// AddressSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type AddressSession struct {
 	Contract     *Address          // Generic contract binding to set the session for
@@ -93,31 +93,31 @@ type AddressSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// AddressCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// AddressCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type AddressCallerSession struct {
 	Contract *AddressCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// AddressTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// AddressTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type AddressTransactorSession struct {
 	Contract     *AddressTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// AddressRaw is an auto generated low-level Go binding around a Klaytn contract.
+// AddressRaw is an auto generated low-level Go binding around a Kaia contract.
 type AddressRaw struct {
 	Contract *Address // Generic contract binding to access the raw methods on
 }
 
-// AddressCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// AddressCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type AddressCallerRaw struct {
 	Contract *AddressCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// AddressTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// AddressTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type AddressTransactorRaw struct {
 	Contract *AddressTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -222,7 +222,7 @@ const CountersBinRuntime = `7300000000000000000000000000000000000000003014608060
 // Deprecated: Use CountersMetaData.Bin instead.
 var CountersBin = CountersMetaData.Bin
 
-// DeployCounters deploys a new Klaytn contract, binding an instance of Counters to it.
+// DeployCounters deploys a new Kaia contract, binding an instance of Counters to it.
 func DeployCounters(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Counters, error) {
 	parsed, err := CountersMetaData.GetAbi()
 	if err != nil {
@@ -239,29 +239,29 @@ func DeployCounters(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &Counters{CountersCaller: CountersCaller{contract: contract}, CountersTransactor: CountersTransactor{contract: contract}, CountersFilterer: CountersFilterer{contract: contract}}, nil
 }
 
-// Counters is an auto generated Go binding around a Klaytn contract.
+// Counters is an auto generated Go binding around a Kaia contract.
 type Counters struct {
 	CountersCaller     // Read-only binding to the contract
 	CountersTransactor // Write-only binding to the contract
 	CountersFilterer   // Log filterer for contract events
 }
 
-// CountersCaller is an auto generated read-only Go binding around a Klaytn contract.
+// CountersCaller is an auto generated read-only Go binding around a Kaia contract.
 type CountersCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// CountersTransactor is an auto generated write-only Go binding around a Kaia contract.
 type CountersTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// CountersFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type CountersFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// CountersSession is an auto generated Go binding around a Klaytn contract,
+// CountersSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type CountersSession struct {
 	Contract     *Counters         // Generic contract binding to set the session for
@@ -269,31 +269,31 @@ type CountersSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// CountersCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// CountersCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type CountersCallerSession struct {
 	Contract *CountersCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// CountersTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// CountersTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type CountersTransactorSession struct {
 	Contract     *CountersTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// CountersRaw is an auto generated low-level Go binding around a Klaytn contract.
+// CountersRaw is an auto generated low-level Go binding around a Kaia contract.
 type CountersRaw struct {
 	Contract *Counters // Generic contract binding to access the raw methods on
 }
 
-// CountersCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// CountersCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type CountersCallerRaw struct {
 	Contract *CountersCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// CountersTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// CountersTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type CountersTransactorRaw struct {
 	Contract *CountersTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -400,29 +400,29 @@ const ERC165BinRuntime = ``
 // Deprecated: Use ERC165MetaData.Sigs instead.
 var ERC165FuncSigs = ERC165MetaData.Sigs
 
-// ERC165 is an auto generated Go binding around a Klaytn contract.
+// ERC165 is an auto generated Go binding around a Kaia contract.
 type ERC165 struct {
 	ERC165Caller     // Read-only binding to the contract
 	ERC165Transactor // Write-only binding to the contract
 	ERC165Filterer   // Log filterer for contract events
 }
 
-// ERC165Caller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC165Caller is an auto generated read-only Go binding around a Kaia contract.
 type ERC165Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC165Transactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC165Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC165Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC165Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC165Session is an auto generated Go binding around a Klaytn contract,
+// ERC165Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC165Session struct {
 	Contract     *ERC165           // Generic contract binding to set the session for
@@ -430,31 +430,31 @@ type ERC165Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC165CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC165CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC165CallerSession struct {
 	Contract *ERC165Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// ERC165TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC165TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC165TransactorSession struct {
 	Contract     *ERC165Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC165Raw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC165Raw is an auto generated low-level Go binding around a Kaia contract.
 type ERC165Raw struct {
 	Contract *ERC165 // Generic contract binding to access the raw methods on
 }
 
-// ERC165CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC165CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC165CallerRaw struct {
 	Contract *ERC165Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC165TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC165TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC165TransactorRaw struct {
 	Contract *ERC165Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -548,7 +548,6 @@ func (_ERC165 *ERC165TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -556,7 +555,6 @@ func (_ERC165 *ERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -606,7 +604,7 @@ var ERC721FuncSigs = ERC721MetaData.Sigs
 // Deprecated: Use ERC721MetaData.Bin instead.
 var ERC721Bin = ERC721MetaData.Bin
 
-// DeployERC721 deploys a new Klaytn contract, binding an instance of ERC721 to it.
+// DeployERC721 deploys a new Kaia contract, binding an instance of ERC721 to it.
 func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721, error) {
 	parsed, err := ERC721MetaData.GetAbi()
 	if err != nil {
@@ -623,29 +621,29 @@ func DeployERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common
 	return address, tx, &ERC721{ERC721Caller: ERC721Caller{contract: contract}, ERC721Transactor: ERC721Transactor{contract: contract}, ERC721Filterer: ERC721Filterer{contract: contract}}, nil
 }
 
-// ERC721 is an auto generated Go binding around a Klaytn contract.
+// ERC721 is an auto generated Go binding around a Kaia contract.
 type ERC721 struct {
 	ERC721Caller     // Read-only binding to the contract
 	ERC721Transactor // Write-only binding to the contract
 	ERC721Filterer   // Log filterer for contract events
 }
 
-// ERC721Caller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721Caller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721Transactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721Session is an auto generated Go binding around a Klaytn contract,
+// ERC721Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721Session struct {
 	Contract     *ERC721           // Generic contract binding to set the session for
@@ -653,31 +651,31 @@ type ERC721Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721CallerSession struct {
 	Contract *ERC721Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// ERC721TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721TransactorSession struct {
 	Contract     *ERC721Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721Raw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721Raw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721Raw struct {
 	Contract *ERC721 // Generic contract binding to access the raw methods on
 }
 
-// ERC721CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721CallerRaw struct {
 	Contract *ERC721Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721TransactorRaw struct {
 	Contract *ERC721Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -771,7 +769,6 @@ func (_ERC721 *ERC721TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -779,7 +776,6 @@ func (_ERC721 *ERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -802,7 +798,6 @@ func (_ERC721 *ERC721CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -810,7 +805,6 @@ func (_ERC721 *ERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -833,7 +827,6 @@ func (_ERC721 *ERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addres
 func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -841,7 +834,6 @@ func (_ERC721 *ERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -864,7 +856,6 @@ func (_ERC721 *ERC721CallerSession) IsApprovedForAll(owner common.Address, opera
 func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -872,7 +863,6 @@ func (_ERC721 *ERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (com
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -895,7 +885,6 @@ func (_ERC721 *ERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address, e
 func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -903,7 +892,6 @@ func (_ERC721 *ERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -1104,7 +1092,6 @@ type ERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1129,7 +1116,6 @@ func (_ERC721 *ERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1265,7 +1251,6 @@ type ERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1286,7 +1271,6 @@ func (_ERC721 *ERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721 *ERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -1418,7 +1402,6 @@ type ERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1443,7 +1426,6 @@ func (_ERC721 *ERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721 *ERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -1534,7 +1516,7 @@ var ERC721BurnableFuncSigs = ERC721BurnableMetaData.Sigs
 // Deprecated: Use ERC721BurnableMetaData.Bin instead.
 var ERC721BurnableBin = ERC721BurnableMetaData.Bin
 
-// DeployERC721Burnable deploys a new Klaytn contract, binding an instance of ERC721Burnable to it.
+// DeployERC721Burnable deploys a new Kaia contract, binding an instance of ERC721Burnable to it.
 func DeployERC721Burnable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Burnable, error) {
 	parsed, err := ERC721BurnableMetaData.GetAbi()
 	if err != nil {
@@ -1551,29 +1533,29 @@ func DeployERC721Burnable(auth *bind.TransactOpts, backend bind.ContractBackend)
 	return address, tx, &ERC721Burnable{ERC721BurnableCaller: ERC721BurnableCaller{contract: contract}, ERC721BurnableTransactor: ERC721BurnableTransactor{contract: contract}, ERC721BurnableFilterer: ERC721BurnableFilterer{contract: contract}}, nil
 }
 
-// ERC721Burnable is an auto generated Go binding around a Klaytn contract.
+// ERC721Burnable is an auto generated Go binding around a Kaia contract.
 type ERC721Burnable struct {
 	ERC721BurnableCaller     // Read-only binding to the contract
 	ERC721BurnableTransactor // Write-only binding to the contract
 	ERC721BurnableFilterer   // Log filterer for contract events
 }
 
-// ERC721BurnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721BurnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721BurnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721BurnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721BurnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721BurnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721BurnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721BurnableSession is an auto generated Go binding around a Klaytn contract,
+// ERC721BurnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721BurnableSession struct {
 	Contract     *ERC721Burnable   // Generic contract binding to set the session for
@@ -1581,31 +1563,31 @@ type ERC721BurnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721BurnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721BurnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721BurnableCallerSession struct {
 	Contract *ERC721BurnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ERC721BurnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721BurnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721BurnableTransactorSession struct {
 	Contract     *ERC721BurnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ERC721BurnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721BurnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721BurnableRaw struct {
 	Contract *ERC721Burnable // Generic contract binding to access the raw methods on
 }
 
-// ERC721BurnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721BurnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721BurnableCallerRaw struct {
 	Contract *ERC721BurnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721BurnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721BurnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721BurnableTransactorRaw struct {
 	Contract *ERC721BurnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -1699,7 +1681,6 @@ func (_ERC721Burnable *ERC721BurnableTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1707,7 +1688,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -1730,7 +1710,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1738,7 +1717,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -1761,7 +1739,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1769,7 +1746,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -1792,7 +1768,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1800,7 +1775,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -1823,7 +1797,6 @@ func (_ERC721Burnable *ERC721BurnableCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Burnable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1831,7 +1804,6 @@ func (_ERC721Burnable *ERC721BurnableCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -2053,7 +2025,6 @@ type ERC721BurnableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721BurnableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2078,7 +2049,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2214,7 +2184,6 @@ type ERC721BurnableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721BurnableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2235,7 +2204,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721BurnableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2367,7 +2335,6 @@ type ERC721BurnableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721BurnableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2392,7 +2359,6 @@ func (_ERC721Burnable *ERC721BurnableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Burnable *ERC721BurnableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721BurnableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -2486,7 +2452,7 @@ var ERC721MintableFuncSigs = ERC721MintableMetaData.Sigs
 // Deprecated: Use ERC721MintableMetaData.Bin instead.
 var ERC721MintableBin = ERC721MintableMetaData.Bin
 
-// DeployERC721Mintable deploys a new Klaytn contract, binding an instance of ERC721Mintable to it.
+// DeployERC721Mintable deploys a new Kaia contract, binding an instance of ERC721Mintable to it.
 func DeployERC721Mintable(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC721Mintable, error) {
 	parsed, err := ERC721MintableMetaData.GetAbi()
 	if err != nil {
@@ -2503,29 +2469,29 @@ func DeployERC721Mintable(auth *bind.TransactOpts, backend bind.ContractBackend)
 	return address, tx, &ERC721Mintable{ERC721MintableCaller: ERC721MintableCaller{contract: contract}, ERC721MintableTransactor: ERC721MintableTransactor{contract: contract}, ERC721MintableFilterer: ERC721MintableFilterer{contract: contract}}, nil
 }
 
-// ERC721Mintable is an auto generated Go binding around a Klaytn contract.
+// ERC721Mintable is an auto generated Go binding around a Kaia contract.
 type ERC721Mintable struct {
 	ERC721MintableCaller     // Read-only binding to the contract
 	ERC721MintableTransactor // Write-only binding to the contract
 	ERC721MintableFilterer   // Log filterer for contract events
 }
 
-// ERC721MintableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721MintableCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721MintableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MintableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721MintableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721MintableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MintableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721MintableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721MintableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721MintableSession is an auto generated Go binding around a Klaytn contract,
+// ERC721MintableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721MintableSession struct {
 	Contract     *ERC721Mintable   // Generic contract binding to set the session for
@@ -2533,31 +2499,31 @@ type ERC721MintableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC721MintableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721MintableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721MintableCallerSession struct {
 	Contract *ERC721MintableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts         // Call options to use throughout this session
 }
 
-// ERC721MintableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721MintableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721MintableTransactorSession struct {
 	Contract     *ERC721MintableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
 }
 
-// ERC721MintableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721MintableRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721MintableRaw struct {
 	Contract *ERC721Mintable // Generic contract binding to access the raw methods on
 }
 
-// ERC721MintableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721MintableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721MintableCallerRaw struct {
 	Contract *ERC721MintableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721MintableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721MintableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721MintableTransactorRaw struct {
 	Contract *ERC721MintableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -2651,7 +2617,6 @@ func (_ERC721Mintable *ERC721MintableTransactorRaw) Transact(opts *bind.Transact
 func (_ERC721Mintable *ERC721MintableCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2659,7 +2624,6 @@ func (_ERC721Mintable *ERC721MintableCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -2682,7 +2646,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) BalanceOf(owner common.Addre
 func (_ERC721Mintable *ERC721MintableCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2690,7 +2653,6 @@ func (_ERC721Mintable *ERC721MintableCaller) GetApproved(opts *bind.CallOpts, to
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -2713,7 +2675,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) GetApproved(tokenId *big.Int
 func (_ERC721Mintable *ERC721MintableCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2721,7 +2682,6 @@ func (_ERC721Mintable *ERC721MintableCaller) IsApprovedForAll(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -2744,7 +2704,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) IsApprovedForAll(owner commo
 func (_ERC721Mintable *ERC721MintableCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2752,7 +2711,6 @@ func (_ERC721Mintable *ERC721MintableCaller) IsMinter(opts *bind.CallOpts, accou
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -2775,7 +2733,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) IsMinter(account common.Addr
 func (_ERC721Mintable *ERC721MintableCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2783,7 +2740,6 @@ func (_ERC721Mintable *ERC721MintableCaller) OwnerOf(opts *bind.CallOpts, tokenI
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -2806,7 +2762,6 @@ func (_ERC721Mintable *ERC721MintableCallerSession) OwnerOf(tokenId *big.Int) (c
 func (_ERC721Mintable *ERC721MintableCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721Mintable.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -2814,7 +2769,6 @@ func (_ERC721Mintable *ERC721MintableCaller) SupportsInterface(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -3078,7 +3032,6 @@ type ERC721MintableApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721MintableApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3103,7 +3056,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721MintableApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3239,7 +3191,6 @@ type ERC721MintableApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721MintableApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3260,7 +3211,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterApprovalForAll(opts *bind.F
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721MintableApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -3390,7 +3340,6 @@ type ERC721MintableMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ERC721MintableMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3407,7 +3356,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterAdded(opts *bind.Filt
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ERC721MintableMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3533,7 +3481,6 @@ type ERC721MintableMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ERC721MintableMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3550,7 +3497,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterMinterRemoved(opts *bind.Fi
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ERC721MintableMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -3678,7 +3624,6 @@ type ERC721MintableTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721MintableTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3703,7 +3648,6 @@ func (_ERC721Mintable *ERC721MintableFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721Mintable *ERC721MintableFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721MintableTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3795,29 +3739,29 @@ const ERC721ServiceChainBinRuntime = ``
 // Deprecated: Use ERC721ServiceChainMetaData.Sigs instead.
 var ERC721ServiceChainFuncSigs = ERC721ServiceChainMetaData.Sigs
 
-// ERC721ServiceChain is an auto generated Go binding around a Klaytn contract.
+// ERC721ServiceChain is an auto generated Go binding around a Kaia contract.
 type ERC721ServiceChain struct {
 	ERC721ServiceChainCaller     // Read-only binding to the contract
 	ERC721ServiceChainTransactor // Write-only binding to the contract
 	ERC721ServiceChainFilterer   // Log filterer for contract events
 }
 
-// ERC721ServiceChainCaller is an auto generated read-only Go binding around a Klaytn contract.
+// ERC721ServiceChainCaller is an auto generated read-only Go binding around a Kaia contract.
 type ERC721ServiceChainCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ERC721ServiceChainTransactor is an auto generated write-only Go binding around a Kaia contract.
 type ERC721ServiceChainTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ERC721ServiceChainFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ERC721ServiceChainFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC721ServiceChainSession is an auto generated Go binding around a Klaytn contract,
+// ERC721ServiceChainSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ERC721ServiceChainSession struct {
 	Contract     *ERC721ServiceChain // Generic contract binding to set the session for
@@ -3825,31 +3769,31 @@ type ERC721ServiceChainSession struct {
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// ERC721ServiceChainCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ERC721ServiceChainCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ERC721ServiceChainCallerSession struct {
 	Contract *ERC721ServiceChainCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts             // Call options to use throughout this session
 }
 
-// ERC721ServiceChainTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ERC721ServiceChainTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ERC721ServiceChainTransactorSession struct {
 	Contract     *ERC721ServiceChainTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
 }
 
-// ERC721ServiceChainRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ERC721ServiceChainRaw is an auto generated low-level Go binding around a Kaia contract.
 type ERC721ServiceChainRaw struct {
 	Contract *ERC721ServiceChain // Generic contract binding to access the raw methods on
 }
 
-// ERC721ServiceChainCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ERC721ServiceChainCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ERC721ServiceChainCallerRaw struct {
 	Contract *ERC721ServiceChainCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC721ServiceChainTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ERC721ServiceChainTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ERC721ServiceChainTransactorRaw struct {
 	Contract *ERC721ServiceChainTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -3943,7 +3887,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainTransactorRaw) Transact(opts *bind.
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3951,7 +3894,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) BalanceOf(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -3974,7 +3916,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) BalanceOf(owner comm
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "bridge")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3982,7 +3923,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) Bridge(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Bridge is a free data retrieval call binding the contract method 0xe78cea92.
@@ -4005,7 +3945,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Bridge() (common.Add
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4013,7 +3952,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) GetApproved(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -4036,7 +3974,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) GetApproved(tokenId 
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4044,7 +3981,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsApprovedForAll(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -4067,7 +4003,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsApprovedForAll(own
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4075,7 +4010,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) IsOwner(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -4098,7 +4032,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) IsOwner() (bool, err
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4106,7 +4039,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -4129,7 +4061,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) Owner() (common.Addr
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4137,7 +4068,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) OwnerOf(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -4160,7 +4090,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCallerSession) OwnerOf(tokenId *big
 func (_ERC721ServiceChain *ERC721ServiceChainCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ERC721ServiceChain.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -4168,7 +4097,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainCaller) SupportsInterface(opts *bin
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -4453,7 +4381,6 @@ type ERC721ServiceChainApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ERC721ServiceChainApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4478,7 +4405,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApproval(opts *bind
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4614,7 +4540,6 @@ type ERC721ServiceChainApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ERC721ServiceChainApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4635,7 +4560,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterApprovalForAll(opts
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -4766,7 +4690,6 @@ type ERC721ServiceChainOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ERC721ServiceChainOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4787,7 +4710,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4919,7 +4841,6 @@ type ERC721ServiceChainTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ERC721ServiceChainTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -4944,7 +4865,6 @@ func (_ERC721ServiceChain *ERC721ServiceChainFilterer) FilterTransfer(opts *bind
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ERC721ServiceChain *ERC721ServiceChainFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ERC721ServiceChainTransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -5020,29 +4940,29 @@ const IERC165BinRuntime = ``
 // Deprecated: Use IERC165MetaData.Sigs instead.
 var IERC165FuncSigs = IERC165MetaData.Sigs
 
-// IERC165 is an auto generated Go binding around a Klaytn contract.
+// IERC165 is an auto generated Go binding around a Kaia contract.
 type IERC165 struct {
 	IERC165Caller     // Read-only binding to the contract
 	IERC165Transactor // Write-only binding to the contract
 	IERC165Filterer   // Log filterer for contract events
 }
 
-// IERC165Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC165Caller is an auto generated read-only Go binding around a Kaia contract.
 type IERC165Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC165Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC165Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC165Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC165Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC165Session is an auto generated Go binding around a Klaytn contract,
+// IERC165Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC165Session struct {
 	Contract     *IERC165          // Generic contract binding to set the session for
@@ -5050,31 +4970,31 @@ type IERC165Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC165CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC165CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC165CallerSession struct {
 	Contract *IERC165Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IERC165TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC165TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC165TransactorSession struct {
 	Contract     *IERC165Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IERC165Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC165Raw is an auto generated low-level Go binding around a Kaia contract.
 type IERC165Raw struct {
 	Contract *IERC165 // Generic contract binding to access the raw methods on
 }
 
-// IERC165CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC165CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC165CallerRaw struct {
 	Contract *IERC165Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC165TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC165TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC165TransactorRaw struct {
 	Contract *IERC165Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5168,7 +5088,6 @@ func (_IERC165 *IERC165TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC165.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5176,7 +5095,6 @@ func (_IERC165 *IERC165Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -5221,29 +5139,29 @@ const IERC721BinRuntime = ``
 // Deprecated: Use IERC721MetaData.Sigs instead.
 var IERC721FuncSigs = IERC721MetaData.Sigs
 
-// IERC721 is an auto generated Go binding around a Klaytn contract.
+// IERC721 is an auto generated Go binding around a Kaia contract.
 type IERC721 struct {
 	IERC721Caller     // Read-only binding to the contract
 	IERC721Transactor // Write-only binding to the contract
 	IERC721Filterer   // Log filterer for contract events
 }
 
-// IERC721Caller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721Caller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721Caller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Transactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721Transactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721Transactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Filterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721Filterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721Filterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721Session is an auto generated Go binding around a Klaytn contract,
+// IERC721Session is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721Session struct {
 	Contract     *IERC721          // Generic contract binding to set the session for
@@ -5251,31 +5169,31 @@ type IERC721Session struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC721CallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721CallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721CallerSession struct {
 	Contract *IERC721Caller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// IERC721TransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721TransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721TransactorSession struct {
 	Contract     *IERC721Transactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// IERC721Raw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721Raw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721Raw struct {
 	Contract *IERC721 // Generic contract binding to access the raw methods on
 }
 
-// IERC721CallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721CallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721CallerRaw struct {
 	Contract *IERC721Caller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721TransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721TransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721TransactorRaw struct {
 	Contract *IERC721Transactor // Generic write-only contract binding to access the raw methods on
 }
@@ -5369,7 +5287,6 @@ func (_IERC721 *IERC721TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5377,7 +5294,6 @@ func (_IERC721 *IERC721Caller) BalanceOf(opts *bind.CallOpts, owner common.Addre
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -5400,7 +5316,6 @@ func (_IERC721 *IERC721CallerSession) BalanceOf(owner common.Address) (*big.Int,
 func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5408,7 +5323,6 @@ func (_IERC721 *IERC721Caller) GetApproved(opts *bind.CallOpts, tokenId *big.Int
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -5431,7 +5345,6 @@ func (_IERC721 *IERC721CallerSession) GetApproved(tokenId *big.Int) (common.Addr
 func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5439,7 +5352,6 @@ func (_IERC721 *IERC721Caller) IsApprovedForAll(opts *bind.CallOpts, owner commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -5462,7 +5374,6 @@ func (_IERC721 *IERC721CallerSession) IsApprovedForAll(owner common.Address, ope
 func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5470,7 +5381,6 @@ func (_IERC721 *IERC721Caller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -5493,7 +5403,6 @@ func (_IERC721 *IERC721CallerSession) OwnerOf(tokenId *big.Int) (common.Address,
 func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _IERC721.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -5501,7 +5410,6 @@ func (_IERC721 *IERC721Caller) SupportsInterface(opts *bind.CallOpts, interfaceI
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -5702,7 +5610,6 @@ type IERC721Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*IERC721ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5727,7 +5634,6 @@ func (_IERC721 *IERC721Filterer) FilterApproval(opts *bind.FilterOpts, owner []c
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC721Approval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5863,7 +5769,6 @@ type IERC721ApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*IERC721ApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -5884,7 +5789,6 @@ func (_IERC721 *IERC721Filterer) FilterApprovalForAll(opts *bind.FilterOpts, own
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_IERC721 *IERC721Filterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *IERC721ApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -6016,7 +5920,6 @@ type IERC721Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*IERC721TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6041,7 +5944,6 @@ func (_IERC721 *IERC721Filterer) FilterTransfer(opts *bind.FilterOpts, from []co
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_IERC721 *IERC721Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC721Transfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -6117,29 +6019,29 @@ const IERC721BridgeReceiverBinRuntime = ``
 // Deprecated: Use IERC721BridgeReceiverMetaData.Sigs instead.
 var IERC721BridgeReceiverFuncSigs = IERC721BridgeReceiverMetaData.Sigs
 
-// IERC721BridgeReceiver is an auto generated Go binding around a Klaytn contract.
+// IERC721BridgeReceiver is an auto generated Go binding around a Kaia contract.
 type IERC721BridgeReceiver struct {
 	IERC721BridgeReceiverCaller     // Read-only binding to the contract
 	IERC721BridgeReceiverTransactor // Write-only binding to the contract
 	IERC721BridgeReceiverFilterer   // Log filterer for contract events
 }
 
-// IERC721BridgeReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721BridgeReceiverFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721BridgeReceiverFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721BridgeReceiverSession is an auto generated Go binding around a Klaytn contract,
+// IERC721BridgeReceiverSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721BridgeReceiverSession struct {
 	Contract     *IERC721BridgeReceiver // Generic contract binding to set the session for
@@ -6147,31 +6049,31 @@ type IERC721BridgeReceiverSession struct {
 	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
 }
 
-// IERC721BridgeReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721BridgeReceiverCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721BridgeReceiverCallerSession struct {
 	Contract *IERC721BridgeReceiverCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts                // Call options to use throughout this session
 }
 
-// IERC721BridgeReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721BridgeReceiverTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721BridgeReceiverTransactorSession struct {
 	Contract     *IERC721BridgeReceiverTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts                // Transaction auth options to use throughout this session
 }
 
-// IERC721BridgeReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721BridgeReceiverRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721BridgeReceiverRaw struct {
 	Contract *IERC721BridgeReceiver // Generic contract binding to access the raw methods on
 }
 
-// IERC721BridgeReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverCallerRaw struct {
 	Contract *IERC721BridgeReceiverCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721BridgeReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721BridgeReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721BridgeReceiverTransactorRaw struct {
 	Contract *IERC721BridgeReceiverTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -6299,29 +6201,29 @@ const IERC721ReceiverBinRuntime = ``
 // Deprecated: Use IERC721ReceiverMetaData.Sigs instead.
 var IERC721ReceiverFuncSigs = IERC721ReceiverMetaData.Sigs
 
-// IERC721Receiver is an auto generated Go binding around a Klaytn contract.
+// IERC721Receiver is an auto generated Go binding around a Kaia contract.
 type IERC721Receiver struct {
 	IERC721ReceiverCaller     // Read-only binding to the contract
 	IERC721ReceiverTransactor // Write-only binding to the contract
 	IERC721ReceiverFilterer   // Log filterer for contract events
 }
 
-// IERC721ReceiverCaller is an auto generated read-only Go binding around a Klaytn contract.
+// IERC721ReceiverCaller is an auto generated read-only Go binding around a Kaia contract.
 type IERC721ReceiverCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// IERC721ReceiverTransactor is an auto generated write-only Go binding around a Kaia contract.
 type IERC721ReceiverTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// IERC721ReceiverFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type IERC721ReceiverFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IERC721ReceiverSession is an auto generated Go binding around a Klaytn contract,
+// IERC721ReceiverSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type IERC721ReceiverSession struct {
 	Contract     *IERC721Receiver  // Generic contract binding to set the session for
@@ -6329,31 +6231,31 @@ type IERC721ReceiverSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// IERC721ReceiverCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// IERC721ReceiverCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type IERC721ReceiverCallerSession struct {
 	Contract *IERC721ReceiverCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// IERC721ReceiverTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// IERC721ReceiverTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type IERC721ReceiverTransactorSession struct {
 	Contract     *IERC721ReceiverTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// IERC721ReceiverRaw is an auto generated low-level Go binding around a Klaytn contract.
+// IERC721ReceiverRaw is an auto generated low-level Go binding around a Kaia contract.
 type IERC721ReceiverRaw struct {
 	Contract *IERC721Receiver // Generic contract binding to access the raw methods on
 }
 
-// IERC721ReceiverCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// IERC721ReceiverCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type IERC721ReceiverCallerRaw struct {
 	Contract *IERC721ReceiverCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IERC721ReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// IERC721ReceiverTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type IERC721ReceiverTransactorRaw struct {
 	Contract *IERC721ReceiverTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -6483,29 +6385,29 @@ const MinterRoleBinRuntime = ``
 // Deprecated: Use MinterRoleMetaData.Sigs instead.
 var MinterRoleFuncSigs = MinterRoleMetaData.Sigs
 
-// MinterRole is an auto generated Go binding around a Klaytn contract.
+// MinterRole is an auto generated Go binding around a Kaia contract.
 type MinterRole struct {
 	MinterRoleCaller     // Read-only binding to the contract
 	MinterRoleTransactor // Write-only binding to the contract
 	MinterRoleFilterer   // Log filterer for contract events
 }
 
-// MinterRoleCaller is an auto generated read-only Go binding around a Klaytn contract.
+// MinterRoleCaller is an auto generated read-only Go binding around a Kaia contract.
 type MinterRoleCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// MinterRoleTransactor is an auto generated write-only Go binding around a Kaia contract.
 type MinterRoleTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// MinterRoleFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type MinterRoleFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MinterRoleSession is an auto generated Go binding around a Klaytn contract,
+// MinterRoleSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type MinterRoleSession struct {
 	Contract     *MinterRole       // Generic contract binding to set the session for
@@ -6513,31 +6415,31 @@ type MinterRoleSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// MinterRoleCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// MinterRoleCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type MinterRoleCallerSession struct {
 	Contract *MinterRoleCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts     // Call options to use throughout this session
 }
 
-// MinterRoleTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// MinterRoleTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type MinterRoleTransactorSession struct {
 	Contract     *MinterRoleTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// MinterRoleRaw is an auto generated low-level Go binding around a Klaytn contract.
+// MinterRoleRaw is an auto generated low-level Go binding around a Kaia contract.
 type MinterRoleRaw struct {
 	Contract *MinterRole // Generic contract binding to access the raw methods on
 }
 
-// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// MinterRoleCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type MinterRoleCallerRaw struct {
 	Contract *MinterRoleCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// MinterRoleTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type MinterRoleTransactorRaw struct {
 	Contract *MinterRoleTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -6631,7 +6533,6 @@ func (_MinterRole *MinterRoleTransactorRaw) Transact(opts *bind.TransactOpts, me
 func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _MinterRole.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -6639,7 +6540,6 @@ func (_MinterRole *MinterRoleCaller) IsMinter(opts *bind.CallOpts, account commo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -6775,7 +6675,6 @@ type MinterRoleMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6792,7 +6691,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterAdded(opts *bind.FilterOpts, 
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6918,7 +6816,6 @@ type MinterRoleMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*MinterRoleMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -6935,7 +6832,6 @@ func (_MinterRole *MinterRoleFilterer) FilterMinterRemoved(opts *bind.FilterOpts
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_MinterRole *MinterRoleFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *MinterRoleMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -7006,29 +6902,29 @@ const OwnableBinRuntime = ``
 // Deprecated: Use OwnableMetaData.Sigs instead.
 var OwnableFuncSigs = OwnableMetaData.Sigs
 
-// Ownable is an auto generated Go binding around a Klaytn contract.
+// Ownable is an auto generated Go binding around a Kaia contract.
 type Ownable struct {
 	OwnableCaller     // Read-only binding to the contract
 	OwnableTransactor // Write-only binding to the contract
 	OwnableFilterer   // Log filterer for contract events
 }
 
-// OwnableCaller is an auto generated read-only Go binding around a Klaytn contract.
+// OwnableCaller is an auto generated read-only Go binding around a Kaia contract.
 type OwnableCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// OwnableTransactor is an auto generated write-only Go binding around a Kaia contract.
 type OwnableTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// OwnableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type OwnableFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// OwnableSession is an auto generated Go binding around a Klaytn contract,
+// OwnableSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type OwnableSession struct {
 	Contract     *Ownable          // Generic contract binding to set the session for
@@ -7036,31 +6932,31 @@ type OwnableSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// OwnableCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// OwnableCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type OwnableCallerSession struct {
 	Contract *OwnableCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
-// OwnableTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// OwnableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type OwnableTransactorSession struct {
 	Contract     *OwnableTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
-// OwnableRaw is an auto generated low-level Go binding around a Klaytn contract.
+// OwnableRaw is an auto generated low-level Go binding around a Kaia contract.
 type OwnableRaw struct {
 	Contract *Ownable // Generic contract binding to access the raw methods on
 }
 
-// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// OwnableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type OwnableCallerRaw struct {
 	Contract *OwnableCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// OwnableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type OwnableTransactorRaw struct {
 	Contract *OwnableTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -7154,7 +7050,6 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -7162,7 +7057,6 @@ func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -7185,7 +7079,6 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -7193,7 +7086,6 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -7330,7 +7222,6 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7351,7 +7242,6 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7421,7 +7311,7 @@ const RolesBinRuntime = `7300000000000000000000000000000000000000003014608060405
 // Deprecated: Use RolesMetaData.Bin instead.
 var RolesBin = RolesMetaData.Bin
 
-// DeployRoles deploys a new Klaytn contract, binding an instance of Roles to it.
+// DeployRoles deploys a new Kaia contract, binding an instance of Roles to it.
 func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Roles, error) {
 	parsed, err := RolesMetaData.GetAbi()
 	if err != nil {
@@ -7438,29 +7328,29 @@ func DeployRoles(auth *bind.TransactOpts, backend bind.ContractBackend) (common.
 	return address, tx, &Roles{RolesCaller: RolesCaller{contract: contract}, RolesTransactor: RolesTransactor{contract: contract}, RolesFilterer: RolesFilterer{contract: contract}}, nil
 }
 
-// Roles is an auto generated Go binding around a Klaytn contract.
+// Roles is an auto generated Go binding around a Kaia contract.
 type Roles struct {
 	RolesCaller     // Read-only binding to the contract
 	RolesTransactor // Write-only binding to the contract
 	RolesFilterer   // Log filterer for contract events
 }
 
-// RolesCaller is an auto generated read-only Go binding around a Klaytn contract.
+// RolesCaller is an auto generated read-only Go binding around a Kaia contract.
 type RolesCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// RolesTransactor is an auto generated write-only Go binding around a Kaia contract.
 type RolesTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// RolesFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type RolesFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// RolesSession is an auto generated Go binding around a Klaytn contract,
+// RolesSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type RolesSession struct {
 	Contract     *Roles            // Generic contract binding to set the session for
@@ -7468,31 +7358,31 @@ type RolesSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RolesCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// RolesCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type RolesCallerSession struct {
 	Contract *RolesCaller  // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts // Call options to use throughout this session
 }
 
-// RolesTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// RolesTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type RolesTransactorSession struct {
 	Contract     *RolesTransactor  // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// RolesRaw is an auto generated low-level Go binding around a Klaytn contract.
+// RolesRaw is an auto generated low-level Go binding around a Kaia contract.
 type RolesRaw struct {
 	Contract *Roles // Generic contract binding to access the raw methods on
 }
 
-// RolesCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// RolesCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type RolesCallerRaw struct {
 	Contract *RolesCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// RolesTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type RolesTransactorRaw struct {
 	Contract *RolesTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -7597,7 +7487,7 @@ const SafeMathBinRuntime = `7300000000000000000000000000000000000000003014608060
 // Deprecated: Use SafeMathMetaData.Bin instead.
 var SafeMathBin = SafeMathMetaData.Bin
 
-// DeploySafeMath deploys a new Klaytn contract, binding an instance of SafeMath to it.
+// DeploySafeMath deploys a new Kaia contract, binding an instance of SafeMath to it.
 func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SafeMath, error) {
 	parsed, err := SafeMathMetaData.GetAbi()
 	if err != nil {
@@ -7614,29 +7504,29 @@ func DeploySafeMath(auth *bind.TransactOpts, backend bind.ContractBackend) (comm
 	return address, tx, &SafeMath{SafeMathCaller: SafeMathCaller{contract: contract}, SafeMathTransactor: SafeMathTransactor{contract: contract}, SafeMathFilterer: SafeMathFilterer{contract: contract}}, nil
 }
 
-// SafeMath is an auto generated Go binding around a Klaytn contract.
+// SafeMath is an auto generated Go binding around a Kaia contract.
 type SafeMath struct {
 	SafeMathCaller     // Read-only binding to the contract
 	SafeMathTransactor // Write-only binding to the contract
 	SafeMathFilterer   // Log filterer for contract events
 }
 
-// SafeMathCaller is an auto generated read-only Go binding around a Klaytn contract.
+// SafeMathCaller is an auto generated read-only Go binding around a Kaia contract.
 type SafeMathCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathTransactor is an auto generated write-only Go binding around a Klaytn contract.
+// SafeMathTransactor is an auto generated write-only Go binding around a Kaia contract.
 type SafeMathTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// SafeMathFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type SafeMathFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// SafeMathSession is an auto generated Go binding around a Klaytn contract,
+// SafeMathSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type SafeMathSession struct {
 	Contract     *SafeMath         // Generic contract binding to set the session for
@@ -7644,31 +7534,31 @@ type SafeMathSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// SafeMathCallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// SafeMathCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type SafeMathCallerSession struct {
 	Contract *SafeMathCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// SafeMathTransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// SafeMathTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type SafeMathTransactorSession struct {
 	Contract     *SafeMathTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// SafeMathRaw is an auto generated low-level Go binding around a Klaytn contract.
+// SafeMathRaw is an auto generated low-level Go binding around a Kaia contract.
 type SafeMathRaw struct {
 	Contract *SafeMath // Generic contract binding to access the raw methods on
 }
 
-// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// SafeMathCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type SafeMathCallerRaw struct {
 	Contract *SafeMathCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// SafeMathTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type SafeMathTransactorRaw struct {
 	Contract *SafeMathTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -7802,7 +7692,7 @@ var ServiceChainNFTNoURIFuncSigs = ServiceChainNFTNoURIMetaData.Sigs
 // Deprecated: Use ServiceChainNFTNoURIMetaData.Bin instead.
 var ServiceChainNFTNoURIBin = ServiceChainNFTNoURIMetaData.Bin
 
-// DeployServiceChainNFTNoURI deploys a new Klaytn contract, binding an instance of ServiceChainNFTNoURI to it.
+// DeployServiceChainNFTNoURI deploys a new Kaia contract, binding an instance of ServiceChainNFTNoURI to it.
 func DeployServiceChainNFTNoURI(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address) (common.Address, *types.Transaction, *ServiceChainNFTNoURI, error) {
 	parsed, err := ServiceChainNFTNoURIMetaData.GetAbi()
 	if err != nil {
@@ -7819,29 +7709,29 @@ func DeployServiceChainNFTNoURI(auth *bind.TransactOpts, backend bind.ContractBa
 	return address, tx, &ServiceChainNFTNoURI{ServiceChainNFTNoURICaller: ServiceChainNFTNoURICaller{contract: contract}, ServiceChainNFTNoURITransactor: ServiceChainNFTNoURITransactor{contract: contract}, ServiceChainNFTNoURIFilterer: ServiceChainNFTNoURIFilterer{contract: contract}}, nil
 }
 
-// ServiceChainNFTNoURI is an auto generated Go binding around a Klaytn contract.
+// ServiceChainNFTNoURI is an auto generated Go binding around a Kaia contract.
 type ServiceChainNFTNoURI struct {
 	ServiceChainNFTNoURICaller     // Read-only binding to the contract
 	ServiceChainNFTNoURITransactor // Write-only binding to the contract
 	ServiceChainNFTNoURIFilterer   // Log filterer for contract events
 }
 
-// ServiceChainNFTNoURICaller is an auto generated read-only Go binding around a Klaytn contract.
+// ServiceChainNFTNoURICaller is an auto generated read-only Go binding around a Kaia contract.
 type ServiceChainNFTNoURICaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTNoURITransactor is an auto generated write-only Go binding around a Klaytn contract.
+// ServiceChainNFTNoURITransactor is an auto generated write-only Go binding around a Kaia contract.
 type ServiceChainNFTNoURITransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTNoURIFilterer is an auto generated log filtering Go binding around a Klaytn contract events.
+// ServiceChainNFTNoURIFilterer is an auto generated log filtering Go binding around a Kaia contract events.
 type ServiceChainNFTNoURIFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ServiceChainNFTNoURISession is an auto generated Go binding around a Klaytn contract,
+// ServiceChainNFTNoURISession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
 type ServiceChainNFTNoURISession struct {
 	Contract     *ServiceChainNFTNoURI // Generic contract binding to set the session for
@@ -7849,31 +7739,31 @@ type ServiceChainNFTNoURISession struct {
 	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
 }
 
-// ServiceChainNFTNoURICallerSession is an auto generated read-only Go binding around a Klaytn contract,
+// ServiceChainNFTNoURICallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
 type ServiceChainNFTNoURICallerSession struct {
 	Contract *ServiceChainNFTNoURICaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts               // Call options to use throughout this session
 }
 
-// ServiceChainNFTNoURITransactorSession is an auto generated write-only Go binding around a Klaytn contract,
+// ServiceChainNFTNoURITransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
 type ServiceChainNFTNoURITransactorSession struct {
 	Contract     *ServiceChainNFTNoURITransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts               // Transaction auth options to use throughout this session
 }
 
-// ServiceChainNFTNoURIRaw is an auto generated low-level Go binding around a Klaytn contract.
+// ServiceChainNFTNoURIRaw is an auto generated low-level Go binding around a Kaia contract.
 type ServiceChainNFTNoURIRaw struct {
 	Contract *ServiceChainNFTNoURI // Generic contract binding to access the raw methods on
 }
 
-// ServiceChainNFTNoURICallerRaw is an auto generated low-level read-only Go binding around a Klaytn contract.
+// ServiceChainNFTNoURICallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
 type ServiceChainNFTNoURICallerRaw struct {
 	Contract *ServiceChainNFTNoURICaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ServiceChainNFTNoURITransactorRaw is an auto generated low-level write-only Go binding around a Klaytn contract.
+// ServiceChainNFTNoURITransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
 type ServiceChainNFTNoURITransactorRaw struct {
 	Contract *ServiceChainNFTNoURITransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -7967,7 +7857,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURITransactorRaw) Transact(opts *b
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -7975,7 +7864,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) BalanceOf(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -7998,7 +7886,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) BalanceOf(owner 
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "bridge")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8006,7 +7893,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Bridge(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Bridge is a free data retrieval call binding the contract method 0xe78cea92.
@@ -8029,7 +7915,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) Bridge() (common
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) GetApproved(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "getApproved", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8037,7 +7922,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) GetApproved(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetApproved is a free data retrieval call binding the contract method 0x081812fc.
@@ -8060,7 +7944,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) GetApproved(toke
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsApprovedForAll(opts *bind.CallOpts, owner common.Address, operator common.Address) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isApprovedForAll", owner, operator)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8068,7 +7951,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsApprovedForAll(opts *
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsApprovedForAll is a free data retrieval call binding the contract method 0xe985e9c5.
@@ -8091,7 +7973,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsApprovedForAll
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsMinter(opts *bind.CallOpts, account common.Address) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isMinter", account)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8099,7 +7980,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsMinter(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsMinter is a free data retrieval call binding the contract method 0xaa271e1a.
@@ -8122,7 +8002,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsMinter(account
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "isOwner")
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8130,7 +8009,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) IsOwner(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -8153,7 +8031,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) IsOwner() (bool,
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "owner")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8161,7 +8038,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) Owner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -8184,7 +8060,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) Owner() (common.
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) OwnerOf(opts *bind.CallOpts, tokenId *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "ownerOf", tokenId)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8192,7 +8067,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) OwnerOf(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // OwnerOf is a free data retrieval call binding the contract method 0x6352211e.
@@ -8215,7 +8089,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICallerSession) OwnerOf(tokenId 
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _ServiceChainNFTNoURI.contract.Call(opts, &out, "supportsInterface", interfaceId)
-
 	if err != nil {
 		return *new(bool), err
 	}
@@ -8223,7 +8096,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURICaller) SupportsInterface(opts 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
-
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -8613,7 +8485,6 @@ type ServiceChainNFTNoURIApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, approved []common.Address, tokenId []*big.Int) (*ServiceChainNFTNoURIApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8638,7 +8509,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApproval(opts *
 //
 // Solidity: event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIApproval, owner []common.Address, approved []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8774,7 +8644,6 @@ type ServiceChainNFTNoURIApprovalForAll struct {
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApprovalForAll(opts *bind.FilterOpts, owner []common.Address, operator []common.Address) (*ServiceChainNFTNoURIApprovalForAllIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8795,7 +8664,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterApprovalForAll(
 //
 // Solidity: event ApprovalForAll(address indexed owner, address indexed operator, bool approved)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchApprovalForAll(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIApprovalForAll, owner []common.Address, operator []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -8925,7 +8793,6 @@ type ServiceChainNFTNoURIMinterAdded struct {
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterAdded(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTNoURIMinterAddedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -8942,7 +8809,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterAdded(opt
 //
 // Solidity: event MinterAdded(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchMinterAdded(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIMinterAdded, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9068,7 +8934,6 @@ type ServiceChainNFTNoURIMinterRemoved struct {
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterRemoved(opts *bind.FilterOpts, account []common.Address) (*ServiceChainNFTNoURIMinterRemovedIterator, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9085,7 +8950,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterMinterRemoved(o
 //
 // Solidity: event MinterRemoved(address indexed account)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchMinterRemoved(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIMinterRemoved, account []common.Address) (event.Subscription, error) {
-
 	var accountRule []interface{}
 	for _, accountItem := range account {
 		accountRule = append(accountRule, accountItem)
@@ -9212,7 +9076,6 @@ type ServiceChainNFTNoURIOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*ServiceChainNFTNoURIOwnershipTransferredIterator, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9233,7 +9096,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterOwnershipTransf
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURIOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9365,7 +9227,6 @@ type ServiceChainNFTNoURITransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address, tokenId []*big.Int) (*ServiceChainNFTNoURITransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -9390,7 +9251,6 @@ func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) FilterTransfer(opts *
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
 func (_ServiceChainNFTNoURI *ServiceChainNFTNoURIFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *ServiceChainNFTNoURITransfer, from []common.Address, to []common.Address, tokenId []*big.Int) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)

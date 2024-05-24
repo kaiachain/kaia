@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2021 The klaytn Authors
 // Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state/snapshot/generate_test.go (2021/10/21).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package snapshot
 
@@ -93,7 +95,7 @@ func TestGeneration(t *testing.T) {
 
 	root, _ := accTrie.Commit(nil) // Root: 0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8
 
-	// TODO-Klaytn-Snapshot update proper block number
+	// TODO-Kaia-Snapshot update proper block number
 	triedb.Commit(root, false, 0)
 
 	if have, want := root, common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"); have != want {
@@ -169,7 +171,7 @@ func TestGenerateExistentState(t *testing.T) {
 	diskdb.WriteStorageSnapshot(hashData([]byte("acc-3")), hashData([]byte("key-3")), []byte("val-3"))
 
 	root, _ := accTrie.Commit(nil) // Root: 0xe3712f1a226f3782caca78ca770ccc19ee000552813a9f59d479f8611db9b1fd
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
 	snap := generateSnapshot(diskdb, triedb, 16, root)
@@ -261,7 +263,7 @@ func (t *testHelper) makeStorageTrie(keys []string, vals []string) common.Hash {
 
 func (t *testHelper) Generate() (common.Hash, *diskLayer) {
 	root, _ := t.accTrie.Commit(nil)
-	// TODO-Klaytn-Snapshot input proper block number
+	// TODO-Kaia-Snapshot input proper block number
 	t.triedb.Commit(root, false, 0)
 	snap := generateSnapshot(t.diskdb, t.triedb, 16, root)
 	return root, snap
@@ -275,10 +277,12 @@ func (t *testHelper) Generate() (common.Hash, *diskLayer) {
 //   - miss in the beginning
 //   - miss in the middle
 //   - miss in the end
+//
 // - the contract(non-empty storage) has wrong storage slots
 //   - wrong slots in the beginning
 //   - wrong slots in the middle
 //   - wrong slots in the end
+//
 // - the contract(non-empty storage) has extra storage slots
 //   - extra slots in the beginning
 //   - extra slots in the middle
@@ -465,7 +469,7 @@ func TestGenerateCorruptAccountTrie(t *testing.T) {
 	tr.Commit(nil)                  // Root: 0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978
 
 	// Delete an account trie leaf and ensure the generator chokes
-	// TODO-Klaytn-Snapshot put propoer block number
+	// TODO-Kaia-Snapshot put propoer block number
 	triedb.Commit(common.HexToHash("0xa04693ea110a31037fb5ee814308a6f1d76bdab0b11676bdf4541d2de55ba978"), false, 0)
 	diskdb.DeleteTrieNode(common.HexToHash("0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7").ExtendZero())
 
@@ -527,7 +531,7 @@ func TestGenerateMissingStorageTrie(t *testing.T) {
 		common.HexToExtHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
 		common.HexToExtHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c"),
 	)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(common.HexToHash("0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef"), false, 0)
 
 	// Delete a storage trie root and ensure the generator chokes
@@ -590,7 +594,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 		common.HexToExtHash("0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67"),
 		common.HexToExtHash("0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c"),
 	)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(common.HexToHash("0x4a651234bc4b8c7462b5ad4eb95bbb724eb636fed72bb5278d886f9ea4c345f8"), false, 0)
 
 	// Delete a storage trie leaf and ensure the generator chokes
@@ -654,7 +658,7 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 	}
 	root, _ := accTrie.Commit(nil)
 	t.Logf("root: %x", root)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 	// To verify the test: If we now inspect the snap db, there should exist extraneous storage items
 	if data := diskdb.ReadStorageSnapshot(hashData([]byte("acc-2")), hashData([]byte("b-key-1"))); data == nil {
@@ -711,7 +715,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 	}
 	root, _ := accTrie.Commit(nil)
 	t.Logf("root: %x", root)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
 	snap := generateSnapshot(diskdb, triedb, 16, root)
@@ -763,7 +767,7 @@ func TestGenerateWithExtraBeforeAndAfter(t *testing.T) {
 
 	root, _ := accTrie.Commit(nil)
 	t.Logf("root: %x", root)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
 	snap := generateSnapshot(diskdb, triedb, 16, root)
@@ -806,7 +810,7 @@ func TestGenerateWithMalformedSnapdata(t *testing.T) {
 
 	root, _ := accTrie.Commit(nil)
 	t.Logf("root: %x", root)
-	// TODO-Klaytn-Snapshot put proper block number
+	// TODO-Kaia-Snapshot put proper block number
 	triedb.Commit(root, false, 0)
 
 	snap := generateSnapshot(diskdb, triedb, 16, root)

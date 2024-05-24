@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kas
 
@@ -25,7 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain"
 	"github.com/klaytn/klaytn/blockchain/vm"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/common"
@@ -38,23 +40,24 @@ import (
 const callTimeout = 300 * time.Millisecond
 
 var (
-	// KIP 13: Interface Query Standard - https://kips.klaytn.com/KIPs/kip-13
+	// KIP 13: Interface Query Standard - https://kips.kaia.io/KIPs/kip-13
 	IKIP13Id  = [4]byte{0x01, 0xff, 0xc9, 0xa7}
 	InvalidId = [4]byte{0xff, 0xff, 0xff, 0xff}
 
-	// KIP 7: Fungible Token Standard - https://kips.klaytn.com/KIPs/kip-7
+	// KIP 7: Fungible Token Standard - https://kips.kaia.io/KIPs/kip-7
 	IKIP7Id         = [4]byte{0x65, 0x78, 0x73, 0x71}
 	IKIP7MetadataId = [4]byte{0xa2, 0x19, 0xa0, 0x25}
 
-	// KIP 17: Non-fungible Token Standard - https://kips.klaytn.com/KIPs/kip-17
+	// KIP 17: Non-fungible Token Standard - https://kips.kaia.io/KIPs/kip-17
 	IKIP17Id         = [4]byte{0x80, 0xac, 0x58, 0xcd}
 	IKIP17MetadataId = [4]byte{0x5b, 0x5e, 0x13, 0x9f}
 
 	errMsgEmptyOutput = "abi: unmarshalling empty output"
 )
 
-//go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
 // BlockchainAPI interface is for testing purpose.
+//
+//go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher/kas BlockchainAPI
 type BlockchainAPI interface {
 	GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
 	Call(ctx context.Context, args api.CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
@@ -78,7 +81,7 @@ func (f *contractCaller) CodeAt(ctx context.Context, contract common.Address, bl
 	return f.blockchainAPI.GetCode(ctx, contract, rpc.NewBlockNumberOrHashWithNumber(num))
 }
 
-func (f *contractCaller) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (f *contractCaller) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	num := rpc.LatestBlockNumber
 	if blockNumber != nil {
 		num = rpc.BlockNumber(blockNumber.Int64())

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,22 +18,23 @@
 //
 // This file is derived from accounts/accounts.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package accounts
 
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/event"
 )
 
-// Account represents a Klaytn account located at a specific location defined
+// Account represents a Kaia account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Klaytn account address derived from the key
+	Address common.Address `json:"address"` // Kaia account address derived from the key
 	URL     URL            `json:"url"`     // Optional resource locator within a backend
 }
 
@@ -88,7 +90,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain klaytn.ChainReader)
+	SelfDerive(base DerivationPath, chain kaia.ChainReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//

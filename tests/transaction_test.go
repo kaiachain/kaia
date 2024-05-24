@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from tests/transaction_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -92,7 +94,7 @@ func TestAccountCreationDisable(t *testing.T) {
 			types.TxValueKeyTo:            anon.Addr,
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Ston),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyAccountKey:    anon.AccKey,
 		}

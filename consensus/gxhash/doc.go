@@ -22,6 +22,6 @@
 Package gxhash implements the gxhash proof-of-work consensus engine.
 gxhash is a renamed version of ethash in Ethereum which implements consensus/Engine interface.
 
-gxhash is no longer used in Klaytn except for some test codes which uses gxhash's fakemode.
+gxhash is no longer used in Kaia except for some test codes which uses gxhash's fakemode.
 */
 package gxhash

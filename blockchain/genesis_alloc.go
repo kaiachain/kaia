@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/genesis_alloc.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -30,7 +32,7 @@ const mainnetAllocData = "\xda\u0654\x19t\x18\x1a?\x1bE+\x00\xec\u06ab\x19\xa2j\
 const testnetAllocData = "\xda\u0654\x19t\x18\x1a?\x1bE+\x00\xec\u06ab\x19\xa2j\xf3\x8f\xcb\xff\x1e\x83\x98\x96\x80"
 
 var (
-	baobabGenesisJson = []byte(`{
+	testnetGenesisJson = []byte(`{
     "config": {
         "chainId": 1001,
         "deriveShaImpl": 2,
@@ -72,7 +74,7 @@ var (
     "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
 }`)
 
-	cypressGenesisJson = []byte(`{
+	mainnetGenesisJson = []byte(`{
     "config": {
         "chainId": 8217,
         "deriveShaImpl": 2,

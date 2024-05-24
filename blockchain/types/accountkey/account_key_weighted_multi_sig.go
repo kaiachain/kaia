@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package accountkey
 
@@ -29,8 +31,8 @@ import (
 )
 
 const (
-	// TODO-Klaytn-MultiSig: Need to fix the maximum number of keys allowed for an account.
-	// NOTE-Klaytn-MultiSig: This value should not be reduced. If it is reduced, there is a case:
+	// TODO-Kaia-MultiSig: Need to fix the maximum number of keys allowed for an account.
+	// NOTE-Kaia-MultiSig: This value should not be reduced. If it is reduced, there is a case:
 	// - the tx validation will be failed if the sender has larger keys.
 	MaxNumKeysForMultiSig = uint64(10)
 )
@@ -95,7 +97,7 @@ func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleT
 	weightedSum := uint(0)
 
 	// To prohibit making a signature with the same key, make a map.
-	// TODO-Klaytn: find another way for better performance
+	// TODO-Kaia: find another way for better performance
 	pMap := make(map[string]*ecdsa.PublicKey)
 	for _, bk := range recoveredKeys {
 		b, err := rlp.EncodeToBytes((*PublicKeySerializable)(bk))

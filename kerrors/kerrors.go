@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,13 +14,14 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kerrors
 
 import "errors"
 
-// TODO-Klaytn: Use integer for error codes.
-// TODO-Klaytn: Integrate all universally accessible errors into kerrors package.
+// TODO-Kaia: Use integer for error codes.
+// TODO-Kaia: Integrate all universally accessible errors into kerrors package.
 var (
 	ErrNotHumanReadableAddress    = errors.New("Human-readable address is not supported now")
 	ErrHumanReadableNotSupported  = errors.New("Human-readable address is not supported now")

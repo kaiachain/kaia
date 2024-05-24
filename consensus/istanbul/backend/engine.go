@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/backend/engine.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package backend
 
@@ -117,7 +119,7 @@ func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
 	return addr, err
 }
 
-// Author retrieves the Klaytn address of the account that minted the given block.
+// Author retrieves the Kaia address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }
@@ -514,7 +516,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(pset) {
-		// TODO-Klaytn Let's redesign below logic and remove dependency between block reward and istanbul consensus.
+		// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 
 		lastHeader := chain.CurrentHeader()
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
@@ -536,9 +538,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset)
 	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, rules, pset)
+		rewardSpec, err = reward.CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 	}
 
 	if err != nil {
@@ -547,29 +549,31 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
-	// Only on the KIP-103 hardfork block, the following logic should be executed
-	if chain.Config().IsKIP103ForkBlock(header.Number) {
-		// RebalanceTreasury can modify the global state (state),
-		// so the existing state db should be used to apply the rebalancing result.
-		c := &Kip103ContractCaller{state, chain, header}
-		result, err := RebalanceTreasury(state, chain, header, c)
+	// RebalanceTreasury can modify the global state (state),
+	// so the existing state db should be used to apply the rebalancing result.
+	// Only on the KIP-103 or KIP-160 hardfork block, the following logic should be executed
+	if chain.Config().IsKIP160ForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
+		_, err := system.RebalanceTreasury(state, chain, header)
 		if err != nil {
-			logger.Error("failed to execute treasury rebalancing (KIP-103). State not changed", "err", err)
-		} else {
-			memo, err := json.Marshal(result)
-			if err != nil {
-				logger.Warn("failed to marshal KIP-103 result", "err", err, "result", result)
-			}
-			logger.Info("successfully executed treasury rebalancing (KIP-103)", "memo", string(memo))
+			logger.Error("failed to execute treasury rebalancing. State not changed", "err", err)
 		}
 	}
 
-	// The Registry contract must be immediately available from the fork block.
-	// So it is installed at block (RandaoCompatibleBlock - 1) which is before the fork block.
+	// The Registry contract are installed at RandaoCompatibleBlock with a KIP113 record
 	if chain.Config().IsRandaoForkBlock(header.Number) {
 		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Replace the Mainnet credit contract
+	if chain.Config().IsKaiaForkBlockParent(header.Number) {
+		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.MainnetCreditAddr) != nil {
+			if err := state.SetCode(system.MainnetCreditAddr, system.MainnetCreditV2Code); err != nil {
+				return nil, err
+			}
+			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
 		}
 	}
 
@@ -674,7 +678,7 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 			Service:   &API{chain: chain, istanbul: sb},
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   &APIExtension{chain: chain, istanbul: sb},
 			Public:    true,
@@ -1026,7 +1030,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)

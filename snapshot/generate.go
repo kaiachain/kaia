@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2021 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state/snapshot/generate.go (2021/10/21).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package snapshot
 
@@ -197,7 +199,7 @@ func journalProgress(db database.KeyValueWriter, marker []byte, stats *generator
 	}
 	logger.Debug("Journalled generator progress", "progress", logstr)
 
-	// TODO-Klaytn-Snapshot refactor the following db write
+	// TODO-Kaia-Snapshot refactor the following db write
 	if err := db.Put(database.SnapshotGeneratorKey, blob); err != nil {
 		logger.Crit("Failed to store snapshot generator", "err", err)
 	}
@@ -443,7 +445,7 @@ func (dl *diskLayer) generateRange(root common.Hash, prefix []byte, kind string,
 			snapTrie.Update(key, result.vals[i])
 		}
 		root, _ := snapTrie.Commit(nil)
-		// TODO-Klaytn update proper block number
+		// TODO-Kaia update proper block number
 		snapTrieDb.Commit(root, false, 0)
 	}
 	tr := result.tr

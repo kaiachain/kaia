@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/geth/genesis_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package nodecmd
 
@@ -159,7 +161,7 @@ var customGenesisTests = []struct {
 	},
 }
 
-// Tests that initializing Klay with a custom genesis block and chain definitions
+// Tests that initializing Kaia with a custom genesis block and chain definitions
 // work properly.
 func TestCustomGenesis(t *testing.T) {
 	for i, tt := range customGenesisTests {
@@ -172,19 +174,19 @@ func TestCustomGenesis(t *testing.T) {
 		if err := os.WriteFile(json, []byte(tt.genesis), 0o600); err != nil {
 			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 		}
-		runKlay(t, "klay-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
+		runKaia(t, "kaia-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
 
 		// Query the custom genesis block
 		if len(tt.query) != len(tt.result) {
 			t.Errorf("Test cases are wrong, #query: %v, #result, %v", len(tt.query), len(tt.result))
 		}
 		for idx, query := range tt.query {
-			klay := runKlay(t,
-				"klay-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
+			kaia := runKaia(t,
+				"kaia-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
 				"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable",
 				"--exec", query, "--verbosity", "0", "console")
-			klay.ExpectRegexp(tt.result[idx])
-			klay.ExpectExit()
+			kaia.ExpectRegexp(tt.result[idx])
+			kaia.ExpectExit()
 		}
 	}
 }

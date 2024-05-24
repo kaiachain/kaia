@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/dial.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package p2p
 
@@ -611,7 +613,7 @@ func (t *discoverTask) Do(srv Server) {
 	srv.SetLastLookupToNow()
 	var target discover.NodeID
 	rand.Read(target[:])
-	t.results = srv.Lookup(target, discover.NodeTypeEN) // TODO-Klaytn Supposed dynamicDial discover only en, but type have to get from argument.
+	t.results = srv.Lookup(target, discover.NodeTypeEN) // TODO-Kaia Supposed dynamicDial discover only en, but type have to get from argument.
 }
 
 func (t *discoverTask) String() string {

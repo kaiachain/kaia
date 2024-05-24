@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -104,7 +106,7 @@ func TestValidateSenderContract(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			multisig.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -147,7 +149,7 @@ func TestValidateSenderContract(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			multisig2.Addr, amount, gasLimit, gasPrice, []byte{})
 

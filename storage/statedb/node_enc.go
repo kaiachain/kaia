@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2023 The klaytn Authors
 // Copyright 2022 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from trie/node_enc.go (2023/09/19).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package statedb
 

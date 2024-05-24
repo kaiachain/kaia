@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package reward
 
@@ -25,6 +27,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,11 +39,6 @@ func (governance *testGovernance) CurrentParams() *params.GovParamSet {
 
 func (governance *testGovernance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 	return governance.p, nil
-}
-
-func (governance *testGovernance) setTestGovernance(intMap map[int]interface{}) {
-	p, _ := params.NewGovParamSetIntMap(intMap)
-	governance.p = p
 }
 
 func assertEqualRewardSpecs(t *testing.T, expected, actual *RewardSpec, msgAndArgs ...interface{}) {
@@ -55,8 +53,8 @@ func assertEqualRewardSpecs(t *testing.T, expected, actual *RewardSpec, msgAndAr
 	lhs := new(big.Int).Add(actual.Minted, actual.TotalFee)
 	lhs = lhs.Sub(lhs, actual.BurntFee)
 	rhs := new(big.Int).Add(actual.Proposer, actual.Stakers)
-	rhs = rhs.Add(rhs, actual.KFF)
-	rhs = rhs.Add(rhs, actual.KCF)
+	rhs = rhs.Add(rhs, actual.KIF)
+	rhs = rhs.Add(rhs, actual.KEF)
 	assert.True(t, lhs.Cmp(rhs) == 0, msgAndArgs...)
 }
 
@@ -67,8 +65,8 @@ var (
 	minStaking     = uint64(2000000) // changing this value will not change the governance's min staking
 	minted, _      = big.NewInt(0).SetString("9600000000000000000", 10)
 	proposerAddr   = common.StringToAddress("0x1552F52D459B713E0C4558e66C8c773a75615FA8")
-	kcfAddr        = intToAddress(1000)
-	kffAddr        = intToAddress(2000)
+	kefAddr        = intToAddress(1000)
+	kifAddr        = intToAddress(2000)
 )
 
 // 500 -> 0x00000...0500
@@ -104,21 +102,11 @@ func genStakingInfo(cnNum int, rewardOverride map[int]int, amountOverride map[in
 		CouncilNodeAddrs:      cns,
 		CouncilStakingAddrs:   stakes,
 		CouncilRewardAddrs:    rewards,
-		KCFAddr:               kcfAddr,
-		KFFAddr:               kffAddr,
+		KEFAddr:               kefAddr,
+		KIFAddr:               kifAddr,
 		UseGini:               false,
 		CouncilStakingAmounts: amounts,
 	}
-}
-
-type testBalanceAdder struct {
-	accounts map[common.Address]*big.Int
-}
-
-func newTestBalanceAdder() *testBalanceAdder {
-	balanceAdder := &testBalanceAdder{}
-	balanceAdder.accounts = make(map[common.Address]*big.Int)
-	return balanceAdder
 }
 
 func getTestConfig() *params.ChainConfig {
@@ -135,15 +123,6 @@ func getTestConfig() *params.ChainConfig {
 	config.Governance.Reward.MinimumStake = big.NewInt(0).SetUint64(minStaking)
 	config.Istanbul.ProposerPolicy = 2
 	return config
-}
-
-func (balanceAdder *testBalanceAdder) AddBalance(addr common.Address, v *big.Int) {
-	balance, ok := balanceAdder.accounts[addr]
-	if ok {
-		balanceAdder.accounts[addr] = big.NewInt(0).Add(balance, v)
-	} else {
-		balanceAdder.accounts[addr] = v
-	}
 }
 
 func noMagma(p *params.ChainConfig) *params.ChainConfig {
@@ -165,15 +144,6 @@ func noDeferred(p *params.ChainConfig) *params.ChainConfig {
 func roundrobin(p *params.ChainConfig) *params.ChainConfig {
 	p.Istanbul.ProposerPolicy = 0
 	return p
-}
-
-func (balanceAdder *testBalanceAdder) GetBalance(addr common.Address) *big.Int {
-	balance, ok := balanceAdder.accounts[addr]
-	if ok {
-		return balance
-	} else {
-		return nil
-	}
 }
 
 func Test_isEmptyAddress(t *testing.T) {
@@ -250,7 +220,7 @@ func TestRewardDistributor_GetTotalTxFee(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		result := GetTotalTxFee(header, rules, pset)
+		result := GetTotalTxFee(header, nil, nil, rules, pset)
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), result.Uint64())
 	}
 }
@@ -286,10 +256,88 @@ func TestRewardDistributor_getBurnAmountMagma(t *testing.T) {
 	for _, testCase := range testCases {
 		header.GasUsed = testCase.gasUsed
 		header.BaseFee = testCase.baseFee
-		txFee := GetTotalTxFee(header, rules, pset)
+		txFee := GetTotalTxFee(header, nil, nil, rules, pset)
 		burnedTxFee := getBurnAmountMagma(txFee)
 		// expectedTotalTxFee = GetTotalTxFee / 2 = BurnedTxFee
 		assert.Equal(t, testCase.expectedTotalTxFee.Uint64(), burnedTxFee.Uint64())
+	}
+}
+
+func TestRewardDistributor_GetTotalReward(t *testing.T) {
+	oldStakingManager := GetStakingManager()
+	defer SetTestStakingManager(oldStakingManager)
+
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
+		stakingInfo = genStakingInfo(5, nil, map[int]uint64{ // not needed for GetTotalReward but needed for GetBlockReward
+			0: minStaking + 4,
+			1: minStaking + 3,
+		})
+		rules = params.Rules{
+			IsMagma: true,
+			IsKore:  true,
+		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
+	testcases := []struct {
+		desc          string
+		policy        istanbul.ProposerPolicy
+		deferredTxFee bool
+		expected      *TotalReward
+	}{
+		{
+			policy:        istanbul.RoundRobin,
+			deferredTxFee: true,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(500)},
+		},
+		{
+			policy:        istanbul.RoundRobin,
+			deferredTxFee: false,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(500)},
+		},
+		{
+			policy:        istanbul.WeightedRandom,
+			deferredTxFee: true,
+			expected:      &TotalReward{Minted: minted, BurntFee: big.NewInt(1000)},
+		},
+	}
+
+	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
+
+	for _, tc := range testcases {
+		config := getTestConfig()
+		if !tc.deferredTxFee {
+			config = noDeferred(config)
+		}
+		config.Istanbul.ProposerPolicy = uint64(tc.policy)
+
+		pset, err := params.NewGovParamSetChainConfig(config)
+		require.Nil(t, err)
+
+		delta, err := GetTotalReward(header, txs, receipts, rules, pset)
+		require.Nil(t, err, tc.desc)
+
+		// Compare GetTotalReward with GetBlockReward
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
+		require.Nil(t, err, tc.desc)
+		assert.Equal(t, spec.Minted.String(), delta.Minted.String(), tc.desc)
+		assert.Equal(t, spec.BurntFee.String(), delta.BurntFee.String(), tc.desc)
+
+		// Compare GetTotalReward with tc.expected
+		assert.Equal(t, tc.expected.Minted.String(), delta.Minted.String(), tc.desc)
+		assert.Equal(t, tc.expected.BurntFee.String(), delta.BurntFee.String(), tc.desc)
 	}
 }
 
@@ -304,6 +352,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			BaseFee:    big.NewInt(1),
 			Rewardbase: proposerAddr,
 		}
+		txs         []*types.Transaction
+		receipts    []*types.Receipt
 		stakingInfo = genStakingInfo(5, nil, map[int]uint64{
 			0: minStaking + 4,
 			1: minStaking + 3,
@@ -313,6 +363,12 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 			IsKore:  true,
 		}
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	testcases := []struct {
 		policy        istanbul.ProposerPolicy
@@ -328,8 +384,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -344,8 +400,8 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -360,12 +416,12 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
-				KFF:      new(big.Int).SetUint64(5.184e18),
-				KCF:      new(big.Int).SetUint64(1.152e18),
+				KIF:      new(big.Int).SetUint64(5.184e18),
+				KEF:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1),
-					kffAddr:                          new(big.Int).SetUint64(5.184e18),
-					kcfAddr:                          new(big.Int).SetUint64(1.152e18),
+					kifAddr:                          new(big.Int).SetUint64(5.184e18),
+					kefAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -380,12 +436,12 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 500 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
-				KFF:      new(big.Int).SetUint64(5.184e18),
-				KCF:      new(big.Int).SetUint64(1.152e18),
+				KIF:      new(big.Int).SetUint64(5.184e18),
+				KEF:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 500 + 1),
-					kffAddr:                          new(big.Int).SetUint64(5.184e18),
-					kcfAddr:                          new(big.Int).SetUint64(1.152e18),
+					kifAddr:                          new(big.Int).SetUint64(5.184e18),
+					kefAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -405,18 +461,28 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := GetBlockReward(header, rules, pset)
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
 }
 
 func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
-	header := &types.Header{
-		Number:     big.NewInt(1),
-		GasUsed:    1000,
-		BaseFee:    big.NewInt(1),
-		Rewardbase: proposerAddr,
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
 	}
 
 	testcases := []struct {
@@ -431,8 +497,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
@@ -446,8 +512,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500), // 50% of tx fee burnt
 				Proposer: new(big.Int).SetUint64(9.6e18 + 500),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 500),
 				},
@@ -465,7 +531,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
@@ -477,13 +543,23 @@ func TestRewardDistributor_CalcDeferredRewardSimple(t *testing.T) {
 // To maintain backward compatibility, we only fix the buggy logic after Magma
 // and leave the buggy logic before Kore.
 func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
-	header := &types.Header{
-		Number:     big.NewInt(1),
-		GasUsed:    1000,
-		BaseFee:    big.NewInt(1),
-		Rewardbase: proposerAddr,
-	}
+	var (
+		header = &types.Header{
+			Number:     big.NewInt(1),
+			GasUsed:    1000,
+			BaseFee:    big.NewInt(1),
+			Rewardbase: proposerAddr,
+		}
 
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		isMagma  bool
 		isKore   bool
@@ -498,8 +574,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18 + 1000),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18 + 1000),
 				},
@@ -514,8 +590,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
@@ -530,8 +606,8 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(9.6e18),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(0),
-				KCF:      new(big.Int).SetUint64(0),
+				KIF:      new(big.Int).SetUint64(0),
+				KEF:      new(big.Int).SetUint64(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(9.6e18),
 				},
@@ -551,7 +627,7 @@ func TestRewardDistributor_CalcDeferredRewardSimple_nodeferred(t *testing.T) {
 		rules := config.Rules(header.Number)
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
-		spec, err := CalcDeferredRewardSimple(header, rules, pset)
+		spec, err := CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}
@@ -565,7 +641,16 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		0: minStaking + 4,
 		1: minStaking + 3,
 	})
-
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -584,12 +669,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: big.NewInt(0),
 				Proposer: big.NewInt(0).SetUint64(3.264e18 + 340),
 				Stakers:  big.NewInt(0),
-				KFF:      big.NewInt(5.184e18 + 540),
-				KCF:      big.NewInt(1.152e18 + 120),
+				KIF:      big.NewInt(5.184e18 + 540),
+				KEF:      big.NewInt(1.152e18 + 120),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: big.NewInt(3.264e18 + 340),
-					kffAddr:      big.NewInt(5.184e18 + 540),
-					kcfAddr:      big.NewInt(1.152e18 + 120),
+					kifAddr:      big.NewInt(5.184e18 + 540),
+					kefAddr:      big.NewInt(1.152e18 + 120),
 				},
 			},
 		},
@@ -604,12 +689,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(0),
 				Proposer: new(big.Int).SetUint64(6.664e18),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(10.584e18),
-				KCF:      new(big.Int).SetUint64(2.352e18),
+				KIF:      new(big.Int).SetUint64(10.584e18),
+				KEF:      new(big.Int).SetUint64(2.352e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(6.664e18),
-					kffAddr:      new(big.Int).SetUint64(10.584e18),
-					kcfAddr:      new(big.Int).SetUint64(2.352e18),
+					kifAddr:      new(big.Int).SetUint64(10.584e18),
+					kefAddr:      new(big.Int).SetUint64(2.352e18),
 				},
 			},
 		},
@@ -624,12 +709,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(500),
 				Proposer: new(big.Int).SetUint64(3.264e18 + 170),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(5.184e18 + 270),
-				KCF:      new(big.Int).SetUint64(1.152e18 + 60),
+				KIF:      new(big.Int).SetUint64(5.184e18 + 270),
+				KEF:      new(big.Int).SetUint64(1.152e18 + 60),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(3.264e18 + 170),
-					kcfAddr:      new(big.Int).SetUint64(1.152e18 + 60),
-					kffAddr:      new(big.Int).SetUint64(5.184e18 + 270),
+					kefAddr:      new(big.Int).SetUint64(1.152e18 + 60),
+					kifAddr:      new(big.Int).SetUint64(5.184e18 + 270),
 				},
 			},
 		},
@@ -644,12 +729,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(5e18),
 				Proposer: new(big.Int).SetUint64(4.964e18),
 				Stakers:  new(big.Int).SetUint64(0),
-				KFF:      new(big.Int).SetUint64(7.884e18),
-				KCF:      new(big.Int).SetUint64(1.752e18),
+				KIF:      new(big.Int).SetUint64(7.884e18),
+				KEF:      new(big.Int).SetUint64(1.752e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: new(big.Int).SetUint64(4.964e18),
-					kffAddr:      new(big.Int).SetUint64(7.884e18),
-					kcfAddr:      new(big.Int).SetUint64(1.752e18),
+					kifAddr:      new(big.Int).SetUint64(7.884e18),
+					kefAddr:      new(big.Int).SetUint64(1.752e18),
 				},
 			},
 		},
@@ -664,12 +749,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(1000),
 				Proposer: new(big.Int).SetUint64(0.6528e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
-				KFF:      new(big.Int).SetUint64(5.184e18),
-				KCF:      new(big.Int).SetUint64(1.152e18),
+				KIF:      new(big.Int).SetUint64(5.184e18),
+				KEF:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     new(big.Int).SetUint64(0.6528e18 + 1),
-					kffAddr:                          new(big.Int).SetUint64(5.184e18),
-					kcfAddr:                          new(big.Int).SetUint64(1.152e18),
+					kifAddr:                          new(big.Int).SetUint64(5.184e18),
+					kefAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -686,12 +771,12 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 				BurntFee: new(big.Int).SetUint64(5e18 + 0.6528e18),
 				Proposer: new(big.Int).SetUint64(5e18 + 1),
 				Stakers:  new(big.Int).SetUint64(2.6112e18 - 1),
-				KFF:      new(big.Int).SetUint64(5.184e18),
-				KCF:      new(big.Int).SetUint64(1.152e18),
+				KIF:      new(big.Int).SetUint64(5.184e18),
+				KEF:      new(big.Int).SetUint64(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     new(big.Int).SetUint64(5e18 + 1),
-					kffAddr:                          new(big.Int).SetUint64(5.184e18),
-					kcfAddr:                          new(big.Int).SetUint64(1.152e18),
+					kifAddr:                          new(big.Int).SetUint64(5.184e18),
+					kefAddr:                          new(big.Int).SetUint64(1.152e18),
 					intToAddress(rewardBaseAddr):     new(big.Int).SetUint64(1492114285714285714),
 					intToAddress(rewardBaseAddr + 1): new(big.Int).SetUint64(1119085714285714285),
 				},
@@ -721,7 +806,7 @@ func TestRewardDistributor_CalcDeferredReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
 		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
@@ -738,10 +823,18 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 			BaseFee:    big.NewInt(1),
 			Rewardbase: proposerAddr,
 		}
-		config  = getTestConfig()
-		rules   = config.Rules(header.Number)
-		pset, _ = params.NewGovParamSetChainConfig(config)
+		config   = getTestConfig()
+		rules    = config.Rules(header.Number)
+		pset, _  = params.NewGovParamSetChainConfig(config)
+		txs      []*types.Transaction
+		receipts []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	testcases := []struct {
 		desc        string
@@ -757,18 +850,18 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				BurntFee: big.NewInt(1000),
 				Proposer: minted,
 				Stakers:  big.NewInt(0),
-				KFF:      big.NewInt(0),
-				KCF:      big.NewInt(0),
+				KIF:      big.NewInt(0),
+				KEF:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: minted,
 				},
 			},
 		},
 		{
-			desc: "stakingInfo has no kff, its portion goes to proposer",
+			desc: "stakingInfo has no kif, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
-				KCFAddr: kcfAddr,
-				KFFAddr: common.Address{},
+				KEFAddr: kefAddr,
+				KIFAddr: common.Address{},
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -776,19 +869,19 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(8.448e18),
 				Stakers:  big.NewInt(0),
-				KFF:      big.NewInt(0),
-				KCF:      big.NewInt(1.152e18), // minted * 0.12
+				KIF:      big.NewInt(0),
+				KEF:      big.NewInt(1.152e18), // minted * 0.12
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: big.NewInt(8.448e18),
-					kcfAddr:      big.NewInt(1.152e18),
+					kefAddr:      big.NewInt(1.152e18),
 				},
 			},
 		},
 		{
-			desc: "stakingInfo has no kcf, its portion goes to proposer",
+			desc: "stakingInfo has no kef, its portion goes to proposer",
 			stakingInfo: &StakingInfo{
-				KCFAddr: common.Address{},
-				KFFAddr: kffAddr,
+				KEFAddr: common.Address{},
+				KIFAddr: kifAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -796,19 +889,19 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(4.416e18),
 				Stakers:  big.NewInt(0),
-				KFF:      big.NewInt(5.184e18), // minted * 0.54
-				KCF:      big.NewInt(0),
+				KIF:      big.NewInt(5.184e18), // minted * 0.54
+				KEF:      big.NewInt(0),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: big.NewInt(4.416e18),
-					kffAddr:      big.NewInt(5.184e18),
+					kifAddr:      big.NewInt(5.184e18),
 				},
 			},
 		},
 		{
-			desc: "stakingInfo has the same kff and kcf",
+			desc: "stakingInfo has the same kif and kef",
 			stakingInfo: &StakingInfo{
-				KCFAddr: kffAddr,
-				KFFAddr: kffAddr,
+				KEFAddr: kifAddr,
+				KIFAddr: kifAddr,
 			},
 			expected: &RewardSpec{
 				Minted:   minted,
@@ -816,11 +909,11 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(3.264e18),
 				Stakers:  big.NewInt(0),
-				KFF:      big.NewInt(5.184e18),
-				KCF:      big.NewInt(1.152e18),
+				KIF:      big.NewInt(5.184e18),
+				KEF:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr: big.NewInt(3.264e18),
-					kffAddr:      big.NewInt(6.336e18),
+					kifAddr:      big.NewInt(6.336e18),
 				},
 			},
 		},
@@ -832,7 +925,7 @@ func TestRewardDistributor_CalcDeferredReward_StakingInfos(t *testing.T) {
 		} else {
 			SetTestStakingManagerWithStakingInfoCache(tc.stakingInfo)
 		}
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed: %s", i, tc.desc)
 	}
@@ -855,7 +948,15 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 			1: minStaking + 3,
 		})
 		splitRemainingConfig = getTestConfig()
+		txs                  []*types.Transaction
+		receipts             []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	splitRemainingConfig.Governance.Reward.MintingAmount = big.NewInt(333)
 
 	testcases := []struct {
@@ -864,7 +965,7 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 		expected *RewardSpec
 	}{
 		{
-			desc:   "split remaining goes to kff",
+			desc:   "split remaining goes to kif",
 			config: splitRemainingConfig,
 			expected: &RewardSpec{
 				Minted:   big.NewInt(333),
@@ -872,12 +973,12 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				BurntFee: big.NewInt(522),
 				Proposer: big.NewInt(501), // proposer=22, rewardFee=478, shareRem=1
 				Stakers:  big.NewInt(89),
-				KFF:      big.NewInt(182), // splitRem=3
-				KCF:      big.NewInt(39),
+				KIF:      big.NewInt(182), // splitRem=3
+				KEF:      big.NewInt(39),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     big.NewInt(501),
-					kffAddr:                          big.NewInt(182),
-					kcfAddr:                          big.NewInt(39),
+					kifAddr:                          big.NewInt(182),
+					kefAddr:                          big.NewInt(39),
 					intToAddress(rewardBaseAddr):     big.NewInt(51), // stakers * 4/7
 					intToAddress(rewardBaseAddr + 1): big.NewInt(38), // stakers * 3/7
 				},
@@ -892,12 +993,12 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 				BurntFee: big.NewInt(1000),
 				Proposer: big.NewInt(0.6528e18 + 1),
 				Stakers:  big.NewInt(2.6112e18 - 1),
-				KFF:      big.NewInt(5.184e18),
-				KCF:      big.NewInt(1.152e18),
+				KIF:      big.NewInt(5.184e18),
+				KEF:      big.NewInt(1.152e18),
 				Rewards: map[common.Address]*big.Int{
 					proposerAddr:                     big.NewInt(0.6528e18 + 1),
-					kffAddr:                          big.NewInt(5.184e18),
-					kcfAddr:                          big.NewInt(1.152e18),
+					kifAddr:                          big.NewInt(5.184e18),
+					kefAddr:                          big.NewInt(1.152e18),
 					intToAddress(rewardBaseAddr):     big.NewInt(1492114285714285714), // stakers * 4/7
 					intToAddress(rewardBaseAddr + 1): big.NewInt(1119085714285714285), // stakers * 3/7
 				},
@@ -912,15 +1013,24 @@ func TestRewardDistributor_CalcDeferredReward_Remainings(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(tc.config)
 		require.Nil(t, err)
 
-		spec, err := CalcDeferredReward(header, rules, pset)
+		spec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
 		require.Nil(t, err, "failed tc: %s", tc.desc)
 		assertEqualRewardSpecs(t, tc.expected, spec, "failed tc: %s", tc.desc)
 	}
 }
 
 func TestRewardDistributor_calcDeferredFee(t *testing.T) {
-	type Result struct{ total, reward, burnt uint64 }
-
+	type Result struct{ total, reward, burnt, totalTip uint64 }
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -934,9 +1044,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: false,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 1000,
-				burnt:  0,
+				total:    1000,
+				reward:   1000,
+				burnt:    0,
+				totalTip: 0,
 			},
 		},
 		{
@@ -945,9 +1056,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: false,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 10e18,
-				burnt:  0,
+				total:    10e18,
+				reward:   10e18,
+				burnt:    0,
+				totalTip: 0,
 			},
 		},
 		{
@@ -956,9 +1068,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 500,
-				burnt:  500,
+				total:    1000,
+				reward:   500,
+				burnt:    500,
+				totalTip: 0,
 			},
 		},
 		{
@@ -967,9 +1080,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 5e18,
-				burnt:  5e18,
+				total:    10e18,
+				reward:   5e18,
+				burnt:    5e18,
+				totalTip: 0,
 			},
 		},
 		{
@@ -978,9 +1092,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     1000,
 			expected: &Result{
-				total:  1000,
-				reward: 0,
-				burnt:  1000,
+				total:    1000,
+				reward:   0,
+				burnt:    1000,
+				totalTip: 0,
 			},
 		},
 		{
@@ -989,9 +1104,10 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 			isMagma: true,
 			fee:     10e18,
 			expected: &Result{
-				total:  10e18,
-				reward: 4.3472e18, // 5 - minted*0.34*0.2
-				burnt:  5.6528e18, // 5 + minted*0.34*0.8
+				total:    10e18,
+				reward:   4.3472e18, // 5 - minted*0.34*0.2
+				burnt:    5.6528e18, // 5 + minted*0.34*0.8
+				totalTip: 0,
 			},
 		},
 	}
@@ -1016,7 +1132,7 @@ func TestRewardDistributor_calcDeferredFee(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		rc, err := NewRewardConfig(header, rules, pset)
+		rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 		require.Nil(t, err)
 
 		total, reward, burnt := calcDeferredFee(rc)
@@ -1040,12 +1156,20 @@ func TestRewardDistributor_calcDeferredFee_nodeferred(t *testing.T) {
 		rules = params.Rules{
 			IsMagma: true,
 		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
 	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
 
 	pset, err := params.NewGovParamSetChainConfig(noDeferred(getTestConfig()))
 	require.Nil(t, err)
 
-	rc, err := NewRewardConfig(header, rules, pset)
+	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	require.Nil(t, err)
 
 	total, reward, burnt := calcDeferredFee(rc)
@@ -1055,13 +1179,22 @@ func TestRewardDistributor_calcDeferredFee_nodeferred(t *testing.T) {
 }
 
 func TestRewardDistributor_calcSplit(t *testing.T) {
-	type Result struct{ proposer, stakers, kff, kcf, remaining uint64 }
+	type Result struct{ proposer, stakers, kif, kef, remaining uint64 }
 
-	header := &types.Header{
-		Number:  big.NewInt(1),
-		BaseFee: big.NewInt(0), // placeholder
+	var (
+		header = &types.Header{
+			Number:  big.NewInt(1),
+			BaseFee: big.NewInt(0), // placeholder
+		}
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
 	}
-
 	testcases := []struct {
 		desc     string
 		isKore   bool
@@ -1075,8 +1208,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 			expected: &Result{
 				proposer:  3.264e18, // minted * 0.34
 				stakers:   0,
-				kff:       5.184e18, // minted * 0.54
-				kcf:       1.152e18, // minted * 0.12
+				kif:       5.184e18, // minted * 0.54
+				kef:       1.152e18, // minted * 0.12
 				remaining: 0,
 			},
 		},
@@ -1087,8 +1220,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 			expected: &Result{
 				proposer:  3.264e18 + 18888, // (minted + fee) * 0.34
 				stakers:   0,
-				kff:       5.184e18 + 29999, // (minted + fee) * 0.54
-				kcf:       1.152e18 + 6666,  // (minted + fee) * 0.12
+				kif:       5.184e18 + 29999, // (minted + fee) * 0.54
+				kef:       1.152e18 + 6666,  // (minted + fee) * 0.12
 				remaining: 2,
 			},
 		},
@@ -1099,8 +1232,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 			expected: &Result{
 				proposer:  0.6528e18, // minted * 0.34 * 0.2
 				stakers:   2.6112e18, // minted * 0.34 * 0.8
-				kff:       5.184e18,  // minted * 0.54
-				kcf:       1.152e18,  // minted * 0.12
+				kif:       5.184e18,  // minted * 0.54
+				kef:       1.152e18,  // minted * 0.12
 				remaining: 0,
 			},
 		},
@@ -1111,8 +1244,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 			expected: &Result{
 				proposer:  0.6528e18 + 55555, // minted * 0.34 * 0.2 + fee
 				stakers:   2.6112e18,         // minted * 0.34 * 0.8
-				kff:       5.184e18,          // minted * 0.54
-				kcf:       1.152e18,          // minted * 0.12
+				kif:       5.184e18,          // minted * 0.54
+				kef:       1.152e18,          // minted * 0.12
 				remaining: 0,
 			},
 		},
@@ -1128,16 +1261,16 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		rc, err := NewRewardConfig(header, rules, pset)
+		rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 		require.Nil(t, err)
 
 		fee := new(big.Int).SetUint64(tc.fee)
-		proposer, stakers, kff, kcf, remaining := calcSplit(rc, minted, fee)
+		proposer, stakers, kif, kef, remaining := calcSplit(rc, minted, fee)
 		actual := &Result{
 			proposer:  proposer.Uint64(),
 			stakers:   stakers.Uint64(),
-			kff:       kff.Uint64(),
-			kcf:       kcf.Uint64(),
+			kif:       kif.Uint64(),
+			kef:       kef.Uint64(),
 			remaining: remaining.Uint64(),
 		}
 		assert.Equal(t, tc.expected, actual, "failed tc: %s", tc.desc)
@@ -1148,8 +1281,8 @@ func TestRewardDistributor_calcSplit(t *testing.T) {
 		actualTotalAmount := big.NewInt(0)
 		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, proposer)
 		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, stakers)
-		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kff)
-		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kcf)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kif)
+		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, kef)
 		actualTotalAmount = actualTotalAmount.Add(actualTotalAmount, remaining)
 		assert.Equal(t, expectedTotalAmount, actualTotalAmount, "failed tc: %s", tc.desc)
 	}
@@ -1259,7 +1392,7 @@ func TestRewardDistributor_calcShares(t *testing.T) {
 	}
 }
 
-func benchSetup() (*types.Header, params.Rules, *params.GovParamSet) {
+func benchSetup() (*types.Header, []*types.Transaction, []*types.Receipt, params.Rules, *params.GovParamSet) {
 	// in the worst case, distribute stake shares among N
 	amounts := make(map[int]uint64)
 	N := 50
@@ -1279,19 +1412,28 @@ func benchSetup() (*types.Header, params.Rules, *params.GovParamSet) {
 
 	rules := config.Rules(header.Number)
 	pset, _ := params.NewGovParamSetChainConfig(config)
-
-	return header, rules, pset
+	var (
+		txs      []*types.Transaction
+		receipts []*types.Receipt
+	)
+	for i := 0; i < 10; i++ {
+		tx := genDynamicFeeTransaction(10)
+		receipt := &types.Receipt{Status: 1, Bloom: types.Bloom{}, Logs: nil, TxHash: tx.Hash(), ContractAddress: common.Address{}, GasUsed: 100}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+	}
+	return header, txs, receipts, rules, pset
 }
 
 func Benchmark_CalcDeferredReward(b *testing.B) {
 	oldStakingManager := GetStakingManager()
 	defer SetTestStakingManager(oldStakingManager)
 
-	header, rules, pset := benchSetup()
+	header, txs, receipts, rules, pset := benchSetup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		CalcDeferredReward(header, rules, pset)
+		CalcDeferredReward(header, txs, receipts, rules, pset)
 	}
 }
 
@@ -1299,8 +1441,8 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	testCases := []struct {
 		s   string
 		cn  int64
-		kff int64
-		kcf int64
+		kif int64
+		kef int64
 		err error
 	}{
 		{"34/54/12", 34, 54, 12, nil},
@@ -1318,14 +1460,14 @@ func TestRewardConfigCache_parseRewardRatio(t *testing.T) {
 	}
 
 	for i := 0; i < len(testCases); i++ {
-		cn, kff, kcf, total, err := parseRewardRatio(testCases[i].s)
+		cn, kif, kef, total, err := parseRewardRatio(testCases[i].s)
 
 		assert.Equal(t, testCases[i].cn, cn)
-		assert.Equal(t, testCases[i].kff, kff)
-		assert.Equal(t, testCases[i].kcf, kcf)
+		assert.Equal(t, testCases[i].kif, kif)
+		assert.Equal(t, testCases[i].kef, kef)
 		assert.Equal(t, testCases[i].err, err)
 
-		expectedTotal := testCases[i].cn + testCases[i].kff + testCases[i].kcf
+		expectedTotal := testCases[i].cn + testCases[i].kif + testCases[i].kef
 		assert.Equal(t, expectedTotal, total)
 	}
 }
@@ -1360,4 +1502,18 @@ func TestRewardConfigCache_parseRewardKip82Ratio(t *testing.T) {
 		expectedTotal := testCases[i].proposer + testCases[i].staking
 		assert.Equal(t, expectedTotal, total)
 	}
+}
+
+func genDynamicFeeTransaction(gasTipCap int64) *types.Transaction {
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	signer := types.NewLondonSigner(big.NewInt(10))
+	tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+		GasFeeCap: big.NewInt(int64(params.LowerBoundBaseFee)),
+		GasTipCap: big.NewInt(gasTipCap),
+		GasLimit:  100,
+		Recipient: &addr,
+	}), signer, key)
+	return tx
 }

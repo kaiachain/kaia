@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package governance
 
@@ -118,6 +120,7 @@ type blockChain interface {
 	CurrentHeader() *types.Header
 	GetHeaderByNumber(val uint64) *types.Header
 	GetBlock(hash common.Hash, number uint64) *types.Block
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
 	State() (*state.StateDB, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
 

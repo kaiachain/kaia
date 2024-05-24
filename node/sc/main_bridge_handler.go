@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -57,7 +59,7 @@ func (mbh *MainBridgeHandler) HandleSubMsg(p BridgePeer, msg p2p.Msg) error {
 		return nil
 	case ServiceChainTxsMsg:
 		logger.Trace("received ServiceChainTxsMsg")
-		// TODO-Klaytn how to check acceptTxs
+		// TODO-Kaia how to check acceptTxs
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		//if atomic.LoadUint32(&pm.acceptTxs) == 0 {
 		//	break

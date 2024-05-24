@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -51,7 +53,7 @@ var testEntries = []testEntry{
 // Sometimes 3) and 4) are omitted if such operation is not possible due to some reasons.
 func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 	for _, entry := range testEntries {
-		tempDir, err := os.MkdirTemp("", "klaytn-db-manager-test")
+		tempDir, err := os.MkdirTemp("", "kaia-test-db-manager-")
 		if err != nil {
 			t.Fatalf("cannot create temporary directory: %v", err)
 		}
@@ -69,7 +71,7 @@ func TestDBManager_WriteAndRead_Functional(t *testing.T) {
 			testWriteAndReadTd(t, dbManager)
 			testWriteAndReadReceipts(t, dbManager)
 			testWriteAndReadBlock(t, dbManager)
-			// TODO-Klaytn-Storage To implement this test case, error shouldn't be returned.
+			// TODO-Kaia-Storage To implement this test case, error shouldn't be returned.
 			// testWriteAndReadIstanbulSnapshot(t, dbManager)
 		})
 
@@ -292,7 +294,7 @@ func testWriteAndReadBlock(t *testing.T, dbManager database.DBManager) {
 }
 
 func testWriteAndReadIstanbulSnapshot(t *testing.T, dbManager database.DBManager) {
-	// TODO-Klaytn-Storage To implement this test case, error shouldn't be returned.
+	// TODO-Kaia-Storage To implement this test case, error shouldn't be returned.
 }
 
 func generateHeaderWithBlockNum(blockNum int) (common.Hash, uint64, *types.Header) {

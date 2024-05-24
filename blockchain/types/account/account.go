@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package account
 
@@ -66,13 +68,13 @@ var (
 )
 
 var (
-	// TODO-Klaytn-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
+	// TODO-Kaia-Accounts: make one single instance emptyCodeHash. It is placed in several locations for now.
 	emptyCodeHash = crypto.Keccak256(nil)
 
 	logger = log.NewModuleLogger(log.BlockchainState)
 )
 
-// Account is the Klaytn consensus representation of accounts.
+// Account is the Kaia consensus representation of accounts.
 // These objects are stored in the main account trie.
 type Account interface {
 	Type() AccountType

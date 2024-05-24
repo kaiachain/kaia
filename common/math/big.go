@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from common/math/big.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package math
 
@@ -190,10 +192,10 @@ func U256Bytes(n *big.Int) []byte {
 // S256 interprets x as a two's complement number.
 // x must not exceed 256 bits (the result is undefined if it does) and is not modified.
 //
-//   S256(0)        = 0
-//   S256(1)        = 1
-//   S256(2**255)   = -2**255
-//   S256(2**256-1) = -1
+//	S256(0)        = 0
+//	S256(1)        = 1
+//	S256(2**255)   = -2**255
+//	S256(2**256-1) = -1
 func S256(x *big.Int) *big.Int {
 	if x.Cmp(tt255) < 0 {
 		return x

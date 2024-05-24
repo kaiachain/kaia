@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from common/types.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package common
 
@@ -324,7 +326,7 @@ func (h Hash) ExtendZero() ExtHash {
 
 /////////// Address
 
-// Address represents the 20 byte address of a Klaytn account.
+// Address represents the 20 byte address of a Kaia account.
 type Address [AddressLength]byte
 
 func EmptyAddress(a Address) bool {
@@ -357,7 +359,7 @@ func IsPrecompiledContractAddress(addr Address) bool {
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Klaytn address or not.
+// Kaia address or not.
 func IsHexAddress(s string) bool {
 	if hasHexPrefix(s) {
 		s = s[2:]

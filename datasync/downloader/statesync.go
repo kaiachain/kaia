@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/downloader/statesync.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
@@ -443,7 +445,7 @@ func (s *stateSync) assignTasks() {
 			req.peer.logger.Trace("Requesting batch of state data", "nodes", len(nodes), "codes", len(codes), "root", s.root)
 			select {
 			case s.d.trackStateReq <- req:
-				req.peer.FetchNodeData(append(nodes, codes...)) // Unified retrieval under klay/6x
+				req.peer.FetchNodeData(append(nodes, codes...)) // Unified retrieval under kaia/6x
 			case <-s.cancel:
 			case <-s.d.cancelCh:
 			}

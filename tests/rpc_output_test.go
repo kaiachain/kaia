@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 // Basically, this test is disabled for the CI test. To run this,
 // $ go test -run TestRPCOutput -tags RPCOutput
@@ -146,7 +148,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 	// TxTypeValueTransfer
 	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,
@@ -168,7 +170,7 @@ func BenchmarkRPCOutput(t *testing.B) {
 
 	// TxTypeFeeDelegatedValueTransfer
 	{
-		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KAIA))
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:    reservoir.Nonce,
 			types.TxValueKeyFrom:     reservoir.Addr,

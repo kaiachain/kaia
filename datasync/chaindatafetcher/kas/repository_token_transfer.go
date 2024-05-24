@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kas
 
@@ -45,7 +47,7 @@ func wordToAddress(word common.Hash) common.Address {
 	return common.BytesToAddress(word[common.HashLength-common.AddressLength:])
 }
 
-// transformLogsToTokenTransfers converts the given event into Klaytn Compatible Token transfers.
+// transformLogsToTokenTransfers converts the given event into Kaia Compatible Token transfers.
 func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer, map[common.Address]struct{}, error) {
 	timestamp := event.Block.Time().Int64()
 	var kctTransfers []*KCTTransfer
@@ -67,7 +69,7 @@ func transformLogsToTokenTransfers(event blockchain.ChainEvent) ([]*KCTTransfer,
 	return kctTransfers, mergedUpdatedEOAs, nil
 }
 
-// transformLogToTokenTransfer converts the given log to Klaytn Compatible Token transfer.
+// transformLogToTokenTransfer converts the given log to Kaia Compatible Token transfer.
 func transformLogToTokenTransfer(log *types.Log) (*KCTTransfer, map[common.Address]struct{}, error) {
 	// in case of token transfer,
 	// case 1:

@@ -40,7 +40,7 @@ var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
 	IstanbulCompatibleBlock:  new(big.Int).SetUint64(0),
 	LondonCompatibleBlock:    new(big.Int).SetUint64(0),
 	EthTxTypeCompatibleBlock: new(big.Int).SetUint64(0),
-	UnitPrice:                25000000000, // 25 ston
+	UnitPrice:                25000000000, // 25 gkei
 }
 
 var (
@@ -55,7 +55,7 @@ var (
 		IstanbulCompatibleBlock:  common.Big0,
 		LondonCompatibleBlock:    common.Big0,
 		EthTxTypeCompatibleBlock: common.Big0,
-		UnitPrice:                25000000000, // 25 ston
+		UnitPrice:                25000000000, // 25 gkei
 	}
 	testRandaoConfig = &params.ChainConfig{
 		ChainID:                  new(big.Int).SetUint64(111111),
@@ -67,7 +67,7 @@ var (
 		ShanghaiCompatibleBlock:  common.Big0,
 		CancunCompatibleBlock:    common.Big0,
 		RandaoCompatibleBlock:    common.Big0,
-		UnitPrice:                25000000000, // 25 ston
+		UnitPrice:                25000000000, // 25 gkei
 	}
 )
 
@@ -842,7 +842,7 @@ func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -859,6 +859,7 @@ func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 
 	// Get transaction by block hash and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -883,6 +884,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -909,6 +911,7 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransaction(gomock.Any()).DoAndReturn(
 		func(hash common.Hash) *types.Transaction {
 			return txHashMap[hash]
@@ -927,14 +930,14 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_PendingTransactionstests PendingTransactions.
+// TestEthereumAPI_PendingTransactions tests PendingTransactions.
 func TestEthereumAPI_PendingTransactions(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	_, txs, txHashMap, _, _ := createTestData(t, nil)
 
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager)
-
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransactions().Return(txs, nil)
 
 	wallets := make([]accounts.Wallet, 1)
@@ -968,6 +971,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
+	mockBackend.EXPECT().ChainConfig().Return(testRandaoConfig).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -976,7 +980,7 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 		txIdx := uint64(i)
-		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()]), txIdx)
+		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestChainConfig), txIdx)
 	}
 
 	mockCtrl.Finish()
@@ -990,14 +994,14 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 
 	api := EthereumAPI{
 		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),
-		publicKlayAPI:            NewPublicKlayAPI(mockBackend),
+		publicKaiaAPI:            NewPublicKaiaAPI(mockBackend),
 		publicBlockChainAPI:      NewPublicBlockChainAPI(mockBackend),
 	}
 	return mockCtrl, mockBackend, api
 }
 
 func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRPCTransaction, tx *types.Transaction, expectedIndex hexutil.Uint64) {
-	// All Klaytn transaction types must be returned as TxTypeLegacyTransaction types.
+	// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
 	assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
 
 	// Check the data of common fields of the transaction.
@@ -1011,7 +1015,7 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 	assert.Equal(t, tx.GetTxInternalData().RawSignatureValues()[0].S, ethTx.S.ToInt())
 	assert.Equal(t, hexutil.Uint64(tx.Nonce()), ethTx.Nonce)
 
-	// Check the optional field of Klaytn transactions.
+	// Check the optional field of Kaia transactions.
 	assert.Equal(t, 0, bytes.Compare(ethTx.Input, tx.Data()))
 
 	to := tx.To()
@@ -1035,7 +1039,7 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 	}
 
 	// Fields additionally used for Ethereum transaction types are not used
-	// when returning Klaytn transactions.
+	// when returning Kaia transactions.
 	assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
 	assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
 	assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
@@ -1076,7 +1080,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	}
 	assert.Equal(t, from, kReceipt["from"])
 
-	// Klaytn transactions that do not use the 'To' field
+	// Kaia transactions that do not use the 'To' field
 	// fill in 'To' with from during converting format.
 	toInTx := tx.To()
 	fromAddress := getFrom(tx)
@@ -1162,7 +1166,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Transactions, map[common.Hash]*types.Transaction, map[common.Hash]*types.Receipt, []*types.Receipt) {
 	var txs types.Transactions
 
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := big.NewInt(25 * params.Gkei)
 	deployData := "0x60806040526000805534801561001457600080fd5b506101ea806100246000396000f30060806040526004361061006d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461007257806342cbb15c1461009d578063767800de146100c8578063b22636271461011f578063d14e62b814610150575b600080fd5b34801561007e57600080fd5b5061008761017d565b6040518082815260200191505060405180910390f35b3480156100a957600080fd5b506100b2610183565b6040518082815260200191505060405180910390f35b3480156100d457600080fd5b506100dd61018b565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561012b57600080fd5b5061014e60048036038101908080356000191690602001909291905050506101b1565b005b34801561015c57600080fd5b5061017b600480360381019080803590602001909291905050506101b4565b005b60005481565b600043905090565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b50565b80600081905550505600a165627a7a7230582053c65686a3571c517e2cf4f741d842e5ee6aa665c96ce70f46f9a594794f11eb0029"
 	executeData := "0xa9059cbb0000000000000000000000008a4c9c443bb0645df646a2d5bb55def0ed1e885a0000000000000000000000000000000000000000000000000000000000003039"
 	var anchorData []byte
@@ -1876,7 +1880,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Block, types.Transactions, map[common.Hash]*types.Transaction, map[common.Hash]*types.Receipt, []*types.Receipt) {
 	var txs types.Transactions
 
-	gasPrice := big.NewInt(25 * params.Ston)
+	gasPrice := big.NewInt(25 * params.Gkei)
 	deployData := "0x60806040526000805534801561001457600080fd5b506101ea806100246000396000f30060806040526004361061006d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461007257806342cbb15c1461009d578063767800de146100c8578063b22636271461011f578063d14e62b814610150575b600080fd5b34801561007e57600080fd5b5061008761017d565b6040518082815260200191505060405180910390f35b3480156100a957600080fd5b506100b2610183565b6040518082815260200191505060405180910390f35b3480156100d457600080fd5b506100dd61018b565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561012b57600080fd5b5061014e60048036038101908080356000191690602001909291905050506101b1565b005b34801561015c57600080fd5b5061017b600480360381019080803590602001909291905050506101b4565b005b60005481565b600043905090565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b50565b80600081905550505600a165627a7a7230582053c65686a3571c517e2cf4f741d842e5ee6aa665c96ce70f46f9a594794f11eb0029"
 	accessList := types.AccessList{
 		types.AccessTuple{
@@ -2362,6 +2366,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 		mockBackend.EXPECT().CurrentBlock().Return(
 			types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)}),
 		)
+		mockBackend.EXPECT().SuggestTipCap(gomock.Any()).Return(unitPrice, nil)
 		mockBackend.EXPECT().SuggestPrice(gomock.Any()).Return(unitPrice, nil)
 		if !test.dynamicFeeParamsSet {
 			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
@@ -2446,13 +2451,17 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	chainConfig.LondonCompatibleBlock = common.Big0
 	chainConfig.EthTxTypeCompatibleBlock = common.Big0
 	chainConfig.MagmaCompatibleBlock = common.Big0
+	chainConfig.KoreCompatibleBlock = common.Big0
+	chainConfig.ShanghaiCompatibleBlock = common.Big0
+	chainConfig.CancunCompatibleBlock = common.Big0
+	chainConfig.KaiaCompatibleBlock = common.Big0
 	var (
 		// genesis
 		account1 = common.HexToAddress("0xaaaa")
 		account2 = common.HexToAddress("0xbbbb")
 		account3 = common.HexToAddress("0xcccc")
 		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-			account1: {Balance: big.NewInt(params.KLAY * 2)},
+			account1: {Balance: big.NewInt(params.KAIA * 2)},
 			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
 		}, Config: chainConfig}
@@ -2465,9 +2474,9 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		chain  = &testChainContext{header: header}
 
 		// tx arguments
-		KLAY     = hexutil.Big(*big.NewInt(params.KLAY))
-		mKLAY    = hexutil.Big(*big.NewInt(params.KLAY / 1000))
-		KLAY2_1  = hexutil.Big(*big.NewInt(params.KLAY*2 + 1))
+		KAIA     = hexutil.Big(*big.NewInt(params.KAIA))
+		mKAIA    = hexutil.Big(*big.NewInt(params.KAIA / 1000))
+		KAIA2_1  = hexutil.Big(*big.NewInt(params.KAIA*2 + 1))
 		gas1000  = hexutil.Uint64(1000)
 		gas40000 = hexutil.Uint64(40000)
 		baddata  = hexutil.Bytes(hexutil.MustDecode("0xdeadbeef"))
@@ -2482,7 +2491,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	getEVM := func(_ context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmConfig vm.Config) (*vm.EVM, func() error, error) {
 		// Taken from node/cn/api_backend.go
 		vmError := func() error { return nil }
-		txContext := blockchain.NewEVMTxContext(msg, header)
+		txContext := blockchain.NewEVMTxContext(msg, header, chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(header, chain, nil)
 		return vm.NewEVM(blockContext, txContext, state, chainConfig, &vmConfig), vmError, nil
 	}
@@ -2502,42 +2511,42 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			args: EthTransactionArgs{
 				From:  &account1,
 				To:    &account2,
-				Value: &KLAY,
+				Value: &KAIA,
 			},
 			expectGas: 21000,
 		},
 		{ // simple transfer with insufficient funds with zero gasPrice
 			args: EthTransactionArgs{
-				From:  &account2, // sender has 0 KLAY
+				From:  &account2, // sender has 0 KAIA
 				To:    &account1,
-				Value: &KLAY, // transfer 1 KLAY
+				Value: &KAIA, // transfer 1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
 		{ // simple transfer with slightly insufficient funds with zero gasPrice
 			// this testcase is to check whether the gas prefunded in EthDoCall is not too much
 			args: EthTransactionArgs{
-				From:  &account1, // sender has 2 KLAY
+				From:  &account1, // sender has 2 KAIA
 				To:    &account2,
-				Value: &KLAY2_1, // transfer 2.0000...1 KLAY
+				Value: &KAIA2_1, // transfer 2.0000...1 KAIA
 			},
 			expectErr: "insufficient balance for transfer",
 		},
 		{ // simple transfer with insufficient funds with nonzero gasPrice
 			args: EthTransactionArgs{
-				From:     &account2, // sender has 0 KLAY
+				From:     &account2, // sender has 0 KAIA
 				To:       &account1,
-				Value:    &KLAY, // transfer 1 KLAY
-				GasPrice: &mKLAY,
+				Value:    &KAIA, // transfer 1 KAIA
+				GasPrice: &mKAIA,
 			},
 			expectErr: "insufficient funds for transfer",
 		},
 		{ // simple transfer too high gasPrice
 			args: EthTransactionArgs{
-				From:     &account1, // sender has 2 KLAY
+				From:     &account1, // sender has 2 KAIA
 				To:       &account2,
-				Value:    &KLAY,  // transfer 1 KLAY
-				GasPrice: &mKLAY, // allowance = (2 - 1) / 0.001 = 1000 gas
+				Value:    &KAIA,  // transfer 1 KAIA
+				GasPrice: &mKAIA, // allowance = (2 - 1) / 0.001 = 1000 gas
 			},
 			expectErr: "gas required exceeds allowance",
 		},

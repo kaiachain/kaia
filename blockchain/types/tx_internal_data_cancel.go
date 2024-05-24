@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -30,7 +32,7 @@ import (
 )
 
 // TxInternalDataCancel is a transaction that cancels a transaction previously submitted into txpool by replacement.
-// Since Klaytn defines fixed gas price for all transactions, a transaction cannot be replaced with
+// Since Kaia defines fixed gas price for all transactions, a transaction cannot be replaced with
 // another transaction with higher gas price. To provide tx replacement, TxInternalDataCancel is introduced.
 // To replace a previously added tx, send a TxInternalCancel transaction with the same nonce.
 type TxInternalDataCancel struct {

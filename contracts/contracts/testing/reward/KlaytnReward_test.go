@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package reward
 
@@ -38,7 +40,7 @@ func TestSmartContract(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	initialValue := big.NewInt(params.KLAY)
+	initialValue := big.NewInt(params.KAIA)
 	withdrawValue := big.NewInt(500000000)
 
 	alloc := blockchain.GenesisAlloc{auth.From: {Balance: initialValue}, auth2.From: {Balance: initialValue}}

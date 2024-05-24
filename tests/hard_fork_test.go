@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -152,7 +154,7 @@ func genBlocks(t *testing.T) {
 		Type    string
 		account TestAccount
 	}{
-		{"KlaytnLegacy", genKlaytnLegacyAccount(t)},
+		{"KaiaLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
 		{"MultiSig", genMultiSigAccount(t)},
 		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
@@ -199,9 +201,9 @@ func genBlocks(t *testing.T) {
 	// Preparing step
 	{
 		var txs types.Transactions
-		// Preparing step. Send KLAY to LegacyAccount.
+		// Preparing step. Send KAIA to LegacyAccount.
 		{
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				accountTypes[0].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -213,7 +215,7 @@ func genBlocks(t *testing.T) {
 			reservoir.AddNonce()
 		}
 
-		// Preparing step. Send KLAY to KlaytnAcounts.
+		// Preparing step. Send KAIA to KaiaAcounts.
 		for i := 1; i < len(accountTypes); i++ {
 			// create an account which account key will be replaced to one of account key types.
 			anon, err := createAnonymousAccount(getRandomPrivateKeyString(t))
@@ -222,7 +224,7 @@ func genBlocks(t *testing.T) {
 			accountTypes[i].account.SetAddr(anon.Addr)
 
 			{
-				amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+				amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 				tx := types.NewTransaction(reservoir.GetNonce(),
 					accountTypes[i].account.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -432,7 +434,7 @@ func genBlocks(t *testing.T) {
 		for _, sender := range accountTypes {
 			toAccount := reservoir
 
-			// LegacyTransaction can be used only with LegacyAccount and KlaytnAccount with AccountKeyLegacy.
+			// LegacyTransaction can be used only with LegacyAccount and KaiaAccount with AccountKeyLegacy.
 			if !strings.Contains(sender.Type, "Legacy") && strings.Contains(f.Name, "Legacy") {
 				continue
 			}

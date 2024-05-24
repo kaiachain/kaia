@@ -19,13 +19,13 @@
 // Modified and improved for the klaytn development.
 
 /*
-kcn is the command-line client for Klaytn Consensus Node.
+kcn is the command-line client for Kaia consensus Node.
 
 kcn has the node type of "cn" internally. Please try `kcn -h` to see commands and options list.
 
-Source Files
+# Source Files
 
 Each file contains following contents
- - main.go : Defines available options and initializes the application with given options
+  - main.go : Defines available options and initializes the application with given options
 */
 package main

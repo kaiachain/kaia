@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rpc/http.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rpc
 
@@ -331,7 +333,7 @@ func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, sr
 	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
 	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
 
-	// TODO-Klaytn concurreny default (256 * 1024), goroutine limit (8192)
+	// TODO-Kaia concurreny default (256 * 1024), goroutine limit (8192)
 	return &fasthttp.Server{
 		Concurrency:        ConcurrencyLimit,
 		Handler:            fhandler,

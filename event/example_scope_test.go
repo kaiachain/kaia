@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from event/example_scope_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package event_test
 
@@ -32,8 +34,10 @@ import (
 //
 // Our example program consists of two servers, each of which performs a calculation when
 // requested. The servers also allow subscribing to results of all computations.
-type divServer struct{ results event.Feed }
-type mulServer struct{ results event.Feed }
+type (
+	divServer struct{ results event.Feed }
+	mulServer struct{ results event.Feed }
+)
 
 func (s *divServer) do(a, b int) int {
 	r := a / b

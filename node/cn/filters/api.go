@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/filters/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package filters
 
@@ -60,7 +62,7 @@ type filter struct {
 }
 
 // PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
-// information related to the Klaytn protocol such als blocks, transactions and logs.
+// information related to the Kaia protocol such als blocks, transactions and logs.
 type PublicFilterAPI struct {
 	backend   Backend
 	mux       *event.TypeMux
@@ -123,7 +125,7 @@ func (api *PublicFilterAPI) timeoutLoop() {
 // as transactions enter the pending state.
 //
 // It is part of the filter package because this filter can be used through the
-// `klay_getFilterChanges` polling method that is also used for log filters.
+// `kaia_getFilterChanges` polling method that is also used for log filters.
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
 		pendingTxs   = make(chan []common.Hash)
@@ -224,7 +226,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 }
 
 // RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
-// For klay_getHeaderByNumber and klay_getHeaderByHash APIs.
+// For kaia_getHeaderByNumber and kaia_getHeaderByHash APIs.
 func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
 	result := map[string]interface{}{
 		"parentHash":       head.ParentHash,
@@ -328,7 +330,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 }
 
 // FilterCriteria represents a request to create a new filter.
-// Same as klaytn.FilterQuery but with UnmarshalJSON() method.
+// Same as Kaia.FilterQuery but with UnmarshalJSON() method.
 type FilterCriteria klaytn.FilterQuery
 
 // NewFilter creates a new filter and returns the filter id. It can be

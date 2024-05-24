@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from consensus/ethash/ethash.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package gxhash
 
@@ -447,7 +449,7 @@ func NewTester() *Gxhash {
 }
 
 // NewFaker creates a gxhash consensus engine with a fake PoW scheme that accepts
-// all blocks' seal as valid, though they still have to conform to the Klaytn
+// all blocks' seal as valid, though they still have to conform to the Kaia
 // consensus rules.
 func NewFaker() *Gxhash {
 	return &Gxhash{
@@ -459,7 +461,7 @@ func NewFaker() *Gxhash {
 
 // NewFakeFailer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid apart from the single one specified, though they
-// still have to conform to the Klaytn consensus rules.
+// still have to conform to the Kaia consensus rules.
 func NewFakeFailer(fail uint64) *Gxhash {
 	return &Gxhash{
 		config: Config{
@@ -471,7 +473,7 @@ func NewFakeFailer(fail uint64) *Gxhash {
 
 // NewFakeDelayer creates a gxhash consensus engine with a fake PoW scheme that
 // accepts all blocks as valid, but delays verifications by some time, though
-// they still have to conform to the Klaytn consensus rules.
+// they still have to conform to the Kaia consensus rules.
 func NewFakeDelayer(delay time.Duration) *Gxhash {
 	return &Gxhash{
 		config: Config{
@@ -587,5 +589,5 @@ func SeedHash(block uint64) []byte {
 
 // Protocol implements consensus.Engine.Protocol
 func (gxhash *Gxhash) Protocol() consensus.Protocol {
-	return consensus.KlayProtocol
+	return consensus.KaiaProtocol
 }

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package dbsyncer
 
@@ -64,7 +66,7 @@ func getProposerAndValidatorsFromBlock(block *types.Block) (proposer string, val
 	return proposerAddr.Hex(), strings.Join(strValidators, ","), nil
 }
 
-// ecrecover extracts the Klaytn account address from a signed header.
+// ecrecover extracts the Kaia account address from a signed header.
 func ecrecover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)

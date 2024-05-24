@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state_transition.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -98,7 +100,7 @@ type Message interface {
 	GasTipCap() *big.Int
 	GasFeeCap() *big.Int
 	EffectiveGasTip(baseFee *big.Int) *big.Int
-	EffectiveGasPrice(header *types.Header) *big.Int
+	EffectiveGasPrice(header *types.Header, config *params.ChainConfig) *big.Int
 
 	Gas() uint64
 	Value() *big.Int
@@ -189,6 +191,7 @@ func getReceiptStatusFromErrTxFailed(errTxFailed error) (status uint) {
 func NewStateTransition(evm *vm.EVM, msg Message) *StateTransition {
 	// before magma hardfork, effectiveGasPrice is GasPrice of tx
 	// after magma hardfork, effectiveGasPrice is BaseFee
+	// after kaia hardfork, effectiveGasPrice is BaseFee + effectiveGasTip
 	effectiveGasPrice := evm.GasPrice
 
 	return &StateTransition{
@@ -377,12 +380,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Defer transferring Tx fee when DeferredTxFee is true
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		if rules.IsMagma {
-			effectiveGasPrice := st.gasPrice
-			txFee := getBurnAmountMagma(new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
-			st.state.AddBalance(st.evm.Context.Rewardbase, txFee)
+			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 		} else {
-			effectiveGasPrice := msg.EffectiveGasPrice(nil)
-			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveGasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 		}
 	}
 
@@ -466,7 +466,7 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 	}
 	st.gas += refund
 
-	// Return KLAY for remaining gas, exchanged at the original rate.
+	// Return KAIA for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()

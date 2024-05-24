@@ -1,7 +1,9 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 //
 // This file is derived from log/format.go (2018/06/04).
 // See LICENSE in the top directory for the original copyright and license.
+// Modified and improved for the Kaia development.
 
 package log
 
@@ -84,12 +86,11 @@ type TerminalStringer interface {
 // a terminal with color-coded level output and terser human friendly timestamp.
 // This format should only be used for interactive programs or while developing.
 //
-//     [TIME] [LEVEL] MESAGE key=value key=value ...
+//	[TIME] [LEVEL] MESAGE key=value key=value ...
 //
 // Example:
 //
-//     [May 16 20:58:45] [DBUG] remove route ns=haproxy addr=127.0.0.1:50002
-//
+//	[May 16 20:58:45] [DBUG] remove route ns=haproxy addr=127.0.0.1:50002
 func TerminalFormat(usecolor bool) Format {
 	return FormatFunc(func(r *Record) []byte {
 		color := 0
@@ -159,7 +160,6 @@ func TerminalFormat(usecolor bool) Format {
 // format for key/value pairs.
 //
 // For more details see: http://godoc.org/github.com/kr/logfmt
-//
 func LogfmtFormat() Format {
 	return FormatFunc(func(r *Record) []byte {
 		common := []interface{}{r.KeyNames.Time, r.Time, r.KeyNames.Lvl, r.Lvl, r.KeyNames.Msg, r.Msg}

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/protocol.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -26,7 +28,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/datasync/downloader"
@@ -36,29 +38,19 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// Constants to match up protocol versions and messages
+// `kaia` is the default fallback protocol for all consensus engine types.
+// The name, versions, and lengths are defined in consensus/protocol.go.
 const (
-	klay62 = 62
-	klay63 = 63
-	klay64 = 64
-	klay65 = 65
+	kaia63 = 63
+	kaia65 = 65
 )
-
-// ProtocolName is the official short name of the protocol used during capability negotiation.
-var ProtocolName = "klay"
-
-// ProtocolVersions are the upported versions of the klay protocol (first is primary).
-var ProtocolVersions = []uint{klay65, klay64, klay63, klay62}
-
-// ProtocolLengths are the number of implemented message corresponding to different protocol versions.
-var ProtocolLengths = []uint64{21, 19, 17, 8}
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 
-// Klaytn protocol message codes
+// Kaia protocol message codes
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
 const (
-	// Protocol messages belonging to klay/62
+	// Protocol messages belonging to kaia/62
 	StatusMsg                   = 0x00
 	NewBlockHashesMsg           = 0x01
 	BlockHeaderFetchRequestMsg  = 0x02
@@ -72,17 +64,17 @@ const (
 	BlockBodiesMsg              = 0x0a
 	NewBlockMsg                 = 0x0b
 
-	// Protocol messages belonging to klay/63
+	// Protocol messages belonging to kaia/63
 	NodeDataRequestMsg = 0x0c
 	NodeDataMsg        = 0x0d
 	ReceiptsRequestMsg = 0x0e
 	ReceiptsMsg        = 0x0f
 
-	// Protocol messages belonging to klay/64
+	// Protocol messages belonging to kaia/64
 	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
 	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
 
-	// Protocol messages belonging to klay/65
+	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg = 0x12
 	StakingInfoMsg        = 0x13
 
@@ -128,8 +120,9 @@ var errorToString = map[int]string{
 	ErrUnsupportedEnginePolicy: "Unsupported engine or policy",
 }
 
-//go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerDownloader
 // ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
+//
+//go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerDownloader
 type ProtocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
@@ -143,7 +136,7 @@ type ProtocolManagerDownloader interface {
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
-	Progress() klaytn.SyncProgress
+	Progress() kaia.SyncProgress
 	Cancel()
 
 	GetSnapSyncer() *snap.Syncer
@@ -151,8 +144,9 @@ type ProtocolManagerDownloader interface {
 	SyncStakingInfoStatus() *downloader.SyncingStatus
 }
 
-//go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher
 // ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
+//
+//go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/klaytn/klaytn/node/cn ProtocolManagerFetcher
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction

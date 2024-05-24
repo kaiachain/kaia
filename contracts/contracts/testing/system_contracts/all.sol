@@ -5,3 +5,5 @@ pragma solidity ^0.8.18;
 // If each file is abigen separately, the resulting Go files may have duplicate symbols.
 import "./RegistryMock.sol";
 import "./KIP113Mock.sol";
+import "./TreasuryRebalanceMock.sol";
+import "./MultiCallContractMock.sol";

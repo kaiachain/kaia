@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/tx_pool.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -54,7 +56,7 @@ const (
 	// non-trivial consequences: larger transactions are significantly harder and
 	// more expensive to propagate; larger transactions also take more resources
 	// to validate whether they fit into the pool or not.
-	// TODO-klaytn: Change the name to clarify what it means. It means the max length of the transaction.
+	// TODO-Kaia: Change the name to clarify what it means. It means the max length of the transaction.
 	MaxTxDataSize = 4 * txSlotSize // 128KB
 
 	// demoteUnexecutablesFullValidationTxLimit is the number of txs will be fully validated in demoteUnexecutables.
@@ -201,7 +203,7 @@ type TxPool struct {
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
 
-	// TODO-Klaytn
+	// TODO-Kaia
 	txMu sync.RWMutex
 
 	pending map[common.Address]*txList   // All currently processable transactions
@@ -687,7 +689,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrInvalidChainId
 	}
 
-	// NOTE-Klaytn Drop transactions with unexpected gasPrice
+	// NOTE-Kaia Drop transactions with unexpected gasPrice
 	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
 		// Sanity check for extremely large numbers
@@ -1078,7 +1080,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 		}
 	}
 
-	// TODO-Klaytn: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
+	// TODO-Kaia: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
 	senderCacher.recover(pool.signer, txs)
 	pool.txMsgCh <- txs
 }

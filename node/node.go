@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from node/node.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package node
 
@@ -214,7 +216,7 @@ func (n *Node) Start() error {
 			p2pServer.AddProtocols(service.Protocols())
 		}
 		for _, s := range services {
-			// TODO-Klaytn-ServiceChain call setcomponents repeatedly for same component
+			// TODO-Kaia-ServiceChain call setcomponents repeatedly for same component
 			s.SetComponents(service.Components())
 		}
 	}
@@ -736,15 +738,15 @@ func (n *Node) apis() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPublicDebugAPI(n),
 		}, {
-			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "klay" namespace.
+			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "kaia" namespace.
 			Namespace: "web3",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(n),
+			Service:   NewPublicKaiaAPI(n),
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(n),
+			Service:   NewPublicKaiaAPI(n),
 			Public:    true,
 		}, {
 			Namespace: "debug",

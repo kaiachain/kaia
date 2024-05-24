@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package blst
 
@@ -20,7 +22,7 @@ import blst "github.com/supranational/blst/bindings/go"
 
 // Aliases to underlying blst go binding symbols
 //
-// Klaytn uses the "minimal-pubkey-size" variant as defined in
+// Kaia uses the "minimal-pubkey-size" variant as defined in
 // draft-irtf-cfrg-bls-signature-05#2.1.
 // Public keys are points in G1 and signatures are points in G2.
 type (

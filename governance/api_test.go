@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package governance
 
 import (
@@ -31,7 +46,7 @@ func newTestBlockchain(config *params.ChainConfig) *testBlockChain {
 }
 
 func newTestGovernanceApi() *GovernanceAPI {
-	config := params.CypressChainConfig
+	config := params.MainnetChainConfig
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
 	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
@@ -141,12 +156,12 @@ func TestGetRewards(t *testing.T) {
 			e.headerGov.WriteGovernance(uint64(o.num), gset, override)
 		}
 
-		govKlayApi := NewGovernanceKlayAPI(e, bc)
+		govKaiaApi := NewGovernanceKaiaAPI(e, bc)
 
 		for num := 1; num <= tc.length; num++ {
 			bc.SetBlockNum(uint64(num))
 
-			rewardSpec, err := govKlayApi.GetRewards(&latestNum)
+			rewardSpec, err := govKaiaApi.GetRewards(&latestNum)
 			assert.Nil(t, err)
 
 			minted := new(big.Int).SetUint64(tc.expected[num])
@@ -156,8 +171,8 @@ func TestGetRewards(t *testing.T) {
 				BurntFee: common.Big0,
 				Proposer: minted,
 				Stakers:  common.Big0,
-				KFF:      common.Big0,
-				KCF:      common.Big0,
+				KIF:      common.Big0,
+				KEF:      common.Big0,
 				Rewards: map[common.Address]*big.Int{
 					proposer: minted,
 				},
@@ -176,7 +191,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	db := database.NewMemoryDBManager()
 
 	// prepare configurations and data for the test environment
-	chainConfig := params.CypressChainConfig.Copy()
+	chainConfig := params.MainnetChainConfig.Copy()
 	chainConfig.KoreCompatibleBlock = big.NewInt(0)
 	chainConfig.Governance.Reward.Ratio = "50/20/30"
 	chainConfig.Governance.Reward.Kip82Ratio = params.DefaultKip82Ratio
@@ -209,8 +224,8 @@ func TestGetRewardsAccumulated(t *testing.T) {
 		CouncilNodeAddrs:      testAddrList,
 		CouncilStakingAddrs:   testAddrList,
 		CouncilRewardAddrs:    testAddrList,
-		KCFAddr:               common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
-		KFFAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		KEFAddr:               common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
+		KIFAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 		CouncilStakingAmounts: testStakingAmountList,
 	}
 
@@ -222,18 +237,22 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	startBlockNum := 0
 	endBlockNum := 10
 	blocks := make([]*types.Block, endBlockNum-startBlockNum+1)
-
+	receipts := make([]types.Receipts, endBlockNum-startBlockNum+1)
 	// set testing data for mock instances
 	for i := startBlockNum; i <= endBlockNum; i++ {
 		blocks[i] = types.NewBlockWithHeader(&types.Header{
 			Number:     big.NewInt(int64(i)),
 			Rewardbase: stInfo.CouncilRewardAddrs[i%4], // round-robin way
 			GasUsed:    uint64(1000),
-			BaseFee:    big.NewInt(25 * params.Ston),
+			BaseFee:    big.NewInt(25 * params.Gkei),
 			Time:       big.NewInt(int64(1000 + i)),
 		})
-
+		receipts[i] = types.Receipts{
+			&types.Receipt{GasUsed: uint64(1000)},
+		}
+		mockBlockchain.EXPECT().GetBlock(blocks[i].Hash(), uint64(i)).Return(blocks[i]).AnyTimes()
 		mockBlockchain.EXPECT().GetHeaderByNumber(uint64(i)).Return(blocks[i].Header()).AnyTimes()
+		mockBlockchain.EXPECT().GetReceiptsByBlockHash(blocks[i].Hash()).Return(receipts[i]).AnyTimes()
 	}
 
 	mockBlockchain.EXPECT().Config().Return(chainConfig).AnyTimes()
@@ -250,13 +269,13 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	assert.NotNil(t, ret)
 
 	// pre-calculated estimated rewards per a block
-	blockMinted, _ := new(big.Int).SetString("9600000000000000000", 10)  // 9.6 KLAY
-	blockProposer, _ := new(big.Int).SetString("960000000000000000", 10) // 0.96 KLAY = 9.6 KLAY * 0.5 * 0.2
-	blockStaking, _ := new(big.Int).SetString("3840000000000000000", 10) // 3.84 KLAY = 9.6 KLAY * 0.5 * 0.8
-	blockTxFee, _ := new(big.Int).SetString("25000000000000", 10)        // 25000 Ston = 1000 * 25 Ston
+	blockMinted, _ := new(big.Int).SetString("9600000000000000000", 10)  // 9.6 KAIA
+	blockProposer, _ := new(big.Int).SetString("960000000000000000", 10) // 0.96 KAIA = 9.6 KAIA * 0.5 * 0.2
+	blockStaking, _ := new(big.Int).SetString("3840000000000000000", 10) // 3.84 KAIA = 9.6 KAIA * 0.5 * 0.8
+	blockTxFee, _ := new(big.Int).SetString("25000000000000", 10)        // 25000 gkei = 1000 * 25 gkei
 	blockTxBurnt := blockTxFee
-	blockKFF, _ := new(big.Int).SetString("1920000000000000000", 10) //  1.92 KLAY = 9.6 KLAY * 0.2
-	blockKCF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KLAY = 9.6 KLAY * 0.3
+	blockKIF, _ := new(big.Int).SetString("1920000000000000000", 10) //  1.92 KAIA = 9.6 KAIA * 0.2
+	blockKEF, _ := new(big.Int).SetString("2880000000000000000", 10) //  2.88 KAIA = 9.6 KAIA * 0.3
 
 	// check the execution result
 	assert.Equal(t, time.Unix(blocks[startBlockNum].Time().Int64(), 0).String(), ret.FirstBlockTime)
@@ -270,12 +289,12 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	assert.Equal(t, new(big.Int).Mul(blockTxBurnt, blockCount), ret.TotalBurntTxFee)
 	assert.Equal(t, new(big.Int).Mul(blockProposer, blockCount), ret.TotalProposerRewards)
 	assert.Equal(t, new(big.Int).Mul(blockStaking, blockCount), ret.TotalStakingRewards)
-	assert.Equal(t, new(big.Int).Mul(blockKFF, blockCount), ret.TotalKFFRewards)
-	assert.Equal(t, new(big.Int).Mul(blockKCF, blockCount), ret.TotalKCFRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKIF, blockCount), ret.TotalKIFRewards)
+	assert.Equal(t, new(big.Int).Mul(blockKEF, blockCount), ret.TotalKEFRewards)
 
 	gcReward := big.NewInt(0)
 	for acc, bal := range ret.Rewards {
-		if acc != stInfo.KFFAddr && acc != stInfo.KCFAddr {
+		if acc != stInfo.KIFAddr && acc != stInfo.KEFAddr {
 			gcReward.Add(gcReward, bal)
 		}
 	}
@@ -289,7 +308,17 @@ func (bc *testBlockChain) GetHeaderByNumber(val uint64) *types.Header {
 		Number: new(big.Int).SetUint64(val),
 	}
 }
-func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block         { return nil }
+
+func (bc *testBlockChain) GetReceiptsByBlockHash(hash common.Hash) types.Receipts {
+	return types.Receipts{
+		&types.Receipt{GasUsed: 10},
+		&types.Receipt{GasUsed: 10},
+	}
+}
+
+func (bc *testBlockChain) GetBlockByNumber(num uint64) *types.Block {
+	return types.NewBlockWithHeader(bc.GetHeaderByNumber(num))
+}
 func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { return nil, nil }
 func (bc *testBlockChain) State() (*state.StateDB, error)                   { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {

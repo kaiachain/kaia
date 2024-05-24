@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rpc/server.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rpc
 
@@ -54,7 +56,7 @@ var (
 	// pendingRequestCount is a total number of concurrent RPC method calls
 	pendingRequestCount int64 = 0
 
-	// TODO-Klaytn: move websocket configurations to Config struct in /network/rpc/server.go
+	// TODO-Kaia: move websocket configurations to Config struct in /network/rpc/server.go
 	// MaxSubscriptionPerWSConn is a maximum number of subscription for a websocket connection
 	MaxSubscriptionPerWSConn int32 = 3000
 

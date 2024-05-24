@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/metrics.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -52,7 +54,7 @@ var (
 
 	lastAnchoredBlockNumGauge = metrics.NewRegisteredGauge("klay/bridge/anchroing/blocknumber", nil)
 
-	// TODO-Klaytn-Servicechain need to add below metrics
+	// TODO-Kaia-Servicechain need to add below metrics
 	// txReceiveCounter     = metrics.NewRegisteredCounter("klay/bridge/tx/recv/counter", nil)
 	// txResendCounter      = metrics.NewRegisteredCounter("klay/bridge/tx/resend/counter", nil)
 	// txResendGauge        = metrics.NewRegisteredGauge("klay/bridge/tx/resend/gauge", nil)

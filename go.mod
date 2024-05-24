@@ -16,7 +16,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
-	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/docker v24.0.9+incompatible
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/ethereum/c-kzg-4844 v0.4.0
 	github.com/fatih/color v1.9.0
@@ -57,10 +57,10 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/crypto v0.17.0
-	golang.org/x/net v0.17.0
-	golang.org/x/sys v0.15.0
-	golang.org/x/tools v0.6.0
+	golang.org/x/crypto v0.21.0
+	golang.org/x/net v0.23.0
+	golang.org/x/sys v0.18.0
+	golang.org/x/tools v0.19.0
 	google.golang.org/grpc v1.56.3
 	gopkg.in/DataDog/dd-trace-go.v1 v1.42.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -78,6 +78,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
+	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81
 )
 
 require (
@@ -140,13 +141,13 @@ require (
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/mod v0.16.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect

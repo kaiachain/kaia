@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from miner/miner.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package work
 
@@ -44,8 +46,9 @@ import (
 
 var logger = log.NewModuleLogger(log.Work)
 
-//go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/work TxPool
 // TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
+//
+//go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/klaytn/klaytn/work TxPool
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -104,7 +107,7 @@ func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine
 		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy),
 		canStart: 1,
 	}
-	// TODO-Klaytn drop or missing tx
+	// TODO-Kaia drop or missing tx
 	miner.Register(NewCpuAgent(backend.BlockChain(), engine, nodetype))
 	go miner.update()
 
@@ -219,8 +222,9 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
-//go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
+//
+//go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/work BlockChain
 type BlockChain interface {
 	Genesis() *types.Block
 

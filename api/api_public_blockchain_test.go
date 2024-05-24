@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package api
 
@@ -27,7 +29,7 @@ import (
 	"github.com/klaytn/klaytn/params"
 )
 
-func testInitForKlayApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *PublicBlockChainAPI) {
+func testInitForKaiaApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *PublicBlockChainAPI) {
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
@@ -37,12 +39,12 @@ func testInitForKlayApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend
 	return mockCtrl, mockBackend, api
 }
 
-func TestKlaytnAPI_EstimateGas(t *testing.T) {
-	mockCtrl, mockBackend, api := testInitForKlayApi(t)
+func TestKaiaAPI_EstimateGas(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForKaiaApi(t)
 	defer mockCtrl.Finish()
 
 	testEstimateGas(t, mockBackend, func(ethArgs EthTransactionArgs) (hexutil.Uint64, error) {
-		// Testcases are written in EthTransactionArgs. Convert to klay CallArgs
+		// Testcases are written in EthTransactionArgs. Convert to Kaia CallArgs
 		args := CallArgs{
 			From:                 ethArgs.from(),
 			To:                   ethArgs.To,

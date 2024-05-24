@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package database
 
@@ -612,9 +614,7 @@ func TestDBManager_TxLookupEntry(t *testing.T) {
 		assert.Equal(t, uint64(0), entryIndex)
 
 		batch := dbm.NewSenderTxHashToTxHashBatch()
-		if err := dbm.PutSenderTxHashToTxHashToBatch(batch, hash1, hash2); err != nil {
-			t.Fatal("Failed while calling PutSenderTxHashToTxHashToBatch", "err", err)
-		}
+		dbm.PutSenderTxHashToTxHashToBatch(batch, hash1, hash2)
 
 		if err := batch.Write(); err != nil {
 			t.Fatal("Failed writing SenderTxHashToTxHashToBatch", "err", err)
@@ -634,21 +634,15 @@ func TestDBManager_BloomBits(t *testing.T) {
 		sh, _ := dbm.ReadBloomBits(hash1[:])
 		assert.Nil(t, sh)
 
-		err := dbm.WriteBloomBits(hash1[:], hash1[:])
-		if err != nil {
-			t.Fatal("Failed to write bloom bits", "err", err)
-		}
+		dbm.WriteBloomBits(hash1[:], hash1[:])
 
-		sh, err = dbm.ReadBloomBits(hash1[:])
+		sh, err := dbm.ReadBloomBits(hash1[:])
 		if err != nil {
 			t.Fatal("Failed to read bloom bits", "err", err)
 		}
 		assert.Equal(t, hash1[:], sh)
 
-		err = dbm.WriteBloomBits(hash1[:], hash2[:])
-		if err != nil {
-			t.Fatal("Failed to write bloom bits", "err", err)
-		}
+		dbm.WriteBloomBits(hash1[:], hash2[:])
 
 		sh, err = dbm.ReadBloomBits(hash1[:])
 		if err != nil {
@@ -780,7 +774,7 @@ func TestDBManager_ChildChain(t *testing.T) {
 		assert.Equal(t, num2, dbm.ReadAnchoredBlockNumber())
 
 		// 2. Read/Write ReceiptFromParentChain
-		// TODO-Klaytn-Database Implement this!
+		// TODO-Kaia-Database Implement this!
 
 		// 3. Read/Write HandleTxHashFromRequestTxHash
 		assert.Equal(t, common.Hash{}, dbm.ReadHandleTxHashFromRequestTxHash(hash1))
@@ -801,14 +795,12 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Nil(t, data)
 
-		err = dbm.WriteCliqueSnapshot(hash1, hash1[:])
-		assert.Nil(t, err)
+		dbm.WriteCliqueSnapshot(hash1, hash1[:])
 
 		data, _ = dbm.ReadCliqueSnapshot(hash1)
 		assert.Equal(t, hash1[:], data)
 
-		err = dbm.WriteCliqueSnapshot(hash1, hash2[:])
-		assert.Nil(t, err)
+		dbm.WriteCliqueSnapshot(hash1, hash2[:])
 
 		data, _ = dbm.ReadCliqueSnapshot(hash1)
 		assert.Equal(t, hash2[:], data)
@@ -817,7 +809,33 @@ func TestDBManager_CliqueSnapshot(t *testing.T) {
 
 func TestDBManager_Governance(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
-	// TODO-Klaytn-Database Implement this!
+	// TODO-Kaia-Database Implement this!
+}
+
+func TestDBManager_AccReward(t *testing.T) {
+	for _, dbm := range dbManagers {
+		// AccReward
+		testcases := []struct {
+			Number    uint64
+			AccReward *AccReward
+		}{
+			{1000, &AccReward{big.NewInt(1111), big.NewInt(99)}},
+			{2000, &AccReward{big.NewInt(0), big.NewInt(88)}},
+			{3000, &AccReward{big.NewInt(2222), big.NewInt(0)}},
+			{4000, &AccReward{big.NewInt(0), big.NewInt(0)}},
+		}
+		for _, tc := range testcases {
+			assert.Nil(t, dbm.ReadAccReward(tc.Number))
+			dbm.WriteAccReward(tc.Number, tc.AccReward)
+			assert.Equal(t, tc.AccReward, dbm.ReadAccReward(tc.Number))
+		}
+
+		// LastAccRewardBlockNumber
+		lastNum := uint64(54321)
+		assert.Zero(t, dbm.ReadLastAccRewardBlockNumber())
+		dbm.WriteLastAccRewardBlockNumber(lastNum)
+		assert.Equal(t, lastNum, dbm.ReadLastAccRewardBlockNumber())
+	}
 }
 
 func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/peer.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -45,10 +47,10 @@ const (
 	handshakeTimeout = 5 * time.Second
 )
 
-// BridgePeerInfo represents a short summary of the Klaytn Bridge sub-protocol metadata known
+// BridgePeerInfo represents a short summary of the Kaia Bridge sub-protocol metadata known
 // about a connected peer.
 type BridgePeerInfo struct {
-	Version int    `json:"version"` // Klaytn Bridge protocol version negotiated
+	Version int    `json:"version"` // Kaia Bridge protocol version negotiated
 	Head    string `json:"head"`    // SHA3 hash of the peer's best owned block
 }
 
@@ -74,7 +76,7 @@ type BridgePeer interface {
 	// data should have been encoded as an RLP list.
 	Send(msgcode uint64, data interface{}) error
 
-	// Handshake executes the Klaytn protocol handshake, negotiating version number,
+	// Handshake executes the Kaia protocol handshake, negotiating version number,
 	// network IDs, difficulties, head, genesis blocks, and onChildChain(if the node is on child chain for the peer)
 	// and returning if the peer on the same chain or not and error.
 	Handshake(network uint64, chainID, td *big.Int, head common.Hash) error
@@ -109,7 +111,7 @@ type BridgePeer interface {
 	// GetRW returns the MsgReadWriter of the peer.
 	GetRW() p2p.MsgReadWriter
 
-	// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+	// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 	// this function terminates, the Peer is disconnected.
 	Handle(bn *MainBridge) error
 
@@ -259,7 +261,7 @@ func (p *baseBridgePeer) SendServiceChainInvalidTxResponse(invalidTxs []InvalidP
 	return p2p.Send(p.rw, ServiceChainInvalidTxResponseMsg, invalidTxs)
 }
 
-// Handshake executes the Klaytn protocol handshake, negotiating version number,
+// Handshake executes the Kaia protocol handshake, negotiating version number,
 // network IDs, difficulties, head and genesis blocks.
 func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head common.Hash) error {
 	// Send out own handshake in a new thread
@@ -381,7 +383,7 @@ func (p *baseBridgePeer) GetRW() p2p.MsgReadWriter {
 	return p.rw
 }
 
-// Handle is the callback invoked to manage the life cycle of a Klaytn Peer. When
+// Handle is the callback invoked to manage the life cycle of a Kaia Peer. When
 // this function terminates, the Peer is disconnected.
 func (p *baseBridgePeer) Handle(bn *MainBridge) error {
 	return bn.handle(p)
@@ -393,7 +395,7 @@ type singleChannelPeer struct {
 }
 
 // bridgePeerSet represents the collection of active peers currently participating in
-// the Klaytn sub-protocol.
+// the Kaia sub-protocol.
 type bridgePeerSet struct {
 	peers  map[string]BridgePeer
 	lock   sync.RWMutex

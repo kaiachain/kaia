@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package system
 
@@ -91,19 +93,37 @@ func InstallRegistry(state *state.StateDB, init *params.RegistryConfig) error {
 }
 
 func ReadActiveAddressFromRegistry(backend bind.ContractCaller, name string, num *big.Int) (common.Address, error) {
-	code, err := backend.CodeAt(context.Background(), RegistryAddr, num)
-	if err != nil {
-		return common.Address{}, err
-	}
-	if code == nil {
-		return common.Address{}, ErrRegistryNotInstalled
-	}
-
-	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
+	caller, err := GetRegistryCaller(backend, num)
 	if err != nil {
 		return common.Address{}, err
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}
 	return caller.GetActiveAddr(opts, name)
+}
+
+func ReadAllRecordsFromRegistry(backend bind.ContractCaller, name string, num *big.Int) ([]contracts.IRegistryRecord, error) {
+	caller, err := GetRegistryCaller(backend, num)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &bind.CallOpts{BlockNumber: num}
+	return caller.GetAllRecords(opts, name)
+}
+
+func GetRegistryCaller(backend bind.ContractCaller, num *big.Int) (*contracts.RegistryCaller, error) {
+	code, err := backend.CodeAt(context.Background(), RegistryAddr, num)
+	if err != nil {
+		return nil, err
+	}
+	if code == nil {
+		return nil, ErrRegistryNotInstalled
+	}
+
+	caller, err := contracts.NewRegistryCaller(RegistryAddr, backend)
+	if err != nil {
+		return nil, err
+	}
+	return caller, nil
 }

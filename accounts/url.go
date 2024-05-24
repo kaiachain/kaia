@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/url.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package accounts
 
@@ -37,7 +39,7 @@ import (
 // references to the original version, whereas the latter is important to ensure
 // one single canonical form opposed to many allowed ones by the RFC 3986 spec.
 //
-// As such, these URLs should not be used outside of the scope of a Klaytn
+// As such, these URLs should not be used outside of the scope of a Kaia
 // wallet or account.
 type URL struct {
 	Scheme string // Protocol scheme to identify a capable account backend
@@ -96,10 +98,9 @@ func (u *URL) UnmarshalJSON(input []byte) error {
 
 // Cmp compares x and y and returns:
 //
-//   -1 if x <  y
-//    0 if x == y
-//   +1 if x >  y
-//
+//	-1 if x <  y
+//	 0 if x == y
+//	+1 if x >  y
 func (u URL) Cmp(url URL) int {
 	if u.Scheme == url.Scheme {
 		return strings.Compare(u.Path, url.Path)

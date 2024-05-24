@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/discover/udp.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package discover
 
@@ -135,7 +137,7 @@ type (
 		NType NodeType // NodeType (CN, PN, EN, BN)
 	}
 
-	// TODO-Klaytn Change private type
+	// TODO-Kaia Change private type
 	NodeType uint8
 )
 
@@ -314,7 +316,7 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	go udp.Discovery.(*Table).loop() // TODO-Klaytn-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
+	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
 	go udp.loop()
 	go udp.readLoop(cfg.Unhandled)
 	return udp.Discovery, udp, nil
@@ -633,7 +635,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
 	logger.Trace("[udp] handlePacket", "name", packet.name(), "packet", packet)
 	err = packet.handle(t, from, fromID, hash)
-	// TODO-Klaytn Count Error UDP Packets
+	// TODO-Kaia Count Error UDP Packets
 	udpPacketCounter.Inc(1)
 	return err
 }
@@ -733,7 +735,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		return errUnknownNode
 	}
 	target := crypto.Keccak256Hash(req.Target[:])
-	closest := t.RetrieveNodes(target, req.TargetType, bucketSize) // TODO-Klaytn-Node if NodeType is CN or PN, bucketSize is not a prefer variable.
+	closest := t.RetrieveNodes(target, req.TargetType, bucketSize) // TODO-Kaia-Node if NodeType is CN or PN, bucketSize is not a prefer variable.
 
 	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix()), TargetType: req.TargetType}
 	var sent bool

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -89,10 +91,10 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 
 	genesis := blockchain.DefaultGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
-	genesis.Config = params.CypressChainConfig.Copy()
+	genesis.Config = params.MainnetChainConfig.Copy()
 	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.UnitPrice = 25 * params.Ston
+	genesis.Config.UnitPrice = 25 * params.Gkei
 
 	chainConfig, _, err := blockchain.SetupGenesisBlock(db, genesis, params.UnusedNetworkId, false, false)
 	if _, ok := err.(*params.ConfigCompatError); err != nil && !ok {
@@ -149,9 +151,9 @@ func TestMainBridge_basic(t *testing.T) {
 	txPool := &blockchain.TxPool{}
 	compAPIs := []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   api.NewPublicKlayAPI(&cn.CNAPIBackend{}),
+			Service:   api.NewPublicKaiaAPI(&cn.CNAPIBackend{}),
 			Public:    true,
 		},
 	}
@@ -167,13 +169,13 @@ func TestMainBridge_basic(t *testing.T) {
 	// before modification: return type is nil
 	// after modification: return type is "nil, map[nil], map[nil], which equals to service{}"
 	// rpc.GetNullServices() returns service{}
-	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["klay"])
+	assert.Equal(t, rpc.GetNullServices(), mBridge.rpcServer.GetServices()["kaia"])
 
 	// Update and check MainBridge components
 	mBridge.SetComponents(comp)
 	assert.Equal(t, bc, mBridge.blockchain)
 	assert.Equal(t, txPool, mBridge.txPool)
-	assert.NotNil(t, mBridge.rpcServer.GetServices()["klay"])
+	assert.NotNil(t, mBridge.rpcServer.GetServices()["kaia"])
 
 	// Start MainBridge and stop later
 	if err := mBridge.Start(p2p.SingleChannelServer{}); err != nil {

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -41,9 +43,9 @@ func init() {
 	flag.BoolVar(&cpuprofile, "addtx_profile", false, "Enable cpu profiling for AddTx")
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 // BenchmarkAddTx
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 func BenchmarkAddTx(b *testing.B) {
 	cacheSender := []bool{false, true}
 	maxAccounts := []int{1000 + 100, 1000 + 1000, 1000 + 10000}
@@ -214,7 +216,7 @@ func makeTransactions(accountMap *AccountMap, fromAddrs []*common.Address, privK
 		}
 
 		var gasLimit uint64 = 1000000
-		gasPrice := new(big.Int).SetInt64(25 * params.Ston)
+		gasPrice := new(big.Int).SetInt64(25 * params.Gkei)
 		data := []byte{}
 
 		tx := types.NewTransaction(nonce, *toAddrs[i], txamount, gasLimit, gasPrice, data)

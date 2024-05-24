@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/config.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -42,11 +44,11 @@ import (
 
 var logger = log.NewModuleLogger(log.NodeCN)
 
-// GetDefaultConfig returns default settings for use on the Klaytn main net.
+// GetDefaultConfig returns default settings for use on the Kaia main net.
 func GetDefaultConfig() *Config {
 	return &Config{
 		SyncMode:             downloader.FullSync,
-		NetworkId:            params.CypressNetworkId,
+		NetworkId:            params.MainnetNetworkId,
 		LevelDBCacheSize:     768,
 		TrieCacheSize:        512,
 		TrieTimeout:          5 * time.Minute,
@@ -54,7 +56,7 @@ func GetDefaultConfig() *Config {
 		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
 		TriesInMemory:        blockchain.DefaultTriesInMemory,
 		LivePruningRetention: blockchain.DefaultLivePruningRetention,
-		GasPrice:             big.NewInt(18 * params.Ston),
+		GasPrice:             big.NewInt(18 * params.Gkei),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -62,6 +64,7 @@ func GetDefaultConfig() *Config {
 			Percentile:       60,
 			MaxHeaderHistory: 1024,
 			MaxBlockHistory:  1024,
+			MaxPrice:         big.NewInt(params.DefaultGPOMaxPrice),
 		},
 		WsEndpoint: "localhost:8546",
 
@@ -83,7 +86,7 @@ func init() {
 
 type Config struct {
 	// The genesis block, which is inserted if the database is empty.
-	// If nil, the Klaytn main net block is used.
+	// If nil, the Kaia main net block is used.
 	Genesis *blockchain.Genesis `toml:",omitempty"`
 
 	// Protocol options
@@ -168,7 +171,7 @@ type Config struct {
 	// Service Chain
 	NoAccountCreation bool
 
-	// use separate network different from baobab or cypress
+	// use separate network different from Testnet or Mainnet
 	IsPrivate bool
 
 	// Restart
@@ -183,7 +186,7 @@ type Config struct {
 	RPCEVMTimeout time.Duration
 
 	// RPCTxFeeCap is the global transaction fee(price * gaslimit) cap for
-	// send-transction variants. The unit is klay.
+	// send-transction variants. The unit is KAIA.
 	// This is used by eth namespace RPC APIs
 	RPCTxFeeCap float64
 

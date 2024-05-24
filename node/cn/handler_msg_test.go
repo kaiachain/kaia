@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -27,6 +29,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/klaytn/klaytn/governance"
 	"github.com/klaytn/klaytn/networks/p2p"
 	mocks2 "github.com/klaytn/klaytn/node/cn/mocks"
 	"github.com/klaytn/klaytn/params"
@@ -161,7 +164,7 @@ func TestNodeDataRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, NodeDataRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -177,7 +180,7 @@ func TestNodeDataRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendNodeData(returnedData).Return(nil).Times(1)
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -188,7 +191,7 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, ReceiptsRequestMsg, uint64(123)) // Non-list value to invoke an error
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -206,7 +209,7 @@ func TestHandleReceiptsRequestMsg(t *testing.T) {
 
 		mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
 
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 		mockCtrl.Finish()
 	}
@@ -253,7 +256,7 @@ func TestHandleTxMsg(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	txs := types.Transactions{tx1}
 	msg := generateMsg(t, TxMsg, txs)
@@ -281,7 +284,7 @@ func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controll
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	return mockCtrl, mockPeer, mockBlockChain, &ProtocolManager{blockchain: mockBlockChain}
 }
@@ -325,7 +328,7 @@ func TestHandleBlockHeaderFetchRequestMsg(t *testing.T) {
 func prepareTestHandleBlockHeaderFetchResponseMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks2.MockProtocolManagerFetcher, *ProtocolManager) {
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
 	pm := &ProtocolManager{fetcher: mockFetcher}
@@ -339,7 +342,7 @@ func TestHandleBlockHeaderFetchResponseMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, BlockHeaderFetchResponseMsg, newBlock(blockNum1)) // use message data as a block, not a header
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
@@ -371,7 +374,7 @@ func preparePeerAndDownloader(t *testing.T) (*gomock.Controller, *MockPeer, *moc
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
-	mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	pm := &ProtocolManager{downloader: mockDownloader}
@@ -384,7 +387,7 @@ func TestHandleReceiptMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, ReceiptsMsg, newBlock(blockNum1)) // use message data as a block, not a header
@@ -422,7 +425,7 @@ func TestHandleNodeDataMsg(t *testing.T) {
 	{
 		mockCtrl := gomock.NewController(t)
 		mockPeer := NewMockPeer(mockCtrl)
-		mockPeer.EXPECT().GetVersion().Return(klay63).AnyTimes()
+		mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 		pm := &ProtocolManager{}
 		msg := generateMsg(t, NodeDataMsg, newBlock(blockNum1)) // use message data as a block, not a node data
 		assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg))
@@ -516,6 +519,50 @@ func TestHandleStakingInfoRequestMsg(t *testing.T) {
 		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(int64(5))}).Times(1) // not on staking block
 		data, _ := rlp.EncodeToBytes(testStakingInfo)
 		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq([]rlp.RawValue{data})).Return(nil).Times(1)
+
+		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleStakingInfoRequestMsgAfterKaia(t *testing.T) {
+	testChainConfig := params.TestChainConfig
+
+	// Setup governance items for testing
+	orig := reward.GetStakingManager()
+	defer reward.SetTestStakingManager(orig)
+
+	kaiaHFBlock := uint64(5)
+	testBlock := uint64(4)
+	testKaiaBlock := uint64(6) // It needs staking info at block 5, not 4.
+	testStakingInfo := newStakingInfo(testBlock)
+	testStakingInfoKaia := newStakingInfo(kaiaHFBlock)
+	params.SetStakingUpdateInterval(testBlock)
+
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		testChainConfig.Istanbul = &params.IstanbulConfig{ProposerPolicy: uint64(istanbul.WeightedRandom)}
+		testChainConfig.KaiaCompatibleBlock = big.NewInt(int64(kaiaHFBlock))
+		pm.chainconfig = testChainConfig
+
+		reward.SetTestStakingManagerWithChain(mockBlockChain, governance.NewGovernance(pm.chainconfig, nil), nil)
+		reward.AddTestStakingInfoToCache(testStakingInfo)
+		reward.AddTestStakingInfoToCache(testStakingInfoKaia)
+
+		msg := generateMsg(t, StakingInfoRequestMsg, requestedHashes)
+
+		mockBlockChain.EXPECT().Config().Return(pm.chainconfig).AnyTimes()
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[0])).Return(&types.Header{Number: big.NewInt(int64(testBlock))}).Times(1)
+		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(int64(testKaiaBlock))}).Times(1) // not on staking block
+
+		dataBeforeKaia, _ := rlp.EncodeToBytes(testStakingInfo)
+		dataAfterKaia, _ := rlp.EncodeToBytes(testStakingInfoKaia)
+		data := append([]rlp.RawValue{dataBeforeKaia}, dataAfterKaia)
+
+		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq(data)).Return(nil).Times(1)
 
 		err := handleStakingInfoRequestMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -32,7 +34,7 @@ var ErrShouldBeSingleSignature = errors.New("the number of signatures should be 
 
 // TxSignatures is a slice of TxSignature. It is created to support multi-sig accounts.
 // Note that this structure also processes txs having a single signature.
-// TODO-Klaytn-Accounts: replace TxSignature with TxSignatures to all newly implemented tx types.
+// TODO-Kaia-Accounts: replace TxSignature with TxSignatures to all newly implemented tx types.
 type TxSignatures []*TxSignature
 
 func NewTxSignatures() TxSignatures {
@@ -77,7 +79,7 @@ func (t TxSignatures) ChainId() *big.Int {
 		logger.CritWithStack("should not be called if no entries exist", err)
 	}
 
-	// TODO-Klaytn-Multisig: Find a way to handle multiple V values here.
+	// TODO-Kaia-Multisig: Find a way to handle multiple V values here.
 	return txSig.ChainId()
 }
 

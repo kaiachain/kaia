@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package log
 
@@ -29,7 +31,7 @@ const StatsReportLimit = 10 * time.Second
 type ModuleID int
 
 // When printID is true, log prints ModuleID instead of ModuleName.
-// TODO-Klaytn This can be controlled by runtime configuration.
+// TODO-Kaia This can be controlled by runtime configuration.
 var printID = true
 
 func GetModuleName(mi ModuleID) string {
@@ -53,7 +55,7 @@ func (mi ModuleID) String() string {
 	return moduleNames[mi]
 }
 
-// NOTE-Klaytn-Log Please add module in lexicographical order.
+// NOTE-Kaia-Log Please add module in lexicographical order.
 const (
 	// 0
 	BaseLogger ModuleID = iota
@@ -75,7 +77,7 @@ const (
 	CMDKCN
 	CMDKEN
 	CMDKGEN
-	CMDKlay
+	CMDKaia
 	CMDKPN
 	CMDKSCN
 	CMDUtils

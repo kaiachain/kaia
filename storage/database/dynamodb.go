@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 //
 // Database implementation of AWS DynamoDB.
 //
@@ -33,8 +35,6 @@ import (
 	"sync"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -43,6 +43,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/klaytn/klaytn/common/hexutil"
 	"github.com/klaytn/klaytn/log"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 )
@@ -99,15 +100,15 @@ type batchWriteWorkerInput struct {
 	wg        *sync.WaitGroup
 }
 
-// TODO-Klaytn refactor the structure : there are common configs that are placed separated
+// TODO-Kaia refactor the structure : there are common configs that are placed separated
 type dynamoDB struct {
 	config DynamoDBConfig
 	fdb    fileDB     // where over size items are stored
 	logger log.Logger // Contextual logger tracking the database path
 
 	// metrics
-	getTimer klaytnmetrics.HybridTimer
-	putTimer klaytnmetrics.HybridTimer
+	getTimer kaiametrics.HybridTimer
+	putTimer kaiametrics.HybridTimer
 }
 
 type DynamoData struct {
@@ -118,7 +119,7 @@ type DynamoData struct {
 // CustomRetryer wraps AWS SDK's built in DefaultRetryer adding additional custom features.
 // DefaultRetryer of AWS SDK has its own standard of retryable situation,
 // but it's not proper when network environment is not stable.
-// CustomRetryer conservatively retry in all error cases because DB failure of Klaytn is critical.
+// CustomRetryer conservatively retry in all error cases because DB failure of Kaia is critical.
 type CustomRetryer struct {
 	client.DefaultRetryer
 }
@@ -134,8 +135,9 @@ func (r CustomRetryer) ShouldRetry(req *request.Request) bool {
 //
 // If you use this config, you will be charged for what you use.
 // You need to set AWS credentials to access to dynamoDB.
-//    $ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-//    $ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+//
+//	$ export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+//	$ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
 func GetDefaultDynamoDBConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "ap-northeast-2",
@@ -441,8 +443,8 @@ func (dynamo *dynamoDB) Close() {
 }
 
 func (dynamo *dynamoDB) Meter(prefix string) {
-	dynamo.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
-	dynamo.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	dynamo.getTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	dynamo.putTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
 	dynamoBatchWriteTimeMeter = metrics.NewRegisteredMeter(prefix+"batchwrite/time", nil)
 }
 
@@ -451,7 +453,7 @@ func (dynamo *dynamoDB) TryCatchUpWithPrimary() error {
 }
 
 func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
-	// TODO-Klaytn: implement this later.
+	// TODO-Kaia: implement this later.
 	return nil
 }
 

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/blockchain.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -49,7 +51,7 @@ import (
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/fork"
 	"github.com/klaytn/klaytn/log"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/rlp"
 	"github.com/klaytn/klaytn/storage/database"
@@ -62,29 +64,29 @@ import (
 const insertTimeLimit = common.PrettyDuration(time.Second)
 
 var (
-	accountReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/reads", nil)
-	accountHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/account/hashes", nil)
-	accountUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/updates", nil)
-	accountCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/account/commits", nil)
+	accountReadTimer   = kaiametrics.NewRegisteredHybridTimer("state/account/reads", nil)
+	accountHashTimer   = kaiametrics.NewRegisteredHybridTimer("state/account/hashes", nil)
+	accountUpdateTimer = kaiametrics.NewRegisteredHybridTimer("state/account/updates", nil)
+	accountCommitTimer = kaiametrics.NewRegisteredHybridTimer("state/account/commits", nil)
 
-	storageReadTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/reads", nil)
-	storageHashTimer   = klaytnmetrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
-	storageUpdateTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/updates", nil)
-	storageCommitTimer = klaytnmetrics.NewRegisteredHybridTimer("state/storage/commits", nil)
+	storageReadTimer   = kaiametrics.NewRegisteredHybridTimer("state/storage/reads", nil)
+	storageHashTimer   = kaiametrics.NewRegisteredHybridTimer("state/storage/hashes", nil)
+	storageUpdateTimer = kaiametrics.NewRegisteredHybridTimer("state/storage/updates", nil)
+	storageCommitTimer = kaiametrics.NewRegisteredHybridTimer("state/storage/commits", nil)
 
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("state/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("state/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("state/snapshot/commits", nil)
 
 	blockBaseFee        = metrics.NewRegisteredGauge("chain/basefee", nil)
-	blockInsertTimer    = klaytnmetrics.NewRegisteredHybridTimer("chain/inserts", nil)
-	blockProcessTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/process", nil)
-	blockExecutionTimer = klaytnmetrics.NewRegisteredHybridTimer("chain/execution", nil)
-	blockFinalizeTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/finalize", nil)
-	blockValidateTimer  = klaytnmetrics.NewRegisteredHybridTimer("chain/validate", nil)
-	blockAgeTimer       = klaytnmetrics.NewRegisteredHybridTimer("chain/age", nil)
+	blockInsertTimer    = kaiametrics.NewRegisteredHybridTimer("chain/inserts", nil)
+	blockProcessTimer   = kaiametrics.NewRegisteredHybridTimer("chain/process", nil)
+	blockExecutionTimer = kaiametrics.NewRegisteredHybridTimer("chain/execution", nil)
+	blockFinalizeTimer  = kaiametrics.NewRegisteredHybridTimer("chain/finalize", nil)
+	blockValidateTimer  = kaiametrics.NewRegisteredHybridTimer("chain/validate", nil)
+	blockAgeTimer       = kaiametrics.NewRegisteredHybridTimer("chain/age", nil)
 
-	blockPrefetchExecuteTimer   = klaytnmetrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
+	blockPrefetchExecuteTimer   = kaiametrics.NewRegisteredHybridTimer("chain/prefetch/executes", nil)
 	blockPrefetchInterruptMeter = metrics.NewRegisteredMeter("chain/prefetch/interrupts", nil)
 
 	ErrNoGenesis            = errors.New("genesis not found in chain")
@@ -96,7 +98,7 @@ var (
 )
 
 // Below is the list of the constants for cache size.
-// TODO-Klaytn: Below should be handled by ini or other configurations.
+// TODO-Kaia: Below should be handled by ini or other configurations.
 const (
 	maxFutureBlocks     = 256
 	maxTimeFutureBlocks = 30
@@ -195,7 +197,7 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
-	parallelDBWrite bool // TODO-Klaytn-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
+	parallelDBWrite bool // TODO-Kaia-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
 	// State migration
 	prepareStateMigration bool
@@ -222,7 +224,7 @@ type prefetchTx struct {
 }
 
 // NewBlockChain returns a fully initialised block chain using information
-// available in the database. It initialises the default Klaytn validator and
+// available in the database. It initialises the default Kaia validator and
 // Processor.
 func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
@@ -625,7 +627,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		if params.IsCheckpointInterval(num) {
 			bc.db.DeleteIstanbulSnapshot(hash)
 		}
-		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && params.IsStakingUpdateInterval(num) {
+		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && !bc.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(num)) && params.IsStakingUpdateInterval(num) {
 			bc.db.DeleteStakingInfo(num)
 		}
 	}
@@ -1244,7 +1246,7 @@ func (bc *BlockChain) InsertReceiptChain(blockChain types.Blocks, receiptChain [
 		start = time.Now()
 		bytes = 0
 
-		// TODO-Klaytn Needs to roll back if any one of batches fails
+		// TODO-Kaia Needs to roll back if any one of batches fails
 		bodyBatch            = bc.db.NewBatch(database.BodyDB)
 		receiptsBatch        = bc.db.NewBatch(database.ReceiptsDB)
 		txLookupEntriesBatch = bc.db.NewBatch(database.TxLookUpEntryDB)
@@ -1385,7 +1387,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 		trieDBPreimagesSizeGauge.Update(int64(preimagesSize))
 
 		if nodesSize > nodesSizeLimit || preimagesSize > 4*1024*1024 {
-			// NOTE-Klaytn Not to change the original behavior, error is not returned.
+			// NOTE-Kaia Not to change the original behavior, error is not returned.
 			// Error should be returned if it is thought to be safe in the future.
 			if err := trieDB.Cap(nodesSizeLimit - database.IdealBatchSize); err != nil {
 				logger.Error("Error from trieDB.Cap", "err", err, "limit", nodesSizeLimit-database.IdealBatchSize)
@@ -1598,7 +1600,7 @@ func (bc *BlockChain) writeBlockLogsToRemoteCache(blockLogsKey []byte, receipts 
 		logger.Error("rlp encoding error", "err", err)
 		return
 	}
-	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	// TODO-Kaia-KES: refine this not to use trieNodeCache
 	cache, ok := bc.stateCache.TrieDB().TrieNodeCache().(*statedb.HybridCache)
 	if !ok {
 		logger.Error("only HybridCache supports block logs writing",
@@ -1699,7 +1701,7 @@ func (bc *BlockChain) writeBlockWithStateParallel(block *types.Block, receipts [
 	parallelDBWriteWG := sync.WaitGroup{}
 	parallelDBWriteErrCh := make(chan error, 2)
 	// Irrelevant of the canonical status, write the block itself to the database
-	// TODO-Klaytn-Storage Implementing worker pool pattern instead of generating goroutines every time.
+	// TODO-Kaia-Storage Implementing worker pool pattern instead of generating goroutines every time.
 	parallelDBWriteWG.Add(4)
 	go func() {
 		defer parallelDBWriteWG.Done()
@@ -2099,7 +2101,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
 
 			if block.Header().BaseFee != nil {
-				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Ston))
+				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Gkei))
 			}
 			blockProcessTimer.Update(time.Duration(processTxsTime))
 			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
@@ -2205,13 +2207,13 @@ func (bc *BlockChain) sendKESSubscriptionData(block *types.Block) {
 	bc.chainFeed.Send(ChainEvent{
 		Block: block,
 		Hash:  block.Hash(),
-		// TODO-Klaytn-KES: fill the following data if needed
+		// TODO-Kaia-KES: fill the following data if needed
 		Receipts:         types.Receipts{},
 		Logs:             []*types.Log{},
 		InternalTxTraces: []*vm.InternalTxTrace{},
 	})
 
-	// TODO-Klaytn-KES: refine this not to use trieNodeCache
+	// TODO-Kaia-KES: refine this not to use trieNodeCache
 	logKey := append(kesCachePrefixBlockLogs, block.Number().Bytes()...)
 	encodedLogs := bc.stateCache.TrieDB().TrieNodeCache().Get(logKey)
 	if encodedLogs == nil {
@@ -2302,7 +2304,7 @@ func (bc *BlockChain) CurrentBlockUpdateLoop(pool *TxPool) {
 			bc.replaceCurrentBlock(block)
 			pool.lockedReset(oldHead, bc.CurrentHeader())
 
-			// TODO-Klaytn-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
+			// TODO-Kaia-RocksDB: update logic for subscription API. check BlockSubscriptionLoop method.
 		case <-bc.quit:
 			logger.Info("Closed current block update loop")
 			return
@@ -2728,7 +2730,7 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, vmConfig *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error) {
-	// TODO-Klaytn We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
+	// TODO-Kaia We reject transactions with unexpected gasPrice and do not put the transaction into TxPool.
 	//         And we run transactions regardless of gasPrice if we push transactions in the TxPool.
 	/*
 		// istanbul BFT
@@ -2750,7 +2752,7 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	}
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
-	txContext := NewEVMTxContext(msg, header)
+	txContext := NewEVMTxContext(msg, header, chainConfig)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
@@ -2803,7 +2805,7 @@ func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 func CheckBlockChainVersion(chainDB database.DBManager) error {
 	bcVersion := chainDB.ReadDatabaseVersion()
 	if bcVersion != nil && *bcVersion > BlockChainVersion {
-		return fmt.Errorf("database version is v%d, Klaytn %s only supports v%d", *bcVersion, params.Version, BlockChainVersion)
+		return fmt.Errorf("database version is v%d, Kaia %s only supports v%d", *bcVersion, params.Version, BlockChainVersion)
 	} else if bcVersion == nil || *bcVersion < BlockChainVersion {
 		bcVersionStr := "N/A"
 		if bcVersion != nil {

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -22,7 +24,7 @@ import "testing"
 // This prohibits the case that GetFeeRatio() is not implemented for TxTypeFeeDelegatedWithRatio types.
 func TestFeeRatioCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
-		if i == TxTypeKlaytnLast {
+		if i == TxTypeKaiaLast {
 			i = TxTypeEthereumAccessList
 		}
 
@@ -39,7 +41,7 @@ func TestFeeRatioCheck(t *testing.T) {
 // This prohibits the case that GetFeePayer() is not implemented for TxTypeFeeDelegatedXXX types.
 func TestFeeDelegatedCheck(t *testing.T) {
 	for i := TxTypeLegacyTransaction; i < TxTypeEthereumLast; i++ {
-		if i == TxTypeKlaytnLast {
+		if i == TxTypeKaiaLast {
 			i = TxTypeEthereumAccessList
 		}
 

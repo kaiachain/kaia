@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package grpc
 
@@ -43,7 +45,7 @@ func TestGRPC(t *testing.T) {
 	addr := "127.0.0.1:4000"
 	handler := rpc.NewServer()
 
-	handler.RegisterName("klay", &APIgRPC{})
+	handler.RegisterName("kaia", &APIgRPC{})
 
 	listener := &Listener{Addr: addr}
 	listener.SetRPCServer(handler)
@@ -59,13 +61,13 @@ func TestGRPC(t *testing.T) {
 func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	kclient, _ := NewgKlaytnClient(addr)
+	kclient, _ := NewgKaiaClient(addr)
 	defer kclient.Close()
 
-	knclient, err := kclient.makeKlaytnClient(timeout)
+	knclient, err := kclient.makeKaiaClient(timeout)
 	assert.NoError(t, err)
 
-	request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
+	request, err := kclient.makeRPCRequest("kaia", "kaia_blockNumber", nil)
 	assert.NoError(t, err)
 
 	response, err := knclient.Call(kclient.ctx, request)
@@ -83,15 +85,15 @@ func testCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 func testBiCall(t *testing.T, addr string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	kclient, _ := NewgKlaytnClient(addr)
+	kclient, _ := NewgKaiaClient(addr)
 	defer kclient.Close()
 
-	knclient, err := kclient.makeKlaytnClient(timeout)
+	knclient, err := kclient.makeKaiaClient(timeout)
 	assert.NoError(t, err)
 
 	stream, _ := knclient.BiCall(kclient.ctx)
 	go kclient.handleBiCall(stream, func() (request *RPCRequest, e error) {
-		request, err := kclient.makeRPCRequest("klay", "klay_blockNumber", nil)
+		request, err := kclient.makeRPCRequest("kaia", "kaia_blockNumber", nil)
 		if assert.NoError(t, err) {
 			return request, err
 		}

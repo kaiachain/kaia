@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from event/subscription.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package event
 
@@ -28,7 +30,6 @@ import (
 	"github.com/klaytn/klaytn/common/mclock"
 )
 
-//go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/klaytn/klaytn/event Subscription
 // Subscription represents a stream of events. The carrier of the events is typically a
 // channel, but isn't part of the interface.
 //
@@ -43,6 +44,8 @@ import (
 // The Unsubscribe method cancels the sending of events. You must call Unsubscribe in all
 // cases to ensure that resources related to the subscription are released. It can be
 // called any number of times.
+//
+//go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/klaytn/klaytn/event Subscription
 type Subscription interface {
 	Err() <-chan error // returns the error channel
 	Unsubscribe()      // cancels sending of events, closing the error channel

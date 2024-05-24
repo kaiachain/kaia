@@ -41,25 +41,25 @@ var (
 		Aliases: []string{},
 	}
 
-	cypressTestFlag = &cli.BoolFlag{
-		Name:    "cypress-test",
-		Usage:   "Generate genesis.json similar to the one used for Cypress with shorter intervals for testing",
-		Aliases: []string{},
+	mainnetTestFlag = &cli.BoolFlag{
+		Name:    "mainnet-test",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet with shorter intervals for testing",
+		Aliases: []string{"cypress-test"}, // TODO: remove
 	}
-	cypressFlag = &cli.BoolFlag{
-		Name:    "cypress",
-		Usage:   "Generate genesis.json similar to the one used for Cypress",
-		Aliases: []string{},
+	mainnetFlag = &cli.BoolFlag{
+		Name:    "mainnet",
+		Usage:   "Generate genesis.json similar to the one used for Mainnet",
+		Aliases: []string{"cypress"}, // TODO: remove
 	}
-	baobabTestFlag = &cli.BoolFlag{
-		Name:    "baobab-test",
-		Usage:   "Generate genesis.json similar to the one used for Baobab with shorter intervals for testing",
-		Aliases: []string{},
+	testnetTestFlag = &cli.BoolFlag{
+		Name:    "testnet-test",
+		Usage:   "Generate genesis.json similar to the one used for Testnet with shorter intervals for testing",
+		Aliases: []string{"baobab-test"}, // TODO: remove
 	}
-	baobabFlag = &cli.BoolFlag{
-		Name:    "baobab",
-		Usage:   "Generate genesis.json similar to the one used for Baobab",
-		Aliases: []string{},
+	testnetFlag = &cli.BoolFlag{
+		Name:    "testnet",
+		Usage:   "Generate genesis.json similar to the one used for Testnet",
+		Aliases: []string{"baobab"}, // TODO: remove
 	}
 	serviceChainFlag = &cli.BoolFlag{
 		Name:    "servicechain",
@@ -128,19 +128,38 @@ var (
 
 	genesisTypeFlag = &cli.StringFlag{
 		Name:    "genesis-type",
-		Usage:   "Set the type of genesis.json to generate (cypress-test, cypress, baobab-test, baobab, clique, servicechain, servicechain-test, istanbul)",
+		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, testnet-test, testnet, clique, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
-	mnemonic = &cli.StringFlag{
+
+	mnemonicFlag = &cli.StringFlag{
 		Name:  "mnemonic",
 		Usage: "Use given mnemonic to derive node keys",
 		Value: "",
 	}
 
-	mnemonicPath = &cli.StringFlag{
+	mnemonicPathFlag = &cli.StringFlag{
 		Name:  "mnemonic-path",
 		Usage: "Use given path/coin to derive node keys (format: m/44'/60'/0'/0/). Effective only if --mnemonic is given",
 		Value: "eth",
+	}
+
+	cnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "cn-nodekey-dir",
+		Usage: "CN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	pnNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "pn-nodekey-dir",
+		Usage: "PN nodekey dir containing nodekey*",
+		Value: "",
+	}
+
+	enNodeKeyDirFlag = &cli.StringFlag{
+		Name:  "en-nodekey-dir",
+		Usage: "EN nodekey dir containing nodekey*",
+		Value: "",
 	}
 
 	chainIDFlag = &cli.Uint64Flag{
@@ -182,7 +201,7 @@ var (
 	fundingAddrFlag = &cli.StringFlag{
 		Name:    "funding-addr",
 		Value:   "",
-		Usage:   "Give initial fund to the given addr",
+		Usage:   "Give initial funds to the given comma-separated list of addresses",
 		Aliases: []string{"genesis.funding-addr"},
 	}
 
@@ -266,35 +285,35 @@ var (
 
 	rpcPortFlag = &cli.IntFlag{
 		Name:    "rpc-port",
-		Usage:   "klay.conf - Klaytn node's rpc port [default: 8551] ",
+		Usage:   "klay.conf - Kaia node's rpc port [default: 8551] ",
 		Value:   8551,
 		Aliases: []string{"deploy.rpc-port"},
 	}
 
 	wsPortFlag = &cli.IntFlag{
 		Name:    "ws-port",
-		Usage:   "klay.conf - Klaytn node's ws port [default: 8552]",
+		Usage:   "klay.conf - Kaia node's ws port [default: 8552]",
 		Value:   8552,
 		Aliases: []string{"deploy.ws-port"},
 	}
 
 	p2pPortFlag = &cli.IntFlag{
 		Name:    "p2p-port",
-		Usage:   "klay.conf - Klaytn node's p2p port [default: 32323]",
+		Usage:   "klay.conf - Kaia node's p2p port [default: 32323]",
 		Value:   32323,
 		Aliases: []string{"deploy.p2p-port"},
 	}
 
 	dataDirFlag = &cli.StringFlag{
 		Name:    "data-dir",
-		Usage:   "klay.conf - Klaytn node's data directory path [default : /var/klay/data]",
+		Usage:   "klay.conf - Kaia node's data directory path [default : /var/klay/data]",
 		Value:   "/var/klay/data",
 		Aliases: []string{"deploy.data-dir"},
 	}
 
 	logDirFlag = &cli.StringFlag{
 		Name:    "log-dir",
-		Usage:   "klay.conf - Klaytn node's log directory path [default : /var/klay/log]",
+		Usage:   "klay.conf - Kaia node's log directory path [default : /var/klay/log]",
 		Value:   "/var/klay/log",
 		Aliases: []string{"deploy.log-dir"},
 	}
@@ -493,6 +512,13 @@ var (
 		Aliases: []string{"genesis.hardfork.cancun-compatible-blocknumber"},
 	}
 
+	kaiaCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kaia-compatible-blocknumber",
+		Usage:   "kaiaCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kaia-compatible-blocknumber"},
+	}
+
 	// KIP103 hardfork is optional
 	kip103CompatibleBlockNumberFlag = &cli.Int64Flag{
 		Name:    "kip103-compatible-blocknumber",
@@ -505,6 +531,20 @@ var (
 		Name:    "kip103-contract-address",
 		Usage:   "kip103 contract address",
 		Aliases: []string{"genesis.hardfork.kip103-contract-address"},
+	}
+
+	// KIP160 hardfork is optional
+	kip160CompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "kip160-compatible-blocknumber",
+		Usage:   "kip160Compatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.kip160-compatible-blocknumber"},
+	}
+
+	kip160ContractAddressFlag = &cli.StringFlag{
+		Name:    "kip160-contract-address",
+		Usage:   "kip160 contract address",
+		Aliases: []string{"genesis.hardfork.kip160-contract-address"},
 	}
 
 	randaoCompatibleBlockNumberFlag = &cli.Int64Flag{

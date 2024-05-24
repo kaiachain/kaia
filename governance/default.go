@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package governance
 
@@ -501,7 +503,7 @@ func (gov *Governance) DB() database.DBManager {
 }
 
 func (g *Governance) GetEncodedVote(addr common.Address, number uint64) []byte {
-	// TODO-Klaytn-Governance Change this part to add all votes to the header at once
+	// TODO-Kaia-Governance Change this part to add all votes to the header at once
 	for key, val := range g.voteMap.Copy() {
 		if val.Casted == false {
 			vote := new(GovernanceVote)
@@ -1048,16 +1050,12 @@ func (gov *Governance) WriteGovernanceState(num uint64, isCheckpoint bool) error
 		logger.Error("Error in marshaling governance state", "err", err)
 		return err
 	} else {
-		if err = gov.db.WriteGovernanceState(b); err != nil {
-			logger.Error("Error in writing governance state", "err", err)
-			return err
-		} else {
-			if isCheckpoint {
-				atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
-			}
-			logger.Info("Successfully stored governance state", "num", num)
-			return nil
+		gov.db.WriteGovernanceState(b)
+		if isCheckpoint {
+			atomic.StoreUint64(&gov.lastGovernanceStateBlock, num)
 		}
+		logger.Info("Successfully stored governance state", "num", num)
+		return nil
 	}
 }
 
@@ -1101,7 +1099,7 @@ func GetGovernanceItemsFromChainConfig(config *params.ChainConfig) GovernanceSet
 		}
 	}
 
-	// original cypress params
+	// original Mainnet params
 	if config.Governance != nil {
 		governance := config.Governance
 		governanceMap := map[int]interface{}{
@@ -1244,7 +1242,7 @@ func (gov *Governance) CurrentParams() *params.GovParamSet {
 
 // EffectiveParams returns the parameter set used for generating the block `num`
 func (gov *Governance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	// TODO-Klaytn: Either handle epoch change, or permanently forbid epoch change.
+	// TODO-Kaia: Either handle epoch change, or permanently forbid epoch change.
 	epoch := gov.epochWithFallback()
 
 	bignum := new(big.Int).SetUint64(num)

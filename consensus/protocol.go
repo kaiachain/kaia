@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/protocol.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package consensus
 
@@ -28,15 +30,15 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	Klay62 = 62
-	Klay63 = 63
-	Klay64 = 64
-	Klay65 = 65
+	Kaia62 = 62
+	Kaia63 = 63
+	Kaia64 = 64
+	Kaia65 = 65
 )
 
-var KlayProtocol = Protocol{
-	Name:     "klay",
-	Versions: []uint{Klay65, Klay64, Klay63, Klay62},
+var KaiaProtocol = Protocol{
+	Name:     "kaia",
+	Versions: []uint{Kaia65, Kaia64, Kaia63, Kaia62},
 	Lengths:  []uint64{21, 19, 17, 8},
 }
 
@@ -44,7 +46,7 @@ var KlayProtocol = Protocol{
 type Protocol struct {
 	// Official short name of the protocol used during capability negotiation.
 	Name string
-	// Supported versions of the klaytn protocol (first is primary).
+	// Supported versions of the Kaia protocol (first is primary).
 	Versions []uint
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64

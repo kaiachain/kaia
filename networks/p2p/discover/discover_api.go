@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package discover
 
@@ -59,7 +61,7 @@ func (tab *Table) GetReplacements() []*Node {
 	tab.storagesMu.RLock()
 	defer tab.storagesMu.RUnlock()
 	for _, bs := range tab.storages {
-		if _, ok := bs.(*KademliaStorage); ok { // TODO-Klaytn-Node Are there any change SimpleStorage use this method?
+		if _, ok := bs.(*KademliaStorage); ok { // TODO-Kaia-Node Are there any change SimpleStorage use this method?
 			ret = append(ret, bs.(*KademliaStorage).getReplacements()...)
 		}
 	}

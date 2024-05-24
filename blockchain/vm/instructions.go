@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/vm/instructions.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package vm
 
@@ -409,7 +411,7 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 //     zero or emptyCodeHash.
 //
 // It is worth noting that in order to avoid unnecessary create and clean, all precompile
-// accounts on mainnet have been transferred 1 wei, so the return here should be
+// accounts on mainnet have been transferred 1 kei, so the return here should be
 // emptyCodeHash. If the precompile account is not transferred any amount on a private or
 // customized chain, the return value will be zero.
 //

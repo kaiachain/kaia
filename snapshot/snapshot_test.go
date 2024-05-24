@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2021 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state/snapshot/snapshot_test.go (2021/10/21).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package snapshot
 
@@ -194,6 +196,9 @@ func TestDiskLayerExternalInvalidationPartialFlatten(t *testing.T) {
 // be returned with junk data. This version of the test retains the bottom diff
 // layer to check the usual mode of operation where the accumulator is retained.
 func TestDiffLayerExternalInvalidationPartialFlatten(t *testing.T) {
+	// Un-commenting this triggers the bloom set to be deterministic. The values below
+	// were used to trigger the flaw described in https://github.com/ethereum/go-ethereum/issues/27254.
+	// bloomDestructHasherOffset, bloomAccountHasherOffset, bloomStorageHasherOffset = 14, 24, 5
 	// Create an empty base layer and a snapshot tree out of it
 	base := &diskLayer{
 		diskdb: database.NewMemoryDBManager(),

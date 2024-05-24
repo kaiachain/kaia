@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -66,7 +68,7 @@ func WaitMined(tx *types.Transaction, backend bind.DeployBackend, t *testing.T) 
 	return nil
 }
 
-// TransferSignedTx sends the transaction to transfer KLAY from auth to `to` and waits the execution of the transaction.
+// TransferSignedTx sends the transaction to transfer KAIA from auth to `to` and waits the execution of the transaction.
 func TransferSignedTx(auth *bind.TransactOpts, backend *backends.SimulatedBackend, to common.Address, value *big.Int, t *testing.T) (common.Hash, *big.Int, error) {
 	ctx := context.Background()
 
@@ -132,7 +134,7 @@ func TestBridgeDeployWithKLAY(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -167,7 +169,7 @@ func TestBridgeRequestValueTransferNonce(t *testing.T) {
 	testAccKey, _ := crypto.GenerateKey()
 	testAcc := bind.NewKeyedTransactor(testAccKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -205,7 +207,7 @@ loop:
 			}
 			expectedNonce++
 
-			// TODO-Klaytn added more request token/NFT transfer cases,
+			// TODO-Kaia added more request token/NFT transfer cases,
 			RequestKLAYTransfer(b, bridgeAccount, testAcc.From, 1, t)
 			backend.Commit()
 
@@ -233,7 +235,7 @@ func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
 	testAccKey, _ := crypto.GenerateKey()
 	testAcc := bind.NewKeyedTransactor(testAccKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -326,7 +328,7 @@ func TestBridgePublicVariables(t *testing.T) {
 	bridgeAccountKey, _ := crypto.GenerateKey()
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -395,7 +397,7 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -541,7 +543,7 @@ func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
 	bobKey, _ := crypto.GenerateKey()
 	bobAcc := bind.NewKeyedTransactor(bobKey)
 
-	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 	defer backend.Close()
 
@@ -710,7 +712,7 @@ func generateBridgeTokenTestEnv(t *testing.T) *bridgeTokenTestENV {
 	tester := bind.NewKeyedTransactor(testKey)
 	tester.GasLimit = DefaultBridgeTxGasLimit
 
-	alloc := blockchain.GenesisAlloc{operator.From: {Balance: big.NewInt(params.KLAY)}, tester.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{operator.From: {Balance: big.NewInt(params.KAIA)}, tester.From: {Balance: big.NewInt(params.KAIA)}}
 	backend := backends.NewSimulatedBackend(alloc)
 
 	// Deploy Bridge
@@ -1166,8 +1168,8 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		alice.From: {Balance: big.NewInt(params.KLAY)},
-		auth.From:  {Balance: big.NewInt(params.KLAY)},
+		alice.From: {Balance: big.NewInt(params.KAIA)},
+		auth.From:  {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1267,8 +1269,8 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		alice.From: {Balance: big.NewInt(params.KLAY)},
-		auth.From:  {Balance: big.NewInt(params.KLAY)},
+		alice.From: {Balance: big.NewInt(params.KAIA)},
+		auth.From:  {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()
@@ -1350,7 +1352,7 @@ func TestBridgeThresholdLimit(t *testing.T) {
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
-		auth.From: {Balance: big.NewInt(params.KLAY)},
+		auth.From: {Balance: big.NewInt(params.KAIA)},
 	}
 	sim := backends.NewSimulatedBackend(alloc)
 	defer sim.Close()

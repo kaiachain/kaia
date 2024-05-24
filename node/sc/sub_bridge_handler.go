@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -68,7 +70,7 @@ type SubBridgeHandler struct {
 	txCountStartingBlockNumber    uint64
 	txCount                       uint64 // accumulated tx counts in blocks for each anchoring period.
 
-	// TODO-Klaytn-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
+	// TODO-Kaia-ServiceChain Need to limit the number independently? Or just managing the size of sentServiceChainTxs?
 	sentServiceChainTxsLimit uint64
 
 	skipSyncBlockCount int32
@@ -308,7 +310,7 @@ func (sbh *SubBridgeHandler) handleParentChainInfoResponseMsg(p BridgePeer, msg 
 // handleParentChainReceiptResponseMsg handles receipt response message from parent chain.
 // It will store the received receipts and remove corresponding transaction in the resending list.
 func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, msg p2p.Msg) error {
-	// TODO-Klaytn-ServiceChain Need to add an option, not to write receipts.
+	// TODO-Kaia-ServiceChain Need to add an option, not to write receipts.
 	// Decode the retrieval message
 	var receipts []*types.ReceiptForStorage
 	if err := msg.Decode(&receipts); err != nil && err != rlp.EOL {
@@ -334,7 +336,7 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:        sbh.getParentOperatorNonce(), // parent chain operator nonce will be increased after signing a transaction.
 		types.TxValueKeyFrom:         *sbh.GetParentOperatorAddr(),
-		types.TxValueKeyGasLimit:     uint64(100000), // TODO-Klaytn-ServiceChain should define proper gas limit
+		types.TxValueKeyGasLimit:     uint64(100000), // TODO-Kaia-ServiceChain should define proper gas limit
 		types.TxValueKeyGasPrice:     new(big.Int).SetUint64(sbh.remoteGasPrice),
 		types.TxValueKeyAnchoredData: encodedCCTxData,
 	}
@@ -356,7 +358,7 @@ func (sbh *SubBridgeHandler) genUnsignedChainDataAnchoringTx(block *types.Block)
 // LocalChainHeadEvent deals with servicechain feature to generate/broadcast service chain transactions and request receipts.
 func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	if sbh.getParentOperatorNonceSynced() {
-		// TODO-Klaytn if other feature use below chainTx, this condition should be refactored to use it for other feature.
+		// TODO-Kaia if other feature use below chainTx, this condition should be refactored to use it for other feature.
 		if sbh.subbridge.GetAnchoringTx() {
 			sbh.blockAnchoringManager(block)
 		}
@@ -367,7 +369,7 @@ func (sbh *SubBridgeHandler) LocalChainHeadEvent(block *types.Block) {
 	} else {
 		sbh.txCountStartingBlockNumber = 0
 		if sbh.skipSyncBlockCount%SyncRequestInterval == 0 {
-			// TODO-Klaytn too many request while sync main-net
+			// TODO-Kaia too many request while sync main-net
 			sbh.SyncNonceAndGasPrice()
 			// check tx's receipts which parent-chain already executed in BridgeTxPool
 			go sbh.broadcastServiceChainReceiptRequest()
@@ -416,7 +418,7 @@ func (sbh *SubBridgeHandler) broadcastServiceChainTx() {
 	if parentChainID == nil {
 		logger.Error("unexpected nil parentChainID while broadcastServiceChainTx")
 	}
-	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
+	txs := sbh.subbridge.GetBridgeTxPool().PendingTxsByAddress(&sbh.subbridge.bridgeAccounts.pAccount.address, int(sbh.GetSentChainTxsLimit())) // TODO-Kaia-Servicechain change GetSentChainTxsLimit type to int from uint64
 	peers := sbh.subbridge.BridgePeerSet().peers
 
 	for _, peer := range peers {
@@ -449,7 +451,7 @@ func (sbh *SubBridgeHandler) writeServiceChainTxReceipts(bc *blockchain.BlockCha
 				sbh.WriteReceiptFromParentChain(decodedData.GetBlockHash(), (*types.Receipt)(receipt))
 				sbh.WriteAnchoredBlockNumber(decodedData.GetBlockNumber().Uint64())
 			}
-			// TODO-Klaytn-ServiceChain: support other tx types if needed.
+			// TODO-Kaia-ServiceChain: support other tx types if needed.
 			sbh.subbridge.GetBridgeTxPool().RemoveTx(tx)
 		} else {
 			logger.Trace("received service chain transaction receipt does not exist in sentServiceChainTxs", "txHash", txHash.String())
@@ -472,7 +474,7 @@ func (sbh *SubBridgeHandler) RegisterNewPeer(p BridgePeer) error {
 
 // broadcastServiceChainReceiptRequest broadcasts receipt requests for service chain transactions.
 func (sbh *SubBridgeHandler) broadcastServiceChainReceiptRequest() {
-	hashes := sbh.subbridge.GetBridgeTxPool().PendingTxHashesByAddress(sbh.GetParentOperatorAddr(), int(sbh.GetSentChainTxsLimit())) // TODO-Klaytn-Servicechain change GetSentChainTxsLimit type to int from uint64
+	hashes := sbh.subbridge.GetBridgeTxPool().PendingTxHashesByAddress(sbh.GetParentOperatorAddr(), int(sbh.GetSentChainTxsLimit())) // TODO-Kaia-Servicechain change GetSentChainTxsLimit type to int from uint64
 	for _, peer := range sbh.subbridge.BridgePeerSet().peers {
 		peer.SendServiceChainReceiptRequest(hashes)
 		logger.Debug("sent ServiceChainReceiptRequest", "peerID", peer.GetID(), "numReceiptsRequested", len(hashes))

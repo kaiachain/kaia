@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -201,7 +203,7 @@ func InitializeBridgeAccountKeystore(keystorePath string) (*keystore.KeyStore, c
 	ks := keystore.NewKeyStore(keystorePath, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	// If there is no keystore file, this creates a random account and the corresponded password file.
-	// TODO-Klaytn-Servicechain A test-option will be added and this routine will be only executed with it.
+	// TODO-Kaia-Servicechain A test-option will be added and this routine will be only executed with it.
 	if len(ks.Accounts()) == 0 {
 		password := setup.RandStringRunes(params.PasswordLength)
 		acc, err := ks.NewAccount(password)

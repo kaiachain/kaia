@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package core
 
 import (
@@ -484,7 +499,7 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn: To enable logging in the test code, we can use the following function.
+// TODO-Kaia: To enable logging in the test code, we can use the following function.
 // This function will be moved to somewhere utility functions are located.
 func enableLog() {
 	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"

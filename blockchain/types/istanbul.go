@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/types/istanbul.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -46,7 +48,7 @@ type IstanbulExtra struct {
 	CommittedSeal [][]byte
 }
 
-// EncodeRLP serializes the istanbul fields into the Klaytn RLP format.
+// EncodeRLP serializes the istanbul fields into the Kaia RLP format.
 func (ist *IstanbulExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/utils/cmd.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package utils
 
@@ -214,7 +216,7 @@ func ExportAppendChain(blockchain *blockchain.BlockChain, fn string, first uint6
 	return nil
 }
 
-// TODO-Klaytn Commented out due to mismatched interface.
+// TODO-Kaia Commented out due to mismatched interface.
 //// ImportPreimages imports a batch of exported hash preimages into the database.
 //func ImportPreimages(db *database.LevelDB, fn string) error {
 //	logger.Info("Importing preimages", "file", fn)

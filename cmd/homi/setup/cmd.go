@@ -63,10 +63,10 @@ type GrafanaFile struct {
 var HomiFlags = []cli.Flag{
 	homiYamlFlag,
 	altsrc.NewStringFlag(genTypeFlag),
-	altsrc.NewBoolFlag(cypressTestFlag),
-	altsrc.NewBoolFlag(cypressFlag),
-	altsrc.NewBoolFlag(baobabTestFlag),
-	altsrc.NewBoolFlag(baobabFlag),
+	altsrc.NewBoolFlag(mainnetTestFlag),
+	altsrc.NewBoolFlag(mainnetFlag),
+	altsrc.NewBoolFlag(testnetTestFlag),
+	altsrc.NewBoolFlag(testnetFlag),
 	altsrc.NewBoolFlag(serviceChainFlag),
 	altsrc.NewBoolFlag(serviceChainTestFlag),
 	altsrc.NewBoolFlag(cliqueFlag),
@@ -78,8 +78,11 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewIntFlag(numOfSPNsFlag),
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
-	altsrc.NewStringFlag(mnemonic),
-	altsrc.NewStringFlag(mnemonicPath),
+	altsrc.NewStringFlag(mnemonicFlag),
+	altsrc.NewStringFlag(mnemonicPathFlag),
+	altsrc.NewStringFlag(cnNodeKeyDirFlag),
+	altsrc.NewStringFlag(pnNodeKeyDirFlag),
+	altsrc.NewStringFlag(enNodeKeyDirFlag),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
 	altsrc.NewUint64Flag(unitPriceFlag),
@@ -127,6 +130,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(koreCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(shanghaiCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(cancunCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(kaiaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
@@ -138,14 +142,14 @@ var HomiFlags = []cli.Flag{
 
 var SetupCommand = &cli.Command{
 	Name:  "setup",
-	Usage: "Generate klaytn CN's init files",
+	Usage: "Generate Kaia CN's init files",
 	Description: `This tool helps generate:
 		* Genesis Block (genesis.json)
 		* Static nodes for all CNs(Consensus Node)
 		* CN details
 		* Docker-compose
 
-		for Klaytn Consensus Node.
+		for Kaia Consensus Node.
 
 Args :
 		type : [local | remote | deploy | docker (default)]
@@ -156,8 +160,8 @@ Args :
 }
 
 const (
-	baobabOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
-	baobabOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
+	testnetOperatorAddress = "0x79deccfacd0599d3166eb76972be7bb20f51b46f"
+	testnetOperatorKey     = "199fd187fdb2ce5f577797e1abaf4dd50e62275949c021f0112be40c9721e1a2"
 )
 
 const (
@@ -360,7 +364,7 @@ func genRewardKeystore(account accounts.Account, i int) {
 	os.Remove(account.URL.Path)
 }
 
-func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+func genMainnetCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -392,13 +396,13 @@ func genCypressCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.
 	return genesisJson
 }
 
-func genCypressGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genCypressCommonGenesis(nodeAddrs, testAddrs)
+func genMainnetGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genMainnetCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithCypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithMainnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
@@ -440,18 +444,18 @@ func genServiceChainTestGenesis(nodeAddrs, testAddrs []common.Address) *blockcha
 	return genesisJson
 }
 
-func genCypressTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genCypressCommonGenesis(nodeAddrs, testAddrs)
+func genMainnetTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genMainnetCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithPrecypressContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPremainnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
 	return testGenesis
 }
 
-func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+func genTestnetCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
 	genesisJson := &blockchain.Genesis{
 		Timestamp:  uint64(time.Now().Unix()),
@@ -483,27 +487,27 @@ func genBaobabCommonGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.G
 	return genesisJson
 }
 
-func genBaobabGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	genesisJson := genBaobabCommonGenesis(nodeAddrs, testAddrs)
+func genTestnetGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	genesisJson := genTestnetCommonGenesis(nodeAddrs, testAddrs)
 	genesisJson.Config.Istanbul.Epoch = 604800
 	genesisJson.Config.Governance.Reward.StakingUpdateInterval = 86400
 	genesisJson.Config.Governance.Reward.ProposerUpdateInterval = 3600
 	genesisJson.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithBaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithTestnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(genesisJson)
 	return genesisJson
 }
 
-func genBaobabTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
-	testGenesis := genBaobabCommonGenesis(nodeAddrs, testAddrs)
+func genTestnetTestGenesis(nodeAddrs, testAddrs []common.Address) *blockchain.Genesis {
+	testGenesis := genTestnetCommonGenesis(nodeAddrs, testAddrs)
 	testGenesis.Config.Istanbul.Epoch = 30
 	testGenesis.Config.Governance.Reward.StakingUpdateInterval = 60
 	testGenesis.Config.Governance.Reward.ProposerUpdateInterval = 30
 	testGenesis.Config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(5000000)
-	allocationFunction := genesis.AllocWithPrebaobabContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
+	allocationFunction := genesis.AllocWithPretestnetContract(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil))
 	allocationFunction(testGenesis)
-	WriteFile([]byte(baobabOperatorAddress), "baobab_operator", "address")
-	WriteFile([]byte(baobabOperatorKey), "baobab_operator", "private")
+	WriteFile([]byte(testnetOperatorAddress), "baobab_operator", "address")
+	WriteFile([]byte(testnetOperatorKey), "baobab_operator", "private")
 	return testGenesis
 }
 
@@ -513,12 +517,15 @@ func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 		return
 	}
 
-	if !common.IsHexAddress(fundingAddr) {
-		log.Fatalf("'%s' is not a valid hex address", fundingAddr)
-	}
-	addr := common.HexToAddress(fundingAddr)
 	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
-	genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+	for _, item := range strings.Split(fundingAddr, ",") {
+		if !common.IsHexAddress(item) {
+			log.Fatalf("'%s' is not a valid hex address", item)
+		}
+
+		addr := common.HexToAddress(item)
+		genesisJson.Alloc[addr] = blockchain.GenesisAccount{Balance: balance}
+	}
 }
 
 func patchGenesisAddressBook(ctx *cli.Context, genesisJson *blockchain.Genesis, nodeAddrs []common.Address) {
@@ -608,7 +615,7 @@ func allocateKip113(ctx *cli.Context, genesisJson *blockchain.Genesis, init syst
 	allocStorage := system.MergeStorage(allocProxyStorage, allocKip113Storage)
 	allocLogicStorage := system.AllocKip113Logic()
 
-	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, allocStorage, allocLogicStorage)
+	allocationFunction := genesis.AllocateKip113(kip113ProxyAddr, kip113LogicAddr, init.Owner, allocStorage, allocLogicStorage)
 	allocationFunction(genesisJson)
 
 	return &kip113ProxyAddr, &kip113LogicAddr
@@ -647,27 +654,27 @@ func Gen(ctx *cli.Context) error {
 	spnNum := ctx.Int(numOfSPNsFlag.Name)
 	senNum := ctx.Int(numOfSENsFlag.Name)
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
-	baobab := ctx.Bool(baobabFlag.Name)
-	baobabTest := ctx.Bool(baobabTestFlag.Name)
-	cypress := ctx.Bool(cypressFlag.Name)
-	cypressTest := ctx.Bool(cypressTestFlag.Name)
+	testnet := ctx.Bool(testnetFlag.Name)
+	testnetTest := ctx.Bool(testnetTestFlag.Name)
+	mainnet := ctx.Bool(mainnetFlag.Name)
+	mainnetTest := ctx.Bool(mainnetTestFlag.Name)
 	clique := ctx.Bool(cliqueFlag.Name)
 	serviceChain := ctx.Bool(serviceChainFlag.Name)
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
-	// Note-klaytn : the following code that seems unnecessary is for the priority to flags, not yaml
-	if !baobab && !baobabTest && !cypress && !cypressTest && !serviceChain && !serviceChainTest && !clique {
+	// NOTE-Kaia : the following code that seems unnecessary is for the priority to flags, not yaml
+	if !testnet && !testnetTest && !mainnet && !mainnetTest && !serviceChain && !serviceChainTest && !clique {
 		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
-		case "baobab":
-			baobab = true
-		case "baobab-test":
-			baobabTest = true
-		case "cypress":
-			cypress = true
-		case "cypress-test":
-			cypressTest = true
+		case "testnet":
+			testnet = true
+		case "testnet-test":
+			testnetTest = true
+		case "mainnet":
+			mainnet = true
+		case "mainnet-test":
+			mainnetTest = true
 		case "servicechain":
 			serviceChain = true
 		case "servicechain-test":
@@ -696,16 +703,18 @@ func Gen(ctx *cli.Context) error {
 		nodeAddrs []common.Address
 	)
 
-	if len(ctx.String(mnemonic.Name)) == 0 {
-		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
-	} else {
-		mnemonic := ctx.String(mnemonic.Name)
+	if keydir := ctx.String(cnNodeKeyDirFlag.Name); len(keydir) > 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+		if len(nodeKeys) != cnNum {
+			log.Fatalf("The number of nodekey files (%d) does not match the given CN num (%d)", len(nodeKeys), cnNum)
+		}
+	} else if mnemonic := ctx.String(mnemonicFlag.Name); len(mnemonic) > 0 {
 		mnemonic = strings.ReplaceAll(mnemonic, ",", " ")
 		// common keys used by web3 tools such as hardhat, foundry, etc.
 		if mnemonic == "test junk" {
 			mnemonic = "test test test test test test test test test test test junk"
 		}
-		path := strings.ToLower(ctx.String(mnemonicPath.Name))
+		path := strings.ToLower(ctx.String(mnemonicPathFlag.Name))
 		if !strings.HasPrefix(path, "m") {
 			switch path {
 			case "klay":
@@ -717,6 +726,8 @@ func Gen(ctx *cli.Context) error {
 			}
 		}
 		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeysFromMnemonic(cnNum, mnemonic, path)
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(cnNum)
 	}
 
 	testPrivKeys, testKeys, testAddrs := istcommon.GenerateKeys(numTestAccs)
@@ -730,14 +741,14 @@ func Gen(ctx *cli.Context) error {
 	validatorNodeAddrs := make([]common.Address, numValidators)
 	copy(validatorNodeAddrs, nodeAddrs[:numValidators])
 
-	if cypressTest {
-		genesisJson = genCypressTestGenesis(validatorNodeAddrs, testAddrs)
-	} else if cypress {
-		genesisJson = genCypressGenesis(validatorNodeAddrs, testAddrs)
-	} else if baobabTest {
-		genesisJson = genBaobabTestGenesis(validatorNodeAddrs, testAddrs)
-	} else if baobab {
-		genesisJson = genBaobabGenesis(validatorNodeAddrs, testAddrs)
+	if mainnetTest {
+		genesisJson = genMainnetTestGenesis(validatorNodeAddrs, testAddrs)
+	} else if mainnet {
+		genesisJson = genMainnetGenesis(validatorNodeAddrs, testAddrs)
+	} else if testnetTest {
+		genesisJson = genTestnetTestGenesis(validatorNodeAddrs, testAddrs)
+	} else if testnet {
+		genesisJson = genTestnetGenesis(validatorNodeAddrs, testAddrs)
 	} else if clique {
 		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
@@ -748,6 +759,7 @@ func Gen(ctx *cli.Context) error {
 		genesisJson = genIstanbulGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	}
 
+	genesisJson.Config.ChainID = new(big.Int).SetUint64(chainid)
 	allocGenesisFund(ctx, genesisJson)
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
@@ -765,10 +777,13 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.KoreCompatibleBlock = big.NewInt(ctx.Int64(koreCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.ShanghaiCompatibleBlock = big.NewInt(ctx.Int64(shanghaiCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.CancunCompatibleBlock = big.NewInt(ctx.Int64(cancunCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.KaiaCompatibleBlock = big.NewInt(ctx.Int64(kaiaCompatibleBlockNumberFlag.Name))
 
 	// KIP103 hardfork is optional
 	genesisJson.Config.Kip103CompatibleBlock = big.NewInt(ctx.Int64(kip103CompatibleBlockNumberFlag.Name))
 	genesisJson.Config.Kip103ContractAddress = common.HexToAddress(ctx.String(kip103ContractAddressFlag.Name))
+	genesisJson.Config.Kip160CompatibleBlock = big.NewInt(ctx.Int64(kip160CompatibleBlockNumberFlag.Name))
+	genesisJson.Config.Kip160ContractAddress = common.HexToAddress(ctx.String(kip160ContractAddressFlag.Name))
 
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 
@@ -779,12 +794,12 @@ func Gen(ctx *cli.Context) error {
 	switch genType {
 	case TypeDocker:
 		validators := makeValidators(cnNum, false, nodeAddrs, nodeKeys, privKeys)
-		pnValidators, proxyNodeKeys := makeProxys(pnNum, false)
+		pnValidators, proxyNodeKeys := makeProxys(ctx, pnNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
 		pnInfos := filterNodeInfo(pnValidators)
-		enValidators, enKeys := makeEndpoints(enNum, false)
+		enValidators, enKeys := makeEndpoints(ctx, enNum, false)
 		enInfos := filterNodeInfo(enValidators)
 
 		scnValidators, scnKeys := makeSCNs(scnNum, false)
@@ -849,18 +864,18 @@ func Gen(ctx *cli.Context) error {
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
-		writeNodeFiles(true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeRemote:
-		writeNodeFiles(false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeDeploy:
 		writeCNInfoKey(cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
-		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
+		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "CN")
-		writeKlayConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
+		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "PN")
 		writePNInfoKey(ctx.Int(numOfPNsFlag.Name))
 		writePrometheusConfig(cnNum, ctx.Int(numOfPNsFlag.Name))
@@ -919,8 +934,8 @@ func writePNInfoKey(num int) {
 	}
 }
 
-func writeKlayConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
-	kConfig := NewKlaytnConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
+func writeKaiaConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
+	kConfig := NewKaiaConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
 	WriteFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
 }
 
@@ -929,7 +944,7 @@ func writePrometheusConfig(cnNum int, pnNum int) {
 	WriteFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
 }
 
-func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
+func writeNodeFiles(ctx *cli.Context, isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
 	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte,
 ) {
 	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
@@ -941,7 +956,7 @@ func writeNodeFiles(isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []comm
 	WriteFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
 
 	if pnum > 0 {
-		proxys, proxyNodeKeys := makeProxys(pnum, isWorkOnSingleHost)
+		proxys, proxyNodeKeys := makeProxys(ctx, pnum, isWorkOnSingleHost)
 		pNodeInfos := filterNodeInfo(proxys)
 		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
 		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
@@ -1040,8 +1055,22 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 	return validators
 }
 
-func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	keydir := ctx.String(pnNodeKeyDirFlag.Name)
+	if len(keydir) > 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+		if len(nodeKeys) != num {
+			log.Fatalf("The number of nodekey files (%d) does not match the given PN num (%d)", len(nodeKeys), num)
+		}
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(num)
+	}
 
 	var p2pPort uint16
 	var proxies []*ValidatorInfo
@@ -1071,8 +1100,22 @@ func makeProxys(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	return proxies, proxyNodeKeys
 }
 
-func makeEndpoints(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
+func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
+	var (
+		privKeys  []*ecdsa.PrivateKey
+		nodeKeys  []string
+		nodeAddrs []common.Address
+	)
+
+	keydir := ctx.String(enNodeKeyDirFlag.Name)
+	if len(keydir) > 0 {
+		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
+		if len(nodeKeys) != num {
+			log.Fatalf("The number of nodekey files (%d) does not match the given EN num (%d)", len(nodeKeys), num)
+		}
+	} else {
+		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(num)
+	}
 
 	var p2pPort uint16
 	var endpoints []*ValidatorInfo
@@ -1237,7 +1280,7 @@ func WriteFile(content []byte, parentFolder string, fileName string) {
 }
 
 func indexGenType(genTypeFlag string, base string) int {
-	// NOTE-Klaytn: genTypeFlag's default value is docker
+	// NOTE-Kaia: genTypeFlag's default value is docker
 	if base != "" && genTypeFlag == "" {
 		genTypeFlag = base
 	}

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/geth/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package nodecmd
 
@@ -40,10 +42,10 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// runKlaytnNode is the main entry point into the system if no special subcommand is ran.
+// runKaiaNode is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
-func RunKlaytnNode(ctx *cli.Context) error {
+func RunKaiaNode(ctx *cli.Context) error {
 	fullNode := MakeFullNode(ctx)
 	startNode(ctx, fullNode)
 	fullNode.Wait()
@@ -133,7 +135,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	if utils.NetworkTypeFlag.Value == utils.SCNNetworkType && utils.ServiceChainConsensusFlag.Value == "clique" {
 		logger.Crit("using clique consensus type is not allowed anymore!")
 	} else {
-		startKlaytnAuxiliaryService(ctx, stack)
+		startKaiaAuxiliaryService(ctx, stack)
 	}
 
 	// Unlock any account specifically requested
@@ -148,13 +150,13 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	}
 }
 
-func startKlaytnAuxiliaryService(ctx *cli.Context, stack *node.Node) {
+func startKaiaAuxiliaryService(ctx *cli.Context, stack *node.Node) {
 	var cn *cn.CN
 	if err := stack.Service(&cn); err != nil {
-		log.Fatalf("Klaytn service not running: %v", err)
+		log.Fatalf("Kaia service not running: %v", err)
 	}
 
-	// TODO-Klaytn-NodeCmd disable accept tx before finishing sync.
+	// TODO-Kaia-NodeCmd disable accept tx before finishing sync.
 	if err := cn.StartMining(false); err != nil {
 		log.Fatalf("Failed to start mining: %v", err)
 	}
@@ -240,11 +242,11 @@ var migrationApplied = map[*cli.Command]struct{}{}
 //
 // Example:
 //
-//    ken account new --keystore /tmp/mykeystore --lightkdf
+//	ken account new --keystore /tmp/mykeystore --lightkdf
 //
 // is equivalent after calling this method with:
 //
-//    ken --keystore /tmp/mykeystore --lightkdf account new
+//	ken --keystore /tmp/mykeystore --lightkdf account new
 //
 // i.e. in the subcommand Action function of 'account new', ctx.Bool("lightkdf)
 // will return true even if --lightkdf is set as a global option.

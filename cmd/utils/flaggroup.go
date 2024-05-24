@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package utils
 
@@ -31,7 +33,7 @@ type FlagGroup struct {
 	Flags []cli.Flag
 }
 
-// TODO-Klaytn: consider changing the type of FlagGroups to map
+// TODO-Kaia: consider changing the type of FlagGroups to map
 // FlagGroups categorizes flags into groups to print structured help.
 var FlagGroups = []FlagGroup{
 	{
@@ -244,8 +246,8 @@ var FlagGroups = []FlagGroup{
 			NodeKeyFileFlag,
 			NodeKeyHexFlag,
 			NetworkIdFlag,
-			BaobabFlag,
-			CypressFlag,
+			TestnetFlag,
+			MainnetFlag,
 		},
 	},
 	{
@@ -338,6 +340,14 @@ var FlagGroups = []FlagGroup{
 			KASServiceChainSecretKeyFlag,
 			KASServiceChainXChainIdFlag,
 			KASServiceChainAnchorRequestTimeoutFlag,
+		},
+	},
+	{
+		Name: "GAS PRICE ORACLE",
+		Flags: []cli.Flag{
+			GpoBlocksFlag,
+			GpoPercentileFlag,
+			GpoMaxGasPriceFlag,
 		},
 	},
 	{

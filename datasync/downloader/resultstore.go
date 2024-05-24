@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2020 The klaytn Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/downloader/resultstore.go (2020/07/24).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
@@ -75,11 +77,12 @@ func (r *resultStore) SetThrottleThreshold(threshold uint64) uint64 {
 // wants to reserve headers for fetching.
 //
 // It returns the following:
-//   stale     - if true, this item is already passed, and should not be requested again
-//   throttled - if true, the store is at capacity, this particular header is not prior now
-//   item      - the result to store data into
-//   err       - any error that occurred
-func (r *resultStore) AddFetch(header *types.Header, mode SyncMode, proposerPolicy uint64) (stale, throttled bool, item *fetchResult, err error) {
+//
+//	stale     - if true, this item is already passed, and should not be requested again
+//	throttled - if true, the store is at capacity, this particular header is not prior now
+//	item      - the result to store data into
+//	err       - any error that occurred
+func (r *resultStore) AddFetch(header *types.Header, mode SyncMode, proposerPolicy uint64, isKaiaFork bool) (stale, throttled bool, item *fetchResult, err error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -89,7 +92,7 @@ func (r *resultStore) AddFetch(header *types.Header, mode SyncMode, proposerPoli
 		return stale, throttled, item, err
 	}
 	if item == nil {
-		item = newFetchResult(header, mode, proposerPolicy)
+		item = newFetchResult(header, mode, proposerPolicy, isKaiaFork)
 		r.items[index] = item
 	}
 	return stale, throttled, item, err

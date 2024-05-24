@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/downloader/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
@@ -24,7 +26,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/networks/rpc"
 )
@@ -39,7 +41,7 @@ type PublicDownloaderAPI struct {
 }
 
 type downloader interface {
-	Progress() klaytn.SyncProgress
+	Progress() kaia.SyncProgress
 	SyncStakingInfo(id string, from, to uint64) error
 	SyncStakingInfoStatus() *SyncingStatus
 }
@@ -99,7 +101,7 @@ func (api *PublicDownloaderAPI) eventLoop() {
 	}
 }
 
-// Syncing provides information when this nodes starts synchronising with the Klaytn network and when it's finished.
+// Syncing provides information when this nodes starts synchronising with the Kaia network and when it's finished.
 func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
@@ -131,8 +133,8 @@ func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription,
 
 // SyncingResult provides information about the current synchronisation status for this node.
 type SyncingResult struct {
-	Syncing bool                `json:"syncing"`
-	Status  klaytn.SyncProgress `json:"status"`
+	Syncing bool              `json:"syncing"`
+	Status  kaia.SyncProgress `json:"status"`
 }
 
 // uninstallSyncSubscriptionRequest uninstalles a syncing subscription in the API event loop.

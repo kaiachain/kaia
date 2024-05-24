@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/backend/backend.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package backend
 
@@ -405,7 +407,7 @@ func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.Validat
 		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
 
-	// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
+	// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
 	return validator.NewValidatorSet(nil, nil,
 		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
 		sb.chain.Config().Istanbul.SubGroupSize,
@@ -416,7 +418,7 @@ func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.Valid
 	snap, err := sb.snapshot(sb.chain, number, hash, nil, false)
 	if err != nil {
 		logger.Error("Snapshot not found.", "err", err)
-		// TODO-Klaytn-Governance The following return case should not be called. Refactor it to error handling.
+		// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
 		return validator.NewValidatorSet(nil, nil,
 			istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
 			sb.chain.Config().Istanbul.SubGroupSize,

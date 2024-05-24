@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,32 +18,33 @@
 //
 // This file is derived from eth/downloader/metrics.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
 import (
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 
 var (
 	headerInMeter      = metrics.NewRegisteredMeter("klay/downloader/headers/in", nil)
-	headerReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/headers/req", nil)
+	headerReqTimer     = kaiametrics.NewRegisteredHybridTimer("klay/downloader/headers/req", nil)
 	headerDropMeter    = metrics.NewRegisteredMeter("klay/downloader/headers/drop", nil)
 	headerTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/headers/timeout", nil)
 
 	bodyInMeter      = metrics.NewRegisteredMeter("klay/downloader/bodies/in", nil)
-	bodyReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/bodies/req", nil)
+	bodyReqTimer     = kaiametrics.NewRegisteredHybridTimer("klay/downloader/bodies/req", nil)
 	bodyDropMeter    = metrics.NewRegisteredMeter("klay/downloader/bodies/drop", nil)
 	bodyTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/bodies/timeout", nil)
 
 	receiptInMeter      = metrics.NewRegisteredMeter("klay/downloader/receipts/in", nil)
-	receiptReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/receipts/req", nil)
+	receiptReqTimer     = kaiametrics.NewRegisteredHybridTimer("klay/downloader/receipts/req", nil)
 	receiptDropMeter    = metrics.NewRegisteredMeter("klay/downloader/receipts/drop", nil)
 	receiptTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/receipts/timeout", nil)
 
 	stakingInfoInMeter      = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/in", nil)
-	stakingInfoReqTimer     = klaytnmetrics.NewRegisteredHybridTimer("klay/downloader/stakinginfo/req", nil)
+	stakingInfoReqTimer     = kaiametrics.NewRegisteredHybridTimer("klay/downloader/stakinginfo/req", nil)
 	stakingInfoDropMeter    = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/drop", nil)
 	stakingInfoTimeoutMeter = metrics.NewRegisteredMeter("klay/downloader/stakinginfo/timeout", nil)
 

@@ -43,7 +43,7 @@ import (
 var (
 
 	// Files that end up in the klay*.zip archive.
-	klayArchiveFiles = []string{
+	kaiaArchiveFiles = []string{
 		"COPYING",
 		executablePath("klay"),
 	}
@@ -58,7 +58,7 @@ var (
 	debExecutables = []debExecutable{
 		{
 			Name:        "klay",
-			Description: "Klaytn CLI client.",
+			Description: "Kaia CLI client.",
 		},
 	}
 
@@ -139,7 +139,7 @@ func doInstall(cmdline []string) {
 
 		if minor < 9 {
 			log.Println("You have Go version", runtime.Version())
-			log.Println("klaytn requires at least Go version 1.9 and cannot")
+			log.Println("Kaia requires at least Go version 1.9 and cannot")
 			log.Println("be compiled with an earlier version. Please upgrade your Go installation.")
 			os.Exit(1)
 		}
@@ -216,7 +216,7 @@ func buildFlags(env build.Environment) (flags []string) {
 		// By default, cmd/link will use external linking mode when non-standard cgo packages are involved.
 		ld = append(ld, "-linkmode", "external", "-extldflags", "-static")
 	}
-	if env.IsKlaytnRaceDetectionOn {
+	if env.IsKaiaRaceDetectionOn {
 		flags = append(flags, "-race")
 	}
 	if len(ld) > 0 {
@@ -335,7 +335,7 @@ func doCover(cmdline []string) {
 
 	gotest.Args = append(gotest.Args, "-cover", "-covermode=atomic", "-coverprofile="+*outputFile)
 	gotest.Args = append(gotest.Args, "-coverpkg", coverPackagesString)
-	gotest.Args = append(gotest.Args, "--timeout=30m")
+	gotest.Args = append(gotest.Args, "--timeout=60m")
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
@@ -448,17 +448,17 @@ func doArchive(cmdline []string) {
 	var (
 		env      = build.Env()
 		base     = archiveBasename(*arch, env)
-		klaybin  = "klay-" + base + ext
+		kaiabin  = "klay-" + base + ext
 		alltools = "klay-alltools-" + base + ext
 	)
 	maybeSkipArchive(env)
-	if err := build.WriteArchive(klaybin, klayArchiveFiles); err != nil {
+	if err := build.WriteArchive(kaiabin, kaiaArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
 	if err := build.WriteArchive(alltools, allToolsArchiveFiles); err != nil {
 		log.Fatal(err)
 	}
-	for _, archive := range []string{klaybin, alltools} {
+	for _, archive := range []string{kaiabin, alltools} {
 		if err := archiveUpload(archive, *upload, *signer); err != nil {
 			log.Fatal(err)
 		}
@@ -587,7 +587,7 @@ func isUnstableBuild(env build.Environment) bool {
 type debMetadata struct {
 	Env build.Environment
 
-	// klaytn version being built. Note that this
+	// Kaia version being built. Note that this
 	// is not the debian package version. The package version
 	// is constructed by VersionString.
 	Version string
@@ -604,7 +604,7 @@ type debExecutable struct {
 func newDebMetadata(distro, author string, env build.Environment, t time.Time) debMetadata {
 	if author == "" {
 		// No signing key, use default author.
-		author = "Klaytn Builds <infra@groundx.xyz>"
+		author = "Kaia Builds <core.dev@kaia.io>"
 	}
 	return debMetadata{
 		Env:         env,
@@ -718,7 +718,7 @@ func doWindowsInstaller(cmdline []string) {
 	var (
 		devTools []string
 		allTools []string
-		klayTool string
+		kaiaTool string
 	)
 	for _, file := range allToolsArchiveFiles {
 		if file == "COPYING" { // license, copied later
@@ -726,17 +726,17 @@ func doWindowsInstaller(cmdline []string) {
 		}
 		allTools = append(allTools, filepath.Base(file))
 		if filepath.Base(file) == "klay.exe" {
-			klayTool = file
+			kaiaTool = file
 		} else {
 			devTools = append(devTools, file)
 		}
 	}
 
 	// Render NSIS scripts: Installer NSIS contains two installer sections,
-	// first section contains the klaytn binary, second section holds the dev tools.
+	// first section contains the Kaia binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Klay":     klayTool,
+		"Klay":     kaiaTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.klay.nsi", filepath.Join(*workdir, "klay.nsi"), 0o644, nil)

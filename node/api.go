@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from node/api.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package node
 
@@ -67,7 +69,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	if server == nil {
 		return false, ErrNodeStopped
 	}
-	// TODO-Klaytn Refactoring this to check whether the url is valid or not by dialing and return it.
+	// TODO-Kaia Refactoring this to check whether the url is valid or not by dialing and return it.
 	if _, err := addPeerInternal(server, url, false); err != nil {
 		return false, err
 	} else {
@@ -460,23 +462,23 @@ func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
 	return counters, nil
 }
 
-// PublicKlayAPI offers helper utils
-type PublicKlayAPI struct {
+// PublicKaiaAPI offers helper utils
+type PublicKaiaAPI struct {
 	stack *Node
 }
 
-// NewPublicKlayAPI creates a new Web3Service instance
-func NewPublicKlayAPI(stack *Node) *PublicKlayAPI {
-	return &PublicKlayAPI{stack}
+// NewPublicKaiaAPI creates a new Web3Service instance
+func NewPublicKaiaAPI(stack *Node) *PublicKaiaAPI {
+	return &PublicKaiaAPI{stack}
 }
 
 // ClientVersion returns the node name
-func (s *PublicKlayAPI) ClientVersion() string {
+func (s *PublicKaiaAPI) ClientVersion() string {
 	return s.stack.Server().Name()
 }
 
-// Sha3 applies the Klaytn sha3 implementation on the input.
+// Sha3 applies the Kaia sha3 implementation on the input.
 // It assumes the input is hex encoded.
-func (s *PublicKlayAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
+func (s *PublicKaiaAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)
 }

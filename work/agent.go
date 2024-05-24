@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from miner/agent.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package work
 
@@ -106,7 +108,7 @@ out:
 }
 
 func (self *CpuAgent) mine(work *Task, stop <-chan struct{}) {
-	// TODO-Klaytn drop or missing tx and remove mining on PN and EN
+	// TODO-Kaia drop or missing tx and remove mining on PN and EN
 	if self.nodetype != common.CONSENSUSNODE {
 		ResultChGauge.Update(ResultChGauge.Value() + 1)
 		self.returnCh <- &Result{work, nil}

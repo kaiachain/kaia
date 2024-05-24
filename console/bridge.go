@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from console/bridge.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package console
 
@@ -38,7 +40,7 @@ import (
 // bridge is a collection of JavaScript utility methods to bride the .js runtime
 // environment and the Go RPC connection backing the remote method calls.
 type bridge struct {
-	client   *rpc.Client  // RPC client to execute Klaytn requests through
+	client   *rpc.Client  // RPC client to execute Kaia requests through
 	prompter UserPrompter // Input prompter to allow interactive user feedback
 	printer  io.Writer    // Output writer to serialize any display strings to
 }
@@ -351,12 +353,12 @@ func (b *bridge) SleepBlocks(call jsre.Call) (goja.Value, error) {
 	// Poll the current block number until either it or a timeout is reached.
 	deadline := time.Now().Add(time.Duration(sleep) * time.Second)
 	var lastNumber hexutil.Uint64
-	if err := b.client.Call(&lastNumber, "klay_blockNumber"); err != nil {
+	if err := b.client.Call(&lastNumber, "kaia_blockNumber"); err != nil {
 		return nil, err
 	}
 	for time.Now().Before(deadline) {
 		var number hexutil.Uint64
-		if err := b.client.Call(&number, "klay_blockNumber"); err != nil {
+		if err := b.client.Call(&number, "kaia_blockNumber"); err != nil {
 			return nil, err
 		}
 		if number != lastNumber {

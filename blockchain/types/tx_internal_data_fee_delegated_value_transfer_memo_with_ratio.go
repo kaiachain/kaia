@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -33,7 +35,7 @@ import (
 	"github.com/klaytn/klaytn/rlp"
 )
 
-// TxInternalDataFeeDelegatedValueTransferMemoWithRatio represents a fee-delegated transaction transferring KLAY
+// TxInternalDataFeeDelegatedValueTransferMemoWithRatio represents a fee-delegated transaction transferring KAIA
 // with a specified fee ratio between the sender and the fee payer.
 // The ratio is a fee payer's ratio in percentage.
 // For example, if it is 20, 20% of tx fee will be paid by the fee payer.

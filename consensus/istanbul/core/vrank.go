@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package core
 
@@ -212,7 +214,7 @@ func assessBatch(ts []time.Duration, threshold time.Duration) []uint8 {
 
 // serialize serializes arrivalTime hashmap into array.
 // If committee is sorted, we can simply figure out the validator position in the output array
-// by sorting the output of `klay.getCommittee()`
+// by sorting the output of `kaia.getCommittee()`
 func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
 	sortedCommittee := make(istanbul.Validators, len(committee))
 	copy(sortedCommittee[:], committee[:])

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/core/handler.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package core
 
@@ -213,7 +215,7 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 }
 
 func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
-	// TODO-Klaytn-Istanbul: EN/PN should not handle consensus msgs.
+	// TODO-Kaia-Istanbul: EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
 		logger.Trace("PN/EN doesn't need to handle timeout messages",
 			"nodeType", c.backend.NodeType().String())

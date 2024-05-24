@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/discover/node.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package discover
 
@@ -138,9 +140,11 @@ func (n *Node) String() string {
 	return u.String()
 }
 
-// TODO-Klaytn-NodeDiscovery: Deprecate supporting "enode"
-var incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
-var lookupIPFunc = net.LookupIP
+// TODO-Kaia-NodeDiscovery: Deprecate supporting "enode"
+var (
+	incompleteNodeURL = regexp.MustCompile("(?i)^(?:kni://|enode://)?([0-9a-f]+)$")
+	lookupIPFunc      = net.LookupIP
+)
 
 // ParseNode parses a node designator.
 //
@@ -150,8 +154,8 @@ var lookupIPFunc = net.LookupIP
 //
 // For incomplete nodes, the designator must look like one of these
 //
-//    kni://<hex node id> or enode://<hex node id>
-//    <hex node id>
+//	kni://<hex node id> or enode://<hex node id>
+//	<hex node id>
 //
 // For complete nodes, the node ID is encoded in the username portion
 // of the URL, separated from the host by an @ sign. The hostname can
@@ -164,8 +168,8 @@ var lookupIPFunc = net.LookupIP
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
-//    kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
-//    enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
+//	kni://<hex node id>@10.3.58.6:30303?&subport=30304&discport=30301[&ntype=cn|pn|en|bn]
+//	enode://<hex node id>@10.3.58.6:30303?discport=30301[&ntype=cn|pn|en|bn]
 func ParseNode(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := HexID(m[1])

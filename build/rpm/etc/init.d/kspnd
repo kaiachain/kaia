@@ -3,7 +3,7 @@
 # kspnd         Startup script for the kspn
 #
 # chkconfig: - 85 15
-# description : kspnd is the Klaytn proxy node daemon
+# description : kspnd is the Kaia proxy node daemon
 #
 # processname: kspnd
 # config:  /etc/kspnd/conf/kspnd.conf
@@ -104,7 +104,7 @@ status_auto_restart_daemon() {
     fi
 }
 
-#------------------------Related to Klaytn node functions-----------------------------
+#------------------------Related to Kaia node functions-----------------------------
 
 if [[ ! -z $METRICS ]] && [[ $METRICS -eq 1 ]]; then
     OPTIONS="$OPTIONS --metrics"

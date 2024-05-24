@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/server.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package p2p
 
@@ -1572,15 +1574,15 @@ func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 	switch srv.ConnectionType {
 	case common.CONSENSUSNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_CN] = typedStatic{100, 3} // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		tsMap[DT_CN] = typedStatic{100, 3} // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
 	case common.PROXYNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
 	case common.ENDPOINTNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Klaytn-Node Change to literal to constant (maxNodeCount, MaxTry)
+		tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
 		return tsMap
 	case common.BOOTNODE:
 		return nil
@@ -1900,7 +1902,7 @@ func ConvertNodeType(ct common.ConnType) discover.NodeType {
 	case common.BOOTNODE:
 		return discover.NodeTypeBN
 	default:
-		return discover.NodeTypeUnknown // TODO-Klaytn-Node Maybe, call panic() func or Crit()
+		return discover.NodeTypeUnknown // TODO-Kaia-Node Maybe, call panic() func or Crit()
 	}
 }
 

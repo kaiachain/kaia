@@ -17,7 +17,7 @@
 package system
 
 /*
-Package system deals with system contracts in Klaytn.
+Package system deals with system contracts in Kaia.
 System contracts are smart contracts that affects the protocol.
 
 - Registry: Stores the canonical system contract addresses.

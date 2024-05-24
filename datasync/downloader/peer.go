@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/downloader/peer.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
@@ -74,7 +76,7 @@ type peerConnection struct {
 
 	peer Peer
 
-	version int        // Klaytn protocol version number to switch strategies
+	version int        // Kaia protocol version number to switch strategies
 	logger  log.Logger // Contextual logger to add extra infos to peer logs
 	lock    sync.RWMutex
 }
@@ -162,7 +164,7 @@ func (p *peerConnection) Reset() {
 func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 	// Sanity check the protocol version
 	if p.version < 62 {
-		panic(fmt.Sprintf("header fetch [klay/62+] requested on klay/%d", p.version))
+		panic(fmt.Sprintf("header fetch [kaia/62+] requested on kaia/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.headerIdle, 0, 1) {
@@ -180,7 +182,7 @@ func (p *peerConnection) FetchHeaders(from uint64, count int) error {
 func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 	// Sanity check the protocol version
 	if p.version < 62 {
-		panic(fmt.Sprintf("body fetch [klay/62+] requested on klay/%d", p.version))
+		panic(fmt.Sprintf("body fetch [kaia/62+] requested on kaia/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.blockIdle, 0, 1) {
@@ -202,7 +204,7 @@ func (p *peerConnection) FetchBodies(request *fetchRequest) error {
 func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 	// Sanity check the protocol version
 	if p.version < 63 {
-		panic(fmt.Sprintf("body fetch [klay/63+] requested on klay/%d", p.version))
+		panic(fmt.Sprintf("body fetch [kaia/63+] requested on kaia/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.receiptIdle, 0, 1) {
@@ -224,7 +226,7 @@ func (p *peerConnection) FetchReceipts(request *fetchRequest) error {
 func (p *peerConnection) FetchStakingInfo(request *fetchRequest) error {
 	// Sanity check the protocol version
 	if p.version < 65 {
-		panic(fmt.Sprintf("staking info fetch [klay/65+] requested on klay/%d", p.version))
+		panic(fmt.Sprintf("staking info fetch [kaia/65+] requested on kaia/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.stakingInfoIdle, 0, 1) {
@@ -246,7 +248,7 @@ func (p *peerConnection) FetchStakingInfo(request *fetchRequest) error {
 func (p *peerConnection) FetchNodeData(hashes []common.Hash) error {
 	// Sanity check the protocol version
 	if p.version < 63 {
-		panic(fmt.Sprintf("node data fetch [klay/63+] requested on klay/%d", p.version))
+		panic(fmt.Sprintf("node data fetch [kaia/63+] requested on kaia/%d", p.version))
 	}
 	// Short circuit if the peer is already fetching
 	if !atomic.CompareAndSwapInt32(&p.stateIdle, 0, 1) {
@@ -592,7 +594,7 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 	return ps.idlePeers(63, 65, idleCheck, throughput)
 }
 
-// TODO-Klaytn-Downloader when idlePeers is called magic numbers are used for minProtocol and maxProtocol. Use a constant instead.
+// TODO-Kaia-Downloader when idlePeers is called magic numbers are used for minProtocol and maxProtocol. Use a constant instead.
 // idlePeers retrieves a flat list of all currently idle peers satisfying the
 // protocol version constraints, using the provided function to check idleness.
 // The resulting set of peers are sorted by their measure throughput.

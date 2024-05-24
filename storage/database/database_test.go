@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from ethdb/database_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package database
 
@@ -38,7 +40,7 @@ import (
 )
 
 func newTestLDB() (Database, func(), string) {
-	dirName, err := os.MkdirTemp(os.TempDir(), "klay_leveldb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "kaia-test-leveldb-")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -54,7 +56,7 @@ func newTestLDB() (Database, func(), string) {
 }
 
 func newTestBadgerDB() (Database, func(), string) {
-	dirName, err := os.MkdirTemp(os.TempDir(), "klay_badgerdb_test_")
+	dirName, err := os.MkdirTemp(os.TempDir(), "kaia-test-badgerdb-")
 	if err != nil {
 		panic("failed to create test file: " + err.Error())
 	}
@@ -116,7 +118,7 @@ func TestDatabaseTestSuite(t *testing.T) {
 	// If you want to include dynamo test, use below line
 	// var testDatabases = []func() (Database, func()){newTestLDB, newTestBadgerDB, newTestMemDB, newTestDynamoS3DB}
 
-	// TODO-Klaytn-Database Need to add DynamoDB to the below list.
+	// TODO-Kaia-Database Need to add DynamoDB to the below list.
 	testDatabases = append(testDatabases, newTestLDB, newTestBadgerDB, newTestMemDB)
 	for _, newFn := range testDatabases {
 		suite.Run(t, &commonDatabaseTestSuite{newFn: newFn})

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from console/console.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package console
 
@@ -59,7 +61,7 @@ const DefaultPrompt = "> "
 type Config struct {
 	DataDir  string       // Data directory to store the console history at
 	DocRoot  string       // Filesystem path from where to load JavaScript files from
-	Client   *rpc.Client  // RPC client to execute Klaytn requests through
+	Client   *rpc.Client  // RPC client to execute Kaia requests through
 	Prompt   string       // Input prompt prefix string (defaults to DefaultPrompt)
 	Prompter UserPrompter // Input prompter to allow interactive user feedback (defaults to TerminalPrompter)
 	Printer  io.Writer    // Output writer to serialize any display strings to (defaults to os.Stdout)
@@ -70,7 +72,7 @@ type Config struct {
 // JavaScript console attached to a running node via an external or in-process RPC
 // client.
 type Console struct {
-	client   *rpc.Client  // RPC client to execute Klaytn requests through
+	client   *rpc.Client  // RPC client to execute Kaia requests through
 	jsre     *jsre.JSRE   // JavaScript runtime environment running the interpreter
 	prompt   string       // Input prompt prefix string
 	prompter UserPrompter // Input prompter to allow interactive user feedback
@@ -197,8 +199,8 @@ func (c *Console) initExtensions() error {
 		}
 	}
 
-	// Compute aliases from server-provided modules.
-	aliases := map[string]struct{}{"klay": {}, "eth": {}}
+	// Compute aliases from server-provided modules. (web3.kaia -> kaia)
+	aliases := map[string]struct{}{"kaia": {}, "klay": {}, "eth": {}}
 	for api := range apis {
 		if api == "web3" {
 			continue
@@ -295,7 +297,7 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 		return "", nil, ""
 	}
 	// Chunk data to relevant part for autocompletion
-	// E.g. in case of nested lines klay.getBalance(klay.coinb<tab><tab>
+	// E.g. in case of nested lines kaia.getBalance(kaia.coinb<tab><tab>
 	start := pos - 1
 	for ; start > 0; start-- {
 		// Skip all methods and namespaces (i.e. including the dot)
@@ -317,8 +319,8 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 // Welcome show summary of current node instance and some metadata about the
 // console's available modules.
 func (c *Console) Welcome() {
-	// Print some generic Klaytn metadata
-	fmt.Fprintf(c.printer, "Welcome to the Klaytn JavaScript console!\n\n")
+	// Print some generic Kaia metadata
+	fmt.Fprintf(c.printer, "Welcome to the Kaia JavaScript console!\n\n")
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
 		console.log(" datadir: " + admin.datadir);

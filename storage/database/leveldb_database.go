@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from ethdb/database.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package database
 
@@ -26,10 +28,9 @@ import (
 	"sync"
 	"time"
 
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
-
 	"github.com/klaytn/klaytn/common/fdlimit"
 	"github.com/klaytn/klaytn/log"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	metricutils "github.com/klaytn/klaytn/metrics/utils"
 	"github.com/rcrowley/go-metrics"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -76,7 +77,7 @@ func GetDefaultLevelDBOption() *opt.Options {
 }
 
 // GetOpenFilesLimit raises out the number of allowed file handles per process
-// for Klaytn and returns half of the allowance to assign to the database.
+// for Kaia and returns half of the allowance to assign to the database.
 func GetOpenFilesLimit() int {
 	limit, err := fdlimit.Current()
 	if err != nil {
@@ -103,12 +104,12 @@ type levelDB struct {
 	aliveSnapshotsMeter metrics.Meter // Meter for measuring the number of alive snapshots
 	aliveIteratorsMeter metrics.Meter // Meter for measuring the number of alive iterators
 
-	compTimer              klaytnmetrics.HybridTimer // Meter for measuring the total time spent in database compaction
-	compReadMeter          metrics.Meter             // Meter for measuring the data read during compaction
-	compWriteMeter         metrics.Meter             // Meter for measuring the data written during compaction
-	diskReadMeter          metrics.Meter             // Meter for measuring the effective amount of data read
-	diskWriteMeter         metrics.Meter             // Meter for measuring the effective amount of data written
-	blockCacheGauge        metrics.Gauge             // Gauge for measuring the current size of block cache
+	compTimer              kaiametrics.HybridTimer // Meter for measuring the total time spent in database compaction
+	compReadMeter          metrics.Meter           // Meter for measuring the data read during compaction
+	compWriteMeter         metrics.Meter           // Meter for measuring the data written during compaction
+	diskReadMeter          metrics.Meter           // Meter for measuring the effective amount of data read
+	diskWriteMeter         metrics.Meter           // Meter for measuring the effective amount of data written
+	blockCacheGauge        metrics.Gauge           // Gauge for measuring the current size of block cache
 	openedTablesCountMeter metrics.Meter
 	memCompGauge           metrics.Gauge // Gauge for tracking the number of memory compaction
 	level0CompGauge        metrics.Gauge // Gauge for tracking the number of table compaction in level0
@@ -122,9 +123,9 @@ type levelDB struct {
 	levelDurationsGauge []metrics.Gauge
 
 	perfCheck       bool
-	getTimer        klaytnmetrics.HybridTimer
-	putTimer        klaytnmetrics.HybridTimer
-	batchWriteTimer klaytnmetrics.HybridTimer
+	getTimer        kaiametrics.HybridTimer
+	putTimer        kaiametrics.HybridTimer
+	batchWriteTimer kaiametrics.HybridTimer
 
 	quitLock sync.Mutex      // Mutex protecting the quit channel access
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -228,7 +229,7 @@ func getCompressionType(ct LevelDBCompressionType, dbEntryType DBEntryType) opt.
 
 // NewLevelDBWithOption explicitly receives LevelDB option to construct a LevelDB object.
 func NewLevelDBWithOption(dbPath string, ldbOption *opt.Options) (*levelDB, error) {
-	// TODO-Klaytn-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
+	// TODO-Kaia-Database Replace `NewLevelDB` with `NewLevelDBWithOption`
 
 	localLogger := logger.NewWith("path", dbPath)
 
@@ -363,7 +364,7 @@ func (db *levelDB) Meter(prefix string) {
 	db.writeDelayDurationMeter = metrics.NewRegisteredMeter(prefix+"writedelay/duration", nil)
 	db.aliveSnapshotsMeter = metrics.NewRegisteredMeter(prefix+"snapshots", nil)
 	db.aliveIteratorsMeter = metrics.NewRegisteredMeter(prefix+"iterators", nil)
-	db.compTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"compaction/time", nil)
+	db.compTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"compaction/time", nil)
 	db.compReadMeter = metrics.NewRegisteredMeter(prefix+"compaction/read", nil)
 	db.compWriteMeter = metrics.NewRegisteredMeter(prefix+"compaction/write", nil)
 	db.diskReadMeter = metrics.NewRegisteredMeter(prefix+"disk/read", nil)
@@ -372,9 +373,9 @@ func (db *levelDB) Meter(prefix string) {
 
 	db.openedTablesCountMeter = metrics.NewRegisteredMeter(prefix+"opendedtables", nil)
 
-	db.getTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
-	db.putTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
-	db.batchWriteTimer = klaytnmetrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
+	db.getTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	db.putTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	db.batchWriteTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
 
 	db.memCompGauge = metrics.NewRegisteredGauge(prefix+"compact/memory", nil)
 	db.level0CompGauge = metrics.NewRegisteredGauge(prefix+"compact/level0", nil)
@@ -399,13 +400,14 @@ func (db *levelDB) Meter(prefix string) {
 // the metrics subsystem.
 //
 // This is how a stats table look like (currently):
-//   Compactions
-//    Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
-//   -------+------------+---------------+---------------+---------------+---------------
-//      0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
-//      1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
-//      2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
-//      3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
+//
+//	Compactions
+//	 Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
+//	-------+------------+---------------+---------------+---------------+---------------
+//	   0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
+//	   1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
+//	   2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
+//	   3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
 //
 // This is how the iostats look like (currently):
 // Read(MB):3895.04860 Write(MB):3654.64712

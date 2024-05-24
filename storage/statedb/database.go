@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from trie/database.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package statedb
 
@@ -169,7 +171,7 @@ func (n rawShortNode) lenEncoded() uint16        { panic("this should never end 
 // in the memory database write layer.
 type cachedNode struct {
 	node node // Cached collapsed trie node, or raw rlp data
-	// TODO-Klaytn: need to change data type of this if we increase the code size limit
+	// TODO-Kaia: need to change data type of this if we increase the code size limit
 	size uint16 // Byte size of the useful cached data
 
 	parents  uint64                    // Number of live nodes referencing this one

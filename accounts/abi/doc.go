@@ -19,28 +19,28 @@
 // Modified and improved for the klaytn development.
 
 /*
-Package abi implements the Klaytn ABI (Application Binary
+Package abi implements the Kaia ABI (Application Binary
 Interface).
 
-The Klaytn ABI is strongly typed, known at compile time
+The Kaia ABI is strongly typed, known at compile time
 and static. This ABI will handle basic type casting; unsigned
 to signed and visa versa. It does not handle slice casting such
 as unsigned slice to signed slice. Bit size type casting is also
 handled. ints with a bit size of 32 will be properly cast to int256,
 etc.
 
-Source Files
+# Source Files
 
 Each file provides the following features
- - abi.go	: Provides `ABI` struct which holds information about a contract's context and available invokable methods. It will allow you to type check function calls and packs data accordingly.
- - argument.go	: Provides `Argument` which holds the name of the argument and the corresponding type.
- - error.go	: Provides type check functions
- - event.go	: Provides `Event` struct which is an event potentially triggered by the EVM's LOG mechanism
- - method.go	: Provides `Method` struct which represents a callable given a `Name` and whether the method is a constant.
- - numbers.go	: Provides U256 function which converts a big Int into a 256 bit EVM number.
- - pack.go	: Provides functions which pack bytes slice, element and number
- - reflect.go	: Provides functions to map an ABI to a struct and detect the type and the kind of a field using reflection
- - type.go	: Provides `Type` struct which is the reflection of the supported argument type
- - unpack.go	: Provides functions which read values based on their kind
+  - abi.go	: Provides `ABI` struct which holds information about a contract's context and available invokable methods. It will allow you to type check function calls and packs data accordingly.
+  - argument.go	: Provides `Argument` which holds the name of the argument and the corresponding type.
+  - error.go	: Provides type check functions
+  - event.go	: Provides `Event` struct which is an event potentially triggered by the EVM's LOG mechanism
+  - method.go	: Provides `Method` struct which represents a callable given a `Name` and whether the method is a constant.
+  - numbers.go	: Provides U256 function which converts a big Int into a 256 bit EVM number.
+  - pack.go	: Provides functions which pack bytes slice, element and number
+  - reflect.go	: Provides functions to map an ABI to a struct and detect the type and the kind of a field using reflection
+  - type.go	: Provides `Type` struct which is the reflection of the supported argument type
+  - unpack.go	: Provides functions which read values based on their kind
 */
 package abi

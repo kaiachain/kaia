@@ -50,7 +50,7 @@ var internalDataTypes = map[types.TxType]interface{}{
 var (
 	testNonce         = hexutil.Uint64(0)
 	testGas           = hexutil.Uint64(900000)
-	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Ston))
+	testGasPrice      = (*hexutil.Big)(big.NewInt(25 * params.Gkei))
 	testValue         = (*hexutil.Big)(big.NewInt(1))
 	testTo            = common.StringToAddress("1234")
 	testFeePayer      = common.HexToAddress("0x819104a190255e0cedbdd9d5f59a557633d79db1")
@@ -71,7 +71,7 @@ func TestTxTypeSupport(t *testing.T) {
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
 
 	// generate a keystore and active accounts
-	dir, err := os.MkdirTemp("", "klay-keystore-test")
+	dir, err := os.MkdirTemp("", "kaia-test-tx-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +102,7 @@ func TestTxTypeSupport(t *testing.T) {
 	mockBackend.EXPECT().CurrentBlock().Return(
 		types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)}),
 	).AnyTimes()
+	mockBackend.EXPECT().SuggestTipCap(gomock.Any()).Return((*big.Int)(testGasPrice), nil).AnyTimes()
 	mockBackend.EXPECT().SuggestPrice(ctx).Return((*big.Int)(testGasPrice), nil).AnyTimes()
 	mockBackend.EXPECT().GetPoolNonce(ctx, gomock.Any()).Return(uint64(testNonce)).AnyTimes()
 	mockBackend.EXPECT().SendTx(ctx, gomock.Any()).Return(nil).AnyTimes()

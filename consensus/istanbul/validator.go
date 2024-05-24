@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/validator.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package istanbul
 
@@ -108,8 +110,11 @@ type ValidatorSet interface {
 
 	IsSubSet() bool
 
+	// Refreshes a list of validators at given blockNum
+	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
+
 	// Refreshes a list of candidate proposers with given hash and blockNum
-	Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
+	RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
 
 	SetBlockNum(blockNum uint64)
 	SetMixHash(mixHash []byte)

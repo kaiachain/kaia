@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/vm/evm.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package vm
 
@@ -94,9 +96,9 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 // it shouldn't be modified.
 type BlockContext struct {
 	// CanTransfer returns whether the account contains
-	// sufficient KLAY to transfer the value
+	// sufficient KAIA to transfer the value
 	CanTransfer CanTransferFunc
-	// Transfer transfers KLAY from one account to the other
+	// Transfer transfers KAIA from one account to the other
 	Transfer TransferFunc
 	// GetHash returns the hash corresponding to n
 	GetHash GetHashFunc
@@ -516,11 +518,11 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// Ensure there's no existing contract already at the designated address
 	contractHash := evm.StateDB.GetCodeHash(address)
 
-	// The early Klaytn design tried to support the account creation with a user selected address,
+	// The early Kaia design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.
 	// Because the feature was postponed for a long time and the restriction can be abused to prevent SCA creation,
-	// Klaytn enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
-	// NOTE: The following code should be re-considered when Klaytn enables TxTypeAccountCreation
+	// Kaia enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
+	// NOTE: The following code should be re-considered when Kaia enables TxTypeAccountCreation
 	if evm.chainRules.IsShanghai {
 		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
 			return nil, common.Address{}, 0, ErrContractAddressCollision
@@ -535,7 +537,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
-	// TODO-Klaytn-Accounts: for now, smart contract accounts cannot withdraw KLAYs via ValueTransfer
+	// TODO-Kaia-Accounts: for now, smart contract accounts cannot withdraw KAIA via ValueTransfer
 	//   because the account key is set to AccountKeyFail by default.
 	//   Need to make a decision of the key type.
 	evm.StateDB.CreateSmartContractAccountWithKey(address, humanReadable, accountkey.NewAccountKeyFail(), codeFormat, evm.chainRules)
@@ -576,8 +578,8 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 				// Then, `vmerr` will be used to make a receipt status using `getReceiptStatusFromVMerr()`.
 				// Since `getReceiptStatusFromVMerr()` uses a map to determine the receipt status,
 				// this `err` should be an error variable declared in vm/errors.go.
-				// TODO-Klaytn: Make a package of error variables containing all exported error variables.
-				// After the above TODO-Klaytn is resolved, we can return the error returned by `SetCode()` directly.
+				// TODO-Kaia: Make a package of error variables containing all exported error variables.
+				// After the above TODO-Kaia is resolved, we can return the error returned by `SetCode()` directly.
 				err = ErrFailedOnSetCode
 			}
 		} else {

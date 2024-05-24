@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/geth/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package utils
 
@@ -26,7 +28,7 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// TODO-Klaytn: Check whether all flags are registered in utils.FlagGroups
+// TODO-Kaia: Check whether all flags are registered in utils.FlagGroups
 
 func AllNodeFlags() []cli.Flag {
 	nodeFlags := []cli.Flag{}
@@ -268,6 +270,9 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewBoolFlag(SnapshotFlag),
 	altsrc.NewIntFlag(SnapshotCacheSizeFlag),
 	altsrc.NewBoolFlag(SnapshotAsyncGen),
+	altsrc.NewIntFlag(GpoBlocksFlag),
+	altsrc.NewIntFlag(GpoPercentileFlag),
+	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
 }
 
 // Common RPC flags
@@ -326,8 +331,8 @@ var BNFlags = []cli.Flag{
 
 var KCNFlags = []cli.Flag{
 	altsrc.NewStringFlag(RewardbaseFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 }
@@ -336,15 +341,15 @@ var KPNFlags = []cli.Flag{
 	altsrc.NewUint64Flag(TxResendIntervalFlag),
 	altsrc.NewIntFlag(TxResendCountFlag),
 	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
 }
 
 var KENFlags = []cli.Flag{
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
-	altsrc.NewBoolFlag(CypressFlag),
-	altsrc.NewBoolFlag(BaobabFlag),
+	altsrc.NewBoolFlag(MainnetFlag),
+	altsrc.NewBoolFlag(TestnetFlag),
 	altsrc.NewBoolFlag(ChildChainIndexingFlag),
 	altsrc.NewBoolFlag(MainBridgeFlag),
 	altsrc.NewIntFlag(MainBridgeListenPortFlag),

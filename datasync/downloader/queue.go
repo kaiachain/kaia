@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,12 +18,14 @@
 //
 // This file is derived from eth/downloader/queue.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package downloader
 
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,7 +34,7 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/prque"
 	"github.com/klaytn/klaytn/consensus/istanbul"
-	klaytnmetrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/klaytn/klaytn/metrics"
 	"github.com/klaytn/klaytn/params"
 	"github.com/klaytn/klaytn/reward"
 	"github.com/rcrowley/go-metrics"
@@ -58,8 +61,8 @@ var (
 // fetchRequest is a currently running data retrieval operation.
 type fetchRequest struct {
 	Peer    *peerConnection // Peer to which the request was sent
-	From    uint64          // [klay/62] Requested chain element index (used for skeleton fills only)
-	Headers []*types.Header // [klay/62] Requested headers, sorted by request order
+	From    uint64          // [kaia/62] Requested chain element index (used for skeleton fills only)
+	Headers []*types.Header // [kaia/62] Requested headers, sorted by request order
 	Time    time.Time       // Time when the request was made
 }
 
@@ -74,7 +77,7 @@ type fetchResult struct {
 	StakingInfo  *reward.StakingInfo
 }
 
-func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64) *fetchResult {
+func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, isKaiaFork bool) *fetchResult {
 	var (
 		fastSync = mode == FastSync
 		snapSync = mode == SnapSync
@@ -88,7 +91,7 @@ func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64) 
 	if (fastSync || snapSync) && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !isKaiaFork) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -131,28 +134,28 @@ type queue struct {
 	mode SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
 
 	// Headers are "special", they download in batches, supported by a skeleton chain
-	headerHead      common.Hash                    // [klay/62] Hash of the last queued header to verify order
-	headerTaskPool  map[uint64]*types.Header       // [klay/62] Pending header retrieval tasks, mapping starting indexes to skeleton headers
-	headerTaskQueue *prque.Prque                   // [klay/62] Priority queue of the skeleton indexes to fetch the filling headers for
-	headerPeerMiss  map[string]map[uint64]struct{} // [klay/62] Set of per-peer header batches known to be unavailable
-	headerPendPool  map[string]*fetchRequest       // [klay/62] Currently pending header retrieval operations
-	headerResults   []*types.Header                // [klay/62] Result cache accumulating the completed headers
-	headerProced    int                            // [klay/62] Number of headers already processed from the results
-	headerOffset    uint64                         // [klay/62] Number of the first header in the result cache
-	headerContCh    chan bool                      // [klay/62] Channel to notify when header download finishes
+	headerHead      common.Hash                    // [kaia/62] Hash of the last queued header to verify order
+	headerTaskPool  map[uint64]*types.Header       // [kaia/62] Pending header retrieval tasks, mapping starting indexes to skeleton headers
+	headerTaskQueue *prque.Prque                   // [kaia/62] Priority queue of the skeleton indexes to fetch the filling headers for
+	headerPeerMiss  map[string]map[uint64]struct{} // [kaia/62] Set of per-peer header batches known to be unavailable
+	headerPendPool  map[string]*fetchRequest       // [kaia/62] Currently pending header retrieval operations
+	headerResults   []*types.Header                // [kaia/62] Result cache accumulating the completed headers
+	headerProced    int                            // [kaia/62] Number of headers already processed from the results
+	headerOffset    uint64                         // [kaia/62] Number of the first header in the result cache
+	headerContCh    chan bool                      // [kaia/62] Channel to notify when header download finishes
 
 	// All data retrievals below are based on an already assembles header chain
-	blockTaskPool  map[common.Hash]*types.Header // [klay/62] Pending block (body) retrieval tasks, mapping hashes to headers
-	blockTaskQueue *prque.Prque                  // [klay/62] Priority queue of the headers to fetch the blocks (bodies) for
-	blockPendPool  map[string]*fetchRequest      // [klay/62] Currently pending block (body) retrieval operations
+	blockTaskPool  map[common.Hash]*types.Header // [kaia/62] Pending block (body) retrieval tasks, mapping hashes to headers
+	blockTaskQueue *prque.Prque                  // [kaia/62] Priority queue of the headers to fetch the blocks (bodies) for
+	blockPendPool  map[string]*fetchRequest      // [kaia/62] Currently pending block (body) retrieval operations
 
-	receiptTaskPool  map[common.Hash]*types.Header // [klay/63] Pending receipt retrieval tasks, mapping hashes to headers
-	receiptTaskQueue *prque.Prque                  // [klay/63] Priority queue of the headers to fetch the receipts for
-	receiptPendPool  map[string]*fetchRequest      // [klay/63] Currently pending receipt retrieval operations
+	receiptTaskPool  map[common.Hash]*types.Header // [kaia/63] Pending receipt retrieval tasks, mapping hashes to headers
+	receiptTaskQueue *prque.Prque                  // [kaia/63] Priority queue of the headers to fetch the receipts for
+	receiptPendPool  map[string]*fetchRequest      // [kaia/63] Currently pending receipt retrieval operations
 
-	stakingInfoTaskPool  map[common.Hash]*types.Header // [klay/65] Pending staking info retrieval tasks, mapping hashes to headers
-	stakingInfoTaskQueue *prque.Prque                  // [klay/65] Priority queue of the headers to fetch the staking infos for
-	stakingInfoPendPool  map[string]*fetchRequest      // [klay/65] Currently pending staking info retrieval operations
+	stakingInfoTaskPool  map[common.Hash]*types.Header // [kaia/65] Pending staking info retrieval tasks, mapping hashes to headers
+	stakingInfoTaskQueue *prque.Prque                  // [kaia/65] Priority queue of the headers to fetch the staking infos for
+	stakingInfoPendPool  map[string]*fetchRequest      // [kaia/65] Currently pending staking info retrieval operations
 
 	resultCache *resultStore       // Downloaded but not yet delivered fetch results
 	resultSize  common.StorageSize // Approximate size of a block (exponential moving average)
@@ -164,10 +167,12 @@ type queue struct {
 	proposerPolicy uint64
 
 	lastStatLog time.Time
+
+	config *params.ChainConfig
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64, config *params.ChainConfig) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:         make(chan bool),
@@ -177,6 +182,7 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint
 		active:               sync.NewCond(lock),
 		lock:                 lock,
 		proposerPolicy:       proposerPolicy,
+		config:               config,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -374,7 +380,7 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && params.IsStakingUpdateInterval(header.Number.Uint64()) {
+		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !q.IsKaiaFork(header.Number)) {
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -541,9 +547,10 @@ func (q *queue) ReserveStakingInfos(p *peerConnection, count int) (*fetchRequest
 // to access the queue, so they already need a lock anyway.
 //
 // Returns:
-//   item     - the fetchRequest
-//   progress - whether any progress was made
-//   throttle - if the caller should throttle for a while
+//
+//	item     - the fetchRequest
+//	progress - whether any progress was made
+//	throttle - if the caller should throttle for a while
 func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common.Hash]*types.Header, taskQueue *prque.Prque,
 	pendPool map[string]*fetchRequest, kind uint,
 ) (*fetchRequest, bool, bool) {
@@ -569,7 +576,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		header := h.(*types.Header)
 		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy)
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy, q.IsKaiaFork(header.Number))
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream
@@ -906,7 +913,7 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.Staking
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		// TODO-Klaytn-Snapsync update validation logic
+		// TODO-Kaia-Snapsync update validation logic
 		return nil
 	}
 
@@ -923,7 +930,7 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.Staking
 // reason this lock is not obtained in here is because the parameters already need
 // to access the queue, so they already need a lock anyway.
 func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQueue *prque.Prque,
-	pendPool map[string]*fetchRequest, reqTimer klaytnmetrics.HybridTimer,
+	pendPool map[string]*fetchRequest, reqTimer kaiametrics.HybridTimer,
 	results int, validate func(index int, header *types.Header) error,
 	reconstruct func(index int, result *fetchResult),
 ) (int, error) {
@@ -977,7 +984,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		accepted++
 	}
 	// Return all failed or missing fetches to the queue
-	for _, header := range request.Headers {
+	for _, header := range request.Headers[accepted:] {
 		taskQueue.Push(header, -int64(header.Number.Uint64()))
 	}
 	// Wake up WaitResults
@@ -1004,4 +1011,9 @@ func (q *queue) Prepare(offset uint64, mode SyncMode) {
 	// Prepare the queue for sync results
 	q.resultCache.Prepare(offset)
 	q.mode = mode
+}
+
+// IsKaiaFork checks if the staking info at the given block number is a Kaia block.
+func (q *queue) IsKaiaFork(num *big.Int) bool {
+	return q.config != nil && q.config.IsKaiaForkEnabled(num)
 }

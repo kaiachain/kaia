@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package dbsyncer
 
@@ -26,7 +28,7 @@ import (
 )
 
 // HandleChainEventContext supports 2PC Commit (insert block + insert txs) for data consistency
-// @TODO-Klaytn improve performance, too slower than HanleChainEvent()
+// @TODO-Kaia improve performance, too slower than HanleChainEvent()
 func (ds *DBSyncer) HandleChainEventContext(block *types.Block) error {
 	logger.Info("dbsyncer HandleChainEvent", "number", block.Number(), "txs", block.Transactions().Len())
 	startblock := time.Now()

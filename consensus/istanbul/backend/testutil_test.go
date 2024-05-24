@@ -151,7 +151,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if config.Governance.GovernanceMode == "single" {
 		config.Governance.GoverningNode = nodeAddrs[0]
 	}
-	genesis := blockchain.DefaultBaobabGenesisBlock()
+	genesis := blockchain.DefaultTestnetGenesisBlock()
 	genesis.Config = config
 	genesis.ExtraData = makeGenesisExtra(nodeAddrs)
 	genesis.Timestamp = uint64(time.Now().Unix())
@@ -323,6 +323,7 @@ func makeTestStakingManager(addrs []common.Address, amounts []uint64) *reward.St
 	// Save old StakingManager, overwrite with the fake one.
 	oldStakingManager := reward.GetStakingManager()
 	reward.SetTestStakingManagerWithStakingInfoCache(info)
+
 	return oldStakingManager
 }
 

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/geth/main.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package main
 
@@ -37,14 +39,14 @@ var (
 	logger = log.NewModuleLogger(log.CMDKSCN)
 
 	// The app that holds all commands and flags.
-	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Klaytn ServiceChain Node")
+	app = utils.NewApp(nodecmd.GetGitCommit(), "The command line interface for Kaia ServiceChain Node")
 )
 
 func init() {
 	// Initialize the CLI app and start kcn
-	app.Action = nodecmd.RunKlaytnNode
+	app.Action = nodecmd.RunKaiaNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Commands = []*cli.Command{
 		// See utils/nodecmd/chaincmd.go:
 		nodecmd.InitCommand,

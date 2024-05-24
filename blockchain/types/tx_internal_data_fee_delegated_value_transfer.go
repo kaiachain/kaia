@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -32,7 +34,7 @@ import (
 )
 
 // TxInternalDataFeeDelegatedValueTransfer represents a fee-delegated transaction
-// transferring KLAY with a fee payer.
+// transferring KAIA with a fee payer.
 // FeePayer should be RLP-encoded after the signature of the sender.
 type TxInternalDataFeeDelegatedValueTransfer struct {
 	AccountNonce uint64

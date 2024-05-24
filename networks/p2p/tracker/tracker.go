@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2021 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/tracker/tracker.go (2022/06/29).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package tracker
 
@@ -205,7 +207,7 @@ func (t *Tracker) Fulfil(peer string, version uint, code uint64, id uint64) {
 	gauge := metrics.GetOrRegisterGauge(g, nil)
 	gauge.Update(gauge.Value() - 1)
 
-	// TODO-Klaytn-SnapSync update the following metrics if necessary
+	// TODO-Kaia-SnapSync update the following metrics if necessary
 	//h := fmt.Sprintf("%s/%s/%d/%#02x", waitHistName, t.protocol, req.version, req.reqCode)
 	//sampler := func() metrics.Sample {
 	//	return metrics.ResettingSample(

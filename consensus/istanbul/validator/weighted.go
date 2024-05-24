@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/validator/default.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package validator
 
@@ -97,15 +99,15 @@ func newWeightedValidator(addr common.Address, reward common.Address, votingpowe
 
 type weightedCouncil struct {
 	subSize           uint64
-	demotedValidators istanbul.Validators // validators staking KLAYs less than minimum, and not in committee/proposers
-	validators        istanbul.Validators // validators staking KLAYs more than and equals to minimum, and in committee/proposers
+	demotedValidators istanbul.Validators // validators staking KAIA less than minimum, and not in committee/proposers
+	validators        istanbul.Validators // validators staking KAIA more than and equals to minimum, and in committee/proposers
 	policy            istanbul.ProposerPolicy
 
 	proposer    atomic.Value // istanbul.Validator
 	validatorMu sync.RWMutex // this validator mutex protects concurrent usage of validators and demotedValidators
 	selector    istanbul.ProposalSelector
 
-	// TODO-Klaytn-Governance proposers means that the proposers for next block, so refactor it.
+	// TODO-Kaia-Governance proposers means that the proposers for next block, so refactor it.
 	// proposers are determined on a specific block, but it can be removed after votes.
 	proposers         []istanbul.Validator
 	proposersBlockNum uint64 // block number when proposers is determined
@@ -174,7 +176,7 @@ func NewWeightedCouncil(addrs []common.Address, demotedAddrs []common.Address, r
 		//}
 
 		for i := range addrs {
-			// TODO-Klaytn-TokenEconomy: Use default value until the formula to calculate votingpower released
+			// TODO-Kaia-TokenEconomy: Use default value until the formula to calculate votingpower released
 			votingPowers[i] = 1000
 			//staking := stateDB.GetBalance(addr)
 			//if staking.Cmp(common.Big0) == 0 {
@@ -293,7 +295,7 @@ func weightedRandomProposer(valSet istanbul.ValidatorSet, lastProposer common.Ad
 		return nil
 	}
 
-	// At Refresh(), proposers is already randomly shuffled considering weights.
+	// At RefreshProposers(), proposers is already randomly shuffled considering weights.
 	// So let's just round robin this array
 	blockNum := weightedCouncil.blockNum
 	picker := (blockNum + round - params.CalcProposerBlockNumber(blockNum+1)) % uint64(numProposers)
@@ -339,8 +341,8 @@ func (valSet *weightedCouncil) DemotedList() []istanbul.Validator {
 // SubList composes a committee after setting a proposer with a default value.
 // This functions returns whole validators if it failed to compose a committee.
 func (valSet *weightedCouncil) SubList(prevHash common.Hash, view *istanbul.View) []istanbul.Validator {
-	// TODO-Klaytn-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
-	// TODO-Klaytn-Istanbul: or the proposer should be calculated based on `view`
+	// TODO-Kaia-Istanbul: investigate whether `valSet.GetProposer().Address()` is a proper value
+	// TODO-Kaia-Istanbul: or the proposer should be calculated based on `view`
 	return valSet.SubListWithProposer(prevHash, valSet.GetProposer().Address(), view)
 }
 
@@ -445,7 +447,7 @@ func (valSet *weightedCouncil) CheckInSubList(prevHash common.Hash, view *istanb
 }
 
 func (valSet *weightedCouncil) IsSubSet() bool {
-	// TODO-Klaytn-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
+	// TODO-Kaia-RemoveLater We don't use this interface anymore. Eventually let's remove this function from ValidatorSet interface.
 	return valSet.Size() > valSet.subSize
 }
 
@@ -464,7 +466,7 @@ func (valSet *weightedCouncil) getByAddress(addr common.Address) (int, istanbul.
 			return i, val
 		}
 	}
-	// TODO-Klaytn-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
+	// TODO-Kaia-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
 	/*logger.Warn("failed to find an address in the validator list",
 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())*/
 	return -1, nil
@@ -492,7 +494,7 @@ func (valSet *weightedCouncil) GetDemotedByAddress(addr common.Address) (int, is
 }
 
 func (valSet *weightedCouncil) GetProposer() istanbul.Validator {
-	// TODO-Klaytn-Istanbul: nil check for valSet.proposer is needed
+	// TODO-Kaia-Istanbul: nil check for valSet.proposer is needed
 	// logger.Trace("GetProposer()", "proposer", valSet.proposer)
 	return valSet.proposer.Load().(istanbul.Validator)
 }
@@ -524,7 +526,7 @@ func (valSet *weightedCouncil) CalcProposer(lastProposer common.Address, round u
 	newProposer := valSet.selector(valSet, lastProposer, round)
 	if newProposer == nil {
 		if len(valSet.validators) == 0 {
-			// TODO-Klaytn We must make a policy about the mininum number of validators, which can prevent this case.
+			// TODO-Kaia We must make a policy about the mininum number of validators, which can prevent this case.
 			logger.Error("NO VALIDATOR! Use lastProposer as a workaround")
 			newProposer = newWeightedValidator(lastProposer, common.Address{}, 0, 0)
 		} else {
@@ -551,7 +553,7 @@ func (valSet *weightedCouncil) AddValidator(address common.Address) bool {
 		}
 	}
 
-	// TODO-Klaytn-Governance the new validator is added on validators only and demoted after `Refresh` method. It is better to update here if it is demoted ones.
+	// TODO-Kaia-Governance the new validator is added on validators only and demoted after `RefreshValSet` method. It is better to update here if it is demoted ones.
 	// TODO-Klaytn-Issue1336 Update for governance implementation. How to determine initial value for rewardAddress and votingPower ?
 	valSet.validators = append(valSet.validators, newWeightedValidator(address, common.Address{}, 1000, 0))
 
@@ -640,15 +642,74 @@ func (valSet *weightedCouncil) F() int {
 
 func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.policy }
 
-// Refresh recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// RefreshValSet recalculates up-to-date validators at the staking block number.
+// It returns an error if it can't make up-to-date validators
+// - due to wrong parameters
+// - due to lack of staking information
+// It returns no error when weightedCouncil:
+// - successfully calculated up-to-date validators
+func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+	valSet.validatorMu.Lock()
+	defer valSet.validatorMu.Unlock()
+
+	// Check errors
+	numValidators := len(valSet.validators)
+	if numValidators == 0 {
+		return errors.New("No validator")
+	}
+
+	blockNumBig := new(big.Int).SetUint64(blockNum)
+	chainRules := config.Rules(blockNumBig)
+
+	stakingBlockNum := blockNum
+	if !chainRules.IsKaia {
+		stakingBlockNum = params.CalcProposerBlockNumber(blockNum) + 1
+	}
+	newStakingInfo := reward.GetStakingInfo(stakingBlockNum)
+
+	if newStakingInfo == nil {
+		// Just return without refreshing validators
+		return errors.New("skip refreshing validators due to no staking info")
+	}
+	valSet.stakingInfo = newStakingInfo
+
+	candidates := append(valSet.validators, valSet.demotedValidators...)
+	weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, newStakingInfo)
+	if err != nil {
+		return err
+	}
+
+	if chainRules.IsIstanbul {
+		var demotedValidators []*weightedValidator
+
+		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
+		valSet.setValidators(weightedValidators, demotedValidators)
+	}
+
+	// Although this is for selecting proposer, update it because
+	// otherwise, all parameters should be re-calculated at `RefreshProposers` method.
+	if chainRules.IsKore {
+		setZeroWeight(weightedValidators)
+	} else {
+		totalStaking, _ := calcTotalAmount(weightedValidators, valSet.stakingInfo, stakingAmounts)
+		calcWeight(weightedValidators, stakingAmounts, totalStaking)
+	}
+
+	logger.Debug("Refresh validators done.", "blockNum", blockNum, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+
+	return nil
+}
+
+// RefreshProposers recalculates up-to-date proposers only when blockNum is the proposer update interval.
+// This is a legacy function and do not affect to proposer after the randao HF.
+// After the randao HF, the proposer is selected at `CalcProposer` method.
 // It returns an error if it can't make up-to-date proposers
 // - due to wrong parameters
 // - due to lack of staking information
 // It returns no error when weightedCouncil:
-// - already has up-do-date proposers
-// - successfully calculated up-do-date proposers
-func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
-	// TODO-Klaytn-Governance divide the following logic into two parts: proposers update / validators update
+// - already has up-to-date proposers
+// - successfully calculated up-to-date proposers
+func (valSet *weightedCouncil) RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -667,45 +728,15 @@ func (valSet *weightedCouncil) Refresh(hash common.Hash, blockNum uint64, config
 		return err
 	}
 
-	newStakingInfo := reward.GetStakingInfo(blockNum + 1)
-	if newStakingInfo == nil {
-		// Just return without updating proposer
-		return errors.New("skip refreshing proposers due to no staking info")
-	}
-	valSet.stakingInfo = newStakingInfo
-
-	blockNumBig := new(big.Int).SetUint64(blockNum)
-	chainRules := config.Rules(blockNumBig)
-
-	candidates := append(valSet.validators, valSet.demotedValidators...)
-	weightedValidators, stakingAmounts, err := getStakingAmountsOfValidators(candidates, newStakingInfo)
-	if err != nil {
-		return err
-	}
-
-	if chainRules.IsIstanbul {
-		var demotedValidators []*weightedValidator
-
-		weightedValidators, stakingAmounts, demotedValidators, _ = filterValidators(isSingle, governingNode, weightedValidators, stakingAmounts, minStaking)
-		valSet.setValidators(weightedValidators, demotedValidators)
-	}
-
 	if valSet.proposersBlockNum == blockNum {
 		// proposers are already refreshed
 		return nil
 	}
 
-	// weight and gini were neutralized after Kore hard fork
-	if chainRules.IsKore {
-		setZeroWeight(weightedValidators)
-	} else {
-		totalStaking, _ := calcTotalAmount(weightedValidators, newStakingInfo, stakingAmounts)
-		calcWeight(weightedValidators, stakingAmounts, totalStaking)
-	}
-
+	// The weight of validators is already calculated at `RefreshValSet` method.
 	valSet.refreshProposers(seed, blockNum)
 
-	logger.Debug("Refresh done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum, "stakingInfo.BlockNum", valSet.stakingInfo.BlockNum)
+	logger.Debug("Refresh proposers done.", "blockNum", blockNum, "hash", hash, "valSet.blockNum", valSet.blockNum)
 	logger.Debug("New proposers calculated", "new proposers", valSet.proposers)
 
 	return nil
@@ -735,7 +766,7 @@ func (valSet *weightedCouncil) setValidators(validators []*weightedValidator, de
 
 // filterValidators divided the given weightedValidators into two group filtered by the minimum amount of staking.
 // If governance mode is single, the governing node will always be a validator.
-// If no validator has enough KLAYs, all become validators.
+// If no validator has enough KAIA, all become validators.
 func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedValidators []*weightedValidator, stakingAmounts []float64, minStaking uint64) ([]*weightedValidator, []float64, []*weightedValidator, []float64) {
 	var (
 		newWeightedValidators []*weightedValidator
@@ -758,10 +789,10 @@ func filterValidators(isSingleMode bool, govNodeAddr common.Address, weightedVal
 		}
 	}
 
-	// when no validator has more than minimum staking amount of KLAYs, all members are in validators
+	// when no validator has more than minimum staking amount of KAIA, all members are in validators
 	if len(newWeightedValidators) <= 0 {
 		// 1. if governance mode is not single,
-		// 2. if governance mode is single and governing node does not have minimum staking amount of KLAYs as well
+		// 2. if governance mode is single and governing node does not have minimum staking amount of KAIA as well
 		if !isSingleMode || uint64(govNodeStaking) < minStaking {
 			newWeightedValidators, newValidatorsStaking = newWeightedDemoted, newDemotedStaking
 			newWeightedDemoted, newDemotedStaking = []*weightedValidator{}, []float64{}

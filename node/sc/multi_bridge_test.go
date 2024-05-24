@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -55,7 +57,7 @@ func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
 	accKey, _ := crypto.GenerateKey()
 	acc := bind.NewKeyedTransactor(accKey)
 
-	alloc := blockchain.GenesisAlloc{acc.From: {Balance: big.NewInt(params.KLAY)}}
+	alloc := blockchain.GenesisAlloc{acc.From: {Balance: big.NewInt(params.KAIA)}}
 	sim := backends.NewSimulatedBackend(alloc)
 
 	chargeAmount := big.NewInt(10000000)
@@ -77,7 +79,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	for i := 0; i < maxAccounts; i++ {
 		accKey, _ := crypto.GenerateKey()
 		res.accounts[i] = bind.NewKeyedTransactor(accKey)
-		accountMap[res.accounts[i].From] = blockchain.GenesisAccount{Balance: big.NewInt(params.KLAY)}
+		accountMap[res.accounts[i].From] = blockchain.GenesisAccount{Balance: big.NewInt(params.KAIA)}
 	}
 
 	res.sim = backends.NewSimulatedBackend(accountMap)
@@ -526,7 +528,7 @@ func TestMultiBridgeERC721Transfer(t *testing.T) {
 }
 
 // TestMultiBridgeSetKLAYFee checks the following:
-// - successfully setting KLAY fee
+// - successfully setting KAIA fee
 func TestMultiBridgeSetKLAYFee(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	defer info.sim.Close()
@@ -796,7 +798,7 @@ func TestMultiOperatorKLAYTransferDup(t *testing.T) {
 }
 
 // TestMultiBridgeSetKLAYFeeErrNonce checks the following:
-// - failed to set KLAY fee because of the wrong nonce.
+// - failed to set KAIA fee because of the wrong nonce.
 func TestMultiBridgeSetKLAYFeeErrNonce(t *testing.T) {
 	info := prepareMultiBridgeEventTest(t)
 	defer info.sim.Close()

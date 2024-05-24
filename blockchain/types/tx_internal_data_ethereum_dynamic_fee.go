@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2022 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package types
 
@@ -318,12 +320,15 @@ func (t *TxInternalDataEthereumDynamicFee) String() string {
 	tx := &Transaction{data: t}
 
 	v, r, s := t.V, t.R, t.S
-
-	signer := LatestSignerForChainID(t.ChainId())
-	if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-		from = "[invalid sender: invalid sig]"
+	if v != nil {
+		signer := LatestSignerForChainID(t.ChainId())
+		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
+			from = "[invalid sender: invalid sig]"
+		} else {
+			from = fmt.Sprintf("%x", f[:])
+		}
 	} else {
-		from = fmt.Sprintf("%x", f[:])
+		from = "[invalid sender: nil V field]"
 	}
 
 	if t.GetRecipient() == nil {

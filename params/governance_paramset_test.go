@@ -1,3 +1,18 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 package params
 
 import (
@@ -145,7 +160,7 @@ func TestGovParamSet_Get(t *testing.T) {
 }
 
 func TestGovParamSet_Nominal(t *testing.T) {
-	c := CypressChainConfig.Copy()
+	c := MainnetChainConfig.Copy()
 	c.Governance.KIP71 = &KIP71Config{
 		LowerBoundBaseFee:         12340000,
 		UpperBoundBaseFee:         56780000,
@@ -204,7 +219,7 @@ func TestGovParamSet_New(t *testing.T) {
 	assert.Equal(t, uint64(0x1234), v)
 	assert.True(t, ok)
 
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err = NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 	v, ok = p.Get(Epoch)
@@ -280,7 +295,7 @@ func TestGovParamSet_RegressDb(t *testing.T) {
 	// slightly wrong during unmarshal because we unmarshal into interface{}.
 	// Namely, JSON integers can be converted to float64.
 
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err := NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 
@@ -295,7 +310,7 @@ func TestGovParamSet_RegressDb(t *testing.T) {
 }
 
 func TestGovParamSet_GetMap(t *testing.T) {
-	c := CypressChainConfig
+	c := MainnetChainConfig
 	p, err := NewGovParamSetChainConfig(c)
 	assert.Nil(t, err)
 

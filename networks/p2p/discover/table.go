@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/discover/table.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package discover
 
@@ -507,7 +509,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 }
 
 func (tab *Table) loadSeedNodes(bond bool) {
-	// TODO-Klaytn-Node Separate logic to storages.
+	// TODO-Kaia-Node Separate logic to storages.
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
 	seeds = removeBn(seeds)
 	seeds = append(seeds, tab.nursery...)

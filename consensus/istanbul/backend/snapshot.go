@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/backend/snapshot.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package backend
 
@@ -55,7 +57,7 @@ type Snapshot struct {
 func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
 	pset, err := gov.EffectiveParams(number)
 	if err != nil {
-		// TODO-Klaytn-Kore: remove err condition
+		// TODO-Kaia-Kore: remove err condition
 		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
 		epoch = params.DefaultEpoch
 		policy = params.DefaultProposerPolicy
@@ -108,7 +110,8 @@ func (s *Snapshot) store(db database.DBManager) error {
 		return err
 	}
 
-	return db.WriteIstanbulSnapshot(s.Hash, blob)
+	db.WriteIstanbulSnapshot(s.Hash, blob)
+	return nil
 }
 
 // copy creates a deep copy of the snapshot, though not the individual votes.
@@ -206,17 +209,25 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			govNode := pset.GoverningNode()
 			minStaking := pset.MinimumStakeBig().Uint64()
 
-			pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
-			if pHeader != nil {
-				if err := snap.ValSet.Refresh(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config(), isSingle, govNode, minStaking); err != nil {
-					// There are three error cases and they just don't refresh proposers
-					// (1) no validator at all
-					// (2) invalid formatted hash
-					// (3) no staking info available
-					logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+			if err := snap.ValSet.RefreshValSet(number+1, chain.Config(), isSingle, govNode, minStaking); err != nil {
+				logger.Trace("Skip refreshing validators while creating snapshot", "snap.Number", snap.Number, "err", err)
+			}
+
+			// Do not refresh proposers from the kaia fork block.
+			// The proposer is calculated every block in `CalcProposer` function after the randao fork.
+			if !chain.Config().IsKaiaForkEnabled(big.NewInt(int64(number + 1))) {
+				pHeader := chain.GetHeaderByNumber(params.CalcProposerBlockNumber(number + 1))
+				if pHeader != nil {
+					if err := snap.ValSet.RefreshProposers(pHeader.Hash(), pHeader.Number.Uint64(), chain.Config()); err != nil {
+						// There are three error cases and they just don't refresh proposers
+						// (1) no validator at all
+						// (2) invalid formatted hash
+						// (3) no staking info available
+						logger.Trace("Skip refreshing proposers while creating snapshot", "snap.Number", snap.Number, "pHeader.Number", pHeader.Number.Uint64(), "err", err)
+					}
+				} else {
+					logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 				}
-			} else {
-				logger.Trace("Can't refreshing proposers while creating snapshot due to lack of required header", "snap.Number", snap.Number)
 			}
 		}
 	}

@@ -184,7 +184,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 
-		txContext := blockchain.NewEVMTxContext(msg, block.Header())
+		txContext := blockchain.NewEVMTxContext(msg, block.Header(), cn.chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(block.Header(), cn.blockchain, nil)
 		if idx == txIndex {
 			return msg, blockContext, txContext, statedb, nil
@@ -195,7 +195,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 			return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction %#x failed: %v", tx.Hash(), err)
 		}
 		// Ensure any modifications are committed to the state
-		// Since klaytn is forked after EIP158/161 (a.k.a Spurious Dragon), deleting empty object is always effective
+		// Since Kaia is forked after EIP158/161 (a.k.a Spurious Dragon), deleting empty object is always effective
 		statedb.Finalise(true, true)
 	}
 	return nil, vm.BlockContext{}, vm.TxContext{}, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())

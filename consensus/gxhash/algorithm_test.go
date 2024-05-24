@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from consensus/ethash/algorithm_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package gxhash
 
@@ -683,7 +685,7 @@ func TestHashimoto(t *testing.T) {
 	}
 }
 
-// TODO-Klaytn-FailedTest This tests fails in Klaytn. Enable or delete this test later.
+// TODO-Kaia-FailedTest This tests fails in Kaia. Enable or delete this test later.
 // Tests that caches generated on disk may be done concurrently.
 /*
 func TestConcurrentDiskCacheGeneration(t *testing.T) {

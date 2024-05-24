@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2021 The klaytn Authors
 // Copyright 2020 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/state/snapshot/conversion.go (2021/10/21).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package snapshot
 
@@ -51,7 +53,7 @@ type (
 	leafCallbackFn func(accountHash, codeHash common.Hash, stat *generateStats) (common.Hash, error)
 )
 
-// TODO-Klaytn-Snapshot port GenerateAccountTrieRoot/GenerateStorageTrieRoot/GenerateTrie
+// TODO-Kaia-Snapshot port GenerateAccountTrieRoot/GenerateStorageTrieRoot/GenerateTrie
 
 // generateStats is a collection of statistics gathered by the trie generator
 // for logging purposes.

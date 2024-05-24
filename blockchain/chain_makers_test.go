@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,10 +18,11 @@
 //
 // This file is derived from core/chain_makers_test.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
-// TODO-Klaytn-FailedTest Fails because this test assumes Homestead fee.
+// TODO-Kaia-FailedTest Fails because this test assumes Homestead fee.
 /*
 import (
 	"fmt"
@@ -59,11 +61,11 @@ func ExampleGenerateChain() {
 	chain, _ := GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, 5, func(i int, gen *BlockGen) {
 		switch i {
 		case 0:
-			// In block 1, addr1 sends addr2 some KLAY.
+			// In block 1, addr1 sends addr2 some KAIA.
 			tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr1), addr2, big.NewInt(10000), params.TxGas, nil, nil), signer, key1)
 			gen.AddTx(tx)
 		case 1:
-			// In block 2, addr1 sends some more KLAY to addr2.
+			// In block 2, addr1 sends some more KAIA to addr2.
 			// addr2 passes it on to addr3.
 			tx1, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr1), addr2, big.NewInt(1000), params.TxGas, nil, nil), signer, key1)
 			tx2, _ := types.SignTx(types.NewTransaction(gen.TxNonce(addr2), addr3, big.NewInt(1000), params.TxGas, nil, nil), signer, key2)

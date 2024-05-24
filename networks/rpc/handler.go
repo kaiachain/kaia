@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2022 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rpc/handler.go (2022/08/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rpc
 
@@ -309,7 +311,7 @@ func (h *handler) handleResponse(msg *jsonrpcMessage) {
 		return
 	}
 	// For subscription responses, start the subscription if the server
-	// indicates success. KlaySubscribe gets unblocked in either case through
+	// indicates success. KaiaSubscribe gets unblocked in either case through
 	// the op.resp channel.
 	defer close(op.resp)
 	if msg.Error != nil {
@@ -428,7 +430,7 @@ func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMes
 func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *callback, args []reflect.Value) *jsonrpcMessage {
 	result, err := callb.call(ctx, msg.Method, args)
 	if err != nil {
-		// TODO-Klaytn:
+		// TODO-Kaia:
 		// 1. The single URL may be extended to the list of URL.
 		// 2. The URL (list or single) seems not modifiable at runtime.
 		// 3. Any request can be relayed as well as the state lack.

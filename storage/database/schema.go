@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2018 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,12 +18,14 @@
 //
 // This file is derived from core/rawdb/schema.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package database
 
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
 
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -128,6 +131,9 @@ var (
 	migrationStatusKey = []byte("migrationStatus")
 
 	stakingInfoPrefix = []byte("stakingInfo")
+
+	accRewardPrefix             = []byte("accReward")
+	lastAccRewardBlockNumberKey = []byte("lastAccRewardBlockNumber")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
 )
@@ -292,4 +298,21 @@ func parsePruningMarkKey(key []byte) PruningMark {
 		Number: binary.BigEndian.Uint64(bNumber),
 		Hash:   common.BytesToExtHash(bHash),
 	}
+}
+
+type AccReward struct {
+	Minted   *big.Int
+	BurntFee *big.Int
+}
+
+func (ar *AccReward) Copy() *AccReward {
+	return &AccReward{
+		Minted:   new(big.Int).Set(ar.Minted),
+		BurntFee: new(big.Int).Set(ar.BurntFee),
+	}
+}
+
+// AccRewardKey = accRewardPrefix + blockNumber
+func accRewardKey(blockNumber uint64) []byte {
+	return append(accRewardPrefix, common.Int64ToByteBigEndian(blockNumber)...)
 }

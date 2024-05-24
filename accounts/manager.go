@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from accounts/manager.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package accounts
 
@@ -42,8 +44,9 @@ type Manager struct {
 	lock sync.RWMutex
 }
 
-//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/klaytn/klaytn/accounts AccountManager
 // AccountManager is an interface of accounts.Manager struct.
+//
+//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/klaytn/klaytn/accounts AccountManager
 type AccountManager interface {
 	Wallet(url string) (Wallet, error)
 	Wallets() []Wallet

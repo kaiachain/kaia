@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package main
 
@@ -48,7 +50,7 @@ var (
 	logger   = log.NewModuleLogger(log.CMDKGEN)
 	fileFlag = &cli.BoolFlag{
 		Name:  "file",
-		Usage: `Generate a nodekey and a Klaytn node information as files`,
+		Usage: `Generate a nodekey and a Kaia node information as files`,
 	}
 	portFlag = &cli.IntFlag{
 		Name:  "port",
@@ -70,8 +72,8 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "kgen"
-	app.Usage = "The command line interface to generate nodekey information for Klaytn"
-	app.Copyright = "Copyright 2018-2023 The klaytn Authors"
+	app.Usage = "The command line interface to generate nodekey information for Kaia"
+	app.Copyright = "Copyright 2018-2024 The Kaia Authors"
 	app.Action = genNodeKey
 	app.Flags = []cli.Flag{
 		fileFlag,

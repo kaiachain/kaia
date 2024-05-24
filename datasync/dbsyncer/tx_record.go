@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package dbsyncer
 
@@ -140,7 +142,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			createdTx := sa.txHash
 
 			hra := true
-			// TODO-Klaytn need to use humanreable field
+			// TODO-Kaia need to use humanreable field
 			internalTx, ok := sa.tx.GetTxInternalData().(*types.TxInternalDataAccountCreation)
 			if !ok {
 				logger.Error("fail to convert TxInternalDataAccountCreation", "txhash", sa.tx.Hash().Hex())
@@ -159,7 +161,7 @@ func MakeSummaryDBRow(sa SummaryArguments) (cols string, vals []interface{}, cou
 			creator := sa.from
 			createdTx := sa.txHash
 
-			// TODO-Klaytn need to use humanreable field
+			// TODO-Kaia need to use humanreable field
 			hra := false
 
 			switch internalTx := sa.tx.GetTxInternalData().(type) {

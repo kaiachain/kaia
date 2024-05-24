@@ -15,9 +15,9 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package kerrors contains common error variables used in Klaytn.
+Package kerrors contains common error variables used in Kaia.
 
-Source File
+# Source File
 
 - kerrors.go : Defines errors
 */

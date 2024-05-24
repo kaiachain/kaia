@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -39,13 +41,13 @@ func BenchmarkDataExecution_Aspen(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Baobab generates the data with Baobab network's database configurations.
-func BenchmarkDataExecution_Baobab(b *testing.B) {
+// BenchmarkDataExecution_Testnet generates the data with Testnet network's database configurations.
+func BenchmarkDataExecution_Testnet(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Baobab"
-	tc.originalDataDir = baobab500_orig
+	tc.testName = "BenchmarkDataExecution_Testnet"
+	tc.originalDataDir = testnet500_orig
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	dataExecutionTest(b, tc)
 }
@@ -74,14 +76,14 @@ func BenchmarkDataExecution_CandidateBadgerDB(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Baobab_ControlGroup generates the data with Baobab network's database configurations.
+// BenchmarkDataExecution_Testnet_ControlGroup generates the data with Testnet network's database configurations.
 // To work as a control group, it only generates 10,000 accounts.
-func BenchmarkDataExecution_Baobab_ControlGroup(b *testing.B) {
+func BenchmarkDataExecution_Testnet_ControlGroup(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Baobab_ControlGroup"
-	tc.originalDataDir = baobab1_orig
+	tc.testName = "BenchmarkDataExecution_Testnet_ControlGroup"
+	tc.originalDataDir = testnet1_orig
 
-	tc.dbc, tc.levelDBOption = genBaobabOptions()
+	tc.dbc, tc.levelDBOption = genTestnetOptions()
 
 	// ControlGroup specific setting
 	tc.numReceiversPerRun = 10000
@@ -100,7 +102,7 @@ var (
 	savedTestDataDir        string
 )
 
-// dataExecutionTest is to check the performance of Klaytn with pre-generated data.
+// dataExecutionTest is to check the performance of Kaia with pre-generated data.
 // It generates warmUpTxs and executionTxs first, and then initialize blockchain and database to
 // remove any effects caused by generating transactions. And then it executes warmUpTxs and executionTxs.
 // To run the test, original data directory should be located at "$GOPATH/src/github.com/klaytn/"

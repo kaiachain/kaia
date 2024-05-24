@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package accountkey
 
@@ -45,7 +47,7 @@ func (a *AccountKeyLegacy) IsCompositeType() bool {
 	return false
 }
 
-// Other accountKey types have the pubkey so that we can compare the pubkeys in Klaytn.
+// Other accountKey types have the pubkey so that we can compare the pubkeys in Kaia.
 // But AccountKeyLegacy doesn't have the pubkey so ValidateMember receives 'from' address more
 // and then checks whether the recovered pubkey's address form equals the 'from' address.
 func (a *AccountKeyLegacy) ValidateMember(recoveredKey *ecdsa.PublicKey, from common.Address) bool {

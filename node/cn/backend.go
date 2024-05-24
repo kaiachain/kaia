@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/backend.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -29,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts"
 	"github.com/klaytn/klaytn/api"
 	"github.com/klaytn/klaytn/blockchain"
@@ -98,7 +100,7 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 }
 
-// CN implements the Klaytn consensus node service.
+// CN implements the Kaia consensus node service.
 type CN struct {
 	config      *Config
 	chainConfig *params.ChainConfig
@@ -134,7 +136,8 @@ type CN struct {
 
 	components []interface{}
 
-	governance governance.Engine
+	governance    governance.Engine
+	supplyManager reward.SupplyManager
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -161,12 +164,7 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 				}
 
 				txHash := tx.Hash()
-
-				if err = db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash); err != nil {
-					logger.Error("Failed to store senderTxHash to txHash mapping to database",
-						"blockNum", event.Block.Number(), "senderTxHash", senderTxHash, "txHash", txHash, "err", err)
-					break
-				}
+				db.PutSenderTxHashToTxHashToBatch(batch, senderTxHash, txHash)
 			}
 
 			if err == nil {
@@ -181,6 +179,10 @@ func senderTxHashIndexer(db database.DBManager, chainEvent <-chan blockchain.Cha
 }
 
 func checkSyncMode(config *Config) error {
+	// TODO-Kaia: allow snap sync after resolving the staking info sync issue
+	if config.SyncMode == downloader.SnapSync {
+		return errors.New("snap sync is temporarily disabled")
+	}
 	if !config.SyncMode.IsValid() {
 		return fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
@@ -328,7 +330,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
-	// TODO-Klaytn-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
+	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
 	governance.SetTxPool(cn.txPool)
@@ -356,10 +358,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 
+	// Setup reward related components
 	if pset.Policy() == uint64(istanbul.WeightedRandom) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
+	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB, config.TrieBlockInterval)
 
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
@@ -379,7 +383,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			istBackend.SetChain(cn.blockchain)
 		}
 	} else {
-		// TODO-Klaytn improve to handle drop transaction on network traffic in PN and EN
+		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
 		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
 	}
 
@@ -390,12 +394,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Klaytn Now we use latest unitPrice
+	// NOTE-Kaia Now we use latest unitPrice
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool)
-	//@TODO Klaytn add core component
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, cn.governance)
+	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
@@ -500,7 +504,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 	return ctx.OpenDatabase(dbc)
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for a Klaytn service
+// CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
@@ -526,29 +530,29 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKlayAPI := governance.NewGovernanceKlayAPI(s.governance, s.blockchain)
+	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
 	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
-	ethAPI.SetGovernanceKlayAPI(governanceKlayAPI)
+	ethAPI.SetGovernanceKaiaAPI(governanceKaiaAPI)
 	ethAPI.SetGovernanceAPI(governanceAPI)
 
 	// Append all the local APIs and return
 	apis = append(apis, []rpc.API{
 		{
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   NewPublicKlayAPI(s),
+			Service:   NewPublicKaiaAPI(s),
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   publicFilterAPI,
 			Public:    true,
@@ -592,9 +596,9 @@ func (s *CN) APIs() []rpc.API {
 			Service:   governanceAPI,
 			Public:    true,
 		}, {
-			Namespace: "klay",
+			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   governanceKlayAPI,
+			Service:   governanceKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
@@ -666,7 +670,7 @@ func (s *CN) ChainDB() database.DBManager             { return s.chainDB }
 func (s *CN) IsListening() bool                       { return true } // Always listening
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
-func (s *CN) Progress() klaytn.SyncProgress           { return s.protocolManager.Downloader().Progress() }
+func (s *CN) Progress() kaia.SyncProgress             { return s.protocolManager.Downloader().Progress() }
 func (s *CN) Governance() governance.Engine           { return s.governance }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
@@ -683,7 +687,7 @@ func (s *CN) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Klaytn protocol implementation.
+// Kaia protocol implementation.
 func (s *CN) Start(srvr p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
@@ -699,13 +703,16 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	reward.StakingManagerSubscribe()
+	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
+		reward.StakingManagerSubscribe()
+	}
+	s.supplyManager.Start()
 
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
-// Klaytn protocol.
+// Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
 	s.protocolManager.Stop()
@@ -719,6 +726,7 @@ func (s *CN) Stop() error {
 	s.txPool.Stop()
 	s.miner.Stop()
 	reward.StakingManagerUnsubscribe()
+	s.supplyManager.Stop()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

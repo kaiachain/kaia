@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/config.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package istanbul
 
@@ -36,7 +38,7 @@ type Config struct {
 	SubGroupSize   uint64         `toml:",omitempty"`
 }
 
-// TODO-Klaytn-Istanbul: Do not use DefaultConfig except for assigning new config
+// TODO-Kaia-Istanbul: Do not use DefaultConfig except for assigning new config
 var DefaultConfig = &Config{
 	Timeout:        10000,
 	BlockPeriod:    1,

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -101,11 +103,11 @@ func createDefaultAccount(accountKeyType accountkey.AccountKeyType) (*TestAccoun
 // For contract execution Txs, TxValueKeyTo value is set to "contract" as a default.
 // The address "contact" should exist before calling this function.
 func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txType types.TxType, contractAddr common.Address) (*types.Transaction, *TestAccountType, error) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// For Dynamic fee tx.
-	gasTipCap := new(big.Int).SetUint64(25 * params.Ston)
-	gasFeeCap := new(big.Int).SetUint64(25 * params.Ston)
+	gasTipCap := new(big.Int).SetUint64(25 * params.Gkei)
+	gasFeeCap := new(big.Int).SetUint64(25 * params.Gkei)
 
 	gasLimit := uint64(10000000)
 	amount := new(big.Int).SetUint64(1)
@@ -400,7 +402,7 @@ func signTxWithVariousKeyTypes(signer types.Signer, tx *types.Transaction, sende
 // The test creates a default account for each account key type, and generates default Tx for each Tx type.
 // AccountKeyTypeNil is excluded because it cannot be used for account creation.
 func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	gasLimit := uint64(100000000)
 
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
@@ -451,7 +453,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			types.TxValueKeyFrom:          reservoir.Addr,
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        amount,
-			types.TxValueKeyGasLimit:      uint64(50 * uint64(params.Ston)),
+			types.TxValueKeyGasLimit:      uint64(50 * uint64(params.Gkei)),
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
@@ -484,7 +486,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -512,11 +514,11 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 			fmt.Println("senderAddr = ", sender.Addr.String())
 		}
 
-		// send KLAY to sender
+		// send KAIA to sender
 		{
 			var txs types.Transactions
 
-			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+			amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir.GetNonce(),
 				sender.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -668,7 +670,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -782,7 +784,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -893,7 +895,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1009,7 +1011,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1108,7 +1110,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1253,7 +1255,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1523,7 +1525,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1655,7 +1657,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 }
 
 // TestAccountUpdateRoleBasedKeyNested tests account update with a nested RoleBasedKey.
-// Nested RoleBasedKey is not allowed in Klaytn.
+// Nested RoleBasedKey is not allowed in Kaia.
 // 1. Create an account with a RoleBasedKey.
 // 2. Update an accountKey with a nested RoleBasedKey
 func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
@@ -1710,7 +1712,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -1804,7 +1806,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -1845,7 +1847,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 
 	txTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
-		if i == types.TxTypeKlaytnLast {
+		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
@@ -1884,7 +1886,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			roleBased.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -2007,7 +2009,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 	defer bcdata.Shutdown()
 
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 
 	// Initialize address-balance map for verification
 	start = time.Now()
@@ -2089,7 +2091,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	{
 		var txs types.Transactions
 
-		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KLAY))
+		amount := new(big.Int).Mul(big.NewInt(3000), new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(reservoir.Nonce,
 			roleBased.Addr, amount, gasLimit, gasPrice, []byte{})
 
@@ -2189,7 +2191,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 }
 
 func TestAccountKeyUpdateLegacyToPublic(t *testing.T) {
-	gasPrice := new(big.Int).SetUint64(25 * params.Ston)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	gasLimit := uint64(1000000)
 
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)

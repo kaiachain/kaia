@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from trie/proof.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package statedb
 
@@ -103,7 +105,7 @@ func (t *Trie) Prove(key []byte, fromLevel uint, proofDB ProofDBWriter) error {
 	return nil
 }
 
-// NOTE-Klaytn-RemoveLater Below Prove is only used in tests, not in core codes.
+// NOTE-Kaia-RemoveLater Below Prove is only used in tests, not in core codes.
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
@@ -350,9 +352,9 @@ findFork:
 // unset removes all internal node references either the left most or right most.
 // It can meet these scenarios:
 //
-// - The given path is existent in the trie, unset the associated nodes with the
-//   specific direction
-// - The given path is non-existent in the trie
+//   - The given path is existent in the trie, unset the associated nodes with the
+//     specific direction
+//   - The given path is non-existent in the trie
 //   - the fork point is a fullnode, the corresponding child pointed by path
 //     is nil, return
 //   - the fork point is a shortnode, the shortnode is included in the range,
@@ -467,15 +469,15 @@ func hasRightElement(node node, key []byte) bool {
 // Expect the normal case, this function can also be used to verify the following
 // range proofs:
 //
-// - All elements proof. In this case the proof can be nil, but the range should
-//   be all the leaves in the trie.
+//   - All elements proof. In this case the proof can be nil, but the range should
+//     be all the leaves in the trie.
 //
-// - One element proof. In this case no matter the edge proof is a non-existent
-//   proof or not, we can always verify the correctness of the proof.
+//   - One element proof. In this case no matter the edge proof is a non-existent
+//     proof or not, we can always verify the correctness of the proof.
 //
-// - Zero element proof. In this case a single non-existent proof is enough to prove.
-//   Besides, if there are still some other leaves available on the right side, then
-//   an error will be returned.
+//   - Zero element proof. In this case a single non-existent proof is enough to prove.
+//     Besides, if there are still some other leaves available on the right side, then
+//     an error will be returned.
 //
 // Except returning the error to indicate the proof is valid or not, the function will
 // also return a flag to indicate whether there exists more accounts/slots in the trie.

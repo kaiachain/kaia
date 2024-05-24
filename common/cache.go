@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2018 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package common
 
@@ -132,7 +134,7 @@ type arcCache struct {
 
 func (cache *arcCache) Add(key CacheKey, value interface{}) (evicted bool) {
 	cache.arc.Add(key, value)
-	// TODO-Klaytn-RemoveLater need to be removed or should be added according to usage of evicted flag
+	// TODO-Kaia-RemoveLater need to be removed or should be added according to usage of evicted flag
 	return true
 }
 
@@ -261,7 +263,6 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 	var err error
 	for i := 0; i < numShards; i++ {
 		lruShard.shards[i], err = lru.NewWithEvict(shardsSize, nil)
-
 		if err != nil {
 			return nil, err
 		}

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -38,13 +40,13 @@ import (
 const (
 	TokenEventChanSize  = 10000
 	BridgeAddrJournal   = "bridge_addrs.rlp"
-	maxPendingNonceDiff = 1000 // TODO-Klaytn-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
+	maxPendingNonceDiff = 1000 // TODO-Kaia-ServiceChain: update this limitation. Currently, 2 * 500 TPS.
 
 	maxHandledEventSize = 10000000
 )
 
 const (
-	KLAY uint8 = iota
+	KAIA uint8 = iota
 	ERC20
 	ERC721
 )
@@ -66,7 +68,7 @@ var (
 )
 
 var handleVTmethods = map[uint8]string{
-	KLAY:   "handleKLAYTransfer",
+	KAIA:   "handleKLAYTransfer",
 	ERC20:  "handleERC20Transfer",
 	ERC721: "handleERC721Transfer",
 }
@@ -90,7 +92,7 @@ type BridgeInfo struct {
 
 	counterpartBackend Backend
 	address            common.Address
-	counterpartAddress common.Address // TODO-Klaytn need to set counterpart
+	counterpartAddress common.Address // TODO-Kaia need to set counterpart
 	account            *accountInfo
 	bridge             *bridgecontract.Bridge
 	counterpartBridge  *bridgecontract.Bridge
@@ -299,8 +301,8 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	)
 
 	ctpartTokenAddr := bi.GetCounterPartToken(tokenAddr)
-	// TODO-Klaytn-Servicechain Add counterpart token address in requestValueTransferEvent
-	if tokenType != KLAY && ctpartTokenAddr == (common.Address{}) {
+	// TODO-Kaia-Servicechain Add counterpart token address in requestValueTransferEvent
+	if tokenType != KAIA && ctpartTokenAddr == (common.Address{}) {
 		logger.Warn("Unregistered counter part token address.", "addr", ctpartTokenAddr.Hex())
 		ctTokenAddr, err := bi.counterpartBridge.RegisteredTokens(nil, tokenAddr)
 		if err != nil {
@@ -327,12 +329,12 @@ func (bi *BridgeInfo) handleRequestValueTransferEvent(ev IRequestValueTransferEv
 	var err error
 
 	switch tokenType {
-	case KLAY:
+	case KAIA:
 		handleTx, err = bi.bridge.HandleKLAYTransfer(auth, txHash, from, to, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
 			return err
 		}
-		handleValueTransferLog(bi.onChildChain, handleVTmethods[KLAY], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
+		handleValueTransferLog(bi.onChildChain, handleVTmethods[KAIA], handleTx.Hash().String(), requestNonce, from, to, valueOrTokenId)
 	case ERC20:
 		handleTx, err = bi.bridge.HandleERC20Transfer(auth, txHash, from, to, ctpartTokenAddr, valueOrTokenId, requestNonce, blkNumber, extraData)
 		if err != nil {
@@ -437,7 +439,7 @@ func (bi *BridgeInfo) GetCurrentBlockNumber() (uint64, error) {
 	return bi.subBridge.remoteBackend.CurrentBlockNumber(context.Background())
 }
 
-// DecodeRLP decodes the Klaytn
+// DecodeRLP decodes the Kaia
 func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	var LegacyBridgeAddrInfo struct {
 		LocalAddress  common.Address
@@ -469,7 +471,7 @@ func (b *BridgeJournal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// EncodeRLP serializes a BridgeJournal into the Klaytn RLP BridgeJournal format.
+// EncodeRLP serializes a BridgeJournal into the Kaia RLP BridgeJournal format.
 func (b *BridgeJournal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		b.BridgeAlias,
@@ -1098,7 +1100,7 @@ func (bm *BridgeManager) loop(
 		return
 	}
 
-	// TODO-Klaytn change goroutine logic for performance
+	// TODO-Kaia change goroutine logic for performance
 	for {
 		select {
 		case <-bi.closed:
@@ -1161,7 +1163,7 @@ func (bm *BridgeManager) SetERC20Fee(bridgeAddr, tokenAddr common.Address, fee *
 	return tx.Hash(), nil
 }
 
-// SetKLAYFee set the KLAY transfer fee on the bridge contract.
+// SetKLAYFee set the KAIA transfer fee on the bridge contract.
 func (bm *BridgeManager) SetKLAYFee(bridgeAddr common.Address, fee *big.Int) (common.Hash, error) {
 	bi, ok := bm.GetBridgeInfo(bridgeAddr)
 	if !ok {
@@ -1218,7 +1220,7 @@ func (bm *BridgeManager) GetERC20Fee(bridgeAddr, tokenAddr common.Address) (*big
 	return bi.bridge.FeeOfERC20(nil, tokenAddr)
 }
 
-// GetKLAYFee returns the KLAY transfer fee on the bridge contract.
+// GetKLAYFee returns the KAIA transfer fee on the bridge contract.
 func (bm *BridgeManager) GetKLAYFee(bridgeAddr common.Address) (*big.Int, error) {
 	bi, ok := bm.GetBridgeInfo(bridgeAddr)
 	if !ok {

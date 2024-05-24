@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from tests/init.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package tests
 
@@ -28,7 +30,7 @@ import (
 )
 
 // Forks table defines supported forks and their chain config.
-// TODO-Klaytn-RemoveLater Remove fork configs that are not meaningful for Klaytn
+// TODO-Kaia-RemoveLater Remove fork configs that are not meaningful for Kaia
 var Forks = map[string]*params.ChainConfig{
 	"Frontier": {
 		ChainID: big.NewInt(1),

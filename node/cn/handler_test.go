@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package cn
 
@@ -21,7 +23,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"sort"
 	"testing"
 	"time"
 
@@ -110,6 +111,7 @@ func newBlock(blockNum int) *types.Block {
 		Extra:      addrs[0][:],
 		Governance: addrs[0][:],
 		Vote:       addrs[0][:],
+		BaseFee:    big.NewInt(int64(params.DefaultLowerBoundBaseFee)),
 	}
 	header.Hash()
 	block := types.NewBlockWithHeader(header)
@@ -1020,19 +1022,31 @@ func TestProtocolManager_SetWsEndPoint(t *testing.T) {
 	assert.Equal(t, wsep, pm.wsendpoint)
 }
 
-func TestBroadcastTxsSortedByTime(t *testing.T) {
+func TestBroadcastTxsSortedByPriceAndTime(t *testing.T) {
 	// Generate a batch of accounts to start with
-	keys := make([]*ecdsa.PrivateKey, 5)
+	keys := make([]*ecdsa.PrivateKey, 10)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
 
 	// Generate a batch of transactions.
+	// txs[0:4] - legacyTxType with gasPrice 25ston. txs[5:10] - dynamicFeeTxType with gasPrice 25ston + tip.
 	txs := types.Transactions{}
-	for _, key := range keys {
-		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
-
+	for _, key := range keys[0:5] {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(25*params.Gkei), nil), signer, key)
+		txs = append(txs, tx)
+	}
+	for i, key := range keys[5:10] {
+		tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+			AccountNonce: uint64(0),
+			Recipient:    &common.Address{},
+			Amount:       big.NewInt(100),
+			GasLimit:     100,
+			GasFeeCap:    big.NewInt(int64(25*params.Gkei + i + 1)),
+			GasTipCap:    big.NewInt(int64(i + 1)),
+			Payload:      nil,
+		}), signer, key)
 		txs = append(txs, tx)
 	}
 
@@ -1045,7 +1059,7 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByTime(sortedTxs))
+	sortedTxs = types.SortTxsByPriceAndTime(sortedTxs, big.NewInt(25*params.Gkei))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1082,17 +1096,29 @@ func TestBroadcastTxsSortedByTime(t *testing.T) {
 
 func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	// Generate a batch of accounts to start with
-	keys := make([]*ecdsa.PrivateKey, 5)
+	keys := make([]*ecdsa.PrivateKey, 10)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
 
 	// Generate a batch of transactions.
+	// txs[0:4] - legacyTxType with gasPrice 25ston. txs[5:10] - dynamicFeeTxType with gasPrice 25ston + tip.
 	txs := types.Transactions{}
-	for _, key := range keys {
-		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
-
+	for _, key := range keys[0:4] {
+		tx, _ := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(25*params.Gkei), nil), signer, key)
+		txs = append(txs, tx)
+	}
+	for i, key := range keys[5:10] {
+		tx, _ := types.SignTx(types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+			AccountNonce: uint64(0),
+			Recipient:    &common.Address{},
+			Amount:       big.NewInt(100),
+			GasLimit:     100,
+			GasFeeCap:    big.NewInt(int64(25*params.Gkei + i + 1)),
+			GasTipCap:    big.NewInt(int64(i + 1)),
+			Payload:      nil,
+		}), signer, key)
 		txs = append(txs, tx)
 	}
 
@@ -1105,7 +1131,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	copy(sortedTxs, txs)
 
 	// Sort transaction by time.
-	sort.Sort(types.TxByTime(sortedTxs))
+	sortedTxs = types.SortTxsByPriceAndTime(sortedTxs, big.NewInt(25*params.Gkei))
 
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE

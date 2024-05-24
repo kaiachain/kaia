@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from core/genesis.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package blockchain
 
@@ -168,10 +170,10 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
-//	                     genesis == nil                            genesis != nil
+//	                     genesis == nil                             genesis != nil
 //	                  +-------------------------------------------------------------------
-//	db has no genesis |  main-net default, baobab if specified  |  genesis
-//	db has genesis    |  from DB                                |  genesis (if compatible)
+//	db has no genesis |  Mainnet default, Testnet if specified   |  genesis
+//	db has genesis    |  from DB                                 |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
@@ -191,13 +193,13 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			case isPrivate:
 				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
 				return params.AllGxhashProtocolChanges, common.Hash{}, errNoGenesis
-			case networkId == params.BaobabNetworkId:
-				logger.Info("Writing default baobab genesis block")
-				genesis = DefaultBaobabGenesisBlock()
-			case networkId == params.CypressNetworkId:
+			case networkId == params.TestnetNetworkId:
+				logger.Info("Writing default Testnet genesis block")
+				genesis = DefaultTestnetGenesisBlock()
+			case networkId == params.MainnetNetworkId:
 				fallthrough
 			default:
-				logger.Info("Writing default main-net genesis block")
+				logger.Info("Writing default Mainnet genesis block")
 				genesis = DefaultGenesisBlock()
 			}
 			if genesis.Config.Governance != nil {
@@ -206,7 +208,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
-		// Initialize DeriveSha implementation
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -227,12 +228,18 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			return genesis.Config, newGenesisBlock.Hash(), err
 		}
 		// This is the usual path which does not overwrite genesis block with the new one.
+		// Make sure the provided genesis is equal to the stored one.
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != stored {
 			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
 		}
 	}
+
+	// The genesis block is present in the database but the corresponding state might not.
+	// Because the trie can be partially corrupted, we always commit the trie.
+	// It can happen in a state migrated database or live pruned database.
+	commitGenesisState(genesis, db, networkId)
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
@@ -261,7 +268,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && params.CypressGenesisHash != stored && params.BaobabGenesisHash != stored {
+	if genesis == nil && params.MainnetGenesisHash != stored && params.TestnetGenesisHash != stored {
 		return storedcfg, stored, nil
 	}
 
@@ -283,10 +290,10 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
-	case ghash == params.CypressGenesisHash:
-		return params.CypressChainConfig
-	case ghash == params.BaobabGenesisHash:
-		return params.BaobabChainConfig
+	case ghash == params.MainnetGenesisHash:
+		return params.MainnetChainConfig
+	case ghash == params.TestnetGenesisHash:
+		return params.TestnetChainConfig
 	default:
 		return params.AllGxhashProtocolChanges
 	}
@@ -296,6 +303,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *types.Block {
 	if db == nil {
+		// If db == nil, do not write to the real database. Here we supply a memory database as a placeholder.
 		db = database.NewMemoryDBManager()
 	}
 	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
@@ -390,31 +398,31 @@ func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	return block
 }
 
-// GenesisBlockForTesting creates and writes a block in which addr has the given peb balance.
+// GenesisBlockForTesting creates and writes a block in which addr has the given kei balance.
 func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
 }
 
-// DefaultGenesisBlock returns the Cypress mainnet genesis block.
+// DefaultGenesisBlock returns the Mainnet genesis block.
 // It is also used for default genesis block.
 func DefaultGenesisBlock() *Genesis {
 	ret := &Genesis{}
-	if err := json.Unmarshal(cypressGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Cypress Genesis Json", "err", err)
+	if err := json.Unmarshal(mainnetGenesisJson, &ret); err != nil {
+		logger.Error("Error in Unmarshalling Mainnet Genesis Json", "err", err)
 	}
-	ret.Config = params.CypressChainConfig
+	ret.Config = params.MainnetChainConfig
 	return ret
 }
 
-// DefaultBaobabGenesisBlock returns the Baobab testnet genesis block.
-func DefaultBaobabGenesisBlock() *Genesis {
+// DefaultTestnetGenesisBlock returns the Testnet genesis block.
+func DefaultTestnetGenesisBlock() *Genesis {
 	ret := &Genesis{}
-	if err := json.Unmarshal(baobabGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Baobab Genesis Json", "err", err)
+	if err := json.Unmarshal(testnetGenesisJson, &ret); err != nil {
+		logger.Error("Error in Unmarshalling Testnet Genesis Json", "err", err)
 		return nil
 	}
-	ret.Config = params.BaobabChainConfig
+	ret.Config = params.TestnetChainConfig
 	return ret
 }
 
@@ -428,6 +436,27 @@ func decodePrealloc(data string) GenesisAlloc {
 		ga[common.BigToAddress(account.Addr)] = GenesisAccount{Balance: account.Balance}
 	}
 	return ga
+}
+
+func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
+	if genesis == nil {
+		switch {
+		case networkId == params.TestnetNetworkId:
+			genesis = DefaultTestnetGenesisBlock()
+		case networkId == params.MainnetNetworkId:
+			fallthrough
+		default:
+			genesis = DefaultGenesisBlock()
+		}
+		if genesis.Config.Governance != nil {
+			genesis.Governance = SetGenesisGovernance(genesis)
+		}
+	}
+	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
+	// But do not run genesis.Commit() which overwrites HeaderHash.
+	InitDeriveSha(genesis.Config)
+	genesis.ToBlock(common.Hash{}, db).Hash()
+	logger.Info("Restored state trie for the genesis block")
 }
 
 type GovernanceSet map[string]interface{}

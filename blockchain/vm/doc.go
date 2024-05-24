@@ -24,7 +24,7 @@ Package vm implements the Ethereum Virtual Machine.
 The vm package implements one EVM, a byte code VM.
 The Byte Code VM loops over a set of bytes and executes them according to the set of rules defined in the Ethereum yellow paper.
 
-As well as the original functionality of the EVM, this package implemented additional pre-compiled contracts to support the native features of Klaytn.
-For more information about pre-compiled contracts, see KlaytnDocs (https://docs.klaytn.com/smart-contract/precompiled-contracts).
+As well as the original functionality of the EVM, this package implemented additional pre-compiled contracts to support the native features of Kaia.
+For more information about pre-compiled contracts, see docs (https://docs.kaia.io/docs/learn/computation/precompiled-contracts/).
 */
 package vm

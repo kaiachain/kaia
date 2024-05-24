@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rlp/decode.go(2022/05/19)
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rlp
 
@@ -80,7 +82,7 @@ type Decoder interface {
 // Note that Decode does not set an input limit for all readers and may be vulnerable to
 // panics cause by huge value sizes. If you need an input limit, use
 //
-//     NewStream(r, limit).Decode(val)
+//	NewStream(r, limit).Decode(val)
 func Decode(r io.Reader, val interface{}) error {
 	stream := streamPool.Get().(*Stream)
 	defer streamPool.Put(stream)

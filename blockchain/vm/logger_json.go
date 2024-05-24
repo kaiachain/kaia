@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from cmd/evm/json_logger.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package vm
 
@@ -45,7 +47,7 @@ func (l *JSONLogger) CaptureStart(env *EVM, from common.Address, to common.Addre
 
 // CaptureState outputs state information on the logger.
 // TODO: Add rData (return data) later
-func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	memory := scope.Memory
 	stack := scope.Stack
 	log := StructLog{
@@ -63,7 +65,7 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint
 		log.Memory = memory.Data()
 	}
 	if !l.cfg.DisableStack {
-		// TODO-Klaytn: residual porting PR -> https://github.com/ethereum/go-ethereum/pull/23016/files
+		// TODO-Kaia: residual porting PR -> https://github.com/ethereum/go-ethereum/pull/23016/files
 		logstack := make([]*big.Int, len(stack.Data()))
 		for i, item := range stack.Data() {
 			logstack[i] = item.ToBig()
@@ -74,8 +76,8 @@ func (l *JSONLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint
 }
 
 // CaptureFault outputs state information on the logger.
-func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
-	l.CaptureState(env, pc, op, gas, cost, scope, depth, err)
+func (l *JSONLogger) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
+	l.CaptureState(env, pc, op, gas, cost, ccLeft, ccOpcode, scope, depth, err)
 }
 
 // CaptureEnd is triggered at end of execution.

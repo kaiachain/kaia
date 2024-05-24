@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package bls
 
@@ -39,7 +41,7 @@ type (
 // Some functions are named after the equivalent functions in prysm Ethereum CL.
 // (https://github.com/prysmaticlabs/prysm/blob/v4.0.2/crypto/bls/bls.go)
 // Such naming should provide compatiblity with prysm code snippets,
-// in case prysm code snippets are integrated to klaytn.
+// in case prysm code snippets are integrated to Kaia.
 //
 // ikm -> SK:  GenerateKey
 // ()  -> SK:  RandKey

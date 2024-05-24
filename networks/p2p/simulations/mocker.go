@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from p2p/simulations/mocker.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package simulations
 
@@ -100,10 +102,10 @@ func startStop(net *Network, quit chan struct{}, nodeCount int) {
 	}
 }
 
-//The probabilistic mocker func has a more probabilistic pattern
-//(the implementation could probably be improved):
-//nodes are connected in a ring, then a varying number of random nodes is selected,
-//mocker then stops and starts them in random intervals, and continues the loop
+// The probabilistic mocker func has a more probabilistic pattern
+// (the implementation could probably be improved):
+// nodes are connected in a ring, then a varying number of random nodes is selected,
+// mocker then stops and starts them in random intervals, and continues the loop
 func probabilistic(net *Network, quit chan struct{}, nodeCount int) {
 	nodes, err := connectNodesInRing(net, nodeCount)
 	if err != nil {

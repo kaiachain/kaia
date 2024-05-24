@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from consensus/ethash/consensus.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package gxhash
 
@@ -35,7 +37,7 @@ import (
 )
 
 var (
-	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in peb for successfully mining a block upward from Byzantium
+	ByzantiumBlockReward   *big.Int = big.NewInt(3e+18) // Block reward in kei for successfully mining a block upward from Byzantium
 	allowedFutureBlockTime          = 15 * time.Second  // Max time from current time allowed for blocks, before they're considered future blocks
 )
 
@@ -78,7 +80,7 @@ func (gxhash *Gxhash) GetConsensusInfo(block *types.Block) (consensus.ConsensusI
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
-// stock Klaytn gxhash engine.
+// stock Kaia gxhash engine.
 func (gxhash *Gxhash) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
 	// If we're running a full engine faking, accept any input as valid
 	if gxhash.config.PowMode == ModeFullFake {
@@ -179,7 +181,7 @@ func (gxhash *Gxhash) verifyHeaderWorker(chain consensus.ChainReader, headers []
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules of the
-// stock Klaytn gxhash engine.
+// stock Kaia gxhash engine.
 // See YP section 4.3.4. "Block Header Validity"
 func (gxhash *Gxhash) verifyHeader(chain consensus.ChainReader, header, parent *types.Header, seal bool) error {
 	// Ensure that the header's extra-data section is of a reasonable size

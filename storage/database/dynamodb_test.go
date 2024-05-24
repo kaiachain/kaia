@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 //
 // For local test, please run the below.
 //    $ docker run -d -p 4566:4566 localstack/localstack:0.13.0
@@ -38,13 +40,14 @@ import (
 // GetTestDynamoConfig gets dynamo config for local test
 //
 // Please Run DynamoDB local with docker
-//    $ docker run -d -p 4566:4566 localstack/localstack:0.11.5
+//
+//	$ docker run -d -p 4566:4566 localstack/localstack:0.11.5
 func GetTestDynamoConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "us-east-1",
 		Endpoint:           "http://localhost:4566",
 		S3Endpoint:         "http://localhost:4566",
-		TableName:          "klaytn-default" + strconv.Itoa(time.Now().Nanosecond()),
+		TableName:          "kaia-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,
 		WriteCapacityUnits: 10000,

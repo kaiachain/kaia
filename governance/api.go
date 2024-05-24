@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package governance
 
@@ -45,13 +47,13 @@ func NewGovernanceAPI(gov Engine) *GovernanceAPI {
 	return &GovernanceAPI{governance: gov}
 }
 
-type GovernanceKlayAPI struct {
+type GovernanceKaiaAPI struct {
 	governance Engine
 	chain      blockChain
 }
 
-func NewGovernanceKlayAPI(gov Engine, chain blockChain) *GovernanceKlayAPI {
-	return &GovernanceKlayAPI{governance: gov, chain: chain}
+func NewGovernanceKaiaAPI(gov Engine, chain blockChain) *GovernanceKaiaAPI {
+	return &GovernanceKaiaAPI{governance: gov, chain: chain}
 }
 
 var (
@@ -65,24 +67,24 @@ var (
 	errInvalidUpperBound      = errors.New("upperboundbasefee cannot be set lower than lowerboundbasefee")
 )
 
-func (api *GovernanceKlayAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+func (api *GovernanceKaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
 	return getStakingInfo(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *GovernanceKaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
 
-func (api *GovernanceKlayAPI) NodeAddress() common.Address {
+func (api *GovernanceKaiaAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
 }
 
 // GetRewards returns detailed information of the block reward at a given block number.
-func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
+func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber {
 		blockNumber = api.chain.CurrentBlock().NumberU64()
@@ -91,6 +93,11 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	}
 
 	header := api.chain.GetHeaderByNumber(blockNumber)
+	block := api.chain.GetBlock(header.Hash(), blockNumber)
+	if block == nil {
+		return nil, errors.New("not found block")
+	}
+	txs, receipts := block.Transactions(), api.chain.GetReceiptsByBlockHash(header.Hash())
 	if header == nil {
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
 	}
@@ -106,7 +113,7 @@ func (api *GovernanceKlayAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 		return nil, err
 	}
 
-	return reward.GetBlockReward(header, rules, rewardParamSet)
+	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet)
 }
 
 type AccumulatedRewards struct {
@@ -115,21 +122,21 @@ type AccumulatedRewards struct {
 	FirstBlock     *big.Int `json:"firstBlock"`
 	LastBlock      *big.Int `json:"lastBlock"`
 
-	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKFFRewards + TotalKCFRewards
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards
 	TotalMinted          *big.Int                    `json:"totalMinted"`
 	TotalTxFee           *big.Int                    `json:"totalTxFee"`
 	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
 	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
 	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
-	TotalKFFRewards      *big.Int                    `json:"totalKFFRewards"`
-	TotalKCFRewards      *big.Int                    `json:"totalKCFRewards"`
+	TotalKIFRewards      *big.Int                    `json:"totalKIFRewards"`
+	TotalKEFRewards      *big.Int                    `json:"totalKEFRewards"`
 	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
 // GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
 func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
 	blockchain := api.governance.BlockChain()
-	govKlayAPI := NewGovernanceKlayAPI(api.governance, blockchain)
+	govKaiaAPI := NewGovernanceKaiaAPI(api.governance, blockchain)
 
 	currentBlock := blockchain.CurrentBlock().NumberU64()
 
@@ -172,7 +179,7 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 			// the minimum digit of request is period to avoid current access to an accArray item
 			for num := range reqCh {
 				bn := rpc.BlockNumber(num)
-				blockReward, err := govKlayAPI.GetRewards(&bn)
+				blockReward, err := govKaiaAPI.GetRewards(&bn)
 				if err != nil {
 					errCh <- err
 					wg.Done()
@@ -226,8 +233,8 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 	accumRewards.TotalBurntTxFee = blockRewards.BurntFee
 	accumRewards.TotalProposerRewards = blockRewards.Proposer
 	accumRewards.TotalStakingRewards = blockRewards.Stakers
-	accumRewards.TotalKFFRewards = blockRewards.KFF
-	accumRewards.TotalKCFRewards = blockRewards.KCF
+	accumRewards.TotalKIFRewards = blockRewards.KIF
+	accumRewards.TotalKEFRewards = blockRewards.KEF
 
 	return accumRewards, nil
 }
@@ -351,7 +358,7 @@ func (api *GovernanceAPI) IdxCacheFromDb() []uint64 {
 	return api.governance.IdxCacheFromDb()
 }
 
-// TODO-Klaytn: Return error if invalid input is given such as pending or a too big number
+// TODO-Kaia: Return error if invalid input is given such as pending or a too big number
 func (api *GovernanceAPI) ItemCacheFromDb(num *rpc.BlockNumber) map[string]interface{} {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
@@ -420,8 +427,11 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
 	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
 	config.CancunCompatibleBlock = latestConfig.CancunCompatibleBlock
+	config.KaiaCompatibleBlock = latestConfig.KaiaCompatibleBlock
 	config.Kip103CompatibleBlock = latestConfig.Kip103CompatibleBlock
 	config.Kip103ContractAddress = latestConfig.Kip103ContractAddress
+	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
+	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
 
 	return config
@@ -442,7 +452,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 }
 
 // Disabled APIs
-// func (api *GovernanceKlayAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
+// func (api *GovernanceKaiaAPI) GetTxGasHumanReadable(num *rpc.BlockNumber) (uint64, error) {
 // 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 // 		// If the value hasn't been set in governance, set it with default value
 // 		if ret := api.governance.GetGovernanceValue(params.ConstTxGasHumanReadable); ret == nil {
@@ -466,7 +476,7 @@ func (api *GovernanceAPI) isGovernanceModeBallot() bool {
 // 	}
 // }
 //
-// func (api *GovernanceKlayAPI) setDefaultTxGasHumanReadable() (uint64, error) {
+// func (api *GovernanceKaiaAPI) setDefaultTxGasHumanReadable() (uint64, error) {
 // 	err := api.governance.currentSet.SetValue(params.ConstTxGasHumanReadable, params.TxGasHumanReadable)
 // 	if err != nil {
 // 		return 0, errSetDefaultFailure

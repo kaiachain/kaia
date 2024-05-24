@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2019 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package account
 
@@ -20,7 +22,7 @@ import (
 	"fmt"
 )
 
-// ExternallyOwnedAccount represents a Klaytn account used by a user.
+// ExternallyOwnedAccount represents a Kaia account used by a user.
 type ExternallyOwnedAccount struct {
 	*AccountCommon
 }

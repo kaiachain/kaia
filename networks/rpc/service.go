@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2022 The klaytn Authors
 // Copyright 2022 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from rpc/service.go (2022/08/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package rpc
 
@@ -104,18 +106,30 @@ func (r *serviceRegistry) callback(method string) *callback {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	namespace, method := elem[0], elem[1]
+
 	// when NonEthCompatible is true, the return formatting for the eth namespace API provided for Ethereum compatibility is disabled.
 	// convert ethereum namespace to klay namespace.
-	if NonEthCompatible && elem[0] == "eth" {
-		return r.services["klay"].callbacks[elem[1]]
+	if NonEthCompatible && namespace == "eth" {
+		return r.services["kaia"].callbacks[method]
 	}
-	return r.services[elem[0]].callbacks[elem[1]]
+
+	if namespace == "klay" {
+		namespace = "kaia"
+	}
+
+	return r.services[namespace].callbacks[method]
 }
 
 // subscription returns a subscription callback in the given service.
 func (r *serviceRegistry) subscription(service, name string) *callback {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if service == "klay" {
+		service = "kaia"
+	}
+
 	return r.services[service].subscriptions[name]
 }
 

@@ -22,6 +22,7 @@ import (
 	event "github.com/klaytn/klaytn/event"
 	rpc "github.com/klaytn/klaytn/networks/rpc"
 	params "github.com/klaytn/klaytn/params"
+	reward "github.com/klaytn/klaytn/reward"
 	database "github.com/klaytn/klaytn/storage/database"
 )
 
@@ -294,6 +295,21 @@ func (m *MockBackend) GetTd(arg0 common.Hash) *big.Int {
 func (mr *MockBackendMockRecorder) GetTd(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTd", reflect.TypeOf((*MockBackend)(nil).GetTd), arg0)
+}
+
+// GetTotalSupply mocks base method.
+func (m *MockBackend) GetTotalSupply(arg0 context.Context, arg1 rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTotalSupply", arg0, arg1)
+	ret0, _ := ret[0].(*reward.TotalSupply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTotalSupply indicates an expected call of GetTotalSupply.
+func (mr *MockBackendMockRecorder) GetTotalSupply(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalSupply", reflect.TypeOf((*MockBackend)(nil).GetTotalSupply), arg0, arg1)
 }
 
 // GetTxAndLookupInfo mocks base method.

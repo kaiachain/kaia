@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2019 The klaytn Authors
 // Copyright 2014 The go-ethereum Authors
 // This file is part of go-ethereum.
@@ -17,6 +18,7 @@
 //
 // This file is derived from eth/protocol.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package sc
 
@@ -56,7 +58,7 @@ var (
 type SCProtocol struct {
 	// Official short name of the protocol used during capability negotiation.
 	Name string
-	// Supported versions of the Klaytn protocol (first is primary).
+	// Supported versions of the Kaia protocol (first is primary).
 	Versions []uint
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64

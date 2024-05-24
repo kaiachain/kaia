@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from internal/build/util.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package build
 
@@ -199,7 +201,7 @@ func ExpandPackages(packages []string) []string {
 // ExcludePackages excludes packages having patterns from the passed package slice and
 // returns a slice including only the remained packages.
 func ExcludePackages(packages []string, patterns []string) []string {
-	// TODO-Klaytn This exclusion code is a naive implementation. Improve this if it hurts build performance.
+	// TODO-Kaia This exclusion code is a naive implementation. Improve this if it hurts build performance.
 	packages = ExpandPackages(packages)
 
 	for _, pattern := range patterns {

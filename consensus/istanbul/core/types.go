@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,6 +18,7 @@
 //
 // This file is derived from quorum/consensus/istanbul/core/types.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package core
 
@@ -94,7 +96,7 @@ type message struct {
 //
 // define the functions that needs to be provided for rlp Encoder/Decoder.
 
-// EncodeRLP serializes m into the Klaytn RLP format.
+// EncodeRLP serializes m into the Kaia RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
@@ -136,11 +138,11 @@ func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 			return err
 		}
 
-		signerAdd, err := validateFn(payload, m.Signature)
+		signerAddr, err := validateFn(payload, m.Signature)
 		if err != nil {
 			return err
 		}
-		if bytes.Compare(signerAdd.Bytes(), m.Address.Bytes()) != 0 {
+		if !bytes.Equal(signerAddr.Bytes(), m.Address.Bytes()) {
 			return errInvalidSigner
 		}
 	}

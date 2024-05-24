@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Copyright 2020 The klaytn Authors
 // This file is part of the klaytn library.
 //
@@ -13,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+// Modified and improved for the Kaia development.
 
 package kas
 
@@ -129,7 +131,7 @@ func transformToTraceResults(event blockchain.ChainEvent) ([]*Tx, []*RevertedTx,
 		entryTx := getEntryTx(event.Block, txIdx, tx)
 		offset := int64(0)
 
-		// transforms the result into internal transaction which is associated with KLAY transfer recursively.
+		// transforms the result into internal transaction which is associated with KAIA transfer recursively.
 		if receipt.Status == types.ReceiptStatusSuccessful {
 			internalTx, err := transformToInternalTx(trace, &offset, entryTx, true)
 			if err != nil {

@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2018 The klaytn Authors
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -17,8 +18,9 @@
 //
 // This file is derived from interfaces.go (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
-// Package klaytn defines interfaces for interacting with Klaytn.
+// Package Kaia defines interfaces for interacting with Kaia.
 package klaytn
 
 import (
@@ -99,7 +101,7 @@ type ChainStateReader interface {
 }
 
 // SyncProgress gives progress indications when the node is synchronising with
-// the Klaytn network.
+// the Kaia network.
 type SyncProgress struct {
 	StartingBlock uint64 // Block number where sync began
 	CurrentBlock  uint64 // Current block number where sync is at
@@ -119,8 +121,8 @@ type CallMsg struct {
 	From     common.Address  // the sender of the 'transaction'
 	To       *common.Address // the destination contract (nil for contract creation)
 	Gas      uint64          // if 0, the call executes with near-infinite gas
-	GasPrice *big.Int        // peb <-> gas exchange ratio
-	Value    *big.Int        // amount of peb sent along with the call
+	GasPrice *big.Int        // kei <-> gas exchange ratio
+	Value    *big.Int        // amount of kei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
 
 	// Introduced by AccessListTxType transaction.
@@ -138,7 +140,7 @@ type ContractCaller interface {
 
 // FilterQuery contains options for contract log filtering.
 type FilterQuery struct {
-	BlockHash *common.Hash     // used by klay_getLogs and eth_getLogs, return logs only from block with this hash
+	BlockHash *common.Hash     // used by kaia_getLogs and eth_getLogs, return logs only from block with this hash
 	FromBlock *big.Int         // beginning of the queried range, nil means genesis block
 	ToBlock   *big.Int         // end of the range, nil means latest block
 	Addresses []common.Address // restricts matches to events created by specific contracts

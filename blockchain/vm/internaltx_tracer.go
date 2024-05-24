@@ -1,3 +1,4 @@
+// Modifications Copyright 2024 The Kaia Authors
 // Modifications Copyright 2020 The klaytn Authors
 // Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
@@ -20,6 +21,7 @@
 //
 // This file is derived from eth/tracers/internal/tracers/call_tracer.js (2018/06/04).
 // Modified and improved for the klaytn development.
+// Modified and improved for the Kaia development.
 
 package vm
 
@@ -199,7 +201,7 @@ func (t *InternalTxTracer) Stop(err error) {
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
-func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	if t.err == nil {
 		// Initialize the context if it wasn't done yet
 		if !t.initialized {
@@ -396,7 +398,7 @@ func (t *InternalTxTracer) step(log *tracerLog) error {
 
 // CaptureFault implements the Tracer interface to trace an execution fault
 // while running an opcode.
-func (t *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost uint64, scope *ScopeContext, depth int, err error) {
+func (t *InternalTxTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 	if t.err == nil {
 		// Apart from the error, everything matches the previous invocation
 		t.errValue = err.Error()
