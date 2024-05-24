@@ -188,7 +188,10 @@ func GetTotalTxFee(header *types.Header, txs []*types.Transaction, receipts []*t
 	if txs == nil || receipts == nil || !rules.IsKaia {
 		return totalFee
 	}
-
+if len(txs) != len(receipts) {
+	logger.Error("GetTotalTxFee: txs and receipts length mismatch", "txs", len(txs), "receipts", len(receipts))
+	return totalFee
+}
 	// Since kaia, tip is added
 	for i, tx := range txs {
 		tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
