@@ -72,6 +72,7 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 		if module == "klay" {
 			module = "kaia"
 		}
+		whitelist[module] = true
 	}
 	// Register all the APIs exposed by the services
 	handler := NewServer()
