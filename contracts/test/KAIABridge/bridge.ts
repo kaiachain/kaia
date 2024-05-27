@@ -1319,7 +1319,7 @@ describe("[Bridge Test]", function () {
     expect(await operator.nextProvisionSeq(operator4.address)).to.be.equal(0)
   });
 
-  it("#Bridge.sol modifier/require test", async function () {
+  it("#Claim error (case: bridge balacne is not enough)", async function () {
     const bridgeBalance = await getBalance(bridge.address);
     const prov1 = [seq, sender, receiver, bridgeBalance + 1n];
     const prov2 = [seq + 1, sender, receiver, amount];
