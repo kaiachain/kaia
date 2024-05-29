@@ -29,7 +29,7 @@ executors:
           password: $DOCKER_PASSWORD
   linux-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/klaytn/klaytn
-    resource_class: xlarge
+    resource_class: large
     docker:
       - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
@@ -390,7 +390,7 @@ jobs:
 
   test-others:
     executor: linux-others-executor
-    resource_class: xlarge
+    resource_class: large
     steps:
       - checkout
       - wait-other-containers-ready
@@ -422,7 +422,7 @@ jobs:
 
   coverage:
     executor: linux-others-executor
-    resource_class: xlarge
+    resource_class: large
     steps:
       - checkout
       - wait-other-containers-ready
