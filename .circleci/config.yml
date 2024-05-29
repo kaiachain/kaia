@@ -20,7 +20,7 @@ orbs:
 
 executors:
   linux-executor: # this executor is for general testing and packaging linux binaries
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
       - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
@@ -28,7 +28,7 @@ executors:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
   linux-others-executor: # this executor is for test-others job
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
       - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
@@ -58,19 +58,19 @@ executors:
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
   darwin-executor: # this executor is for packaging darwin binaries
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/kaiachain/kaia
     macos:
       xcode: 14.2.0
     resource_class: macos.x86.medium.gen2
   rpm-executor: # this executor is for packaging rpm binaries
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/kaiachain/kaia
     docker:
       - image: klaytn/circleci-rpmbuild:1.22.1-gcc7
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
   default:
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/kaiachain/kaia
     docker:
       - image: cimg/go:1.22.1
 
