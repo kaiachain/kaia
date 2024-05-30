@@ -2,13 +2,13 @@ version: 2.1
 
 aliases:
   - &filter-only-version-tag
-    tags:
-      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+#    tags:
+#      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore: /.*/
   - &filter-version-not-release
-    tags:
-      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+#    tags:
+#      only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
     branches:
       ignore:
         - /release\/.*/
@@ -140,7 +140,7 @@ commands:
             export GOPATH=~/go
             export PATH=$HOME/go1.22.1/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -159,7 +159,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/
             done
   rpm-tagging-baobab:
     description: "rpm tagging for baobab"
@@ -176,7 +176,7 @@ commands:
             for item in kcn kpn ken; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/
             done
   createrepo-update:
     steps:
