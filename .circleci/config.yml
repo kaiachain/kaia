@@ -246,7 +246,7 @@ commands:
       - run:
           name: "Generate tag"
           command: |
-            export version="v0.9.0-test1"
+            export version=$(go run build/rpm/main.go version) >> $BASH_ENV
             echo "git tag $version"
             git checkout test-cicd
             git config --global user.email "team.devops@groundx.xyz"
@@ -553,7 +553,6 @@ jobs:
     steps:
       - add_ssh_keys
       - checkout
-      - run: git checkout test-cicd
       - tagging-delete-branch
 
 workflows:
