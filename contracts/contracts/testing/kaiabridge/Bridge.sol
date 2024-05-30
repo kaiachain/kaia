@@ -244,15 +244,35 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         emit Transfer(swapReq);
     }
 
+    /// @dev record failed transfer history
+    /// @param seq sequence number
+    function recordTransferFailure(uint64 seq) internal {
+        transferFail[seq]++;
+        if (transferFail[seq] > maxTryTransfer) {
+            EnumerableSetUint64.setRemove(claimCandidates, seq);
+            EnumerableSetUint64.setAdd(claimFailures, seq);
+        }
+    }
+
     /// @dev Transfer KAIA to receiver with the specified amount in the provision
     /// @param prov ProvisionData
     /// @param revertOnFail Make reverts if operations fails and the value is true, otherwise no make revert, but record its failure
     function claim(ProvisionData memory prov, bool revertOnFail)
         internal
         nonReentrant
-        enoughPoolAmount(prov.amount)
         returns (bool)
     {
+        uint256 bridgeBalance = address(this).balance;
+        bool isEnoughBalance = bridgeBalance > prov.amount;
+        if (revertOnFail) {
+            require(isEnoughBalance, "KAIA::Bridge: Bridge balance is not enough to transfer provision amount");
+        } else {
+            if (!isEnoughBalance) {
+                recordTransferFailure(prov.seq);
+                return false;
+            }
+        }
+
         // Allocate half of gas as available gas for the fallback code
         (bool sent, ) = prov.receiver.call{
             value: prov.amount,
@@ -262,10 +282,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
             if (revertOnFail) {
                 revert("KAIA::Bridge: Failed to transfer amount of provision");
             }
-            if (transferFail[prov.seq]++ > maxTryTransfer) {
-                EnumerableSetUint64.setRemove(claimCandidates, prov.seq);
-                EnumerableSetUint64.setAdd(claimFailures, prov.seq);
-            }
+            recordTransferFailure(prov.seq);
             return false;
         }
         emit Claim(prov);

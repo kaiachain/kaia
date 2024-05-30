@@ -1319,6 +1319,33 @@ describe("[Bridge Test]", function () {
     expect(await operator.nextProvisionSeq(operator4.address)).to.be.equal(0)
   });
 
+  it("#Claim error (case: bridge balacne is not enough)", async function () {
+    const bridgeBalance = await getBalance(bridge.address);
+    const prov1 = [seq, sender, receiver, bridgeBalance + 1n];
+    const prov2 = [seq + 1, sender, receiver, amount];
+
+    let rawTxData = (await bridge.populateTransaction.provision(prov1)).data;
+    await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
+    await operator.connect(operator2).submitTransaction(bridge.address, rawTxData, 0);
+    await operator.connect(operator3).submitTransaction(bridge.address, rawTxData, 0);
+
+    rawTxData = (await bridge.populateTransaction.provision(prov2)).data;
+    await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
+    await operator.connect(operator2).submitTransaction(bridge.address, rawTxData, 0);
+    await operator.connect(operator3).submitTransaction(bridge.address, rawTxData, 0);
+
+    const mintLock = Number(await bridge.TRANSFERLOCK());
+    await addTime(mintLock);
+
+    // revert on single claim
+    await expect(bridge.requestClaim(seq))
+      .to.be.revertedWith("KAIA::Bridge: Bridge balance is not enough to transfer provision amount")
+
+    expect(await bridge.nClaimed()).to.be.equal(0);
+    await bridge.requestBatchClaim(10);
+    expect(await bridge.nClaimed()).to.be.equal(1);
+  })
+
   /////////////////// modifier/require coverage test ///////////////////
   it("#Bridge.sol modifier/require cov", async function () {
     // 1. auth
