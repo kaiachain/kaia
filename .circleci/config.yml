@@ -683,7 +683,7 @@ workflows:
       - major-tagging:
           filters:
             branches:
-              only: master
+              only: test-cicd
 
   nightly-coverage:
     triggers:
