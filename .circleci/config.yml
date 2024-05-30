@@ -246,7 +246,7 @@ commands:
       - run:
           name: "Generate tag"
           command: |
-            export version="v0.9.0-test"
+            export version="v0.9.0-test1"
             echo "git tag $version"
             git checkout test-cicd
             git config --global user.email "team.devops@groundx.xyz"
