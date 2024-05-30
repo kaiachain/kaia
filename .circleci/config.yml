@@ -248,6 +248,7 @@ commands:
           command: |
             export version="v0.9.0-test"
             echo "git tag $version"
+            git checkout test-cicd
             git config --global user.email "team.devops@groundx.xyz"
             git config --global user.name "circleci-klaytn"
             git tag -a $version -m "$CIRCLE_STAGE"
@@ -552,6 +553,7 @@ jobs:
     steps:
       - add_ssh_keys
       - checkout
+      - run: git checkout test-cicd
       - tagging-delete-branch
 
 workflows:
