@@ -297,6 +297,7 @@ abstract contract IBridge {
     uint256 public maxTryTransfer;
     bool public addrValidationOn;
     uint256 public TRANSFERLOCK;
+    uint256 public nTransferHolds;
     mapping (uint256 => uint256) public timelocks; // <sequence, residual lock duration>
     bool public pause;
 

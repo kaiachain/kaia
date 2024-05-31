@@ -49,7 +49,7 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
         nextProvisionSeq = 0;
         maxTryTransfer = newMaxTryTransfer;
 
-        TRANSFERLOCK = 7 days;
+        TRANSFERLOCK = 30 minutes;
         pause = false;
         operator = initOperator;
         guardian = initGuardian;
@@ -326,12 +326,14 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     /// @dev See {IBridge-holdClaim}
     function holdClaim(uint256 seq) public override onlyJudge {
         setTransferTimeLock(seq, INFINITE);
+        nTransferHolds += 1;
         emit HoldClaim(seq, INFINITE);
     }
 
     /// @dev See {IBridge-releaseClaim}
     function releaseClaim(uint256 seq) public override onlyGuardian {
         setTransferTimeLock(seq, 0);
+        nTransferHolds -= 1;
         emit ReleaseClaim(seq, 0);
     }
 

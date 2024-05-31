@@ -3,7 +3,7 @@ import { addTime, getBalance } from "../../test/common/helper";
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 const DAY = 24 * 60 * 60;
-const WEEK = 7 * DAY;
+const HOUR = 60 * 60;
 const YEAR = 365 * DAY;
 
 describe("[Bridge Test]", function () {
@@ -223,7 +223,7 @@ describe("[Bridge Test]", function () {
   });
 
   it("#authroization test - requestClaim", async function () {
-    expect(await bridge.TRANSFERLOCK()).to.equal(WEEK);
+    expect(await bridge.TRANSFERLOCK()).to.equal(HOUR / 2);
     let rawTxData = (await bridge.populateTransaction.changeTransferTimeLock(
       DAY
     )).data;
@@ -366,7 +366,7 @@ describe("[Bridge Test]", function () {
     await operator.connect(operator2).confirmTransaction(1);
     await operator.connect(operator3).confirmTransaction(1);
 
-    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + WEEK);
+    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + HOUR / 2);
 
     rawTxData = (await bridge.populateTransaction.holdClaim(seq)).data;
     await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
@@ -381,7 +381,7 @@ describe("[Bridge Test]", function () {
     await operator.connect(operator2).confirmTransaction(1);
     await operator.connect(operator3).confirmTransaction(1);
 
-    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + WEEK);
+    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + HOUR / 2);
 
     rawTxData = (await bridge.populateTransaction.holdClaim(seq)).data;
     await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
@@ -836,6 +836,8 @@ describe("[Bridge Test]", function () {
     let rawTxData = (await bridge.populateTransaction.holdClaim(holdSeq)).data;
     await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, 0);
 
+    expect(await bridge.nTransferHolds()).to.be.equal(1)
+
     const N = 100;
     await bridge.requestBatchClaim(N);
     expect(await bridge.nClaimed()).to.equal(n - 2);
@@ -848,6 +850,8 @@ describe("[Bridge Test]", function () {
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
+
+    expect(await bridge.nTransferHolds()).to.be.equal(0)
 
     await bridge.requestBatchClaim(N);
     expect(await bridge.nClaimed()).to.equal(n - 1);
@@ -1197,7 +1201,7 @@ describe("[Bridge Test]", function () {
     await operator.connect(operator2).confirmTransaction(submission2TxID);
     await operator.connect(operator3).confirmTransaction(submission2TxID);
 
-    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + WEEK);
+    expect(await bridge.timelocks(seq)).to.lte(await time.latest() + HOUR / 2);
 
     const uniqJudgeIndex = 123;
     submission2TxID = await judge.submission2TxID(uniqJudgeIndex);
