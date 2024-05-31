@@ -88,6 +88,41 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getFilterChanges',
+			call: 'eth_getFilterChanges',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getFilterLogs',
+			call: 'eth_getFilterLogs',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getLogs',
+			call: 'eth_getLogs',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'newBlockFilter',
+			call: 'eth_newBlockFilter',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'newFilter',
+			call: 'eth_newFilter',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'newPendingTransactionFilter',
+			call: 'eth_newPendingTransactionFilter',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'uninstallFilter',
+			call: 'eth_uninstallFilter',
+			params: 1,
+		}),
+		new web3._extend.Method({
 			name: 'getHeaderByNumber',
 			call: 'eth_getHeaderByNumber',
 			params: 1,
@@ -736,8 +771,8 @@ web3._extend({
 			params: 2
 		}),
 		new web3._extend.Method({
-			name: 'setMutexProfileRate',
-			call: 'debug_setMutexProfileRate',
+			name: 'setMutexProfileFraction',
+			call: 'debug_setMutexProfileFraction',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -748,6 +783,11 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'writeMemProfile',
 			call: 'debug_writeMemProfile',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'writeVMLog',
+			call: 'debug_writeVMLog',
 			params: 1
 		}),
 		new web3._extend.Method({
@@ -991,6 +1031,41 @@ var klayMethods = [
 		call: 'klay_submitTransaction',
 		params: 1,
 		inputFormatter: [web3._extend.formatters.inputTransactionFormatter]
+	}),
+	new web3._extend.Method({
+		name: 'getFilterChanges',
+		call: 'klay_getFilterChanges',
+		params: 1,
+	}),
+	new web3._extend.Method({
+		name: 'getFilterLogs',
+		call: 'klay_getFilterLogs',
+		params: 1,
+	}),
+	new web3._extend.Method({
+		name: 'getLogs',
+		call: 'klay_getLogs',
+		params: 1,
+	}),
+	new web3._extend.Method({
+		name: 'newBlockFilter',
+		call: 'klay_newBlockFilter',
+		params: 0,
+	}),
+	new web3._extend.Method({
+		name: 'newFilter',
+		call: 'klay_newFilter',
+		params: 1,
+	}),
+	new web3._extend.Method({
+		name: 'newPendingTransactionFilter',
+		call: 'klay_newPendingTransactionFilter',
+		params: 0,
+	}),
+	new web3._extend.Method({
+		name: 'uninstallFilter',
+		call: 'klay_uninstallFilter',
+		params: 1,
 	}),
 	new web3._extend.Method({
 		name: 'getRawTransaction',
