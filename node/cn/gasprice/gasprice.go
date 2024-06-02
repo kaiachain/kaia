@@ -144,9 +144,10 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 // The suggested prices needs to match the requirements.
 //
 // | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas) |
-// |------------------ |------------------------------------------------------------ |----------------------------- |
-// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice              |
-// | After Magma       | BaseFee * 2                                                 | Zero                         |
+// |------------------ |------------------------------------------------------------ |----------------------------------------- |
+// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                          |
+// | After Magma       | BaseFee * 2                                                 | Zero                                     |
+// | After Kaia        | BaseFee + SuggestTipCap                                     | 60% percentile of last 20 blocks         |
 
 // SuggestPrice returns the recommended gas price.
 // This value is intended to be used as gasPrice or maxFeePerGas.
@@ -164,7 +165,7 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 		if err != nil {
 			return nil, err
 		}
-		return new(big.Int).Add(new(big.Int).Mul(baseFee, common.Big2), suggestedTip), nil
+		return new(big.Int).Add(baseFee, suggestedTip), nil
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return the twice of BaseFee as a buffer.
 		baseFee := gpo.txPool.GasPrice()
