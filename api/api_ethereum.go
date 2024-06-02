@@ -77,38 +77,22 @@ type EthereumAPI struct {
 // EthereumAPI operates using Kaia's API internally without overriding.
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
-func NewEthereumAPI() *EthereumAPI {
-	return &EthereumAPI{nil, nil, nil, nil, nil, nil}
-}
-
-// SetPublicFilterAPI sets publicFilterAPI
-func (api *EthereumAPI) SetPublicFilterAPI(publicFilterAPI *filters.PublicFilterAPI) {
-	api.publicFilterAPI = publicFilterAPI
-}
-
-// SetPublicKaiaAPI sets publicKaiaAPI
-func (api *EthereumAPI) SetPublicKaiaAPI(publicKaiaAPI *PublicKaiaAPI) {
-	api.publicKaiaAPI = publicKaiaAPI
-}
-
-// SetPublicBlockChainAPI sets publicBlockChainAPI
-func (api *EthereumAPI) SetPublicBlockChainAPI(publicBlockChainAPI *PublicBlockChainAPI) {
-	api.publicBlockChainAPI = publicBlockChainAPI
-}
-
-// SetPublicTransactionPoolAPI sets publicTransactionPoolAPI
-func (api *EthereumAPI) SetPublicTransactionPoolAPI(publicTransactionPoolAPI *PublicTransactionPoolAPI) {
-	api.publicTransactionPoolAPI = publicTransactionPoolAPI
-}
-
-// SetPublicAccountAPI sets publicAccountAPI
-func (api *EthereumAPI) SetPublicAccountAPI(publicAccountAPI *PublicAccountAPI) {
-	api.publicAccountAPI = publicAccountAPI
-}
-
-// SetGovernanceAPI sets governanceAPI
-func (api *EthereumAPI) SetGovernanceAPI(governanceAPI *governance.GovernanceAPI) {
-	api.governanceAPI = governanceAPI
+func NewEthereumAPI(
+	publicFilterAPI *filters.PublicFilterAPI,
+	publicKaiaAPI *PublicKaiaAPI,
+	publicBlockChainAPI *PublicBlockChainAPI,
+	publicTransactionPoolAPI *PublicTransactionPoolAPI,
+	publicAccountAPI *PublicAccountAPI,
+	governanceAPI *governance.GovernanceAPI,
+) *EthereumAPI {
+	return &EthereumAPI{
+		publicFilterAPI,
+		publicKaiaAPI,
+		publicBlockChainAPI,
+		publicTransactionPoolAPI,
+		publicAccountAPI,
+		governanceAPI,
+	}
 }
 
 // Etherbase is the address of operating node.

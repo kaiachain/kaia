@@ -524,7 +524,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-
 	var (
 		nonceLock                = new(api.AddrLocker)
 		publicBlockChainAPI      = api.NewPublicBlockChainAPI(s.APIBackend)
@@ -587,13 +586,14 @@ func (s *CN) APIs() []rpc.API {
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
-	ethAPI := api.NewEthereumAPI()
-	ethAPI.SetPublicKaiaAPI(publicKaiaAPI)
-	ethAPI.SetPublicBlockChainAPI(publicBlockChainAPI)
-	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
-	ethAPI.SetPublicAccountAPI(publicAccountAPI)
-	ethAPI.SetPublicFilterAPI(publicFilterAPI)
-	ethAPI.SetGovernanceAPI(governanceAPI)
+	ethAPI := api.NewEthereumAPI(
+		publicFilterAPI,
+		publicKaiaAPI,
+		publicBlockChainAPI,
+		publicTransactionPoolAPI,
+		publicAccountAPI,
+		governanceAPI,
+	)
 
 	// Append all the local APIs and return
 	apis = append(apis, []rpc.API{
