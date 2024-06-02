@@ -593,7 +593,6 @@ func (s *CN) APIs() []rpc.API {
 	ethAPI.SetPublicTransactionPoolAPI(publicTransactionPoolAPI)
 	ethAPI.SetPublicAccountAPI(publicAccountAPI)
 	ethAPI.SetPublicFilterAPI(publicFilterAPI)
-	ethAPI.SetGovernanceKaiaAPI(governanceKaiaAPI)
 	ethAPI.SetGovernanceAPI(governanceAPI)
 
 	// Append all the local APIs and return

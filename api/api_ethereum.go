@@ -64,11 +64,8 @@ var (
 )
 
 // EthereumAPI provides an API to access the Kaia through the `eth` namespace.
-// TODO-Kaia: Removed unused variable
 type EthereumAPI struct {
-	publicFilterAPI   *filters.PublicFilterAPI
-	governanceKaiaAPI *governance.GovernanceKaiaAPI
-
+	publicFilterAPI          *filters.PublicFilterAPI
 	publicKaiaAPI            *PublicKaiaAPI
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
@@ -81,17 +78,12 @@ type EthereumAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthereumAPI() *EthereumAPI {
-	return &EthereumAPI{nil, nil, nil, nil, nil, nil, nil}
+	return &EthereumAPI{nil, nil, nil, nil, nil, nil}
 }
 
 // SetPublicFilterAPI sets publicFilterAPI
 func (api *EthereumAPI) SetPublicFilterAPI(publicFilterAPI *filters.PublicFilterAPI) {
 	api.publicFilterAPI = publicFilterAPI
-}
-
-// SetGovernanceKaiaAPI sets governanceKaiaAPI
-func (api *EthereumAPI) SetGovernanceKaiaAPI(governanceKaiaAPI *governance.GovernanceKaiaAPI) {
-	api.governanceKaiaAPI = governanceKaiaAPI
 }
 
 // SetPublicKaiaAPI sets publicKaiaAPI
