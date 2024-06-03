@@ -1173,16 +1173,16 @@ describe("[Bridge Test]", function () {
     expect((await operator.getOperators()).length).to.equal(initialOperatorLen);
 
     const uniqUserIdx = 123;
-    let submission2TxID = await guardian.submission2TxID(uniqUserIdx);
-    expect(submission2TxID).to.be.equal(0);
+    let userIdx2TxID = await guardian.userIdx2TxID(uniqUserIdx);
+    expect(userIdx2TxID).to.be.equal(0);
     const operatorCandidate = unknown;
     const rawTxData = (await operator.populateTransaction.addOperator(operatorCandidate.address)).data;
     await guardian.connect(guardian1).submitTransaction(operator.address, rawTxData, uniqUserIdx);
-    submission2TxID = await guardian.submission2TxID(uniqUserIdx);
-    expect(submission2TxID).to.not.be.equal(0);
+    userIdx2TxID = await guardian.userIdx2TxID(uniqUserIdx);
+    expect(userIdx2TxID).to.not.be.equal(0);
 
-    await guardian.connect(guardian2).confirmTransaction(submission2TxID);
-    await guardian.connect(guardian3).confirmTransaction(submission2TxID);
+    await guardian.connect(guardian2).confirmTransaction(userIdx2TxID);
+    await guardian.connect(guardian3).confirmTransaction(userIdx2TxID);
 
     expect((await operator.getOperators()).length).to.equal(initialOperatorLen + 1);
   });
@@ -1190,27 +1190,27 @@ describe("[Bridge Test]", function () {
   it("hold claim (case: use unique user index)", async function () {
     const provision = [seq, sender, receiver, amount];
     const uniqOperatorIndex = 123;
-    let submission2TxID = await operator.submission2TxID(uniqOperatorIndex);
-    expect(submission2TxID).to.be.equal(0);
+    let userIdx2TxID = await operator.userIdx2TxID(uniqOperatorIndex);
+    expect(userIdx2TxID).to.be.equal(0);
 
     let rawTxData = (await bridge.populateTransaction.provision(provision)).data;
     await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
-    submission2TxID = await operator.submission2TxID(uniqOperatorIndex);
-    expect(submission2TxID).to.not.be.equal(0);
+    userIdx2TxID = await operator.userIdx2TxID(uniqOperatorIndex);
+    expect(userIdx2TxID).to.not.be.equal(0);
 
-    await operator.connect(operator2).confirmTransaction(submission2TxID);
-    await operator.connect(operator3).confirmTransaction(submission2TxID);
+    await operator.connect(operator2).confirmTransaction(userIdx2TxID);
+    await operator.connect(operator3).confirmTransaction(userIdx2TxID);
 
     expect(await bridge.timelocks(seq)).to.lte(await time.latest() + HOUR / 2);
 
     const uniqJudgeIndex = 123;
-    submission2TxID = await judge.submission2TxID(uniqJudgeIndex);
-    expect(submission2TxID).to.be.equal(0);
+    userIdx2TxID = await judge.userIdx2TxID(uniqJudgeIndex);
+    expect(userIdx2TxID).to.be.equal(0);
     rawTxData = (await bridge.populateTransaction.holdClaim(seq)).data;
     await judge.connect(judge1).submitTransaction(bridge.address, rawTxData, uniqJudgeIndex);
 
-    submission2TxID = await judge.submission2TxID(uniqJudgeIndex);
-    expect(submission2TxID).to.not.be.equal(0);
+    userIdx2TxID = await judge.userIdx2TxID(uniqJudgeIndex);
+    expect(userIdx2TxID).to.not.be.equal(0);
 
     expect(await bridge.timelocks(seq)).to.gte(await time.latest() + YEAR * 1000);
   });
@@ -1228,20 +1228,20 @@ describe("[Bridge Test]", function () {
     // Bridge not paused yet
     let rawTxData = (await bridge.populateTransaction.burnBridgeBalance()).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
-    let submission2TxID1 = await guardian.submission2TxID(uniqOperatorIndex);
-    await guardian.connect(guardian2).confirmTransaction(submission2TxID1);
-    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID1))
+    let userIdx2TxID1 = await guardian.userIdx2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(userIdx2TxID1);
+    await expect(guardian.connect(guardian3).confirmTransaction(userIdx2TxID1))
       .to.be.revertedWith("KAIA::Bridge: Bridge has not been paused");
 
     // Puase the bridge
     uniqOperatorIndex++;
     rawTxData = (await bridge.populateTransaction.pauseBridge("Bridge pause")).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
-    let submission2TxID2 = await guardian.submission2TxID(uniqOperatorIndex);
-    await guardian.connect(guardian2).confirmTransaction(submission2TxID2);
-    await guardian.connect(guardian3).confirmTransaction(submission2TxID2);
+    let userIdx2TxID2 = await guardian.userIdx2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(userIdx2TxID2);
+    await guardian.connect(guardian3).confirmTransaction(userIdx2TxID2);
 
-    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID1))
+    await expect(guardian.connect(guardian3).confirmTransaction(userIdx2TxID1))
       .to.be.revertedWith("KAIA::Bridge: Service period is not expired yet");
 
     // Adjust timestamp
@@ -1249,7 +1249,7 @@ describe("[Bridge Test]", function () {
     await addTime(servicePeriodOver);
 
     // Burn
-    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID1))
+    await expect(guardian.connect(guardian3).confirmTransaction(userIdx2TxID1))
       .to.emit(bridge, "BridgeBalanceBurned");
 
     const bridgeBalanceAfter = await getBalance(bridge.address);
@@ -1269,9 +1269,9 @@ describe("[Bridge Test]", function () {
 
     let rawTxData = (await bridge.populateTransaction.changeBridgeServicePeriod(newPeriod)).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, uniqOperatorIndex);
-    let submission2TxID = await guardian.submission2TxID(uniqOperatorIndex);
-    await guardian.connect(guardian2).confirmTransaction(submission2TxID);
-    await expect(guardian.connect(guardian3).confirmTransaction(submission2TxID))
+    let userIdx2TxID = await guardian.userIdx2TxID(uniqOperatorIndex);
+    await guardian.connect(guardian2).confirmTransaction(userIdx2TxID);
+    await expect(guardian.connect(guardian3).confirmTransaction(userIdx2TxID))
       .to.emit(bridge, "ChangeBridgeServicePeriod")
 
     const curPeriodAfter = Number(await bridge.bridgeServicePeriod());
@@ -1627,7 +1627,7 @@ describe("[Bridge Test]", function () {
 
     // 10. confirmTransaction: already confirmed
     await operator.connect(operator1).submitTransaction(operator.address, rawTxData, 200);
-    let txID = await operator.submission2TxID(200)
+    let txID = await operator.userIdx2TxID(200)
     await expect(operator.connect(operator1).confirmTransaction(txID))
       .to.be.revertedWith("KAIA::Operator: Transaction was already confirmed");
 
