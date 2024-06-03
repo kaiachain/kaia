@@ -155,13 +155,30 @@ func (result *rebalanceResult) memo(isKip103 bool) []byte {
 		err  error
 	)
 	if isKip103 {
-		type kip103RebalanceResult struct {
-			Zeroed    map[common.Address]*big.Int `json:"retired"`
-			Allocated map[common.Address]*big.Int `json:"newbie"`
-			Burnt     *big.Int                    `json:"burnt"`
-			Success   bool                        `json:"success"`
+		type retired struct {
+			Zeroed  string `json:"retired"`
+			Balance uint64 `json:"balance"`
 		}
-		memo, err = json.Marshal(kip103RebalanceResult{result.Zeroed, result.Allocated, result.Burnt, result.Success})
+		type newbie struct {
+			Retired       string `json:"newbie"`
+			FundAllocated uint64 `json:"fundAllocated"`
+		}
+		type kip103RebalanceResult struct {
+			Zeroed    []retired `json:"retired"`
+			Allocated []newbie  `json:"newbie"`
+			Burnt     *big.Int  `json:"burnt"`
+			Success   bool      `json:"success"`
+		}
+		formattedKip103Result := new(kip103RebalanceResult)
+		for addr, balance := range result.Zeroed {
+			formattedKip103Result.Zeroed = append(formattedKip103Result.Zeroed, retired{addr.String(), balance.Uint64()})
+		}
+		for addr, fundAllocated := range result.Allocated {
+			formattedKip103Result.Allocated = append(formattedKip103Result.Allocated, newbie{addr.String(), fundAllocated.Uint64()})
+		}
+		formattedKip103Result.Burnt = result.Burnt
+		formattedKip103Result.Success = result.Success
+		memo, err = json.Marshal(formattedKip103Result)
 	} else {
 		memo, err = json.Marshal(result)
 	}

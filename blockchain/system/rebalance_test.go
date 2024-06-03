@@ -223,6 +223,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			tc.expectMemo = strings.Replace(tc.expectMemo, "retired", "zeroed", -1)
 			tc.expectMemo = strings.Replace(tc.expectMemo, "newbie", "allocated", -1)
 		}
+		t.Log(string(res.memo(isKip103)))
 		assert.Equal(t, tc.expectMemo, string(res.memo(isKip103)))
 	}
 }
