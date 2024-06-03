@@ -161,27 +161,27 @@ func (result *rebalanceResult) memo(isKip103 bool) []byte {
 	)
 	if isKip103 {
 		type retired struct {
-			Zeroed  string `json:"retired"`
-			Balance uint64 `json:"balance"`
+			Zeroed  common.Address `json:"retired"`
+			Balance uint64         `json:"balance"`
 		}
 		type newbie struct {
-			Allocated     string `json:"newbie"`
-			FundAllocated uint64 `json:"fundAllocated"`
+			Allocated     common.Address `json:"newbie"`
+			FundAllocated uint64         `json:"fundAllocated"`
 		}
 		type kip103RebalanceResult struct {
 			Zeroed    []retired `json:"retiree"`
 			Allocated []newbie  `json:"newbies"`
-			Burnt     *big.Int  `json:"burnt"`
+			Burnt     uint64    `json:"burnt"`
 			Success   bool      `json:"success"`
 		}
 		formattedKip103Result := new(kip103RebalanceResult)
 		for addr, balance := range result.Before.Zeroed {
-			formattedKip103Result.Zeroed = append(formattedKip103Result.Zeroed, retired{addr.String(), balance.Uint64()})
+			formattedKip103Result.Zeroed = append(formattedKip103Result.Zeroed, retired{addr, balance.Uint64()})
 		}
 		for addr, fundAllocated := range result.After.Allocated {
-			formattedKip103Result.Allocated = append(formattedKip103Result.Allocated, newbie{addr.String(), fundAllocated.Uint64()})
+			formattedKip103Result.Allocated = append(formattedKip103Result.Allocated, newbie{addr, fundAllocated.Uint64()})
 		}
-		formattedKip103Result.Burnt = result.Burnt
+		formattedKip103Result.Burnt = result.Burnt.Uint64()
 		formattedKip103Result.Success = result.Success
 		memo, err = json.Marshal(formattedKip103Result)
 	} else {
@@ -207,11 +207,12 @@ func (result *rebalanceResult) fillZeroed(contract RebalanceCaller, state *state
 			return err
 		}
 		result.Before.Zeroed[ret] = state.GetBalance(ret)
+		result.After.Zeroed[ret] = state.GetBalance(ret) // will be set as zero if rebalance suceed
 	}
 	return nil
 }
 
-func (result *rebalanceResult) fillAllocated(contract RebalanceCaller) error {
+func (result *rebalanceResult) fillAllocated(contract RebalanceCaller, state *state.StateDB) error {
 	numNewbieBigInt, err := contract.GetAllocatedCount(nil)
 	if err != nil {
 		logger.Error("Failed to get AllocatedCount from TreasuryRebalance contract", "err", err)
@@ -225,6 +226,7 @@ func (result *rebalanceResult) fillAllocated(contract RebalanceCaller) error {
 			return err
 		}
 
+		result.Before.Allocated[ret.Addr] = state.GetBalance(ret.Addr)
 		result.After.Allocated[ret.Addr] = ret.Amount
 	}
 	return nil
@@ -276,7 +278,7 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	}
 
 	// Retrieve 2) Get Allocated
-	if err = result.fillAllocated(caller); err != nil {
+	if err = result.fillAllocated(caller, state); err != nil {
 		return result, err
 	}
 
@@ -311,8 +313,6 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	for addr, balance := range result.After.Allocated {
 		// if an allocated has KAIA before the allocation, it will be burnt
 		currentBalance := state.GetBalance(addr)
-
-		result.Before.Allocated[addr] = currentBalance
 		result.Burnt.Add(result.Burnt, currentBalance)
 
 		state.SetBalance(addr, balance)
