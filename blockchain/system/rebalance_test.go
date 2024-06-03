@@ -17,7 +17,6 @@ package system
 
 import (
 	"math/big"
-	"strings"
 	"testing"
 
 	"github.com/klaytn/klaytn/accounts/abi/bind"
@@ -107,7 +106,8 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		expectNonce             uint64
 		expectBurnt             *big.Int
 		expectSuccess           bool
-		expectMemo              string
+		expectKip103Memo        string
+		expectKip160Memo        string
 	}{
 		{
 			// normal case
@@ -121,7 +121,8 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			10,
 			big.NewInt(8_012_345),
 			true,
-			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":8012345,\"success\":true}",
+			`{"retiree":[{"retired":"0x000000000000000000000000000000000000AA00","balance":4000000},{"retired":"0x000000000000000000000000000000000000aA11","balance":2000000},{"retired":"0x000000000000000000000000000000000000AA22","balance":1000000}],"newbies":[{"newbie":"0x000000000000000000000000000000000000bb00","fundAllocated":2000000},{"newbie":"0x000000000000000000000000000000000000bB11","fundAllocated":5000000}],"burnt":8012345,"success":true}`,
+			`{"before":{"zeroed":{"0x000000000000000000000000000000000000aa00":4000000,"0x000000000000000000000000000000000000aa11":2000000,"0x000000000000000000000000000000000000aa22":1000000},"allocated":{"0x000000000000000000000000000000000000bb00":8012345,"0x000000000000000000000000000000000000bb11":0}},"after":{"zeroed":{"0x000000000000000000000000000000000000aa00":0,"0x000000000000000000000000000000000000aa11":0,"0x000000000000000000000000000000000000aa22":0},"allocated":{"0x000000000000000000000000000000000000bb00":2000000,"0x000000000000000000000000000000000000bb11":5000000}},"burnt":8012345,"success":true}`,
 		},
 		{
 			// failed case - rebalancing aborted due to wrong rebalanceBlockNumber
@@ -135,7 +136,8 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			8,
 			big.NewInt(0),
 			false,
-			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":0,\"success\":false}",
+			`{"retiree":[{"retired":"0x000000000000000000000000000000000000AA00","balance":4000000},{"retired":"0x000000000000000000000000000000000000aA11","balance":2000000},{"retired":"0x000000000000000000000000000000000000AA22","balance":1000000}],"newbies":[{"newbie":"0x000000000000000000000000000000000000bb00","fundAllocated":2000000},{"newbie":"0x000000000000000000000000000000000000bB11","fundAllocated":5000000}],"burnt":0,"success":false}`,
+			`{"before":{"zeroed":{"0x000000000000000000000000000000000000aa00":4000000,"0x000000000000000000000000000000000000aa11":2000000,"0x000000000000000000000000000000000000aa22":1000000},"allocated":{}},"after":{"zeroed":{},"allocated":{"0x000000000000000000000000000000000000bb00":2000000,"0x000000000000000000000000000000000000bb11":5000000}},"burnt":0,"success":false}`,
 		},
 		{
 			// failed case - rebalancing aborted due to wrong state
@@ -149,7 +151,8 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			9,
 			big.NewInt(0),
 			false,
-			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":0,\"success\":false}",
+			`{"retiree":[{"retired":"0x000000000000000000000000000000000000AA00","balance":4000000},{"retired":"0x000000000000000000000000000000000000aA11","balance":2000000},{"retired":"0x000000000000000000000000000000000000AA22","balance":1000000}],"newbies":[{"newbie":"0x000000000000000000000000000000000000bb00","fundAllocated":2000000},{"newbie":"0x000000000000000000000000000000000000bB11","fundAllocated":5000000}],"burnt":0,"success":false}`,
+			`{"before":{"zeroed":{"0x000000000000000000000000000000000000aa00":4000000,"0x000000000000000000000000000000000000aa11":2000000,"0x000000000000000000000000000000000000aa22":1000000},"allocated":{}},"after":{"zeroed":{},"allocated":{"0x000000000000000000000000000000000000bb00":2000000,"0x000000000000000000000000000000000000bb11":5000000}},"burnt":0,"success":false}`,
 		},
 		{
 			// failed case - rebalancing aborted doe to bigger allocation than zeroeds
@@ -163,7 +166,8 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			9,
 			big.NewInt(0),
 			false,
-			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000001},\"burnt\":0,\"success\":false}",
+			`{"retiree":[{"retired":"0x000000000000000000000000000000000000AA00","balance":4000000},{"retired":"0x000000000000000000000000000000000000aA11","balance":2000000},{"retired":"0x000000000000000000000000000000000000AA22","balance":1000000}],"newbies":[{"newbie":"0x000000000000000000000000000000000000bb00","fundAllocated":2000000},{"newbie":"0x000000000000000000000000000000000000bB11","fundAllocated":5000001}],"burnt":0,"success":false}`,
+			`{"before":{"zeroed":{"0x000000000000000000000000000000000000aa00":4000000,"0x000000000000000000000000000000000000aa11":2000000,"0x000000000000000000000000000000000000aa22":1000000},"allocated":{}},"after":{"zeroed":{},"allocated":{"0x000000000000000000000000000000000000bb00":2000000,"0x000000000000000000000000000000000000bb11":5000001}},"burnt":0,"success":false}`,
 		},
 	}
 
@@ -218,12 +222,12 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		assert.Equal(t, tc.expectBurnt, res.Burnt)
 		assert.Equal(t, tc.expectSuccess, res.Success)
 
-		isKip160, isKip103 := chain.Config().Kip160CompatibleBlock != nil, chain.Config().Kip103CompatibleBlock != nil
-		if isKip160 {
-			tc.expectMemo = strings.Replace(tc.expectMemo, "retired", "zeroed", -1)
-			tc.expectMemo = strings.Replace(tc.expectMemo, "newbie", "allocated", -1)
-		}
+		isKip103 := chain.Config().Kip103CompatibleBlock != nil
 		t.Log(string(res.memo(isKip103)))
-		assert.Equal(t, tc.expectMemo, string(res.memo(isKip103)))
+		if isKip103 {
+			assert.Equal(t, tc.expectKip103Memo, string(res.memo(isKip103)))
+		} else {
+			assert.Equal(t, tc.expectKip160Memo, string(res.memo(isKip103)))
+		}
 	}
 }
