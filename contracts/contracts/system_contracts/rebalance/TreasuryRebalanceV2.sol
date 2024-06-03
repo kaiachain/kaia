@@ -313,10 +313,6 @@ contract TreasuryRebalanceV2 is Ownable {
         onlyOwner
         onlyAtStatus(Status.Registered)
     {
-        require(
-            getTreasuryAmount() < sumOfZeroedBalance(),
-            "treasury amount should be less than the sum of all zeroed address balances"
-        );
         checkZeroedsApproved();
         status = Status.Approved;
         emit StatusChanged(status);

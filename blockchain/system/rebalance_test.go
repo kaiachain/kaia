@@ -81,7 +81,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			addr    common.Address
 			balance *big.Int
 		}{
-			{common.HexToAddress("0xbb00"), big.NewInt(12_345)},
+			{common.HexToAddress("0xbb00"), big.NewInt(8_012_345)},
 			{common.HexToAddress("0xbb11"), big.NewInt(0)},
 		}
 
@@ -119,9 +119,9 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 			[]*big.Int{big.NewInt(0), big.NewInt(0), big.NewInt(0)},
 			[]*big.Int{big.NewInt(2_000_000), big.NewInt(5_000_000)},
 			10,
-			big.NewInt(12345),
+			big.NewInt(8_012_345),
 			true,
-			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":12345,\"success\":true}",
+			"{\"retired\":{\"0x000000000000000000000000000000000000aa00\":4000000,\"0x000000000000000000000000000000000000aa11\":2000000,\"0x000000000000000000000000000000000000aa22\":1000000},\"newbie\":{\"0x000000000000000000000000000000000000bb00\":2000000,\"0x000000000000000000000000000000000000bb11\":5000000},\"burnt\":8012345,\"success\":true}",
 		},
 		{
 			// failed case - rebalancing aborted due to wrong rebalanceBlockNumber
