@@ -237,7 +237,7 @@ abstract contract IOperator {
     mapping (address => uint64) public greatestSubmittedSeq; // Gratest submitted seq per operator
     mapping (address => uint64) public nextProvisionSeq; // next sequence to be submitted per operator
     EnumerableSet.UintSet revokedProvisionSeqs; // revoked provision sequence list
-    mapping (uint256 => uint64) public submission2TxID; // <unique user input number, tx ID>
+    mapping (uint256 => uint64) public userIdx2TxID; // <unique user input number, tx ID>
 
     uint256[100] __gap;
 }

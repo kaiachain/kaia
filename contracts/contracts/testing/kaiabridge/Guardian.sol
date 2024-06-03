@@ -207,8 +207,8 @@ contract NewGuardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(submission2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
-            submission2TxID[uniqUserTxIndex] = txID;
+            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
+            userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
     }
