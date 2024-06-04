@@ -1353,9 +1353,9 @@ describe("[Bridge Test]", function () {
   it("#Query acccumulated claim amount", async function () {
     async function sendProvision(prov) {
       let rawTxData = (await bridge.populateTransaction.provision(prov)).data;
-      await operator.connect(operator1).submitTransaction(bridge.target, rawTxData, 0);
-      await operator.connect(operator2).submitTransaction(bridge.target, rawTxData, 0);
-      await operator.connect(operator3).submitTransaction(bridge.target, rawTxData, 0);
+      await operator.connect(operator1).submitTransaction(bridge.address, rawTxData, 0);
+      await operator.connect(operator2).submitTransaction(bridge.address, rawTxData, 0);
+      await operator.connect(operator3).submitTransaction(bridge.address, rawTxData, 0);
     }
 
     async function claim(n) {
