@@ -169,7 +169,7 @@ func (result *rebalanceResult) memo(isKip103 bool) []byte {
 			FundAllocated uint64         `json:"fundAllocated"`
 		}
 		type kip103RebalanceResult struct {
-			Zeroed    []retired `json:"retiree"`
+			Zeroed    []retired `json:"retirees"`
 			Allocated []newbie  `json:"newbies"`
 			Burnt     uint64    `json:"burnt"`
 			Success   bool      `json:"success"`
