@@ -1350,6 +1350,32 @@ describe("[Bridge Test]", function () {
     expect(await bridge.nClaimed()).to.be.equal(1);
   })
 
+  it("#Query acccumulated claim amount", async function () {
+    async function sendProvision(prov) {
+      let rawTxData = (await bridge.populateTransaction.provision(prov)).data;
+      await operator.connect(operator1).submitTransaction(bridge.target, rawTxData, 0);
+      await operator.connect(operator2).submitTransaction(bridge.target, rawTxData, 0);
+      await operator.connect(operator3).submitTransaction(bridge.target, rawTxData, 0);
+    }
+
+    async function claim(n) {
+      expect(await bridge.nClaimed()).to.be.equal(0);
+      const mintLock = Number(await bridge.TRANSFERLOCK());
+      await setBlockTimestamp(mintLock);
+      await bridge.requestBatchClaim(n);
+      expect(await bridge.nClaimed()).to.be.equal(n);
+      expect(await bridge.accumulatedClaimAmount()).to.be.equal(amount * n);
+    }
+
+    const n = 10;
+    const amount = 10;
+    for (let i=1; i<=n; i++) {
+      let provision = [i, sender, receiver, amount];
+      await sendProvision(provision);
+    }
+    await claim(n);
+  });
+
   /////////////////// modifier/require coverage test ///////////////////
   it("#Bridge.sol modifier/require cov", async function () {
     // 1. auth

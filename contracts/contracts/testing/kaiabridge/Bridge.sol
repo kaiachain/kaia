@@ -286,6 +286,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
             return false;
         }
         emit Claim(prov);
+        accumulatedClaimAmount += prov.amount;
         return true;
     }
 

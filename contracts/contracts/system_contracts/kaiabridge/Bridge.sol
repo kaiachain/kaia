@@ -289,6 +289,7 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
             return false;
         }
         emit Claim(prov);
+        accumulatedClaimAmount += prov.amount;
         return true;
     }
 
