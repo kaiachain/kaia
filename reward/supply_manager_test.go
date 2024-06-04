@@ -138,7 +138,7 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 
 	amount, err = s.sm.GetRebalanceBurn(300, big.NewInt(300), addrKip160)
 	require.NoError(t, err)
-	assert.Equal(t, "120800000000000000000", amount.String())
+	assert.Equal(t, "-79200000000000000000", amount.String())
 
 	// call failed: bad contract address
 	amount, err = s.sm.GetRebalanceBurn(200, big.NewInt(200), addrFund1)
@@ -479,15 +479,15 @@ func (s *SupplyTestSuite) testcases() []supplyTestTC {
 
 		// Fund1 has 769254566500000000000, Fund2 has 178056862000000000000 at block 199 but burnt
 		// Fund1 get   1280000000000000000, Fund2 get   1920000000000000000 at block 200 minted from reward but burnt
-		// Fund2 get 100000000000000000000, Fund2 get 200000000000000000000 at block 200 minted from kip103
+		// Fund1 get 100000000000000000000, Fund2 get 200000000000000000000 at block 200 minted from kip103
 		// kip103Burn = (769.25 + 178.06 + 1.28 + 1.92) - (100 + 200) = 650.51
 		kip103Burn, _ = new(big.Int).SetString("650511428500000000000", 10)
 
 		// Fund1 has 226720000000000000000, Fund2 has 390080000000000000000 at block 299 but burnt
 		// Fund1 get   2000000000000000000, Fund2 get   2000000000000000000 at block 300 minted from reward but burnt
-		// Fund2 get 200000000000000000000, Fund2 get 300000000000000000000 at block 300 minted from kip160
-		// kip160Burn = (226.72 + 390.08 + 2.00 + 2.00) - (200 + 300) = 120.80
-		kip160Burn, _ = new(big.Int).SetString("120800000000000000000", 10)
+		// Fund1 get 300000000000000000000, Fund2 get 400000000000000000000 at block 300 minted from kip160
+		// kip160Burn = (226.72 + 390.08 + 2.00 + 2.00) - (300 + 400) = -79.2
+		kip160Burn, _ = new(big.Int).SetString("-79200000000000000000", 10)
 
 		// Allocated at genesis
 		zeroBurn = bigMult(amount1B, big.NewInt(1))
@@ -581,15 +581,15 @@ func (s *SupplyTestSuite) kip103Alloc() blockchain.GenesisAccount {
 	// Memo taken from the INFO log of blockchain/system/rebalance.go "successfully executed treasury rebalancing"
 	return s.rebalanceAlloc(200, addrKip103, system.Kip103MockCode,
 		[]*big.Int{bigMult(amount1, big.NewInt(100)), bigMult(amount1, big.NewInt(200))},
-		"{\"retired\":{\"0x000000000000000000000000000000000000a000\":770534566500000000000,\"0x000000000000000000000000000000000000b000\":179976862000000000000},\"newbie\":{\"0x000000000000000000000000000000000000a000\":100000000000000000000,\"0x000000000000000000000000000000000000b000\":200000000000000000000},\"burnt\":650511428500000000000,\"success\":true}",
+		"{\"retirees\":[{\"retired\":\"0x000000000000000000000000000000000000a000\",\"balance\":770534566500000000000},{\"retired\":\"0x000000000000000000000000000000000000b000\",\"balance\":179976862000000000000}],\"newbies\":[{\"newbie\":\"0x000000000000000000000000000000000000a000\",\"fundAllocated\":100000000000000000000},{\"newbie\":\"0x000000000000000000000000000000000000b000\",\"fundAllocated\":200000000000000000000}],\"burnt\":650511428500000000000,\"success\":true}",
 	)
 }
 
 func (s *SupplyTestSuite) kip160Alloc() blockchain.GenesisAccount {
 	// Memo taken from the INFO log of blockchain/system/rebalance.go "successfully executed treasury rebalancing"
 	return s.rebalanceAlloc(300, addrKip160, system.Kip160MockCode,
-		[]*big.Int{bigMult(amount1, big.NewInt(200)), bigMult(amount1, big.NewInt(300))},
-		"{\"zeroed\":{\"0x000000000000000000000000000000000000a000\":228720000000000000000,\"0x000000000000000000000000000000000000b000\":392080000000000000000},\"allocated\":{\"0x000000000000000000000000000000000000a000\":200000000000000000000,\"0x000000000000000000000000000000000000b000\":300000000000000000000},\"burnt\":120800000000000000000,\"success\":true}",
+		[]*big.Int{bigMult(amount1, big.NewInt(300)), bigMult(amount1, big.NewInt(400))},
+		`{"before": {"allocated": {"0x000000000000000000000000000000000000a000": 226720000000000000000, "0x000000000000000000000000000000000000b000": 390080000000000000000}, "zeroed": {"0x000000000000000000000000000000000000a000": 226720000000000000000, "0x000000000000000000000000000000000000b000": 390080000000000000000}},"after": {"allocated": {"0x000000000000000000000000000000000000a000": 300000000000000000000, "0x000000000000000000000000000000000000b000": 400000000000000000000}, "zeroed": {"0x000000000000000000000000000000000000a000": 0, "0x000000000000000000000000000000000000b000": 0}}, "burnt": -79200000000000000000, "success": true}`,
 	)
 }
 
