@@ -100,6 +100,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         if (success) {
             claimed[seq] = true;
             nClaimed += 1;
+            accumulatedClaimAmount += provisions[seq].amount;
             EnumerableSetUint64.setRemove(claimCandidates, seq);
             EnumerableSetUint64.setRemove(claimFailures, seq);
             return true;
@@ -286,7 +287,6 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
             return false;
         }
         emit Claim(prov);
-        accumulatedClaimAmount += prov.amount;
         return true;
     }
 
