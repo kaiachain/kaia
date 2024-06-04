@@ -1361,7 +1361,7 @@ describe("[Bridge Test]", function () {
     async function claim(n) {
       expect(await bridge.nClaimed()).to.be.equal(0);
       const mintLock = Number(await bridge.TRANSFERLOCK());
-      await setBlockTimestamp(mintLock);
+      await addTime(mintLock);
       await bridge.requestBatchClaim(n);
       expect(await bridge.nClaimed()).to.be.equal(n);
       expect(await bridge.accumulatedClaimAmount()).to.be.equal(amount * n);
