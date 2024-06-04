@@ -168,9 +168,7 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
 
         emit ProvisionReceiverChanged(provisions[seq].receiver, newReceiver);
         provisions[seq].receiver = newReceiver;
-        claim(provisions[seq], true);
-        EnumerableSetUint64.setRemove(claimCandidates, seq);
-        EnumerableSetUint64.setRemove(claimFailures, seq);
+        doRequestClaim(seq, true);
     }
 
     /// @dev Update greatest sequence
