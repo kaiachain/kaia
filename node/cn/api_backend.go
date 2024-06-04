@@ -311,12 +311,14 @@ func (b *CNAPIBackend) ProtocolVersion() int {
 }
 
 // SuggestPrice returns the baseFee * 2 if the current block is magma hard forked.
+// If it's kaia hard forked, it returns the baseFee + SuggestTipCap.
 // Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
-// SuggestTipCap returns the baseFee if the current block is magma hard forked.
+// SuggestTipCap returns the 0 if the current block is magma hard forked.
+// If it's kaia hard forked, it returns the SuggestTipCap based on fee history.
 // Other cases, it returns the unitPrice.
 func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestTipCap(ctx)
