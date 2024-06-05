@@ -421,9 +421,30 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         return EnumerableSetUint64.getAll(claimCandidates);
     }
 
+    // @dev See {IBridge-getClaimCandidates}
+    function getClaimCandidatesSize() public override view returns (uint256) {
+        return EnumerableSetUint64.setLength(claimCandidates);
+    }
+
+    // @dev See {IBridge-getClaimCandidatesRangePure}
+    function getClaimCandidatesRangePure(uint64 range) public override view returns (uint64[] memory) {
+        return EnumerableSetUint64.getRange(claimCandidates, range);
+    }
+
     // @dev See {IBridge-getClaimCandidatesRange}
     function getClaimCandidatesRange(uint64 range) public override view returns (uint64[] memory) {
-        return EnumerableSetUint64.getRange(claimCandidates, range);
+        uint64[] memory seqs = EnumerableSetUint64.getRange(claimCandidates, range);
+        uint64[] memory candidates = new uint64[](range);
+        uint256 cnt = 0;
+        for (uint i=0; i<seqs.length; i++) {
+            if (isPassedTimeLockDuration(seqs[i])) {
+                candidates[cnt++] = seqs[i];
+            }
+        }
+        assembly {
+            mstore(candidates, cnt)
+        }
+        return candidates;
     }
 
     // @dev See {IBridge-getClaimFailures}
