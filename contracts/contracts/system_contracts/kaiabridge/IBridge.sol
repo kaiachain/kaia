@@ -263,6 +263,12 @@ abstract contract IBridge {
     /// @dev Return `claimCandidates` set
     function getClaimCandidates() external virtual view returns (uint64[] memory);
 
+    /// @dev Return `claimCandidates` set size
+    function getClaimCandidatesSize() external virtual view returns (uint256);
+
+    /// @dev Return `claimCandidates` set with the given range
+    function getClaimCandidatesRangePure(uint64 range) external virtual view returns (uint64[] memory);
+
     /// @dev Return `claimCandidates` set with the given range
     /// @param range Range of set
     function getClaimCandidatesRange(uint64 range) external virtual view returns (uint64[] memory);

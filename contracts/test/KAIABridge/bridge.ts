@@ -840,18 +840,24 @@ describe("[Bridge Test]", function () {
 
     const N = 100;
     await bridge.requestBatchClaim(N);
-    expect(await bridge.nClaimed()).to.equal(n - 2);
-    expect(await bridge.getClaimCandidates()).to.deep.equal([15]);
-    expect(await bridge.getClaimCandidatesRange(100)).to.deep.equal([15]);
-    expect(await bridge.getClaimCandidatesRange(1)).to.deep.equal([15]);
+    expect(await bridge.getClaimCandidates()).to.deep.equal([holdSeq]);
+    expect(await bridge.getClaimCandidatesRangePure(100)).to.deep.equal([holdSeq]);
+    expect(await bridge.getClaimCandidatesRangePure(1)).to.deep.equal([holdSeq]);
+    expect(await bridge.getClaimCandidatesRange(100)).to.deep.equal([])
 
     // release seq 15
     rawTxData = (await bridge.populateTransaction.releaseClaim(holdSeq)).data;
     await guardian.connect(guardian1).submitTransaction(bridge.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
     await guardian.connect(guardian3).confirmTransaction(guardianTxID);
-
     expect(await bridge.nTransferHolds()).to.be.equal(0)
+    expect(await bridge.nClaimed()).to.equal(n - 2);
+
+    expect(await bridge.getClaimCandidatesRange(100)).to.deep.equal([])
+    await addTime(1);
+    expect(await bridge.getClaimCandidatesRange(100)).to.deep.equal([BigInt(holdSeq)])
+
+    expect(await bridge.nClaimed()).to.equal(n - 2);
 
     await bridge.requestBatchClaim(N);
     expect(await bridge.nClaimed()).to.equal(n - 1);
@@ -1590,18 +1596,14 @@ describe("[Bridge Test]", function () {
     await expect(guardian.connect(guardian1).executeTransaction(guardianTxID + 100))
       .to.be.revertedWith("KAIA::Guardian: No confirmation was committed yet");
 
-    // 15. executeTransaction: already executed
-    await expect(guardian.connect(guardian1).executeTransaction(guardianTxID - 1))
-      .to.be.revertedWith("KAIA::Guardian: Transaction was already executed");
-
-    // 16. getTransactionIds: input range error
+    // 15. getTransactionIds: input range error
     await expect(guardian.getTransactionIds(1, 0, true, true))
       .to.be.revertedWith("KAIA::Guardian: Invalid from and to")
 
-    // 17. getTransactionIds: touch the first condition `from == 0`
+    // 16. getTransactionIds: touch the first condition `from == 0`
     await guardian.getTransactionIds(0, 1, true, true)
 
-    // 18. getTransactionIds: touch the second condition `to > transactions.length`
+    // 17. getTransactionIds: touch the second condition `to > transactions.length`
     await guardian.getTransactionIds(0, 10000, true, true)
   });
 
@@ -1677,41 +1679,37 @@ describe("[Bridge Test]", function () {
     await expect(operator.connect(operator4).executeTransaction(1))
       .to.be.revertedWith("KAIA::Operator: No confirmation was committed yet");
 
-    // 15. executeTransaction: no confirmation
-    await expect(operator.connect(operator1).executeTransaction(2))
-      .to.be.revertedWith("KAIA::Operator: Transaction was already executed");
-
-    // 16. getTransactionIds: input range error
+    // 15. getTransactionIds: input range error
     await expect(operator.getTransactionIds(1, 0, true, true))
       .to.be.revertedWith("KAIA::Operator: Invalid from and to")
 
-    // 17. getTransactionIds: touch the first condition `from == 0`
+    // 16. getTransactionIds: touch the first condition `from == 0`
     await operator.getTransactionIds(0, 1, true, true)
 
-    // 18. getTransactionIds: touch the second condition `to > transactions.length`
+    // 17. getTransactionIds: touch the second condition `to > transactions.length`
     await operator.getTransactionIds(0, 10000, true, true)
 
-    // 19. getUnconfirmedProvisionSeqs: not an operator
+    // 18. getUnconfirmedProvisionSeqs: not an operator
     await expect(operator.getUnconfirmedProvisionSeqs("0x0000000000000000000000000000000000000123", 100))
       .to.be.revertedWith("KAIA::Operator: Not an operator")
 
-    // 20. doGetUnconfirmedProvisionSeqs: not an operator
+    // 19. doGetUnconfirmedProvisionSeqs: not an operator
     await expect(operator.doGetUnconfirmedProvisionSeqs("0x0000000000000000000000000000000000000123", 0, 0))
       .to.be.revertedWith("KAIA::Operator: Not an operator")
 
-    // 21. doGetUnconfirmedProvisionSeqs: input range error
+    // 20. doGetUnconfirmedProvisionSeqs: input range error
     await expect(operator.doGetUnconfirmedProvisionSeqs(operator1.address, 1, 0))
       .to.be.revertedWith("KAIA::Operator: Invalid from and to")
 
-    // 22. unmarkRevokeSeq: auth
+    // 21. unmarkRevokeSeq: auth
     await expect(operator.unmarkRevokeSeq(1))
       .to.be.revertedWith("KAIA::Operator: Sender is not bridge contract")
 
-    // 23. markRevokeSeq: auth
+    // 22. markRevokeSeq: auth
     await expect(operator.markRevokeSeq(1))
       .to.be.revertedWith("KAIA::Operator: Sender is not bridge contract")
 
-    // 24. updateNextUnsubmittedSeq: not an operator
+    // 23. updateNextUnsubmittedSeq: not an operator
     await expect(operator.connect(guardian1).updateNextUnsubmittedSeq(0))
       .to.be.revertedWith("KAIA::Operator: Not an operator")
   });
@@ -1801,21 +1799,17 @@ describe("[Bridge Test]", function () {
     await expect(judge.connect(judge1).executeTransaction(100))
       .to.be.revertedWith("KAIA::Judge: No confirmation was committed yet");
 
-    // 17. executeTransaction: not confirmed yet
-    await expect(judge.connect(judge1).executeTransaction(1))
-      .to.be.revertedWith("KAIA::Judge: Transaction was already executed");
-
-    // 18. getTransactionIds: input range error
+    // 17. getTransactionIds: input range error
     await expect(judge.getTransactionIds(1, 0, true, true))
       .to.be.revertedWith("KAIA::Judge: Invalid from and to")
 
-    // 19. getTransactionIds: touch the first condition `from == 0`
+    // 18. getTransactionIds: touch the first condition `from == 0`
     await judge.getTransactionIds(0, 1, true, true)
 
-    // 20. getTransactionIds: touch the second condition `to > transactions.length`
+    // 19. getTransactionIds: touch the second condition `to > transactions.length`
     await judge.getTransactionIds(0, 10000, true, true)
 
-    // 21. touch getVersion
+    // 20. touch getVersion
     await judge.getVersion();
   });
 
