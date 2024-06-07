@@ -105,7 +105,7 @@ var (
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
-		Kip160ContractAddress: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		Kip160ContractAddress: common.HexToAddress("0x3D478E73c9dBebB72332712D7265961B1868d193"),
 		// Genesis governance paramters
 		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
