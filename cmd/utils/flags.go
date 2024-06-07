@@ -1219,7 +1219,7 @@ var (
 	MainnetFlag = &cli.BoolFlag{
 		Name:     "mainnet",
 		Usage:    "Pre-configured Kaia Mainnet network",
-		Aliases:  []string{"p2p.cypress", "p2p.mainnet"},                     // TODO: remove cypress
+		Aliases:  []string{"p2p.cypress", "p2p.mainnet", "cypress"},          // TODO: remove cypress
 		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS", "KAIA_MAINNET"}, // TODO: remove cypress
 		Category: "NETWORK",
 	}
@@ -1227,7 +1227,7 @@ var (
 	TestnetFlag = &cli.BoolFlag{
 		Name:     "testnet",
 		Usage:    "Pre-configured Kaia Testnet network",
-		Aliases:  []string{"p2p.baobab", "p2p.testnet"},                    // TODO: remove baobab
+		Aliases:  []string{"p2p.baobab", "p2p.testnet", "baobab"},          // TODO: remove baobab
 		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_TESTNET"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}

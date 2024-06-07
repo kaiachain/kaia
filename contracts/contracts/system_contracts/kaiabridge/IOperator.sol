@@ -91,7 +91,7 @@ abstract contract IOperator {
     event ChangeGuardian(address indexed beforeGuardian, address indexed newGuardian);
     event ChangeBridge(address indexed beforeBridge, address indexed newBridge);
     event RequirementChange(uint64 indexed required);
-    event UnsubmittedNextSeqUpdate(uint64 indexed unprovisionedNextSeq, uint64 indexed newSeq);
+    event UnsubmittedNextSeqUpdate(uint64 indexed unsubmittedNextSeq, uint64 indexed newSeq);
     event RevokedProvision(uint64 indexed seq);
 
     //////////////////// Exported functions ////////////////////
@@ -197,7 +197,7 @@ abstract contract IOperator {
         view
         returns (uint64[] memory);
 
-    /// @dev update `unprovisionedNextSeq` value
+    /// @dev update `unsubmittedNextSeq` value
     /// @param nextUnprovisionedSeq value to be replaced
     /// NOTE: This update function should be called once the getter(getUnprovisionedSeqs() or doGetUnprovisionedSeqs()) condition is satisfied.
     /// condition: Completness value (second value in pair) must be non-zero
@@ -232,13 +232,12 @@ abstract contract IOperator {
     mapping (uint64 => uint64) public txID2Seq; // <tx id, provision sequence>
     mapping (bytes32 => uint64) public calldataHashes;
     mapping (uint64 => IBridge.ProvisionData) public provisions; // <txID, provision info>
-    mapping (address => uint64) public unprovisionedNextSeq;
     mapping (uint64 => EnumerableSet.UintSet) seq2TxID; // <sequence number, all provision transaction ID set>
     mapping (address => uint64) public unsubmittedNextSeq; // <operator address, next unsubmitted sequence number>
     mapping (address => uint64) public greatestSubmittedSeq; // Gratest submitted seq per operator
     mapping (address => uint64) public nextProvisionSeq; // next sequence to be submitted per operator
     EnumerableSet.UintSet revokedProvisionSeqs; // revoked provision sequence list
-    mapping (uint256 => uint64) public submission2TxID; // <unique user input number, tx ID>
+    mapping (uint256 => uint64) public userIdx2TxID; // <unique user input number, tx ID>
 
     uint256[100] __gap;
 }

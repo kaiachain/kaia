@@ -118,7 +118,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 }
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
-func (api *API) GetDemoteValidators(number *rpc.BlockNumber) ([]common.Address, error) {
+func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	header, err := headerByRpcNumber(api.chain, number)
 	if err != nil {
 		return nil, err

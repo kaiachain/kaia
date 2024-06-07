@@ -47,7 +47,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         maxTryTransfer = newMaxTryTransfer;
 
 
-        TRANSFERLOCK = 7 days;
+        TRANSFERLOCK = 30 minutes;
         pause = false;
         operator = initOperator;
         guardian = initGuardian;
@@ -100,6 +100,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         if (success) {
             claimed[seq] = true;
             nClaimed += 1;
+            accumulatedClaimAmount += provisions[seq].amount;
             EnumerableSetUint64.setRemove(claimCandidates, seq);
             EnumerableSetUint64.setRemove(claimFailures, seq);
             return true;
@@ -165,9 +166,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
 
         emit ProvisionReceiverChanged(provisions[seq].receiver, newReceiver);
         provisions[seq].receiver = newReceiver;
-        claim(provisions[seq], true);
-        EnumerableSetUint64.setRemove(claimCandidates, seq);
-        EnumerableSetUint64.setRemove(claimFailures, seq);
+        doRequestClaim(seq, true);
     }
 
     /// @dev Update greatest sequence
@@ -244,15 +243,35 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         emit Transfer(swapReq);
     }
 
+    /// @dev record failed transfer history
+    /// @param seq sequence number
+    function recordTransferFailure(uint64 seq) internal {
+        transferFail[seq]++;
+        if (transferFail[seq] > maxTryTransfer) {
+            EnumerableSetUint64.setRemove(claimCandidates, seq);
+            EnumerableSetUint64.setAdd(claimFailures, seq);
+        }
+    }
+
     /// @dev Transfer KAIA to receiver with the specified amount in the provision
     /// @param prov ProvisionData
     /// @param revertOnFail Make reverts if operations fails and the value is true, otherwise no make revert, but record its failure
     function claim(ProvisionData memory prov, bool revertOnFail)
         internal
         nonReentrant
-        enoughPoolAmount(prov.amount)
         returns (bool)
     {
+        uint256 bridgeBalance = address(this).balance;
+        bool isEnoughBalance = bridgeBalance > prov.amount;
+        if (revertOnFail) {
+            require(isEnoughBalance, "KAIA::Bridge: Bridge balance is not enough to transfer provision amount");
+        } else {
+            if (!isEnoughBalance) {
+                recordTransferFailure(prov.seq);
+                return false;
+            }
+        }
+
         // Allocate half of gas as available gas for the fallback code
         (bool sent, ) = prov.receiver.call{
             value: prov.amount,
@@ -262,10 +281,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
             if (revertOnFail) {
                 revert("KAIA::Bridge: Failed to transfer amount of provision");
             }
-            if (transferFail[prov.seq]++ > maxTryTransfer) {
-                EnumerableSetUint64.setRemove(claimCandidates, prov.seq);
-                EnumerableSetUint64.setAdd(claimFailures, prov.seq);
-            }
+            recordTransferFailure(prov.seq);
             return false;
         }
         emit Claim(prov);
@@ -306,12 +322,14 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
     /// @dev See {IBridge-holdClaim}
     function holdClaim(uint256 seq) public override onlyJudge {
         setTransferTimeLock(seq, INFINITE);
+        nTransferHolds += 1;
         emit HoldClaim(seq, INFINITE);
     }
 
     /// @dev See {IBridge-releaseClaim}
     function releaseClaim(uint256 seq) public override onlyGuardian {
         setTransferTimeLock(seq, 0);
+        nTransferHolds -= 1;
         emit ReleaseClaim(seq, 0);
     }
 
@@ -403,9 +421,30 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         return EnumerableSetUint64.getAll(claimCandidates);
     }
 
+    // @dev See {IBridge-getClaimCandidates}
+    function getClaimCandidatesSize() public override view returns (uint256) {
+        return EnumerableSetUint64.setLength(claimCandidates);
+    }
+
+    // @dev See {IBridge-getClaimCandidatesRangePure}
+    function getClaimCandidatesRangePure(uint64 range) public override view returns (uint64[] memory) {
+        return EnumerableSetUint64.getRange(claimCandidates, range);
+    }
+
     // @dev See {IBridge-getClaimCandidatesRange}
     function getClaimCandidatesRange(uint64 range) public override view returns (uint64[] memory) {
-        return EnumerableSetUint64.getRange(claimCandidates, range);
+        uint64[] memory seqs = EnumerableSetUint64.getRange(claimCandidates, range);
+        uint64[] memory candidates = new uint64[](range);
+        uint256 cnt = 0;
+        for (uint i=0; i<seqs.length; i++) {
+            if (isPassedTimeLockDuration(seqs[i])) {
+                candidates[cnt++] = seqs[i];
+            }
+        }
+        assembly {
+            mstore(candidates, cnt)
+        }
+        return candidates;
     }
 
     // @dev See {IBridge-getClaimFailures}
