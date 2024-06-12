@@ -381,7 +381,7 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
         bytes32 _secondArg,
         bytes32 _thirdArg
     ) public override notConfirmedRequest(_id) onlyRole(ADMIN_ROLE) {
-        require(!_hasConfirmed(_id, _msgSender()), "Msg.sender already confirmed.");
+        require(!_hasConfirmed(_id, msg.sender), "Msg.sender already confirmed.");
         Request storage _req = _requestMap[_id];
         require(
             _req.functionId == _functionId &&
@@ -391,8 +391,8 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
             "Function id and arguments do not match."
         );
 
-        _req.confirmers.add(_msgSender());
-        emit ConfirmRequest(_id, _msgSender(), _functionId, _firstArg, _secondArg, _thirdArg, _req.confirmers.values());
+        _req.confirmers.add(msg.sender);
+        emit ConfirmRequest(_id, msg.sender, _functionId, _firstArg, _secondArg, _thirdArg, _req.confirmers.values());
 
         if (_req.confirmers.length() >= requirement) {
             _executeRequest(_id);
@@ -418,7 +418,7 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
         bytes32 _secondArg,
         bytes32 _thirdArg
     ) external override notConfirmedRequest(_id) onlyRole(ADMIN_ROLE) {
-        require(_hasConfirmed(_id, _msgSender()), "Msg.sender has not confirmed.");
+        require(_hasConfirmed(_id, msg.sender), "Msg.sender has not confirmed.");
         Request storage _req = _requestMap[_id];
         require(
             _req.functionId == _functionId &&
@@ -428,14 +428,14 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
             "Function id and arguments do not match."
         );
 
-        if (_req.requestProposer == _msgSender()) {
+        if (_req.requestProposer == msg.sender) {
             _req.state = RequestState.Canceled;
-            emit CancelRequest(_id, _msgSender(), _req.functionId, _req.firstArg, _req.secondArg, _req.thirdArg);
+            emit CancelRequest(_id, msg.sender, _req.functionId, _req.firstArg, _req.secondArg, _req.thirdArg);
         } else {
-            _req.confirmers.remove(_msgSender());
+            _req.confirmers.remove(msg.sender);
             emit RevokeConfirmation(
                 _id,
-                _msgSender(),
+                msg.sender,
                 _req.functionId,
                 _req.firstArg,
                 _req.secondArg,
@@ -464,10 +464,10 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
         req.firstArg = _firstArg;
         req.secondArg = _secondArg;
         req.thirdArg = _thirdArg;
-        req.requestProposer = _msgSender();
+        req.requestProposer = msg.sender;
         req.state = RequestState.NotConfirmed;
 
-        emit SubmitRequest(id, _msgSender(), _functionId, _firstArg, _secondArg, _thirdArg);
+        emit SubmitRequest(id, msg.sender, _functionId, _firstArg, _secondArg, _thirdArg);
         return id;
     }
 
@@ -499,10 +499,10 @@ contract CnStakingV3MultiSig is ICnStakingV3MultiSig, CnStakingV3MultiSigStorage
 
         if (ok) {
             req.state = RequestState.Executed;
-            emit ExecuteRequestSuccess(_id, _msgSender(), funcId, a1, a2, a3);
+            emit ExecuteRequestSuccess(_id, msg.sender, funcId, a1, a2, a3);
         } else {
             req.state = RequestState.ExecutionFailed;
-            emit ExecuteRequestFailure(_id, _msgSender(), funcId, a1, a2, a3);
+            emit ExecuteRequestFailure(_id, msg.sender, funcId, a1, a2, a3);
         }
     }
 

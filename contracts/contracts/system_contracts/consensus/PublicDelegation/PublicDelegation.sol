@@ -119,7 +119,7 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
     /// @dev Stake KAIA to CnStakingV3.
     /// Emits a Staked event.
     function stake() external payable override {
-        _sweepAndStake(_msgSender(), msg.value);
+        _sweepAndStake(msg.sender, msg.value);
     }
 
     /// @dev Stake KAIA to CnStakingV3 for a specific address.
@@ -131,7 +131,7 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
 
     /// @dev Fallback function to receive KAIA.
     receive() external payable override {
-        _sweepAndStake(_msgSender(), msg.value);
+        _sweepAndStake(msg.sender, msg.value);
     }
 
     /* ========== REDELEGATE FUNCTIONS ========== */
@@ -154,7 +154,7 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
         _sweepAndStake(address(0), 0);
 
         uint256 _shares = previewWithdraw(_assets);
-        _burn(_msgSender(), _shares);
+        _burn(msg.sender, _shares);
 
         _redelegate(_targetCnV3, _assets);
     }
@@ -177,7 +177,7 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
         _sweepAndStake(address(0), 0);
 
         uint256 _assets = previewRedeem(_shares);
-        _burn(_msgSender(), _shares);
+        _burn(msg.sender, _shares);
 
         _redelegate(_targetCnV3, _assets);
     }
@@ -201,10 +201,10 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
 
         uint256 _shares = previewWithdraw(_assets);
 
-        _burn(_msgSender(), _shares);
-        _requestWithdrawal(_msgSender(), _recipient, _assets);
+        _burn(msg.sender, _shares);
+        _requestWithdrawal(msg.sender, _recipient, _assets);
 
-        emit Redeemed(_msgSender(), _recipient, _assets, _shares);
+        emit Redeemed(msg.sender, _recipient, _assets, _shares);
     }
 
     /// @dev Request withdrawal of staked KAIA by shares.
@@ -224,10 +224,10 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
 
         uint256 _assets = previewRedeem(_shares);
 
-        _burn(_msgSender(), _shares);
-        _requestWithdrawal(_msgSender(), _recipient, _assets);
+        _burn(msg.sender, _shares);
+        _requestWithdrawal(msg.sender, _recipient, _assets);
 
-        emit Redeemed(_msgSender(), _recipient, _assets, _shares);
+        emit Redeemed(msg.sender, _recipient, _assets, _shares);
     }
 
     /* ========== CANCEL/CLAIM WITHDRAWAL FUNCTIONS ========== */
@@ -319,9 +319,9 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
     function _redelegate(address _targetCnV3, uint256 _assets) private {
         require(_assets > 0, "Redelegate amount is too low.");
 
-        baseCnStakingV3.redelegate(_msgSender(), _targetCnV3, _assets);
+        baseCnStakingV3.redelegate(msg.sender, _targetCnV3, _assets);
 
-        emit Redelegated(_msgSender(), _targetCnV3, _assets);
+        emit Redelegated(msg.sender, _targetCnV3, _assets);
     }
 
     /// @dev Send the approved staking withdrawal.
@@ -337,21 +337,21 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
 
     /// @dev Cancel the approved staking withdrawal.
     function _cancelApprovedStakingWithdrawal(uint256 _id) private {
-        require(requestIdToOwner[_id] == _msgSender(), "Not the owner of the request.");
+        require(requestIdToOwner[_id] == msg.sender, "Not the owner of the request.");
 
         // Revive the shares
         (, uint256 _assets, , ) = _withdrawalRequest(_id);
         uint256 _shares = previewDeposit(_assets);
-        _mint(_msgSender(), _shares);
+        _mint(msg.sender, _shares);
 
         baseCnStakingV3.cancelApprovedStakingWithdrawal(_id);
 
-        emit RequestCancelWithdrawal(_msgSender(), _id);
+        emit RequestCancelWithdrawal(msg.sender, _id);
     }
 
     /// @dev Claim the approved staking withdrawal.
     function _claim(uint256 _id) private {
-        require(requestIdToOwner[_id] == _msgSender(), "Not the owner of the request.");
+        require(requestIdToOwner[_id] == msg.sender, "Not the owner of the request.");
 
         baseCnStakingV3.withdrawApprovedStaking(_id);
 
@@ -361,11 +361,11 @@ contract PublicDelegation is IPublicDelegation, PublicDelegationStorage, ERC20, 
         // Since the `_totalAsset()` was already increased by _asset, it needs to be subtracted.
         if (_state == ICnStakingV3.WithdrawalStakingState.Canceled) {
             uint256 _shares = _convertToShares(_asset, totalSupply(), _totalAssets() - _asset);
-            _mint(_msgSender(), _shares);
+            _mint(msg.sender, _shares);
             return;
         }
 
-        emit Claimed(_msgSender(), _id);
+        emit Claimed(msg.sender, _id);
     }
 
     /// @dev Send the commission to the commission address.
