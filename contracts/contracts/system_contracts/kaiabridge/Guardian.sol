@@ -95,6 +95,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         onlyGuardian
         guardianExists(guardian)
         guardianDoesNotExist(newGuardian)
+        notNull(newGuardian)
     {
         for (uint256 i=0; i<guardians.length; i++) {
             if (guardians[i] == guardian) {
