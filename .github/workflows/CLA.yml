@@ -21,3 +21,4 @@ jobs:
           branch: "main"
           allowlist: dependabot[bot], KlaytnDev, circleci-klaytn
           remote-repository-name: ${{ secrets.CLA_REPOSITORY }}
+          create-file-commit-message: "new file created"
