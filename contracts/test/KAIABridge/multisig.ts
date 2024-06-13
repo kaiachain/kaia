@@ -247,7 +247,7 @@ describe("[Multisig Test]", function () {
     expect((await guardian.getGuardians()).length).to.equal(initGuardianLen - 1);
   });
 
-  it.only("#guardian removal is not available if not guardian size is not greater than one", async function () {
+  it("#guardian removal is not available if not guardian size is not greater than one", async function () {
     let rawTxData = (await guardian.populateTransaction.removeGuardian(guardian4.address)).data;
     await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
     await guardian.connect(guardian2).confirmTransaction(guardianTxID);
