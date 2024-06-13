@@ -34,7 +34,13 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     /// @param initOperator operator address
     /// @param initGuardian guardian address
     /// @param initJudge Judge contract address
-    function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer) public initializer {
+    function initialize(address initOperator, address initGuardian, address initJudge, uint256 newMaxTryTransfer)
+        public
+        initializer
+        notNull(initOperator)
+        notNull(initGuardian)
+        notNull(initJudge)
+    {
         require(IERC165(initOperator).supportsInterface(type(IOperator).interfaceId), "KAIA::Bridger: Operator contract address does not implement IOperator");
         __ReentrancyGuard_init();
         bridgeServiceStarted = block.timestamp;
@@ -292,19 +298,19 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
     }
 
     /// @dev See {IBridge-changeOperator}
-    function changeOperator(address newOperator) public override onlyGuardian {
+    function changeOperator(address newOperator) public override onlyGuardian notNull(newOperator) {
         emit ChangeOperator(operator, newOperator);
         operator = newOperator;
     }
 
     /// @dev See {IBridge-changeGuardian}
-    function changeGuardian(address newGuardian) public override onlyGuardian {
+    function changeGuardian(address newGuardian) public override onlyGuardian notNull(newGuardian) {
         emit ChangeGuardian(guardian, newGuardian);
         guardian = newGuardian;
     }
 
     /// @dev See {IBridge-changeJudge}
-    function changeJudge(address newJudge) public override onlyGuardian {
+    function changeJudge(address newJudge) public override onlyGuardian notNull(newJudge) {
         emit ChangeJudge(judge, newJudge);
         judge = newJudge;
     }
