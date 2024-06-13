@@ -534,10 +534,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
 
     /// @dev Refresh the balance of this contract recorded in StakingTracker
     function _refreshStake() private {
-        (bool success, ) = address(stakingTracker).call(
-            abi.encodeWithSignature("refreshStake(address)", address(this))
-        );
-        require(success, "StakingTracker call failed.");
+        IStakingTracker(stakingTracker).refreshStake(address(this));
     }
 
     /// @dev Check if the caller can accept the reward address
