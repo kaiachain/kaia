@@ -12,7 +12,7 @@ aliases:
     branches:
       ignore:
         - /release\/.*/
-        - master
+        - main
 
 orbs:
   codecov: codecov/codecov@1.0.5
@@ -29,7 +29,7 @@ executors:
           password: $DOCKER_PASSWORD
   linux-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/klaytn/klaytn
-    resource_class: large
+    resource_class: xlarge
     docker:
       - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
@@ -140,7 +140,7 @@ commands:
             export GOPATH=~/go
             export PATH=$HOME/go1.22.1/go/bin:$PATH
             KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/; done
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -159,7 +159,7 @@ commands:
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
   rpm-tagging-baobab:
     description: "rpm tagging for baobab"
@@ -176,7 +176,7 @@ commands:
             for item in kcn kpn ken; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia-test/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
             done
   createrepo-update:
     steps:
@@ -230,14 +230,14 @@ commands:
       - run:
           name: "Create pull request"
           command: |
-            version=$(hub pr list -s open -L 10 -f "%H%n")
-            echo $version
-            if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
-              echo "PR already exist"
-            else
-              echo "hub pull-request -m "[Master] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
-              echo -e "[Master] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
-            fi
+              version=$(hub pr list -s open -L 10 -f "%H%n")
+              echo $version
+              if [[ $version == *"release/${CIRCLE_TAG%-*}"* ]]; then
+                echo "PR already exist"
+              else
+                echo "hub pull-request -m "[Main] release/$CIRCLE_TAG QA Signoff" -b $CIRCLE_PROJECT_USERNAME:master -h $CIRCLE_PROJECT_USERNAME:${CIRCLE_TAG%-*}"
+                echo -e "[Main] release/${CIRCLE_TAG%-*} QA Sign-off\n\nThis PR is automatically created by CI to release a new official version of $CIRCLE_PROJECT_REPONAME.\n\nWhen this PR is approved by QA team, a new version will be released." | hub pull-request -b $CIRCLE_PROJECT_USERNAME:main -h $CIRCLE_PROJECT_USERNAME:release/${CIRCLE_TAG%-*} -r $GITHUB_reviewer -l circleci -F-
+              fi
       - run:
           name: "build announce"
           command: .circleci/scripts/build_announce.sh
@@ -248,7 +248,6 @@ commands:
           command: |
             export version=$(go run build/rpm/main.go version) >> $BASH_ENV
             echo "git tag $version"
-            git checkout test-cicd
             git config --global user.email "team.devops@groundx.xyz"
             git config --global user.name "circleci-klaytn"
             git tag -a $version -m "$CIRCLE_STAGE"
@@ -391,7 +390,7 @@ jobs:
 
   test-others:
     executor: linux-others-executor
-    resource_class: large
+    resource_class: xlarge
     steps:
       - checkout
       - wait-other-containers-ready
@@ -423,7 +422,7 @@ jobs:
 
   coverage:
     executor: linux-others-executor
-    resource_class: large
+    resource_class: xlarge
     steps:
       - checkout
       - wait-other-containers-ready
@@ -683,7 +682,7 @@ workflows:
       - major-tagging:
           filters:
             branches:
-              only: test-cicd
+              only: main
 
   nightly-coverage:
     triggers:

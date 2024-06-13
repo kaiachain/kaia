@@ -524,7 +524,58 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
-	apis, ethAPI := api.GetAPIs(s.APIBackend, s.config.DisableUnsafeDebug)
+	var (
+		nonceLock                = new(api.AddrLocker)
+		publicBlockChainAPI      = api.NewPublicBlockChainAPI(s.APIBackend)
+		publicKaiaAPI            = api.NewPublicKaiaAPI(s.APIBackend)
+		publicTransactionPoolAPI = api.NewPublicTransactionPoolAPI(s.APIBackend, nonceLock)
+		publicAccountAPI         = api.NewPublicAccountAPI(s.APIBackend.AccountManager())
+	)
+
+	apis := []rpc.API{
+		{
+			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicKaiaAPI,
+			Public:    true,
+		}, {
+			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicBlockChainAPI,
+			Public:    true,
+		}, {
+			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicTransactionPoolAPI,
+			Public:    true,
+		}, {
+			Namespace: "txpool",
+			Version:   "1.0",
+			Service:   api.NewPublicTxPoolAPI(s.APIBackend),
+			Public:    true,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   api.NewPublicDebugAPI(s.APIBackend),
+			Public:    false,
+		}, {
+			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicAccountAPI,
+			Public:    true,
+		}, {
+			Namespace: "personal",
+			Version:   "1.0",
+			Service:   api.NewPrivateAccountAPI(s.APIBackend, nonceLock),
+			Public:    false,
+		}, {
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   api.NewPrivateDebugAPI(s.APIBackend),
+			Public:    false,
+			IPCOnly:   s.config.DisableUnsafeDebug,
+		},
+	}
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -535,9 +586,14 @@ func (s *CN) APIs() []rpc.API {
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
-	ethAPI.SetPublicFilterAPI(publicFilterAPI)
-	ethAPI.SetGovernanceKaiaAPI(governanceKaiaAPI)
-	ethAPI.SetGovernanceAPI(governanceAPI)
+	ethAPI := api.NewEthereumAPI(
+		publicFilterAPI,
+		publicKaiaAPI,
+		publicBlockChainAPI,
+		publicTransactionPoolAPI,
+		publicAccountAPI,
+		governanceAPI,
+	)
 
 	// Append all the local APIs and return
 	apis = append(apis, []rpc.API{

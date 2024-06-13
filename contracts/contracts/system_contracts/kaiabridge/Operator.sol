@@ -223,8 +223,11 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         override
         operatorExists(msg.sender)
         confirmed(txID, msg.sender)
-        notExecuted(txID)
     {
+        // if transaction was already executed, silently return without revert
+        if (transactions[txID].executed) {
+            return;
+        }
         if (isConfirmed(txID)) {
             Transaction storage targetTx = transactions[txID];
             if (predefinedExecute(targetTx.to, targetTx.data)) {
@@ -271,8 +274,8 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(submission2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
-            submission2TxID[uniqUserTxIndex] = txID;
+            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
+            userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
     }

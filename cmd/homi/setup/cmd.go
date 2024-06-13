@@ -133,6 +133,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(kaiaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(kip103CompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip103ContractAddressFlag),
+	altsrc.NewInt64Flag(kip160CompatibleBlockNumberFlag),
+	altsrc.NewStringFlag(kip160ContractAddressFlag),
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),

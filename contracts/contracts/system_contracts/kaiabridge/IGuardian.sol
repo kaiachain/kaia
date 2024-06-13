@@ -165,7 +165,7 @@ abstract contract IGuardian {
     mapping (address => bool) public isGuardian;
     Transaction[] public transactions;
     mapping (uint256 => mapping (address => bool)) public confirmations;
-    mapping (uint256 => uint64) public submission2TxID; // <unique user input number, tx ID>
+    mapping (uint256 => uint64) public userIdx2TxID; // <unique user input number, tx ID>
 
     uint256[100] __gap;
 }

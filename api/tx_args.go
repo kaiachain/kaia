@@ -171,7 +171,7 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 
 	// b.SuggestPrice = unitPrice, for before Magma
 	//                = baseFee * 2,   for after Magma
-	//                = baseFee * 2 + tip         for after Kaia
+	//                = baseFee + tip  for after Kaia
 	price, err := b.SuggestPrice(ctx)
 	if err != nil {
 		return err
@@ -616,7 +616,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 
 	// b.SuggestPrice = unitPrice,                for before Magma
 	//                = baseFee * 2,              for after Magma
-	//                = baseFee * 2 + tip         for
+	//                = baseFee + tip             for after Kaia
 	gasPrice, err := b.SuggestPrice(ctx)
 	if err != nil {
 		return err

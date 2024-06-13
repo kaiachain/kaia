@@ -53,11 +53,6 @@ abstract contract IBridge {
     }
 
     //////////////////// Modifier ////////////////////
-    modifier enoughPoolAmount(uint256 amount) {
-        require(address(this).balance >= amount, "KAIA::Pool: Pool's balance is not enough to transfer");
-        _;
-    }
-
     modifier onlyOperator {
         require(operator == msg.sender, "KAIA::Bridge: Not an operator");
         _;
@@ -93,19 +88,19 @@ abstract contract IBridge {
     event TransferFromKaiaOnOffChanged(bool indexed transferFromKaiaOn, bool indexed set);
 
     /// @dev Emitted when a provision is submitted
-    event ProvisionConfirm(ProvisionConfirmedEvent indexed provision);
+    event ProvisionConfirm(ProvisionConfirmedEvent provision);
 
     /// @dev Emitted when a provision is confirmed
-    event Provision(ProvisionIndividualEvent indexed provision);
+    event Provision(ProvisionIndividualEvent provision);
 
     /// @dev Emitted when a provision is removed
-    event RemoveProvision(ProvisionData indexed provision);
+    event RemoveProvision(ProvisionData provision);
 
     /// @dev Emitted when KAIA is charged
     event KAIACharged(address sender, uint256 amount);
 
     /// @dev Emitted when transfer (swap request) is done
-    event Transfer(SwapRequest indexed lockInfo);
+    event Transfer(SwapRequest lockInfo);
 
     /// @dev Emitted when `minLockableKAIA` is changed
     event MinLockableKAIAChange(uint256 indexed beforeMinLock, uint256 indexed newMinLock);
@@ -268,6 +263,12 @@ abstract contract IBridge {
     /// @dev Return `claimCandidates` set
     function getClaimCandidates() external virtual view returns (uint64[] memory);
 
+    /// @dev Return `claimCandidates` set size
+    function getClaimCandidatesSize() external virtual view returns (uint256);
+
+    /// @dev Return `claimCandidates` set with the given range
+    function getClaimCandidatesRangePure(uint64 range) external virtual view returns (uint64[] memory);
+
     /// @dev Return `claimCandidates` set with the given range
     /// @param range Range of set
     function getClaimCandidatesRange(uint64 range) external virtual view returns (uint64[] memory);
@@ -302,6 +303,8 @@ abstract contract IBridge {
     uint256 public maxTryTransfer;
     bool public addrValidationOn;
     uint256 public TRANSFERLOCK;
+    uint256 public nTransferHolds;
+    uint256 public accumulatedClaimAmount;
     mapping (uint256 => uint256) public timelocks; // <sequence, residual lock duration>
     bool public pause;
 
