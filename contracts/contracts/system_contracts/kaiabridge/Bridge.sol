@@ -471,7 +471,7 @@ contract KAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeabl
         emit KAIACharged(msg.sender, msg.value);
     }
 
-    function burnBridgeBalance() public override onlyGuardian inPause {
+    function burnBridgeBalance() public override onlyGuardian inPause nonReentrant {
         require(block.timestamp > bridgeServicePeriod, "KAIA::Bridge: Service period is not expired yet");
         uint256 bridgeBalance = address(this).balance;
         (bool sent, ) = BURN_TARGET.call{value: bridgeBalance}("");
