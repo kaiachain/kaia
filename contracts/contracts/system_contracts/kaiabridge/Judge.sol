@@ -98,6 +98,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         onlyGuardian
         judgeExists(judge)
         judgeDoesNotExist(newJudge)
+        notNull(newJudge)
     {
         for (uint256 i=0; i<judges.length; i++) {
             if (judges[i] == judge) {
@@ -116,6 +117,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         public
         override
         onlyGuardian
+        notNull(newGuardian)
     {
         emit ChangeGuardian(guardian, newGuardian);
         guardian = newGuardian;
@@ -224,7 +226,7 @@ contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IE
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
+            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Judge: Submission to txID exists");
             userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
