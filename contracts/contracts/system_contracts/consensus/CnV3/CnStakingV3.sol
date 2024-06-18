@@ -181,14 +181,14 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
         publicDelegation = address(IPublicDelegationFactory(_pdFactory).deployPublicDelegation(_decodedPDArgs));
         rewardAddress = publicDelegation;
 
-        emit SetPublicDelegation(_msgSender(), publicDelegation, rewardAddress);
+        emit SetPublicDelegation(msg.sender, publicDelegation, rewardAddress);
     }
 
     /// @dev Agree on the initial lockup conditions.
     /// Emits a ReviewInitialConditions event.
     /// Emits a CompleteReviewInitialConditions.
     function reviewInitialConditions() external override beforeInit onlyRole(ADMIN_ROLE) {
-        address _caller = _msgSender();
+        address _caller = msg.sender;
         require(lockupConditions.reviewedAdmin[_caller] == false, "Msg.sender already reviewed.");
         lockupConditions.reviewedAdmin[_caller] = true;
         unchecked {
@@ -228,7 +228,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
         _grantStakingRoles();
 
         isInitialized = true;
-        emit DepositLockupStakingAndInit(_msgSender(), msg.value);
+        emit DepositLockupStakingAndInit(msg.sender, msg.value);
     }
 
     /// @dev Grants staking related roles to the appropriate addresses.
@@ -356,7 +356,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
     ///
     /// Emits a Redelegate event.
     function redelegate(address _user, address _targetCnV3, uint256 _value) external override afterInit notNull(_user) {
-        require(isRedelegationEnabled && _msgSender() == publicDelegation, "Redelegation disabled.");
+        require(isRedelegationEnabled && msg.sender == publicDelegation, "Redelegation disabled.");
         require(_targetCnV3 != address(this), "Target can't be self.");
         require(_targetCnV3._validCnStaking(3), "Invalid CnStakingV3.");
         require(_value > 0 && unstaking + _value <= staking, "Invalid value.");
@@ -387,7 +387,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
         // Early exit if the Redelegation disabled.
         // Note that isRedelegationEnabled can be true only if the public delegation is enabled.
         require(isRedelegationEnabled, "Redelegation disabled.");
-        require(_msgSender()._validCnStaking(3), "Invalid CnStakingV3.");
+        require(msg.sender._validCnStaking(3), "Invalid CnStakingV3.");
 
         lastRedelegation[_user] = block.timestamp;
 
@@ -404,7 +404,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
         _publicDelegation.stakeFor{value: msg.value}(_user);
         require(expected == address(this).balance, "Invalid stakeFor.");
 
-        emit HandleRedelegation(_user, _msgSender(), address(this), msg.value);
+        emit HandleRedelegation(_user, msg.sender, address(this), msg.value);
     }
 
     /// @dev Withdraw a part of delegated stakes.
@@ -506,7 +506,7 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
         }
 
         _refreshStake();
-        emit DelegateKaia(_msgSender(), msg.value);
+        emit DelegateKaia(msg.sender, msg.value);
     }
 
     /// @dev Validate initial conditions
@@ -534,20 +534,17 @@ contract CnStakingV3 is ICnStakingV3, CnStakingV3Storage, AccessControlEnumerabl
 
     /// @dev Refresh the balance of this contract recorded in StakingTracker
     function _refreshStake() private {
-        (bool success, ) = address(stakingTracker).call(
-            abi.encodeWithSignature("refreshStake(address)", address(this))
-        );
-        require(success, "StakingTracker call failed.");
+        IStakingTracker(stakingTracker).refreshStake(address(this));
     }
 
     /// @dev Check if the caller can accept the reward address
     function _canAcceptRewardAddress() private view returns (bool) {
-        if (_msgSender() == pendingRewardAddress) {
+        if (msg.sender == pendingRewardAddress) {
             return true;
         }
         (address[] memory abookAdminList, ) = IAddressBook(ADDRESS_BOOK_ADDRESS).getState();
         for (uint256 i = 0; i < abookAdminList.length; i++) {
-            if (_msgSender() == abookAdminList[i]) {
+            if (msg.sender == abookAdminList[i]) {
                 return true;
             }
         }
