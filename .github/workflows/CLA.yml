@@ -17,7 +17,7 @@ jobs:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_PERSONAL_ACCESS_TOKEN }}
         with:
           path-to-signatures: "${{ github.event.repository.name }}/signatures/version1/cla.json"
-          path-to-document: "https://gist.github.com/e78f99e1c527225637e269cff1bc7e49" # Klaytn Gist
+          path-to-document: "https://gist.github.com/kaiachain-dev/bbf65cc330275c057463c4c94ce787a6" # Kaia Gist
           branch: "main"
-          allowlist: dependabot[bot], KlaytnDev, circleci-klaytn
+          allowlist: dependabot[bot], KaiaDev, circleci-kaia
           remote-repository-name: ${{ secrets.CLA_REPOSITORY }}
