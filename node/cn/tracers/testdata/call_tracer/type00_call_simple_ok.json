@@ -1,0 +1,83 @@
+ {
+  "_comment": "chainId 1001 txHash 0x7f392254fdd2ae079e2f925f790f34340e69d324143563570bc0991a5e3ee755",
+  "genesis": {
+    "alloc": {
+      "0xe6c5b1cbf283d9482088136b8cee53fdb6c088eb": {
+        "balance": "0x0",
+        "nonce": "1",
+        "code": "0x608060405234801561000f575f80fd5b506004361061004a575f3560e01c806335f469941461004e5780638381f58a146100585780639667064414610076578063d09de08a14610080575b5f80fd5b61005661008a565b005b6100606100ae565b60405161006d919061013f565b60405180910390f35b61007e6100b3565b005b61008861010f565b005b5f8081548092919061009b90610185565b91905055505f6001146100ac575f80fd5b565b5f5481565b5f808154809291906100c490610185565b9190505550600160021461010d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161010490610226565b60405180910390fd5b565b5f8081548092919061012090610185565b9190505550565b5f819050919050565b61013981610127565b82525050565b5f6020820190506101525f830184610130565b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f61018f82610127565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036101c1576101c0610158565b5b600182019050919050565b5f82825260208201905092915050565b7f62616420696e70757400000000000000000000000000000000000000000000005f82015250565b5f6102106009836101cc565b915061021b826101dc565b602082019050919050565b5f6020820190508181035f83015261023d81610204565b905091905056fea2646970667358221220038a0b4df95a181a3d6015b14447422ba6fc5cb631fc606ca794f09f8818e4e864736f6c634300081a0033",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000001"
+        }
+      },
+      "0x7f0546832758f61410e81a94d7a07d55b1dfd278": {
+        "balance": "0x2b538d40e54f79a00",
+        "nonce": "13",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1001,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 6400000000000000000,
+          "ratio": "50/20/30",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0x8e8442ffaf698a5746a2771a6e21bfce0a50682a8801bda9258a24be88e30f40",
+    "number": "156322558",
+    "timestamp": "1717903794",
+    "blockScore": "0x1",
+    "baseFeePerGas": "0x5d21dba00"
+  },
+  "input": "0xf86a0d850ba43b740082687594e6c5b1cbf283d9482088136b8cee53fdb6c088eb8084d09de08a8207f5a0c97204674702244bd799e4018b2c848e3bb19ee141bf1bec63bb739f09d59e5ca06cffd781d6712cad3ba53173be81b6a966b787b283cd19b134c7b30e09ddcde3",
+  "result": {
+    "from": "0x7f0546832758f61410e81a94d7a07d55b1dfd278",
+    "gas": "0x6875",
+    "gasUsed": "0x6875",
+    "input": "0xd09de08a",
+    "to": "0xe6c5b1cbf283d9482088136b8cee53fdb6c088eb",
+    "value": "0x0",
+    "type": "CALL"
+  }
+}
