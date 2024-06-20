@@ -53,6 +53,11 @@ abstract contract IBridge {
     }
 
     //////////////////// Modifier ////////////////////
+    modifier notNull(address addr) {
+        require(addr != address(0), "KAIA::Guardian: A zero address is not allowed");
+        _;
+    }
+
     modifier onlyOperator {
         require(operator == msg.sender, "KAIA::Bridge: Not an operator");
         _;
