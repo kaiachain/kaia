@@ -69,6 +69,47 @@ func TestPrestateTracer(t *testing.T) {
 	})
 }
 
+func TestCallTracer(t *testing.T) {
+	forEachJson(t, "testdata/call_tracer", func(t *testing.T, tc *tracerTestdata) {
+		tracer := vm.NewCallTracer()
+
+		// Run the tracer and check the tracer result
+		tx, execResult, tracerResult := runTracer(t, tc, tracer)
+
+		// Check the tracer result against the tx and execution result
+		// Note that CallFrame.Type is not correctly unmarshalled, so we need to unmarshal it separately
+		var callFrame *vm.CallFrame
+		require.NoError(t, json.Unmarshal(tracerResult, &callFrame))
+		var callFrame2 struct {
+			TypeString string `json:"type"`
+		}
+		require.NoError(t, json.Unmarshal(tracerResult, &callFrame2))
+
+		// contract creation tx, 'to' is the deployed contract address, if succeeded.
+		topLevelCreate := (tx.Type().IsEthereumTransaction() && tx.To() == nil) || tx.Type().IsContractDeploy()
+		// txs without 'to' address, yet not contract creation. treated as CALL to self in the tracer.
+		assumeToSelf := (tx.Type().IsAccountUpdate() || tx.Type().IsCancelTransaction() || tx.Type().IsChainDataAnchoring())
+
+		if topLevelCreate {
+			assert.Equal(t, "CREATE", callFrame2.TypeString)
+		} else {
+			assert.Equal(t, "CALL", callFrame2.TypeString)
+		}
+		assert.Equal(t, tx.ValidatedSender(), callFrame.From)
+		assert.Equal(t, tx.Gas(), callFrame.Gas)
+		assert.Equal(t, execResult.UsedGas, callFrame.GasUsed)
+		assert.Equal(t, tx.Data(), callFrame.Input)
+		if topLevelCreate && execResult.VmExecutionStatus == types.ReceiptStatusSuccessful {
+			assert.NotEqual(t, nil, callFrame.To)
+			assert.NotEqual(t, common.Address{}, callFrame.To)
+		} else if assumeToSelf {
+			assert.Equal(t, tx.ValidatedSender(), *callFrame.To)
+		} else {
+			assert.Equal(t, tx.To(), callFrame.To)
+		}
+	})
+}
+
 func forEachJson(t *testing.T, dir string, f func(t *testing.T, tc *tracerTestdata)) {
 	files, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -127,6 +168,8 @@ func runTracer(t *testing.T, tc *tracerTestdata, tracer vm.Tracer) (*types.Trans
 	var tracerResult json.RawMessage
 	switch tracer := tracer.(type) {
 	case *Tracer:
+		tracerResult, err = tracer.GetResult()
+	case *vm.CallTracer:
 		tracerResult, err = tracer.GetResult()
 	}
 	require.NoError(t, err)
