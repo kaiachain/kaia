@@ -487,7 +487,3 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
-
-func getBurnAmountMagma(fee *big.Int) *big.Int {
-	return new(big.Int).Div(fee, big.NewInt(2))
-}
