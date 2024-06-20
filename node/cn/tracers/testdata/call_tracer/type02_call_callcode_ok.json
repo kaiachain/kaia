@@ -1,0 +1,100 @@
+ {
+  "_comment": "chainId 1001 txHash 0xa08bc9c2cd694c9f8b365c0d5361b11904a1783283a7ab8f9b9ba621a90d4a81 CallCodeCaller.sol",
+  "genesis": {
+    "alloc": {
+      "0x9eb29d8374ea137a21264ecc95b2e808b02064d3": {
+        "balance": "0x0",
+        "nonce": "1",
+        "code": "0x608060405260043610610041576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633917b3df14610046575b600080fd5b61004e610050565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166040516024016040516020818303038152906040527fc605f76c000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff19166020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff838183161783525050505060405180828051906020019080838360005b8381101561013857808201518184015260208101905061011d565b50505050905090810190601f1680156101655780820380516001836020036101000a031916815260200191505b509150506000604051808303816000865af2915050505600a165627a7a7230582048e2dfe51493e523a0c6fdad1b437bd853aa3748f8d25fa4258a947cd2b4594a0029",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000003625f722b191ad858899eaaecaddc4c8f18488ae"
+        }
+      },
+      "0x3625f722b191ad858899eaaecaddc4c8f18488ae": {
+        "balance": "0x0",
+        "nonce": "1",
+        "code": "0x608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063c605f76c146044575b600080fd5b604a604c565b005b5600a165627a7a723058205533ed81b1ced1dcd0f6d6cd6f8c85a681ae1dc6f862ffe5fe03b40ef9aabde30029",
+        "storage": {}
+      },
+      "0x7f0546832758f61410e81a94d7a07d55b1dfd278": {
+        "balance": "0x2b08be25231543900",
+        "nonce": "47",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1001,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 50
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 9500000000000000000,
+          "ratio": "50/25/25",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0x21cef59cf7332aa098e396f67f2cea0a196ba120715707c0993ceca418c493f0",
+    "number": "157223835",
+    "timestamp": "1718805202",
+    "blockScore": "0x1",
+    "baseFeePerGas": "0x5d21dba00"
+  },
+  "input": "0x7802f8798203e92f853a35294400853a352944008268d8949eb29d8374ea137a21264ecc95b2e808b02064d387071afd498d0000843917b3dfc001a0c0a19e13ea294c77805bcbea9a3cbd6dc2c3f9ff84695540825efbf307730392a062e0ed7b667be7b5a1504249d3a51048f551c5886948839383f1e87f89cf1f32",
+  "result": {
+    "from": "0x7f0546832758f61410e81a94d7a07d55b1dfd278",
+    "gas": "0x68d8",
+    "gasUsed": "0x68d8",
+    "input": "0x3917b3df",
+    "to": "0x9eb29d8374ea137a21264ecc95b2e808b02064d3",
+    "value": "0x71afd498d0000",
+    "calls": [
+      {
+        "from": "0x9eb29d8374ea137a21264ecc95b2e808b02064d3",
+        "gas": "0x7e",
+        "gasUsed": "0x6d",
+        "input": "0xc605f76c00000000000000000000000000000000000000000000000000000000",
+        "to": "0x3625f722b191ad858899eaaecaddc4c8f18488ae",
+        "value": "0x0",
+        "type": "CALLCODE"
+      }
+    ],
+    "type": "CALL"
+  }
+}
