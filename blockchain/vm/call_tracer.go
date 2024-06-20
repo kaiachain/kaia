@@ -51,6 +51,38 @@ func (f CallFrame) TypeString() string { // to satisfy gencodec
 	return f.Type.String()
 }
 
+func (f CallFrame) ToInternalTxTrace() *InternalTxTrace {
+	t := &InternalTxTrace{}
+
+	t.Type = f.Type.String()
+	t.From = &f.From
+	t.To = f.To
+	if f.Value != nil {
+		t.Value = f.Value.Text(16)
+	}
+
+	t.Gas = f.Gas
+	t.GasUsed = f.GasUsed
+
+	if len(f.Input) > 0 {
+		t.Input = hexutil.Encode(f.Input)
+	}
+	if len(f.Output) > 0 {
+		t.Output = hexutil.Encode(f.Output)
+	}
+	t.Error = errors.New(f.Error)
+
+	t.Calls = make([]*InternalTxTrace, len(f.Calls))
+	for i, call := range f.Calls {
+		t.Calls[i] = call.ToInternalTxTrace()
+	}
+
+	t.RevertReason = f.RevertReason
+	t.Reverted = f.Reverted
+
+	return t
+}
+
 // FieldType overrides for callFrame that's used for JSON encoding
 // Must rerun gencodec after modifying this struct
 type callFrameMarshaling struct {
@@ -197,6 +229,18 @@ func (t *CallTracer) GetResult() (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Return with interrupt reason if any
+	return result, t.interruptReason
+}
+
+// Convert to the legacy InternalTxTrace type
+func (t *CallTracer) GetResultAsInternalTxTrace() (*InternalTxTrace, error) {
+	if len(t.callstack) != 1 {
+		return nil, errors.New("incorrect number of top-level calls")
+	}
+
+	result := t.callstack[0].ToInternalTxTrace()
 
 	// Return with interrupt reason if any
 	return result, t.interruptReason
