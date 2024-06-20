@@ -901,8 +901,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 			}
 		}
 
-		if *config.Tracer == fastCallTracer {
-			tracer = vm.NewInternalTxTracer()
+		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
+			tracer = vm.NewCallTracer()
 		} else {
 			// Construct the JavaScript tracer to execute with
 			if tracer, err = New(*config.Tracer, new(Context), api.unsafeTrace); err != nil {
@@ -918,6 +918,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				case *Tracer:
 					t.Stop(errors.New("execution timeout"))
 				case *vm.InternalTxTracer:
+					t.Stop(errors.New("execution timeout"))
+				case *vm.CallTracer:
 					t.Stop(errors.New("execution timeout"))
 				default:
 					logger.Warn("unknown tracer type", "type", reflect.TypeOf(t).String())
@@ -962,6 +964,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 	case *Tracer:
 		return tracer.GetResult()
 	case *vm.InternalTxTracer:
+		return tracer.GetResult()
+	case *vm.CallTracer:
 		return tracer.GetResult()
 
 	default:
