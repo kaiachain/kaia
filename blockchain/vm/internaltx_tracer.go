@@ -153,7 +153,8 @@ type InternalTxTrace struct {
 	Time  time.Duration      `json:"time,omitempty"`
 	Calls []*InternalTxTrace `json:"calls,omitempty"`
 
-	Reverted *RevertedInfo `json:"reverted,omitempty"`
+	RevertReason string        `json:"revertReason,omitempty"`
+	Reverted     *RevertedInfo `json:"reverted,omitempty"`
 }
 
 type RevertedInfo struct {
