@@ -553,9 +553,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// so the existing state db should be used to apply the rebalancing result.
 	// Only on the KIP-103 or KIP-160 hardfork block, the following logic should be executed
 	if chain.Config().IsKIP160ForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
-		_, err := system.RebalanceTreasury(state, chain, header)
+		rebalanceResult, err := system.RebalanceTreasury(state, chain, header)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing. State not changed", "err", err)
+		} else {
+			// Leave the memo in the log for later contract finalization
+			isKIP103 := chain.Config().IsKIP103ForkBlock(header.Number) // because memo format differs between KIP-103 and KIP-160
+			logger.Info("successfully executed treasury rebalancing", "memo", string(rebalanceResult.Memo(isKIP103)))
 		}
 	}
 

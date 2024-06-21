@@ -222,7 +222,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		res, err := RebalanceTreasury(state, chain, chain.CurrentHeader())
 		if chain.Config().Kip103CompatibleBlock != nil && tc.expectBurnt.Cmp(big.NewInt(0)) == -1 {
 			assert.Equal(t, ErrRebalanceNotEnoughBalance, err)
-			t.Log(string(res.memo(true)))
+			t.Log(string(res.Memo(true)))
 			continue
 		}
 
@@ -250,9 +250,9 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		//	assert.Equal(t, tc.expectKip103Memo, string(res.memo(isKip103)))
 		//}
 
-		t.Log(string(res.memo(isKip103)))
+		t.Log(string(res.Memo(isKip103)))
 		if !isKip103 {
-			assert.Equal(t, tc.expectKip160Memo, string(res.memo(isKip103)))
+			assert.Equal(t, tc.expectKip160Memo, string(res.Memo(isKip103)))
 		}
 	}
 }
