@@ -407,7 +407,12 @@ func (b *SimulatedBackend) PendingNonceAt(_ context.Context, account common.Addr
 // SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
 // chain doesn't have miners, we just return a gas price of 1 for any call.
 func (b *SimulatedBackend) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	return new(big.Int).SetUint64(b.config.UnitPrice), nil
+	current := b.blockchain.CurrentBlock()
+	if b.blockchain.Config().IsMagmaForkEnabled(current.Number()) {
+		return new(big.Int).Mul(current.Header().BaseFee, big.NewInt(2)), nil
+	} else {
+		return new(big.Int).SetUint64(b.config.UnitPrice), nil
+	}
 }
 
 // EstimateGas executes the requested code against the latest block/state and

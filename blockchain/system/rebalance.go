@@ -154,7 +154,7 @@ func newRebalanceReceipt() *rebalanceResult {
 	}
 }
 
-func (result *rebalanceResult) memo(isKip103 bool) []byte {
+func (result *rebalanceResult) Memo(isKip103 bool) []byte {
 	var (
 		memo []byte
 		err  error
@@ -322,8 +322,5 @@ func RebalanceTreasury(state *state.StateDB, chain backends.BlockChainForCaller,
 	remainder := new(big.Int).Sub(totalZeroedAmount, totalAllocatedAmount)
 	result.Burnt.Add(result.Burnt, remainder)
 	result.Success = true
-
-	// Leave a memo for logging
-	logger.Info("successfully executed treasury rebalancing", "memo", string(result.memo(isKIP103)))
 	return result, nil
 }
