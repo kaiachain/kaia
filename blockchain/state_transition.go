@@ -371,7 +371,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if txType.IsAccountUpdate() || txType.IsCancelTransaction() || txType.IsChainDataAnchoring() {
 			st.evm.Config.Tracer.CaptureStart(st.evm, msg.ValidatedSender(), msg.ValidatedSender(), false, msg.Data(), st.initialGas, msg.Value())
 			defer func() {
-				st.evm.Config.Tracer.CaptureEnd(ret, st.gas, vmerr)
+				st.evm.Config.Tracer.CaptureEnd(ret, st.gasUsed(), vmerr)
 			}()
 		}
 	}
