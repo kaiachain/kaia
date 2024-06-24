@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -212,11 +213,17 @@ func (sm *supplyManager) GetRebalanceBurn(num uint64, forkNum *big.Int, addr com
 	result := struct { // See system.rebalanceResult struct
 		Burnt *big.Int `json:"burnt"`
 	}{}
-	if err := json.Unmarshal([]byte(memo), &result); err != nil {
-		// 4. memo is malformed
-		return nil, errNoRebalanceBurn(err)
-	}
 
+	if sm.chain.Config().ChainID.Uint64() == 1001 && strings.Contains(memo, "before") {
+		// correctly set burnt amount for kairos testnet
+		result.Burnt = new(big.Int)
+		result.Burnt.SetString("-3704329462904320084000000000", 10)
+	} else {
+		if err := json.Unmarshal([]byte(memo), &result); err != nil {
+			// memo is malformed
+			return nil, errNoRebalanceBurn(err)
+		}
+	}
 	// 2. found the memo
 	sm.memoCache.Add(addr, result.Burnt)
 	return result.Burnt, nil
