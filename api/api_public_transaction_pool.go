@@ -600,7 +600,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, fmt.Errorf("invalid signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1

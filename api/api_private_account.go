@@ -492,7 +492,7 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, errors.New("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1
