@@ -597,10 +597,10 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
 ) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1
