@@ -214,7 +214,7 @@ func (sm *supplyManager) GetRebalanceBurn(num uint64, forkNum *big.Int, addr com
 		Burnt *big.Int `json:"burnt"`
 	}{}
 
-	if sm.chain.Config().ChainID.Uint64() == 1001 && strings.Contains(memo, "before") {
+	if sm.chain.Config().ChainID.Uint64() == 1001 && strings.HasPrefix(memo, "before") {
 		// correctly set burnt amount for kairos testnet
 		result.Burnt = new(big.Int)
 		result.Burnt.SetString("-3704329462904320084000000000", 10)
