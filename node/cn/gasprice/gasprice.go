@@ -30,6 +30,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/consensus/misc"
 	"github.com/klaytn/klaytn/networks/rpc"
 	"github.com/klaytn/klaytn/params"
 	"golang.org/x/exp/slices"
@@ -143,11 +144,11 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 //
 // The suggested prices needs to match the requirements.
 //
-// | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas) |
-// |------------------ |------------------------------------------------------------ |----------------------------------------- |
-// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                          |
-// | After Magma       | BaseFee * 2                                                 | Zero                                     |
-// | After Kaia        | BaseFee + SuggestTipCap                                     | 60% percentile of last 20 blocks         |
+// | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas)                                              |
+// |------------------ |------------------------------------------------------------ |-------------------------------------------------------------------------------------- |
+// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                                                                       |
+// | After Magma       | BaseFee * 2                                                 | Zero                                                                                  |
+// | After Kaia        | BaseFee + SuggestTipCap                                     | Zero if nextBaseFee is lower bound, 60% percentile of last 20 blocks otherwise.       |
 
 // SuggestPrice returns the recommended gas price.
 // This value is intended to be used as gasPrice or maxFeePerGas.
@@ -188,8 +189,17 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
 	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
 		// After Kaia, return using fee history.
-		// By default config, this will return 60% percentile of last 20 blocks
+		// If the next baseFee is lower bound, return 0.
+		// Otherwise, by default config, this will return 60% percentile of last 20 blocks
 		// See node/cn/config.go for the default config.
+		pset, err := gpo.gov.EffectiveParams(nextNum.Uint64())
+		if pset != nil && err == nil {
+			header := gpo.backend.CurrentBlock().Header()
+			nextBaseFee := misc.NextMagmaBlockBaseFee(header, pset.ToKIP71Config())
+			if nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee()))) <= 0 {
+				return common.Big0, nil
+			}
+		}
 		return gpo.suggestTipCapUsingFeeHistory(ctx)
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
