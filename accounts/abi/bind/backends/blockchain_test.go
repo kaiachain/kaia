@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -133,6 +134,18 @@ func TestBlockchainCallContract(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expectedReturn, ret)
 
+	// Argument error - both gasPrice and feecap, tipcap
+	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
+		From:      testAddr,
+		To:        &code1Addr,
+		Gas:       1000000,
+		Data:      data_receive,
+		GasPrice:  big.NewInt(1),
+		GasFeeCap: big.NewInt(1),
+		GasTipCap: big.NewInt(1),
+	}, nil)
+	assert.Equal(t, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified", err.Error())
+
 	// Error outside VM - Intrinsic Gas
 	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
 		From: testAddr,
@@ -226,6 +239,28 @@ func TestBlockChainEstimateGas(t *testing.T) {
 	})
 	assert.Contains(t, err.Error(), "insufficient balance for transfer")
 	assert.Zero(t, gas)
+
+	// Error case - simple transfer with high GasPrice
+	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
+		From:     testAddr,
+		To:       &testAddr,
+		Value:    big.NewInt(1),
+		GasPrice: big.NewInt(1e9),
+	})
+	assert.Zero(t, gas)
+	fmt.Println(gas, err)
+	assert.Contains(t, err.Error(), "gas required exceeds allowance")
+
+	// Error case - simple transfer with high GasFeeCap
+	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
+		From:      testAddr,
+		To:        &testAddr,
+		Value:     big.NewInt(1),
+		GasFeeCap: big.NewInt(1e9),
+	})
+	assert.Zero(t, gas)
+	fmt.Println(gas, err)
+	assert.Contains(t, err.Error(), "gas required exceeds allowance")
 }
 
 func TestBlockChainSendTransaction(t *testing.T) {

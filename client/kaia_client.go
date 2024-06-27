@@ -567,6 +567,15 @@ func toCallArg(msg kaia.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	if msg.GasFeeCap != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.GasFeeCap)
+	}
+	if msg.GasTipCap != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.GasTipCap)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
+	}
 	return arg
 }
 
@@ -581,6 +590,12 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	if msg.Price != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.Price)
 	}
+	if msg.MaxFeePerGas != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.MaxFeePerGas)
+	}
+	if msg.MaxPriorityFeePerGas != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.MaxPriorityFeePerGas)
+	}
 	if msg.Amount != nil {
 		arg["value"] = (*hexutil.Big)(msg.Amount)
 	}
@@ -589,6 +604,9 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	}
 	if len(*msg.Payload) > 0 {
 		arg["input"] = (*hexutil.Bytes)(msg.Payload)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
 	}
 
 	return arg

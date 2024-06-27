@@ -138,7 +138,16 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, call.GasPrice, call.Data,
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if call.GasPrice != nil {
+		gasPrice = call.GasPrice
+	} else if call.GasFeeCap != nil {
+		gasPrice = call.GasFeeCap
+	}
+
+	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, call.Data,
 		false, intrinsicGas, accessList)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
@@ -232,7 +241,16 @@ func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.C
 		return res.Failed(), res, nil
 	}
 
-	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if call.GasPrice != nil {
+		gasPrice = call.GasPrice
+	} else if call.GasFeeCap != nil {
+		gasPrice = call.GasFeeCap
+	}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, gasPrice, balance, executable)
 	return uint64(estimated), err
 }
 
