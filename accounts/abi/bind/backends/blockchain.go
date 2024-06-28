@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
@@ -125,6 +126,28 @@ func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.
 }
 
 func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	if !b.bc.Config().IsKaiaForkEnabled(block.Number()) { // before KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		}
+	} else { // after KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		} else {
+			if call.GasFeeCap == nil {
+				call.GasFeeCap = big.NewInt(0)
+			}
+			if call.GasTipCap == nil {
+				call.GasTipCap = big.NewInt(0)
+			}
+			gasPrice = math.BigMin(new(big.Int).Add(call.GasTipCap, block.Header().BaseFee), call.GasFeeCap)
+		}
+	}
+
 	if call.Gas == 0 {
 		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
 	}
@@ -137,14 +160,6 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	var accessList types.AccessList
 	if call.AccessList != nil {
 		accessList = *call.AccessList
-	}
-	gasPrice := common.Big0
-	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
-		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if call.GasPrice != nil {
-		gasPrice = call.GasPrice
-	} else if call.GasFeeCap != nil {
-		gasPrice = call.GasFeeCap
 	}
 
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, call.Data,

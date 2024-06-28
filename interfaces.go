@@ -122,8 +122,8 @@ type CallMsg struct {
 	To        *common.Address // the destination contract (nil for contract creation)
 	Gas       uint64          // if 0, the call executes with near-infinite gas
 	GasPrice  *big.Int        // kei <-> gas exchange ratio
-	GasFeeCap *big.Int        // EIP-1559 fee cap per gas.
-	GasTipCap *big.Int        // EIP-1559 tip per gas.
+	GasFeeCap *big.Int        // EIP-1559 fee cap per gas (i.e. maxFeePerGas)
+	GasTipCap *big.Int        // EIP-1559 tip per gas. (i.e. maxPriorityFeePerGas)
 	Value     *big.Int        // amount of kei sent along with the call
 	Data      []byte          // input data, usually an ABI-encoded contract method invocation
 

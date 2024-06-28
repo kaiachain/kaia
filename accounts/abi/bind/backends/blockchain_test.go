@@ -248,7 +248,6 @@ func TestBlockChainEstimateGas(t *testing.T) {
 		GasPrice: big.NewInt(1e9),
 	})
 	assert.Zero(t, gas)
-	fmt.Println(gas, err)
 	assert.Contains(t, err.Error(), "gas required exceeds allowance")
 
 	// Error case - simple transfer with high GasFeeCap
