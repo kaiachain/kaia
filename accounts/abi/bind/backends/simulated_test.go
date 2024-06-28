@@ -476,6 +476,18 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			Data:     common.Hex2Bytes("50f6fe34"),
 		}, 0, errors.New("gas required exceeds allowance (100000)"), nil},
 
+		{"HighGasPrice", kaia.CallMsg{
+			From:     addr,
+			To:       &addr,
+			GasPrice: big.NewInt(1e9),
+		}, 0, errors.New("gas required exceeds allowance (10)"), nil},
+
+		{"HighFeeCap", kaia.CallMsg{
+			From:      addr,
+			To:        &addr,
+			GasFeeCap: big.NewInt(1e9),
+		}, 0, errors.New("gas required exceeds allowance (10)"), nil},
+
 		{"Assert", kaia.CallMsg{
 			From:     addr,
 			To:       &contractAddr,

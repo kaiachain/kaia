@@ -30,6 +30,7 @@ import (
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/blockchain/vm"
 	"github.com/klaytn/klaytn/common"
+	"github.com/klaytn/klaytn/common/math"
 	"github.com/klaytn/klaytn/event"
 	"github.com/klaytn/klaytn/node/cn/filters"
 	"github.com/klaytn/klaytn/params"
@@ -125,6 +126,28 @@ func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.
 }
 
 func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	if !b.bc.Config().IsKaiaForkEnabled(block.Number()) { // before KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		}
+	} else { // after KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		} else {
+			if call.GasFeeCap == nil {
+				call.GasFeeCap = big.NewInt(0)
+			}
+			if call.GasTipCap == nil {
+				call.GasTipCap = big.NewInt(0)
+			}
+			gasPrice = math.BigMin(new(big.Int).Add(call.GasTipCap, block.Header().BaseFee), call.GasFeeCap)
+		}
+	}
+
 	if call.Gas == 0 {
 		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
 	}
@@ -138,7 +161,8 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, call.GasPrice, call.Data,
+
+	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, call.Data,
 		false, intrinsicGas, accessList)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
@@ -232,7 +256,16 @@ func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.C
 		return res.Failed(), res, nil
 	}
 
-	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if call.GasPrice != nil {
+		gasPrice = call.GasPrice
+	} else if call.GasFeeCap != nil {
+		gasPrice = call.GasFeeCap
+	}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, gasPrice, balance, executable)
 	return uint64(estimated), err
 }
 

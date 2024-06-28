@@ -441,7 +441,16 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (
 		return res.Failed(), res, nil
 	}
 
-	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if call.GasPrice != nil {
+		gasPrice = call.GasPrice
+	} else if call.GasFeeCap != nil {
+		gasPrice = call.GasFeeCap
+	}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, gasPrice, balance, executable)
 	if err != nil {
 		return 0, err
 	} else {
@@ -453,8 +462,26 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (
 // state is modified during execution, make sure to copy it if necessary.
 func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, block *types.Block, stateDB *state.StateDB) (*blockchain.ExecutionResult, error) {
 	// Ensure message is initialized properly.
-	if call.GasPrice == nil {
-		call.GasPrice = big.NewInt(1)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	if !b.config.IsKaiaForkEnabled(block.Number()) { // before KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		}
+	} else { // after KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		} else {
+			if call.GasFeeCap == nil {
+				call.GasFeeCap = big.NewInt(0)
+			}
+			if call.GasTipCap == nil {
+				call.GasTipCap = big.NewInt(0)
+			}
+			gasPrice = math.BigMin(new(big.Int).Add(call.GasTipCap, block.Header().BaseFee), call.GasFeeCap)
+		}
 	}
 	if call.Gas == 0 {
 		call.Gas = 50000000
@@ -473,7 +500,8 @@ func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, bl
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas, accessList)
+
+	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, gasPrice, call.Data, true, intrinsicGas, accessList)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.config)
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.blockchain, nil)

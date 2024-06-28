@@ -118,12 +118,14 @@ type ChainSyncReader interface {
 
 // CallMsg contains parameters for contract calls.
 type CallMsg struct {
-	From     common.Address  // the sender of the 'transaction'
-	To       *common.Address // the destination contract (nil for contract creation)
-	Gas      uint64          // if 0, the call executes with near-infinite gas
-	GasPrice *big.Int        // kei <-> gas exchange ratio
-	Value    *big.Int        // amount of kei sent along with the call
-	Data     []byte          // input data, usually an ABI-encoded contract method invocation
+	From      common.Address  // the sender of the 'transaction'
+	To        *common.Address // the destination contract (nil for contract creation)
+	Gas       uint64          // if 0, the call executes with near-infinite gas
+	GasPrice  *big.Int        // kei <-> gas exchange ratio
+	GasFeeCap *big.Int        // EIP-1559 fee cap per gas (i.e. maxFeePerGas)
+	GasTipCap *big.Int        // EIP-1559 tip per gas. (i.e. maxPriorityFeePerGas)
+	Value     *big.Int        // amount of kei sent along with the call
+	Data      []byte          // input data, usually an ABI-encoded contract method invocation
 
 	// Introduced by AccessListTxType transaction.
 	AccessList *types.AccessList `json:"accessList,omitempty"`

@@ -507,27 +507,8 @@ func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction)
 // SendUnsignedTransaction injects a unsigned transaction into the pending pool for execution.
 //
 // This function can return the transaction hash and error.
-func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Address, to common.Address, gas uint64, gasPrice uint64, value *big.Int, data []byte, input []byte) (common.Hash, error) {
+func (ec *Client) SendUnsignedTransaction(ctx context.Context, unsignedTx api.SendTxArgs) (common.Hash, error) {
 	var hex hexutil.Bytes
-
-	tGas := hexutil.Uint64(gas)
-	bigGasPrice := new(big.Int).SetUint64(gasPrice)
-	tGasPrice := (*hexutil.Big)(bigGasPrice)
-	hValue := (*hexutil.Big)(value)
-	tData := hexutil.Bytes(data)
-	tInput := hexutil.Bytes(input)
-
-	unsignedTx := api.SendTxArgs{
-		From:      from,
-		Recipient: &to,
-		GasLimit:  &tGas,
-		Price:     tGasPrice,
-		Amount:    hValue,
-		// Nonce : nonce,	Nonce will be determined by Kaia node.
-		Data:    &tData,
-		Payload: &tInput,
-	}
-
 	if err := ec.c.CallContext(ctx, &hex, "kaia_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
 		return common.Hash{}, err
 	}
@@ -567,6 +548,15 @@ func toCallArg(msg kaia.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	if msg.GasFeeCap != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.GasFeeCap)
+	}
+	if msg.GasTipCap != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.GasTipCap)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
+	}
 	return arg
 }
 
@@ -581,6 +571,12 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	if msg.Price != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.Price)
 	}
+	if msg.MaxFeePerGas != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.MaxFeePerGas)
+	}
+	if msg.MaxPriorityFeePerGas != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.MaxPriorityFeePerGas)
+	}
 	if msg.Amount != nil {
 		arg["value"] = (*hexutil.Big)(msg.Amount)
 	}
@@ -589,6 +585,9 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	}
 	if len(*msg.Payload) > 0 {
 		arg["input"] = (*hexutil.Bytes)(msg.Payload)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
 	}
 
 	return arg
