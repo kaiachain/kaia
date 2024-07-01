@@ -58,7 +58,7 @@ func (f CallFrame) ToInternalTxTrace() *InternalTxTrace {
 	t.From = &f.From
 	t.To = f.To
 	if f.Value != nil {
-		t.Value = f.Value.Text(16)
+		t.Value = "0x" + f.Value.Text(16)
 	}
 
 	t.Gas = f.Gas
@@ -220,7 +220,16 @@ func (t *CallTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccL
 func (t *CallTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 }
 
-func (t *CallTracer) GetResult() (json.RawMessage, error) {
+func (t *CallTracer) GetResult() ([]CallFrame, error) {
+	if len(t.callstack) != 1 {
+		return nil, errors.New("incorrect number of top-level calls")
+	}
+
+	// Return with interrupt reason if any
+	return t.callstack, t.interruptReason
+}
+
+func (t *CallTracer) GetResultAsJson() (json.RawMessage, error) {
 	if len(t.callstack) != 1 {
 		return nil, errors.New("incorrect number of top-level calls")
 	}
