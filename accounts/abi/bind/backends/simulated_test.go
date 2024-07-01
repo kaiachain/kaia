@@ -40,6 +40,8 @@ import (
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/crypto"
 	"github.com/klaytn/klaytn/params"
+	"github.com/klaytn/klaytn/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimulatedBackend(t *testing.T) {
@@ -805,18 +807,54 @@ func TestSimulatedBackend_TransactionReceipt(t *testing.T) {
 }
 
 func TestSimulatedBackend_SuggestGasPrice(t *testing.T) {
-	sim := NewSimulatedBackend(
-		blockchain.GenesisAlloc{},
+	var (
+		dbm   = database.NewMemoryDBManager()
+		alloc = blockchain.GenesisAlloc{
+			testAddr: {Balance: big.NewInt(10000000000)},
+		}
+		config = params.TestnetChainConfig.Copy()
 	)
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = big.NewInt(2)
+
+	config.Governance.KIP71 = params.GetDefaultKIP71Config()
+	config.Governance.KIP71.GasTarget = 10000 // very sensitive
+	config.Governance.KIP71.LowerBoundBaseFee = 70
+	config.UnitPrice = 30
+
+	sim := NewSimulatedBackendWithDatabase(dbm, alloc, config)
 	defer sim.Close()
 	bgCtx := context.Background()
-	gasPrice, err := sim.SuggestGasPrice(bgCtx)
-	if err != nil {
-		t.Errorf("could not get gas price: %v", err)
-	}
-	if gasPrice.Uint64() != uint64(0) {
-		t.Errorf("gas price was not expected value of 0. actual: %v", gasPrice.Uint64())
-	}
+
+	// current=0, pending=1. Before Magma: UnitPrice
+	price, err := sim.SuggestGasPrice(bgCtx)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(30), price.Uint64())
+	assert.Equal(t, uint64(0), sim.blockchain.CurrentBlock().NumberU64())
+
+	// Advance empty block
+	sim.Commit()
+
+	// current=1, pending=2. After Magma: BaseFee*2
+	price, err = sim.SuggestGasPrice(bgCtx)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(140), price.Uint64())
+	assert.Equal(t, uint64(1), sim.blockchain.CurrentBlock().NumberU64())
+
+	// Raise baseFee by sending a transaction above GasTarget
+	tx := types.NewTransaction(0, testAddr, common.Big0, params.TxGas, price, nil)
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(sim.config.ChainID), testKey)
+	assert.NoError(t, err)
+	sim.SendTransaction(bgCtx, signedTx)
+	sim.Commit()
+
+	// current=2, pending=3. After Magma: BaseFee*2
+	price, err = sim.SuggestGasPrice(bgCtx)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(144), price.Uint64())
+	assert.Equal(t, uint64(2), sim.blockchain.CurrentBlock().NumberU64())
 }
 
 func TestSimulatedBackend_PendingCodeAt(t *testing.T) {
