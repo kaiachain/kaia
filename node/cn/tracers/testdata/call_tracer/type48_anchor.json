@@ -1,0 +1,75 @@
+ {
+  "_comment": "chainId 1001 txHash 0x67b770bc17f2cc96f61a11a4abf5bfe8e07b8ff82de42629be9f269784fe7f95",
+  "genesis": {
+    "alloc": {
+      "0x34cf5835054de547d57cc9cbc9785d036f62758d": {
+        "balance": "0x784bf0f594ca0ce90",
+        "nonce": "1126050",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1001,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 6400000000000000000,
+          "ratio": "50/20/30",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "number": "121156333",
+    "timestamp": "1682733436",
+    "blockScore": "0x1",
+    "baseFeePerGas": "0x5d21dba00"
+  },
+  "input": "0x48f9012183112ea285ae9f7bcc00830186a09434cf5835054de547d57cc9cbc9785d036f62758db8b3f8b180b8aef8aca0b398aee6a16b85dc6402e87136d999f2896d2ee5110faeb6ac5c7ba4e2127373a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470a044699aca1604e0fe1949804fdaa267c2305fd5cb64a16b02d70c44e3b89f118ea0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470a06a5279c5b7cc4af88d9d35ac636a43d66c7e473965bc223c76a85b9c9edf315384015abe043c80f847f8458207f6a0d31409c99396b0238dc0af9e8f629586712473c632acbd0fd861ca14541584b8a00494b923336e202a1db70cc2704a6ce4009f5066efd5a6a5e6abfb5ca341fb2d",
+  "result": {
+    "from": "0x34cf5835054de547d57cc9cbc9785d036f62758d",
+    "gas": "0x186a0",
+    "gasUsed": "0x97f4",
+    "to": "0x34cf5835054de547d57cc9cbc9785d036f62758d",
+    "input": "0xf8b180b8aef8aca0b398aee6a16b85dc6402e87136d999f2896d2ee5110faeb6ac5c7ba4e2127373a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470a044699aca1604e0fe1949804fdaa267c2305fd5cb64a16b02d70c44e3b89f118ea0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470a06a5279c5b7cc4af88d9d35ac636a43d66c7e473965bc223c76a85b9c9edf315384015abe043c80",
+    "value": "0x0",
+    "type": "CALL"
+  }
+}

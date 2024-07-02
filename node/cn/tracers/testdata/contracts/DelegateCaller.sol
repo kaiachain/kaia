@@ -6,11 +6,11 @@ contract Caller {
         callee = _callee;
     }
 
-    function callHelloWorld() public {
+    function callHelloWorld() public payable {
         callee.delegatecall(abi.encodeWithSignature("helloWorld()"));
     }
 }
 
 contract Callee {
-    function helloWorld() public {}
+    function helloWorld() public payable {}
 }

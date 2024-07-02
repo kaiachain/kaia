@@ -1,0 +1,100 @@
+ {
+  "_comment": "chainId 1001 txHash 0x931c5af31bfb906fc20effa0f90f1a8e66edefac9879729fedd18a65d64a11be DelegateCaller.sol",
+  "genesis": {
+    "alloc": {
+      "0xd94ed12cf3c2eded33adc58a7a09f0b4e0721cd0": {
+        "balance": "0x0",
+        "nonce": "1",
+        "code": "0x60806040526004361061001e5760003560e01c80633917b3df14610023575b600080fd5b61002b61002d565b005b6000809054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166040516024016040516020818303038152906040527fc605f76c000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff19166020820180517bffffffffffffffffffffffffffffffffffffffffffffffffffffffff83818316178352505050506040518082805190602001908083835b6020831061011b57805182526020820191506020810190506020830392506100f8565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855af49150503d806000811461017b576040519150601f19603f3d011682016040523d82523d6000602084013e610180565b606091505b50505056fea165627a7a72305820328f478fc00e99f4fe448c69cb6e3474a806d2290fc314707df20b01ed551a0e0029",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000003d0c6d64907b2ef39e73aa8b08ad8da9b03b9140"
+        }
+      },
+      "0x3d0c6d64907b2ef39e73aa8b08ad8da9b03b9140": {
+        "balance": "0x0",
+        "nonce": "1",
+        "code": "0x608060405260043610601c5760003560e01c8063c605f76c146021575b600080fd5b60276029565b005b56fea165627a7a72305820a78bbff26a2b18e83d320dc32b5a08642a2f9704bc6c72a47b29bd733695d1310029",
+        "storage": {}
+      },
+      "0x7f0546832758f61410e81a94d7a07d55b1dfd278": {
+        "balance": "0x2b423a36015447300",
+        "nonce": "38",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1001,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 50
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 9500000000000000000,
+          "ratio": "50/25/25",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0x36aa95ca790ecb4cb63bf5b3651eb696284bd77ad9dbc460413e88a9f1892342",
+    "number": "157093750",
+    "timestamp": "1718675117",
+    "blockScore": "0x1",
+    "baseFeePerGas": "0x5d21dba00"
+  },
+  "input": "0x7802f8798203e92685062b85e90085062b85e90082687a94d94ed12cf3c2eded33adc58a7a09f0b4e0721cd0870aa87bee538000843917b3dfc001a0e9f50002f3b369e40a6dcd6a2fd1ca821b5ffbf33d0837298fb38717dd5df5c5a01cf5c73cb8693bac8ed10a70979ebc0d122fafa0e8571407378e02833e535a47",
+  "result": {
+    "from": "0x7f0546832758f61410e81a94d7a07d55b1dfd278",
+    "gas": "0x687a",
+    "gasUsed": "0x687a",
+    "input": "0x3917b3df",
+    "to": "0xd94ed12cf3c2eded33adc58a7a09f0b4e0721cd0",
+    "value": "0xaa87bee538000",
+    "calls": [
+      {
+        "from": "0xd94ed12cf3c2eded33adc58a7a09f0b4e0721cd0",
+        "gas": "0x9b",
+        "gasUsed": "0x62",
+        "input": "0xc605f76c",
+        "to": "0x3d0c6d64907b2ef39e73aa8b08ad8da9b03b9140",
+        "value": "0xaa87bee538000",
+        "type": "DELEGATECALL"
+      }
+    ],
+    "type": "CALL"
+  }
+}
