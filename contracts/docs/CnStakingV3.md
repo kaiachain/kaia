@@ -2,7 +2,7 @@
 
 A member of Kaia Governance Council (GC) must own at least one CnStaking contract. There are three versions of CnStaking contract so far.
 
-- [Deprecated] legacy/CnStakingContract (CnSV1): The original CnStaking contract that is being used since the start of Kaia mainnet.
+- [Deprecated] legacy/CnStakingContract (CnSV1): The original CnStaking contract that is being used since the start of Klaytn mainnet.
 - CnStakingV2 (CnSV2): An upgraded version of CnSV1, having all interfaces of V1 as well as new governance-related features.
 - CnStakingV3MultiSig (CnSV3): An upgraded version of CnSV2, having all features of V2 as well as new public delegation features.
 
