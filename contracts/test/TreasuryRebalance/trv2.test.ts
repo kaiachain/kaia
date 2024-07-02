@@ -409,9 +409,9 @@ describe("TreasuryRebalanceV2", function () {
         );
       });
 
-      it("Should revert if owner tries to set Finalize after Registered", async function () {
-        await expect(trV2.finalizeContract(memo)).to.be.revertedWith(
-          "Not in the designated status"
+      it("Should revert if owner tries to set pendingMemo after Registered", async function () {
+        await expect(trV2.setPendingMemo(memo)).to.be.revertedWith(
+            "Not in the designated status"
         );
       });
       it("should revert if not called by the owner", async () => {
@@ -630,9 +630,7 @@ describe("TreasuryRebalanceV2", function () {
     before(async function () {
       const { _trV2 } = await loadFixture(buildFixture);
       trV2 = _trV2;
-    });
 
-    before(async function () {
       await trV2.registerZeroed(zeroed1.address);
       await trV2.registerZeroed(zeroed2.address);
       await trV2.registerAllocated(allocated1.address, value);
@@ -644,25 +642,34 @@ describe("TreasuryRebalanceV2", function () {
       await trV2.connect(zeroedAdmins[3]).approve(zeroed2.address);
       await trV2.finalizeApproval();
     });
-    it("should revert if current block is larger than rebalanceBlockNumber", async function () {
-      await expect(
-        trV2.updateRebalanceBlocknumber(await ethers.provider.getBlockNumber())
-      ).to.be.revertedWith(
-        "rebalance blockNumber should be greater than current block"
+    it("should revert finalizeContract before rebalanceBlockNumber", async () => {
+      await expect(trV2.finalizeContract()).to.be.revertedWith(
+          "Contract can only finalize after executing rebalancing",
       );
     });
-    it("should revert before rebalanceBlockNumber", async () => {
-      await expect(trV2.finalizeContract(memo)).to.be.revertedWith(
-        "Contract can only finalize after executing rebalancing"
-      );
-    });
-    it("should set the memo and status to Finalized and emit Finalize event", async function () {
+    it("should revert finalizeContract when pendingMemo is never initialized", async function () {
       await hre.network.provider.send("hardhat_mine", ["0xC8"]);
-      await expect(trV2.finalizeContract(memo))
-        .to.emit(trV2, "Finalized")
-        .withArgs(memo, 3);
+      await expect(trV2.finalizeContract()).to.be.revertedWith("no pending memo, cannot finalize without memo");
+    });
+    it("should set pendingMemo repeatedly before finalizeContract", async function () {
+      await trV2.setPendingMemo("testMemo");
+      expect(await trV2.pendingMemo()).to.equal("testMemo");
+      await trV2.setPendingMemo(memo);
+      expect(await trV2.pendingMemo()).to.equal(memo);
+      await trV2.setPendingMemo("");
+      expect(await trV2.pendingMemo()).to.equal("");
+    });
+    it("should revert finalizeContract when pendingMemo has no memo", async function () {
+      await hre.network.provider.send("hardhat_mine", ["0xC8"]);
+      await expect(trV2.finalizeContract()).to.be.revertedWith("no pending memo, cannot finalize without memo");
+    });
+    it("should set pendingMemo after executing rebalance", async function () {
+      await trV2.setPendingMemo(memo);
+      expect(await trV2.pendingMemo()).to.equal(memo);
+    });
+    it("should set status to Finalized and emit Finalize event", async function () {
+      await expect(trV2.finalizeContract()).to.emit(trV2, "Finalized").withArgs(memo, 3);
       expect(await trV2.memo()).to.equal(memo);
-      expect(await trV2.status()).to.equal(3);
     });
   });
 });

@@ -26,10 +26,7 @@ import "../../libs/Ownable.sol";
  * @title Interface to get adminlist and quorom
  */
 interface IZeroedContract {
-    function getState()
-        external
-        view
-        returns (address[] memory adminList, uint256 quorom);
+    function getState() external view returns (address[] memory adminList, uint256 quorom);
 }
 
 /**
@@ -39,7 +36,7 @@ interface IZeroedContract {
  * Core will execute the re-distribution by reading this contract.
  */
 contract TreasuryRebalanceV2 is Ownable {
-     // Status of the contract
+    // Status of the contract
     enum Status {
         Initialized,
         Registered,
@@ -63,16 +60,12 @@ contract TreasuryRebalanceV2 is Ownable {
         uint256 amount;
     }
 
-  /**
+    /**
      * @dev Emitted when the contract is deployed
      * `rebalanceBlockNumber` is the target block number of the execution the rebalance in Core
      * `deployedBlockNumber` is the current block number when its deployed
      */
-    event ContractDeployed(
-        Status status,
-        uint256 rebalanceBlockNumber,
-        uint256 deployedBlockNumber
-    );
+    event ContractDeployed(Status status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber);
 
     /**
      * @dev Emitted when a Zeroed is registered
@@ -116,8 +109,9 @@ contract TreasuryRebalanceV2 is Ownable {
     Zeroed[] public zeroeds; // array of the Zeroed struct
     Allocated[] public allocateds; // array of Allocated struct
     Status public status; // current status of the contract
-    uint256 public rebalanceBlockNumber; // the target block number of the execution of rebalancing.
-    string public memo; // result of the treasury fund rebalance.
+    uint256 public rebalanceBlockNumber; // the target block number of the execution of rebalancing
+    string public pendingMemo; // temporary storage for memo
+    string public memo; // result of the treasury fund rebalance
 
     /**
      * Modifiers
@@ -143,9 +137,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev updates rebalance block number
      * @param _rebalanceBlockNumber is the target block number to be updated
      */
-    function updateRebalanceBlocknumber(
-        uint256 _rebalanceBlockNumber
-    ) external onlyOwner {
+    function updateRebalanceBlocknumber(uint256 _rebalanceBlockNumber) external onlyOwner {
         require(block.number < rebalanceBlockNumber, "current block shouldn't be past the currently set block number");
         require(block.number < _rebalanceBlockNumber, "rebalance blockNumber should be greater than current block");
         rebalanceBlockNumber = _rebalanceBlockNumber;
@@ -154,20 +146,15 @@ contract TreasuryRebalanceV2 is Ownable {
     /**
      * @dev registers zeroed details
      * @param _zeroedAddress is the address of the zeroed
-     * 
+     *
      * If the zeroed address is a contract, make sure its adminList is not too long
      * because otherwise the for-loops around adminList or approvers may run out of gas.
      * However, processing even 1000 admins is feasible as it takes a few million gas.
      * The number of multisig admins is much less than 1000 is not in normal use cases
      * and the zeroed contracts are trusted by the Owner, so out of gas is unlikely.
      */
-    function registerZeroed(
-        address _zeroedAddress
-    ) external onlyOwner onlyAtStatus(Status.Initialized) {
-        require(
-            !zeroedExists(_zeroedAddress),
-            "Zeroed address is already registered"
-        );
+    function registerZeroed(address _zeroedAddress) external onlyOwner onlyAtStatus(Status.Initialized) {
+        require(!zeroedExists(_zeroedAddress), "Zeroed address is already registered");
         Zeroed storage zeroed = zeroeds.push();
         zeroed.addr = _zeroedAddress;
         emit ZeroedRegistered(zeroed.addr);
@@ -177,9 +164,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev remove the zeroed details from the array
      * @param _zeroedAddress is the address of the zeroed
      */
-    function removeZeroed(
-        address _zeroedAddress
-    ) external onlyOwner onlyAtStatus(Status.Initialized) {
+    function removeZeroed(address _zeroedAddress) external onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 zeroedIndex = getZeroedIndex(_zeroedAddress);
         require(zeroedIndex != type(uint256).max, "Zeroed not registered");
         zeroeds[zeroedIndex] = zeroeds[zeroeds.length - 1];
@@ -196,10 +181,7 @@ contract TreasuryRebalanceV2 is Ownable {
         address _allocatedAddress,
         uint256 _amount
     ) external onlyOwner onlyAtStatus(Status.Initialized) {
-        require(
-            !allocatedExists(_allocatedAddress),
-            "Allocated address is already registered"
-        );
+        require(!allocatedExists(_allocatedAddress), "Allocated address is already registered");
         require(_amount != 0, "Amount cannot be set to 0");
         Allocated memory allocated = Allocated(_allocatedAddress, _amount);
         allocateds.push(allocated);
@@ -210,9 +192,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev remove the allocated details from the array
      * @param _allocatedAddress is the address of the allocated
      */
-    function removeAllocated(
-        address _allocatedAddress
-    ) external onlyOwner onlyAtStatus(Status.Initialized) {
+    function removeAllocated(address _allocatedAddress) external onlyOwner onlyAtStatus(Status.Initialized) {
         uint256 allocatedIndex = getAllocatedIndex(_allocatedAddress);
         require(allocatedIndex != type(uint256).max, "Allocated not registered");
         allocateds[allocatedIndex] = allocateds[allocateds.length - 1];
@@ -227,30 +207,19 @@ contract TreasuryRebalanceV2 is Ownable {
      *      It uses the getState() function in the zeroedAddress contract to get the admin details.
      * @param _zeroedAddress is the address of the zeroed
      */
-    function approve(
-        address _zeroedAddress
-    ) external onlyAtStatus(Status.Registered) {
-        require(
-            zeroedExists(_zeroedAddress),
-            "zeroed needs to be registered before approval"
-        );
+    function approve(address _zeroedAddress) external onlyAtStatus(Status.Registered) {
+        require(zeroedExists(_zeroedAddress), "zeroed needs to be registered before approval");
         //Check whether the zeroed address is EOA or contract address
         bool isContract = isContractAddr(_zeroedAddress);
         if (!isContract) {
             //check whether the msg.sender is the zeroed if its a EOA
-            require(
-                msg.sender == _zeroedAddress,
-                "zeroedAddress is not the msg.sender"
-            );
+            require(msg.sender == _zeroedAddress, "zeroedAddress is not the msg.sender");
             _updateApprover(_zeroedAddress, msg.sender);
         } else {
             (address[] memory adminList, uint256 req) = _getState(_zeroedAddress);
             require(adminList.length != 0, "admin list cannot be empty");
             //check if the msg.sender is one of the admin of the zeroedAddress contract
-            require(
-                _validateAdmin(msg.sender, adminList),
-                "msg.sender is not the admin"
-            );
+            require(_validateAdmin(msg.sender, adminList), "msg.sender is not the admin");
             _updateApprover(_zeroedAddress, msg.sender);
         }
     }
@@ -260,10 +229,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @param _approver is the msg.sender
      * @return isAdmin is true if the msg.sender is one of the admin
      */
-    function _validateAdmin(
-        address _approver,
-        address[] memory _adminList
-    ) private pure returns (bool isAdmin) {
+    function _validateAdmin(address _approver, address[] memory _adminList) private pure returns (bool isAdmin) {
         uint256 numAdmins = _adminList.length;
         for (uint256 i = 0; i < numAdmins; i++) {
             if (_approver == _adminList[i]) {
@@ -279,9 +245,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @return adminList list of the zeroedAddress contract admins
      * @return req min required number of approvals
      */
-    function _getState(
-        address _zeroedAddress
-    ) private view returns (address[] memory adminList, uint256 req) {
+    function _getState(address _zeroedAddress) private view returns (address[] memory adminList, uint256 req) {
         IZeroedContract zeroedContract = IZeroedContract(_zeroedAddress);
         (adminList, req) = zeroedContract.getState();
     }
@@ -291,10 +255,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * _zeroedAddress is the address of the zeroed
      * _approver is the admin of the zeroedAddress
      */
-    function _updateApprover(
-        address _zeroedAddress,
-        address _approver
-    ) private {
+    function _updateApprover(address _zeroedAddress, address _approver) private {
         uint256 index = getZeroedIndex(_zeroedAddress);
         require(index != type(uint256).max, "Zeroed not registered");
         address[] memory approvers = zeroeds[index].approvers;
@@ -303,22 +264,14 @@ contract TreasuryRebalanceV2 is Ownable {
             require(approvers[i] != _approver, "Already approved");
         }
         zeroeds[index].approvers.push(_approver);
-        emit Approved(
-            _zeroedAddress,
-            _approver,
-            zeroeds[index].approvers.length
-        );
+        emit Approved(_zeroedAddress, _approver, zeroeds[index].approvers.length);
     }
 
     /**
      * @dev finalizeRegistration sets the status to Registered,
      *      After this stage, registrations will be restricted.
      */
-    function finalizeRegistration()
-        external
-        onlyOwner
-        onlyAtStatus(Status.Initialized)
-    {
+    function finalizeRegistration() external onlyOwner onlyAtStatus(Status.Initialized) {
         status = Status.Registered;
         emit StatusChanged(status);
     }
@@ -327,11 +280,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev finalizeApproval sets the status to Approved,
      *      After this stage, approvals will be restricted.
      */
-    function finalizeApproval()
-        external
-        onlyOwner
-        onlyAtStatus(Status.Registered)
-    {
+    function finalizeApproval() external onlyOwner onlyAtStatus(Status.Registered) {
         checkZeroedsApproved();
         status = Status.Approved;
         emit StatusChanged(status);
@@ -346,13 +295,8 @@ contract TreasuryRebalanceV2 is Ownable {
             Zeroed memory zeroed = zeroeds[i];
             bool isContract = isContractAddr(zeroed.addr);
             if (isContract) {
-                (address[] memory adminList, uint256 req) = _getState(
-                    zeroed.addr
-                );
-                require(
-                    zeroed.approvers.length >= req,
-                    "min required admins should approve"
-                );
+                (address[] memory adminList, uint256 req) = _getState(zeroed.addr);
+                require(zeroed.approvers.length >= req, "min required admins should approve");
                 //if min quorom reached, make sure all approvers are still valid
                 address[] memory approvers = zeroed.approvers;
                 uint256 numApprovers = approvers.length;
@@ -362,10 +306,7 @@ contract TreasuryRebalanceV2 is Ownable {
                         validApprovals++;
                     }
                 }
-                require(
-                    validApprovals >= req,
-                    "min required admins should approve"
-                );
+                require(validApprovals >= req, "min required admins should approve");
             } else {
                 require(zeroed.approvers.length == 1, "EOA should approve");
             }
@@ -373,26 +314,35 @@ contract TreasuryRebalanceV2 is Ownable {
     }
 
     /**
-     * @dev sets the status of the contract to Finalize. Once finalized the storage data
-     * of the contract cannot be modified
+     * @dev sets the pendingMemo of the Contract. Once finalized, the memo cannot be modified.
      * @param _memo is the result of the rebalance after executing successfully in the core.
-     * Can only be called by the current owner at Approved state after the execution of rebalance in the core
-     *  - memo format: { "zeroeds": [ { "zeroed": "0xaddr", "balance": 0xamount },
-     *                 { "zeroed": "0xaddr", "balance": 0xamount }, ... ],
-     *                 "allocateds": [ { "allocated": "0xaddr", "fundAllocated": 0xamount },
-     *                 { "allocated": "0xaddr", "fundAllocated": 0xamount }, ... ],
-     *                 "burnt": 0xamount, "success": true/false }
+     *  - memo format: { "before": { "zeroed": { "0xZeroedAddress1": [balance of zeroedAddress1 before rebalance],
+     *                  "0xZeroedAddress2": [balance of zeroedAddress2 before rebalance], ...},
+     *                  "allocated": {  "0xAllocatedAddress1": [balance of AllocatedAddress1 before rebalance],
+     *                  "0xAllocatedAddress2": [balance of AllocatedAddress1 before rebalance], ...}},
+     *                  "after": { zeroed": {  "0xZeroedAddress1": [balance of zeroedAddress1 after rebalance],
+     *                  "0xZeroedAddress2": [balance of zeroedAddress2 after rebalance], ...},
+     *                  "allocated": { "0xAllocatedAddress1": [balance of AllocatedAddress1 after rebalance],
+     *                  "0xAllocatedAddress2": [balance of AllocatedAddress1 after rebalance], ...}
+     *                 }, "burnt": [burnt amount], "success": [true/false] }
      */
-    function finalizeContract(
-        string memory _memo
-    ) external onlyOwner onlyAtStatus(Status.Approved) {
-        memo = _memo;
+    function setPendingMemo(string memory _memo) external onlyOwner onlyAtStatus(Status.Approved) {
+        pendingMemo = _memo;
+    }
+
+    /**
+     * @dev sets the status of the contract to Finalize. Once finalized the storage data
+     * of the contract cannot be modified. Also it sets the memo with pendingMemo value.
+     * It will be used for public disclosure.
+     * Can only be called by the current owner at Approved state after the execution of rebalance in the core
+     */
+    function finalizeContract() external onlyOwner onlyAtStatus(Status.Approved) {
+        require(block.number > rebalanceBlockNumber, "Contract can only finalize after executing rebalancing");
+        require(bytes(pendingMemo).length > 0, "no pending memo, cannot finalize without memo");
+
+        memo = pendingMemo;
         status = Status.Finalized;
         emit Finalized(memo, status);
-        require(
-            block.number > rebalanceBlockNumber,
-            "Contract can only finalize after executing rebalancing"
-        );
     }
 
     /**
@@ -401,7 +351,7 @@ contract TreasuryRebalanceV2 is Ownable {
     function reset() external onlyOwner {
         //reset cannot be called at Finalized status or after target block.number
         require(status != Status.Finalized, "Contract is finalized, cannot reset values");
-        require (block.number < rebalanceBlockNumber, "Rebalance blocknumber already passed");
+        require(block.number < rebalanceBlockNumber, "Rebalance blocknumber already passed");
 
         //`delete` keyword is used to set a storage variable or a dynamic array to its default value.
         delete zeroeds;
@@ -415,9 +365,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev to get zeroed details by zeroedAddress
      * @param _zeroedAddress is the address of the zeroed
      */
-    function getZeroed(
-        address _zeroedAddress
-    ) external view returns (address, address[] memory) {
+    function getZeroed(address _zeroedAddress) external view returns (address, address[] memory) {
         uint256 index = getZeroedIndex(_zeroedAddress);
         require(index != type(uint256).max, "Zeroed not registered");
         Zeroed memory zeroed = zeroeds[index];
@@ -442,9 +390,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev get index of the zeroed in the zeroeds array
      * @param _zeroedAddress is the address of the zeroed
      */
-    function getZeroedIndex(
-        address _zeroedAddress
-    ) public view returns (uint256) {
+    function getZeroedIndex(address _zeroedAddress) public view returns (uint256) {
         uint256 numZeroeds = zeroeds.length;
         for (uint256 i = 0; i < numZeroeds; i++) {
             if (zeroeds[i].addr == _zeroedAddress) {
@@ -458,11 +404,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev to calculate the sum of zeroeds balances
      * @return zeroedsBalance the sum of balances of zeroeds
      */
-    function sumOfZeroedBalance()
-        public
-        view
-        returns (uint256 zeroedsBalance)
-    {
+    function sumOfZeroedBalance() public view returns (uint256 zeroedsBalance) {
         uint256 numZeroeds = zeroeds.length;
         for (uint256 i = 0; i < numZeroeds; i++) {
             zeroedsBalance += zeroeds[i].addr.balance;
@@ -476,9 +418,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @return allocated is the address of the allocated
      * @return amount is the fund allocated to the allocated
      */
-    function getAllocated(
-        address _allocatedAddress
-    ) external view returns (address, uint256) {
+    function getAllocated(address _allocatedAddress) external view returns (address, uint256) {
         uint256 index = getAllocatedIndex(_allocatedAddress);
         require(index != type(uint256).max, "Allocated not registered");
         Allocated memory allocated = allocateds[index];
@@ -503,9 +443,7 @@ contract TreasuryRebalanceV2 is Ownable {
      * @dev get index of the allocated in the allocateds array
      * @param _allocatedAddress is the address of the allocated
      */
-    function getAllocatedIndex(
-        address _allocatedAddress
-    ) public view returns (uint256) {
+    function getAllocatedIndex(address _allocatedAddress) public view returns (uint256) {
         uint256 numAllocateds = allocateds.length;
         for (uint256 i = 0; i < numAllocateds; i++) {
             if (allocateds[i].addr == _allocatedAddress) {
