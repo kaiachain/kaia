@@ -105,6 +105,10 @@ func StartIPCEndpoint(ipcEndpoint string, apis []API) (net.Listener, *Server, er
 	// Register all the APIs exposed by the services.
 	handler := NewServer()
 	for _, api := range apis {
+		if api.Namespace == "klay" {
+			api.Namespace = "kaia"
+		}
+
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return nil, nil, err
 		}
