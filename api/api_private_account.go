@@ -452,7 +452,7 @@ func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, t
 }
 
 // Sign calculates a Kaia ECDSA signature for:
-// keccack256("\x19Klaytn Signed Message:\n" + len(message) + message))
+// keccack256("\x19Ethereum Signed Message:\n" + len(message) + message))
 //
 // Note, the produced signature conforms to the secp256k1 curve R, S and V values,
 // where the V value will be 27 or 28 for legacy reasons.
@@ -469,7 +469,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 		return nil, err
 	}
 	// Assemble sign the data with the wallet
-	signature, err := wallet.SignHashWithPassphrase(account, passwd, signHash(data))
+	signature, err := wallet.SignHashWithPassphrase(account, passwd, ethSignHash(data))
 	if err != nil {
 		return nil, err
 	}
