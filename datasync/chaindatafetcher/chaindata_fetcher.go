@@ -320,7 +320,11 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 		}
 		for _, r := range results {
 			if r.Result != nil {
-				internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+				switch r.Result.(type) {
+				case []vm.CallFrame:
+					cf := r.Result.([]vm.CallFrame)
+					internalTraces = append(internalTraces, cf[0].ToInternalTxTrace())
+				}
 			} else {
 				traceAPIErrorCounter.Inc(1)
 				logger.Error("the trace result is nil", "err", r.Error, "blockNumber", blockNumber)
