@@ -480,13 +480,11 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // EcRecover returns the address for the account that was used to create the signature.
 // Note, this function is compatible with eth_sign and personal_sign. As such it recovers
 // the address of:
-// hash = keccak256("\x19Klaytn Signed Message:\n"${message length}${message})
+// hash = keccak256("\x19Ethereum Signed Message:\n"${message length}${message})
 // addr = ecrecover(hash, signature)
 //
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
 // the V value must be 27 or 28 for legacy reasons.
-//
-// https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
 		return common.Address{}, errors.New("signature must be 65 bytes long")
@@ -498,7 +496,7 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 	// Transform yellow paper V from 27/28 to 0/1
 	sig[crypto.RecoveryIDOffset] -= 27
 
-	pubkey, err := klayEcRecover(data, sig)
+	pubkey, err := ethEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}

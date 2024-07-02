@@ -596,6 +596,8 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 }
 
 // RecoverFromMessage validates that the message is signed by one of the keys in the given account.
+// The signature must be either EIP-191 or KIP-97 compliant, meaning the message must have been prefixed
+// with either "\x19Ethereum Signed Message" or "\x19Klaytn Signed Message" before hashed and signed.
 // Returns the recovered signer address, which may be different from the account address.
 func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
@@ -616,9 +618,8 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	}
 	key := state.GetKey(address)
 
-	// We cannot identify if the signature has signed with kaia or eth prefix without the signer's address.
-	// Even though a user signed message with eth prefix, it will return invalid something in klayEcRecover.
-	// We should call each rcrecover function separately and the actual result will be checked in ValidateMember.
+	// We cannot identify if the signature has signed with EIP-191 or KIP-97 prefix without the signer's address.
+	// Try ecrecover with both prefixes and validate the actual result in ValidateMember.
 	var recoverErr error
 	if pubkey, err := klayEcRecover(data, sig); err == nil {
 		if key.ValidateMember(pubkey, address) {
