@@ -1,0 +1,81 @@
+ {
+  "_comment": "chainId 1001 txHash 0x6bcce4a683a1e81168e7ab05c3b4fa7d17a1cb97a70ef5c666a14e4603615b0c",
+  "genesis": {
+    "alloc": {
+      "0xba736c844fd44c380ce19423f9f1ddcb9cd19b6c": {
+        "balance": "0x354a6ba7a18000",
+        "nonce": "0",
+        "code": "0x",
+        "storage": {}
+      },
+      "0x7f0546832758f61410e81a94d7a07d55b1dfd278": {
+        "balance": "0x2b57266aaf0d46800",
+        "nonce": "10",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1001,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 6400000000000000000,
+          "ratio": "50/20/30",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0xc1293c22998f6d463d9790fe5de569fffa7d92ccd0339ab2e93d0c58bdc23f3f",
+    "number": "156322489",
+    "timestamp": "1717903725",
+    "blockScore": "0x1",
+    "baseFeePerGas": "0x5d21dba00"
+  },
+  "input": "0xf8660a850ba43b740082520894ba736c844fd44c380ce19423f9f1ddcb9cd19b6c80808207f6a0488d5a9590931961319ba909e2a135e6289b66a7dfc489dee4ae02348ed81ba2a0717d52e2ff7965243b05a957a9ac27c3e86d02ad51331dc112960d36ce820ebb",
+  "result": {
+    "from": "0x7f0546832758f61410e81a94d7a07d55b1dfd278",
+    "gas": "0x5208",
+    "gasUsed": "0x5208",
+    "input": "0x",
+    "to": "0xba736c844fd44c380ce19423f9f1ddcb9cd19b6c",
+    "value": "0x0",
+    "type": "CALL"
+  }
+}

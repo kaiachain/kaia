@@ -1,0 +1,91 @@
+ {
+  "_comment": "EIP-1014 Skinny CREATE2 Example 4. The bytecode in 0xdeadbeef pushes 'deadbeef' into memory, then the other params, and calls CREATE2, then returns the address.",
+  "genesis": {
+    "alloc": {
+      "0x00000000000000000000000000000000deadbeef": {
+        "balance": "0x1",
+        "nonce": "1",
+        "code": "0x63deadbeef60005263cafebabe6004601c6000F560005260206000F3",
+        "storage": {}
+      },
+      "0xc142709fb77c43c4b0fa539b91549d1859c5521a": {
+        "balance": "0x1c6bf52634000",
+        "nonce": "1",
+        "code": "0x",
+        "storage": {}
+      }
+    },
+    "config": {
+      "chainId": 1,
+      "istanbulCompatibleBlock": 75373312,
+      "londonCompatibleBlock": 80295291,
+      "ethTxTypeCompatibleBlock": 86513895,
+      "magmaCompatibleBlock": 98347376,
+      "koreCompatibleBlock": 111736800,
+      "shanghaiCompatibleBlock": 131608000,
+      "cancunCompatibleBlock": 141367000,
+      "kaiaCompatibleBlock": 156660000,
+      "kip103CompatibleBlock": 119145600,
+      "kip103ContractAddress": "0xd5ad6d61dd87edabe2332607c328f5cc96aecb95",
+      "kip160CompatibleBlock": 156660000,
+      "kip160ContractAddress": "0x3d478e73c9dbebb72332712d7265961b1868d193",
+      "randaoCompatibleBlock": 141367000,
+      "istanbul": {
+        "epoch": 604800,
+        "policy": 2,
+        "sub": 22
+      },
+      "unitPrice": 250000000000,
+      "deriveShaImpl": 0,
+      "governance": {
+        "governingNode": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+        "governanceMode": "single",
+        "govParamContract": "0x84214cec245d752a9f2faf355b59ddf7f58a6edb",
+        "reward": {
+          "mintingAmount": 6400000000000000000,
+          "ratio": "50/20/30",
+          "kip82ratio": "20/80",
+          "useGiniCoeff": true,
+          "deferredTxFee": true,
+          "stakingUpdateInterval": 86400,
+          "proposerUpdateInterval": 3600,
+          "minimumStake": 5000000
+        },
+        "kip71": {
+          "lowerboundbasefee": 25000000000,
+          "upperboundbasefee": 750000000000,
+          "gastarget": 30000000,
+          "maxblockgasusedforbasefee": 60000000,
+          "basefeedenominator": 20
+        }
+      }
+    }
+  },
+  "context": {
+    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "number": "8000000",
+    "timestamp": "0",
+    "blockScore": "0x1"
+  },
+  "input": "0xf8600101834c4b409400000000000000000000000000000000deadbeef808026a09279149c669e4e6571a7b662c21aa1395aecaf7bbce41cd97c4fcc13e9b019b7a031b61de0826d001d583c5b8386fb9816ee9adb06e874c59f16c6d593c2212bf2",
+  "result": {
+    "0x00000000000000000000000000000000deadbeef": {
+      "balance": "0x1",
+      "nonce": 1,
+      "code": "0x63deadbeef60005263cafebabe6004601c6000f560005260206000f3",
+      "storage": {}
+    },
+    "0x60f3f640a8508fc6a86d45df051962668e1e8ac7": {
+      "balance": "0x0",
+      "nonce": 0,
+      "code": "0x",
+      "storage": {}
+    },
+    "0xc142709fb77c43c4b0fa539b91549d1859c5521a": {
+      "balance": "0x1c6bf52634000",
+      "nonce": 1,
+      "code": "0x",
+      "storage": {}
+    }
+  }
+}
