@@ -169,10 +169,13 @@ func runTracer(t *testing.T, tc *tracerTestdata, tracer vm.Tracer) (*types.Trans
 	switch tracer := tracer.(type) {
 	case *Tracer:
 		tracerResult, err = tracer.GetResult()
+		require.NoError(t, err)
 	case *vm.CallTracer:
-		tracerResult, err = tracer.GetResultAsJson()
+		callFrame, err := tracer.GetResult()
+		require.NoError(t, err)
+		tracerResult, err = json.Marshal(callFrame)
+		require.NoError(t, err)
 	}
-	require.NoError(t, err)
 	assert.JSONEq(t, string(tc.Result), string(tracerResult))
 
 	return msg, execResult, tracerResult

@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"encoding/json"
 	"errors"
 	"math/big"
 	"sync/atomic"
@@ -220,39 +219,13 @@ func (t *CallTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccL
 func (t *CallTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 }
 
-func (t *CallTracer) GetResult() ([]CallFrame, error) {
+func (t *CallTracer) GetResult() (CallFrame, error) {
 	if len(t.callstack) != 1 {
-		return nil, errors.New("incorrect number of top-level calls")
+		return CallFrame{}, errors.New("incorrect number of top-level calls")
 	}
 
 	// Return with interrupt reason if any
-	return t.callstack, t.interruptReason
-}
-
-func (t *CallTracer) GetResultAsJson() (json.RawMessage, error) {
-	if len(t.callstack) != 1 {
-		return nil, errors.New("incorrect number of top-level calls")
-	}
-
-	result, err := json.Marshal(t.callstack[0])
-	if err != nil {
-		return nil, err
-	}
-
-	// Return with interrupt reason if any
-	return result, t.interruptReason
-}
-
-// Convert to the legacy InternalTxTrace type
-func (t *CallTracer) GetResultAsInternalTxTrace() (*InternalTxTrace, error) {
-	if len(t.callstack) != 1 {
-		return nil, errors.New("incorrect number of top-level calls")
-	}
-
-	result := t.callstack[0].ToInternalTxTrace()
-
-	// Return with interrupt reason if any
-	return result, t.interruptReason
+	return t.callstack[0], t.interruptReason
 }
 
 // Stop terminates execution of the tracer at the first opportune moment.
