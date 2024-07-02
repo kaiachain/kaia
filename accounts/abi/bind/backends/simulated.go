@@ -404,12 +404,14 @@ func (b *SimulatedBackend) PendingNonceAt(_ context.Context, account common.Addr
 	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
 }
 
-// SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
-// chain doesn't have miners, we just return a gas price of 1 for any call.
+// SuggestGasPrice implements ContractTransactor.SuggestGasPrice.
 func (b *SimulatedBackend) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	current := b.blockchain.CurrentBlock()
-	if b.blockchain.Config().IsMagmaForkEnabled(current.Number()) {
-		return new(big.Int).Mul(current.Header().BaseFee, big.NewInt(2)), nil
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	pending := b.pendingBlock
+	if b.config.IsMagmaForkEnabled(pending.Number()) {
+		return new(big.Int).Mul(pending.Header().BaseFee, big.NewInt(2)), nil
 	} else {
 		return new(big.Int).SetUint64(b.config.UnitPrice), nil
 	}
