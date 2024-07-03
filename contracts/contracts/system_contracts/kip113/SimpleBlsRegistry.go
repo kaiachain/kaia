@@ -372,10 +372,10 @@ type ContextUpgradeableInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -657,10 +657,10 @@ type ERC1967UpgradeUpgradeableAdminChangedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -789,10 +789,10 @@ type ERC1967UpgradeUpgradeableBeaconUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -930,10 +930,10 @@ type ERC1967UpgradeUpgradeableInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1061,10 +1061,10 @@ type ERC1967UpgradeUpgradeableUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2681,10 +2681,10 @@ type IERC1967UpgradeableAdminChangedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2813,10 +2813,10 @@ type IERC1967UpgradeableBeaconUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2954,10 +2954,10 @@ type IERC1967UpgradeableUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3453,10 +3453,10 @@ type InitializableInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3818,10 +3818,10 @@ type OwnableUpgradeableInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3949,10 +3949,10 @@ type OwnableUpgradeableOwnershipTransferredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4703,10 +4703,10 @@ type SimpleBlsRegistryAdminChangedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4835,10 +4835,10 @@ type SimpleBlsRegistryBeaconUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4976,10 +4976,10 @@ type SimpleBlsRegistryInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5107,10 +5107,10 @@ type SimpleBlsRegistryOwnershipTransferredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5257,10 +5257,10 @@ type SimpleBlsRegistryRegisteredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5390,10 +5390,10 @@ type SimpleBlsRegistryUnregisteredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5523,10 +5523,10 @@ type SimpleBlsRegistryUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6074,10 +6074,10 @@ type UUPSUpgradeableAdminChangedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6206,10 +6206,10 @@ type UUPSUpgradeableBeaconUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6347,10 +6347,10 @@ type UUPSUpgradeableInitializedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6478,10 +6478,10 @@ type UUPSUpgradeableUpgradedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there

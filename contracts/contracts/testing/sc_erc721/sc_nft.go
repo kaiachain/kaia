@@ -1020,10 +1020,10 @@ type ERC721ApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1179,10 +1179,10 @@ type ERC721ApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1330,10 +1330,10 @@ type ERC721TransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -1953,10 +1953,10 @@ type ERC721BurnableApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2112,10 +2112,10 @@ type ERC721BurnableApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2263,10 +2263,10 @@ type ERC721BurnableTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -2954,10 +2954,10 @@ type ERC721EnumerableApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3113,10 +3113,10 @@ type ERC721EnumerableApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -3264,10 +3264,10 @@ type ERC721EnumerableTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4045,10 +4045,10 @@ type ERC721FullApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4204,10 +4204,10 @@ type ERC721FullApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -4355,10 +4355,10 @@ type ERC721FullTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5046,10 +5046,10 @@ type ERC721MetadataApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5205,10 +5205,10 @@ type ERC721MetadataApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -5356,10 +5356,10 @@ type ERC721MetadataTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6121,10 +6121,10 @@ type ERC721MetadataMintableApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6280,10 +6280,10 @@ type ERC721MetadataMintableApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6431,10 +6431,10 @@ type ERC721MetadataMintableMinterAddedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6572,10 +6572,10 @@ type ERC721MetadataMintableMinterRemovedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -6713,10 +6713,10 @@ type ERC721MetadataMintableTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -7470,10 +7470,10 @@ type ERC721ServiceChainApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -7629,10 +7629,10 @@ type ERC721ServiceChainApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -7780,10 +7780,10 @@ type ERC721ServiceChainOwnershipTransferredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -7930,10 +7930,10 @@ type ERC721ServiceChainTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -8699,10 +8699,10 @@ type IERC721ApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -8858,10 +8858,10 @@ type IERC721ApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -9009,10 +9009,10 @@ type IERC721TransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -9860,10 +9860,10 @@ type IERC721EnumerableApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -10019,10 +10019,10 @@ type IERC721EnumerableApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -10170,10 +10170,10 @@ type IERC721EnumerableTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -10839,10 +10839,10 @@ type IERC721MetadataApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -10998,10 +10998,10 @@ type IERC721MetadataApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -11149,10 +11149,10 @@ type IERC721MetadataTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -11724,10 +11724,10 @@ type MinterRoleMinterAddedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -11865,10 +11865,10 @@ type MinterRoleMinterRemovedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -12270,10 +12270,10 @@ type OwnableOwnershipTransferredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -13712,10 +13712,10 @@ type ServiceChainNFTApprovalIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -13871,10 +13871,10 @@ type ServiceChainNFTApprovalForAllIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -14022,10 +14022,10 @@ type ServiceChainNFTMinterAddedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -14163,10 +14163,10 @@ type ServiceChainNFTMinterRemovedIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -14304,10 +14304,10 @@ type ServiceChainNFTOwnershipTransferredIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -14454,10 +14454,10 @@ type ServiceChainNFTTransferIterator struct {
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
 
-	logs chan types.Log      // Log channel receiving the found contract events
+	logs chan types.Log    // Log channel receiving the found contract events
 	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool                // Whether the subscription completed delivering logs
-	fail error               // Occurred error to stop iteration
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
