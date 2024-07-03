@@ -321,9 +321,9 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 		for _, r := range results {
 			if r.Result != nil {
 				switch r.Result.(type) {
-				case []vm.CallFrame:
-					cf := r.Result.([]vm.CallFrame)
-					internalTraces = append(internalTraces, cf[0].ToInternalTxTrace())
+				case vm.CallFrame:
+					cf := r.Result.(vm.CallFrame)
+					internalTraces = append(internalTraces, cf.ToInternalTxTrace())
 				}
 			} else {
 				traceAPIErrorCounter.Inc(1)
