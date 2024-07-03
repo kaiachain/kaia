@@ -30,7 +30,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/stretchr/testify/assert"
 )
 

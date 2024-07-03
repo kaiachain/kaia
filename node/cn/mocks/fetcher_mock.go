@@ -9,9 +9,9 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	fetcher "github.com/klaytn/klaytn/datasync/fetcher"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	fetcher "github.com/kaiachain/kaia/datasync/fetcher"
 )
 
 // MockProtocolManagerFetcher is a mock of ProtocolManagerFetcher interface

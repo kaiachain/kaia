@@ -31,10 +31,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/networks/p2p/nat"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/networks/p2p/nat"
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const Version = 4

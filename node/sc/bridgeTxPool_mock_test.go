@@ -8,8 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 )
 
 // MockBridgeTxPool is a mock of BridgeTxPool interface

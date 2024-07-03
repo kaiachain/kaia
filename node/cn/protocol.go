@@ -28,14 +28,14 @@ import (
 	"math/big"
 	"time"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/datasync/downloader"
-	"github.com/klaytn/klaytn/datasync/fetcher"
-	"github.com/klaytn/klaytn/node/cn/snap"
-	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/rlp"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/datasync/fetcher"
+	"github.com/kaiachain/kaia/node/cn/snap"
+	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // `kaia` is the default fallback protocol for all consensus engine types.

@@ -31,9 +31,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 type testBlockEncodingTC struct {

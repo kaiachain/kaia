@@ -22,9 +22,9 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/params"
 )
 
 const numKeys = 1

@@ -20,9 +20,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 

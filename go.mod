@@ -1,4 +1,4 @@
-module github.com/klaytn/klaytn
+module github.com/kaiachain/kaia
 
 go 1.22.1
 

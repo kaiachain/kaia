@@ -25,14 +25,14 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/work"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/work"
 	"github.com/pkg/errors"
 )
 

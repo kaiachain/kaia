@@ -9,11 +9,11 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/klaytn/klaytn/blockchain/state"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	consensus "github.com/klaytn/klaytn/consensus"
-	rpc "github.com/klaytn/klaytn/networks/rpc"
+	state "github.com/kaiachain/kaia/blockchain/state"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	consensus "github.com/kaiachain/kaia/consensus"
+	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
 // MockEngine is a mock of Engine interface.

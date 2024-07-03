@@ -8,9 +8,9 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/klaytn/klaytn/blockchain/state"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	work "github.com/klaytn/klaytn/work"
+	state "github.com/kaiachain/kaia/blockchain/state"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	work "github.com/kaiachain/kaia/work"
 )
 
 // MockMiner is a mock of Miner interface

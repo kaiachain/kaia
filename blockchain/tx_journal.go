@@ -27,9 +27,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // errNoActiveJournal is returned if a transaction is attempted to be inserted

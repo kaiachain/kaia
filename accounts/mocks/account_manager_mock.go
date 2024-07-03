@@ -8,8 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	accounts "github.com/klaytn/klaytn/accounts"
-	event "github.com/klaytn/klaytn/event"
+	accounts "github.com/kaiachain/kaia/accounts"
+	event "github.com/kaiachain/kaia/event"
 )
 
 // MockAccountManager is a mock of AccountManager interface

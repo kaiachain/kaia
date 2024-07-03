@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 // PublicTxPoolAPI offers and API for the transaction pool. It only operates on data that is non confidential.

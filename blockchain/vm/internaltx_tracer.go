@@ -33,9 +33,9 @@ import (
 	"time"
 
 	"github.com/holiman/uint256"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 var (

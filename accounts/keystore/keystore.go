@@ -34,11 +34,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
 )
 
 var (

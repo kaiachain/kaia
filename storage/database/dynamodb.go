@@ -41,9 +41,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/log"
-	kaiametrics "github.com/klaytn/klaytn/metrics"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/log"
+	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 )

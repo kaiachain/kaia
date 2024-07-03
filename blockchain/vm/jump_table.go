@@ -25,7 +25,7 @@ package vm
 import (
 	"errors"
 
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/params"
 )
 
 type (

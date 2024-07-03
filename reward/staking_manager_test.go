@@ -24,13 +24,13 @@ import (
 	"testing"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 

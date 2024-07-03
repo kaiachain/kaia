@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 func TestPairingExpected(t *testing.T) {

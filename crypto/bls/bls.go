@@ -24,9 +24,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/bls/blst"
-	"github.com/klaytn/klaytn/crypto/bls/types"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls/blst"
+	"github.com/kaiachain/kaia/crypto/bls/types"
 )
 
 type (

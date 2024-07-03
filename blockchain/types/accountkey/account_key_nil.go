@@ -22,9 +22,9 @@ import (
 	"crypto/ecdsa"
 	"io"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // AccountKeyNil represents a key having nothing.

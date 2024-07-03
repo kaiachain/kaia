@@ -25,7 +25,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 func TestJumpDestAnalysis(t *testing.T) {

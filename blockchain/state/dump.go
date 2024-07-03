@@ -26,10 +26,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/klaytn/klaytn/blockchain/types/account"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/blockchain/types/account"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 // emptyRoot is the known root hash of an empty trie.

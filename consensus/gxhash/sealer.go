@@ -30,8 +30,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus"
 )
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies

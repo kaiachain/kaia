@@ -29,13 +29,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // Type determines the kind of filter and is used to put the filter in to

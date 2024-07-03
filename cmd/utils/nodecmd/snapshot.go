@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/snapshot"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/snapshot"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/urfave/cli/v2"
 )
 

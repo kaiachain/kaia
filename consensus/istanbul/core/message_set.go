@@ -28,8 +28,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
 // Construct a new message set to accumulate messages for given sequence/view number.

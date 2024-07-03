@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 var _ = (*stTransactionMarshaling)(nil)

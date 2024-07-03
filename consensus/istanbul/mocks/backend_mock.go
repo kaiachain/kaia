@@ -10,9 +10,9 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	common "github.com/klaytn/klaytn/common"
-	istanbul "github.com/klaytn/klaytn/consensus/istanbul"
-	event "github.com/klaytn/klaytn/event"
+	common "github.com/kaiachain/kaia/common"
+	istanbul "github.com/kaiachain/kaia/consensus/istanbul"
+	event "github.com/kaiachain/kaia/event"
 )
 
 // MockBackend is a mock of Backend interface

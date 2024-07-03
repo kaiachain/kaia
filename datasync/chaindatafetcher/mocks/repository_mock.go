@@ -8,8 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	blockchain "github.com/klaytn/klaytn/blockchain"
-	types "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+	blockchain "github.com/kaiachain/kaia/blockchain"
+	types "github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
 
 // MockRepository is a mock of Repository interface

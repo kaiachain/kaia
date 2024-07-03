@@ -29,11 +29,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul/backend"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/node/cn/snap"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/node/cn/snap"
 )
 
 var (

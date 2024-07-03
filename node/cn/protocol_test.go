@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

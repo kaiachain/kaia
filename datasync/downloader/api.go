@@ -26,9 +26,9 @@ import (
 	"context"
 	"sync"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/rpc"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // PublicDownloaderAPI provides an API which gives information about the current synchronisation status.

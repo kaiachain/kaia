@@ -33,9 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 	"gopkg.in/fatih/set.v0"
 )
 

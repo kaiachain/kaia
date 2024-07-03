@@ -23,7 +23,7 @@
 package params
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 type bootnodesByTypes struct {

@@ -31,9 +31,9 @@ import (
 	// "path/filepath"
 	// "testing"
 
-	"github.com/klaytn/klaytn/common/math"
-	// "github.com/klaytn/klaytn/blockchain/types"
-	// "github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/common/math"
+	// "github.com/kaiachain/kaia/blockchain/types"
+	// "github.com/kaiachain/kaia/params"
 )
 
 type diffTest struct {

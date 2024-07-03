@@ -21,8 +21,8 @@ package cn
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/consensus/istanbul/backend"
-	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/stretchr/testify/assert"
 )
 

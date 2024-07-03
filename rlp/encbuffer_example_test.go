@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 func ExampleEncoderBuffer() {

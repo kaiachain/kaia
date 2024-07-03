@@ -25,9 +25,9 @@ package vm
 import (
 	"errors"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/params"
 )
 
 // memoryGasCost calculates the quadratic gas for memory expansion. It does so

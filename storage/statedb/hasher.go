@@ -26,10 +26,10 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/klaytn/klaytn/blockchain/types/account"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types/account"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 type hasherOpts struct {

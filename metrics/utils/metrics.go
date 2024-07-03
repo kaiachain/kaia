@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/log"
-	prometheusmetrics "github.com/klaytn/klaytn/metrics/prometheus"
+	"github.com/kaiachain/kaia/log"
+	prometheusmetrics "github.com/kaiachain/kaia/metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"

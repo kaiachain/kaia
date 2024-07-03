@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // PrivateDebugAPI is the collection of Kaia APIs exposed over the private

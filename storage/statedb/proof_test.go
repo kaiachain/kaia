@@ -30,9 +30,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 func TestProof(t *testing.T) {

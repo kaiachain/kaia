@@ -28,8 +28,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/storage"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/storage"
 	"github.com/stretchr/testify/suite"
 )
 

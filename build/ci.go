@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/utils/build"
+	"github.com/kaiachain/kaia/utils/build"
 )
 
 var (

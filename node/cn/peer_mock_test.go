@@ -9,12 +9,12 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	p2p "github.com/klaytn/klaytn/networks/p2p"
-	discover "github.com/klaytn/klaytn/networks/p2p/discover"
-	snap "github.com/klaytn/klaytn/node/cn/snap"
-	rlp "github.com/klaytn/klaytn/rlp"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	p2p "github.com/kaiachain/kaia/networks/p2p"
+	discover "github.com/kaiachain/kaia/networks/p2p/discover"
+	snap "github.com/kaiachain/kaia/node/cn/snap"
+	rlp "github.com/kaiachain/kaia/rlp"
 )
 
 // MockPeer is a mock of Peer interface

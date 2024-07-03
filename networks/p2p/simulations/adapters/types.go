@@ -33,11 +33,11 @@ import (
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/gorilla/websocket"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
 )
 
 // Node represents a node in a simulation network which is created by a

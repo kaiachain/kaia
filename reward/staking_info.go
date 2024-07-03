@@ -27,9 +27,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const (

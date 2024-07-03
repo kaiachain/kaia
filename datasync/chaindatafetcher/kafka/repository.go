@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
 
 type traceGroupResult struct {

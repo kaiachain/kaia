@@ -27,7 +27,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/klaytn/klaytn/event"
+	"github.com/kaiachain/kaia/event"
 )
 
 // Manager is an overarching account manager that can communicate with various

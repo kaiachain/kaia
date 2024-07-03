@@ -23,7 +23,7 @@
 package state
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 type accessList struct {

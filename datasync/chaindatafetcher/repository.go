@@ -21,8 +21,8 @@ package chaindatafetcher
 import (
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
 
 const (

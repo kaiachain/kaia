@@ -33,8 +33,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

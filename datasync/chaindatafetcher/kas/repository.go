@@ -28,12 +28,12 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
-	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 const (

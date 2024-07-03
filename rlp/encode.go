@@ -29,7 +29,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/klaytn/klaytn/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
 )
 
 var (

@@ -21,9 +21,9 @@ package accountkey
 import (
 	"crypto/ecdsa"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/kerrors"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
 )
 
 // AccountKeyLegacy is used for accounts having no keys.

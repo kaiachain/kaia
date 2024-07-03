@@ -34,7 +34,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/klaytn/klaytn/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
 )
 
 //lint:ignore ST1012 EOL is not an error.

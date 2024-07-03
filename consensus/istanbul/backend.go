@@ -26,8 +26,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 )
 
 // Backend provides application specific functions for Istanbul core

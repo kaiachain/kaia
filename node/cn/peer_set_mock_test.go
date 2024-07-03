@@ -8,10 +8,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	p2p "github.com/klaytn/klaytn/networks/p2p"
-	snap "github.com/klaytn/klaytn/node/cn/snap"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	p2p "github.com/kaiachain/kaia/networks/p2p"
+	snap "github.com/kaiachain/kaia/node/cn/snap"
 )
 
 // MockPeerSet is a mock of PeerSet interface

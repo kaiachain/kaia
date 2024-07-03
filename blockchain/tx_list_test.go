@@ -28,8 +28,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/stretchr/testify/assert"
 )
 

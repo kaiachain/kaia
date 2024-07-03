@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 var (

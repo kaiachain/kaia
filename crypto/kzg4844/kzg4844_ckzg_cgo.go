@@ -31,7 +31,7 @@ import (
 
 	gokzg4844 "github.com/crate-crypto/go-kzg-4844"
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 // ckzgAvailable signals whether the library was compiled into Geth.

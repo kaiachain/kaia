@@ -9,10 +9,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	p2p "github.com/klaytn/klaytn/networks/p2p"
-	discover "github.com/klaytn/klaytn/networks/p2p/discover"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	p2p "github.com/kaiachain/kaia/networks/p2p"
+	discover "github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
 // MockBridgePeer is a mock of BridgePeer interface.

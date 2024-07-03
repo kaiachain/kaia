@@ -24,9 +24,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 var _ Tracer = (*CallTracer)(nil)

@@ -19,7 +19,7 @@
 package kafka
 
 import (
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 type CheckpointDB struct {

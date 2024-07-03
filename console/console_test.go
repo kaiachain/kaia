@@ -31,11 +31,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/console/jsre"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/console/jsre"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/node/cn"
 )
 
 const (

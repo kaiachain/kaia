@@ -29,10 +29,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/storage"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

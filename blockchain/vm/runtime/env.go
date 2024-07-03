@@ -23,8 +23,8 @@
 package runtime
 
 import (
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {

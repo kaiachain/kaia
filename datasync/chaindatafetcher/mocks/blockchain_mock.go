@@ -8,10 +8,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	blockchain "github.com/klaytn/klaytn/blockchain"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	event "github.com/klaytn/klaytn/event"
+	blockchain "github.com/kaiachain/kaia/blockchain"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	event "github.com/kaiachain/kaia/event"
 )
 
 // MockBlockChain is a mock of BlockChain interface

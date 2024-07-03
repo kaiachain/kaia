@@ -8,11 +8,11 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	istanbul "github.com/klaytn/klaytn/consensus/istanbul"
-	params "github.com/klaytn/klaytn/params"
-	database "github.com/klaytn/klaytn/storage/database"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	istanbul "github.com/kaiachain/kaia/consensus/istanbul"
+	params "github.com/kaiachain/kaia/params"
+	database "github.com/kaiachain/kaia/storage/database"
 )
 
 // MockEngine is a mock of Engine interface.

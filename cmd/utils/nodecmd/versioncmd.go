@@ -25,7 +25,7 @@ package nodecmd
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/params"
 	"github.com/urfave/cli/v2"
 )
 

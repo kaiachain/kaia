@@ -9,10 +9,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	api "github.com/klaytn/klaytn/api"
-	common "github.com/klaytn/klaytn/common"
-	hexutil "github.com/klaytn/klaytn/common/hexutil"
-	rpc "github.com/klaytn/klaytn/networks/rpc"
+	api "github.com/kaiachain/kaia/api"
+	common "github.com/kaiachain/kaia/common"
+	hexutil "github.com/kaiachain/kaia/common/hexutil"
+	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
 // MockBlockchainAPI is a mock of BlockchainAPI interface

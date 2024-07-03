@@ -10,16 +10,16 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	blockchain "github.com/klaytn/klaytn/blockchain"
-	state "github.com/klaytn/klaytn/blockchain/state"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	vm "github.com/klaytn/klaytn/blockchain/vm"
-	common "github.com/klaytn/klaytn/common"
-	consensus "github.com/klaytn/klaytn/consensus"
-	event "github.com/klaytn/klaytn/event"
-	params "github.com/klaytn/klaytn/params"
-	rlp "github.com/klaytn/klaytn/rlp"
-	snapshot "github.com/klaytn/klaytn/snapshot"
+	blockchain "github.com/kaiachain/kaia/blockchain"
+	state "github.com/kaiachain/kaia/blockchain/state"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	vm "github.com/kaiachain/kaia/blockchain/vm"
+	common "github.com/kaiachain/kaia/common"
+	consensus "github.com/kaiachain/kaia/consensus"
+	event "github.com/kaiachain/kaia/event"
+	params "github.com/kaiachain/kaia/params"
+	rlp "github.com/kaiachain/kaia/rlp"
+	snapshot "github.com/kaiachain/kaia/snapshot"
 )
 
 // MockBlockChain is a mock of BlockChain interface.

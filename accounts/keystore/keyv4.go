@@ -24,8 +24,8 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 type KeyV4 struct {

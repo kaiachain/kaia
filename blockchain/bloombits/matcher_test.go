@@ -29,7 +29,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 const testSectionSize = 4096

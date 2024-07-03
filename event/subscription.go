@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common/mclock"
+	"github.com/kaiachain/kaia/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a

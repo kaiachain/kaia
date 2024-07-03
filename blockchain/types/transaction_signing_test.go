@@ -30,12 +30,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 func TestLondonSigningWithoutChainID(t *testing.T) {

@@ -31,14 +31,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/prque"
-	"github.com/klaytn/klaytn/consensus/misc"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/params"
 	"github.com/rcrowley/go-metrics"
 )
 
