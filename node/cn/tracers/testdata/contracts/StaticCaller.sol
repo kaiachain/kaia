@@ -6,7 +6,7 @@ contract StaticCaller {
         callee = _callee;
     }
 
-    function callHelloWorld() public {
+    function callHelloWorld() public payable {
         callee.staticcall(abi.encodeWithSignature("helloWorld()"));
     }
 }
