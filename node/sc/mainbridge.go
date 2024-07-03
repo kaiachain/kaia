@@ -239,7 +239,14 @@ func (mb *MainBridge) SetComponents(components []interface{}) {
 		case []rpc.API:
 			logger.Debug("p2p rpc registered", "len(v)", len(v))
 			for _, api := range v {
-				if api.Public && api.Namespace == "klay" {
+				// TODO-Kaia-RPC: cleanup
+				if api.Public && (api.Namespace == "klay" || api.Namespace == "kaia") {
+					api.Namespace = "klay"
+					logger.Error("p2p rpc registered", "namespace", api.Namespace)
+					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+						logger.Error("pRPC failed to register", "namespace", api.Namespace)
+					}
+					api.Namespace = "kaia"
 					logger.Error("p2p rpc registered", "namespace", api.Namespace)
 					if err := mb.rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
 						logger.Error("pRPC failed to register", "namespace", api.Namespace)

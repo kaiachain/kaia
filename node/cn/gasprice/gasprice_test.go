@@ -233,6 +233,12 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+type MockGov struct{}
+
+func (m *MockGov) EffectiveParams(bn uint64) (*params.GovParamSet, error) {
+	return nil, nil
+}
+
 func TestSuggestTipCap(t *testing.T) {
 	config := Config{
 		Blocks:           3,
@@ -246,22 +252,40 @@ func TestSuggestTipCap(t *testing.T) {
 		magmaBlock *big.Int // Magma fork block number
 		kaiaBlock  *big.Int // Kaia fork block number
 		expect     *big.Int // Expected gasprice suggestion
+		isBusy     bool     // Whether the network is busy
 	}{
-		{nil, nil, big.NewInt(1)}, // If not Magma forked, should return unitPrice (which is 1 for test)
+		/// Not busy network
+		{nil, nil, big.NewInt(1), false}, // If not Magma forked, should return unitPrice (which is 1 for test)
 
-		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Kaia fork, should return 0
+		{big.NewInt(0), nil, common.Big0, false}, // After Magma fork and before Kaia fork, should return 0
 
 		// After Kaia fork
-		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(30))},   // Fork point in genesis
-		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(30))},   // Fork point in first block
-		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(30))}, // Fork point in last block
-		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30))}, // Fork point in the future
+		// Expected gas tip is 0 since the next base fee is lower bound
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(0)), false},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(0)), false},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(0)), false}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(0)), false}, // Fork point in the future
+
+		/// Busy network
+		{nil, nil, big.NewInt(1), true}, // If not Magma forked, should return unitPrice (which is 1 for test)
+
+		{big.NewInt(0), nil, common.Big0, true}, // After Magma fork and before Kaia fork, should return 0
+
+		// After Kaia fork
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(30)), true},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(30)), true},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in the future
 	}
 	for _, c := range cases {
 		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
 		chainConfig := testBackend.ChainConfig()
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-		oracle := NewOracle(testBackend, config, txPool, testGov)
+		gov := testGov
+		if c.isBusy {
+			gov = &MockGov{}
+		}
+		oracle := NewOracle(testBackend, config, txPool, gov)
 
 		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G
 		got, err := oracle.SuggestTipCap(context.Background())
