@@ -246,7 +246,7 @@ var FlagGroups = []FlagGroup{
 			NodeKeyFileFlag,
 			NodeKeyHexFlag,
 			NetworkIdFlag,
-			TestnetFlag,
+			KairosFlag,
 			MainnetFlag,
 		},
 	},

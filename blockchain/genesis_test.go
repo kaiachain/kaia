@@ -38,21 +38,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestDefaultGenesisBlock tests the genesis block generation functions: DefaultGenesisBlock, DefaultTestnetGenesisBlock
+// TestDefaultGenesisBlock tests the genesis block generation functions: DefaultGenesisBlock, DefaultKairosGenesisBlock
 func TestDefaultGenesisBlock(t *testing.T) {
 	block := genMainnetGenesisBlock().ToBlock(common.Hash{}, nil)
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong Mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-	block = genTestnetGenesisBlock().ToBlock(common.Hash{}, nil)
-	if block.Hash() != params.TestnetGenesisHash {
-		t.Errorf("wrong Testnet genesis hash, got %v, want %v", block.Hash(), params.TestnetGenesisHash)
+	block = genKairosGenesisBlock().ToBlock(common.Hash{}, nil)
+	if block.Hash() != params.KairosGenesisHash {
+		t.Errorf("wrong Kairos genesis hash, got %v, want %v", block.Hash(), params.KairosGenesisHash)
 	}
 }
 
 // TestHardCodedChainConfigUpdate tests the public network's chainConfig update.
 func TestHardCodedChainConfigUpdate(t *testing.T) {
-	mainnetGenesisBlock, testnetGenesisBlock := genMainnetGenesisBlock(), genTestnetGenesisBlock()
+	mainnetGenesisBlock, kairosGenesisBlock := genMainnetGenesisBlock(), genKairosGenesisBlock()
 	tests := []struct {
 		name             string
 		newHFBlock       *big.Int
@@ -79,28 +79,28 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		// TODO-Kaia: add more Mainnet test cases after Mainnet hard fork block numbers are added
 		{
 			// Because of the fork-ordering check logic, the istanbulCompatibleBlock should be less than the londonCompatibleBlock
-			name:       "Testnet chainConfig update - correct hard-fork block number order",
+			name:       "Kairos chainConfig update - correct hard-fork block number order",
 			newHFBlock: big.NewInt(79999999),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				testnetGenesisBlock.MustCommit(db)
-				testnetGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, testnetGenesisBlock, params.TestnetNetworkId, false, false)
+				kairosGenesisBlock.MustCommit(db)
+				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
+				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false, false)
 			},
-			wantHash:         params.TestnetGenesisHash,
-			wantConfig:       testnetGenesisBlock.Config,
-			wantStoredConfig: testnetGenesisBlock.Config,
+			wantHash:         params.KairosGenesisHash,
+			wantConfig:       kairosGenesisBlock.Config,
+			wantStoredConfig: kairosGenesisBlock.Config,
 		},
 		{
 			// This test fails because the new istanbulCompatibleBlock(90909999) is larger than londonCompatibleBlock(80295291)
-			name:       "Testnet chainConfig update - wrong hard-fork block number order",
+			name:       "Kairos chainConfig update - wrong hard-fork block number order",
 			newHFBlock: big.NewInt(90909999),
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				testnetGenesisBlock.MustCommit(db)
-				testnetGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, testnetGenesisBlock, params.TestnetNetworkId, false, false)
+				kairosGenesisBlock.MustCommit(db)
+				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
+				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false, false)
 			},
 			wantHash:         common.Hash{},
-			wantConfig:       testnetGenesisBlock.Config,
+			wantConfig:       kairosGenesisBlock.Config,
 			wantStoredConfig: nil,
 			wantErr: fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
 				"istanbulBlock", big.NewInt(90909999), "londonBlock", big.NewInt(80295291)),
@@ -187,12 +187,12 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
-			name: "no block in DB, genesis == nil, Testnet networkId",
+			name: "no block in DB, genesis == nil, Kairos networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, nil, params.TestnetNetworkId, false, false)
+				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false, false)
 			},
-			wantHash:   params.TestnetGenesisHash,
-			wantConfig: params.TestnetChainConfig,
+			wantHash:   params.KairosGenesisHash,
+			wantConfig: params.KairosChainConfig,
 		},
 		{
 			name: "no block in DB, genesis == customGenesis, private network",
@@ -212,13 +212,13 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
-			name: "Testnet block in DB, genesis == nil, Testnet networkId",
+			name: "Kairos block in DB, genesis == nil, Kairos networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genTestnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, nil, params.TestnetNetworkId, false, false)
+				genKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false, false)
 			},
-			wantHash:   params.TestnetGenesisHash,
-			wantConfig: params.TestnetChainConfig,
+			wantHash:   params.KairosGenesisHash,
+			wantConfig: params.KairosChainConfig,
 		},
 		{
 			name: "custom block in DB, genesis == nil, custom networkId",
@@ -230,22 +230,22 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: customGenesis.Config,
 		},
 		{
-			name: "Mainnet block in DB, genesis == Testnet",
+			name: "Mainnet block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genTestnetGenesisBlock(), params.TestnetNetworkId, false, false)
+				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false, false)
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.TestnetGenesisHash},
-			wantHash:   params.TestnetGenesisHash,
-			wantConfig: params.TestnetChainConfig,
+			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
+			wantHash:   params.KairosGenesisHash,
+			wantConfig: params.KairosChainConfig,
 		},
 		{
-			name: "Testnet block in DB, genesis == Mainnet",
+			name: "Kairos block in DB, genesis == Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genTestnetGenesisBlock().MustCommit(db)
+				genKairosGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, genMainnetGenesisBlock(), params.MainnetNetworkId, false, false)
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.TestnetGenesisHash, New: params.MainnetGenesisHash},
+			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
 			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
 		},
@@ -260,12 +260,12 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: customGenesis.Config,
 		},
 		{
-			name: "Testnet block in DB, genesis == custom",
+			name: "Kairos block in DB, genesis == custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genTestnetGenesisBlock().MustCommit(db)
+				genKairosGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, customGenesis, customChainId, true, false)
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.TestnetGenesisHash, New: customGenesisHash},
+			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
 			wantHash:   customGenesisHash,
 			wantConfig: customGenesis.Config,
 		},
@@ -280,14 +280,14 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: params.MainnetChainConfig,
 		},
 		{
-			name: "custom block in DB, genesis == Testnet",
+			name: "custom block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, genTestnetGenesisBlock(), params.TestnetNetworkId, false, false)
+				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false, false)
 			},
-			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.TestnetGenesisHash},
-			wantHash:   params.TestnetGenesisHash,
-			wantConfig: params.TestnetChainConfig,
+			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
+			wantHash:   params.KairosGenesisHash,
+			wantConfig: params.KairosChainConfig,
 		},
 		{
 			name: "compatible config in DB",
@@ -379,9 +379,9 @@ func genMainnetGenesisBlock() *Genesis {
 	return genesis
 }
 
-func genTestnetGenesisBlock() *Genesis {
-	genesis := DefaultTestnetGenesisBlock()
-	genesis.Config = params.TestnetChainConfig.Copy()
+func genKairosGenesisBlock() *Genesis {
+	genesis := DefaultKairosGenesisBlock()
+	genesis.Config = params.KairosChainConfig.Copy()
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config)
 	return genesis

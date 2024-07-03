@@ -26,7 +26,7 @@ import (
 )
 
 func TestChainConfig_CheckConfigForkOrder(t *testing.T) {
-	assert.Nil(t, TestnetChainConfig.CheckConfigForkOrder())
+	assert.Nil(t, KairosChainConfig.CheckConfigForkOrder())
 	assert.Nil(t, MainnetChainConfig.CheckConfigForkOrder())
 }
 

@@ -102,22 +102,22 @@ func AllocWithMainnetContract(addrs []common.Address, balance *big.Int) Option {
 	}
 }
 
-func AllocWithPretestnetContract(addrs []common.Address, balance *big.Int) Option {
+func AllocWithPreKairosContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
 		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(PretestnetAddressBookBin),
+			Code:    common.FromHex(PreKairosAddressBookBin),
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
 	}
 }
 
-func AllocWithTestnetContract(addrs []common.Address, balance *big.Int) Option {
+func AllocWithKairosContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
 		alloc[system.AddressBookAddr] = blockchain.GenesisAccount{
-			Code:    common.FromHex(TestnetAddressBookBin),
+			Code:    common.FromHex(KairosAddressBookBin),
 			Balance: big.NewInt(0),
 		}
 		genesis.Alloc = alloc
@@ -138,9 +138,9 @@ func PatchAddressBook(addr common.Address) Option {
 		switch codeHex {
 		case MainnetAddressBookBin:
 			oldAddr = "854ca8508c8be2bb1f3c244045786410cb7d5d0a"
-		case TestnetAddressBookBin:
+		case KairosAddressBookBin:
 			oldAddr = "88bb3838aa0a140acb73eeb3d4b25a8d3afd58d4"
-		case PremainnetAddressBookBin, PretestnetAddressBookBin:
+		case PremainnetAddressBookBin, PreKairosAddressBookBin:
 			oldAddr = "fe1ffd5293fc94857a33dcd284fe82bc106be4c7"
 		}
 

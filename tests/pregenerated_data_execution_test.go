@@ -41,13 +41,13 @@ func BenchmarkDataExecution_Aspen(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Testnet generates the data with Testnet network's database configurations.
-func BenchmarkDataExecution_Testnet(b *testing.B) {
+// BenchmarkDataExecution_Kairos generates the data with Kairos network's database configurations.
+func BenchmarkDataExecution_Kairos(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Testnet"
-	tc.originalDataDir = testnet500_orig
+	tc.testName = "BenchmarkDataExecution_Kairos"
+	tc.originalDataDir = kairos500_orig
 
-	tc.dbc, tc.levelDBOption = genTestnetOptions()
+	tc.dbc, tc.levelDBOption = genKairosOptions()
 
 	dataExecutionTest(b, tc)
 }
@@ -76,14 +76,14 @@ func BenchmarkDataExecution_CandidateBadgerDB(b *testing.B) {
 	dataExecutionTest(b, tc)
 }
 
-// BenchmarkDataExecution_Testnet_ControlGroup generates the data with Testnet network's database configurations.
+// BenchmarkDataExecution_Kairos_ControlGroup generates the data with Kairos network's database configurations.
 // To work as a control group, it only generates 10,000 accounts.
-func BenchmarkDataExecution_Testnet_ControlGroup(b *testing.B) {
+func BenchmarkDataExecution_Kairos_ControlGroup(b *testing.B) {
 	tc := getExecutionTestDefaultTC()
-	tc.testName = "BenchmarkDataExecution_Testnet_ControlGroup"
-	tc.originalDataDir = testnet1_orig
+	tc.testName = "BenchmarkDataExecution_Kairos_ControlGroup"
+	tc.originalDataDir = kairos1_orig
 
-	tc.dbc, tc.levelDBOption = genTestnetOptions()
+	tc.dbc, tc.levelDBOption = genKairosOptions()
 
 	// ControlGroup specific setting
 	tc.numReceiversPerRun = 10000

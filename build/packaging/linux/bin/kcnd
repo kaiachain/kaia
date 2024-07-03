@@ -181,17 +181,17 @@ __check_option() {
     fi
 
     # Mainnet network => NETWORK_ID is null && NETWORK = "mainnet"
-    # Testnet network => NETWORK_ID is null && NETWORK = "testnet"
+    # Kairos  network => NETWORK_ID is null && NETWORK = "kairos"
     # Else => private network
     if [[ -z $NETWORK_ID ]]; then
-        if [[ $NETWORK == "testnet" || $NETWORK == "baobab" ]]; then
-            OPTIONS="$OPTIONS --testnet"
+        if [[ $NETWORK == "kairos" || $NETWORK == "baobab" ]]; then
+            OPTIONS="$OPTIONS --kairos"
         elif [[ $NETWORK == "mainnet" || $NETWORK == "cypress" ]]; then
             OPTIONS="$OPTIONS --mainnet"
         else
             echo
             echo "[ERROR] network id is not specified and network is not available."
-            echo "Available network: testnet, mainnet"
+            echo "Available network: kairos, mainnet"
             exit 1
         fi
     else

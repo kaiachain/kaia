@@ -136,7 +136,7 @@ var (
 	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
-		Usage:    "Network identifier (integer, 8217=Mainnet , 1000=Aspen, 1001=Testnet)",
+		Usage:    "Network identifier (integer, 8217=Mainnet , 1000=Aspen, 1001=Kairos)",
 		Value:    cn.GetDefaultConfig().NetworkId,
 		Aliases:  []string{"p2p.network-id"},
 		EnvVars:  []string{"KLAYTN_NETWORKID", "KAIA_NETWORKID"},
@@ -1223,12 +1223,12 @@ var (
 		EnvVars:  []string{"KLAYTN_CYPRESS", "KAIA_CYPRESS", "KAIA_MAINNET"}, // TODO: remove cypress
 		Category: "NETWORK",
 	}
-	// Testnet bootnodes setting
-	TestnetFlag = &cli.BoolFlag{
-		Name:     "testnet",
-		Usage:    "Pre-configured Kaia Testnet network",
-		Aliases:  []string{"p2p.baobab", "p2p.testnet", "baobab"},          // TODO: remove baobab
-		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_TESTNET"}, // TODO: remove baobab
+	// Kairos bootnodes setting
+	KairosFlag = &cli.BoolFlag{
+		Name:     "kairos",
+		Usage:    "Pre-configured Kaia Kairos test network",
+		Aliases:  []string{"p2p.baobab", "p2p.kairos", "baobab"},          // TODO: remove baobab
+		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_KAIROS"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}
 	// Bootnode's settings
@@ -1998,12 +1998,12 @@ var (
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
-// if none (or the empty string) is specified. If the node is starting a Testnet,
+// if none (or the empty string) is specified. If the node is starting a Kairos test network,
 // the a subdirectory of the specified datadir will be used.
 func MakeDataDir(ctx *cli.Context) string {
 	if path := ctx.String(DataDirFlag.Name); path != "" {
-		if ctx.Bool(TestnetFlag.Name) {
-			return filepath.Join(path, "baobab") // TODO: rename to Testnet
+		if ctx.Bool(KairosFlag.Name) {
+			return filepath.Join(path, "baobab") // TODO: rename to Kairos
 		}
 		return path
 	}

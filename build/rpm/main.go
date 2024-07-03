@@ -85,7 +85,7 @@ type RpmSpec struct {
 	MakeTarget  string
 	ProgramName string // kcn, kpn, ken, kscn, kspn, ksen, kbn
 	DaemonName  string // kcnd, kpnd, kend, kscnd, kspnd, ksend, kbnd
-	PostFix     string // testnet
+	PostFix     string // kairos
 	Description string
 }
 
@@ -124,8 +124,8 @@ func main() {
 					Usage: "generate spec for devel version",
 				},
 				&cli.BoolFlag{
-					Name:  "testnet",
-					Usage: "generate spec for testnet version",
+					Name:  "kairos",
+					Usage: "generate spec for Kairos version",
 				},
 				&cli.IntFlag{
 					Name:  "build_num",
@@ -180,10 +180,10 @@ func genspec(c *cli.Context) error {
 		}
 		rpmSpec.BuildNumber = buildNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-devel"
-	} else if c.Bool("testnet") {
+	} else if c.Bool("kairos") {
 		rpmSpec.BuildNumber = params.ReleaseNum
-		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-testnet"
-		rpmSpec.PostFix = "_testnet"
+		rpmSpec.Name = BINARY_TYPE[binaryType].daemon + "-kairos"
+		rpmSpec.PostFix = "_kairos"
 	} else {
 		rpmSpec.BuildNumber = params.ReleaseNum
 		rpmSpec.Name = BINARY_TYPE[binaryType].daemon
