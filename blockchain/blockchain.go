@@ -2794,6 +2794,12 @@ func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 		if err != nil {
 			return nil, err
 		}
+	case *vm.CallTracer:
+		callTrace, err := tracer.GetResult()
+		if err != nil {
+			return nil, err
+		}
+		internalTxTrace = callTrace.ToInternalTxTrace()
 	default:
 		logger.Error("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
 		return nil, ErrInvalidTracer

@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"encoding/json"
 	"errors"
 	"math/big"
 	"sync/atomic"
@@ -49,6 +48,38 @@ type CallFrame struct {
 
 func (f CallFrame) TypeString() string { // to satisfy gencodec
 	return f.Type.String()
+}
+
+func (f CallFrame) ToInternalTxTrace() *InternalTxTrace {
+	t := &InternalTxTrace{}
+
+	t.Type = f.Type.String()
+	t.From = &f.From
+	t.To = f.To
+	if f.Value != nil {
+		t.Value = "0x" + f.Value.Text(16)
+	}
+
+	t.Gas = f.Gas
+	t.GasUsed = f.GasUsed
+
+	if len(f.Input) > 0 {
+		t.Input = hexutil.Encode(f.Input)
+	}
+	if len(f.Output) > 0 {
+		t.Output = hexutil.Encode(f.Output)
+	}
+	t.Error = errors.New(f.Error)
+
+	t.Calls = make([]*InternalTxTrace, len(f.Calls))
+	for i, call := range f.Calls {
+		t.Calls[i] = call.ToInternalTxTrace()
+	}
+
+	t.RevertReason = f.RevertReason
+	t.Reverted = f.Reverted
+
+	return t
 }
 
 // FieldType overrides for callFrame that's used for JSON encoding
@@ -188,18 +219,13 @@ func (t *CallTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccL
 func (t *CallTracer) CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
 }
 
-func (t *CallTracer) GetResult() (json.RawMessage, error) {
+func (t *CallTracer) GetResult() (CallFrame, error) {
 	if len(t.callstack) != 1 {
-		return nil, errors.New("incorrect number of top-level calls")
-	}
-
-	result, err := json.Marshal(t.callstack[0])
-	if err != nil {
-		return nil, err
+		return CallFrame{}, errors.New("incorrect number of top-level calls")
 	}
 
 	// Return with interrupt reason if any
-	return result, t.interruptReason
+	return t.callstack[0], t.interruptReason
 }
 
 // Stop terminates execution of the tracer at the first opportune moment.
