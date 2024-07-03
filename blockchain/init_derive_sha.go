@@ -19,8 +19,8 @@
 package blockchain
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types/derivesha"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types/derivesha"
+	"github.com/kaiachain/kaia/params"
 )
 
 // InitDeriveSha makes DeriveSha() and EmptyRootHash() depend on only ChainConfig.DeriveShaImpl.

@@ -29,8 +29,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 // MakeTopics converts a filter query argument list into a filter topic set.

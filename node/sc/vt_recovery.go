@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/pkg/errors"
 )
 

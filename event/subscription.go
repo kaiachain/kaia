@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common/mclock"
+	"github.com/kaiachain/kaia/common/mclock"
 )
 
 // Subscription represents a stream of events. The carrier of the events is typically a
@@ -45,7 +45,7 @@ import (
 // cases to ensure that resources related to the subscription are released. It can be
 // called any number of times.
 //
-//go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/klaytn/klaytn/event Subscription
+//go:generate mockgen -destination=event/mocks/subscription_mock.go -package=mocks github.com/kaiachain/kaia/event Subscription
 type Subscription interface {
 	Err() <-chan error // returns the error channel
 	Unsubscribe()      // cancels sending of events, closing the error channel

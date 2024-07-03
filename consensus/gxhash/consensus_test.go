@@ -26,14 +26,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	// Enable below packages when enabling TestCalcDiffulty
-	// "os"
-	// "path/filepath"
-	// "testing"
-
-	"github.com/klaytn/klaytn/common/math"
-	// "github.com/klaytn/klaytn/blockchain/types"
-	// "github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 type diffTest struct {

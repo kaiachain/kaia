@@ -21,8 +21,8 @@ package statedb
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -37,9 +37,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/secp256k1"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/secp256k1"
 )
 
 const NodeIDBits = 512

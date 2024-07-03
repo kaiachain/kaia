@@ -8,7 +8,7 @@ package bn256
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 var half = new(big.Int).Rsh(Order, 1)

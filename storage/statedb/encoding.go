@@ -23,7 +23,7 @@
 package statedb
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 // Trie keys are dealt with in three distinct encodings:

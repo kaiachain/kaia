@@ -24,12 +24,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const (

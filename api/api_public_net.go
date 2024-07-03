@@ -25,8 +25,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/networks/p2p"
 )
 
 // PublicNetAPI offers network related RPC methods

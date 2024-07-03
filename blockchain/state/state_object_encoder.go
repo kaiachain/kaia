@@ -22,8 +22,8 @@ import (
 	"math"
 	"runtime"
 
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 var stateObjEncoderDefaultWorkers = calcNumStateObjectEncoderWorkers()

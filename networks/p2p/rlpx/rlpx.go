@@ -41,13 +41,13 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/ecies"
-	"github.com/klaytn/klaytn/crypto/secp256k1"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/ecies"
+	"github.com/kaiachain/kaia/crypto/secp256k1"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // Conn is an RLPx network connection. It wraps a low-level network connection. The

@@ -23,7 +23,7 @@
 package core
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 func (c *core) handleFinalCommitted() error {

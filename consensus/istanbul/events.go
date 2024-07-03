@@ -22,7 +22,7 @@
 
 package istanbul
 
-import "github.com/klaytn/klaytn/common"
+import "github.com/kaiachain/kaia/common"
 
 // RequestEvent is posted to propose a proposal
 type RequestEvent struct {

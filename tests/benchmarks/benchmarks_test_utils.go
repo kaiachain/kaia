@@ -23,13 +23,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 type BenchConfig struct {

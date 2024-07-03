@@ -32,13 +32,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/log"
 )
 
 // s3FileDB is an implementation of fileDB based on AWS S3.

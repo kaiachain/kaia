@@ -32,7 +32,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 // JSRE is a JS runtime environment embedding the goja interpreter.

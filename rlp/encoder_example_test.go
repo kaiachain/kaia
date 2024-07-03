@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 type MyCoolType struct {

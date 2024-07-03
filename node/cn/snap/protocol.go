@@ -25,7 +25,7 @@ package snap
 import (
 	"errors"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 // Constants to match up protocol versions and messages

@@ -25,13 +25,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 var CalcDeferredRewardTimer time.Duration
@@ -318,7 +318,7 @@ func CalcDeferredRewardSimple(header *types.Header, txs []*types.Transaction, re
 	// If not DeferredTxFee, fees are already added to the proposer during TX execution.
 	// Therefore, there are no fees to distribute here at the end of block processing.
 	// However, before Magma, there was a bug that distributed tx fee regardless
-	// of `deferredTxFee` flag. See https://github.com/klaytn/klaytn/issues/1692.
+	// of `deferredTxFee` flag. See https://github.com/kaiachain/kaia/issues/1692.
 	// To maintain backward compatibility, we only fix the buggy logic after Magma
 	// and leave the buggy logic before Magma.
 	// However, the fees must be compensated to calculate actual rewards paid.

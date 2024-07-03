@@ -23,17 +23,17 @@ import (
 	"errors"
 	"math/big"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/params"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Maintain separate minimal interfaces of blockchain.BlockChain because ContractBackend are used

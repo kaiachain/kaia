@@ -23,10 +23,10 @@
 package clique
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // API is a user facing RPC API to allow controlling the signer and voting

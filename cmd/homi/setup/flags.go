@@ -18,8 +18,8 @@
 package setup
 
 import (
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/params"
 	"github.com/urfave/cli/v2"
 )
 

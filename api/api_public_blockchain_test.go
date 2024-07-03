@@ -23,10 +23,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	mock_api "github.com/klaytn/klaytn/api/mocks"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/params"
+	mock_api "github.com/kaiachain/kaia/api/mocks"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/params"
 )
 
 func testInitForKaiaApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *PublicBlockChainAPI) {

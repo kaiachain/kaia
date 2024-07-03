@@ -27,12 +27,12 @@ import (
 	"encoding/json"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // Vote represents a single vote that an authorized signer made to modify the

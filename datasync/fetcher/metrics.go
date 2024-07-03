@@ -23,7 +23,7 @@
 package fetcher
 
 import (
-	kaiametrics "github.com/klaytn/klaytn/metrics"
+	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 

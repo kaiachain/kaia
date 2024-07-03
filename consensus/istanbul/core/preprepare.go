@@ -25,9 +25,9 @@ package core
 import (
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {

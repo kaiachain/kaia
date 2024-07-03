@@ -24,9 +24,9 @@ import (
 	"runtime/pprof"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
 const txPoolSize = 32768

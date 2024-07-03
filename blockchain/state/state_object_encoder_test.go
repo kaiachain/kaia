@@ -21,7 +21,7 @@ package state
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types/account"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/stretchr/testify/assert"
 )
 

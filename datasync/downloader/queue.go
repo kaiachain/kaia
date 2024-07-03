@@ -30,13 +30,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/prque"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	kaiametrics "github.com/klaytn/klaytn/metrics"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	kaiametrics "github.com/kaiachain/kaia/metrics"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
 	"github.com/rcrowley/go-metrics"
 )
 

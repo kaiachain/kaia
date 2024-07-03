@@ -28,10 +28,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/log"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulValidator)

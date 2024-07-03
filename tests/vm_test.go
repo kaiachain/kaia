@@ -25,7 +25,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/kaiachain/kaia/blockchain/vm"
 )
 
 func TestVM(t *testing.T) {

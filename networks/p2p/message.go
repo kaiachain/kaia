@@ -30,9 +30,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // Msg defines the structure of a p2p message.

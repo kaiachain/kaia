@@ -19,8 +19,8 @@
 package work
 
 import (
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 )
 
 type FakeWorker struct{}

@@ -8,12 +8,12 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup

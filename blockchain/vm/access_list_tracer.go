@@ -23,8 +23,8 @@ package vm
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
 // accessList is an accumulator for the set of accounts and storage slots an EVM

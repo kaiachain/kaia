@@ -36,11 +36,11 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/simulations/adapters"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/simulations/adapters"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // DefaultClient is the default simulation API client which expects the API

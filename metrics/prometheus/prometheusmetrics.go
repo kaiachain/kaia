@@ -12,8 +12,7 @@ import (
 	"strings"
 	"time"
 
-	kaiametrics "github.com/klaytn/klaytn/metrics"
-
+	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rcrowley/go-metrics"
 )

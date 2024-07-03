@@ -39,8 +39,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 type allocItem struct{ Addr, Balance *big.Int }

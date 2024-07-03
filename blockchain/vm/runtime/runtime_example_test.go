@@ -25,8 +25,8 @@ package runtime_test
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/blockchain/vm/runtime"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/blockchain/vm/runtime"
+	"github.com/kaiachain/kaia/common"
 )
 
 func ExampleExecute() {

@@ -25,12 +25,12 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -69,7 +69,7 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 //
-//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
+//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
 type Engine interface {
 	// Author retrieves the Kaia address of the account that minted the given
 	// block.

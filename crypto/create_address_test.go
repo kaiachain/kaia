@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // BenchmarkCreateAddress measures performance of two address generation methods:

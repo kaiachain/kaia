@@ -24,11 +24,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/networks/rpc"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/pkg/errors"
 )
 
@@ -88,7 +88,7 @@ func (rb *RemoteBackend) BalanceAt(ctx context.Context, account common.Address, 
 	return (*big.Int)(&hex), nil
 }
 
-func (rb *RemoteBackend) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (rb *RemoteBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -126,7 +126,7 @@ func (rb *RemoteBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) 
 	return (*big.Int)(&hex), nil
 }
 
-func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg klaytn.CallMsg) (uint64, error) {
+func (rb *RemoteBackend) EstimateGas(ctx context.Context, msg kaia.CallMsg) (uint64, error) {
 	if !rb.checkParentPeer() {
 		return 0, NoParentPeerErr
 	}
@@ -153,7 +153,7 @@ func (rb *RemoteBackend) TransactionReceipt(ctx context.Context, txHash common.H
 	var r *types.Receipt
 	err := rb.rpcClient.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
-		return nil, klaytn.NotFound
+		return nil, kaia.NotFound
 	}
 	return r, err
 }
@@ -165,7 +165,7 @@ func (rb *RemoteBackend) TransactionReceiptRpcOutput(ctx context.Context, txHash
 
 	err = rb.rpcClient.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
-		return nil, klaytn.NotFound
+		return nil, kaia.NotFound
 	}
 	return
 }
@@ -175,7 +175,7 @@ func (rb *RemoteBackend) ChainID(ctx context.Context) (*big.Int, error) {
 	return big.NewInt(int64(rb.subBridge.config.ParentChainID)), nil
 }
 
-func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuery) (result []types.Log, err error) {
+func (rb *RemoteBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) (result []types.Log, err error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -183,7 +183,7 @@ func (rb *RemoteBackend) FilterLogs(ctx context.Context, query klaytn.FilterQuer
 	return
 }
 
-func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query klaytn.FilterQuery, ch chan<- types.Log) (klaytn.Subscription, error) {
+func (rb *RemoteBackend) SubscribeFilterLogs(ctx context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
 	if !rb.checkParentPeer() {
 		return nil, NoParentPeerErr
 	}
@@ -200,7 +200,7 @@ func (rb *RemoteBackend) CurrentBlockNumber(ctx context.Context) (uint64, error)
 	return uint64(result), err
 }
 
-func toFilterArg(q klaytn.FilterQuery) interface{} {
+func toFilterArg(q kaia.FilterQuery) interface{} {
 	arg := map[string]interface{}{
 		"fromBlock": toBlockNumArg(q.FromBlock),
 		"toBlock":   toBlockNumArg(q.ToBlock),
@@ -220,7 +220,7 @@ func toBlockNumArg(number *big.Int) string {
 	return hexutil.EncodeBig(number)
 }
 
-func toCallArg(msg klaytn.CallMsg) interface{} {
+func toCallArg(msg kaia.CallMsg) interface{} {
 	arg := map[string]interface{}{
 		"from": msg.From,
 		"to":   msg.To,

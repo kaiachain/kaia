@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/klaytn/klaytn/storage"
+	"github.com/kaiachain/kaia/storage"
 	"github.com/stretchr/testify/assert"
 )
 

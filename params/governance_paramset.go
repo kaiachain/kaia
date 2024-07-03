@@ -23,9 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/log"
 )
 
 var (

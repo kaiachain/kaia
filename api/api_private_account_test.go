@@ -23,9 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/accounts/keystore"
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/require"
 )
 

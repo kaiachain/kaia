@@ -25,10 +25,10 @@ package vm
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 // StateDB is an EVM database for full state querying.

@@ -28,11 +28,11 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
 	"gopkg.in/olebedev/go-duktape.v3"
 )
 

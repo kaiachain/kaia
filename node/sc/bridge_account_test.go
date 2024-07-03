@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts/keystore"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 

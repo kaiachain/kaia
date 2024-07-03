@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/profile"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/profile"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -28,10 +28,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/rlpx"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/rlpx"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const (

@@ -28,11 +28,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 // stateReq represents a batch of state fetch requests grouped together into

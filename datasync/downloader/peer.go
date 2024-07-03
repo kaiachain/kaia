@@ -32,9 +32,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/log"
 )
 
 const (

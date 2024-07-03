@@ -31,11 +31,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/rlpx"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/rlpx"
 )
 
 func init() {

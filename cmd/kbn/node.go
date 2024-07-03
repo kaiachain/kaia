@@ -28,10 +28,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/grpc"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/grpc"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
 )
 
 // Node is a container on which services can be registered.

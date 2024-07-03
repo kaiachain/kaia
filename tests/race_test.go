@@ -28,13 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // TestRaceBetweenTxpoolAddAndCommitNewWork tests race conditions between `Txpool.add` and `commitNewWork`.

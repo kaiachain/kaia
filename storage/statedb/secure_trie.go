@@ -23,7 +23,7 @@
 package statedb
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 // SecureTrie wraps a trie with key hashing. In a secure trie, all

@@ -22,7 +22,7 @@
 
 package client
 
-import kaia "github.com/klaytn/klaytn"
+import kaia "github.com/kaiachain/kaia"
 
 // Verify that Client implements the Kaia interfaces.
 var (

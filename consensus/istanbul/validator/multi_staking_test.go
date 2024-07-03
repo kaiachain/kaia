@@ -39,9 +39,9 @@ package validator
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/reward"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/reward"
 	"github.com/stretchr/testify/assert"
 )
 

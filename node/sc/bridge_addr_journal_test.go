@@ -23,7 +23,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 )
 

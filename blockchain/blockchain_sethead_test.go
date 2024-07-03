@@ -21,9 +21,9 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus/gxhash"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 

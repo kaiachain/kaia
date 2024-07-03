@@ -26,8 +26,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -27,9 +27,9 @@ import (
 	"errors"
 	"math/big"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
 var (

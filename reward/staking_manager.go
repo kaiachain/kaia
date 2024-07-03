@@ -26,16 +26,16 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	contract "github.com/klaytn/klaytn/contracts/contracts/system_contracts/consensus"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/consensus"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (

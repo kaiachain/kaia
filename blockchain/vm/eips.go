@@ -20,8 +20,8 @@ import (
 	"fmt"
 
 	"github.com/holiman/uint256"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 // EnableEIP enables the given EIP on the config.

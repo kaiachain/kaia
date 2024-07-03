@@ -20,10 +20,10 @@ package extra
 import (
 	"bytes"
 
-	atypes "github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/rlp"
+	atypes "github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 func Encode(vanity string, validators []common.Address) (string, error) {

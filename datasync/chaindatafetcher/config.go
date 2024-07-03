@@ -21,8 +21,8 @@ package chaindatafetcher
 import (
 	"time"
 
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 )
 
 type ChainDataFetcherMode int

@@ -23,11 +23,11 @@
 package istanbul
 
 import (
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbul)

@@ -30,12 +30,12 @@ import (
 	"strings"
 	"sync"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
 )
 
 // SignerFn is a signer function callback when a contract requires a method to

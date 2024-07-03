@@ -30,10 +30,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
 )
 
 func init() {

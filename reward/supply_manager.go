@@ -28,13 +28,13 @@ import (
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/rebalance"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
