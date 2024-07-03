@@ -117,7 +117,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key Key, auth string) err
 				"This indicates that the keystore is corrupted. \n" +
 				"The corrupted file is stored at \n%v\n" +
 				"Please file a ticket at:\n\n" +
-				"https://github.com/klaytn/klaytn/issues" +
+				"https://github.com/kaiachain/kaia/issues" +
 				"The error was : %w"
 			return fmt.Errorf(msg, tmpName, err)
 		}

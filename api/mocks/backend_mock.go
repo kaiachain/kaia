@@ -11,7 +11,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	klaytn "github.com/kaiachain/kaia"
+	kaia "github.com/kaiachain/kaia"
 	accounts "github.com/kaiachain/kaia/accounts"
 	blockchain "github.com/kaiachain/kaia/blockchain"
 	state "github.com/kaiachain/kaia/blockchain/state"
@@ -470,10 +470,10 @@ func (mr *MockBackendMockRecorder) LowerBoundGasPrice(arg0 interface{}) *gomock.
 }
 
 // Progress mocks base method.
-func (m *MockBackend) Progress() klaytn.SyncProgress {
+func (m *MockBackend) Progress() kaia.SyncProgress {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Progress")
-	ret0, _ := ret[0].(klaytn.SyncProgress)
+	ret0, _ := ret[0].(kaia.SyncProgress)
 	return ret0
 }
 
