@@ -29,9 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/statedb"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -43,6 +40,8 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 const (

@@ -28,7 +28,6 @@ import (
 	"net"
 
 	metricutils "github.com/kaiachain/kaia/metrics/utils"
-
 	"github.com/rcrowley/go-metrics"
 )
 

@@ -27,10 +27,9 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/kaiachain/kaia/consensus"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/governance"

@@ -24,12 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/vm"
-
 	kaia "github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/contracts/contracts/libs/kip13"

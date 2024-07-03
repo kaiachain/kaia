@@ -30,11 +30,9 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/params"
-
-	"github.com/kaiachain/kaia/log"
-
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"

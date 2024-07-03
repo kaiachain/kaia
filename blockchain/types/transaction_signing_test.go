@@ -31,11 +31,10 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLondonSigningWithoutChainID(t *testing.T) {

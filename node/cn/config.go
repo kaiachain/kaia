@@ -28,8 +28,6 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/kaiachain/kaia/storage/statedb"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -40,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 var logger = log.NewModuleLogger(log.NodeCN)

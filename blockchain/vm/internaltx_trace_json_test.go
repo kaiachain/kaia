@@ -33,9 +33,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func jsonMustCompact(data []byte) []byte {

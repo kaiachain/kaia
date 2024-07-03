@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/rcrowley/go-metrics"
-
 	"github.com/steakknife/bloomfilter"
 )
 

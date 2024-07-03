@@ -29,11 +29,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 type testBlockEncodingTC struct {

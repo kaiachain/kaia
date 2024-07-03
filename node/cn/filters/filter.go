@@ -29,14 +29,13 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/kaiachain/kaia/params"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 

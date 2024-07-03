@@ -49,7 +49,6 @@ import (
 	"github.com/kaiachain/kaia/storage"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

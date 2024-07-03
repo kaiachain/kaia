@@ -37,14 +37,13 @@ import (
 	"time"
 	"unsafe"
 
+	mmap "github.com/edsrzf/mmap-go"
 	"github.com/hashicorp/golang-lru/simplelru"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/rcrowley/go-metrics"
-
-	mmap "github.com/edsrzf/mmap-go"
-	"github.com/kaiachain/kaia/common"
 )
 
 var ErrInvalidDumpMagic = errors.New("invalid dump magic")

@@ -28,7 +28,6 @@ import (
 
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
-
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/storage/database"

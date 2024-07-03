@@ -25,8 +25,6 @@ import (
 	"reflect"
 	"testing"
 
-	gotest_assert "gotest.tools/assert"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -36,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	gotest_assert "gotest.tools/assert"
 )
 
 type voteValue struct {

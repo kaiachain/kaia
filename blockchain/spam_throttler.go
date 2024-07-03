@@ -23,10 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/rcrowley/go-metrics"
 )
 
 // TODO-Kaia: move these variables into TxPool when BlockChain struct contains a TxPool interface

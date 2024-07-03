@@ -35,8 +35,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/snapshot"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -54,6 +52,7 @@ import (
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/rcrowley/go-metrics"

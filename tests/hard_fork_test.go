@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/log"
@@ -43,8 +44,6 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 )
 
 // TestHardForkBlock tests whether the change incurs a hard fork or not.

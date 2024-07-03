@@ -21,16 +21,15 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/cmd/homi/extra"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/clique"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 type Option func(*blockchain.Genesis)

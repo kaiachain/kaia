@@ -30,12 +30,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kaiachain/kaia/networks/rpc"
-
-	"github.com/kaiachain/kaia/storage/database"
-
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/nat"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 const (

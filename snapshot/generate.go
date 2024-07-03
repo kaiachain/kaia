@@ -30,9 +30,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types/account"
-
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/rlp"

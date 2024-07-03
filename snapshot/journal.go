@@ -30,12 +30,11 @@ import (
 	"io"
 	"time"
 
+	"github.com/VictoriaMetrics/fastcache"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
-
-	"github.com/VictoriaMetrics/fastcache"
 )
 
 const journalVersion uint64 = 0

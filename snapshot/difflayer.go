@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types/account"
-
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/steakknife/bloomfilter"
