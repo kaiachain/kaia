@@ -88,7 +88,7 @@ It expects the genesis file as argument.`,
 		ArgsUsage: "",
 		Flags: []cli.Flag{
 			utils.MainnetFlag,
-			utils.TestnetFlag,
+			utils.KairosFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -229,8 +229,8 @@ func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 	switch {
 	case ctx.Bool(utils.MainnetFlag.Name):
 		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.Bool(utils.TestnetFlag.Name):
-		genesis = blockchain.DefaultTestnetGenesisBlock()
+	case ctx.Bool(utils.KairosFlag.Name):
+		genesis = blockchain.DefaultKairosGenesisBlock()
 	}
 	return genesis
 }

@@ -7,7 +7,7 @@ set -e
 
 function printUsage {
     echo "Usage: $0 [-b] <target binary>"
-    echo "               -b: use testnet configuration."
+    echo "               -b: use Kairos configuration."
     echo "  <target binary>: kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     exit 1
 }
@@ -18,9 +18,9 @@ TESTNET_PREFIX=
 while getopts "b" opt; do
 	case ${opt} in
 		b)
-			echo "Using testnet configuration..."
-			TESTNET_FLAG=" --testnet"
-			TESTNET_PREFIX="-testnet"
+			echo "Using Kairos configuration..."
+			TESTNET_FLAG=" --kairos"
+			TESTNET_PREFIX="-kairos"
 			;;
 	esac
 done

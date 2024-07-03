@@ -228,7 +228,7 @@ func TestLoadYaml(t *testing.T) {
 		"authorized-nodes":                          false,
 		"rewardbase":                                false,
 		"mainnet":                                   true,
-		"testnet":                                   true,
+		"kairos":                                    true,
 		"block-generation-interval":                 true,
 		"block-generation-time-limit":               true,
 		"txresend.interval":                         true,

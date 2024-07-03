@@ -428,8 +428,8 @@ func genAspenOptions() (*database.DBConfig, *opt.Options) {
 	return aspenDBConfig, aspenLevelDBOptions
 }
 
-// genTestnetOptions returns database configurations of Testnet network.
-func genTestnetOptions() (*database.DBConfig, *opt.Options) {
+// genKairosOptions returns database configurations of Kairos network.
+func genKairosOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 
 	opts.CompactionTableSize = 4 * opt.MiB

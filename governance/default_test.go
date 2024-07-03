@@ -631,16 +631,16 @@ func TestVoteValueNilInterface(t *testing.T) {
 	}
 }
 
-func TestTestnetGenesisHash(t *testing.T) {
-	testnetHash := params.TestnetGenesisHash
-	genesis := blockchain.DefaultTestnetGenesisBlock()
+func TestKairosGenesisHash(t *testing.T) {
+	kairosHash := params.KairosGenesisHash
+	genesis := blockchain.DefaultKairosGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
-	if block.Hash() != testnetHash {
-		t.Errorf("Generated hash is not equal to Testnet's hash. Want %v, Have %v", testnetHash.String(), block.Hash().String())
+	if block.Hash() != kairosHash {
+		t.Errorf("Generated hash is not equal to Kairos's hash. Want %v, Have %v", kairosHash.String(), block.Hash().String())
 	}
 }
 

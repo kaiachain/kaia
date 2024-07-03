@@ -151,7 +151,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if config.Governance.GovernanceMode == "single" {
 		config.Governance.GoverningNode = nodeAddrs[0]
 	}
-	genesis := blockchain.DefaultTestnetGenesisBlock()
+	genesis := blockchain.DefaultKairosGenesisBlock()
 	genesis.Config = config
 	genesis.ExtraData = makeGenesisExtra(nodeAddrs)
 	genesis.Timestamp = uint64(time.Now().Unix())

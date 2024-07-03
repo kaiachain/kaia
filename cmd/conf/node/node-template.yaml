@@ -29,7 +29,7 @@ txresend:
 
 p2p:
   mainnet: false
-  testnet: false
+  kairos: false
   network-id: 8217
   bootnodes: ""
   rw-timer-wait-time: 15s

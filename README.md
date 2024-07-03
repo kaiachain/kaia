@@ -38,7 +38,7 @@ for the details of CC bootstrapping process.
 
 ## Running an Endpoint Node
 
-Endpoint Node (EN) is an entry point from the outside of the network in order to interact with the Kaia network. Currently, two official networks are available: Testnet and Mainnet (legacy names: Baobab and Cypress). Please visit the official
+Endpoint Node (EN) is an entry point from the outside of the network in order to interact with the Kaia network. Currently, two official networks are available: Kairos and Mainnet (legacy names: Baobab and Cypress). Please visit the official
 [EN Operation Guide](https://docs.kaia.io/docs/nodes/endpoint-node/).
 
 ## Running a Service Chain Node

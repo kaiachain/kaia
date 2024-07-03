@@ -21,7 +21,7 @@ Package params contains configuration parameters for Kaia.
 
 Each file contains following parameters.
 
-  - bootnodes.go			: Provides boot nodes information for Mainnet and Testnet
+  - bootnodes.go			: Provides boot nodes information for Mainnet and Kairos
   - computation_cost_params.go	: Defines computation costs for each opcode
   - config.go			: Defines various structs for different settings of a network. Also provides getters for those settings
   - denomination.go		: Defines units of KAIA

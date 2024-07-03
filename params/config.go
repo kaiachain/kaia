@@ -34,7 +34,7 @@ import (
 // Genesis hashes to enforce below configs on.
 var (
 	MainnetGenesisHash      = common.HexToHash("0xc72e5293c3c3ba38ed8ae910f780e4caaa9fb95e79784f7ab74c3c262ea7137e") // mainnet genesis hash to enforce below configs on
-	TestnetGenesisHash      = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // testnet genesis hash to enforce below configs on
+	KairosGenesisHash       = common.HexToHash("0xe33ff05ceec2581ca9496f38a2bf9baad5d4eed629e896ccb33d1dc991bc4b4a") // Kairos genesis hash to enforce below configs on
 	AuthorAddressForTesting = common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949")
 	mintingAmount, _        = new(big.Int).SetString("9600000000000000000", 10)
 	logger                  = log.NewModuleLogger(log.Governance)
@@ -85,9 +85,9 @@ var (
 		UnitPrice: 25000000000,
 	}
 
-	// TestnetChainConfig contains the chain parameters to run a node on the Testnet.
-	TestnetChainConfig = &ChainConfig{
-		ChainID:                  big.NewInt(int64(TestnetNetworkId)),
+	// KairosChainConfig contains the chain parameters to run a node on the Kairos.
+	KairosChainConfig = &ChainConfig{
+		ChainID:                  big.NewInt(int64(KairosNetworkId)),
 		IstanbulCompatibleBlock:  big.NewInt(75373312),
 		LondonCompatibleBlock:    big.NewInt(80295291),
 		EthTxTypeCompatibleBlock: big.NewInt(86513895),

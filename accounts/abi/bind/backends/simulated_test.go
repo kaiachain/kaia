@@ -812,7 +812,7 @@ func TestSimulatedBackend_SuggestGasPrice(t *testing.T) {
 		alloc = blockchain.GenesisAlloc{
 			testAddr: {Balance: big.NewInt(10000000000)},
 		}
-		config = params.TestnetChainConfig.Copy()
+		config = params.KairosChainConfig.Copy()
 	)
 	config.IstanbulCompatibleBlock = common.Big0
 	config.LondonCompatibleBlock = common.Big0

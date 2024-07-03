@@ -171,7 +171,7 @@ type Config struct {
 	// Service Chain
 	NoAccountCreation bool
 
-	// use separate network different from Testnet or Mainnet
+	// use separate network different from Kairos or Mainnet
 	IsPrivate bool
 
 	// Restart
