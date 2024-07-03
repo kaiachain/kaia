@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -373,7 +373,7 @@ type ContextUpgradeableInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -658,7 +658,7 @@ type ERC1967UpgradeUpgradeableAdminChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -790,7 +790,7 @@ type ERC1967UpgradeUpgradeableBeaconUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -931,7 +931,7 @@ type ERC1967UpgradeUpgradeableInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1062,7 +1062,7 @@ type ERC1967UpgradeUpgradeableUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2682,7 +2682,7 @@ type IERC1967UpgradeableAdminChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2814,7 +2814,7 @@ type IERC1967UpgradeableBeaconUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2955,7 +2955,7 @@ type IERC1967UpgradeableUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3454,7 +3454,7 @@ type InitializableInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3819,7 +3819,7 @@ type OwnableUpgradeableInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3950,7 +3950,7 @@ type OwnableUpgradeableOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4704,7 +4704,7 @@ type SimpleBlsRegistryAdminChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4836,7 +4836,7 @@ type SimpleBlsRegistryBeaconUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4977,7 +4977,7 @@ type SimpleBlsRegistryInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -5108,7 +5108,7 @@ type SimpleBlsRegistryOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -5258,7 +5258,7 @@ type SimpleBlsRegistryRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -5391,7 +5391,7 @@ type SimpleBlsRegistryUnregisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -5524,7 +5524,7 @@ type SimpleBlsRegistryUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6075,7 +6075,7 @@ type UUPSUpgradeableAdminChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6207,7 +6207,7 @@ type UUPSUpgradeableBeaconUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6348,7 +6348,7 @@ type UUPSUpgradeableInitializedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6479,7 +6479,7 @@ type UUPSUpgradeableUpgradedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }

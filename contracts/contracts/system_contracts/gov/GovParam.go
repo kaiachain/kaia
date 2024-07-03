@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -743,7 +743,7 @@ type GovParamOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -893,7 +893,7 @@ type GovParamSetParamIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1476,7 +1476,7 @@ type IGovParamSetParamIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1844,7 +1844,7 @@ type OwnableOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }

@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -899,7 +899,7 @@ type ITreasuryRebalanceApprovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1032,7 +1032,7 @@ type ITreasuryRebalanceContractDeployedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1165,7 +1165,7 @@ type ITreasuryRebalanceFinalizedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1297,7 +1297,7 @@ type ITreasuryRebalanceNewbieRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1429,7 +1429,7 @@ type ITreasuryRebalanceNewbieRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1560,7 +1560,7 @@ type ITreasuryRebalanceRetiredRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1691,7 +1691,7 @@ type ITreasuryRebalanceRetiredRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1822,7 +1822,7 @@ type ITreasuryRebalanceStatusChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2443,7 +2443,7 @@ type OwnableOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3622,7 +3622,7 @@ type TreasuryRebalanceApprovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3755,7 +3755,7 @@ type TreasuryRebalanceContractDeployedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3888,7 +3888,7 @@ type TreasuryRebalanceFinalizedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4020,7 +4020,7 @@ type TreasuryRebalanceNewbieRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4152,7 +4152,7 @@ type TreasuryRebalanceNewbieRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4283,7 +4283,7 @@ type TreasuryRebalanceOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4433,7 +4433,7 @@ type TreasuryRebalanceRetiredRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4564,7 +4564,7 @@ type TreasuryRebalanceRetiredRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4695,7 +4695,7 @@ type TreasuryRebalanceStatusChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -5910,7 +5910,7 @@ type TreasuryRebalanceV2AllocatedRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6042,7 +6042,7 @@ type TreasuryRebalanceV2AllocatedRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6173,7 +6173,7 @@ type TreasuryRebalanceV2ApprovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6306,7 +6306,7 @@ type TreasuryRebalanceV2ContractDeployedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6439,7 +6439,7 @@ type TreasuryRebalanceV2FinalizedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6571,7 +6571,7 @@ type TreasuryRebalanceV2OwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6721,7 +6721,7 @@ type TreasuryRebalanceV2StatusChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6852,7 +6852,7 @@ type TreasuryRebalanceV2ZeroedRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6983,7 +6983,7 @@ type TreasuryRebalanceV2ZeroedRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }

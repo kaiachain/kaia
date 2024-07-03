@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/accounts/abi"
 	"github.com/klaytn/klaytn/accounts/abi/bind"
 	"github.com/klaytn/klaytn/blockchain/types"
@@ -21,7 +21,7 @@ var (
 	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
-	_ = klaytn.NotFound
+	_ = kaia.NotFound
 	_ = bind.Bind
 	_ = common.Big1
 	_ = types.BloomLookup
@@ -463,7 +463,7 @@ type BridgeFeeERC20FeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -613,7 +613,7 @@ type BridgeFeeFeeReceiverChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -754,7 +754,7 @@ type BridgeFeeKLAYFeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -1647,7 +1647,7 @@ type BridgeOperatorOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2321,7 +2321,7 @@ type BridgeTokensOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2471,7 +2471,7 @@ type BridgeTokensTokenDeregisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2612,7 +2612,7 @@ type BridgeTokensTokenLockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2753,7 +2753,7 @@ type BridgeTokensTokenRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -2894,7 +2894,7 @@ type BridgeTokensTokenUnlockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -3949,7 +3949,7 @@ type BridgeTransferERC20FeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4099,7 +4099,7 @@ type BridgeTransferFeeReceiverChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4240,7 +4240,7 @@ type BridgeTransferHandleValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4405,7 +4405,7 @@ type BridgeTransferKLAYFeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4546,7 +4546,7 @@ type BridgeTransferOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4696,7 +4696,7 @@ type BridgeTransferRequestValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -4860,7 +4860,7 @@ type BridgeTransferRequestValueTransferEncodedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6266,7 +6266,7 @@ type BridgeTransferERC20ERC20FeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6416,7 +6416,7 @@ type BridgeTransferERC20FeeReceiverChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6557,7 +6557,7 @@ type BridgeTransferERC20HandleValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6722,7 +6722,7 @@ type BridgeTransferERC20KLAYFeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -6863,7 +6863,7 @@ type BridgeTransferERC20OwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7013,7 +7013,7 @@ type BridgeTransferERC20RequestValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7177,7 +7177,7 @@ type BridgeTransferERC20RequestValueTransferEncodedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7343,7 +7343,7 @@ type BridgeTransferERC20TokenDeregisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7484,7 +7484,7 @@ type BridgeTransferERC20TokenLockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7625,7 +7625,7 @@ type BridgeTransferERC20TokenRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -7766,7 +7766,7 @@ type BridgeTransferERC20TokenUnlockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9125,7 +9125,7 @@ type BridgeTransferERC721ERC20FeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9275,7 +9275,7 @@ type BridgeTransferERC721FeeReceiverChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9416,7 +9416,7 @@ type BridgeTransferERC721HandleValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9581,7 +9581,7 @@ type BridgeTransferERC721KLAYFeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9722,7 +9722,7 @@ type BridgeTransferERC721OwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -9872,7 +9872,7 @@ type BridgeTransferERC721RequestValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10036,7 +10036,7 @@ type BridgeTransferERC721RequestValueTransferEncodedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10202,7 +10202,7 @@ type BridgeTransferERC721TokenDeregisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10343,7 +10343,7 @@ type BridgeTransferERC721TokenLockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10484,7 +10484,7 @@ type BridgeTransferERC721TokenRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10625,7 +10625,7 @@ type BridgeTransferERC721TokenUnlockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -10970,7 +10970,7 @@ type CallbackRegisteredOfferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -11852,7 +11852,7 @@ type ERC20ApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -12003,7 +12003,7 @@ type ERC20TransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -12580,7 +12580,7 @@ type ERC20BurnableApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -12731,7 +12731,7 @@ type ERC20BurnableTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -13360,7 +13360,7 @@ type ERC20MintableApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -13511,7 +13511,7 @@ type ERC20MintableMinterAddedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -13652,7 +13652,7 @@ type ERC20MintableMinterRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -13793,7 +13793,7 @@ type ERC20MintableTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -14386,7 +14386,7 @@ type ERC721ApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -14545,7 +14545,7 @@ type ERC721ApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -14696,7 +14696,7 @@ type ERC721TransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -15319,7 +15319,7 @@ type ERC721BurnableApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -15478,7 +15478,7 @@ type ERC721BurnableApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -15629,7 +15629,7 @@ type ERC721BurnableTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -16320,7 +16320,7 @@ type ERC721MetadataApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -16479,7 +16479,7 @@ type ERC721MetadataApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -16630,7 +16630,7 @@ type ERC721MetadataTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -17395,7 +17395,7 @@ type ERC721MetadataMintableApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -17554,7 +17554,7 @@ type ERC721MetadataMintableApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -17705,7 +17705,7 @@ type ERC721MetadataMintableMinterAddedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -17846,7 +17846,7 @@ type ERC721MetadataMintableMinterRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -17987,7 +17987,7 @@ type ERC721MetadataMintableTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -19570,7 +19570,7 @@ type ExtBridgeERC20FeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -19720,7 +19720,7 @@ type ExtBridgeFeeReceiverChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -19861,7 +19861,7 @@ type ExtBridgeHandleValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20026,7 +20026,7 @@ type ExtBridgeKLAYFeeChangedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20167,7 +20167,7 @@ type ExtBridgeOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20317,7 +20317,7 @@ type ExtBridgeRequestValueTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20481,7 +20481,7 @@ type ExtBridgeRequestValueTransferEncodedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20647,7 +20647,7 @@ type ExtBridgeTokenDeregisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20788,7 +20788,7 @@ type ExtBridgeTokenLockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -20929,7 +20929,7 @@ type ExtBridgeTokenRegisteredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -21070,7 +21070,7 @@ type ExtBridgeTokenUnlockedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -21717,7 +21717,7 @@ type IERC20ApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -21868,7 +21868,7 @@ type IERC20TransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -22621,7 +22621,7 @@ type IERC721ApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -22780,7 +22780,7 @@ type IERC721ApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -22931,7 +22931,7 @@ type IERC721TransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -23782,7 +23782,7 @@ type IERC721MetadataApprovalIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -23941,7 +23941,7 @@ type IERC721MetadataApprovalForAllIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -24092,7 +24092,7 @@ type IERC721MetadataTransferIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -24667,7 +24667,7 @@ type MinterRoleMinterAddedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -24808,7 +24808,7 @@ type MinterRoleMinterRemovedIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }
@@ -25213,7 +25213,7 @@ type OwnableOwnershipTransferredIterator struct {
 	event    string              // Event name to use for unpacking event data
 
 	logs chan types.Log      // Log channel receiving the found contract events
-	sub  klaytn.Subscription // Subscription for errors, completion and termination
+	sub  kaia.Subscription // Subscription for errors, completion and termination
 	done bool                // Whether the subscription completed delivering logs
 	fail error               // Occurred error to stop iteration
 }

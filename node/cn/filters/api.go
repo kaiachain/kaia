@@ -33,7 +33,7 @@ import (
 
 	"github.com/klaytn/klaytn/params"
 
-	"github.com/klaytn/klaytn"
+	kaia "github.com/klaytn/klaytn"
 	"github.com/klaytn/klaytn/blockchain/types"
 	"github.com/klaytn/klaytn/common"
 	"github.com/klaytn/klaytn/common/hexutil"
@@ -304,7 +304,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 		matchedLogs = make(chan []*types.Log)
 	)
 
-	logsSub, err := api.events.SubscribeLogs(klaytn.FilterQuery(crit), matchedLogs)
+	logsSub, err := api.events.SubscribeLogs(kaia.FilterQuery(crit), matchedLogs)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,7 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc
 
 // FilterCriteria represents a request to create a new filter.
 // Same as Kaia.FilterQuery but with UnmarshalJSON() method.
-type FilterCriteria klaytn.FilterQuery
+type FilterCriteria kaia.FilterQuery
 
 // NewFilter creates a new filter and returns the filter id. It can be
 // used to retrieve logs when the state changes. This method cannot be
@@ -346,7 +346,7 @@ type FilterCriteria klaytn.FilterQuery
 // In case "fromBlock" > "toBlock" an error is returned.
 func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 	logs := make(chan []*types.Log)
-	logsSub, err := api.events.SubscribeLogs(klaytn.FilterQuery(crit), logs)
+	logsSub, err := api.events.SubscribeLogs(kaia.FilterQuery(crit), logs)
 	if err != nil {
 		return rpc.ID(""), err
 	}
