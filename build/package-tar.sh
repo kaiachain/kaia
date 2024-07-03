@@ -113,7 +113,7 @@ if [ ! -z "$DAEMON" ]; then
     mkdir -p ${PACK_NAME}/conf
     CONF_FILE=build/packaging/linux/conf/${TARGET}d.conf
     if [ ! -z "$TESTNET" ]; then
-        TESTNET_CONF_FILE=build/packaging/linux/conf/${TARGET}d_baobab.conf # TODO: rename to _kairos
+        TESTNET_CONF_FILE=build/packaging/linux/conf/${TARGET}d_kairos.conf
         if [ -e "$TESTNET_CONF_FILE" ]; then
             CONF_FILE=$TESTNET_CONF_FILE
         else
