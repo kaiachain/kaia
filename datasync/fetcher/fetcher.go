@@ -27,11 +27,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/prque"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/log"
 )
 
 const (

@@ -31,7 +31,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common/math"
 	"github.com/stretchr/testify/assert"
 )
 

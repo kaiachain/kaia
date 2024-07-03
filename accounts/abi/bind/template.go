@@ -22,7 +22,7 @@
 
 package bind
 
-import "github.com/klaytn/klaytn/accounts/abi"
+import "github.com/kaiachain/kaia/accounts/abi"
 
 // tmplData is the data structure required to fill the binding template.
 type tmplData struct {
@@ -99,12 +99,12 @@ import (
 	"strings"
 	"errors"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/event"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

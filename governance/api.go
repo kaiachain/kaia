@@ -27,10 +27,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
 )
 
 type GovernanceAPI struct {

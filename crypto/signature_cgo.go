@@ -29,8 +29,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/crypto/secp256k1"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/crypto/secp256k1"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.

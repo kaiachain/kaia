@@ -33,9 +33,9 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 )
 
 var (

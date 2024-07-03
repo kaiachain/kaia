@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // AccountSerializer serializes an Account object using RLP/JSON.

@@ -27,8 +27,8 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/rcrowley/go-metrics"
 )
 

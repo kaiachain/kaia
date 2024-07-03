@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 )
 

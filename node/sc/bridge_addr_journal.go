@@ -29,9 +29,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node/sc/bridgepool"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/node/sc/bridgepool"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 var (

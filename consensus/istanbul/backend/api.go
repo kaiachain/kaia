@@ -29,16 +29,16 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	kaiaApi "github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	kaiaApi "github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // API is a user facing RPC API to dump Istanbul state

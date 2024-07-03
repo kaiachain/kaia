@@ -27,8 +27,8 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 type JSONLogger struct {

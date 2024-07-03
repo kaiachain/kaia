@@ -25,7 +25,7 @@ package api
 import (
 	"sync"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 type AddrLocker struct {

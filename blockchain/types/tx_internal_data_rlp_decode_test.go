@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

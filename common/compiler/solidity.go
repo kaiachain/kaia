@@ -33,7 +33,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/log"
 )
 
 var logger = log.NewModuleLogger(log.Common)

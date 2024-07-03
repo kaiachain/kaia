@@ -28,7 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/klaytn/klaytn/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
 )
 
 // typeinfo is an entry in the type cache.

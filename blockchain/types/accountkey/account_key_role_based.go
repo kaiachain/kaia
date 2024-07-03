@@ -24,9 +24,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 type RoleType int

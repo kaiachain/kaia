@@ -9,14 +9,14 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	blockchain "github.com/klaytn/klaytn/blockchain"
-	bloombits "github.com/klaytn/klaytn/blockchain/bloombits"
-	types "github.com/klaytn/klaytn/blockchain/types"
-	common "github.com/klaytn/klaytn/common"
-	event "github.com/klaytn/klaytn/event"
-	rpc "github.com/klaytn/klaytn/networks/rpc"
-	params "github.com/klaytn/klaytn/params"
-	database "github.com/klaytn/klaytn/storage/database"
+	blockchain "github.com/kaiachain/kaia/blockchain"
+	bloombits "github.com/kaiachain/kaia/blockchain/bloombits"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
+	event "github.com/kaiachain/kaia/event"
+	rpc "github.com/kaiachain/kaia/networks/rpc"
+	params "github.com/kaiachain/kaia/params"
+	database "github.com/kaiachain/kaia/storage/database"
 )
 
 // MockBackend is a mock of Backend interface.

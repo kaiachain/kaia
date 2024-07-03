@@ -25,7 +25,7 @@ package event_test
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/event"
+	"github.com/kaiachain/kaia/event"
 )
 
 func ExampleNewSubscription() {

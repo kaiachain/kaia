@@ -25,12 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/profile"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
 )

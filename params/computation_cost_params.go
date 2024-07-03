@@ -22,7 +22,7 @@
 
 package params
 
-import "github.com/klaytn/klaytn/common/math"
+import "github.com/kaiachain/kaia/common/math"
 
 const (
 	// Computation cost for opcodes

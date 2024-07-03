@@ -35,10 +35,10 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/ecies"
-	"github.com/klaytn/klaytn/networks/p2p/simulations/pipes"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/ecies"
+	"github.com/kaiachain/kaia/networks/p2p/simulations/pipes"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

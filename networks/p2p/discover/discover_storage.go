@@ -19,7 +19,7 @@
 package discover
 
 import (
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 type discoverStorage interface {

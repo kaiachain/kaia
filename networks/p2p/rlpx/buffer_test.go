@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/stretchr/testify/assert"
 )
 

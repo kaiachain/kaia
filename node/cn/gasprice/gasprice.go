@@ -28,11 +28,11 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/misc"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"golang.org/x/exp/slices"
 )
 
@@ -137,10 +137,10 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 // | After EthTxType   | must be fixed UnitPrice (1)  | must be fixed UnitPrice (3)  | must be fixed UnitPrice (3)  |
 // | After Magma       | BaseFee or higher (4)        | BaseFee or higher (4)        | Ignored (4)                  |
 //
-// (1) If tx.type != 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L729
-// (2) If tx.type == 2 && !rules.IsEthTxType: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L670
-// (3) If tx.type == 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L710
-// (4) If tx.type == 2 && rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L703
+// (1) If tx.type != 2 && !rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L729
+// (2) If tx.type == 2 && !rules.IsEthTxType: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L670
+// (3) If tx.type == 2 && !rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L710
+// (4) If tx.type == 2 && rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L703
 //
 // The suggested prices needs to match the requirements.
 //

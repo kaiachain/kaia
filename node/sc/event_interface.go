@@ -18,9 +18,9 @@ package sc
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	bridgecontract "github.com/klaytn/klaytn/contracts/contracts/service_chain/bridge"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	bridgecontract "github.com/kaiachain/kaia/contracts/contracts/service_chain/bridge"
 )
 
 type IRequestValueTransferEvent interface {

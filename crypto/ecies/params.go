@@ -46,7 +46,7 @@ import (
 	"fmt"
 	"hash"
 
-	ethcrypto "github.com/klaytn/klaytn/crypto"
+	ethcrypto "github.com/kaiachain/kaia/crypto"
 )
 
 var (

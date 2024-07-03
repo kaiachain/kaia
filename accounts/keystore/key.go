@@ -35,9 +35,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 // Key represents a keystore storing private keys of an account.

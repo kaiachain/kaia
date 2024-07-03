@@ -29,9 +29,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // Tests that databases are correctly created persistent or ephemeral based on

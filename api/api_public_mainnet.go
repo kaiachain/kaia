@@ -23,10 +23,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/misc"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // MainnetCredit contract is stored in the address zero.

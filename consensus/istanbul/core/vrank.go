@@ -26,8 +26,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/rcrowley/go-metrics"
 )
 

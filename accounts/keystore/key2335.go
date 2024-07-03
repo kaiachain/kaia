@@ -26,7 +26,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/klaytn/klaytn/crypto/bls"
+	"github.com/kaiachain/kaia/crypto/bls"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 

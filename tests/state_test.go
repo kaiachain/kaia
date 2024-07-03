@@ -28,8 +28,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/params"
 )
 
 func TestState(t *testing.T) {

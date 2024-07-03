@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/datasync/downloader"
-	"github.com/klaytn/klaytn/node/cn/mocks"
-	"github.com/klaytn/klaytn/params"
-	mocks2 "github.com/klaytn/klaytn/work/mocks"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/node/cn/mocks"
+	"github.com/kaiachain/kaia/params"
+	mocks2 "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

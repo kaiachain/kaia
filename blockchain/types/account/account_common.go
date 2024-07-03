@@ -24,9 +24,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // AccountCommon represents the common data structure of a Kaia account.

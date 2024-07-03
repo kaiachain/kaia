@@ -24,8 +24,8 @@ import (
 	"math/big"
 
 	"github.com/go-stack/stack"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/common"
 )
 
 // LegacyAccount is the Kaia consensus representation of legacy accounts.

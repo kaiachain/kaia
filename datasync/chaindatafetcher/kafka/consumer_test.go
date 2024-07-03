@@ -28,10 +28,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka/mocks"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka/mocks"
 
 	"github.com/Shopify/sarama"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 )
 

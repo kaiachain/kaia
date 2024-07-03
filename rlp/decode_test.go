@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 func TestStreamKind(t *testing.T) {

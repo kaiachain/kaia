@@ -36,9 +36,9 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/crypto"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
@@ -117,7 +117,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key Key, auth string) err
 				"This indicates that the keystore is corrupted. \n" +
 				"The corrupted file is stored at \n%v\n" +
 				"Please file a ticket at:\n\n" +
-				"https://github.com/klaytn/klaytn/issues" +
+				"https://github.com/kaiachain/kaia/issues" +
 				"The error was : %w"
 			return fmt.Errorf(msg, tmpName, err)
 		}

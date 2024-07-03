@@ -21,11 +21,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/params"
 )
 
 type overflowCheckFunc func(t *testing.T)

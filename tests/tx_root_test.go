@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/derivesha"
-	"github.com/klaytn/klaytn/common/profile"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/derivesha"
+	"github.com/kaiachain/kaia/common/profile"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 func BenchmarkDeriveSha(b *testing.B) {

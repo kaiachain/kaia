@@ -26,13 +26,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/event"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 )
 
 // Backend provides application specific functions for Istanbul core
 //
-//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/klaytn/klaytn/consensus/istanbul Backend
+//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/kaiachain/kaia/consensus/istanbul Backend
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address

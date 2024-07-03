@@ -27,25 +27,25 @@ import (
 	"math/big"
 	"time"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/storage/database"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 //
-//go:generate mockgen -destination=mocks/backend_mock.go github.com/klaytn/klaytn/api Backend
+//go:generate mockgen -destination=mocks/backend_mock.go github.com/kaiachain/kaia/api Backend
 type Backend interface {
 	// General Kaia API
 	Progress() kaia.SyncProgress

@@ -25,7 +25,7 @@ package snap
 import (
 	"time"
 
-	"github.com/klaytn/klaytn/networks/p2p/tracker"
+	"github.com/kaiachain/kaia/networks/p2p/tracker"
 )
 
 // requestTracker is a singleton tracker for request times.

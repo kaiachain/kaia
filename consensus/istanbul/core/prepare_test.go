@@ -23,12 +23,12 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	mock_istanbul "github.com/klaytn/klaytn/consensus/istanbul/mocks"
-	"github.com/klaytn/klaytn/fork"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
+	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 

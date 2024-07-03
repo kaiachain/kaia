@@ -25,10 +25,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/common"
-	contracts "github.com/klaytn/klaytn/contracts/contracts/system_contracts/kip113"
-	"github.com/klaytn/klaytn/crypto/bls"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/common"
+	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
+	"github.com/kaiachain/kaia/crypto/bls"
 )
 
 type BlsPublicKeyInfo struct {

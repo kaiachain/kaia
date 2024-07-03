@@ -23,7 +23,7 @@
 package vm
 
 import (
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/params"
 )
 
 func minSwapStack(n int) int {

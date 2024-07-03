@@ -29,7 +29,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types"
 )
 
 // Tests that gxhash works correctly in test mode.

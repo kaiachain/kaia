@@ -27,12 +27,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
+	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/cmd/utils/nodecmd"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/urfave/cli/v2"
 )
 

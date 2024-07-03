@@ -23,9 +23,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/stretchr/testify/assert"
 )
 

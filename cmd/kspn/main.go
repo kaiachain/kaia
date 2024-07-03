@@ -27,11 +27,11 @@ import (
 	"os"
 	"sort"
 
-	"github.com/klaytn/klaytn/api/debug"
-	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/cmd/utils/nodecmd"
-	"github.com/klaytn/klaytn/console"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/cmd/utils/nodecmd"
+	"github.com/kaiachain/kaia/console"
+	"github.com/kaiachain/kaia/log"
 	"github.com/urfave/cli/v2"
 )
 
