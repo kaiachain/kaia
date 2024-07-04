@@ -565,6 +565,9 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 		"from": msg.From,
 		"to":   msg.Recipient,
 	}
+	if msg.TypeInt != nil {
+		arg["typeInt"] = *msg.TypeInt
+	}
 	if *msg.GasLimit != 0 {
 		arg["gas"] = (*hexutil.Uint64)(msg.GasLimit)
 	}
