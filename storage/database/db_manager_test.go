@@ -52,6 +52,16 @@ var (
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
+
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
+
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
 	}
 )
 

@@ -79,6 +79,7 @@ type SCConfig struct {
 	SkipBcVersionCheck bool `toml:"-"`
 	DatabaseHandles    int  `toml:"-"`
 	LevelDBCacheSize   int
+	PebbleDBCacheSize  int
 	TrieCacheSize      int
 	TrieTimeout        time.Duration
 	TrieBlockInterval  uint

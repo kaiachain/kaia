@@ -45,6 +45,8 @@ var testEntries = []testEntry{
 	{"MemoryDB", &database.DBConfig{DBType: database.MemoryDB, SingleDB: false, NumStateTrieShards: 4}},
 	{"LevelDB-Single", &database.DBConfig{DBType: database.LevelDB, SingleDB: true, LevelDBCacheSize: 128, OpenFilesLimit: 32}},
 	{"LevelDB", &database.DBConfig{DBType: database.LevelDB, SingleDB: false, LevelDBCacheSize: 128, OpenFilesLimit: 32, NumStateTrieShards: 4}},
+	{"PebbleDB-Single", &database.DBConfig{DBType: database.PebbleDB, SingleDB: true, PebbleDBCacheSize: 128, OpenFilesLimit: 32}},
+	{"PebbleDB", &database.DBConfig{DBType: database.PebbleDB, SingleDB: false, PebbleDBCacheSize: 128, OpenFilesLimit: 32, NumStateTrieShards: 4}},
 }
 
 // TestDBManager_WriteAndRead_Functional checks basic functionality of database.DBManager interface
