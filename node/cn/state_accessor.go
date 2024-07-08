@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/reward"
 	statedb2 "github.com/kaiachain/kaia/storage/statedb"
 )
 
@@ -112,7 +113,14 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		start  = time.Now()
 		logged time.Time
 		parent common.Hash
+
+		preloadedStakingBlockNums = make([]uint64, 0, origin-current.NumberU64())
 	)
+	defer func() {
+		for _, num := range preloadedStakingBlockNums {
+			reward.UnloadStakingInfo(num)
+		}
+	}()
 	for current.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
 		if report && time.Since(logged) > 8*time.Second {
@@ -122,6 +130,11 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		// Quit the state regeneration if time limit exceeds
 		if cn.config.DisableUnsafeDebug && time.Since(start) > cn.config.StateRegenerationTimeLimit {
 			return nil, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
+		}
+		// Preload StakingInfo from the current block and state. Needed for next block's engine.Finalize() post-Kaia.
+		preloadedStakingBlockNums = append(preloadedStakingBlockNums, current.NumberU64())
+		if err := reward.PreloadStakingInfoWithState(current.Header(), statedb); err != nil {
+			return nil, fmt.Errorf("preloading staking info from block %d failed: %v", current.NumberU64(), err)
 		}
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1

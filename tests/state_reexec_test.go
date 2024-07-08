@@ -57,13 +57,18 @@ func TestStateReexec(t *testing.T) {
 
 	// Clear staking cache to force GetStakingInfo post-Kaia to utilize the state trie.
 	reward.PurgeStakingInfoCache()
-
 	// Delete state roots to force historical state regeneration
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
-	testStateReexec_run(t, ctx.nodes[0], 3) // pre-kaia
+	// Test state regeneration
+	testStateReexec_run(t, ctx.nodes[0], 3)
 
+	// Repeat for post-Kaia block
+	reward.PurgeStakingInfoCache()
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	testStateReexec_run(t, ctx.nodes[0], 5) // post-kaia
+
+	// Ensure preloaded staking info are released after use.
+	assert.Equal(t, 0, reward.TestGetStakingPreloadSize())
 }
 
 func testStateReexec_config(forkNum *big.Int) *params.ChainConfig {
@@ -153,11 +158,10 @@ func testStateReexec_prune(t *testing.T, node *blockchainTestNode, nums []uint64
 func testStateReexec_run(t *testing.T, node *blockchainTestNode, num uint64) {
 	block := node.cn.BlockChain().GetBlockByNumber(num)
 
+	t.Logf("Regenerating state at block %d", num)
 	state, err := node.cn.APIBackend.StateAtBlock(context.Background(), block, 10, nil, false, false)
-	require.Nil(t, err)
-	root, err := state.Commit(false)
 	require.Nil(t, err)
 
 	// Regenerated state must match the stored block's stateRoot
-	assert.Equal(t, block.Header().Root, root)
+	assert.Equal(t, block.Header().Root, state.IntermediateRoot(false))
 }
