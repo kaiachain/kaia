@@ -116,7 +116,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 	for current.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
 		if report && time.Since(logged) > 8*time.Second {
-			logger.Info("Regenerating historical state", "block", current.NumberU64()+1, "target", origin, "remaining", origin-block.NumberU64()-1, "elapsed", time.Since(start))
+			logger.Info("Regenerating historical state", "block", current.NumberU64()+1, "target", origin, "remaining", origin-current.NumberU64()-1, "elapsed", time.Since(start))
 			logged = time.Now()
 		}
 		// Quit the state regeneration if time limit exceeds
