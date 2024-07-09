@@ -259,7 +259,7 @@ func PreloadStakingInfoWithState(header *types.Header, statedb *state.StateDB) e
 	}
 
 	num := header.Number.Uint64()
-	info, err := getStakingInfoFromMultiCallAtState(num, statedb.Copy(), header)
+	info, err := getStakingInfoFromMultiCallAtState(num, statedb, header)
 	if err != nil {
 		return fmt.Errorf("staking info preload failed. root err: %v", err)
 	}
@@ -334,17 +334,17 @@ func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
 		return nil, fmt.Errorf("failed to get header by number %d", blockNum)
 	}
 
-	tempState, err := stakingManager.blockchain.StateAt(header.Root)
+	statedb, err := stakingManager.blockchain.StateAt(header.Root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get state at number %d. root err: %s", blockNum, err)
 	}
 
-	return getStakingInfoFromMultiCallAtState(blockNum, tempState, header)
+	return getStakingInfoFromMultiCallAtState(blockNum, statedb, header)
 }
 
-func getStakingInfoFromMultiCallAtState(blockNum uint64, tempState *state.StateDB, header *types.Header) (*StakingInfo, error) {
+func getStakingInfoFromMultiCallAtState(blockNum uint64, statedb *state.StateDB, header *types.Header) (*StakingInfo, error) {
 	// Get staking info from multicall contract
-	caller, err := system.NewMultiCallContractCaller(tempState, stakingManager.blockchain, header)
+	caller, err := system.NewMultiCallContractCaller(statedb, stakingManager.blockchain, header)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create multicall contract caller. root err: %s", err)
 	}
