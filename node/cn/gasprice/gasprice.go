@@ -224,7 +224,7 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 
 	oracle.fetchLock.Lock()
 	defer oracle.fetchLock.Unlock()
-	// Try checking the cache again, maybe the last fetch fetched what we need
+
 	lastHead, lastPrice := oracle.readCache()
 	if headHash == lastHead {
 		return new(big.Int).Set(lastPrice), nil
@@ -331,6 +331,9 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 	}
 }
 
+// isRelaxedNetwork returns true if the current network congestion is low to the point
+// paying any tip is unnecessary. It returns true when the head block is after Magma fork
+// and the next base fee is at the lower bound.
 func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
 	pset, err := oracle.gov.EffectiveParams(header.Number.Uint64() + 1)
 	if pset != nil && err == nil {
