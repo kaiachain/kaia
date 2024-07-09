@@ -25,11 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/rcrowley/go-metrics"
-
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
+	"github.com/kaiachain/kaia/log"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
