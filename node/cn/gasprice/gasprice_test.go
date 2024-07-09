@@ -158,7 +158,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params := Config{}
 	oracle := NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -167,7 +167,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Blocks: 2}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 2, oracle.checkBlocks)
 	assert.Equal(t, 1, oracle.maxEmpty)
 	assert.Equal(t, 10, oracle.maxBlocks)
@@ -176,7 +176,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: -1}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -185,7 +185,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: 101}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -194,7 +194,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: 101, Default: big.NewInt(123)}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Equal(t, big.NewInt(123), oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
