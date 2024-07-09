@@ -195,7 +195,7 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		header := gpo.backend.CurrentBlock().Header()
 		headHash := header.Hash()
 		// If the latest gasprice is still available, return it.
-		if lastPrice, ok := gpo.checkCache(headHash); ok {
+		if lastPrice, ok := gpo.readCacheChecked(headHash); ok {
 			return new(big.Int).Set(lastPrice), nil
 		}
 		if gpo.isRelaxedNetwork(header) {
@@ -343,7 +343,7 @@ func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
 	return false
 }
 
-func (oracle *Oracle) checkCache(headHash common.Hash) (*big.Int, bool) {
+func (oracle *Oracle) readCacheChecked(headHash common.Hash) (*big.Int, bool) {
 	lastHead, lastPrice := oracle.readCache()
 	return lastPrice, headHash == lastHead
 }
