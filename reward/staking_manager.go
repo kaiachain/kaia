@@ -432,6 +432,7 @@ func getStakingInfoFromCache(blockNum uint64) *StakingInfo {
 
 	if info, ok := stakingManager.preloadedInfo.Get(blockNum); ok {
 		info := info.(*StakingInfo)
+		logger.Debug("preloadedInfo hit.", "staking block number", blockNum, "stakingInfo", info)
 		// Fill in Gini coeff if not set. Modifies the cached object.
 		if err := fillMissingGiniCoefficient(info, blockNum); err != nil {
 			logger.Warn("Cannot fill in gini coefficient", "staking block number", blockNum, "err", err)
