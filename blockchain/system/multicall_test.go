@@ -42,12 +42,12 @@ func TestContractCallerForMultiCall(t *testing.T) {
 	header := backend.BlockChain().CurrentHeader()
 	chain := backend.BlockChain()
 
-	caller, _ := NewMultiCallContractCaller(chain, header)
+	state, _ := backend.BlockChain().StateAt(header.Root)
+	caller, _ := NewMultiCallContractCaller(state, chain, header)
 	ret, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number})
 	assert.Nil(t, err)
 
 	// Does not affect the original state
-	state, _ := backend.BlockChain().StateAt(header.Root)
 	assert.Equal(t, []byte(nil), state.GetCode(MultiCallAddr))
 
 	// Mock data
