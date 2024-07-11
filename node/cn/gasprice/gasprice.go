@@ -115,7 +115,7 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 
 	return &Oracle{
 		backend:          backend,
-		lastPrice:        config.Default,
+		lastPrice:        common.Big0,
 		maxPrice:         maxPrice,
 		checkBlocks:      blocks,
 		maxEmpty:         blocks / 2,
@@ -190,17 +190,23 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
 		// After Kaia, return using fee history.
 		// If the next baseFee is lower bound, return 0.
-		// Otherwise, by default config, this will return 60% percentile of last 20 blocks
+		// Otherwise, by default config, this will return 60% percentile of last 20 blocks.
 		// See node/cn/config.go for the default config.
-		pset, err := gpo.gov.EffectiveParams(nextNum.Uint64())
-		if pset != nil && err == nil {
-			header := gpo.backend.CurrentBlock().Header()
-			nextBaseFee := misc.NextMagmaBlockBaseFee(header, pset.ToKIP71Config())
-			if nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee()))) <= 0 {
-				return common.Big0, nil
-			}
+		header := gpo.backend.CurrentBlock().Header()
+		headHash := header.Hash()
+		// If the latest gasprice is still available, return it.
+		if lastPrice, ok := gpo.readCacheChecked(headHash); ok {
+			return new(big.Int).Set(lastPrice), nil
 		}
-		return gpo.suggestTipCapUsingFeeHistory(ctx)
+		if gpo.isRelaxedNetwork(header) {
+			gpo.writeCache(headHash, common.Big0)
+			return common.Big0, nil
+		}
+		price, err := gpo.suggestTipCapUsingFeeHistory(ctx)
+		if err == nil {
+			gpo.writeCache(headHash, price)
+		}
+		return price, err
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
 		return common.Big0, nil
@@ -216,20 +222,10 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 	head, _ := oracle.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	headHash := head.Hash()
 
-	// If the latest gasprice is still available, return it.
-	oracle.cacheLock.RLock()
-	lastHead, lastPrice := oracle.lastHead, oracle.lastPrice
-	oracle.cacheLock.RUnlock()
-	if headHash == lastHead {
-		return new(big.Int).Set(lastPrice), nil
-	}
 	oracle.fetchLock.Lock()
 	defer oracle.fetchLock.Unlock()
 
-	// Try checking the cache again, maybe the last fetch fetched what we need
-	oracle.cacheLock.RLock()
-	lastHead, lastPrice = oracle.lastHead, oracle.lastPrice
-	oracle.cacheLock.RUnlock()
+	lastHead, lastPrice := oracle.readCache()
 	if headHash == lastHead {
 		return new(big.Int).Set(lastPrice), nil
 	}
@@ -283,10 +279,6 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 	if price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
 	}
-	oracle.cacheLock.Lock()
-	oracle.lastHead = headHash
-	oracle.lastPrice = price
-	oracle.cacheLock.Unlock()
 
 	return new(big.Int).Set(price), nil
 }
@@ -337,6 +329,36 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 	case result <- results{prices, nil}:
 	case <-quit:
 	}
+}
+
+// isRelaxedNetwork returns true if the current network congestion is low to the point
+// paying any tip is unnecessary. It returns true when the head block is after Magma fork
+// and the next base fee is at the lower bound.
+func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
+	pset, err := oracle.gov.EffectiveParams(header.Number.Uint64() + 1)
+	if pset != nil && err == nil {
+		nextBaseFee := misc.NextMagmaBlockBaseFee(header, pset.ToKIP71Config())
+		return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee()))) <= 0
+	}
+	return false
+}
+
+func (oracle *Oracle) readCacheChecked(headHash common.Hash) (*big.Int, bool) {
+	lastHead, lastPrice := oracle.readCache()
+	return lastPrice, headHash == lastHead
+}
+
+func (oracle *Oracle) readCache() (common.Hash, *big.Int) {
+	oracle.cacheLock.RLock()
+	defer oracle.cacheLock.RUnlock()
+	return oracle.lastHead, oracle.lastPrice
+}
+
+func (oracle *Oracle) writeCache(head common.Hash, price *big.Int) {
+	oracle.cacheLock.Lock()
+	oracle.lastHead = head
+	oracle.lastPrice = price
+	oracle.cacheLock.Unlock()
 }
 
 func (oracle *Oracle) PurgeCache() {
