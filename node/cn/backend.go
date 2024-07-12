@@ -369,9 +369,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
 	// Particularly, the gov.changeSet is also restored here.
+	// Temporarily set chain since snapshot needs state since kaia hardfork
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
 	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
 
 	// set worker
 	if config.WorkerDisable {

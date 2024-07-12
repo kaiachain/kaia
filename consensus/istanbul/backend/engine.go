@@ -517,8 +517,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(pset) {
 		// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
-
-		lastHeader := chain.CurrentHeader()
+		lastHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
 
 		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.

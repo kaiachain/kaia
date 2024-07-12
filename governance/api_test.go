@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -323,6 +324,14 @@ func (bc *testBlockChain) StateAt(root common.Hash) (*state.StateDB, error) { re
 func (bc *testBlockChain) State() (*state.StateDB, error)                   { return nil, nil }
 func (bc *testBlockChain) Config() *params.ChainConfig {
 	return bc.config
+}
+
+func (bc *testBlockChain) Processor() blockchain.Processor {
+	return nil
+}
+
+func (bc *testBlockChain) StateCache() state.Database {
+	return nil
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
