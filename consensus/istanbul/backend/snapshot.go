@@ -406,12 +406,12 @@ func preloadStakingInfo(headers []*types.Header, engine governance.HeaderEngine)
 		database.TrieDB().ReferenceRoot(root)
 		if !common.EmptyHash(parent) {
 			database.TrieDB().Dereference(parent)
-			if current.Root() != root {
-				err = fmt.Errorf("mistmatching state root block expected %x reexecuted %x", current.Root(), root)
-				// Logging here because something went wrong when the state roots disagree even if the execution was successful.
-				logger.Error("incorrectly regenerated historical state", "block", current.NumberU64(), "err", err)
-				return nil, fmt.Errorf("incorrectly regenerated historical state for block %d: %v", current.NumberU64(), err)
-			}
+		}
+		if current.Root() != root {
+			err = fmt.Errorf("mistmatching state root block expected %x reexecuted %x", current.Root(), root)
+			// Logging here because something went wrong when the state roots disagree even if the execution was successful.
+			logger.Error("incorrectly regenerated historical state", "block", current.NumberU64(), "err", err)
+			return nil, fmt.Errorf("incorrectly regenerated historical state for block %d: %v", current.NumberU64(), err)
 		}
 		parent = root
 	}
