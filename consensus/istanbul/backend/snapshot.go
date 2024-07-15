@@ -168,21 +168,18 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 		}
 	}
 
-	if len(kaiaHeaders) > 0 {
-		sInfo := reward.GetStakingInfo(kaiaHeaders[0].Number.Uint64() + 1)
-		// The second condition is to make sure that the staking info is not already loaded
-		if len(kaiaHeaders) > 1 || (len(kaiaHeaders) == 1 && sInfo == nil) {
-			preloadNums, err := preloadStakingInfo(kaiaHeaders, gov.HeaderGov())
-			if err != nil {
-				return nil, err
-			}
-
-			defer func() {
-				for _, num := range preloadNums {
-					reward.UnloadStakingInfo(num)
-				}
-			}()
+	needPreload := len(kaiaHeaders) > 1 || (len(kaiaHeaders) == 1 && reward.GetStakingInfo(kaiaHeaders[0].Number.Uint64()+1) == nil)
+	if needPreload {
+		preloadNums, err := preloadStakingInfo(kaiaHeaders, gov.HeaderGov())
+		if err != nil {
+			return nil, err
 		}
+
+		defer func() {
+			for _, num := range preloadNums {
+				reward.UnloadStakingInfo(num)
+			}
+		}()
 	}
 
 	// Iterate through the headers and create a new snapshot
