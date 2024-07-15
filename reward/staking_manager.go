@@ -343,13 +343,24 @@ func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
 }
 
 func getStakingInfoFromMultiCallAtState(blockNum uint64, statedb *state.StateDB, header *types.Header) (*StakingInfo, error) {
+	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
+	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
+	}
+	if code == nil {
+		// This is an expected behavior when the addressBook contract is not installed.
+		logger.Info("The addressBook is not installed. Use empty stakingInfo")
+		return newEmptyStakingInfo(blockNum), nil
+	}
+
 	// Get staking info from multicall contract
-	caller, err := system.NewMultiCallContractCaller(statedb, stakingManager.blockchain, header)
+	contract, err := system.NewMultiCallContractCaller(statedb, stakingManager.blockchain, header)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create multicall contract caller. root err: %s", err)
 	}
 
-	res, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
+	res, err := contract.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
 	if err != nil {
 		return nil, fmt.Errorf("failed to call MultiCall contract. root err: %s", err)
 	}
