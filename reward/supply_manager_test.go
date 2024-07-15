@@ -792,6 +792,10 @@ func (s *supplyTestEngine) CreateSnapshot(chain consensus.ChainReader, number ui
 	return nil
 }
 
+func (s *supplyTestEngine) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	return nil, nil
+}
+
 func (s *supplyTestEngine) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	return consensus.ConsensusInfo{}, nil
 }

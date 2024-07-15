@@ -885,10 +885,7 @@ func (sb *backend) InitSnapshot() {
 	sb.blsPubkeyProvider.ResetBlsCache()
 }
 
-// snapshot retrieves the state of the authorization voting at a given point in time.
-// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
-// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
-func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
+func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, []*types.Header, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -913,13 +910,13 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		if number == 0 {
 			var err error
 			if snap, err = sb.initSnapshot(chain); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
 		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &parents); header == nil {
-			return nil, consensus.ErrUnknownAncestor
+			return nil, nil, consensus.ErrUnknownAncestor
 		} else {
 			headers = append(headers, header)
 			number, hash = number-1, header.ParentHash
@@ -929,7 +926,28 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	pset, err := sb.governance.EffectiveParams(number)
+
+	return snap, headers, nil
+}
+
+func (sb *backend) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+	return headers, nil
+}
+
+// snapshot retrieves the state of the authorization voting at a given point in time.
+// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
+// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
+func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
+	snap, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+
+	pset, err := sb.governance.EffectiveParams(snap.Number)
 	if err != nil {
 		return nil, err
 	}
