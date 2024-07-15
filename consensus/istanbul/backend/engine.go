@@ -930,12 +930,23 @@ func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint
 	return snap, headers, nil
 }
 
+// GetHeadersToApply returns the headers need to be applied to calculate snapshot for the given block number.
+// Note that it only returns headers for kaia fork enabled blocks.
 func (sb *backend) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
 	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
 	if err != nil {
 		return nil, err
 	}
-	return headers, nil
+
+	kaiaHeaders := []*types.Header{}
+	for i := 0; i < len(headers); i++ {
+		if chain.Config().IsKaiaForkEnabled(new(big.Int).Add(headers[i].Number, big.NewInt(1))) {
+			kaiaHeaders = headers[i:]
+			break
+		}
+	}
+
+	return kaiaHeaders, nil
 }
 
 // snapshot retrieves the state of the authorization voting at a given point in time.
