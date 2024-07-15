@@ -431,7 +431,18 @@ func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
 
 	statedb, err := stakingManager.blockchain.StateAt(header.Root)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get state at number %d. root err: %s", blockNum, err)
+		logger.Error("failed to get state, try to regenerate state at number %d", blockNum)
+		// Note that `PreloadStakingInfo` internally re-generates all necessary states to calculate staking info at the given header.
+		preloadNums, err := PreloadStakingInfo([]*types.Header{header})
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			for _, num := range preloadNums {
+				UnloadStakingInfo(num)
+			}
+		}()
+		return getStakingInfoFromCache(blockNum), nil
 	}
 
 	return getStakingInfoFromMultiCallAtState(blockNum, statedb, header)
