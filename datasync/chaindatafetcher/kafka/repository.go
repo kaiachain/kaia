@@ -24,6 +24,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
@@ -75,6 +76,12 @@ func (r *repository) SetComponent(component interface{}) {
 func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType types.RequestType) error {
 	switch dataType {
 	case types.RequestTypeBlockGroup:
+		if event.Block.NumberU64() > 0 {
+			err := checkStatesForSnapshot(r.blockchain, r.engine, event.Block.NumberU64()-1, event.Block.ParentHash())
+			if err != nil {
+				return err
+			}
+		}
 		cInfo, err := r.engine.GetConsensusInfo(event.Block)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve consensusinfo with the given block number: %v", event.Block.Number())
@@ -96,4 +103,18 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 	default:
 		return fmt.Errorf("not supported type. [blockNumber: %v, reqType: %v]", event.Block.NumberU64(), dataType)
 	}
+}
+
+func checkStatesForSnapshot(chain consensus.ChainReader, engine consensus.Engine, number uint64, hash common.Hash) error {
+	headers, err := engine.GetHeadersToApply(chain, number, hash, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, header := range headers {
+		if _, err := chain.StateAt(header.Root); err != nil {
+			return err
+		}
+	}
+	return nil
 }

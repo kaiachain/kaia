@@ -91,6 +91,11 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
+	// Check if the node has state to calculate the snapshot.
+	err := checkStateForStakingInfo(api.governance, blockNumber)
+	if err != nil {
+		return nil, err
+	}
 
 	header := api.chain.GetHeaderByNumber(blockNumber)
 	block := api.chain.GetBlock(header.Hash(), blockNumber)
@@ -339,7 +344,29 @@ func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInf
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
+	// Check if the node has state to calculate the snapshot.
+	err := checkStateForStakingInfo(governance, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
 	return reward.GetStakingInfo(blockNumber), nil
+}
+
+// Checks the state of block for the given block number for staking info
+func checkStateForStakingInfo(governance Engine, blockNumber uint64) error {
+	if blockNumber == 0 {
+		return nil
+	}
+
+	// The staking info at blockNumber is calculated by the state of previous block
+	blockNumber--
+	if !governance.BlockChain().Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
+		return nil
+	}
+
+	_, err := governance.BlockChain().StateAt(governance.BlockChain().GetHeaderByNumber(blockNumber).Root)
+	return err
 }
 
 func (api *GovernanceAPI) PendingChanges() map[string]interface{} {

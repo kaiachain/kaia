@@ -885,6 +885,8 @@ func (sb *backend) InitSnapshot() {
 	sb.blsPubkeyProvider.ResetBlsCache()
 }
 
+// prepareSnapshotApply is a helper function to prepare snapshot and headers for the given block number and hash.
+// It returns the snapshot, headers, and error if any.
 func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, []*types.Header, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
@@ -930,7 +932,7 @@ func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint
 	return snap, headers, nil
 }
 
-// GetHeadersToApply returns the headers need to be applied to calculate snapshot for the given block number.
+// GetHeadersToApply returns the headers need to be applied to create snapshot for the given block number.
 // Note that it only returns headers for kaia fork enabled blocks.
 func (sb *backend) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
 	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
