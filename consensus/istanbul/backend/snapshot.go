@@ -25,12 +25,9 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -170,7 +167,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 
 	needPreload := len(kaiaHeaders) > 1 || (len(kaiaHeaders) == 1 && reward.GetStakingInfo(kaiaHeaders[0].Number.Uint64()+1) == nil)
 	if needPreload {
-		preloadNums, err := preloadStakingInfo(kaiaHeaders, gov.HeaderGov())
+		preloadNums, err := reward.PreloadStakingInfo(kaiaHeaders)
 		if err != nil {
 			return nil, err
 		}
@@ -328,92 +325,6 @@ func sortValidatorArray(validators []common.Address) []common.Address {
 		}
 	}
 	return validators
-}
-
-// preloadStakingInfo preloads staking info for the given headers.
-// It first finds the first block that does not have state, and then
-// it regenerates the state from the nearest block that has state to the target block to preload staking info.
-// Note that the state is saved every 128 blocks to disk in full node.
-func preloadStakingInfo(headers []*types.Header, engine governance.HeaderEngine) ([]uint64, error) {
-	var (
-		current  *types.Block
-		database state.Database
-		target   = headers[len(headers)-1].Number.Uint64()
-		bc       = engine.BlockChain()
-	)
-
-	database = state.NewDatabaseWithExistingCache(engine.DB(), bc.StateCache().TrieDB().TrieNodeCache())
-
-	// Find the first block that does not have state
-	i := 0
-	for i < len(headers) {
-		if _, err := state.New(headers[i].Root, database, nil, nil); err != nil {
-			break
-		}
-		i++
-	}
-	// Early return if all blocks have state
-	if i == len(headers) {
-		return nil, nil
-	}
-
-	// Find the nearest block that has state
-	origin := headers[i].Number.Uint64() - headers[i].Number.Uint64()%128
-	current = bc.GetBlockByNumber(origin)
-	if current == nil {
-		return nil, fmt.Errorf("block %d not found", origin)
-	}
-	statedb, err := state.New(current.Header().Root, database, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		parent                    common.Hash
-		preloadedStakingBlockNums = make([]uint64, 0, target-current.NumberU64())
-	)
-
-	// Include target since we want staking info at `target`, not for `target`.
-	for current.NumberU64() <= target {
-		// Preload StakingInfo from the current block and state.
-		preloadedStakingBlockNums = append(preloadedStakingBlockNums, current.NumberU64())
-		if err := reward.PreloadStakingInfoWithState(current.Header(), statedb); err != nil {
-			return nil, fmt.Errorf("preloading staking info from block %d failed: %v", current.NumberU64(), err)
-		}
-		if current.NumberU64() == target {
-			break
-		}
-		// Retrieve the next block to regenerate and process it
-		next := current.NumberU64() + 1
-		if current = bc.GetBlockByNumber(next); current == nil {
-			return nil, fmt.Errorf("block #%d not found", next)
-		}
-		_, _, _, _, _, err := bc.Processor().Process(current, statedb, vm.Config{})
-		if err != nil {
-			return nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
-		}
-		// Finalize the state so any modifications are written to the trie
-		root, err := statedb.Commit(true)
-		if err != nil {
-			return nil, err
-		}
-		if err := statedb.Reset(root); err != nil {
-			return nil, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
-		}
-		database.TrieDB().ReferenceRoot(root)
-		if !common.EmptyHash(parent) {
-			database.TrieDB().Dereference(parent)
-		}
-		if current.Root() != root {
-			err = fmt.Errorf("mistmatching state root block expected %x reexecuted %x", current.Root(), root)
-			// Logging here because something went wrong when the state roots disagree even if the execution was successful.
-			logger.Error("incorrectly regenerated historical state", "block", current.NumberU64(), "err", err)
-			return nil, fmt.Errorf("incorrectly regenerated historical state for block %d: %v", current.NumberU64(), err)
-		}
-		parent = root
-	}
-
-	return preloadedStakingBlockNums, nil
 }
 
 type snapshotJSON struct {
