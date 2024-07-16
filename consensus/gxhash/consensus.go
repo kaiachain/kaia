@@ -74,8 +74,8 @@ func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64,
 	return nil
 }
 
-// GetHeadersToApply is not used for PoW engine.
-func (gxhash *Gxhash) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+// GetKaiaHeadersForSnapshotApply is not used for PoW engine.
+func (gxhash *Gxhash) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
 	return nil, nil
 }
 

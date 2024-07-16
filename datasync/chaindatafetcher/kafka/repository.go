@@ -106,7 +106,7 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 }
 
 func checkStatesForSnapshot(chain consensus.ChainReader, engine consensus.Engine, number uint64, hash common.Hash) error {
-	headers, err := engine.GetHeadersToApply(chain, number, hash, nil)
+	headers, err := engine.GetKaiaHeadersForSnapshotApply(chain, number, hash, nil)
 	if err != nil {
 		return err
 	}

@@ -366,8 +366,8 @@ func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash
 	return err
 }
 
-// GetHeadersToApply is not used for Clique engine
-func (c *Clique) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+// GetKaiaHeadersForSnapshotApply is not used for Clique engine
+func (c *Clique) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
 	return nil, nil
 }
 

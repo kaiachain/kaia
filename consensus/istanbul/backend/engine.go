@@ -932,9 +932,9 @@ func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint
 	return snap, headers, nil
 }
 
-// GetHeadersToApply returns the headers need to be applied to create snapshot for the given block number.
+// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to create snapshot for the given block number.
 // Note that it only returns headers for kaia fork enabled blocks.
-func (sb *backend) GetHeadersToApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+func (sb *backend) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
 	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
 	if err != nil {
 		return nil, err

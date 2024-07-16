@@ -594,7 +594,7 @@ func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*t
 
 // Checks the all states for snapshot creation at the given block number
 func checkStatesForSnapshot(chain consensus.ChainReader, istBackend *backend, number uint64, hash common.Hash) error {
-	headers, err := istBackend.GetHeadersToApply(chain, number, hash, nil)
+	headers, err := istBackend.GetKaiaHeadersForSnapshotApply(chain, number, hash, nil)
 	if err != nil {
 		return err
 	}

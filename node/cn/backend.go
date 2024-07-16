@@ -374,7 +374,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		currBlock = cn.blockchain.CurrentBlock()
 		headers   []*types.Header
 	)
-	if headers, err = cn.Engine().GetHeadersToApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
+	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
 		// Temporarily supply blockchain for `Finalize`.
