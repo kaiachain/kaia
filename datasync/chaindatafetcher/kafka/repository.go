@@ -79,7 +79,8 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 		if event.Block.NumberU64() > 0 {
 			err := checkStatesForSnapshot(r.blockchain, r.engine, event.Block.NumberU64()-1, event.Block.ParentHash())
 			if err != nil {
-				return err
+				logger.Warn("skip fetching block", "number", event.Block.NumberU64(), "err", err)
+				return nil
 			}
 		}
 		cInfo, err := r.engine.GetConsensusInfo(event.Block)
