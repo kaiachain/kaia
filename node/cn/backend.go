@@ -370,6 +370,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
 	// Particularly, the gov.changeSet is also restored here.
 	// Temporarily set chain since snapshot needs state since kaia hardfork
+	logger.Info("Start creating istanbul snapshot")
 	var (
 		currBlock = cn.blockchain.CurrentBlock()
 		headers   []*types.Header
@@ -393,6 +394,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
 	if config.WorkerDisable {
