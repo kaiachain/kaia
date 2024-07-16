@@ -148,7 +148,7 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 // |------------------ |------------------------------------------------------------ |-------------------------------------------------------------------------------------- |
 // | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                                                                       |
 // | After Magma       | BaseFee * 2                                                 | Zero                                                                                  |
-// | After Kaia        | BaseFee + SuggestTipCap                                     | Zero if nextBaseFee is lower bound, 60% percentile of last 20 blocks otherwise.       |
+// | After Kaia        | BaseFee * 1.10 or 1.15 + SuggestTipCap                      | Zero if nextBaseFee is lower bound, 60% percentile of last 20 blocks otherwise.       |
 
 // SuggestPrice returns the recommended gas price.
 // This value is intended to be used as gasPrice or maxFeePerGas.
@@ -166,6 +166,13 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 		if err != nil {
 			return nil, err
 		}
+		// If network is relaxed, give a buffer of 10% to the suggested tip. Otherwise, 15%.
+		if suggestedTip.Cmp(common.Big0) == 0 {
+			baseFee.Mul(baseFee, big.NewInt(110))
+		} else {
+			baseFee.Mul(baseFee, big.NewInt(115))
+		}
+		baseFee.Div(baseFee, big.NewInt(100))
 		return new(big.Int).Add(baseFee, suggestedTip), nil
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return the twice of BaseFee as a buffer.
