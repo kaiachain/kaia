@@ -174,8 +174,9 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 	mu := sync.Mutex{} // protect blockRewards
 
 	numWorkers := runtime.NumCPU()
-	reqCh := make(chan uint64, numWorkers)
-	errCh := make(chan error, numWorkers+1)
+	// TODO-api: Fix hanging issue when requested range is over numWorkers considering goroutine scheduling
+	reqCh := make(chan uint64, blockCount)
+	errCh := make(chan error, blockCount+1)
 	wg := sync.WaitGroup{}
 
 	// introduce the worker pattern to prevent resource exhaustion
