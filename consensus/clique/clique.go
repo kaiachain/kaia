@@ -366,6 +366,11 @@ func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash
 	return err
 }
 
+// GetKaiaHeadersForSnapshotApply is not used for Clique engine
+func (c *Clique) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	return nil, nil
+}
+
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints

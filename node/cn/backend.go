@@ -369,9 +369,32 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
 	// Particularly, the gov.changeSet is also restored here.
-	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
+	// Temporarily set chain since snapshot needs state since kaia hardfork
+	logger.Info("Start creating istanbul snapshot")
+	var (
+		currBlock = cn.blockchain.CurrentBlock()
+		headers   []*types.Header
+	)
+	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
+		logger.Error("Failed to get headers to apply", "err", err)
+	} else {
+		// Temporarily supply blockchain for `Finalize`.
+		cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
+		preloadNums, err := reward.PreloadStakingInfo(headers)
+		if err != nil {
+			logger.Error("Preload staking info failed", "err", err)
+		}
+		cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
+		defer func() {
+			for _, num := range preloadNums {
+				reward.UnloadStakingInfo(num)
+			}
+		}()
+	}
+	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
 	if config.WorkerDisable {

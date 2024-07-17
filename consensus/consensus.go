@@ -124,6 +124,9 @@ type Engine interface {
 	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 
+	// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to calculate snapshot for the given block number.
+	GetKaiaHeadersForSnapshotApply(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error)
+
 	// GetConsensusInfo returns consensus information regarding the given block number.
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 
