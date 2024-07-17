@@ -541,7 +541,7 @@ workflows:
             branches:
               ignore: /.*/
       - test-rpc:
-          filters: *filter-version-not-release
+          filters: *filter-only-version-tag
 
       - pass-tests:
           requires:
