@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 func bigFromHex(hex string) *big.Int {

@@ -99,6 +99,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         onlyGuardian
         operatorExists(operator)
         operatorDoesNotExist(newOperator)
+        notNull(newOperator)
     {
         for (uint64 i=0; i<operators.length; i++) {
             if (operators[i] == operator) {
@@ -117,6 +118,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         public
         override
         onlyGuardian
+        notNull(newGuardian)
     {
         emit ChangeGuardian(guardian, newGuardian);
         guardian = newGuardian;
@@ -127,6 +129,7 @@ contract Operator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         public
         override
         onlyGuardian
+        notNull(newBridge)
     {
         emit ChangeBridge(bridge, newBridge);
         bridge = newBridge;

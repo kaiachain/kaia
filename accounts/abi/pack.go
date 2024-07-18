@@ -26,8 +26,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 // packBytesSlice packs the given bytes as [L, V] as the canonical representation

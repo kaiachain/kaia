@@ -74,6 +74,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         onlyGuardian
         guardianExists(guardian)
     {
+        require(guardians.length > 1, "KAIA::Guardian: Guardian size must be greater than one to remove a guardian");
         isGuardian[guardian] = false;
         for (uint256 i=0; i<guardians.length - 1; i++)
             if (guardians[i] == guardian) {
@@ -94,6 +95,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         onlyGuardian
         guardianExists(guardian)
         guardianDoesNotExist(newGuardian)
+        notNull(newGuardian)
     {
         for (uint256 i=0; i<guardians.length; i++) {
             if (guardians[i] == guardian) {
@@ -210,7 +212,7 @@ contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable,
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
+            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Guardian: Submission to txID exists");
             userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;

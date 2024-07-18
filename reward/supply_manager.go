@@ -23,17 +23,18 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/rebalance"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
@@ -212,11 +213,17 @@ func (sm *supplyManager) GetRebalanceBurn(num uint64, forkNum *big.Int, addr com
 	result := struct { // See system.rebalanceResult struct
 		Burnt *big.Int `json:"burnt"`
 	}{}
-	if err := json.Unmarshal([]byte(memo), &result); err != nil {
-		// 4. memo is malformed
-		return nil, errNoRebalanceBurn(err)
-	}
 
+	if sm.chain.Config().ChainID.Uint64() == 1001 && strings.HasPrefix(memo, "before") {
+		// correctly set burnt amount for Kairos network
+		result.Burnt = new(big.Int)
+		result.Burnt.SetString("-3704329462904320084000000000", 10)
+	} else {
+		if err := json.Unmarshal([]byte(memo), &result); err != nil {
+			// memo is malformed
+			return nil, errNoRebalanceBurn(err)
+		}
+	}
 	// 2. found the memo
 	sm.memoCache.Add(addr, result.Burnt)
 	return result.Burnt, nil

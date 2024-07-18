@@ -25,9 +25,9 @@ package blockchain
 import (
 	"container/list"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // Implement our EthTest Manager

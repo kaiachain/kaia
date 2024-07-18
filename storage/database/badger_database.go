@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/log"
 	"github.com/pkg/errors"
 )
 

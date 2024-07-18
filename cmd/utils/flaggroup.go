@@ -21,7 +21,7 @@ package utils
 import (
 	"sort"
 
-	"github.com/klaytn/klaytn/api/debug"
+	"github.com/kaiachain/kaia/api/debug"
 	"github.com/urfave/cli/v2"
 )
 
@@ -246,7 +246,7 @@ var FlagGroups = []FlagGroup{
 			NodeKeyFileFlag,
 			NodeKeyHexFlag,
 			NetworkIdFlag,
-			TestnetFlag,
+			KairosFlag,
 			MainnetFlag,
 		},
 	},

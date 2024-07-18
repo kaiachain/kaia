@@ -23,8 +23,8 @@
 package sc
 
 import (
-	metricutils "github.com/klaytn/klaytn/metrics/utils"
-	"github.com/klaytn/klaytn/networks/p2p"
+	metricutils "github.com/kaiachain/kaia/metrics/utils"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/rcrowley/go-metrics"
 )
 

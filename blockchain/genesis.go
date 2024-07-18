@@ -31,14 +31,14 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -172,7 +172,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 //
 //	                     genesis == nil                             genesis != nil
 //	                  +-------------------------------------------------------------------
-//	db has no genesis |  Mainnet default, Testnet if specified   |  genesis
+//	db has no genesis |  Mainnet default, Kairos if specified    |  genesis
 //	db has genesis    |  from DB                                 |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
@@ -193,9 +193,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			case isPrivate:
 				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
 				return params.AllGxhashProtocolChanges, common.Hash{}, errNoGenesis
-			case networkId == params.TestnetNetworkId:
-				logger.Info("Writing default Testnet genesis block")
-				genesis = DefaultTestnetGenesisBlock()
+			case networkId == params.KairosNetworkId:
+				logger.Info("Writing default Kairos genesis block")
+				genesis = DefaultKairosGenesisBlock()
 			case networkId == params.MainnetNetworkId:
 				fallthrough
 			default:
@@ -268,7 +268,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && params.MainnetGenesisHash != stored && params.TestnetGenesisHash != stored {
+	if genesis == nil && params.MainnetGenesisHash != stored && params.KairosGenesisHash != stored {
 		return storedcfg, stored, nil
 	}
 
@@ -292,8 +292,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return g.Config
 	case ghash == params.MainnetGenesisHash:
 		return params.MainnetChainConfig
-	case ghash == params.TestnetGenesisHash:
-		return params.TestnetChainConfig
+	case ghash == params.KairosGenesisHash:
+		return params.KairosChainConfig
 	default:
 		return params.AllGxhashProtocolChanges
 	}
@@ -415,14 +415,14 @@ func DefaultGenesisBlock() *Genesis {
 	return ret
 }
 
-// DefaultTestnetGenesisBlock returns the Testnet genesis block.
-func DefaultTestnetGenesisBlock() *Genesis {
+// DefaultKairosGenesisBlock returns the Kairos genesis block.
+func DefaultKairosGenesisBlock() *Genesis {
 	ret := &Genesis{}
-	if err := json.Unmarshal(testnetGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Testnet Genesis Json", "err", err)
+	if err := json.Unmarshal(kairosGenesisJson, &ret); err != nil {
+		logger.Error("Error in Unmarshalling Kairos Genesis Json", "err", err)
 		return nil
 	}
-	ret.Config = params.TestnetChainConfig
+	ret.Config = params.KairosChainConfig
 	return ret
 }
 
@@ -441,8 +441,8 @@ func decodePrealloc(data string) GenesisAlloc {
 func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
 	if genesis == nil {
 		switch {
-		case networkId == params.TestnetNetworkId:
-			genesis = DefaultTestnetGenesisBlock()
+		case networkId == params.KairosNetworkId:
+			genesis = DefaultKairosGenesisBlock()
 		case networkId == params.MainnetNetworkId:
 			fallthrough
 		default:

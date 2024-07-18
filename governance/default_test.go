@@ -25,17 +25,16 @@ import (
 	"reflect"
 	"testing"
 
-	gotest_assert "gotest.tools/assert"
-
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	"github.com/klaytn/klaytn/consensus/istanbul/validator"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/istanbul/validator"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	gotest_assert "gotest.tools/assert"
 )
 
 type voteValue struct {
@@ -631,16 +630,16 @@ func TestVoteValueNilInterface(t *testing.T) {
 	}
 }
 
-func TestTestnetGenesisHash(t *testing.T) {
-	testnetHash := params.TestnetGenesisHash
-	genesis := blockchain.DefaultTestnetGenesisBlock()
+func TestKairosGenesisHash(t *testing.T) {
+	kairosHash := params.KairosGenesisHash
+	genesis := blockchain.DefaultKairosGenesisBlock()
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()
 	block, _ := genesis.Commit(common.Hash{}, db)
-	if block.Hash() != testnetHash {
-		t.Errorf("Generated hash is not equal to Testnet's hash. Want %v, Have %v", testnetHash.String(), block.Hash().String())
+	if block.Hash() != kairosHash {
+		t.Errorf("Generated hash is not equal to Kairos's hash. Want %v, Have %v", kairosHash.String(), block.Hash().String())
 	}
 }
 

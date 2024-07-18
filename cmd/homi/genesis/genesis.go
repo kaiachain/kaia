@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	istcommon "github.com/klaytn/klaytn/cmd/homi/common"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain"
+	istcommon "github.com/kaiachain/kaia/cmd/homi/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (

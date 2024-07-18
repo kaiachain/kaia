@@ -33,9 +33,9 @@ import (
 	"time"
 
 	"github.com/holiman/uint256"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 var (
@@ -153,7 +153,8 @@ type InternalTxTrace struct {
 	Time  time.Duration      `json:"time,omitempty"`
 	Calls []*InternalTxTrace `json:"calls,omitempty"`
 
-	Reverted *RevertedInfo `json:"reverted,omitempty"`
+	RevertReason string        `json:"revertReason,omitempty"`
+	Reverted     *RevertedInfo `json:"reverted,omitempty"`
 }
 
 type RevertedInfo struct {

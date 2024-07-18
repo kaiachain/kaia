@@ -10,10 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types/account"
-
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/types/account"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/steakknife/bloomfilter"
 )
 

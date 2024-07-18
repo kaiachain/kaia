@@ -247,6 +247,26 @@ describe("[Multisig Test]", function () {
     expect((await guardian.getGuardians()).length).to.equal(initGuardianLen - 1);
   });
 
+  it("#guardian removal is not available if not guardian size is not greater than one", async function () {
+    let rawTxData = (await guardian.populateTransaction.removeGuardian(guardian4.address)).data;
+    await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
+    await guardian.connect(guardian2).confirmTransaction(guardianTxID);
+    await guardian.connect(guardian3).confirmTransaction(guardianTxID);
+
+    rawTxData = (await guardian.populateTransaction.removeGuardian(guardian3.address)).data;
+    await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
+    await guardian.connect(guardian2).confirmTransaction(guardianTxID + 1);
+    await guardian.connect(guardian3).confirmTransaction(guardianTxID + 1);
+
+    rawTxData = (await guardian.populateTransaction.removeGuardian(guardian2.address)).data;
+    await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);
+    await guardian.connect(guardian2).confirmTransaction(guardianTxID + 2);
+
+    rawTxData = (await guardian.populateTransaction.removeGuardian(guardian1.address)).data;
+    await expect(guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0))
+      .to.be.revertedWith("KAIA::Guardian: Guardian size must be greater than one to remove a guardian");
+  });
+
   it("#guardian removal may change the number of required confirmation", async function () {
     let rawTxData = (await guardian.populateTransaction.changeRequirement(4)).data;
     await guardian.connect(guardian1).submitTransaction(guardian.address, rawTxData, 0);

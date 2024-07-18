@@ -31,7 +31,7 @@ import (
 	"time"
 
 	natpmp "github.com/jackpal/go-nat-pmp"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/log"
 )
 
 var logger = log.NewModuleLogger(log.NetworksP2PNat)

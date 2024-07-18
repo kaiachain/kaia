@@ -34,19 +34,19 @@ import (
 	"sync/atomic"
 	"time"
 
-	kaiaapi "github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
+	kaiaapi "github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 const (
@@ -901,8 +901,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 			}
 		}
 
-		if *config.Tracer == fastCallTracer {
-			tracer = vm.NewInternalTxTracer()
+		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
+			tracer = vm.NewCallTracer()
 		} else {
 			// Construct the JavaScript tracer to execute with
 			if tracer, err = New(*config.Tracer, new(Context), api.unsafeTrace); err != nil {
@@ -918,6 +918,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				case *Tracer:
 					t.Stop(errors.New("execution timeout"))
 				case *vm.InternalTxTracer:
+					t.Stop(errors.New("execution timeout"))
+				case *vm.CallTracer:
 					t.Stop(errors.New("execution timeout"))
 				default:
 					logger.Warn("unknown tracer type", "type", reflect.TypeOf(t).String())
@@ -962,6 +964,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 	case *Tracer:
 		return tracer.GetResult()
 	case *vm.InternalTxTracer:
+		return tracer.GetResult()
+	case *vm.CallTracer:
 		return tracer.GetResult()
 
 	default:

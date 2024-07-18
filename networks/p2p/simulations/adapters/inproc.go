@@ -30,12 +30,12 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/simulations/pipes"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/simulations/pipes"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
 )
 
 // SimAdapter is a NodeAdapter which creates in-memory simulation nodes and

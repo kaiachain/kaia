@@ -173,7 +173,7 @@ const (
 	// Network Id
 	UnusedNetworkId              uint64 = 0
 	AspenNetworkId               uint64 = 1000
-	TestnetNetworkId             uint64 = 1001
+	KairosNetworkId              uint64 = 1001
 	MainnetNetworkId             uint64 = 8217
 	ServiceChainDefaultNetworkId uint64 = 3000
 

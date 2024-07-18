@@ -33,8 +33,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto/sha3"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto/sha3"
 )
 
 const (

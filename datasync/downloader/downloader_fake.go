@@ -21,12 +21,12 @@ package downloader
 import (
 	"math/big"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/node/cn/snap"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/node/cn/snap"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
 )
 
 // fakeDownloader do nothing

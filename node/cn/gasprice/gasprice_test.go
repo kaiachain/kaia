@@ -24,18 +24,18 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	mock_api "github.com/klaytn/klaytn/api/mocks"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/consensus/gxhash"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	mock_api "github.com/kaiachain/kaia/api/mocks"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -158,7 +158,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params := Config{}
 	oracle := NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -167,7 +167,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Blocks: 2}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 2, oracle.checkBlocks)
 	assert.Equal(t, 1, oracle.maxEmpty)
 	assert.Equal(t, 10, oracle.maxBlocks)
@@ -176,7 +176,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: -1}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -185,7 +185,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: 101}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Nil(t, oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -194,7 +194,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	params = Config{Percentile: 101, Default: big.NewInt(123)}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
-	assert.Equal(t, big.NewInt(123), oracle.lastPrice)
+	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
 	assert.Equal(t, 1, oracle.checkBlocks)
 	assert.Equal(t, 0, oracle.maxEmpty)
 	assert.Equal(t, 5, oracle.maxBlocks)
@@ -233,6 +233,12 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+type MockGov struct{}
+
+func (m *MockGov) EffectiveParams(bn uint64) (*params.GovParamSet, error) {
+	return nil, nil
+}
+
 func TestSuggestTipCap(t *testing.T) {
 	config := Config{
 		Blocks:           3,
@@ -246,22 +252,40 @@ func TestSuggestTipCap(t *testing.T) {
 		magmaBlock *big.Int // Magma fork block number
 		kaiaBlock  *big.Int // Kaia fork block number
 		expect     *big.Int // Expected gasprice suggestion
+		isBusy     bool     // Whether the network is busy
 	}{
-		{nil, nil, big.NewInt(1)}, // If not Magma forked, should return unitPrice (which is 1 for test)
+		/// Not busy network
+		{nil, nil, big.NewInt(1), false}, // If not Magma forked, should return unitPrice (which is 1 for test)
 
-		{big.NewInt(0), nil, common.Big0}, // After Magma fork and before Kaia fork, should return 0
+		{big.NewInt(0), nil, common.Big0, false}, // After Magma fork and before Kaia fork, should return 0
 
 		// After Kaia fork
-		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(30))},   // Fork point in genesis
-		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(30))},   // Fork point in first block
-		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(30))}, // Fork point in last block
-		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30))}, // Fork point in the future
+		// Expected gas tip is 0 since the next base fee is lower bound
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(0)), false},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(0)), false},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(0)), false}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(0)), false}, // Fork point in the future
+
+		/// Busy network
+		{nil, nil, big.NewInt(1), true}, // If not Magma forked, should return unitPrice (which is 1 for test)
+
+		{big.NewInt(0), nil, common.Big0, true}, // After Magma fork and before Kaia fork, should return 0
+
+		// After Kaia fork
+		{big.NewInt(0), big.NewInt(0), big.NewInt(params.Gkei * int64(30)), true},   // Fork point in genesis
+		{big.NewInt(1), big.NewInt(1), big.NewInt(params.Gkei * int64(30)), true},   // Fork point in first block
+		{big.NewInt(32), big.NewInt(32), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in last block
+		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in the future
 	}
 	for _, c := range cases {
 		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
 		chainConfig := testBackend.ChainConfig()
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-		oracle := NewOracle(testBackend, config, txPool, testGov)
+		gov := testGov
+		if c.isBusy {
+			gov = &MockGov{}
+		}
+		oracle := NewOracle(testBackend, config, txPool, gov)
 
 		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G
 		got, err := oracle.SuggestTipCap(context.Background())

@@ -30,21 +30,21 @@ import (
 	"sync"
 	"time"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/bloombits"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/consensus/gxhash"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // This nil assignment ensures compile time that SimulatedBackend implements bind.ContractBackend.
@@ -404,10 +404,17 @@ func (b *SimulatedBackend) PendingNonceAt(_ context.Context, account common.Addr
 	return b.pendingState.GetOrNewStateObject(account).Nonce(), nil
 }
 
-// SuggestGasPrice implements ContractTransactor.SuggestGasPrice. Since the simulated
-// chain doesn't have miners, we just return a gas price of 1 for any call.
+// SuggestGasPrice implements ContractTransactor.SuggestGasPrice.
 func (b *SimulatedBackend) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	return new(big.Int).SetUint64(b.config.UnitPrice), nil
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	pending := b.pendingBlock
+	if b.config.IsMagmaForkEnabled(pending.Number()) {
+		return new(big.Int).Mul(pending.Header().BaseFee, big.NewInt(2)), nil
+	} else {
+		return new(big.Int).SetUint64(b.config.UnitPrice), nil
+	}
 }
 
 // EstimateGas executes the requested code against the latest block/state and
@@ -436,7 +443,16 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (
 		return res.Failed(), res, nil
 	}
 
-	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, call.GasPrice, balance, executable)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	} else if call.GasPrice != nil {
+		gasPrice = call.GasPrice
+	} else if call.GasFeeCap != nil {
+		gasPrice = call.GasFeeCap
+	}
+
+	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, gasPrice, balance, executable)
 	if err != nil {
 		return 0, err
 	} else {
@@ -448,8 +464,26 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (
 // state is modified during execution, make sure to copy it if necessary.
 func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, block *types.Block, stateDB *state.StateDB) (*blockchain.ExecutionResult, error) {
 	// Ensure message is initialized properly.
-	if call.GasPrice == nil {
-		call.GasPrice = big.NewInt(1)
+	gasPrice := common.Big0
+	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
+		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	}
+	if !b.config.IsKaiaForkEnabled(block.Number()) { // before KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		}
+	} else { // after KIP-162
+		if call.GasPrice != nil {
+			gasPrice = call.GasPrice
+		} else {
+			if call.GasFeeCap == nil {
+				call.GasFeeCap = big.NewInt(0)
+			}
+			if call.GasTipCap == nil {
+				call.GasTipCap = big.NewInt(0)
+			}
+			gasPrice = math.BigMin(new(big.Int).Add(call.GasTipCap, block.Header().BaseFee), call.GasFeeCap)
+		}
 	}
 	if call.Gas == 0 {
 		call.Gas = 50000000
@@ -468,7 +502,8 @@ func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, bl
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, call.GasPrice, call.Data, true, intrinsicGas, accessList)
+
+	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, gasPrice, call.Data, true, intrinsicGas, accessList)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.config)
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.blockchain, nil)

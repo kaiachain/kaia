@@ -22,14 +22,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/contracts/system_contracts/multicall"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 )
 
 // ContractCallerForMultiCall is an implementation of ContractCaller only for MultiCall contract.
@@ -45,7 +45,7 @@ func (caller *ContractCallerForMultiCall) CodeAt(ctx context.Context, contract c
 }
 
 // CallContract injects a multicall contract code into the state and executes the call.
-func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call klaytn.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	gasPrice := big.NewInt(0) // execute call regardless of the balance of the sender
 	gasLimit := uint64(1e8)   // enough gas limit to execute multicall contract functions
 	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
@@ -75,11 +75,7 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 }
 
 // NewMultiCallContractCaller creates a new instance of ContractCaller for MultiCall contract.
-func NewMultiCallContractCaller(chain backends.BlockChainForCaller, header *types.Header) (*multicall.MultiCallContractCaller, error) {
-	state, err := chain.StateAt(header.Root)
-	if err != nil {
-		return nil, err
-	}
-	c := &ContractCallerForMultiCall{state, chain, header}
+func NewMultiCallContractCaller(state *state.StateDB, chain backends.BlockChainForCaller, header *types.Header) (*multicall.MultiCallContractCaller, error) {
+	c := &ContractCallerForMultiCall{state.Copy(), chain, header} // Copy the state to prevent the original state from being modified.
 	return multicall.NewMultiCallContractCaller(MultiCallAddr, c)
 }

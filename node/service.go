@@ -26,13 +26,13 @@ import (
 	"crypto/ecdsa"
 	"reflect"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto/bls"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto/bls"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 type ServiceContext struct {

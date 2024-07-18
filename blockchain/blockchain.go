@@ -35,27 +35,26 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/snapshot"
-
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/mclock"
-	"github.com/klaytn/klaytn/common/prque"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/fork"
-	"github.com/klaytn/klaytn/log"
-	kaiametrics "github.com/klaytn/klaytn/metrics"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/mclock"
+	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/log"
+	kaiametrics "github.com/kaiachain/kaia/metrics"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/snapshot"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -2794,6 +2793,12 @@ func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
 		if err != nil {
 			return nil, err
 		}
+	case *vm.CallTracer:
+		callTrace, err := tracer.GetResult()
+		if err != nil {
+			return nil, err
+		}
+		internalTxTrace = callTrace.ToInternalTxTrace()
 	default:
 		logger.Error("To trace internal transactions, VM tracer type should be vm.InternalTxTracer", "actualType", reflect.TypeOf(tracer).String())
 		return nil, ErrInvalidTracer

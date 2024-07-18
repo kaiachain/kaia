@@ -23,7 +23,7 @@
 package utils
 
 import (
-	"github.com/klaytn/klaytn/api/debug"
+	"github.com/kaiachain/kaia/api/debug"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -332,7 +332,7 @@ var BNFlags = []cli.Flag{
 var KCNFlags = []cli.Flag{
 	altsrc.NewStringFlag(RewardbaseFlag),
 	altsrc.NewBoolFlag(MainnetFlag),
-	altsrc.NewBoolFlag(TestnetFlag),
+	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 }
@@ -342,14 +342,14 @@ var KPNFlags = []cli.Flag{
 	altsrc.NewIntFlag(TxResendCountFlag),
 	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
 	altsrc.NewBoolFlag(MainnetFlag),
-	altsrc.NewBoolFlag(TestnetFlag),
+	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
 }
 
 var KENFlags = []cli.Flag{
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
 	altsrc.NewBoolFlag(MainnetFlag),
-	altsrc.NewBoolFlag(TestnetFlag),
+	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewBoolFlag(ChildChainIndexingFlag),
 	altsrc.NewBoolFlag(MainBridgeFlag),
 	altsrc.NewIntFlag(MainBridgeListenPortFlag),

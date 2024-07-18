@@ -23,7 +23,7 @@
 package core
 
 import (
-	"github.com/klaytn/klaytn/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
 func (c *core) handleRequest(request *istanbul.Request) error {

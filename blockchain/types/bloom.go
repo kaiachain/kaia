@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 type bytesBacked interface {

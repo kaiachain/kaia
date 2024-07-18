@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/pkg/errors"
 )
 

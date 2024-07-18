@@ -32,10 +32,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/Shopify/sarama"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -232,7 +231,7 @@ func (s *KafkaSuite) subscribeData(topic, groupId string, numTests int, handler 
 	}()
 
 	// wait for all data to be consumed
-	timeout := time.NewTimer(5 * time.Second)
+	timeout := time.NewTimer(10 * time.Second)
 	for i := 0; i < numTests; i++ {
 		select {
 		case <-numCheckCh:
@@ -473,7 +472,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 	}()
 
 	// checkout the returned error is buffer overflow error
-	timeout := time.NewTimer(5 * time.Second)
+	timeout := time.NewTimer(10 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")
@@ -508,7 +507,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments_ErrCallBack() {
 	}()
 
 	// checkout the returned error is callback error
-	timeout := time.NewTimer(5 * time.Second)
+	timeout := time.NewTimer(10 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")
@@ -550,7 +549,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegments_MessageTimeout() {
 	}()
 
 	// checkout the returned error is callback error
-	timeout := time.NewTimer(5 * time.Second)
+	timeout := time.NewTimer(10 * time.Second)
 	select {
 	case <-timeout.C:
 		s.Fail("timeout")

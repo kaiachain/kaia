@@ -28,11 +28,11 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
 	"gopkg.in/olebedev/go-duktape.v3"
 )
 
@@ -689,6 +689,7 @@ func (jst *Tracer) CaptureStart(env *vm.EVM, from common.Address, to common.Addr
 	jst.ctx["gasPrice"] = env.TxContext.GasPrice
 	jst.ctx["value"] = value
 	jst.ctx["intrinsicGas"] = jst.gasLimit - gas
+	jst.dbWrapper.db = env.StateDB
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
@@ -714,7 +715,6 @@ func (jst *Tracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost,
 	jst.stackWrapper.stack = scope.Stack
 	jst.memoryWrapper.memory = scope.Memory
 	jst.contractWrapper.contract = scope.Contract
-	jst.dbWrapper.db = env.StateDB
 
 	*jst.pcValue = uint(pc)
 	*jst.gasValue = uint(gas)

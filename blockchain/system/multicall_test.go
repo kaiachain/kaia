@@ -19,11 +19,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,12 +42,12 @@ func TestContractCallerForMultiCall(t *testing.T) {
 	header := backend.BlockChain().CurrentHeader()
 	chain := backend.BlockChain()
 
-	caller, _ := NewMultiCallContractCaller(chain, header)
+	state, _ := backend.BlockChain().StateAt(header.Root)
+	caller, _ := NewMultiCallContractCaller(state, chain, header)
 	ret, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number})
 	assert.Nil(t, err)
 
 	// Does not affect the original state
-	state, _ := backend.BlockChain().StateAt(header.Root)
 	assert.Equal(t, []byte(nil), state.GetCode(MultiCallAddr))
 
 	// Mock data

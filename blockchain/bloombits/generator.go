@@ -25,7 +25,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/klaytn/klaytn/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types"
 )
 
 var (

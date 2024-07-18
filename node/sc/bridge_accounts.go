@@ -27,13 +27,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/cmd/homi/setup"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/keystore"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/cmd/homi/setup"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (

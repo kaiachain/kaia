@@ -21,8 +21,8 @@ package discover
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 )
 
 var rawUrls = []string{

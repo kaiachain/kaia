@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/compiler"
-	"github.com/klaytn/klaytn/common/profile"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/compiler"
+	"github.com/kaiachain/kaia/common/profile"
 )
 
 type testData struct {

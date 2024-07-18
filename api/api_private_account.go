@@ -29,14 +29,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/accounts/keystore"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // PrivateAccountAPI provides an API to access accounts managed by this node.
@@ -452,7 +452,7 @@ func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, t
 }
 
 // Sign calculates a Kaia ECDSA signature for:
-// keccack256("\x19Klaytn Signed Message:\n" + len(message) + message))
+// keccack256("\x19Ethereum Signed Message:\n" + len(message) + message))
 //
 // Note, the produced signature conforms to the secp256k1 curve R, S and V values,
 // where the V value will be 27 or 28 for legacy reasons.
@@ -469,7 +469,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 		return nil, err
 	}
 	// Assemble sign the data with the wallet
-	signature, err := wallet.SignHashWithPassphrase(account, passwd, signHash(data))
+	signature, err := wallet.SignHashWithPassphrase(account, passwd, ethSignHash(data))
 	if err != nil {
 		return nil, err
 	}
@@ -480,25 +480,23 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 // EcRecover returns the address for the account that was used to create the signature.
 // Note, this function is compatible with eth_sign and personal_sign. As such it recovers
 // the address of:
-// hash = keccak256("\x19Klaytn Signed Message:\n"${message length}${message})
+// hash = keccak256("\x19Ethereum Signed Message:\n"${message length}${message})
 // addr = ecrecover(hash, signature)
 //
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
 // the V value must be 27 or 28 for legacy reasons.
-//
-// https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_ecRecover
 func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
 		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, errors.New("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1
 	sig[crypto.RecoveryIDOffset] -= 27
 
-	pubkey, err := klayEcRecover(data, sig)
+	pubkey, err := ethEcRecover(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}

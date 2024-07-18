@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 const (

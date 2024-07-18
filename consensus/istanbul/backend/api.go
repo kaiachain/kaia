@@ -29,16 +29,16 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	kaiaApi "github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	kaiaApi "github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // API is a user facing RPC API to dump Istanbul state
@@ -54,8 +54,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+	return checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -64,7 +63,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+	return checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
 }
 
 // GetValidators retrieves the list of authorized validators with the given block number.
@@ -84,7 +83,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 		return istanbulExtra.Validators, nil
 	}
 
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+	snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64()-1, header.ParentHash)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, err
@@ -109,7 +108,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 		return istanbulExtra.Validators, nil
 	}
 
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+	snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64()-1, header.ParentHash)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, errInternalError
@@ -126,14 +125,14 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 
 	blockNumber := header.Number.Uint64()
 	if blockNumber == 0 {
-		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+		snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
 		if err != nil {
 			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
 	} else {
-		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+		snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64()-1, header.ParentHash)
 		if err != nil {
 			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
@@ -151,14 +150,14 @@ func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, 
 
 	blockNumber := header.Number.Uint64()
 	if blockNumber == 0 {
-		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil, false)
+		snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
 		if err != nil {
 			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
 		}
 		return snap.demotedValidators(), nil
 	} else {
-		snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+		snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64()-1, header.ParentHash)
 		if err != nil {
 			logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 			return nil, err
@@ -233,7 +232,7 @@ func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 		return istanbulExtra.Validators, nil
 	}
 
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+	snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, blockNumber-1, header.ParentHash)
 	if err != nil {
 		logger.Error("Failed to get snapshot.", "blockNum", blockNumber, "err", err)
 		return nil, err
@@ -267,7 +266,7 @@ func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 		return istanbulExtra.Validators, nil
 	}
 
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64()-1, header.ParentHash, nil, false)
+	snap, err := checkStatesAndGetSnapshot(api.chain, api.istanbul, blockNumber-1, header.ParentHash)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +327,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 			rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], api.chain.Config())
 		} else {
 			// fill the transaction output if receipt is not found
-			rpcTransactions[i] = kaiaApi.NewRPCTransaction(b, tx, hash, head.Number.Uint64(), uint64(i), api.chain.Config())
+			rpcTransactions[i] = kaiaApi.NewRPCTransaction(head, tx, hash, head.Number.Uint64(), uint64(i), api.chain.Config())
 		}
 	}
 
@@ -388,6 +387,13 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
 	}
 	blockHash := block.Hash()
+
+	if blockNumber > 0 {
+		err := checkStatesForSnapshot(api.chain, api.istanbul, blockNumber-1, block.ParentHash())
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	cInfo, err := api.istanbul.GetConsensusInfo(block)
 	if err != nil {
@@ -463,6 +469,13 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 	if block == nil {
 		logger.Trace("Finding a block failed.", "blockHash", blockHash)
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
+	}
+
+	if block.NumberU64() > 0 {
+		err := checkStatesForSnapshot(api.chain, api.istanbul, block.NumberU64()-1, block.ParentHash())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cInfo, err := api.istanbul.GetConsensusInfo(block)
@@ -577,4 +590,29 @@ func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*t
 		return nil, errUnknownBlock
 	}
 	return header, nil
+}
+
+// Checks the all states for snapshot creation at the given block number
+func checkStatesForSnapshot(chain consensus.ChainReader, istBackend *backend, number uint64, hash common.Hash) error {
+	headers, err := istBackend.GetKaiaHeadersForSnapshotApply(chain, number, hash, nil)
+	if err != nil {
+		return err
+	}
+
+	for _, header := range headers {
+		if _, err := chain.StateAt(header.Root); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Checks the all states for snapshot creation at the given block number and returns the snapshot if all states exist
+func checkStatesAndGetSnapshot(chain consensus.ChainReader, istBackend *backend, number uint64, hash common.Hash) (*Snapshot, error) {
+	err := checkStatesForSnapshot(chain, istBackend, number, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return istBackend.snapshot(chain, number, hash, nil, false)
 }

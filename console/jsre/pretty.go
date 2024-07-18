@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/dop251/goja"
-
 	"github.com/fatih/color"
 )
 

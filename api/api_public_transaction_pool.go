@@ -29,14 +29,14 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // PublicTransactionPoolAPI exposes methods for the RPC interface
@@ -135,7 +135,11 @@ func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Cont
 func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
-		return newRPCTransaction(nil, tx, blockHash, blockNumber, index, s.b.ChainConfig())
+		header, err := s.b.HeaderByHash(ctx, blockHash)
+		if err != nil {
+			return nil
+		}
+		return newRPCTransaction(header, tx, blockHash, blockNumber, index, s.b.ChainConfig())
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := s.b.GetPoolTransaction(hash); tx != nil {
@@ -210,7 +214,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 		return nil
 	}
 
-	fields := newRPCTransaction(nil, tx, blockHash, blockNumber, index, config)
+	fields := newRPCTransaction(header, tx, blockHash, blockNumber, index, config)
 
 	if receipt.Status != types.ReceiptStatusSuccessful {
 		fields["status"] = hexutil.Uint(types.ReceiptStatusFailed)
@@ -383,7 +387,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 }
 
 // Sign calculates an ECDSA signature for:
-// keccack256("\x19Klaytn Signed Message:\n" + len(message) + message).
+// keccack256("\x19Ethereum Signed Message:\n" + len(message) + message).
 //
 // Note, the produced signature conforms to the secp256k1 curve R, S and V values,
 // where the V value will be 27 or 28 for legacy reasons.
@@ -400,7 +404,7 @@ func (s *PublicTransactionPoolAPI) Sign(addr common.Address, data hexutil.Bytes)
 		return nil, err
 	}
 	// Sign the requested hash with the wallet
-	signature, err := wallet.SignHash(account, signHash(data))
+	signature, err := wallet.SignHash(account, ethSignHash(data))
 	if err == nil {
 		signature[crypto.RecoveryIDOffset] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
 	}
@@ -592,15 +596,17 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 }
 
 // RecoverFromMessage validates that the message is signed by one of the keys in the given account.
+// The signature must be either EIP-191 or KIP-97 compliant, meaning the message must have been prefixed
+// with either "\x19Ethereum Signed Message" or "\x19Klaytn Signed Message" before hashed and signed.
 // Returns the recovered signer address, which may be different from the account address.
 func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
 ) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
-		return common.Address{}, fmt.Errorf("signature must be 65 bytes long")
+		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
 	if sig[crypto.RecoveryIDOffset] != 27 && sig[crypto.RecoveryIDOffset] != 28 {
-		return common.Address{}, fmt.Errorf("invalid Klaytn signature (V is not 27 or 28)")
+		return common.Address{}, errors.New("invalid signature (V is not 27 or 28)")
 	}
 
 	// Transform yellow paper V from 27/28 to 0/1
@@ -612,9 +618,8 @@ func (s *PublicTransactionPoolAPI) RecoverFromMessage(
 	}
 	key := state.GetKey(address)
 
-	// We cannot identify if the signature has signed with kaia or eth prefix without the signer's address.
-	// Even though a user signed message with eth prefix, it will return invalid something in klayEcRecover.
-	// We should call each rcrecover function separately and the actual result will be checked in ValidateMember.
+	// We cannot identify if the signature has signed with EIP-191 or KIP-97 prefix without the signer's address.
+	// Try ecrecover with both prefixes and validate the actual result in ValidateMember.
 	var recoverErr error
 	if pubkey, err := klayEcRecover(data, sig); err == nil {
 		if key.ValidateMember(pubkey, address) {

@@ -8,7 +8,7 @@ set -e
 
 function printUsage {
     echo "Usage: ${0} [-b] <arch> <target>"
-    echo "         -b: use testnet configuration"
+    echo "         -b: use Kairos configuration"
     echo "     <arch>:  linux-386 | linux-amd64 | darwin-amd64 | windows-386 | windows-amd64"
     echo "   <target>:  kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     echo ""
@@ -21,8 +21,8 @@ TESTNET=
 while getopts "b" opt; do
     case ${opt} in
         b)
-            echo "Using testnet configuration..."
-            TESTNET="-testnet"
+            echo "Using Kairos configuration..."
+            TESTNET="-kairos"
             ;;
     esac
 done
@@ -113,7 +113,7 @@ if [ ! -z "$DAEMON" ]; then
     mkdir -p ${PACK_NAME}/conf
     CONF_FILE=build/packaging/linux/conf/${TARGET}d.conf
     if [ ! -z "$TESTNET" ]; then
-        TESTNET_CONF_FILE=build/packaging/linux/conf/${TARGET}d_baobab.conf # TODO: rename to Testnet
+        TESTNET_CONF_FILE=build/packaging/linux/conf/${TARGET}d_kairos.conf
         if [ -e "$TESTNET_CONF_FILE" ]; then
             CONF_FILE=$TESTNET_CONF_FILE
         else

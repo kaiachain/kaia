@@ -31,20 +31,20 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulCore "github.com/klaytn/klaytn/consensus/istanbul/core"
-	"github.com/klaytn/klaytn/consensus/istanbul/validator"
-	"github.com/klaytn/klaytn/consensus/misc"
-	"github.com/klaytn/klaytn/crypto/sha3"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/consensus/istanbul/validator"
+	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const (
@@ -516,13 +516,12 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// If sb.chain is nil, it means backend is not initialized yet.
 	if sb.chain != nil && !reward.IsRewardSimple(pset) {
-		// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
-
-		lastHeader := chain.CurrentHeader()
-		valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
-
 		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
 		if common.EmptyHash(header.Root) {
+			// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
+			lastHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+			valSet := sb.getValidators(lastHeader.Number.Uint64(), lastHeader.Hash())
+
 			var logMsg string
 			_, nodeValidator := valSet.GetByAddress(sb.address)
 			if nodeValidator == nil || (nodeValidator.RewardAddress() == common.Address{}) {
@@ -553,9 +552,13 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	// so the existing state db should be used to apply the rebalancing result.
 	// Only on the KIP-103 or KIP-160 hardfork block, the following logic should be executed
 	if chain.Config().IsKIP160ForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
-		_, err := system.RebalanceTreasury(state, chain, header)
+		rebalanceResult, err := system.RebalanceTreasury(state, chain, header)
 		if err != nil {
 			logger.Error("failed to execute treasury rebalancing. State not changed", "err", err)
+		} else {
+			// Leave the memo in the log for later contract finalization
+			isKIP103 := chain.Config().IsKIP103ForkBlock(header.Number) // because memo format differs between KIP-103 and KIP-160
+			logger.Info("successfully executed treasury rebalancing", "memo", string(rebalanceResult.Memo(isKIP103)))
 		}
 	}
 
@@ -882,10 +885,9 @@ func (sb *backend) InitSnapshot() {
 	sb.blsPubkeyProvider.ResetBlsCache()
 }
 
-// snapshot retrieves the state of the authorization voting at a given point in time.
-// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
-// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
-func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
+// prepareSnapshotApply is a helper function to prepare snapshot and headers for the given block number and hash.
+// It returns the snapshot, headers, and error if any.
+func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, []*types.Header, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.Header
@@ -910,13 +912,13 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		if number == 0 {
 			var err error
 			if snap, err = sb.initSnapshot(chain); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
 		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &parents); header == nil {
-			return nil, consensus.ErrUnknownAncestor
+			return nil, nil, consensus.ErrUnknownAncestor
 		} else {
 			headers = append(headers, header)
 			number, hash = number-1, header.ParentHash
@@ -926,7 +928,39 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	pset, err := sb.governance.EffectiveParams(number)
+
+	return snap, headers, nil
+}
+
+// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to create snapshot for the given block number.
+// Note that it only returns headers for kaia fork enabled blocks.
+func (sb *backend) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+
+	kaiaHeaders := []*types.Header{}
+	for i := 0; i < len(headers); i++ {
+		if chain.Config().IsKaiaForkEnabled(new(big.Int).Add(headers[i].Number, big.NewInt(1))) {
+			kaiaHeaders = headers[i:]
+			break
+		}
+	}
+
+	return kaiaHeaders, nil
+}
+
+// snapshot retrieves the state of the authorization voting at a given point in time.
+// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
+// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
+func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
+	snap, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+
+	pset, err := sb.governance.EffectiveParams(snap.Number)
 	if err != nil {
 		return nil, err
 	}

@@ -26,8 +26,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // PublicDebugAPI is the collection of Kaia APIs exposed over the public

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 func TestHTTPErrorResponseWithDelete(t *testing.T) {

@@ -68,7 +68,6 @@ contract MultiCallContract {
     }
 
     function _getCnStakingAmounts(address cnStaking) private view returns (uint256) {
-        // TODO: Consider `unstaking` as well.
         return cnStaking.balance;
     }
 

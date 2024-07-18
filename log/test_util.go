@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/klaytn/klaytn/log/term"
+	"github.com/kaiachain/kaia/log/term"
 	"github.com/mattn/go-colorable"
 )
 

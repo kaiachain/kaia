@@ -26,7 +26,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
 )
 
 // ServeListener accepts connections on l, serving JSON-RPC on them.

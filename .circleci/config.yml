@@ -20,18 +20,18 @@ orbs:
 
 executors:
   linux-executor: # this executor is for general testing and packaging linux binaries
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
-      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
   linux-others-executor: # this executor is for test-others job
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
-      - image: klaytn/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -57,36 +57,19 @@ executors:
           KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  darwin-executor: # this executor is for packaging darwin binaries
-    working_directory: ~/go/src/github.com/klaytn/klaytn
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.x86.medium.gen2
   rpm-executor: # this executor is for packaging rpm binaries
-    working_directory: /go/src/github.com/klaytn/klaytn
+    working_directory: /go/src/github.com/kaiachain/kaia
     docker:
-      - image: klaytn/circleci-rpmbuild:1.22.1-gcc7
+      - image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
   default:
-    working_directory: ~/go/src/github.com/klaytn/klaytn
+    working_directory: ~/go/src/github.com/kaiachain/kaia
     docker:
       - image: cimg/go:1.22.1
 
 commands:
-  install-darwin-dependencies:
-    description: Install dependencies on darwin machine
-    steps:
-      - run:
-          name: "install darwin dependencies"
-          command: |
-            # install awscli
-            brew install awscli
-            # install golang
-            curl -O https://dl.google.com/go/go1.22.1.darwin-amd64.tar.gz
-            mkdir $HOME/go1.22.1
-            tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-amd64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -107,7 +90,7 @@ commands:
             else
               echo "this is not RC version"
             fi
-            echo "export KLAYTN_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
+            echo "export KAIA_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
   build-packaging:
     description: "Build for each OS/Network"
     parameters:
@@ -139,8 +122,8 @@ commands:
           command: |
             export GOPATH=~/go
             export PATH=$HOME/go1.22.1/go/bin:$PATH
-            KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/; done
+            KAIA_VERSION=$(go run build/rpm/main.go version)
+            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/; done
   rpm-tagging:
     description: "rpm tagging for cypress"
     steps:
@@ -154,12 +137,12 @@ commands:
           name: "upload S3 repo"
           command: |
             PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-            KLAYTN_VERSION=$(go run build/rpm/main.go version)
+            KAIA_VERSION=$(go run build/rpm/main.go version)
 
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
             done
   rpm-tagging-baobab:
     description: "rpm tagging for baobab"
@@ -174,9 +157,9 @@ commands:
           name: "upload S3 repo"
           command: |
             for item in kcn kpn ken; do
-              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-baobab-v" '$0~pat')
+              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-kairos-v" '$0~pat')
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/klaytn/$KLAYTN_VERSION/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
             done
   createrepo-update:
     steps:
@@ -192,9 +175,9 @@ commands:
           name: "Verify tag and file version match"
           command: |
             echo "tag version is " $CIRCLE_TAG
-            KLAYTN_VERSION=$(go run build/rpm/main.go version)
-            echo "version on version.go" $KLAYTN_VERSION
-            if [ $KLAYTN_VERSION == ${CIRCLE_TAG%-*} ]; then
+            KAIA_VERSION=$(go run build/rpm/main.go version)
+            echo "version on version.go" $KAIA_VERSION
+            if [ $KAIA_VERSION == ${CIRCLE_TAG%-*} ]; then
               echo "verification pass"
             else
               echo "It's not same version."
@@ -206,10 +189,10 @@ commands:
           name: "Verify tag and file version match"
           command: |
             TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$CIRCLE_TAG | sed 's/ .*//')
-            if [ $TAGGER == 'circleci-klaytn' ]; then
-              echo "Pass! Tagger is circleci-klaytn"
+            if [ $TAGGER == 'circleci-kaia' ]; then
+              echo "Pass! Tagger is circleci-kaia"
             else
-              echo "only circleci-klaytn can tagging major version"
+              echo "only circleci-kaia can tagging major version"
               exit 1
             fi
   make-pr:
@@ -249,7 +232,7 @@ commands:
             export version=$(go run build/rpm/main.go version) >> $BASH_ENV
             echo "git tag $version"
             git config --global user.email "team.devops@groundx.xyz"
-            git config --global user.name "circleci-klaytn"
+            git config --global user.name "circleci-kaia"
             git tag -a $version -m "$CIRCLE_STAGE"
             git push origin $version
       - run:
@@ -488,28 +471,6 @@ jobs:
       - upload-repo:
           item: "kcn kpn ken"
 
-  packaging-darwin:
-    executor: darwin-executor
-    steps:
-      - checkout
-      - install-darwin-dependencies
-      - pre-build
-      - build-packaging:
-          os-network: "darwin-amd64"
-      - upload-repo
-
-  packaging-darwin-baobab:
-    executor: darwin-executor
-    steps:
-      - checkout
-      - install-darwin-dependencies
-      - pre-build
-      - build-packaging:
-          os-network: "darwin-amd64"
-          baobab: "-b"
-      - upload-repo:
-          item: "kcn kpn ken"
-
   rpm-tagged:
     executor: rpm-executor
     steps:
@@ -600,7 +561,7 @@ workflows:
           requires:
             - pass-tests
           extra_build_args: '--platform=linux/amd64'
-          image: klaytn/klaytn
+          image: kaiachain/kaia
           tag: dev
           executor: docker/docker
           use-remote-docker: true
@@ -616,7 +577,7 @@ workflows:
           requires:
             - pass-tests
           extra_build_args: '--platform=linux/amd64'
-          image: klaytn/klaytn
+          image: kaiachain/kaia
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
@@ -632,8 +593,6 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]/
@@ -646,8 +605,6 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
@@ -667,14 +624,6 @@ workflows:
           requires:
             - pass-tests
       - packaging-linux-baobab:
-          filters: *filter-only-version-tag
-          requires:
-            - pass-tests
-      - packaging-darwin:
-          filters: *filter-only-version-tag
-          requires:
-            - pass-tests
-      - packaging-darwin-baobab:
           filters: *filter-only-version-tag
           requires:
             - pass-tests

@@ -26,20 +26,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
-	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn/tracers"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
+	cfTypes "github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/node/cn/tracers"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -54,7 +54,7 @@ var (
 	errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
 )
 
-//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/datasync/chaindatafetcher BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher BlockChain
 type BlockChain interface {
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
 	CurrentHeader() *types.Header
@@ -320,7 +320,11 @@ func (f *ChainDataFetcher) makeChainEvent(blockNumber uint64) (blockchain.ChainE
 		}
 		for _, r := range results {
 			if r.Result != nil {
-				internalTraces = append(internalTraces, r.Result.(*vm.InternalTxTrace))
+				switch r.Result.(type) {
+				case vm.CallFrame:
+					cf := r.Result.(vm.CallFrame)
+					internalTraces = append(internalTraces, cf.ToInternalTxTrace())
+				}
 			} else {
 				traceAPIErrorCounter.Inc(1)
 				logger.Error("the trace result is nil", "err", r.Error, "blockNumber", blockNumber)

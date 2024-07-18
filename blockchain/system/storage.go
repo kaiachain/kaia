@@ -21,9 +21,9 @@ package system
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 // Calculate the contract storage slot for a mapping element.

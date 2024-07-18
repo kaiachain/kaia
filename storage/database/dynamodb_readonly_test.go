@@ -25,8 +25,8 @@ package database
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/storage"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/storage"
 	"github.com/stretchr/testify/assert"
 )
 

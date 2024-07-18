@@ -29,13 +29,13 @@ import (
 	"fmt"
 	"math/big"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/rlp"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // TODO-Kaia Needs to separate APIs along with each namespaces.
@@ -507,27 +507,8 @@ func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction)
 // SendUnsignedTransaction injects a unsigned transaction into the pending pool for execution.
 //
 // This function can return the transaction hash and error.
-func (ec *Client) SendUnsignedTransaction(ctx context.Context, from common.Address, to common.Address, gas uint64, gasPrice uint64, value *big.Int, data []byte, input []byte) (common.Hash, error) {
+func (ec *Client) SendUnsignedTransaction(ctx context.Context, unsignedTx api.SendTxArgs) (common.Hash, error) {
 	var hex hexutil.Bytes
-
-	tGas := hexutil.Uint64(gas)
-	bigGasPrice := new(big.Int).SetUint64(gasPrice)
-	tGasPrice := (*hexutil.Big)(bigGasPrice)
-	hValue := (*hexutil.Big)(value)
-	tData := hexutil.Bytes(data)
-	tInput := hexutil.Bytes(input)
-
-	unsignedTx := api.SendTxArgs{
-		From:      from,
-		Recipient: &to,
-		GasLimit:  &tGas,
-		Price:     tGasPrice,
-		Amount:    hValue,
-		// Nonce : nonce,	Nonce will be determined by Kaia node.
-		Data:    &tData,
-		Payload: &tInput,
-	}
-
 	if err := ec.c.CallContext(ctx, &hex, "kaia_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
 		return common.Hash{}, err
 	}
@@ -567,6 +548,15 @@ func toCallArg(msg kaia.CallMsg) interface{} {
 	if msg.GasPrice != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
+	if msg.GasFeeCap != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.GasFeeCap)
+	}
+	if msg.GasTipCap != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.GasTipCap)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
+	}
 	return arg
 }
 
@@ -575,11 +565,20 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 		"from": msg.From,
 		"to":   msg.Recipient,
 	}
+	if msg.TypeInt != nil {
+		arg["typeInt"] = *msg.TypeInt
+	}
 	if *msg.GasLimit != 0 {
 		arg["gas"] = (*hexutil.Uint64)(msg.GasLimit)
 	}
 	if msg.Price != nil {
 		arg["gasPrice"] = (*hexutil.Big)(msg.Price)
+	}
+	if msg.MaxFeePerGas != nil {
+		arg["maxFeePerGas"] = (*hexutil.Big)(msg.MaxFeePerGas)
+	}
+	if msg.MaxPriorityFeePerGas != nil {
+		arg["maxPriorityFeePerGas"] = (*hexutil.Big)(msg.MaxPriorityFeePerGas)
 	}
 	if msg.Amount != nil {
 		arg["value"] = (*hexutil.Big)(msg.Amount)
@@ -589,6 +588,9 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 	}
 	if len(*msg.Payload) > 0 {
 		arg["input"] = (*hexutil.Bytes)(msg.Payload)
+	}
+	if msg.AccessList != nil {
+		arg["accessList"] = msg.AccessList
 	}
 
 	return arg

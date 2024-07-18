@@ -19,15 +19,15 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/contracts/contracts/testing/system_contracts"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -222,7 +222,7 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		res, err := RebalanceTreasury(state, chain, chain.CurrentHeader())
 		if chain.Config().Kip103CompatibleBlock != nil && tc.expectBurnt.Cmp(big.NewInt(0)) == -1 {
 			assert.Equal(t, ErrRebalanceNotEnoughBalance, err)
-			t.Log(string(res.memo(true)))
+			t.Log(string(res.Memo(true)))
 			continue
 		}
 
@@ -250,9 +250,9 @@ func rebalanceTreasury(t *testing.T, sender *bind.TransactOpts, config *params.C
 		//	assert.Equal(t, tc.expectKip103Memo, string(res.memo(isKip103)))
 		//}
 
-		t.Log(string(res.memo(isKip103)))
+		t.Log(string(res.Memo(isKip103)))
 		if !isKip103 {
-			assert.Equal(t, tc.expectKip160Memo, string(res.memo(isKip103)))
+			assert.Equal(t, tc.expectKip160Memo, string(res.Memo(isKip103)))
 		}
 	}
 }

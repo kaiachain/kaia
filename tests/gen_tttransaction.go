@@ -7,9 +7,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 var _ = (*ttTransactionMarshaling)(nil)

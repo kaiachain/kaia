@@ -26,7 +26,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/klaytn/klaytn/cmd/utils"
+	"github.com/kaiachain/kaia/cmd/utils"
 	"github.com/urfave/cli/v2"
 )
 

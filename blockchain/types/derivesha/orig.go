@@ -23,10 +23,10 @@
 package derivesha
 
 import (
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 type DeriveShaOrig struct{}

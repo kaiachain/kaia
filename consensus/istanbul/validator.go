@@ -25,9 +25,8 @@ package istanbul
 import (
 	"strings"
 
-	"github.com/klaytn/klaytn/params"
-
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 type Validator interface {

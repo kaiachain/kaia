@@ -28,14 +28,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/cmd/utils"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
 
@@ -88,7 +88,7 @@ It expects the genesis file as argument.`,
 		ArgsUsage: "",
 		Flags: []cli.Flag{
 			utils.MainnetFlag,
-			utils.TestnetFlag,
+			utils.KairosFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -229,8 +229,8 @@ func MakeGenesis(ctx *cli.Context) *blockchain.Genesis {
 	switch {
 	case ctx.Bool(utils.MainnetFlag.Name):
 		genesis = blockchain.DefaultGenesisBlock()
-	case ctx.Bool(utils.TestnetFlag.Name):
-		genesis = blockchain.DefaultTestnetGenesisBlock()
+	case ctx.Bool(utils.KairosFlag.Name):
+		genesis = blockchain.DefaultKairosGenesisBlock()
 	}
 	return genesis
 }

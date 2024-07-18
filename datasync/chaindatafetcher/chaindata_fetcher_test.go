@@ -27,13 +27,13 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/mocks"
-	cfTypes "github.com/klaytn/klaytn/datasync/chaindatafetcher/types"
-	eventMocks "github.com/klaytn/klaytn/event/mocks"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/mocks"
+	cfTypes "github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
+	eventMocks "github.com/kaiachain/kaia/event/mocks"
+	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"
 )
 

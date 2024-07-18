@@ -25,10 +25,10 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/params"
 )
 
 // BlockValidator is responsible for validating block headers and

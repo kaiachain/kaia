@@ -21,11 +21,9 @@ package kas
 import (
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
-
-	"github.com/klaytn/klaytn/blockchain/types"
-
-	"github.com/klaytn/klaytn/blockchain/vm"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 )
 

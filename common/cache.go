@@ -23,7 +23,7 @@ import (
 	"math"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/log"
 	"github.com/pbnjay/memory"
 )
 

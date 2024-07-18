@@ -33,7 +33,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/log"
+	"github.com/kaiachain/kaia/log"
 	"github.com/pkg/errors"
 )
 

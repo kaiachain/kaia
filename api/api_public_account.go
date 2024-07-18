@@ -23,8 +23,8 @@
 package api
 
 import (
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
 )
 
 // PublicAccountAPI provides an API to access accounts managed by this node.

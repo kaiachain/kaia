@@ -37,33 +37,33 @@ import (
 	"unicode"
 
 	"github.com/Shopify/sarama"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/keystore"
-	"github.com/klaytn/klaytn/api/debug"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/fdlimit"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/crypto/bls"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kafka"
-	"github.com/klaytn/klaytn/datasync/chaindatafetcher/kas"
-	"github.com/klaytn/klaytn/datasync/dbsyncer"
-	"github.com/klaytn/klaytn/datasync/downloader"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/nat"
-	"github.com/klaytn/klaytn/networks/p2p/netutil"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/node/cn/tracers"
-	"github.com/klaytn/klaytn/node/sc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/accounts/keystore"
+	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/fdlimit"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
+	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
+	"github.com/kaiachain/kaia/datasync/dbsyncer"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/nat"
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/node/cn"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/node/cn/tracers"
+	"github.com/kaiachain/kaia/node/sc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )
@@ -316,10 +316,10 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case ctx.Bool(MainnetFlag.Name):
 		logger.Info("Mainnet bootnodes are set")
 		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
-	case ctx.Bool(TestnetFlag.Name):
-		logger.Info("Testnet bootnodes are set")
-		// set pre-configured bootnodes when 'testnet' option was enabled
-		urls = params.TestnetBootnodes[cfg.ConnectionType].Addrs
+	case ctx.Bool(KairosFlag.Name):
+		logger.Info("Kairos bootnodes are set")
+		// set pre-configured bootnodes when 'kairos' option was enabled
+		urls = params.KairosBootnodes[cfg.ConnectionType].Addrs
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
@@ -510,7 +510,7 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 // SetKaiaConfig applies klay-related command line flags to the config.
 func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	// TODO-Kaia-Bootnode: better have to check conflicts about network flags when we add Kaia's `mainnet` parameter
-	// checkExclusive(ctx, DeveloperFlag, TestnetFlag, RinkebyFlag)
+	// checkExclusive(ctx, DeveloperFlag, KairosFlag, RinkebyFlag)
 	cfg := &kCfg.CN
 	raiseFDLimit()
 
@@ -702,13 +702,13 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	tracers.HeavyAPIRequestLimit = int32(ctx.Int(HeavyDebugRequestLimitFlag.Name))
 
 	// Override any default configs for hard coded network.
-	// TODO-Kaia-Bootnode: Discuss and add `testnet` test network's genesis block
+	// TODO-Kaia-Bootnode: Discuss and add `kairos` test network's genesis block
 	/*
-		if ctx.Bool(TestnetFlag.Name) {
+		if ctx.Bool(KairosFlag.Name) {
 			if !ctx.IsSet(NetworkIdFlag.Name) {
 				cfg.NetworkId = 3
 			}
-			cfg.Genesis = blockchain.DefaultTestnetGenesisBlock()
+			cfg.Genesis = blockchain.DefaultKairosGenesisBlock()
 		}
 	*/
 	// Set the Tx resending related configuration variables
@@ -829,11 +829,11 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 
 // getNetworkId returns the associated network ID with whether or not the network is private.
 func getNetworkId(ctx *cli.Context) (uint64, bool) {
-	if ctx.Bool(TestnetFlag.Name) && ctx.Bool(MainnetFlag.Name) {
-		log.Fatalf("--testnet and --mainnet must not be set together")
+	if ctx.Bool(KairosFlag.Name) && ctx.Bool(MainnetFlag.Name) {
+		log.Fatalf("--kairos and --mainnet must not be set together")
 	}
-	if ctx.Bool(TestnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
-		log.Fatalf("--testnet and --networkid must not be set together")
+	if ctx.Bool(KairosFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
+		log.Fatalf("--kairos and --networkid must not be set together")
 	}
 	if ctx.Bool(MainnetFlag.Name) && ctx.IsSet(NetworkIdFlag.Name) {
 		log.Fatalf("--mainnet and --networkid must not be set together")
@@ -843,9 +843,9 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 	case ctx.Bool(MainnetFlag.Name):
 		logger.Info("Mainnet network ID is set", "networkid", params.MainnetNetworkId)
 		return params.MainnetNetworkId, false
-	case ctx.Bool(TestnetFlag.Name):
-		logger.Info("Testnet network ID is set", "networkid", params.TestnetNetworkId)
-		return params.TestnetNetworkId, false
+	case ctx.Bool(KairosFlag.Name):
+		logger.Info("Kairos network ID is set", "networkid", params.KairosNetworkId)
+		return params.KairosNetworkId, false
 	case ctx.IsSet(NetworkIdFlag.Name):
 		networkId := ctx.Uint64(NetworkIdFlag.Name)
 		logger.Info("A private network ID is set", "networkid", networkId)

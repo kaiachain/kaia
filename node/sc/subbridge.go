@@ -33,25 +33,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/accounts/abi/bind"
-	"github.com/klaytn/klaytn/accounts/abi/bind/backends"
-	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/node/sc/bridgepool"
-	"github.com/klaytn/klaytn/node/sc/kas"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/work"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/node/sc/bridgepool"
+	"github.com/kaiachain/kaia/node/sc/kas"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work"
 )
 
 const (
@@ -88,7 +88,7 @@ type SubBridgeInfo struct {
 	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
-//go:generate mockgen -destination=bridgeTxPool_mock_test.go -package=sc github.com/klaytn/klaytn/node/sc BridgeTxPool
+//go:generate mockgen -destination=bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
 type BridgeTxPool interface {
 	GetMaxTxNonce(from *common.Address) uint64
 	AddLocal(tx *types.Transaction) error

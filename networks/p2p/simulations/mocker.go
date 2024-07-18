@@ -28,9 +28,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/p2p/discover"
-	"github.com/klaytn/klaytn/networks/p2p/simulations/adapters"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/networks/p2p/simulations/adapters"
 )
 
 // a map of mocker names to its function

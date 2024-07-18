@@ -27,8 +27,8 @@ import (
 	"math/big"
 	"net/http"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
 const (
@@ -41,18 +41,18 @@ var (
 	errInvalidBlockNumber = errors.New("invalid block number")
 )
 
-//go:generate mockgen -destination=./mocks/anchordb_mock.go -package=mocks github.com/klaytn/klaytn/kas AnchorDB
+//go:generate mockgen -destination=./mocks/anchordb_mock.go -package=mocks github.com/kaiachain/kaia/kas AnchorDB
 type AnchorDB interface {
 	WriteAnchoredBlockNumber(blockNum uint64)
 	ReadAnchoredBlockNumber() uint64
 }
 
-//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/klaytn/klaytn/kas BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/kas BlockChain
 type BlockChain interface {
 	GetBlockByNumber(number uint64) *types.Block
 }
 
-//go:generate mockgen -destination=./mocks/client_mock.go -package=mocks github.com/klaytn/klaytn/kas HTTPClient
+//go:generate mockgen -destination=./mocks/client_mock.go -package=mocks github.com/kaiachain/kaia/kas HTTPClient
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }

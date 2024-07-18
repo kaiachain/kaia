@@ -1,17 +1,15 @@
-pragma solidity ^0.5.6;
+pragma solidity ^0.8.24;
 
 contract Factory {
-    function deploy(bytes memory code, uint256 salt) public {
-        address addr;
-        assembly {
-            addr := create2(0, add(code, 0x20), mload(code), salt)
-            if iszero(extcodesize(addr)) {
-                revert(0, 0)
-            }
-        }
+    event Deploy(address a);
+    function deploy(bytes32 salt, uint256 arg) public {
+        Contract a = new Contract{salt: salt}(arg);
+        emit Deploy(address(a));
     }
 }
 
 contract Contract {
-    constructor(bytes32 name) public {}
+    constructor(uint256 arg) {
+        arg -= 100; // reverts if arg < 100
+    }
 }

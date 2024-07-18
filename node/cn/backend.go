@@ -31,38 +31,38 @@ import (
 	"sync"
 	"time"
 
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts"
-	"github.com/klaytn/klaytn/api"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/bloombits"
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/datasync/downloader"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/node/cn/gasprice"
-	"github.com/klaytn/klaytn/node/cn/tracers"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/rlp"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/work"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/node/cn/gasprice"
+	"github.com/kaiachain/kaia/node/cn/tracers"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work"
 )
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/klaytn/klaytn/node/cn LesServer
+//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -72,7 +72,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/klaytn/klaytn/node/cn Miner
+//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -86,7 +86,7 @@ type Miner interface {
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/klaytn/klaytn/node/cn BackendProtocolManager
+//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/kaiachain/kaia/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -369,9 +369,32 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
 	// Particularly, the gov.changeSet is also restored here.
-	if err := cn.Engine().CreateSnapshot(cn.blockchain, cn.blockchain.CurrentBlock().NumberU64(), cn.blockchain.CurrentBlock().Hash(), nil); err != nil {
+	// Temporarily set chain since snapshot needs state since kaia hardfork
+	logger.Info("Start creating istanbul snapshot")
+	var (
+		currBlock = cn.blockchain.CurrentBlock()
+		headers   []*types.Header
+	)
+	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
+		logger.Error("Failed to get headers to apply", "err", err)
+	} else {
+		// Temporarily supply blockchain for `Finalize`.
+		cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
+		preloadNums, err := reward.PreloadStakingInfo(headers)
+		if err != nil {
+			logger.Error("Preload staking info failed", "err", err)
+		}
+		cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
+		defer func() {
+			for _, num := range preloadNums {
+				reward.UnloadStakingInfo(num)
+			}
+		}()
+	}
+	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
 	if config.WorkerDisable {

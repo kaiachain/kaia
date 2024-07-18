@@ -32,7 +32,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/klaytn/klaytn/common/math"
+	"github.com/kaiachain/kaia/common/math"
 )
 
 type testEncoder struct {

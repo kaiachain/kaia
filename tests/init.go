@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Forks table defines supported forks and their chain config.

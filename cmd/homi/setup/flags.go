@@ -18,8 +18,8 @@
 package setup
 
 import (
-	"github.com/klaytn/klaytn/blockchain/system"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -51,14 +51,14 @@ var (
 		Usage:   "Generate genesis.json similar to the one used for Mainnet",
 		Aliases: []string{"cypress"}, // TODO: remove
 	}
-	testnetTestFlag = &cli.BoolFlag{
-		Name:    "testnet-test",
-		Usage:   "Generate genesis.json similar to the one used for Testnet with shorter intervals for testing",
+	kairosTestFlag = &cli.BoolFlag{
+		Name:    "kairos-test",
+		Usage:   "Generate genesis.json similar to the one used for Kairos with shorter intervals for testing",
 		Aliases: []string{"baobab-test"}, // TODO: remove
 	}
-	testnetFlag = &cli.BoolFlag{
-		Name:    "testnet",
-		Usage:   "Generate genesis.json similar to the one used for Testnet",
+	kairosFlag = &cli.BoolFlag{
+		Name:    "kairos",
+		Usage:   "Generate genesis.json similar to the one used for Kairos",
 		Aliases: []string{"baobab"}, // TODO: remove
 	}
 	serviceChainFlag = &cli.BoolFlag{
@@ -128,7 +128,7 @@ var (
 
 	genesisTypeFlag = &cli.StringFlag{
 		Name:    "genesis-type",
-		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, testnet-test, testnet, clique, servicechain, servicechain-test, istanbul)",
+		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, kairos-test, kairos, clique, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
 

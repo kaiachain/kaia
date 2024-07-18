@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/klaytn/klaytn/common"
+	"github.com/kaiachain/kaia/common"
 )
 
 func (g *G1) one() *PointG1 {

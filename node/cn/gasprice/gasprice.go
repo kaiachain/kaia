@@ -28,10 +28,11 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"golang.org/x/exp/slices"
 )
 
@@ -114,7 +115,7 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 
 	return &Oracle{
 		backend:          backend,
-		lastPrice:        config.Default,
+		lastPrice:        common.Big0,
 		maxPrice:         maxPrice,
 		checkBlocks:      blocks,
 		maxEmpty:         blocks / 2,
@@ -136,18 +137,18 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 // | After EthTxType   | must be fixed UnitPrice (1)  | must be fixed UnitPrice (3)  | must be fixed UnitPrice (3)  |
 // | After Magma       | BaseFee or higher (4)        | BaseFee or higher (4)        | Ignored (4)                  |
 //
-// (1) If tx.type != 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L729
-// (2) If tx.type == 2 && !rules.IsEthTxType: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L670
-// (3) If tx.type == 2 && !rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L710
-// (4) If tx.type == 2 && rules.IsMagma: https://github.com/klaytn/klaytn/blob/v1.11.1/blockchain/tx_pool.go#L703
+// (1) If tx.type != 2 && !rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L729
+// (2) If tx.type == 2 && !rules.IsEthTxType: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L670
+// (3) If tx.type == 2 && !rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L710
+// (4) If tx.type == 2 && rules.IsMagma: https://github.com/kaiachain/kaia/blob/v1.11.1/blockchain/tx_pool.go#L703
 //
 // The suggested prices needs to match the requirements.
 //
-// | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas) |
-// |------------------ |------------------------------------------------------------ |----------------------------------------- |
-// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                          |
-// | After Magma       | BaseFee * 2                                                 | Zero                                     |
-// | After Kaia        | BaseFee + SuggestTipCap                                     | 60% percentile of last 20 blocks         |
+// | Fork              | SuggestPrice (for gasPrice and maxFeePerGas)                | SuggestTipCap (for maxPriorityFeePerGas)                                              |
+// |------------------ |------------------------------------------------------------ |-------------------------------------------------------------------------------------- |
+// | Before Magma      | Fixed UnitPrice                                             | Fixed UnitPrice                                                                       |
+// | After Magma       | BaseFee * 2                                                 | Zero                                                                                  |
+// | After Kaia        | BaseFee * 1.10 or 1.15 + SuggestTipCap                      | Zero if nextBaseFee is lower bound, 60% percentile of last 20 blocks otherwise.       |
 
 // SuggestPrice returns the recommended gas price.
 // This value is intended to be used as gasPrice or maxFeePerGas.
@@ -165,6 +166,13 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 		if err != nil {
 			return nil, err
 		}
+		// If network is relaxed, give a buffer of 10% to the suggested tip. Otherwise, 15%.
+		if suggestedTip.Cmp(common.Big0) == 0 {
+			baseFee.Mul(baseFee, big.NewInt(110))
+		} else {
+			baseFee.Mul(baseFee, big.NewInt(115))
+		}
+		baseFee.Div(baseFee, big.NewInt(100))
 		return new(big.Int).Add(baseFee, suggestedTip), nil
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return the twice of BaseFee as a buffer.
@@ -188,9 +196,24 @@ func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
 	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
 		// After Kaia, return using fee history.
-		// By default config, this will return 60% percentile of last 20 blocks
+		// If the next baseFee is lower bound, return 0.
+		// Otherwise, by default config, this will return 60% percentile of last 20 blocks.
 		// See node/cn/config.go for the default config.
-		return gpo.suggestTipCapUsingFeeHistory(ctx)
+		header := gpo.backend.CurrentBlock().Header()
+		headHash := header.Hash()
+		// If the latest gasprice is still available, return it.
+		if lastPrice, ok := gpo.readCacheChecked(headHash); ok {
+			return new(big.Int).Set(lastPrice), nil
+		}
+		if gpo.isRelaxedNetwork(header) {
+			gpo.writeCache(headHash, common.Big0)
+			return common.Big0, nil
+		}
+		price, err := gpo.suggestTipCapUsingFeeHistory(ctx)
+		if err == nil {
+			gpo.writeCache(headHash, price)
+		}
+		return price, err
 	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
 		return common.Big0, nil
@@ -206,20 +229,10 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 	head, _ := oracle.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	headHash := head.Hash()
 
-	// If the latest gasprice is still available, return it.
-	oracle.cacheLock.RLock()
-	lastHead, lastPrice := oracle.lastHead, oracle.lastPrice
-	oracle.cacheLock.RUnlock()
-	if headHash == lastHead {
-		return new(big.Int).Set(lastPrice), nil
-	}
 	oracle.fetchLock.Lock()
 	defer oracle.fetchLock.Unlock()
 
-	// Try checking the cache again, maybe the last fetch fetched what we need
-	oracle.cacheLock.RLock()
-	lastHead, lastPrice = oracle.lastHead, oracle.lastPrice
-	oracle.cacheLock.RUnlock()
+	lastHead, lastPrice := oracle.readCache()
 	if headHash == lastHead {
 		return new(big.Int).Set(lastPrice), nil
 	}
@@ -273,10 +286,6 @@ func (oracle *Oracle) suggestTipCapUsingFeeHistory(ctx context.Context) (*big.In
 	if price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
 	}
-	oracle.cacheLock.Lock()
-	oracle.lastHead = headHash
-	oracle.lastPrice = price
-	oracle.cacheLock.Unlock()
 
 	return new(big.Int).Set(price), nil
 }
@@ -327,6 +336,36 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 	case result <- results{prices, nil}:
 	case <-quit:
 	}
+}
+
+// isRelaxedNetwork returns true if the current network congestion is low to the point
+// paying any tip is unnecessary. It returns true when the head block is after Magma fork
+// and the next base fee is at the lower bound.
+func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
+	pset, err := oracle.gov.EffectiveParams(header.Number.Uint64() + 1)
+	if pset != nil && err == nil {
+		nextBaseFee := misc.NextMagmaBlockBaseFee(header, pset.ToKIP71Config())
+		return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee()))) <= 0
+	}
+	return false
+}
+
+func (oracle *Oracle) readCacheChecked(headHash common.Hash) (*big.Int, bool) {
+	lastHead, lastPrice := oracle.readCache()
+	return lastPrice, headHash == lastHead
+}
+
+func (oracle *Oracle) readCache() (common.Hash, *big.Int) {
+	oracle.cacheLock.RLock()
+	defer oracle.cacheLock.RUnlock()
+	return oracle.lastHead, oracle.lastPrice
+}
+
+func (oracle *Oracle) writeCache(head common.Hash, price *big.Int) {
+	oracle.cacheLock.Lock()
+	oracle.lastHead = head
+	oracle.lastPrice = price
+	oracle.cacheLock.Unlock()
 }
 
 func (oracle *Oracle) PurgeCache() {

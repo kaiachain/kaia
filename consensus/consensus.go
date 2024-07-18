@@ -25,12 +25,12 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -69,7 +69,7 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 //
-//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/klaytn/klaytn/consensus Engine
+//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
 type Engine interface {
 	// Author retrieves the Kaia address of the account that minted the given
 	// block.
@@ -123,6 +123,9 @@ type Engine interface {
 
 	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
+
+	// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to calculate snapshot for the given block number.
+	GetKaiaHeadersForSnapshotApply(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error)
 
 	// GetConsensusInfo returns consensus information regarding the given block number.
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)

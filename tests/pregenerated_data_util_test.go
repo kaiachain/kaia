@@ -32,20 +32,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/istanbul"
-	istanbulBackend "github.com/klaytn/klaytn/consensus/istanbul/backend"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/governance"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
-	"github.com/klaytn/klaytn/storage/database"
-	"github.com/klaytn/klaytn/storage/statedb"
-	"github.com/klaytn/klaytn/work"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/work"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
@@ -428,8 +428,8 @@ func genAspenOptions() (*database.DBConfig, *opt.Options) {
 	return aspenDBConfig, aspenLevelDBOptions
 }
 
-// genTestnetOptions returns database configurations of Testnet network.
-func genTestnetOptions() (*database.DBConfig, *opt.Options) {
+// genKairosOptions returns database configurations of Kairos network.
+func genKairosOptions() (*database.DBConfig, *opt.Options) {
 	dbc, opts := genAspenOptions()
 
 	opts.CompactionTableSize = 4 * opt.MiB

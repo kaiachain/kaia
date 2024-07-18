@@ -27,10 +27,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/reward"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/reward"
 )
 
 type GovernanceAPI struct {
@@ -90,6 +90,11 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 		blockNumber = api.chain.CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
+	}
+	// Check if the node has state to calculate the snapshot.
+	err := checkStateForStakingInfo(api.governance, blockNumber)
+	if err != nil {
+		return nil, err
 	}
 
 	header := api.chain.GetHeaderByNumber(blockNumber)
@@ -170,27 +175,26 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 
 	numWorkers := runtime.NumCPU()
 	reqCh := make(chan uint64, numWorkers)
-	errCh := make(chan error, numWorkers+1)
+	errCh := make(chan error, 1)
 	wg := sync.WaitGroup{}
 
 	// introduce the worker pattern to prevent resource exhaustion
 	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			// the minimum digit of request is period to avoid current access to an accArray item
 			for num := range reqCh {
 				bn := rpc.BlockNumber(num)
 				blockReward, err := govKaiaAPI.GetRewards(&bn)
 				if err != nil {
 					errCh <- err
-					wg.Done()
 					return
 				}
 
 				mu.Lock()
 				blockRewards.Add(blockReward)
 				mu.Unlock()
-
-				wg.Done()
 			}
 		}()
 	}
@@ -211,15 +215,17 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 	accumRewards.LastBlock = header.Number
 	accumRewards.LastBlockTime = time.Unix(header.Time.Int64(), 0).String()
 
-	for num := firstBlock; num <= lastBlock; num++ {
-		wg.Add(1)
-		reqCh <- num
-	}
+	go func() {
+		defer close(reqCh)
+		for num := firstBlock; num <= lastBlock; num++ {
+			reqCh <- num
+		}
+	}()
 
 	// generate a goroutine to return error early
 	go func() {
 		wg.Wait()
-		errCh <- nil
+		close(errCh)
 	}()
 
 	if err := <-errCh; err != nil {
@@ -339,7 +345,29 @@ func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInf
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
+	// Check if the node has state to calculate the snapshot.
+	err := checkStateForStakingInfo(governance, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
 	return reward.GetStakingInfo(blockNumber), nil
+}
+
+// Checks the state of block for the given block number for staking info
+func checkStateForStakingInfo(governance Engine, blockNumber uint64) error {
+	if blockNumber == 0 {
+		return nil
+	}
+
+	// The staking info at blockNumber is calculated by the state of previous block
+	blockNumber--
+	if !governance.BlockChain().Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
+		return nil
+	}
+
+	_, err := governance.BlockChain().StateAt(governance.BlockChain().GetHeaderByNumber(blockNumber).Root)
+	return err
 }
 
 func (api *GovernanceAPI) PendingChanges() map[string]interface{} {

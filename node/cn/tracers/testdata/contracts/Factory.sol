@@ -1,11 +1,13 @@
-pragma solidity ^0.5.6;
+pragma solidity ^0.8.24;
 
 contract Factory {
-    function createContract (bytes32 name) public {
-        new Contract(name);
+    function createContract (uint256 num) public {
+        new Contract(num);
     }
 }
 
 contract Contract {
-    constructor(bytes32 name) public {}
+    constructor(uint256 num) {
+        num -= 100;
+    }
 }

@@ -27,11 +27,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/kerrors"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/params"
 )
 
 var (
@@ -363,6 +363,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	)
 	ret, st.gas, vmerr = msg.Execute(st.evm, st.state, st.evm.Context.BlockNumber.Uint64(), st.gas, st.value)
 
+	// These tx types does not enter the EVM in the msg.Execute() method. For the purpose of debug traces,
+	// those tx types are considered as a harmless zero-value transfer to sender itself. This aligns with
+	// how the eth_getTransaction fills the 'to' field for those tx types. See also api_ethereum.go:resolveToField
+	if st.evm.Config.Debug {
+		txType := msg.Type()
+		if txType.IsAccountUpdate() || txType.IsCancelTransaction() || txType.IsChainDataAnchoring() {
+			st.evm.Config.Tracer.CaptureStart(st.evm, msg.ValidatedSender(), msg.ValidatedSender(), false, msg.Data(), st.initialGas, msg.Value())
+			defer func() {
+				st.evm.Config.Tracer.CaptureEnd(ret, st.gasUsed(), vmerr)
+			}()
+		}
+	}
+
 	// time-limit error is not a vm error. This error is returned when the EVM is still running while the
 	// block proposer's total execution time of txs for a candidate block reached the predefined limit.
 	if vmerr == vm.ErrTotalTimeLimitReached {
@@ -486,8 +499,4 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
-}
-
-func getBurnAmountMagma(fee *big.Int) *big.Int {
-	return new(big.Int).Div(fee, big.NewInt(2))
 }

@@ -29,11 +29,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain/state"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus"
-	"github.com/klaytn/klaytn/params"
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/params"
 )
 
 var (
@@ -72,6 +72,11 @@ func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (cha
 // CreateSnapshot is not used for PoW engine.
 func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
 	return nil
+}
+
+// GetKaiaHeadersForSnapshotApply is not used for PoW engine.
+func (gxhash *Gxhash) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	return nil, nil
 }
 
 // GetConsensusInfo is not used for PoW engine.

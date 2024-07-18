@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Fetch tags from upstream first
-git fetch -t git@github.com:klaytn/klaytn.git
+git fetch -t git@github.com:kaiachain/kaia.git
 
 VERSION=$(go run build/rpm/main.go version)
 echo "Trying to tag $VERSION"

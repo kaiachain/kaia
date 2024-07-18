@@ -30,8 +30,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 func (i InternalTxTrace) MarshalJSON() ([]byte, error) {
@@ -51,7 +51,8 @@ func (i InternalTxTrace) MarshalJSON() ([]byte, error) {
 		Time  *string            `json:"time,omitempty"`
 		Calls []*InternalTxTrace `json:"calls,omitempty"`
 
-		Reverted *RevertedInfo `json:"reverted,omitempty"`
+		RevertReason string        `json:"revertReason,omitempty"`
+		Reverted     *RevertedInfo `json:"reverted,omitempty"`
 	}
 
 	var enc internalTxTrace
@@ -84,6 +85,7 @@ func (i InternalTxTrace) MarshalJSON() ([]byte, error) {
 		enc.Time = &timeStr
 	}
 	enc.Calls = i.Calls
+	enc.RevertReason = i.RevertReason
 	enc.Reverted = i.Reverted
 
 	return json.Marshal(&enc)
@@ -106,7 +108,8 @@ func (i *InternalTxTrace) UnmarshalJSON(input []byte) error {
 		Time  *string            `json:"time,omitempty"`
 		Calls []*InternalTxTrace `json:"calls,omitempty"`
 
-		Reverted *RevertedInfo `json:"reverted,omitempty"`
+		RevertReason string        `json:"revertReason,omitempty"`
+		Reverted     *RevertedInfo `json:"reverted,omitempty"`
 	}
 	var dec internalTxTrace
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -145,6 +148,7 @@ func (i *InternalTxTrace) UnmarshalJSON(input []byte) error {
 		i.Time = t
 	}
 	i.Calls = dec.Calls
+	i.RevertReason = dec.RevertReason
 	i.Reverted = dec.Reverted
 	return nil
 }

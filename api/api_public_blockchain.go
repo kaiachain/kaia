@@ -30,19 +30,19 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/types/account"
-	"github.com/klaytn/klaytn/blockchain/types/accountkey"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/common/hexutil"
-	"github.com/klaytn/klaytn/common/math"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/networks/rpc"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/rlp"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 var logger = log.NewModuleLogger(log.API)
@@ -614,13 +614,13 @@ func getFrom(tx *types.Transaction) common.Address {
 	return from
 }
 
-func NewRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
-	return newRPCTransaction(b, tx, blockHash, blockNumber, index, config)
+func NewRPCTransaction(head *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
+	return newRPCTransaction(head, tx, blockHash, blockNumber, index, config)
 }
 
 // newRPCTransaction returns a transaction that will serialize to the RPC
 // representation, with the given location metadata set (if available).
-func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
+func newRPCTransaction(header *types.Header, tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64, config *params.ChainConfig) map[string]interface{} {
 	output := tx.MakeRPCOutput()
 	output["senderTxHash"] = tx.SenderTxHashAll()
 	output["blockHash"] = blockHash
@@ -629,8 +629,8 @@ func newRPCTransaction(b *types.Block, tx *types.Transaction, blockHash common.H
 	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
 	if tx.Type() == types.TxTypeEthereumDynamicFee {
-		if b != nil {
-			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(b.Header(), config))
+		if header != nil {
+			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(header, config))
 		} else {
 			// transaction is not processed yet
 			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
@@ -646,12 +646,13 @@ func newRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig)
 }
 
 // newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
+// non-null of b(block) is guaranteed
 func newRPCTransactionFromBlockIndex(b *types.Block, index uint64, config *params.ChainConfig) map[string]interface{} {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
 		return nil
 	}
-	return newRPCTransaction(b, txs[index], b.Hash(), b.NumberU64(), index, config)
+	return newRPCTransaction(b.Header(), txs[index], b.Hash(), b.NumberU64(), index, config)
 }
 
 // newRPCRawTransactionFromBlockIndex returns the bytes of a transaction given a block and a transaction index.

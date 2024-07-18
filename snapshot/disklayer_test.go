@@ -27,12 +27,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/klaytn/klaytn/rlp"
-
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/storage/database"
-
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 // reverse reverses the contents of a byte slice. It's used to update random accs

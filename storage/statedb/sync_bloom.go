@@ -26,11 +26,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/log"
-	"github.com/klaytn/klaytn/storage/database"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/rcrowley/go-metrics"
-
 	"github.com/steakknife/bloomfilter"
 )
 

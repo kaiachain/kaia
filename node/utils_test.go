@@ -28,8 +28,8 @@ package node
 import (
 	"reflect"
 
-	"github.com/klaytn/klaytn/networks/p2p"
-	"github.com/klaytn/klaytn/networks/rpc"
+	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 // NoopService is a trivial implementation of the Service interface.

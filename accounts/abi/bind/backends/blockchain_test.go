@@ -22,25 +22,26 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	kaia "github.com/klaytn/klaytn"
-	"github.com/klaytn/klaytn/accounts/abi"
-	"github.com/klaytn/klaytn/blockchain"
-	"github.com/klaytn/klaytn/blockchain/types"
-	"github.com/klaytn/klaytn/blockchain/vm"
-	"github.com/klaytn/klaytn/common"
-	"github.com/klaytn/klaytn/consensus/gxhash"
-	"github.com/klaytn/klaytn/crypto"
-	"github.com/klaytn/klaytn/event"
-	"github.com/klaytn/klaytn/node/cn/filters"
-	mock_filter "github.com/klaytn/klaytn/node/cn/filters/mock"
-	"github.com/klaytn/klaytn/params"
-	"github.com/klaytn/klaytn/storage/database"
+	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/node/cn/filters"
+	mock_filter "github.com/kaiachain/kaia/node/cn/filters/mock"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -132,6 +133,18 @@ func TestBlockchainCallContract(t *testing.T) {
 	}, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedReturn, ret)
+
+	// Argument error - both gasPrice and feecap, tipcap
+	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
+		From:      testAddr,
+		To:        &code1Addr,
+		Gas:       1000000,
+		Data:      data_receive,
+		GasPrice:  big.NewInt(1),
+		GasFeeCap: big.NewInt(1),
+		GasTipCap: big.NewInt(1),
+	}, nil)
+	assert.Equal(t, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified", err.Error())
 
 	// Error outside VM - Intrinsic Gas
 	ret, err = c.CallContract(context.Background(), kaia.CallMsg{
@@ -226,6 +239,27 @@ func TestBlockChainEstimateGas(t *testing.T) {
 	})
 	assert.Contains(t, err.Error(), "insufficient balance for transfer")
 	assert.Zero(t, gas)
+
+	// Error case - simple transfer with high GasPrice
+	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
+		From:     testAddr,
+		To:       &testAddr,
+		Value:    big.NewInt(1),
+		GasPrice: big.NewInt(1e9),
+	})
+	assert.Zero(t, gas)
+	assert.Contains(t, err.Error(), "gas required exceeds allowance")
+
+	// Error case - simple transfer with high GasFeeCap
+	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
+		From:      testAddr,
+		To:        &testAddr,
+		Value:     big.NewInt(1),
+		GasFeeCap: big.NewInt(1e9),
+	})
+	assert.Zero(t, gas)
+	fmt.Println(gas, err)
+	assert.Contains(t, err.Error(), "gas required exceeds allowance")
 }
 
 func TestBlockChainSendTransaction(t *testing.T) {
