@@ -231,7 +231,7 @@ commands:
           command: |
             export version=$(go run build/rpm/main.go version) >> $BASH_ENV
             echo "git tag $version"
-            git config --global user.email "team.devops@kaia.io"
+            git config --global user.email "devops@kaia.io"
             git config --global user.name "circleci-kaia"
             git tag -a $version -m "$CIRCLE_STAGE"
             git push origin $version
