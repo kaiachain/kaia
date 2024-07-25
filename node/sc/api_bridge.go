@@ -555,7 +555,7 @@ func addPeerInternal(server p2p.Server, url string) (*discover.Node, error) {
 	return node, nil
 }
 
-// RemovePeer disconnects from a a remote node if the connection exists
+// RemovePeer disconnects from a remote node if the connection exists
 func (sb *SubBridgeAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := sb.subBridge.bridgeServer
