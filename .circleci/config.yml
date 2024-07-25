@@ -57,6 +57,11 @@ executors:
           KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  darwin-executor: # this executor is for packaging darwin binaries
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.m1.medium.gen1
   rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/kaiachain/kaia
     docker:
@@ -70,6 +75,18 @@ executors:
       - image: cimg/go:1.22.1
 
 commands:
+  install-darwin-dependencies:
+    description: Install dependencies on darwin machine
+    steps:
+      - run:
+          name: "install darwin dependencies"
+          command: |
+            # install awscli
+            brew install awscli
+            # install golang
+            curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
+            mkdir $HOME/go1.22.1
+            tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -470,7 +487,27 @@ jobs:
           baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
+  packaging-darwin:
+    executor: darwin-executor
+    steps:
+      - checkout
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging:
+          os-network: "darwin-arm64"
+      - upload-repo
 
+  packaging-darwin-baobab:
+    executor: darwin-executor
+    steps:
+      - checkout
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging:
+          os-network: "darwin-arm64"
+          baobab: "-b"
+      - upload-repo:
+          item: "kcn kpn ken"
   rpm-tagged:
     executor: rpm-executor
     steps:
@@ -593,6 +630,8 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]/
@@ -605,6 +644,8 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
@@ -627,7 +668,14 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-
+      - packaging-darwin:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin-baobab:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
       - major-tagging:
           filters:
             branches:
