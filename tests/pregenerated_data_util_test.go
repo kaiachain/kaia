@@ -327,7 +327,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		return nil, errors.New("numTotalSenders should be bigger numValidatorsForTest")
 	}
 
-	// Remove test data directory if 1) exists and and 2) generating test.
+	// Remove test data directory if 1) exists and 2) generating test.
 	if _, err := os.Stat(testDataDir); err == nil && tc.isGenerateTest {
 		os.RemoveAll(testDataDir)
 	}
