@@ -307,6 +307,7 @@ commands:
             ./set_CNonly.sh
             cd ..
             cp config_template.json config.json
+            apt update
             apt install python3.8 python3-venv -y
             python3.8 -m venv --without-pip venv
             source venv/bin/activate
