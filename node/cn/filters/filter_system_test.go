@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
 	"github.com/kaiachain/kaia/blockchain/types"

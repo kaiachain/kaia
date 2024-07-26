@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
