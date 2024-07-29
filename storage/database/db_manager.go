@@ -409,6 +409,8 @@ func getDBEntryConfig(originalDBC *DBConfig, i DBEntryType, dbDir string) *DBCon
 	newDBC.LevelDBCacheSize = originalDBC.LevelDBCacheSize * ratio / 100
 	newDBC.OpenFilesLimit = originalDBC.OpenFilesLimit * ratio / 100
 
+	newDBC.PebbleDBCacheSize = originalDBC.PebbleDBCacheSize * ratio / 100
+
 	// Update dir to each Database specific directory.
 	newDBC.Dir = filepath.Join(originalDBC.Dir, dbDir)
 	// Update dynmao table name to Database specific name.
@@ -468,6 +470,9 @@ type DBConfig struct {
 	LevelDBCacheSize   int // LevelDBCacheSize = BlockCacheCapacity + WriteBuffer
 	LevelDBCompression LevelDBCompressionType
 	LevelDBBufferPool  bool
+
+	// PebbleDB related configurations
+	PebbleDBCacheSize int
 
 	// RocksDB related configurations
 	RocksDBConfig *RocksDBConfig

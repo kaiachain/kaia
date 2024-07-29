@@ -105,6 +105,8 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
 		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
+		PebbleDBCacheSize: ctx.Int(utils.PebbleDBCacheSizeFlag.Name),
+
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
 			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),
@@ -141,6 +143,8 @@ func createDBConfigForMigration(ctx *cli.Context) (*database.DBConfig, *database
 		LevelDBCacheSize:    ctx.Int(utils.DstLevelDBCacheSizeFlag.Name),
 		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.DstLevelDBCompressionTypeFlag.Name)),
 		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
+
+		PebbleDBCacheSize: ctx.Int(utils.DstPebbleDBCacheSizeFlag.Name),
 
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.String(utils.DstDynamoDBTableNameFlag.Name),

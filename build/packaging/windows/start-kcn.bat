@@ -73,6 +73,10 @@ IF DEFINED LDBCACHESIZE (
     set OPTIONS=%OPTIONS% --db.leveldb.cache-size %LDBCACHESIZE%
 )
 
+IF DEFINED PDBCACHESIZE (
+    set OPTIONS=%OPTIONS% --db.pebbledb.cache-size %PDBCACHESIZE%
+)
+
 IF DEFINED REWARDBASE (
     set OPTIONS=%OPTIONS% --rewardbase %REWARDBASE%
 )

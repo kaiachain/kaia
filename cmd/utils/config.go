@@ -563,6 +563,8 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.EnableDBPerfMetrics = !ctx.Bool(DBNoPerformanceMetricsFlag.Name)
 	cfg.LevelDBCacheSize = ctx.Int(LevelDBCacheSizeFlag.Name)
 
+	cfg.PebbleDBCacheSize = ctx.Int(PebbleDBCacheSizeFlag.Name)
+
 	cfg.RocksDBConfig.Secondary = ctx.Bool(RocksDBSecondaryFlag.Name)
 	cfg.RocksDBConfig.MaxOpenFiles = ctx.Int(RocksDBMaxOpenFilesFlag.Name)
 	if cfg.RocksDBConfig.Secondary {

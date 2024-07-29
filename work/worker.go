@@ -498,7 +498,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 }
 
 func (self *worker) commitNewWork() {
-
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.currentMu.Lock()
