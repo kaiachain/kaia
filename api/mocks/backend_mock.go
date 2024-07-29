@@ -11,7 +11,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	accounts "github.com/kaiachain/kaia/accounts"
 	blockchain "github.com/kaiachain/kaia/blockchain"
 	state "github.com/kaiachain/kaia/blockchain/state"

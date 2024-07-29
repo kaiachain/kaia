@@ -22,7 +22,7 @@ import (
 	"context"
 	"math/big"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"

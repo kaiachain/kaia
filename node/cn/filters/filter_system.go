@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"

@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	downloader "github.com/kaiachain/kaia/datasync/downloader"
