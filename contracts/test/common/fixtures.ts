@@ -594,6 +594,9 @@ export async function airdropTestFixture() {
 
   const airdrop = await new Airdrop__factory(deployer).deploy();
 
+  // Just mock contract without receiver function to test claim failed case.
+  const noReceiverContract = await new StakingTrackerMockReceiver__factory(deployer).deploy();
+
   return {
     airdrop,
     deployer,
@@ -601,6 +604,7 @@ export async function airdropTestFixture() {
     claimers,
     claimInfo,
     totalAirdropAmount,
+    noReceiverContract,
   };
 }
 

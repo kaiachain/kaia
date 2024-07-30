@@ -24,12 +24,6 @@ import "openzeppelin-contracts-5.0/access/Ownable.sol";
 contract Airdrop is Ownable, IAirdrop {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /* ========== CONSTANTS ========== */
-
-    uint256 public constant KAIA_UNIT = 1e18;
-
-    uint256 public constant TOTAL_AIRDROP_AMOUNT = 80_000_000 * KAIA_UNIT;
-
     /* ========== STATE VARIABLES ========== */
 
     EnumerableSet.AddressSet private _beneficiaries;
@@ -38,11 +32,24 @@ contract Airdrop is Ownable, IAirdrop {
 
     mapping(address => bool) public claimed;
 
+    bool public claimAllowed;
+
+    /* ========== MODIFIER ========== */
+
+    modifier onlyClaimAllowed() {
+        require(claimAllowed, "Airdrop: claim not allowed");
+        _;
+    }
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor() Ownable(msg.sender) {}
 
     /* ========== OPERATOR FUNCTIONS ========== */
+
+    function toggleClaimAllowed() external override onlyOwner {
+        claimAllowed = !claimAllowed;
+    }
 
     function addClaim(address beneficiary, uint256 amount) external override onlyOwner {
         _addClaim(beneficiary, amount);
@@ -58,24 +65,27 @@ contract Airdrop is Ownable, IAirdrop {
 
     /* ========== PUBLIC FUNCTIONS ========== */
 
-    function claim() external override {
+    receive() external payable override {}
+
+    function claim() external override onlyClaimAllowed {
         _claim(msg.sender);
     }
 
-    function claimFor(address beneficiary) public override {
+    function claimFor(address beneficiary) public override onlyClaimAllowed {
         _claim(beneficiary);
     }
 
-    function claimBatch(address[] calldata beneficiary) external override {
-        for (uint256 i = 0; i < beneficiary.length; i++) {
-            _claim(beneficiary[i]);
+    function claimBatch(address[] calldata beneficiaries) external override onlyClaimAllowed {
+        for (uint256 i = 0; i < beneficiaries.length; i++) {
+            _claim(beneficiaries[i]);
         }
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
     function _addClaim(address beneficiary, uint256 amount) internal {
-        require(_beneficiaries.add(beneficiary), "Airdrop: beneficiary already exists");
+        // Override claim if beneficiary already exists
+        _beneficiaries.add(beneficiary);
         claims[beneficiary] = amount;
     }
 
@@ -88,32 +98,32 @@ contract Airdrop is Ownable, IAirdrop {
         claimed[beneficiary] = true;
 
         (bool success, ) = beneficiary.call{value: _amount}("");
-        require(success, "Transfer failed.");
+        require(success, "Airdrop: claim failed");
 
         emit Claimed(beneficiary, _amount);
     }
 
     /* ========== GETTERS ========== */
 
-    function getBeneficiaries(uint256 start, uint256 end) external override view returns (address[] memory result) {
+    function getBeneficiaries(uint256 start, uint256 end) external view override returns (address[] memory result) {
         end = end > _beneficiaries.length() ? _beneficiaries.length() : end;
         if (start >= end) {
             return new address[](0);
         }
 
         result = new address[](end - start);
-        for (uint256 i = start; i < end; i++) { 
+        for (uint256 i = start; i < end; i++) {
             unchecked {
                 result[i - start] = _beneficiaries.at(i);
             }
         }
     }
 
-    function getBeneficiaryAt(uint256 index) external override view returns (address) {
+    function getBeneficiaryAt(uint256 index) external view override returns (address) {
         return _beneficiaries.at(index);
     }
 
-    function getBeneficiariesLength() external override view returns (uint256) {
+    function getBeneficiariesLength() external view override returns (uint256) {
         return _beneficiaries.length();
     }
 }

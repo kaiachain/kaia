@@ -24,9 +24,7 @@ interface IAirdrop {
 
     /* ========== VIEWS ========== */
 
-    function KAIA_UNIT() external view returns (uint256);
-
-    function TOTAL_AIRDROP_AMOUNT() external view returns (uint256);
+    function claimAllowed() external view returns (bool);
 
     function claims(address) external view returns (uint256);
 
@@ -39,6 +37,10 @@ interface IAirdrop {
     function getBeneficiariesLength() external view returns (uint256);
 
     /* ========== MUTATIVE FUNCTIONS ========== */
+
+    receive() external payable;
+
+    function toggleClaimAllowed() external;
 
     function addClaim(address beneficiary, uint256 amount) external;
 
