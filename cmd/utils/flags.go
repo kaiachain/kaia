@@ -96,7 +96,7 @@ var (
 	}
 	DbTypeFlag = &cli.StringFlag{
 		Name:     "dbtype",
-		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
+		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3", "PebbleDB")`,
 		Value:    "LevelDB",
 		Aliases:  []string{"db.type", "migration.src.dbtype"},
 		EnvVars:  []string{"KLAYTN_DBTYPE", "KAIA_DBTYPE"},

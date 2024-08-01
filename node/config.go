@@ -67,7 +67,7 @@ type Config struct {
 	// in the devp2p node identifier.
 	Version string `toml:"-"`
 
-	// key-value database type [LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB]
+	// key-value database type [LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB, PebbleDB]
 	DBType database.DBType
 
 	// DataDir is the file system folder the node should use for any data storage
