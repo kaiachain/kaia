@@ -56,13 +56,6 @@ func TestGetStakingInfo_Uncached(t *testing.T) {
 				},
 				KIP71: params.GetDefaultKIP71Config(),
 			},
-			LondonCompatibleBlock:    common.Big0,
-			IstanbulCompatibleBlock:  common.Big0,
-			EthTxTypeCompatibleBlock: common.Big0,
-			MagmaCompatibleBlock:     common.Big0,
-			KoreCompatibleBlock:      common.Big0,
-			ShanghaiCompatibleBlock:  common.Big0,
-			CancunCompatibleBlock:    common.Big0,
 		}
 
 		// Addresses are already stored in AddressBookMock.sol:AddressBookMockTwoCN
