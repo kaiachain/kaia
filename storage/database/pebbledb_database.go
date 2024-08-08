@@ -28,6 +28,7 @@ import (
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
 	"github.com/kaiachain/kaia/log"
+	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -70,7 +71,16 @@ type pebbleDB struct {
 	seekCompGauge       metrics.Gauge // Gauge for tracking the number of table compaction caused by read opt
 	manualMemAllocGauge metrics.Gauge // Gauge for tracking amount of non-managed memory currently allocated
 
-	levelsGauge []metrics.Gauge // Gauge for tracking the number of tables in levels
+	levelSizesGauge  []metrics.Gauge
+	levelTablesGauge []metrics.Gauge // Gauge for tracking the number of tables in levels
+	levelReadGauge   []metrics.Gauge
+	levelWriteGauge  []metrics.Gauge
+	// levelDurationGauge []metrics.Gauge // Not impl in pebbledb, do not try to match it with leveldb
+
+	perfCheck       bool
+	getTimer        kaiametrics.HybridTimer
+	putTimer        kaiametrics.HybridTimer
+	batchWriteTimer kaiametrics.HybridTimer
 
 	quitLock sync.RWMutex    // Mutex protecting the quit channel and the closed flag
 	quitChan chan chan error // Quit channel to stop the metrics collection before closing the database
@@ -139,7 +149,7 @@ func (l panicLogger) Fatalf(format string, args ...interface{}) {
 	logger.Crit(fmt.Sprintf(format, args...))
 }
 
-// New returns a wrapped pebble DB object. The namespace is the prefix that the
+// NewPebbleDB returns a wrapped pebble DB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
 func NewPebbleDB(dbc *DBConfig, file string) (*pebbleDB, error) {
 	// Ensure we have some minimal caching and file guarantees
@@ -183,6 +193,7 @@ func NewPebbleDB(dbc *DBConfig, file string) (*pebbleDB, error) {
 		log:          logger,
 		quitChan:     make(chan chan error),
 		writeOptions: &pebble.WriteOptions{Sync: ephemeral},
+		perfCheck:    dbc.EnableDBPerfMetrics,
 	}
 	opt := &pebble.Options{
 		// Pebble has a single combined cache area and the write
@@ -260,6 +271,10 @@ func (d *pebbleDB) Meter(prefix string) {
 	d.seekCompGauge = metrics.GetOrRegisterGauge(prefix+"compact/seek", nil)
 	d.manualMemAllocGauge = metrics.GetOrRegisterGauge(prefix+"memory/manualalloc", nil)
 
+	d.getTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"get/time", nil)
+	d.putTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"put/time", nil)
+	d.batchWriteTimer = kaiametrics.NewRegisteredHybridTimer(prefix+"batchwrite/time", nil)
+
 	// Start up the metrics gathering and return
 	go d.meter(metricsGatheringInterval, prefix)
 }
@@ -318,7 +333,24 @@ func (d *pebbleDB) Get(key []byte) ([]byte, error) {
 	if d.closed {
 		return nil, pebble.ErrClosed
 	}
+	if d.perfCheck {
+		start := time.Now()
+		ret, err := d.get(key)
+		d.getTimer.Update(time.Since(start))
+		return ret, err
+	}
+
+	return d.get(key)
+}
+
+func (d *pebbleDB) get(key []byte) ([]byte, error) {
 	dat, closer, err := d.db.Get(key)
+	defer func() {
+		if err == nil {
+			closer.Close()
+		}
+	}()
+
 	if err != nil {
 		if err == pebble.ErrNotFound {
 			return nil, dataNotFoundErr
@@ -327,7 +359,6 @@ func (d *pebbleDB) Get(key []byte) ([]byte, error) {
 	}
 	ret := make([]byte, len(dat))
 	copy(ret, dat)
-	closer.Close()
 	return ret, nil
 }
 
@@ -337,6 +368,12 @@ func (d *pebbleDB) Put(key []byte, value []byte) error {
 	defer d.quitLock.RUnlock()
 	if d.closed {
 		return pebble.ErrClosed
+	}
+	if d.perfCheck {
+		start := time.Now()
+		err := d.db.Set(key, value, d.writeOptions)
+		d.putTimer.Update(time.Since(start))
+		return err
 	}
 	return d.db.Set(key, value, d.writeOptions)
 }
@@ -495,12 +532,19 @@ func (d *pebbleDB) meter(refresh time.Duration, namespace string) {
 		d.level0CompGauge.Update(level0CompCount)
 		d.seekCompGauge.Update(stats.Compact.ReadCount)
 
+		// data can exist at level 6 even when levels 1 through 5 are empty
 		for i, level := range stats.Levels {
-			// Append metrics for additional layers
-			if i >= len(d.levelsGauge) {
-				d.levelsGauge = append(d.levelsGauge, metrics.GetOrRegisterGauge(namespace+fmt.Sprintf("tables/level%v", i), nil))
+			if i >= len(d.levelSizesGauge) {
+				prefix := namespace + fmt.Sprintf("level%v/", i)
+				d.levelTablesGauge = append(d.levelTablesGauge, metrics.GetOrRegisterGauge(prefix+"tables", nil))
+				d.levelSizesGauge = append(d.levelSizesGauge, metrics.GetOrRegisterGauge(prefix+"size", nil))
+				d.levelReadGauge = append(d.levelReadGauge, metrics.GetOrRegisterGauge(prefix+"read", nil))
+				d.levelWriteGauge = append(d.levelWriteGauge, metrics.GetOrRegisterGauge(prefix+"write", nil))
 			}
-			d.levelsGauge[i].Update(level.NumFiles)
+			d.levelSizesGauge[i].Update(level.Size)
+			d.levelTablesGauge[i].Update(level.NumFiles)
+			d.levelReadGauge[i].Update(int64(level.BytesRead))
+			d.levelWriteGauge[i].Update(int64(level.BytesCompacted))
 		}
 
 		// Sleep a bit, then repeat the stats collection
@@ -548,6 +592,12 @@ func (b *batch) Write() error {
 	defer b.db.quitLock.RUnlock()
 	if b.db.closed {
 		return pebble.ErrClosed
+	}
+	if b.db.perfCheck {
+		start := time.Now()
+		err := b.b.Commit(b.db.writeOptions)
+		b.db.batchWriteTimer.Update(time.Since(start))
+		return err
 	}
 	return b.b.Commit(b.db.writeOptions)
 }

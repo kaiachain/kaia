@@ -563,6 +563,8 @@ func newDatabase(dbc *DBConfig, entryType DBEntryType) (Database, error) {
 		return NewLevelDB(dbc, entryType)
 	case RocksDB:
 		return NewRocksDB(dbc.Dir, dbc.RocksDBConfig)
+	case PebbleDB:
+		return NewPebbleDB(dbc, dbc.Dir)
 	case BadgerDB:
 		return NewBadgerDB(dbc.Dir)
 	case MemoryDB:
