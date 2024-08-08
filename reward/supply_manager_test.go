@@ -19,6 +19,7 @@
 package reward
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -47,6 +48,30 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// ----------------------------------------------------------------------------
+// Tests other than SupplyTestSuite
+
+// Test that the missing trie node errors returned by GetTotalSupply will trigger Upstream EN retry.
+func TestSupplyManagerError(t *testing.T) {
+	// Mimics networks/rpc/handler.go:shouldReauestUpstream()
+	shouldRequestUpstream := func(err error) bool {
+		var missingNodeError *statedb.MissingNodeError
+		return errors.As(err, &missingNodeError)
+	}
+
+	// If the error contains MissingNodeError, it must trigger Upstream EN retry.
+	mtn := &statedb.MissingNodeError{NodeHash: common.HexToHash("0x1234")}
+	assert.True(t, shouldRequestUpstream(errNoCanonicalBurn(mtn)))
+	assert.True(t, shouldRequestUpstream(errors.Join(errNoRebalanceBurn(errNoRebalanceMemo), errNoCanonicalBurn(mtn))))
+
+	// Other errors should not trigger Upstream EN retry
+	assert.False(t, shouldRequestUpstream(errNoAccReward))
+	assert.False(t, shouldRequestUpstream(errNoRebalanceBurn(errNoRebalanceMemo)))
+}
+
+// ----------------------------------------------------------------------------
+// SupplyTestSuite
+
 // A test suite with the blockchain having a reward-related history similar to Mainnet.
 // | Block     	| Fork  	| Minting 	| Ratio    	| KIP82 	| Event                      	|
 // |-----------	|-------	|---------	|----------	|-------	|----------------------------	|
@@ -69,6 +94,10 @@ type SupplyTestSuite struct {
 	genesis *types.Block
 	chain   *blockchain.BlockChain
 	sm      *supplyManager
+}
+
+func TestSupplyManager(t *testing.T) {
+	suite.Run(t, new(SupplyTestSuite))
 }
 
 // ----------------------------------------------------------------------------
@@ -292,10 +321,6 @@ func (s *SupplyTestSuite) waitAccReward() {
 	if s.db.ReadLastAccRewardBlockNumber() < 400 {
 		s.T().Fatal("Catchup not finished in time")
 	}
-}
-
-func TestSupplyManager(t *testing.T) {
-	suite.Run(t, new(SupplyTestSuite))
 }
 
 // ----------------------------------------------------------------------------

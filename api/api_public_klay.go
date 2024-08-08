@@ -117,7 +117,9 @@ type TotalSupplyResult struct {
 	Kip160Burn  *hexutil.Big `json:"kip160Burn"`      // by KIP160 fork. Read from its memo.
 }
 
-func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*TotalSupplyResult, error) {
+// If showPartial == nil or *showPartial == false, the regular use case, this API either delivers the full result or fails.
+// If showPartial == true, the advanced and debugging use case, this API delivers full or best effort partial result.
+func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash, showPartial *bool) (*TotalSupplyResult, error) {
 	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -143,11 +145,13 @@ func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.Bl
 		Kip103Burn:  (*hexutil.Big)(ts.Kip103Burn),
 		Kip160Burn:  (*hexutil.Big)(ts.Kip160Burn),
 	}
-	if err != nil {
+	if showPartial != nil && *showPartial && err != nil {
 		errStr := err.Error()
 		res.Error = &errStr
+		return res, nil
+	} else {
+		return res, err
 	}
-	return res, nil
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not

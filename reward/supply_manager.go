@@ -50,11 +50,11 @@ var (
 )
 
 func errNoCanonicalBurn(err error) error {
-	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %v", err)
+	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %w", err)
 }
 
 func errNoRebalanceBurn(err error) error {
-	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %v", err)
+	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %w", err)
 }
 
 // SupplyManager tracks the total supply of native tokens.
