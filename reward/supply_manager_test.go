@@ -311,6 +311,44 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	assert.Nil(t, ts)
 }
 
+// Test that when db.AccReward are missing, GetTotalSupply will re-accumulate from the nearest stored AccReward.
+func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
+	t := s.T()
+	s.setupHistory()
+	s.sm.Start()
+	defer s.sm.Stop()
+	s.waitAccReward()
+
+	// Delete AccRewards not on the default block interval (128).
+	// This happens on full nodes, and archive nodes with default BlockInterval config.
+	// Note that archive nodes ars allowed to have BlockInterval > 1, still tries are committed every block.
+	for num := uint64(0); num <= 400; num++ {
+		if num%128 != 0 {
+			// Because it's for testing, we do not add db.DeleteAccReward method.
+			s.db.GetMiscDB().Delete(append([]byte("accReward"), common.Int64ToByteBigEndian(num)...))
+		}
+	}
+
+	// Still, all block data must be available.
+	testcases := s.testcases()
+	for _, tc := range testcases {
+		s.sm.accRewardCache.Purge()
+		ts, err := s.sm.GetTotalSupply(tc.number)
+		require.NoError(t, err)
+
+		expected := tc.expectTotalSupply
+		actual := ts
+		bigEqual(t, expected.TotalSupply, actual.TotalSupply, tc.number)
+		bigEqual(t, expected.TotalMinted, actual.TotalMinted, tc.number)
+		bigEqual(t, expected.TotalBurnt, actual.TotalBurnt, tc.number)
+		bigEqual(t, expected.BurntFee, actual.BurntFee, tc.number)
+		bigEqual(t, expected.ZeroBurn, actual.ZeroBurn, tc.number)
+		bigEqual(t, expected.DeadBurn, actual.DeadBurn, tc.number)
+		bigEqual(t, expected.Kip103Burn, actual.Kip103Burn, tc.number)
+		bigEqual(t, expected.Kip160Burn, actual.Kip160Burn, tc.number)
+	}
+}
+
 func (s *SupplyTestSuite) waitAccReward() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
 		if s.db.ReadLastAccRewardBlockNumber() >= 400 {
@@ -421,8 +459,9 @@ func (s *SupplyTestSuite) SetupTest() {
 	t := s.T()
 
 	s.db = database.NewMemoryDBManager()
+	chainConfig := s.config.Copy() // to avoid some tests (i.e. PartialInfo) breaking other tests
 	genesis := &blockchain.Genesis{
-		Config:     s.config,
+		Config:     chainConfig,
 		Timestamp:  uint64(time.Now().Unix()),
 		BlockScore: common.Big1,
 		Alloc: blockchain.GenesisAlloc{
@@ -443,11 +482,11 @@ func (s *SupplyTestSuite) SetupTest() {
 		TriesInMemory:       128,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 	}
-	chain, err := blockchain.NewBlockChain(s.db, cacheConfig, s.config, s.engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(s.db, cacheConfig, chainConfig, s.engine, vm.Config{})
 	require.NoError(t, err)
 	s.chain = chain
 
-	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1)
+	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1) // 1 interval for testing
 }
 
 func (s *SupplyTestSuite) setupHistory() {
