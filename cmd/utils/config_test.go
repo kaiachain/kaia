@@ -82,6 +82,7 @@ func TestLoadYaml(t *testing.T) {
 		"db.dynamo.write-capacity":                  true, // TODO-check after bugfix
 		"db.dynamo.read-only":                       true,
 		"db.leveldb.cache-size":                     true,
+		"db.pebbledb.cache-size":                    true,
 		"db.no-parallel-write":                      true,
 		"db.rocksdb.secondary":                      true,
 		"db.rocksdb.cache-size":                     true,

@@ -36,12 +36,13 @@ const (
 	MemoryDB         = "MemoryDB"
 	DynamoDB         = "DynamoDBS3"
 	ShardedDB        = "ShardedDB"
+	PebbleDB         = "PebbleDB"
 )
 
 // ToValid converts DBType to a valid one.
 // If it is unable to convert, "" is returned.
 func (db DBType) ToValid() DBType {
-	validDBType := []DBType{LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB}
+	validDBType := []DBType{LevelDB, RocksDB, BadgerDB, MemoryDB, DynamoDB, PebbleDB}
 
 	for _, vdb := range validDBType {
 		if strings.ToLower(string(vdb)) == strings.ToLower(string(db)) {

@@ -431,7 +431,7 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 		return database.NewMemoryDBManager()
 	} else {
 		dbc := &database.DBConfig{
-			Dir: dir, DBType: dbType, LevelDBCacheSize: 768,
+			Dir: dir, DBType: dbType, LevelDBCacheSize: 768, PebbleDBCacheSize: 768,
 			OpenFilesLimit: 1024, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true,
 			LevelDBCompression: database.AllNoCompression, LevelDBBufferPool: true,
 		}

@@ -37,7 +37,7 @@ func createLocalTestDB(t *testing.T) (string, database.DBManager) {
 	if err != nil {
 		t.Fatalf("failed to create a database: %v", err)
 	}
-	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 128, OpenFilesLimit: 128}
+	dbc := &database.DBConfig{Dir: dir, DBType: database.LevelDB, LevelDBCacheSize: 128, PebbleDBCacheSize: 128, OpenFilesLimit: 128}
 	db := database.NewDBManager(dbc)
 	return dir, db
 }

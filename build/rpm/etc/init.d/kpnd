@@ -234,6 +234,10 @@ if [ ! -z $LDBCACHESIZE ]; then
     OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
 fi
 
+if [ ! -z $PDBCACHESIZE ]; then
+    OPTIONS="$OPTIONS --db.pebbledb.cache-size $PDBCACHESIZE"
+fi
+
 if [[ ! -z $NO_DISCOVER ]] && [[ $NO_DISCOVER -eq 1 ]]; then
     OPTIONS="$OPTIONS --nodiscover"
 fi

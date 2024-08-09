@@ -107,6 +107,8 @@ func getConfig(ctx *cli.Context) *database.DBConfig {
 		LevelDBCompression:  database.LevelDBCompressionType(ctx.Int(utils.LevelDBCompressionTypeFlag.Name)),
 		EnableDBPerfMetrics: !ctx.Bool(utils.DBNoPerformanceMetricsFlag.Name),
 
+		PebbleDBCacheSize: ctx.Int(utils.PebbleDBCacheSizeFlag.Name),
+
 		DynamoDBConfig: &database.DynamoDBConfig{
 			TableName:          ctx.String(utils.DynamoDBTableNameFlag.Name),
 			Region:             ctx.String(utils.DynamoDBRegionFlag.Name),

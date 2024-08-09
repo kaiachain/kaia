@@ -227,6 +227,13 @@ var flagsWithValues = []struct {
 		flagType: FlagTypeBoolean,
 	},
 	{
+		flag:        "--db.pebbledb.cache-size",
+		flagType:    FlagTypeArgument,
+		values:      []string{"768"},
+		wrongValues: commonTwoErrors,
+		errors:      []int{ErrorInvalidValue, ErrorInvalidValue},
+	},
+	{
 		flag:     "--db.no-parallel-write",
 		flagType: FlagTypeBoolean,
 	},

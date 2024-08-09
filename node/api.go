@@ -77,7 +77,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 	}
 }
 
-// RemovePeer disconnects from a a remote node if the connection exists
+// RemovePeer disconnects from a remote node if the connection exists
 func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()

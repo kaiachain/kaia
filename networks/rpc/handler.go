@@ -25,6 +25,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -448,12 +449,10 @@ func (h *handler) runMethod(ctx context.Context, msg *jsonrpcMessage, callb *cal
 
 // shouldRequestUpstream is a function that determines whether must be requested upstream.
 func shouldRequestUpstream(err error) bool {
-	switch err.(type) {
-	case *statedb.MissingNodeError:
-		return true
-	default:
-		return false
-	}
+	// Checks if the error contains MissingNodeError in the wrapped error chain.
+	// MissingNodeError is a strong evidence that the node has no state and worth dialing the upstream.
+	var missingNodeError *statedb.MissingNodeError
+	return errors.As(err, &missingNodeError)
 }
 
 // requestUpstream is the function to request upstream archive en

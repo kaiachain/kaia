@@ -91,6 +91,7 @@ var FlagGroups = []FlagGroup{
 		Name: "DATABASE",
 		Flags: []cli.Flag{
 			LevelDBCacheSizeFlag,
+			PebbleDBCacheSizeFlag,
 			SingleDBFlag,
 			NumStateTrieShardsFlag,
 			LevelDBCompressionTypeFlag,

@@ -87,6 +87,8 @@ db:
     compression: 0
     no-buffer-pool: false
     cache-size: 768
+  pebbledb:
+    cache-size: 768
   dynamo:
     table-name: ""
     region: ap-northeast-2

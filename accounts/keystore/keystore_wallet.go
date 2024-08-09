@@ -25,7 +25,7 @@ package keystore
 import (
 	"math/big"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/blockchain/types"
 )

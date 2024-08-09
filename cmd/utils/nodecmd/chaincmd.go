@@ -182,7 +182,8 @@ func initGenesis(ctx *cli.Context) error {
 		dbc := &database.DBConfig{
 			Dir: name, DBType: dbtype, ParallelDBWrite: parallelDBWrite,
 			SingleDB: singleDB, NumStateTrieShards: numStateTrieShards,
-			LevelDBCacheSize: 0, OpenFilesLimit: 0, DynamoDBConfig: dynamoDBConfig, RocksDBConfig: rocksDBConfig,
+			LevelDBCacheSize: 0, PebbleDBCacheSize: 0, OpenFilesLimit: 0,
+			DynamoDBConfig: dynamoDBConfig, RocksDBConfig: rocksDBConfig,
 		}
 		chainDB := stack.OpenDatabase(dbc)
 

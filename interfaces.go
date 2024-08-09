@@ -20,8 +20,8 @@
 // Modified and improved for the klaytn development.
 // Modified and improved for the Kaia development.
 
-// Package Kaia defines interfaces for interacting with Kaia.
-package klaytn
+// Package kaia defines interfaces for interacting with Kaia.
+package kaia
 
 import (
 	"context"

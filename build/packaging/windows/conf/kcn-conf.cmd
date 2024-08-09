@@ -9,6 +9,7 @@ set SYNCMODE="full"
 set VERBOSITY=3
 set MAXCONNECTIONS=100
 :: set LDBCACHESIZE=10240
+:: set PDBCACHESIZE=10240
 set REWARDBASE="0x0"
 
 REM txpool options setting

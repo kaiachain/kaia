@@ -96,7 +96,7 @@ var (
 	}
 	DbTypeFlag = &cli.StringFlag{
 		Name:     "dbtype",
-		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3")`,
+		Usage:    `Blockchain storage database type ("LevelDB", "BadgerDB", "MemoryDB", "DynamoDBS3", "PebbleDB")`,
 		Value:    "LevelDB",
 		Aliases:  []string{"db.type", "migration.src.dbtype"},
 		EnvVars:  []string{"KLAYTN_DBTYPE", "KAIA_DBTYPE"},
@@ -350,6 +350,14 @@ var (
 		Usage:    "Disables using buffer pool for LevelDB's block allocation",
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_NO_BUFFER_POOL", "KAIA_DB_LEVELDB_NO_BUFFER_POOL"},
+		Category: "DATABASE",
+	}
+	PebbleDBCacheSizeFlag = &cli.IntFlag{
+		Name:     "db.pebbledb.cache-size",
+		Usage:    "Size of in-memory cache in Pebble (MiB)",
+		Value:    768,
+		Aliases:  []string{"migration.src.db.pebbledb.cache-size"},
+		EnvVars:  []string{"KLAYTN_DB_PEBBLE_CACHE_SIZE", "KAIA_DB_PEBBLE_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
 	RocksDBSecondaryFlag = &cli.BoolFlag{
@@ -1820,6 +1828,14 @@ var (
 		Value:    0,
 		Aliases:  []string{"migration.dst.db.leveldb.compression"},
 		EnvVars:  []string{"KLAYTN_DB_DST_LEVELDB_COMPRESSION", "KAIA_DB_DST_LEVELDB_COMPRESSION"},
+		Category: "DATABASE MIGRATION",
+	}
+	DstPebbleDBCacheSizeFlag = &cli.IntFlag{
+		Name:     "db.dst.pebbledb.cache-size",
+		Usage:    "Size of in-memory cache in PebbleDB (MiB)",
+		Value:    768,
+		Aliases:  []string{"migration.dst.db.pebbledb.cache-size"},
+		EnvVars:  []string{"KLAYTN_DB_DST_PEBBLEDB_CACHE_SIZE", "KAIA_DB_DST_PEBBLEDB_CACHE_SIZE"},
 		Category: "DATABASE MIGRATION",
 	}
 	DstNumStateTrieShardsFlag = &cli.UintFlag{

@@ -37,7 +37,7 @@ func TestChildChainData_ReadAndWrite_ChildChainTxHash(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 
@@ -67,7 +67,7 @@ func TestLastIndexedBlockData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 
@@ -93,7 +93,7 @@ func TestChildChainData_ReadAndWrite_AnchoredBlockNumber(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 
@@ -119,7 +119,7 @@ func TestChildChainData_ReadAndWrite_ReceiptFromParentChain(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 
@@ -151,7 +151,7 @@ func TestChildChainData_ReadAndWrite_ValueTransferTxHash(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 
@@ -184,7 +184,7 @@ func TestChildChainData_ReadAndWrite_OperatorFeePayer(t *testing.T) {
 	firstAddr := common.HexToAddress("0x1")
 	secondAddr := common.HexToAddress("0x2")
 
-	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, OpenFilesLimit: 32}
+	dbc := &DBConfig{Dir: dir, DBType: LevelDB, LevelDBCacheSize: 32, PebbleDBCacheSize: 32, OpenFilesLimit: 32}
 	dbm := NewDBManager(dbc)
 	defer dbm.Close()
 

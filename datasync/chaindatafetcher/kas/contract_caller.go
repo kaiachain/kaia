@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
