@@ -71,9 +71,10 @@ func (api *GovernanceKaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.Chain
 	return getChainConfig(api.governance, num)
 }
 
-func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
-}
+// TODO-kaiax: temporarily disabled in favor of kaiax/staking
+// func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
+// 	return getStakingInfo(api.governance, num)
+// }
 
 func (api *GovernanceKaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)

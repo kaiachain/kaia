@@ -47,6 +47,8 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -135,6 +137,8 @@ type CN struct {
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
 	components []interface{}
+	modules    []kaiax.BaseModule    // KaiaX Modules to start and stop along with CN
+	rpcModules []kaiax.JsonRpcModule // KaiaX Modules that provide JSON-RPC APIs
 
 	governance    governance.Engine
 	supplyManager reward.SupplyManager
@@ -431,6 +435,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
+	if err := cn.SetupKaiaModules(); err != nil {
+		return nil, err
+	}
+
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
 		restartInterval := config.RestartTimeOutFlag
@@ -499,6 +507,47 @@ func (s *CN) Components() []interface{} {
 
 func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
+}
+
+func (s *CN) SetupKaiaModules() error {
+	// Construct modules
+	var (
+		mStaking = staking.NewStakingModule()
+	)
+
+	// Initialize modules
+	if err := mStaking.Init(&staking.InitOpts{
+		ChainKv:     s.chainDB.GetMiscDB(),
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+	}); err != nil {
+		return err
+	}
+
+	// Register BaseModules to CN
+	s.RegisterBaseModules(mStaking)
+
+	// Register JsonRpcModules to CN
+	s.RegisterJsonRpcModules(mStaking)
+
+	// TODO-kaiax: Register ConsensusModule to consensus engine
+	// TODO-kaiax: Register ExecutionModules to BlockChain
+	// TODO-kaiax: Register TxProcessModules to BlockChain
+
+	// TODO: remove type assertion
+	// Register UnwindableModule to BlockChain
+	s.BlockChain().(*blockchain.BlockChain).RegisterUnwindableModules(mStaking)
+	return nil
+}
+
+func (s *CN) RegisterBaseModules(modules ...kaiax.BaseModule) {
+	// Add to s.modules so s.Start() and s.Stop() can call them.
+	s.modules = append(s.modules, modules...)
+}
+
+func (s *CN) RegisterJsonRpcModules(modules ...kaiax.JsonRpcModule) {
+	// Add to s.modules so s.Start() and s.Stop() can call them.
+	s.rpcModules = append(s.rpcModules, modules...)
 }
 
 // istanbul BFT
@@ -696,6 +745,11 @@ func (s *CN) APIs() []rpc.API {
 		},
 	}...)
 
+	// Append APIs exposed by JsonRpcModules
+	for _, module := range s.rpcModules {
+		apis = append(apis, module.APIs()...)
+	}
+
 	return apis
 }
 
@@ -771,6 +825,13 @@ func (s *CN) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Kaia protocol implementation.
 func (s *CN) Start(srvr p2p.Server) error {
+	// Start internal KaiaX modules
+	for _, module := range s.modules {
+		if err := module.Start(); err != nil {
+			return err
+		}
+	}
+
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -803,6 +864,10 @@ func (s *CN) Stop() error {
 	}
 
 	// Then stop everything else.
+	for _, module := range s.modules {
+		module.Stop()
+	}
+
 	s.bloomIndexer.Close()
 	close(s.closeBloomHandler)
 	s.txPool.Stop()

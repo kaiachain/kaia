@@ -54,8 +54,8 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg kip149 --sol ./contracts/system_contracts/kip149/Registry.sol --out ./contracts/system_contracts/kip149/Registry.go --ver 0.8.19
 //go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./contracts/system_contracts/proxy/proxy.go --ver 0.8.19
 //go:generate ./abigenw --pkg system_contracts --sol ./contracts/testing/system_contracts/all.sol --out ./contracts/testing/system_contracts/all.go --ver 0.8.19
+//go:generate ./abigenw --pkg multicall --sol ./contracts/system_contracts/multicall/MultiCallContract.sol --out ./contracts/system_contracts/multicall/MultiCallContract.go --ver 0.8.19
 
 // These files were compiled with solidity 0.8.25.
 
 //go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/Kip163.sol --out ./contracts/system_contracts/consensus/Kip163.go --ver 0.8.25
-//go:generate ./abigenw --pkg multicall --sol ./contracts/system_contracts/multicall/MultiCallContract.sol --out ./contracts/system_contracts/multicall/MultiCallContract.go --ver 0.8.25

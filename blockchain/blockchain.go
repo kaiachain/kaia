@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -213,6 +214,9 @@ type BlockChain struct {
 	quitWarmUp         chan struct{}
 
 	prefetchTxCh chan prefetchTx
+
+	// KaiaX modules
+	unwindableModules []kaiax.UnwindableModule // KaiaX modules that should be called during chain unwinding
 }
 
 // prefetchTx is used to prefetch transactions, when fetcher works.
@@ -628,6 +632,9 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		}
 		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && !bc.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(num)) && params.IsStakingUpdateInterval(num) {
 			bc.db.DeleteStakingInfo(num)
+		}
+		for _, module := range bc.unwindableModules {
+			module.Unwind(num)
 		}
 	}
 
@@ -2722,6 +2729,10 @@ func (bc *BlockChain) SaveTrieNodeCacheToDisk() error {
 	}
 	go bc.stateCache.TrieDB().SaveTrieNodeCacheToFile(bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir, runtime.NumCPU()/2)
 	return nil
+}
+
+func (bc *BlockChain) RegisterUnwindableModules(modules ...kaiax.UnwindableModule) {
+	bc.unwindableModules = append(bc.unwindableModules, modules...)
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
