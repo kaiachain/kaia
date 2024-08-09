@@ -363,6 +363,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
+	// Note: archive nodes might have TrieBlockInterval == 128, then SupplyManager will store checkpoints every 128 blocks.
+	// Still it is not a problem since SupplyManager can re-accumulate from the nearest checkpoint.
 	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB, config.TrieBlockInterval)
 
 	// Governance states which are not yet applied to the db remains at in-memory storage

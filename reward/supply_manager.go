@@ -40,6 +40,7 @@ import (
 var (
 	supplyCacheSize   = 86400          // A day; Some total supply consumers might want daily supply.
 	supplyLogInterval = uint64(102400) // Periodic total supply log.
+	supplyReaccLimit  = uint64(1024)   // Re-accumulate from the last accumulated block.
 	zeroBurnAddress   = common.HexToAddress("0x0")
 	deadBurnAddress   = common.HexToAddress("0xdead")
 
@@ -143,9 +144,9 @@ func (sm *supplyManager) GetAccReward(num uint64) (*database.AccReward, error) {
 		return nil, errNoAccReward
 	}
 
-	accReward := sm.db.ReadAccReward(num)
-	if accReward == nil {
-		return nil, errNoAccReward
+	accReward, err := sm.getAccRewardUncached(num)
+	if err != nil {
+		return nil, err
 	}
 
 	sm.accRewardCache.Add(num, accReward.Copy())
@@ -318,7 +319,7 @@ func (sm *supplyManager) catchup() {
 	for lastNum < headNum {
 		logger.Info("Total supply big step catchup", "last", lastNum, "head", headNum, "minted", lastAccReward.Minted.String(), "burntFee", lastAccReward.BurntFee.String())
 
-		accReward, err := sm.accumulateReward(lastNum, headNum, lastAccReward)
+		accReward, err := sm.accumulateReward(lastNum, headNum, lastAccReward, true)
 		if err != nil {
 			if err != errSupplyManagerQuit {
 				logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
@@ -341,7 +342,7 @@ func (sm *supplyManager) catchup() {
 		case head := <-sm.chainHeadChan:
 			headNum = head.Block.NumberU64()
 
-			supply, err := sm.accumulateReward(lastNum, headNum, lastAccReward)
+			supply, err := sm.accumulateReward(lastNum, headNum, lastAccReward, true)
 			if err != nil {
 				if err != errSupplyManagerQuit {
 					logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
@@ -379,9 +380,45 @@ func (sm *supplyManager) totalSupplyFromState(num uint64) (*big.Int, error) {
 	return totalSupply, nil
 }
 
+func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, error) {
+	accReward := sm.db.ReadAccReward(num)
+	if accReward != nil {
+		return accReward, nil
+	}
+
+	// Trace back to the last stored accumulated reward.
+	var fromNum uint64
+	var fromAcc *database.AccReward
+
+	// Fast path using checkpointInterval
+	if accReward := sm.db.ReadAccReward(num - num%sm.checkpointInterval); accReward != nil {
+		fromNum = num - num%sm.checkpointInterval
+		fromAcc = accReward
+	} else {
+		// Slow path in case the checkpoint has changed or checkpoint is missing.
+		for i := uint64(1); i < supplyReaccLimit; i++ {
+			accReward = sm.db.ReadAccReward(num - i)
+			if accReward != nil {
+				fromNum = num - i
+				fromAcc = accReward
+				break
+			}
+		}
+	}
+	if fromAcc == nil {
+		return nil, errNoAccReward
+	}
+
+	logger.Trace("on-demand reaccumulating rewards", "from", fromNum, "to", num)
+	return sm.accumulateReward(fromNum, num, fromAcc, false)
+}
+
 // accumulateReward calculates the total supply from the last block to the current block.
 // Given supply at `from` is `fromSupply`, calculate the supply until `to`, inclusive.
-func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.AccReward) (*database.AccReward, error) {
+// If `write` is true, the result will be written to the database.
+// If `write` is false, the result will not be written to the database,
+// to prevent overwriting LastAccRewardBlockNumber (essentially rollback) and to keep the disk size small (only store at checkpointInterval).
+func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.AccReward, write bool) (*database.AccReward, error) {
 	accReward := fromAcc.Copy() // make a copy because we're updating it in-place.
 
 	for num := from + 1; num <= to; num++ {
@@ -410,7 +447,7 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 
 		// Store to database, print progress log.
 		sm.accRewardCache.Add(num, accReward.Copy())
-		if (num % sm.checkpointInterval) == 0 {
+		if write && (num%sm.checkpointInterval) == 0 {
 			sm.db.WriteAccReward(num, accReward)
 			sm.db.WriteLastAccRewardBlockNumber(num)
 		}
