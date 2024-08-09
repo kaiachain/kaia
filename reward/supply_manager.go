@@ -389,12 +389,20 @@ func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, 
 	// Trace back to the last stored accumulated reward.
 	var fromNum uint64
 	var fromAcc *database.AccReward
-	for i := uint64(1); i < supplyReaccLimit; i++ {
-		accReward = sm.db.ReadAccReward(num - i)
-		if accReward != nil {
-			fromNum = num - i
-			fromAcc = accReward
-			break
+
+	// Fast path using checkpointInterval
+	if accReward := sm.db.ReadAccReward(num - num%sm.checkpointInterval); accReward != nil {
+		fromNum = num - num%sm.checkpointInterval
+		fromAcc = accReward
+	} else {
+		// Slow path in case the checkpoint has changed or checkpoint is missing.
+		for i := uint64(1); i < supplyReaccLimit; i++ {
+			accReward = sm.db.ReadAccReward(num - i)
+			if accReward != nil {
+				fromNum = num - i
+				fromAcc = accReward
+				break
+			}
 		}
 	}
 	if fromAcc == nil {
@@ -408,6 +416,8 @@ func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, 
 // accumulateReward calculates the total supply from the last block to the current block.
 // Given supply at `from` is `fromSupply`, calculate the supply until `to`, inclusive.
 // If `write` is true, the result will be written to the database.
+// If `write` is false, the result will not be written to the database,
+// to prevent overwriting LastAccRewardBlockNumber (essentially rollback) and to keep the disk size small (only store at checkpointInterval).
 func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.AccReward, write bool) (*database.AccReward, error) {
 	accReward := fromAcc.Copy() // make a copy because we're updating it in-place.
 
