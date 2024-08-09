@@ -2,7 +2,7 @@
 
 The public delegation (PD) is a non-transferable ERC-4626 based contract that allows general users to delegate and re-delegate their KAIA to a Kaia Governance Council (GC) who uses CnStakingV3MultiSig (CnSV3) and enable PD.
 
-It mints the tokenized shares to the delegator, which is called `pdKAIA`. The `pdKAIA` is a non-transferable interest-bearing token that represents the delegator's share of the total KAIA delegated to the GC. As rewards are compunded, the exchange rate of `pdKAIA` to KAIA increases. The delegator can burn the `pdKAIA` to get the KAIA back. All the math comes from the ERC-4626 standard.
+It mints the tokenized shares to the delegator, which is called `pdKAIA`. The `pdKAIA` is a non-transferable interest-bearing token that represents the delegator's share of the total KAIA delegated to the GC. As rewards are compounded, the exchange rate of `pdKAIA` to KAIA increases. The delegator can burn the `pdKAIA` to get the KAIA back. All the math comes from the ERC-4626 standard.
 
 Unlike usual ERC-4626 vault contracts, the reward is directly distributed to PD contract by state modification at the consensus-level. The reward will be automatically compounded to the CnSV3 contract.
 

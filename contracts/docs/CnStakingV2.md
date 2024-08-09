@@ -18,7 +18,7 @@ CnStakingV2 has built-in multisig facility that requires certain number of appro
 - `requirement`: the required number of approvals.
 - `isAdmin`: true for admins.
 
-## Contract intialization
+## Contract Initialization
 
 Initializing a CnStakingV2 takes multiple steps involving many entities.
 1. `constructor()`, usually by the `contractValidator`, or CV.
@@ -119,7 +119,7 @@ struct WithdrawalRequest {
 ```
 
 A withdrawal request can be in following `WithdrawalStakingState`
-- Unknown: before transfer or cancellation. Unlike `RequestState.Unknown`, `WithdrawalStakingState.Unknwon` is a meaningful enum.
+- Unknown: before transfer or cancellation. Unlike `RequestState.Unknown`, `WithdrawalStakingState.Unknown` is a meaningful enum.
 - Transferred: successfully executed.
 - Canceled: canceled due to timeout or an explicit cancellation.
 
@@ -139,7 +139,7 @@ Related functions:
 A Klaytn GC member uses several accounts for different purposes. Some of them are appointed via CnStakingV2 contract.
 
 Related functions:
-- `multisig UpdateRewardAddress(addr)`: Update the `rewardAddress` and also update to the AddressBook contract.
+- `multisig UpdateRewardAddress(addr)`: Update the `rewardAddress` and also update the AddressBook contract.
 - `multisig UpdateStakingTracker(addr)`: Update the `stakingTracker` address. CnStakingV2 contract notifies staking balance change and voter address change to the StakingTracker.
 - `multisig UpdateVoterAddress(addr)`: Update the `voterAddress` and also update to the StakingTracker contract.
 
