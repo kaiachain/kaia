@@ -57,7 +57,7 @@ func NewAccountSerializerExt() *AccountSerializer {
 	return &AccountSerializer{preserveExtHash: true}
 }
 
-// NewAccountSerializerWithAccount creates a new AccountSerializer object with the given account.
+// NewAccountSerializerExtWithAccount creates a new AccountSerializer object with the given account.
 func NewAccountSerializerExtWithAccount(a Account) *AccountSerializer {
 	return &AccountSerializer{a.Type(), a, true}
 }
