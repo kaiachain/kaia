@@ -1161,8 +1161,8 @@ var klayMethods = [
 	new web3._extend.Method({
 		name: 'getTotalSupply',
 		call: 'klay_getTotalSupply',
-		params: 1,
-		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		params: 2,
+		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, function (val) { return !!val; }]
 	}),
 	new web3._extend.Method({
 		name: 'getProof',
