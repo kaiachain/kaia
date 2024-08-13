@@ -342,16 +342,18 @@ func (sm *supplyManager) catchup() {
 		case head := <-sm.chainHeadChan:
 			headNum = head.Block.NumberU64()
 
-			supply, err := sm.accumulateReward(lastNum, headNum, lastCheckpoint, true)
-			if err != nil {
-				if err != errSupplyManagerQuit {
-					logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
+			if lastNum < headNum {
+				supply, err := sm.accumulateReward(lastNum, headNum, lastCheckpoint, true)
+				if err != nil {
+					if err != errSupplyManagerQuit {
+						logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
+					}
+					return
 				}
-				return
-			}
 
-			lastNum = headNum
-			lastCheckpoint = supply
+				lastNum = headNum
+				lastCheckpoint = supply
+			}
 		}
 	}
 }
