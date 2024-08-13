@@ -110,7 +110,7 @@ type TotalSupplyResult struct {
 	TotalSupply *hexutil.Big `json:"totalSupply"`     // The total supply of the native token. i.e. Minted - Burnt.
 	TotalMinted *hexutil.Big `json:"totalMinted"`     // Total minted amount.
 	TotalBurnt  *hexutil.Big `json:"totalBurnt"`      // Total burnt amount. Sum of all burnt amounts below.
-	BurntFee    *hexutil.Big `json:"burntFee"`        // from tx fee burn. ReadAccReward(num).BurntFee.
+	BurntFee    *hexutil.Big `json:"burntFee"`        // from tx fee burn.
 	ZeroBurn    *hexutil.Big `json:"zeroBurn"`        // balance of 0x0 (zero) address.
 	DeadBurn    *hexutil.Big `json:"deadBurn"`        // balance of 0xdead (dead) address.
 	Kip103Burn  *hexutil.Big `json:"kip103Burn"`      // by KIP103 fork. Read from its memo.

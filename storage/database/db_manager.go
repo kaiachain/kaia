@@ -300,11 +300,12 @@ type DBManager interface {
 	HasStakingInfo(blockNum uint64) (bool, error)
 	DeleteStakingInfo(blockNum uint64)
 
-	// Accumulated block rewards functions
-	ReadAccReward(blockNum uint64) *AccReward
-	WriteAccReward(blockNum uint64, accReward *AccReward)
-	ReadLastAccRewardBlockNumber() uint64
-	WriteLastAccRewardBlockNumber(blockNum uint64)
+	// TotalSupply checkpoint functions
+	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
+	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
+	DeleteSupplyCheckpoint(blockNum uint64)
+	ReadLastSupplyCheckpointNumber() uint64
+	WriteLastSupplyCheckpointNumber(blockNum uint64)
 
 	// DB migration related function
 	StartDBMigration(DBManager) error
@@ -2875,11 +2876,11 @@ func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	return db.Get(governanceStateKey)
 }
 
-// ReadAccReward retrieves the accumulated reward (minted, burntFee) up to a specific block number.
-// Returns nil if the accumulated reward is not stored.
-func (dbm *databaseManager) ReadAccReward(blockNum uint64) *AccReward {
+// ReadSupplyCheckpoint retrieves the SupplyCheckpoint for a block number
+// Returns nil if the SupplyCheckpoint is not found.
+func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint {
 	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(accRewardKey(blockNum))
+	data, err := db.Get(supplyCheckpointKey(blockNum))
 	if len(data) == 0 || err != nil {
 		return nil
 	}
@@ -2888,37 +2889,45 @@ func (dbm *databaseManager) ReadAccReward(blockNum uint64) *AccReward {
 		BurntFee []byte
 	}{}
 	if err := rlp.DecodeBytes(data, &stored); err != nil {
-		logger.Crit("Corrupt accumulated reward", "err", err)
+		logger.Crit("Corrupt supply checkpoint", "err", err)
 	}
-	return &AccReward{
+	return &SupplyCheckpoint{
 		Minted:   new(big.Int).SetBytes(stored.Minted),
 		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
 	}
 }
 
-// WriteAccReward stores the accumulated reward (minted, burntFee) up to a specific block number.
-func (dbm *databaseManager) WriteAccReward(blockNum uint64, accReward *AccReward) {
+// WriteSupplyCheckpoint stores the SupplyCheckpoint for a specific block number.
+func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint) {
 	db := dbm.getDatabase(MiscDB)
 	stored := struct {
 		Minted   []byte
 		BurntFee []byte
 	}{
-		Minted:   accReward.Minted.Bytes(),
-		BurntFee: accReward.BurntFee.Bytes(),
+		Minted:   checkpoint.Minted.Bytes(),
+		BurntFee: checkpoint.BurntFee.Bytes(),
 	}
 	data, err := rlp.EncodeToBytes(stored)
 	if err != nil {
-		logger.Crit("Failed to write accumulated reward", "err", err)
+		logger.Crit("Failed to write supply checkpoint", "err", err)
 	}
-	if err := db.Put(accRewardKey(blockNum), data); err != nil {
-		logger.Crit("Failed to write accumulated reward", "err", err)
+	if err := db.Put(supplyCheckpointKey(blockNum), data); err != nil {
+		logger.Crit("Failed to write supply checkpoint", "err", err)
 	}
 }
 
-// ReadLastAccRewardBlockNumber retrieves the last block number for which the accumulated reward is stored.
-func (dbm *databaseManager) ReadLastAccRewardBlockNumber() uint64 {
+// DeleteSupplyCheckpoint removes the SupplyCheckpoint for a specific block number.
+func (dbm *databaseManager) DeleteSupplyCheckpoint(blockNum uint64) {
 	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(lastAccRewardBlockNumberKey)
+	if err := db.Delete(supplyCheckpointKey(blockNum)); err != nil {
+		logger.Crit("Failed to delete supply checkpoint", "err", err)
+	}
+}
+
+// ReadLastSupplyCheckpointNumber retrieves the highest number for which the SupplyCheckpoint is stored.
+func (dbm *databaseManager) ReadLastSupplyCheckpointNumber() uint64 {
+	db := dbm.getDatabase(MiscDB)
+	data, err := db.Get(lastSupplyCheckpointNumberKey)
 	if len(data) == 0 || err != nil {
 		return 0
 	} else {
@@ -2926,12 +2935,12 @@ func (dbm *databaseManager) ReadLastAccRewardBlockNumber() uint64 {
 	}
 }
 
-// WriteLastAccRewardBlockNumber stores the last block number for which the accumulated reward is stored.
-func (dbm *databaseManager) WriteLastAccRewardBlockNumber(blockNum uint64) {
+// WriteLastSupplyCheckpointNumber stores the highest number for which the SupplyCheckpoint is stored.
+func (dbm *databaseManager) WriteLastSupplyCheckpointNumber(blockNum uint64) {
 	db := dbm.getDatabase(MiscDB)
 	data := common.Int64ToByteBigEndian(blockNum)
-	if err := db.Put(lastAccRewardBlockNumberKey, data); err != nil {
-		logger.Crit("Failed to write last accumulated reward block number", "err", err)
+	if err := db.Put(lastSupplyCheckpointNumberKey, data); err != nil {
+		logger.Crit("Failed to write last supply checkpoint number", "err", err)
 	}
 }
 
