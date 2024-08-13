@@ -38,7 +38,8 @@ const (
 	// The prefix for governance cache
 	GovernanceCachePrefix = "governance"
 
-	CheckpointInterval = 1024
+	CheckpointInterval       = 1024 // For Istanbul snapshot
+	SupplyCheckpointInterval = 128  // for SupplyManager tracking native token supply
 )
 
 const (

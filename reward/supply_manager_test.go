@@ -240,9 +240,14 @@ func (s *SupplyTestSuite) TestCatchupRewind() {
 	s.insertBlocks()                   // block is inserted after the catchup started
 	s.waitCatchup()                    // catchup to block 400
 
-	// Rewind to 200, and re-insert blocks.
-	// The catchup thread should correctly handle ChainHeadEvents less than 400.
+	// Rewind to 200; relevant data must have been deleted.
 	s.chain.SetHead(200)
+	assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
+	assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
+	assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
+
+	// Re-insert blocks.
+	// The catchup thread should correctly handle ChainHeadEvents less than 400.
 	s.insertBlocks()
 
 	testcases := s.testcases()
