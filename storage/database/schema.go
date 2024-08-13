@@ -300,15 +300,15 @@ func parsePruningMarkKey(key []byte) PruningMark {
 	}
 }
 
-type AccReward struct {
+type SupplyCheckpoint struct {
 	Minted   *big.Int
 	BurntFee *big.Int
 }
 
-func (ar *AccReward) Copy() *AccReward {
-	return &AccReward{
-		Minted:   new(big.Int).Set(ar.Minted),
-		BurntFee: new(big.Int).Set(ar.BurntFee),
+func (c *SupplyCheckpoint) Copy() *SupplyCheckpoint {
+	return &SupplyCheckpoint{
+		Minted:   new(big.Int).Set(c.Minted),
+		BurntFee: new(big.Int).Set(c.BurntFee),
 	}
 }
 

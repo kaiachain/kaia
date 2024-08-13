@@ -134,9 +134,9 @@ func (sm *supplyManager) Stop() {
 	}
 }
 
-func (sm *supplyManager) GetAccReward(num uint64) (*database.AccReward, error) {
+func (sm *supplyManager) GetAccReward(num uint64) (*database.SupplyCheckpoint, error) {
 	if accReward, ok := sm.accRewardCache.Get(num); ok {
-		return accReward.(*database.AccReward), nil
+		return accReward.(*database.SupplyCheckpoint), nil
 	}
 
 	lastNum := sm.db.ReadLastSupplyCheckpointNumber()
@@ -301,7 +301,7 @@ func (sm *supplyManager) catchup() {
 			logger.Error("totalSupplyFromState failed", "number", 0, "err", err)
 			return
 		}
-		sm.db.WriteSupplyCheckpoint(0, &database.AccReward{
+		sm.db.WriteSupplyCheckpoint(0, &database.SupplyCheckpoint{
 			Minted:   genesisTotalSupply,
 			BurntFee: big.NewInt(0),
 		})
@@ -380,7 +380,7 @@ func (sm *supplyManager) totalSupplyFromState(num uint64) (*big.Int, error) {
 	return totalSupply, nil
 }
 
-func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, error) {
+func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.SupplyCheckpoint, error) {
 	accReward := sm.db.ReadSupplyCheckpoint(num)
 	if accReward != nil {
 		return accReward, nil
@@ -388,7 +388,7 @@ func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, 
 
 	// Trace back to the last stored accumulated reward.
 	var fromNum uint64
-	var fromAcc *database.AccReward
+	var fromAcc *database.SupplyCheckpoint
 
 	// Fast path using checkpointInterval
 	if accReward := sm.db.ReadSupplyCheckpoint(num - num%sm.checkpointInterval); accReward != nil {
@@ -418,7 +418,7 @@ func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, 
 // If `write` is true, the result will be written to the database.
 // If `write` is false, the result will not be written to the database,
 // to prevent overwriting LastAccRewardBlockNumber (essentially rollback) and to keep the disk size small (only store at checkpointInterval).
-func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.AccReward, write bool) (*database.AccReward, error) {
+func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.SupplyCheckpoint, write bool) (*database.SupplyCheckpoint, error) {
 	accReward := fromAcc.Copy() // make a copy because we're updating it in-place.
 
 	for num := from + 1; num <= to; num++ {

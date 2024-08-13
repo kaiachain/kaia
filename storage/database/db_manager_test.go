@@ -827,12 +827,12 @@ func TestDBManager_AccReward(t *testing.T) {
 		// SupplyCheckpoint
 		testcases := []struct {
 			Number    uint64
-			AccReward *AccReward
+			AccReward *SupplyCheckpoint
 		}{
-			{1000, &AccReward{big.NewInt(1111), big.NewInt(99)}},
-			{2000, &AccReward{big.NewInt(0), big.NewInt(88)}},
-			{3000, &AccReward{big.NewInt(2222), big.NewInt(0)}},
-			{4000, &AccReward{big.NewInt(0), big.NewInt(0)}},
+			{1000, &SupplyCheckpoint{big.NewInt(1111), big.NewInt(99)}},
+			{2000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(88)}},
+			{3000, &SupplyCheckpoint{big.NewInt(2222), big.NewInt(0)}},
+			{4000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(0)}},
 		}
 		for _, tc := range testcases {
 			assert.Nil(t, dbm.ReadSupplyCheckpoint(tc.Number))

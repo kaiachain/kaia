@@ -301,8 +301,8 @@ type DBManager interface {
 	DeleteStakingInfo(blockNum uint64)
 
 	// TotalSupply checkpoint functions
-	ReadSupplyCheckpoint(blockNum uint64) *AccReward
-	WriteSupplyCheckpoint(blockNum uint64, accReward *AccReward)
+	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
+	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
 	ReadLastSupplyCheckpointNumber() uint64
 	WriteLastSupplyCheckpointNumber(blockNum uint64)
 
@@ -2877,7 +2877,7 @@ func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 
 // ReadSupplyCheckpoint retrieves the SupplyCheckpoint for a block number
 // Returns nil if the SupplyCheckpoint is not found.
-func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *AccReward {
+func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint {
 	db := dbm.getDatabase(MiscDB)
 	data, err := db.Get(supplyCheckpointKey(blockNum))
 	if len(data) == 0 || err != nil {
@@ -2890,21 +2890,21 @@ func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *AccReward {
 	if err := rlp.DecodeBytes(data, &stored); err != nil {
 		logger.Crit("Corrupt accumulated reward", "err", err)
 	}
-	return &AccReward{
+	return &SupplyCheckpoint{
 		Minted:   new(big.Int).SetBytes(stored.Minted),
 		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
 	}
 }
 
 // WriteSupplyCheckpoint stores the SupplyCheckpoint for a specific block number.
-func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, accReward *AccReward) {
+func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint) {
 	db := dbm.getDatabase(MiscDB)
 	stored := struct {
 		Minted   []byte
 		BurntFee []byte
 	}{
-		Minted:   accReward.Minted.Bytes(),
-		BurntFee: accReward.BurntFee.Bytes(),
+		Minted:   checkpoint.Minted.Bytes(),
+		BurntFee: checkpoint.BurntFee.Bytes(),
 	}
 	data, err := rlp.EncodeToBytes(stored)
 	if err != nil {
