@@ -231,6 +231,29 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	}
 }
 
+// Tests go catchup -> insertBlock case, where the catchup follows the chain head event.
+func (s *SupplyTestSuite) TestCatchupRewind() {
+	t := s.T()
+	s.sm.Start() // start catchup
+	defer s.sm.Stop()
+	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+	s.insertBlocks()                   // block is inserted after the catchup started
+	s.waitCatchup()                    // catchup to block 400
+
+	// Rewind to 200, and re-insert blocks.
+	// The catchup thread should correctly handle ChainHeadEvents less than 400.
+	s.chain.SetHead(200)
+	s.insertBlocks()
+
+	testcases := s.testcases()
+	for _, tc := range testcases {
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
+		require.NoError(t, err)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
+	}
+}
+
 // Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
 	t := s.T()
