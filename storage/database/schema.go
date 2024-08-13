@@ -132,8 +132,8 @@ var (
 
 	stakingInfoPrefix = []byte("stakingInfo")
 
-	accRewardPrefix             = []byte("accReward")
-	lastAccRewardBlockNumberKey = []byte("lastAccRewardBlockNumber")
+	supplyCheckpointPrefix        = []byte("accReward")
+	lastSupplyCheckpointNumberKey = []byte("lastAccRewardBlockNumber")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
 )
@@ -312,7 +312,6 @@ func (ar *AccReward) Copy() *AccReward {
 	}
 }
 
-// AccRewardKey = accRewardPrefix + blockNumber
-func accRewardKey(blockNumber uint64) []byte {
-	return append(accRewardPrefix, common.Int64ToByteBigEndian(blockNumber)...)
+func supplyCheckpointKey(blockNumber uint64) []byte {
+	return append(supplyCheckpointPrefix, common.Int64ToByteBigEndian(blockNumber)...)
 }

@@ -824,7 +824,7 @@ func TestDBManager_Governance(t *testing.T) {
 
 func TestDBManager_AccReward(t *testing.T) {
 	for _, dbm := range dbManagers {
-		// AccReward
+		// SupplyCheckpoint
 		testcases := []struct {
 			Number    uint64
 			AccReward *AccReward
@@ -835,16 +835,16 @@ func TestDBManager_AccReward(t *testing.T) {
 			{4000, &AccReward{big.NewInt(0), big.NewInt(0)}},
 		}
 		for _, tc := range testcases {
-			assert.Nil(t, dbm.ReadAccReward(tc.Number))
-			dbm.WriteAccReward(tc.Number, tc.AccReward)
-			assert.Equal(t, tc.AccReward, dbm.ReadAccReward(tc.Number))
+			assert.Nil(t, dbm.ReadSupplyCheckpoint(tc.Number))
+			dbm.WriteSupplyCheckpoint(tc.Number, tc.AccReward)
+			assert.Equal(t, tc.AccReward, dbm.ReadSupplyCheckpoint(tc.Number))
 		}
 
-		// LastAccRewardBlockNumber
+		// LastSupplyCheckpointNumber
 		lastNum := uint64(54321)
-		assert.Zero(t, dbm.ReadLastAccRewardBlockNumber())
-		dbm.WriteLastAccRewardBlockNumber(lastNum)
-		assert.Equal(t, lastNum, dbm.ReadLastAccRewardBlockNumber())
+		assert.Zero(t, dbm.ReadLastSupplyCheckpointNumber())
+		dbm.WriteLastSupplyCheckpointNumber(lastNum)
+		assert.Equal(t, lastNum, dbm.ReadLastSupplyCheckpointNumber())
 	}
 }
 

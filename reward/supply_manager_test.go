@@ -304,7 +304,7 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
 
 	// No AccReward
-	s.db.WriteLastAccRewardBlockNumber(num - 1)
+	s.db.WriteLastSupplyCheckpointNumber(num - 1)
 	s.sm.accRewardCache.Purge()
 	ts, err = s.sm.GetTotalSupply(num)
 	assert.ErrorIs(t, err, errNoAccReward)
@@ -351,12 +351,12 @@ func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 
 func (s *SupplyTestSuite) waitAccReward() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
-		if s.db.ReadLastAccRewardBlockNumber() >= 400 {
+		if s.db.ReadLastSupplyCheckpointNumber() >= 400 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if s.db.ReadLastAccRewardBlockNumber() < 400 {
+	if s.db.ReadLastSupplyCheckpointNumber() < 400 {
 		s.T().Fatal("Catchup not finished in time")
 	}
 }

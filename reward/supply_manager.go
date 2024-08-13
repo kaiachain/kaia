@@ -78,7 +78,7 @@ type TotalSupply struct {
 	TotalSupply *big.Int // The total supply of the native token. i.e. Minted - Burnt.
 	TotalMinted *big.Int // Total minted amount.
 	TotalBurnt  *big.Int // Total burnt amount. Sum of all burnt amounts below.
-	BurntFee    *big.Int // from tx fee burn. ReadAccReward(num).BurntFee.
+	BurntFee    *big.Int // from tx fee burn.
 	ZeroBurn    *big.Int // balance of 0x0 (zero) address.
 	DeadBurn    *big.Int // balance of 0xdead (dead) address.
 	Kip103Burn  *big.Int // by KIP103 fork. Read from its memo.
@@ -139,7 +139,7 @@ func (sm *supplyManager) GetAccReward(num uint64) (*database.AccReward, error) {
 		return accReward.(*database.AccReward), nil
 	}
 
-	lastNum := sm.db.ReadLastAccRewardBlockNumber()
+	lastNum := sm.db.ReadLastSupplyCheckpointNumber()
 	if lastNum < num { // soft deleted
 		return nil, errNoAccReward
 	}
@@ -284,12 +284,12 @@ func (sm *supplyManager) catchup() {
 
 	var (
 		headNum = sm.chain.CurrentBlock().NumberU64()
-		lastNum = sm.db.ReadLastAccRewardBlockNumber()
+		lastNum = sm.db.ReadLastSupplyCheckpointNumber()
 	)
 
-	if lastNum > 0 && sm.db.ReadAccReward(lastNum) == nil {
+	if lastNum > 0 && sm.db.ReadSupplyCheckpoint(lastNum) == nil {
 		logger.Error("Last accumulated reward not found. Restarting supply catchup", "last", lastNum, "head", headNum)
-		sm.db.WriteLastAccRewardBlockNumber(0) // soft reset to genesis
+		sm.db.WriteLastSupplyCheckpointNumber(0) // soft reset to genesis
 		lastNum = 0
 	}
 
@@ -301,17 +301,17 @@ func (sm *supplyManager) catchup() {
 			logger.Error("totalSupplyFromState failed", "number", 0, "err", err)
 			return
 		}
-		sm.db.WriteAccReward(0, &database.AccReward{
+		sm.db.WriteSupplyCheckpoint(0, &database.AccReward{
 			Minted:   genesisTotalSupply,
 			BurntFee: big.NewInt(0),
 		})
-		sm.db.WriteLastAccRewardBlockNumber(0)
+		sm.db.WriteLastSupplyCheckpointNumber(0)
 		lastNum = 0
 		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
 	}
 
-	lastNum = sm.db.ReadLastAccRewardBlockNumber()
-	lastAccReward := sm.db.ReadAccReward(lastNum)
+	lastNum = sm.db.ReadLastSupplyCheckpointNumber()
+	lastAccReward := sm.db.ReadSupplyCheckpoint(lastNum)
 
 	// Big-step catchup; accumulate until the head block as of now.
 	// The head block can be obsolete by the time catchup finished, so the big-step can end up being a bit short.
@@ -381,7 +381,7 @@ func (sm *supplyManager) totalSupplyFromState(num uint64) (*big.Int, error) {
 }
 
 func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, error) {
-	accReward := sm.db.ReadAccReward(num)
+	accReward := sm.db.ReadSupplyCheckpoint(num)
 	if accReward != nil {
 		return accReward, nil
 	}
@@ -391,13 +391,13 @@ func (sm *supplyManager) getAccRewardUncached(num uint64) (*database.AccReward, 
 	var fromAcc *database.AccReward
 
 	// Fast path using checkpointInterval
-	if accReward := sm.db.ReadAccReward(num - num%sm.checkpointInterval); accReward != nil {
+	if accReward := sm.db.ReadSupplyCheckpoint(num - num%sm.checkpointInterval); accReward != nil {
 		fromNum = num - num%sm.checkpointInterval
 		fromAcc = accReward
 	} else {
 		// Slow path in case the checkpoint has changed or checkpoint is missing.
 		for i := uint64(1); i < supplyReaccLimit; i++ {
-			accReward = sm.db.ReadAccReward(num - i)
+			accReward = sm.db.ReadSupplyCheckpoint(num - i)
 			if accReward != nil {
 				fromNum = num - i
 				fromAcc = accReward
@@ -448,8 +448,8 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 		// Store to database, print progress log.
 		sm.accRewardCache.Add(num, accReward.Copy())
 		if write && (num%sm.checkpointInterval) == 0 {
-			sm.db.WriteAccReward(num, accReward)
-			sm.db.WriteLastAccRewardBlockNumber(num)
+			sm.db.WriteSupplyCheckpoint(num, accReward)
+			sm.db.WriteLastSupplyCheckpointNumber(num)
 		}
 		if (num % supplyLogInterval) == 0 {
 			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.Minted.String(), "burntFee", accReward.BurntFee.String())
