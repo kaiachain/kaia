@@ -93,6 +93,7 @@ type SupplyTestSuite struct {
 	db      database.DBManager
 	genesis *types.Block
 	chain   *blockchain.BlockChain
+	blocks  []*types.Block
 	sm      *supplyManager
 }
 
@@ -103,11 +104,11 @@ func TestSupplyManager(t *testing.T) {
 // ----------------------------------------------------------------------------
 // Test cases
 
-// Tests totalSupplyFromState as well as the setupHistory() itself.
-// This accounts for (AccMinted - AccBurntFee - kip103Burn - kip160Burn) but not (- zeroBurn - deadBurn).
+// Tests totalSupplyFromState as well as the insertBlocks() itself.
+// totalSupplyFromState accounts for (AccMinted - AccBurntFee - kip103Burn - kip160Burn) but not (- zeroBurn - deadBurn).
 func (s *SupplyTestSuite) TestFromState() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start() // start catchup
 
 	testcases := s.testcases()
@@ -126,7 +127,7 @@ func (s *SupplyTestSuite) TestFromState() {
 // Test reading canonical burn amounts from the state.
 func (s *SupplyTestSuite) TestCanonicalBurn() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 
 	// Delete state at 199
 	root := s.db.ReadBlockByNumber(199).Root()
@@ -148,7 +149,7 @@ func (s *SupplyTestSuite) TestCanonicalBurn() {
 // Test reading rebalance memo from the contract.
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 
 	// rebalance not configured
 	amount, err := s.sm.GetRebalanceBurn(199, nil, common.Address{})
@@ -177,7 +178,7 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 
 // Tests sm.Stop() does not block.
 func (s *SupplyTestSuite) TestStop() {
-	s.setupHistory() // head block is already 400
+	s.insertBlocks() // head block is already 400
 	s.sm.Start()     // start catchup, enters big-step mode
 
 	endCh := make(chan struct{})
@@ -198,7 +199,7 @@ func (s *SupplyTestSuite) TestStop() {
 // Tests the insertBlock -> go catchup, where the catchup enters the big-step mode.
 func (s *SupplyTestSuite) TestCatchupBigStep() {
 	t := s.T()
-	s.setupHistory() // head block is already 400
+	s.insertBlocks() // head block is already 400
 	s.sm.Start()     // start catchup
 	defer s.sm.Stop()
 	s.waitCatchup() // Wait for catchup to finish
@@ -217,8 +218,8 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	t := s.T()
 	s.sm.Start() // start catchup
 	defer s.sm.Stop()
-	time.Sleep(10 * time.Millisecond) // yield to the catchup goroutine to start
-	s.setupHistory()                  // block is inserted after the catchup started
+	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+	s.insertBlocks()                   // block is inserted after the catchup started
 	s.waitCatchup()
 
 	testcases := s.testcases()
@@ -233,7 +234,7 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 // Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start()
 	defer s.sm.Stop()
 	s.waitCatchup()
@@ -259,7 +260,7 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 // Test that when some data are missing, GetTotalSupply leaves some fields nil and returns an error.
 func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start()
 	s.waitCatchup()
 	s.sm.Stop()
@@ -314,7 +315,7 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 // Test that when SupplyCheckpoint are missing, GetTotalSupply will re-accumulate from the nearest stored SupplyCheckpoint.
 func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start()
 	defer s.sm.Stop()
 	s.waitCatchup()
@@ -350,14 +351,12 @@ func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 
 func (s *SupplyTestSuite) waitCatchup() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
-		if s.db.ReadLastSupplyCheckpointNumber() >= 400 {
-			break
+		if s.sm.checkpointCache.Contains(uint64(400)) {
+			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if s.db.ReadLastSupplyCheckpointNumber() < 400 {
-		s.T().Fatal("Catchup not finished in time")
-	}
+	s.T().Fatal("Catchup not finished in time")
 }
 
 // ----------------------------------------------------------------------------
@@ -485,12 +484,6 @@ func (s *SupplyTestSuite) SetupTest() {
 	require.NoError(t, err)
 	s.chain = chain
 
-	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1) // 1 interval for testing
-}
-
-func (s *SupplyTestSuite) setupHistory() {
-	t := s.T()
-
 	var ( // Generate blocks with 1 tx per block. Send 1 kei from Genesis4 to Genesis3.
 		signer   = types.LatestSignerForChainID(s.config.ChainID)
 		key      = keyGenesis4
@@ -516,13 +509,22 @@ func (s *SupplyTestSuite) setupHistory() {
 			}
 		}
 	)
-	blocks, _ := blockchain.GenerateChain(s.config, s.genesis, s.engine, s.db, 400, genFunc)
-	require.NotEmpty(t, blocks)
+	s.blocks, _ = blockchain.GenerateChain(s.config, s.genesis, s.engine, s.db, 400, genFunc)
+	require.NotEmpty(t, s.blocks)
 
-	// Insert s.chain
-	_, err := s.chain.InsertChain(blocks)
-	require.NoError(t, err)
-	expected := blocks[len(blocks)-1]
+	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1) // 1 interval for testing
+}
+
+func (s *SupplyTestSuite) insertBlocks() {
+	t := s.T()
+
+	// Insert blocks to chain. Note that duplicating blocks will automatically be ignored.
+	// ChainHeadEvent will be published after each block insertion.
+	for _, block := range s.blocks {
+		_, err := s.chain.InsertChain([]*types.Block{block})
+		require.NoError(t, err)
+	}
+	expected := s.blocks[len(s.blocks)-1]
 	actual := s.chain.CurrentBlock()
 	assert.Equal(t, expected.Hash(), actual.Hash())
 }
