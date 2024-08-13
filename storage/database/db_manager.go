@@ -2888,7 +2888,7 @@ func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpo
 		BurntFee []byte
 	}{}
 	if err := rlp.DecodeBytes(data, &stored); err != nil {
-		logger.Crit("Corrupt accumulated reward", "err", err)
+		logger.Crit("Corrupt supply checkpoint", "err", err)
 	}
 	return &SupplyCheckpoint{
 		Minted:   new(big.Int).SetBytes(stored.Minted),
@@ -2908,10 +2908,10 @@ func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *S
 	}
 	data, err := rlp.EncodeToBytes(stored)
 	if err != nil {
-		logger.Crit("Failed to write accumulated reward", "err", err)
+		logger.Crit("Failed to write supply checkpoint", "err", err)
 	}
 	if err := db.Put(supplyCheckpointKey(blockNum), data); err != nil {
-		logger.Crit("Failed to write accumulated reward", "err", err)
+		logger.Crit("Failed to write supply checkpoint", "err", err)
 	}
 }
 
@@ -2931,7 +2931,7 @@ func (dbm *databaseManager) WriteLastSupplyCheckpointNumber(blockNum uint64) {
 	db := dbm.getDatabase(MiscDB)
 	data := common.Int64ToByteBigEndian(blockNum)
 	if err := db.Put(lastSupplyCheckpointNumberKey, data); err != nil {
-		logger.Crit("Failed to write last accumulated reward block number", "err", err)
+		logger.Crit("Failed to write last supply checkpoint number", "err", err)
 	}
 }
 

@@ -65,7 +65,7 @@ func TestSupplyManagerError(t *testing.T) {
 	assert.True(t, shouldRequestUpstream(errors.Join(errNoRebalanceBurn(errNoRebalanceMemo), errNoCanonicalBurn(mtn))))
 
 	// Other errors should not trigger Upstream EN retry
-	assert.False(t, shouldRequestUpstream(errNoAccReward))
+	assert.False(t, shouldRequestUpstream(errNoCheckpoint))
 	assert.False(t, shouldRequestUpstream(errNoRebalanceBurn(errNoRebalanceMemo)))
 }
 
@@ -201,14 +201,14 @@ func (s *SupplyTestSuite) TestCatchupBigStep() {
 	s.setupHistory() // head block is already 400
 	s.sm.Start()     // start catchup
 	defer s.sm.Stop()
-	s.waitAccReward() // Wait for catchup to finish
+	s.waitCatchup() // Wait for catchup to finish
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
-		accReward, err := s.sm.GetAccReward(tc.number)
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
 		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, accReward.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, accReward.BurntFee, tc.number)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
 	}
 }
 
@@ -219,14 +219,14 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	defer s.sm.Stop()
 	time.Sleep(10 * time.Millisecond) // yield to the catchup goroutine to start
 	s.setupHistory()                  // block is inserted after the catchup started
-	s.waitAccReward()
+	s.waitCatchup()
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
-		accReward, err := s.sm.GetAccReward(tc.number)
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
 		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, accReward.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, accReward.BurntFee, tc.number)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
 	}
 }
 
@@ -236,7 +236,7 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 	s.setupHistory()
 	s.sm.Start()
 	defer s.sm.Stop()
-	s.waitAccReward()
+	s.waitCatchup()
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
@@ -261,7 +261,7 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	t := s.T()
 	s.setupHistory()
 	s.sm.Start()
-	s.waitAccReward()
+	s.waitCatchup()
 	s.sm.Stop()
 
 	var num uint64 = 200
@@ -305,21 +305,21 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 
 	// No AccReward
 	s.db.WriteLastSupplyCheckpointNumber(num - 1)
-	s.sm.accRewardCache.Purge()
+	s.sm.checkpointCache.Purge()
 	ts, err = s.sm.GetTotalSupply(num)
-	assert.ErrorIs(t, err, errNoAccReward)
+	assert.ErrorIs(t, err, errNoCheckpoint)
 	assert.Nil(t, ts)
 }
 
-// Test that when db.AccReward are missing, GetTotalSupply will re-accumulate from the nearest stored AccReward.
+// Test that when SupplyCheckpoint are missing, GetTotalSupply will re-accumulate from the nearest stored SupplyCheckpoint.
 func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 	t := s.T()
 	s.setupHistory()
 	s.sm.Start()
 	defer s.sm.Stop()
-	s.waitAccReward()
+	s.waitCatchup()
 
-	// Delete AccRewards not on the default block interval (128).
+	// Delete checkpoints not on the default block interval (128).
 	// This happens on full nodes, and archive nodes with default BlockInterval config.
 	// Note that archive nodes ars allowed to have BlockInterval > 1, still tries are committed every block.
 	for num := uint64(0); num <= 400; num++ {
@@ -332,7 +332,7 @@ func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 	// Still, all block data must be available.
 	testcases := s.testcases()
 	for _, tc := range testcases {
-		s.sm.accRewardCache.Purge()
+		s.sm.checkpointCache.Purge()
 		ts, err := s.sm.GetTotalSupply(tc.number)
 		require.NoError(t, err)
 
@@ -349,7 +349,7 @@ func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 	}
 }
 
-func (s *SupplyTestSuite) waitAccReward() {
+func (s *SupplyTestSuite) waitCatchup() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
 		if s.db.ReadLastSupplyCheckpointNumber() >= 400 {
 			break
@@ -557,7 +557,7 @@ func (s *SupplyTestSuite) testcases() []supplyTestTC {
 		zeroBurn = bigMult(amount1B, big.NewInt(1))
 		deadBurn = bigMult(amount1B, big.NewInt(2))
 	)
-	// accumulated rewards: segment sums
+	// supply checkpoints: segment sums
 	minted := make(map[uint64]*big.Int)
 	burntFee := make(map[uint64]*big.Int)
 

@@ -822,12 +822,12 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Kaia-Database Implement this!
 }
 
-func TestDBManager_AccReward(t *testing.T) {
+func TestDBManager_SupplyCheckpoint(t *testing.T) {
 	for _, dbm := range dbManagers {
 		// SupplyCheckpoint
 		testcases := []struct {
-			Number    uint64
-			AccReward *SupplyCheckpoint
+			Number     uint64
+			Checkpoint *SupplyCheckpoint
 		}{
 			{1000, &SupplyCheckpoint{big.NewInt(1111), big.NewInt(99)}},
 			{2000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(88)}},
@@ -836,8 +836,8 @@ func TestDBManager_AccReward(t *testing.T) {
 		}
 		for _, tc := range testcases {
 			assert.Nil(t, dbm.ReadSupplyCheckpoint(tc.Number))
-			dbm.WriteSupplyCheckpoint(tc.Number, tc.AccReward)
-			assert.Equal(t, tc.AccReward, dbm.ReadSupplyCheckpoint(tc.Number))
+			dbm.WriteSupplyCheckpoint(tc.Number, tc.Checkpoint)
+			assert.Equal(t, tc.Checkpoint, dbm.ReadSupplyCheckpoint(tc.Number))
 		}
 
 		// LastSupplyCheckpointNumber
