@@ -34,13 +34,13 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
 	supplyCacheSize   = 86400          // A day; Some total supply consumers might want daily supply.
 	supplyLogInterval = uint64(102400) // Periodic total supply log.
-	supplyReaccLimit  = uint64(1024)   // Re-accumulate from the last accumulated block.
 	zeroBurnAddress   = common.HexToAddress("0x0")
 	deadBurnAddress   = common.HexToAddress("0xdead")
 
@@ -104,7 +104,7 @@ type supplyManager struct {
 
 // NewSupplyManager creates a new supply manager.
 // The TotalSupply data is stored every checkpointInterval blocks.
-func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBManager, checkpointInterval uint) *supplyManager {
+func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBManager) *supplyManager {
 	checkpointCache, _ := lru.NewARC(supplyCacheSize)
 	memoCache, _ := lru.NewARC(10)
 
@@ -113,7 +113,7 @@ func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBMana
 		chainHeadChan:      make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		gov:                gov,
 		db:                 db,
-		checkpointInterval: uint64(checkpointInterval),
+		checkpointInterval: uint64(params.SupplyCheckpointInterval),
 		checkpointCache:    checkpointCache,
 		memoCache:          memoCache,
 		quitCh:             make(chan struct{}, 1), // make sure Stop() doesn't block if catchup() has exited before Stop()
@@ -137,11 +137,6 @@ func (sm *supplyManager) Stop() {
 func (sm *supplyManager) GetCheckpoint(num uint64) (*database.SupplyCheckpoint, error) {
 	if checkpoint, ok := sm.checkpointCache.Get(num); ok {
 		return checkpoint.(*database.SupplyCheckpoint), nil
-	}
-
-	lastNum := sm.db.ReadLastSupplyCheckpointNumber()
-	if lastNum < num { // soft deleted
-		return nil, errNoCheckpoint
 	}
 
 	checkpoint, err := sm.getCheckpointUncached(num)
@@ -383,36 +378,21 @@ func (sm *supplyManager) totalSupplyFromState(num uint64) (*big.Int, error) {
 }
 
 func (sm *supplyManager) getCheckpointUncached(num uint64) (*database.SupplyCheckpoint, error) {
+	// Read from DB
 	checkpoint := sm.db.ReadSupplyCheckpoint(num)
 	if checkpoint != nil {
 		return checkpoint, nil
 	}
 
-	// Trace back to the last stored supply checkpoint.
-	var fromNum uint64
-	var fromAcc *database.SupplyCheckpoint
-
-	// Fast path using checkpointInterval
-	if checkpoint := sm.db.ReadSupplyCheckpoint(num - num%sm.checkpointInterval); checkpoint != nil {
-		fromNum = num - num%sm.checkpointInterval
-		fromAcc = checkpoint
-	} else {
-		// Slow path in case the checkpoint has changed or checkpoint is missing.
-		for i := uint64(1); i < supplyReaccLimit; i++ {
-			checkpoint = sm.db.ReadSupplyCheckpoint(num - i)
-			if checkpoint != nil {
-				fromNum = num - i
-				fromAcc = checkpoint
-				break
-			}
-		}
-	}
-	if fromAcc == nil {
+	// Re-accumulate from the the nearest checkpoint
+	fromNum := num - (num % sm.checkpointInterval)
+	fromCheckpoint := sm.db.ReadSupplyCheckpoint(fromNum)
+	if fromCheckpoint == nil {
 		return nil, errNoCheckpoint
 	}
 
 	logger.Trace("on-demand reaccumulating rewards", "from", fromNum, "to", num)
-	return sm.accumulateReward(fromNum, num, fromAcc, false)
+	return sm.accumulateReward(fromNum, num, fromCheckpoint, false)
 }
 
 // accumulateReward calculates the total supply from the last block to the current block.

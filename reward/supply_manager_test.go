@@ -269,6 +269,7 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
+		s.sm.checkpointCache.Purge() // To test re-accumulate
 		ts, err := s.sm.GetTotalSupply(tc.number)
 		require.NoError(t, err)
 
@@ -286,12 +287,12 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 }
 
 // Test that when some data are missing, GetTotalSupply leaves some fields nil and returns an error.
-func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
+func (s *SupplyTestSuite) TestPartialInfo() {
 	t := s.T()
 	s.insertBlocks()
 	s.sm.Start()
+	defer s.sm.Stop()
 	s.waitCatchup()
-	s.sm.Stop()
 
 	var num uint64 = 200
 	var expected *TotalSupply
@@ -333,48 +334,13 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
 
 	// No SupplyCheckpoint
-	s.db.WriteLastSupplyCheckpointNumber(num - 1)
+	s.db.WriteLastSupplyCheckpointNumber(num - (num % 128))
+	s.db.DeleteSupplyCheckpoint(num - (num % 128))
 	s.sm.checkpointCache.Purge()
+
 	ts, err = s.sm.GetTotalSupply(num)
 	assert.ErrorIs(t, err, errNoCheckpoint)
 	assert.Nil(t, ts)
-}
-
-// Test that when SupplyCheckpoint are missing, GetTotalSupply will re-accumulate from the nearest stored SupplyCheckpoint.
-func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
-	t := s.T()
-	s.insertBlocks()
-	s.sm.Start()
-	defer s.sm.Stop()
-	s.waitCatchup()
-
-	// Delete checkpoints not on the default block interval (128).
-	// This happens on full nodes, and archive nodes with default BlockInterval config.
-	// Note that archive nodes ars allowed to have BlockInterval > 1, still tries are committed every block.
-	for num := uint64(0); num <= 400; num++ {
-		if num%128 != 0 {
-			s.db.DeleteSupplyCheckpoint(num)
-		}
-	}
-
-	// Still, all block data must be available.
-	testcases := s.testcases()
-	for _, tc := range testcases {
-		s.sm.checkpointCache.Purge()
-		ts, err := s.sm.GetTotalSupply(tc.number)
-		require.NoError(t, err)
-
-		expected := tc.expectTotalSupply
-		actual := ts
-		bigEqual(t, expected.TotalSupply, actual.TotalSupply, tc.number)
-		bigEqual(t, expected.TotalMinted, actual.TotalMinted, tc.number)
-		bigEqual(t, expected.TotalBurnt, actual.TotalBurnt, tc.number)
-		bigEqual(t, expected.BurntFee, actual.BurntFee, tc.number)
-		bigEqual(t, expected.ZeroBurn, actual.ZeroBurn, tc.number)
-		bigEqual(t, expected.DeadBurn, actual.DeadBurn, tc.number)
-		bigEqual(t, expected.Kip103Burn, actual.Kip103Burn, tc.number)
-		bigEqual(t, expected.Kip160Burn, actual.Kip160Burn, tc.number)
-	}
 }
 
 func (s *SupplyTestSuite) waitCatchup() {
@@ -540,7 +506,7 @@ func (s *SupplyTestSuite) SetupTest() {
 	s.blocks, _ = blockchain.GenerateChain(s.config, s.genesis, s.engine, s.db, 400, genFunc)
 	require.NotEmpty(t, s.blocks)
 
-	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1) // 1 interval for testing
+	s.sm = NewSupplyManager(s.chain, s.gov, s.db)
 }
 
 func (s *SupplyTestSuite) insertBlocks() {
