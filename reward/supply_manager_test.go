@@ -303,7 +303,7 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	assert.Nil(t, ts.Kip103Burn)
 	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
 
-	// No AccReward
+	// No SupplyCheckpoint
 	s.db.WriteLastSupplyCheckpointNumber(num - 1)
 	s.sm.checkpointCache.Purge()
 	ts, err = s.sm.GetTotalSupply(num)
@@ -324,8 +324,7 @@ func (s *SupplyTestSuite) TestTotalSupplyReaccumulate() {
 	// Note that archive nodes ars allowed to have BlockInterval > 1, still tries are committed every block.
 	for num := uint64(0); num <= 400; num++ {
 		if num%128 != 0 {
-			// Because it's for testing, we do not add db.DeleteAccReward method.
-			s.db.GetMiscDB().Delete(append([]byte("accReward"), common.Int64ToByteBigEndian(num)...))
+			s.db.DeleteSupplyCheckpoint(num)
 		}
 	}
 

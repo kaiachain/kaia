@@ -303,6 +303,7 @@ type DBManager interface {
 	// TotalSupply checkpoint functions
 	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
 	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
+	DeleteSupplyCheckpoint(blockNum uint64)
 	ReadLastSupplyCheckpointNumber() uint64
 	WriteLastSupplyCheckpointNumber(blockNum uint64)
 
@@ -2912,6 +2913,14 @@ func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *S
 	}
 	if err := db.Put(supplyCheckpointKey(blockNum), data); err != nil {
 		logger.Crit("Failed to write supply checkpoint", "err", err)
+	}
+}
+
+// DeleteSupplyCheckpoint removes the SupplyCheckpoint for a specific block number.
+func (dbm *databaseManager) DeleteSupplyCheckpoint(blockNum uint64) {
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Delete(supplyCheckpointKey(blockNum)); err != nil {
+		logger.Crit("Failed to delete supply checkpoint", "err", err)
 	}
 }
 
