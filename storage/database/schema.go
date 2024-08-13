@@ -132,8 +132,8 @@ var (
 
 	stakingInfoPrefix = []byte("stakingInfo")
 
-	supplyCheckpointPrefix        = []byte("accReward")
-	lastSupplyCheckpointNumberKey = []byte("lastAccRewardBlockNumber")
+	supplyCheckpointPrefix        = []byte("supplyCheckpoint")
+	lastSupplyCheckpointNumberKey = []byte("lastSupplyCheckpointNumber")
 
 	chaindatafetcherCheckpointKey = []byte("chaindatafetcherCheckpoint")
 )

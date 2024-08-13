@@ -100,6 +100,8 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
+	b.cn.supplyManager.Stop()
+	defer b.cn.supplyManager.Start()
 	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
 }
 
