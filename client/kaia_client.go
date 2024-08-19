@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"math/big"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"

@@ -52,6 +52,7 @@ func TestContextDatabases(t *testing.T) {
 	dbc := &database.DBConfig{
 		Dir: "persistent", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, OpenFilesLimit: 0,
+		PebbleDBCacheSize: 0,
 	}
 	db := ctx.OpenDatabase(dbc)
 	db.Close()
@@ -64,6 +65,7 @@ func TestContextDatabases(t *testing.T) {
 	dbc = &database.DBConfig{
 		Dir: "ephemeral", DBType: database.LevelDB,
 		LevelDBCacheSize: 0, OpenFilesLimit: 0,
+		PebbleDBCacheSize: 0,
 	}
 
 	db = ctx.OpenDatabase(dbc)

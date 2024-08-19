@@ -611,6 +611,11 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 			// to low, so it's safe the update in-memory markers directly.
 			bc.currentFastBlock.Store(newHeadFastBlock)
 		}
+
+		// Rewind the supply checkpoint
+		newLastSupplyCheckpointNumber := header.Number.Uint64() - (header.Number.Uint64() % params.SupplyCheckpointInterval)
+		bc.db.WriteLastSupplyCheckpointNumber(newLastSupplyCheckpointNumber)
+
 		return bc.CurrentBlock().Number().Uint64(), nil
 	}
 
@@ -629,6 +634,7 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && !bc.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(num)) && params.IsStakingUpdateInterval(num) {
 			bc.db.DeleteStakingInfo(num)
 		}
+		bc.db.DeleteSupplyCheckpoint(num)
 	}
 
 	// If SetHead was only called as a chain reparation method, try to skip

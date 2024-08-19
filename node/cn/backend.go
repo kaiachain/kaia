@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	kaia "github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
@@ -363,7 +363,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
-	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB, config.TrieBlockInterval)
+	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB)
 
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
@@ -521,7 +521,8 @@ func makeExtraData(extra []byte) []byte {
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DBManager {
 	dbc := &database.DBConfig{
 		Dir: name, DBType: config.DBType, ParallelDBWrite: config.ParallelDBWrite, SingleDB: config.SingleDB, NumStateTrieShards: config.NumStateTrieShards,
-		LevelDBCacheSize: config.LevelDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(), LevelDBCompression: config.LevelDBCompression,
+		LevelDBCacheSize: config.LevelDBCacheSize, LevelDBCompression: config.LevelDBCompression,
+		PebbleDBCacheSize: config.PebbleDBCacheSize, OpenFilesLimit: database.GetOpenFilesLimit(),
 		LevelDBBufferPool: config.LevelDBBufferPool, EnableDBPerfMetrics: config.EnableDBPerfMetrics, RocksDBConfig: &config.RocksDBConfig, DynamoDBConfig: &config.DynamoDBConfig,
 	}
 	return ctx.OpenDatabase(dbc)

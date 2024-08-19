@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -44,17 +45,17 @@ var (
 	deadBurnAddress   = common.HexToAddress("0xdead")
 
 	errSupplyManagerQuit = errors.New("supply manager quit")
-	errNoAccReward       = errors.New("accumulated reward not stored")
+	errNoCheckpoint      = errors.New("no supply checkpoint found")
 	errNoBlock           = errors.New("block not found")
 	errNoRebalanceMemo   = errors.New("rebalance memo not yet stored")
 )
 
 func errNoCanonicalBurn(err error) error {
-	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %v", err)
+	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %w", err)
 }
 
 func errNoRebalanceBurn(err error) error {
-	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %v", err)
+	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %w", err)
 }
 
 // SupplyManager tracks the total supply of native tokens.
@@ -77,7 +78,7 @@ type TotalSupply struct {
 	TotalSupply *big.Int // The total supply of the native token. i.e. Minted - Burnt.
 	TotalMinted *big.Int // Total minted amount.
 	TotalBurnt  *big.Int // Total burnt amount. Sum of all burnt amounts below.
-	BurntFee    *big.Int // from tx fee burn. ReadAccReward(num).BurntFee.
+	BurntFee    *big.Int // from tx fee burn.
 	ZeroBurn    *big.Int // balance of 0x0 (zero) address.
 	DeadBurn    *big.Int // balance of 0xdead (dead) address.
 	Kip103Burn  *big.Int // by KIP103 fork. Read from its memo.
@@ -94,17 +95,17 @@ type supplyManager struct {
 	checkpointInterval uint64
 
 	// Internal data structures
-	accRewardCache *lru.ARCCache  // Cache (number uint64) -> (accReward *database.AccReward)
-	memoCache      *lru.ARCCache  // Cache (address Address) -> (memo.Burnt *big.Int)
-	quit           uint32         // Stop the goroutine in initial catchup stage
-	quitCh         chan struct{}  // Stop the goroutine in event subscription state
-	wg             sync.WaitGroup // background goroutine wait group for shutting down
+	checkpointCache *lru.ARCCache  // Cache (number uint64) -> (checkpoint *database.SupplyCheckpoint)
+	memoCache       *lru.ARCCache  // Cache (address Address) -> (memo.Burnt *big.Int)
+	quit            uint32         // Stop the goroutine in initial catchup stage
+	quitCh          chan struct{}  // Stop the goroutine in event subscription state
+	wg              sync.WaitGroup // background goroutine wait group for shutting down
 }
 
 // NewSupplyManager creates a new supply manager.
 // The TotalSupply data is stored every checkpointInterval blocks.
-func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBManager, checkpointInterval uint) *supplyManager {
-	accRewardCache, _ := lru.NewARC(supplyCacheSize)
+func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBManager) *supplyManager {
+	checkpointCache, _ := lru.NewARC(supplyCacheSize)
 	memoCache, _ := lru.NewARC(10)
 
 	return &supplyManager{
@@ -112,8 +113,8 @@ func NewSupplyManager(chain blockChain, gov governanceHelper, db database.DBMana
 		chainHeadChan:      make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		gov:                gov,
 		db:                 db,
-		checkpointInterval: uint64(checkpointInterval),
-		accRewardCache:     accRewardCache,
+		checkpointInterval: uint64(params.SupplyCheckpointInterval),
+		checkpointCache:    checkpointCache,
 		memoCache:          memoCache,
 		quitCh:             make(chan struct{}, 1), // make sure Stop() doesn't block if catchup() has exited before Stop()
 	}
@@ -133,23 +134,18 @@ func (sm *supplyManager) Stop() {
 	}
 }
 
-func (sm *supplyManager) GetAccReward(num uint64) (*database.AccReward, error) {
-	if accReward, ok := sm.accRewardCache.Get(num); ok {
-		return accReward.(*database.AccReward), nil
+func (sm *supplyManager) GetCheckpoint(num uint64) (*database.SupplyCheckpoint, error) {
+	if checkpoint, ok := sm.checkpointCache.Get(num); ok {
+		return checkpoint.(*database.SupplyCheckpoint), nil
 	}
 
-	lastNum := sm.db.ReadLastAccRewardBlockNumber()
-	if lastNum < num { // soft deleted
-		return nil, errNoAccReward
+	checkpoint, err := sm.getCheckpointUncached(num)
+	if err != nil {
+		return nil, err
 	}
 
-	accReward := sm.db.ReadAccReward(num)
-	if accReward == nil {
-		return nil, errNoAccReward
-	}
-
-	sm.accRewardCache.Add(num, accReward.Copy())
-	return accReward, nil
+	sm.checkpointCache.Add(num, checkpoint.Copy())
+	return checkpoint, nil
 }
 
 func (sm *supplyManager) GetCanonicalBurn(num uint64) (zero *big.Int, dead *big.Int, err error) {
@@ -233,14 +229,14 @@ func (sm *supplyManager) GetTotalSupply(num uint64) (*TotalSupply, error) {
 	errs := make([]error, 0)
 	ts := new(TotalSupply)
 
-	// Read accumulated rewards (minted, burntFee)
+	// Read accumulated supply checkpoint (minted, burntFee)
 	// This is an essential component, so failure to read it immediately aborts the function.
-	accReward, err := sm.GetAccReward(num)
+	checkpoint, err := sm.GetCheckpoint(num)
 	if err != nil {
 		return nil, err
 	}
-	ts.TotalMinted = accReward.Minted
-	ts.BurntFee = accReward.BurntFee
+	ts.TotalMinted = checkpoint.Minted
+	ts.BurntFee = checkpoint.BurntFee
 
 	// Read canonical burn address balances
 	// Leave them nil if the historic state isn't available.
@@ -283,12 +279,12 @@ func (sm *supplyManager) catchup() {
 
 	var (
 		headNum = sm.chain.CurrentBlock().NumberU64()
-		lastNum = sm.db.ReadLastAccRewardBlockNumber()
+		lastNum = sm.db.ReadLastSupplyCheckpointNumber()
 	)
 
-	if lastNum > 0 && sm.db.ReadAccReward(lastNum) == nil {
-		logger.Error("Last accumulated reward not found. Restarting supply catchup", "last", lastNum, "head", headNum)
-		sm.db.WriteLastAccRewardBlockNumber(0) // soft reset to genesis
+	if lastNum > 0 && sm.db.ReadSupplyCheckpoint(lastNum) == nil {
+		logger.Error("Last supply checkpoint not found. Restarting supply catchup", "last", lastNum, "head", headNum)
+		sm.db.WriteLastSupplyCheckpointNumber(0) // soft reset to genesis
 		lastNum = 0
 	}
 
@@ -300,25 +296,25 @@ func (sm *supplyManager) catchup() {
 			logger.Error("totalSupplyFromState failed", "number", 0, "err", err)
 			return
 		}
-		sm.db.WriteAccReward(0, &database.AccReward{
+		sm.db.WriteSupplyCheckpoint(0, &database.SupplyCheckpoint{
 			Minted:   genesisTotalSupply,
 			BurntFee: big.NewInt(0),
 		})
-		sm.db.WriteLastAccRewardBlockNumber(0)
+		sm.db.WriteLastSupplyCheckpointNumber(0)
 		lastNum = 0
 		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
 	}
 
-	lastNum = sm.db.ReadLastAccRewardBlockNumber()
-	lastAccReward := sm.db.ReadAccReward(lastNum)
+	lastNum = sm.db.ReadLastSupplyCheckpointNumber()
+	lastCheckpoint := sm.db.ReadSupplyCheckpoint(lastNum)
 
 	// Big-step catchup; accumulate until the head block as of now.
 	// The head block can be obsolete by the time catchup finished, so the big-step can end up being a bit short.
 	// Repeat until the difference is close enough so that the headNum stays the same after one iteration.
 	for lastNum < headNum {
-		logger.Info("Total supply big step catchup", "last", lastNum, "head", headNum, "minted", lastAccReward.Minted.String(), "burntFee", lastAccReward.BurntFee.String())
+		logger.Info("Total supply big step catchup", "last", lastNum, "head", headNum, "minted", lastCheckpoint.Minted.String(), "burntFee", lastCheckpoint.BurntFee.String())
 
-		accReward, err := sm.accumulateReward(lastNum, headNum, lastAccReward)
+		checkpoint, err := sm.accumulateReward(lastNum, headNum, lastCheckpoint, true)
 		if err != nil {
 			if err != errSupplyManagerQuit {
 				logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
@@ -327,10 +323,10 @@ func (sm *supplyManager) catchup() {
 		}
 
 		lastNum = headNum
-		lastAccReward = accReward
+		lastCheckpoint = checkpoint
 		headNum = sm.chain.CurrentBlock().NumberU64()
 	}
-	logger.Info("Total supply big step catchup done", "last", lastNum, "minted", lastAccReward.Minted.String(), "burntFee", lastAccReward.BurntFee.String())
+	logger.Info("Total supply big step catchup done", "last", lastNum, "minted", lastCheckpoint.Minted.String(), "burntFee", lastCheckpoint.BurntFee.String())
 
 	// Subscribe to chain head events and accumulate on demand.
 	sm.chainHeadSub = sm.chain.SubscribeChainHeadEvent(sm.chainHeadChan)
@@ -341,16 +337,18 @@ func (sm *supplyManager) catchup() {
 		case head := <-sm.chainHeadChan:
 			headNum = head.Block.NumberU64()
 
-			supply, err := sm.accumulateReward(lastNum, headNum, lastAccReward)
-			if err != nil {
-				if err != errSupplyManagerQuit {
-					logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
+			if lastNum < headNum {
+				supply, err := sm.accumulateReward(lastNum, headNum, lastCheckpoint, true)
+				if err != nil {
+					if err != errSupplyManagerQuit {
+						logger.Error("Total supply accumulate failed", "from", lastNum, "to", headNum, "err", err)
+					}
+					return
 				}
-				return
-			}
 
-			lastNum = headNum
-			lastAccReward = supply
+				lastNum = headNum
+				lastCheckpoint = supply
+			}
 		}
 	}
 }
@@ -379,10 +377,31 @@ func (sm *supplyManager) totalSupplyFromState(num uint64) (*big.Int, error) {
 	return totalSupply, nil
 }
 
+func (sm *supplyManager) getCheckpointUncached(num uint64) (*database.SupplyCheckpoint, error) {
+	// Read from DB
+	checkpoint := sm.db.ReadSupplyCheckpoint(num)
+	if checkpoint != nil {
+		return checkpoint, nil
+	}
+
+	// Re-accumulate from the the nearest checkpoint
+	fromNum := num - (num % sm.checkpointInterval)
+	fromCheckpoint := sm.db.ReadSupplyCheckpoint(fromNum)
+	if fromCheckpoint == nil {
+		return nil, errNoCheckpoint
+	}
+
+	logger.Trace("on-demand reaccumulating rewards", "from", fromNum, "to", num)
+	return sm.accumulateReward(fromNum, num, fromCheckpoint, false)
+}
+
 // accumulateReward calculates the total supply from the last block to the current block.
-// Given supply at `from` is `fromSupply`, calculate the supply until `to`, inclusive.
-func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.AccReward) (*database.AccReward, error) {
-	accReward := fromAcc.Copy() // make a copy because we're updating it in-place.
+// Given the supply at `from` is `fromCheckpoint`, calculate the supply until `to`, inclusive.
+// If `write` is true, the result will be written to the database.
+// If `write` is false, the result will not be written to the database,
+// to prevent overwriting LastSupplyCheckpointNumber (essentially rollback) and to keep the disk size small (only store at checkpointInterval).
+func (sm *supplyManager) accumulateReward(from, to uint64, fromCheckpoint *database.SupplyCheckpoint, write bool) (*database.SupplyCheckpoint, error) {
+	checkpoint := fromCheckpoint.Copy() // make a copy because we're updating it in-place.
 
 	for num := from + 1; num <= to; num++ {
 		// Abort upon quit signal
@@ -405,18 +424,18 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromAcc *database.Acc
 		if err != nil {
 			return nil, err
 		}
-		accReward.Minted.Add(accReward.Minted, blockTotal.Minted)
-		accReward.BurntFee.Add(accReward.BurntFee, blockTotal.BurntFee)
+		checkpoint.Minted.Add(checkpoint.Minted, blockTotal.Minted)
+		checkpoint.BurntFee.Add(checkpoint.BurntFee, blockTotal.BurntFee)
 
 		// Store to database, print progress log.
-		sm.accRewardCache.Add(num, accReward.Copy())
-		if (num % sm.checkpointInterval) == 0 {
-			sm.db.WriteAccReward(num, accReward)
-			sm.db.WriteLastAccRewardBlockNumber(num)
+		sm.checkpointCache.Add(num, checkpoint.Copy())
+		if write && (num%sm.checkpointInterval) == 0 {
+			sm.db.WriteSupplyCheckpoint(num, checkpoint)
+			sm.db.WriteLastSupplyCheckpointNumber(num)
 		}
 		if (num % supplyLogInterval) == 0 {
-			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.Minted.String(), "burntFee", accReward.BurntFee.String())
+			logger.Info("Accumulated block rewards", "number", num, "minted", checkpoint.Minted.String(), "burntFee", checkpoint.BurntFee.String())
 		}
 	}
-	return accReward, nil
+	return checkpoint, nil
 }

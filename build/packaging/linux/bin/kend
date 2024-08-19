@@ -267,6 +267,10 @@ __check_option() {
         OPTIONS="$OPTIONS --db.leveldb.cache-size $LDBCACHESIZE"
     fi
 
+    if [ ! -z $PDBCACHESIZE ]; then
+        OPTIONS="$OPTIONS --db.pebbledb.cache-size $PDBCACHESIZE"
+    fi
+
     if [[ ! -z $SC_MAIN_BRIDGE ]] && [[ $SC_MAIN_BRIDGE -eq 1 ]]; then
         OPTIONS="$OPTIONS --mainbridge --mainbridgeport $SC_MAIN_BRIDGE_PORT"
         if [[ ! -z $SC_MAIN_BRIDGE_INDEXING ]] && [[ $SC_MAIN_BRIDGE_INDEXING -eq 1 ]]; then

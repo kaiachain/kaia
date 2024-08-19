@@ -51,7 +51,7 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		KaiaCompatibleBlock:      big.NewInt(999999999), // TODO-Kaia: set Mainnet KaiaCompatibleBlock
+		KaiaCompatibleBlock:      big.NewInt(162900480),
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -61,7 +61,7 @@ var (
 		},
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
-		Kip160CompatibleBlock: big.NewInt(999999999), // TODO-Kaia: set Mainnet Kip160CompatibleBlock
+		Kip160CompatibleBlock: big.NewInt(162900480),
 		Kip160ContractAddress: common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
 		DeriveShaImpl:         2,
 		Governance: &GovernanceConfig{

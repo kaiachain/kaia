@@ -2,7 +2,7 @@
 
 ## Klaytn governance structure
 
-Klatyn as it is today is run by a permissioned validators called the Governance Council (GC). Each GC member run one Consensus Node (CN) to produce and validate blocks. The GC members also have authority to change Klaytn's network parameters such as gas price and block reward. Our governance contracts are trying to facilitate a transparent and stake-based voting by the GC members.
+Klaytn as it is today is run by a permissioned validators called the Governance Council (GC). Each GC member run one Consensus Node (CN) to produce and validate blocks. The GC members also have authority to change Klaytn's network parameters such as gas price and block reward. Our governance contracts are trying to facilitate a transparent and stake-based voting by the GC members.
 
 ### Voting power
 
@@ -38,7 +38,7 @@ The [KIP-81 as of 2022-11-09](https://github.com/klaytn/kips/blob/a1d99a58a60d0e
 
 ## Access Control
 
-Voting contract has two category of users, secretary and voters.
+Voting contract has two categories of users, secretary and voters.
 
 - The secretary is a single account stored in the `secretary` variable. This account is intended to be controlled by the Klaytn Foundation. It will serve the GC by assisting administrative works such as submitting and executing proposals.
 - Voters are identified by their `NodeID`. The list of voters differs per proposal, depending on the list of GC members registered in AddressBook and their staking amounts at the time of proposal submission.
@@ -62,7 +62,7 @@ Each function has different access control rule.
 
 In Klaytn there exists a on-chain governance system leveraging block headers ([docs](https://docs.klaytn.foundation/content/dapp/json-rpc/api-references/governance), [explainer in Korean](https://www.youtube.com/watch?v=UPyf7B0YvI0)). Major complaint about the existing system was that it takes 1 to 2 weeks for a parameter change to take effect ([example](https://medium.com/klaytn/klaytn-gas-price-reduction-schedule-2ba158e3630d))
 
-Therefore the Voting contract will allow each proposal to have custom timing. The `propose()` function accepts two timing paramters `votingDelay` and `votingPeriod`, given that they fall within the `timingRule` ranges.
+Therefore the Voting contract will allow each proposal to have custom timing. The `propose()` function accepts two timing parameters `votingDelay` and `votingPeriod`, given that they fall within the `timingRule` ranges.
 
 In the default setting, both `votingDelay` and `votingPeriod` are bound between 1 and 28 days. This makes the quickest proposal execution down to 4 days (1 day Pending, 1 day Active, 2 days Queued).
 

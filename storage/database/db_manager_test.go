@@ -52,6 +52,16 @@ var (
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
 		{DBType: LevelDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
+
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: false, NumStateTrieShards: 4, ParallelDBWrite: true},
+
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 1, ParallelDBWrite: true},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: false},
+		{DBType: PebbleDB, SingleDB: true, NumStateTrieShards: 4, ParallelDBWrite: true},
 	}
 )
 
@@ -812,29 +822,29 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Kaia-Database Implement this!
 }
 
-func TestDBManager_AccReward(t *testing.T) {
+func TestDBManager_SupplyCheckpoint(t *testing.T) {
 	for _, dbm := range dbManagers {
-		// AccReward
+		// SupplyCheckpoint
 		testcases := []struct {
-			Number    uint64
-			AccReward *AccReward
+			Number     uint64
+			Checkpoint *SupplyCheckpoint
 		}{
-			{1000, &AccReward{big.NewInt(1111), big.NewInt(99)}},
-			{2000, &AccReward{big.NewInt(0), big.NewInt(88)}},
-			{3000, &AccReward{big.NewInt(2222), big.NewInt(0)}},
-			{4000, &AccReward{big.NewInt(0), big.NewInt(0)}},
+			{1000, &SupplyCheckpoint{big.NewInt(1111), big.NewInt(99)}},
+			{2000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(88)}},
+			{3000, &SupplyCheckpoint{big.NewInt(2222), big.NewInt(0)}},
+			{4000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(0)}},
 		}
 		for _, tc := range testcases {
-			assert.Nil(t, dbm.ReadAccReward(tc.Number))
-			dbm.WriteAccReward(tc.Number, tc.AccReward)
-			assert.Equal(t, tc.AccReward, dbm.ReadAccReward(tc.Number))
+			assert.Nil(t, dbm.ReadSupplyCheckpoint(tc.Number))
+			dbm.WriteSupplyCheckpoint(tc.Number, tc.Checkpoint)
+			assert.Equal(t, tc.Checkpoint, dbm.ReadSupplyCheckpoint(tc.Number))
 		}
 
-		// LastAccRewardBlockNumber
+		// LastSupplyCheckpointNumber
 		lastNum := uint64(54321)
-		assert.Zero(t, dbm.ReadLastAccRewardBlockNumber())
-		dbm.WriteLastAccRewardBlockNumber(lastNum)
-		assert.Equal(t, lastNum, dbm.ReadLastAccRewardBlockNumber())
+		assert.Zero(t, dbm.ReadLastSupplyCheckpointNumber())
+		dbm.WriteLastSupplyCheckpointNumber(lastNum)
+		assert.Equal(t, lastNum, dbm.ReadLastSupplyCheckpointNumber())
 	}
 }
 

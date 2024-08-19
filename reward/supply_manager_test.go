@@ -19,6 +19,7 @@
 package reward
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -47,6 +48,30 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// ----------------------------------------------------------------------------
+// Tests other than SupplyTestSuite
+
+// Test that the missing trie node errors returned by GetTotalSupply will trigger Upstream EN retry.
+func TestSupplyManagerError(t *testing.T) {
+	// Mimics networks/rpc/handler.go:shouldReauestUpstream()
+	shouldRequestUpstream := func(err error) bool {
+		var missingNodeError *statedb.MissingNodeError
+		return errors.As(err, &missingNodeError)
+	}
+
+	// If the error contains MissingNodeError, it must trigger Upstream EN retry.
+	mtn := &statedb.MissingNodeError{NodeHash: common.HexToHash("0x1234")}
+	assert.True(t, shouldRequestUpstream(errNoCanonicalBurn(mtn)))
+	assert.True(t, shouldRequestUpstream(errors.Join(errNoRebalanceBurn(errNoRebalanceMemo), errNoCanonicalBurn(mtn))))
+
+	// Other errors should not trigger Upstream EN retry
+	assert.False(t, shouldRequestUpstream(errNoCheckpoint))
+	assert.False(t, shouldRequestUpstream(errNoRebalanceBurn(errNoRebalanceMemo)))
+}
+
+// ----------------------------------------------------------------------------
+// SupplyTestSuite
+
 // A test suite with the blockchain having a reward-related history similar to Mainnet.
 // | Block     	| Fork  	| Minting 	| Ratio    	| KIP82 	| Event                      	|
 // |-----------	|-------	|---------	|----------	|-------	|----------------------------	|
@@ -68,17 +93,22 @@ type SupplyTestSuite struct {
 	db      database.DBManager
 	genesis *types.Block
 	chain   *blockchain.BlockChain
+	blocks  []*types.Block
 	sm      *supplyManager
+}
+
+func TestSupplyManager(t *testing.T) {
+	suite.Run(t, new(SupplyTestSuite))
 }
 
 // ----------------------------------------------------------------------------
 // Test cases
 
-// Tests totalSupplyFromState as well as the setupHistory() itself.
-// This accounts for (AccMinted - AccBurntFee - kip103Burn - kip160Burn) but not (- zeroBurn - deadBurn).
+// Tests totalSupplyFromState as well as the insertBlocks() itself.
+// totalSupplyFromState accounts for (AccMinted - AccBurntFee - kip103Burn - kip160Burn) but not (- zeroBurn - deadBurn).
 func (s *SupplyTestSuite) TestFromState() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start() // start catchup
 
 	testcases := s.testcases()
@@ -97,7 +127,7 @@ func (s *SupplyTestSuite) TestFromState() {
 // Test reading canonical burn amounts from the state.
 func (s *SupplyTestSuite) TestCanonicalBurn() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 
 	// Delete state at 199
 	root := s.db.ReadBlockByNumber(199).Root()
@@ -119,7 +149,7 @@ func (s *SupplyTestSuite) TestCanonicalBurn() {
 // Test reading rebalance memo from the contract.
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 
 	// rebalance not configured
 	amount, err := s.sm.GetRebalanceBurn(199, nil, common.Address{})
@@ -148,7 +178,7 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 
 // Tests sm.Stop() does not block.
 func (s *SupplyTestSuite) TestStop() {
-	s.setupHistory() // head block is already 400
+	s.insertBlocks() // head block is already 400
 	s.sm.Start()     // start catchup, enters big-step mode
 
 	endCh := make(chan struct{})
@@ -169,17 +199,17 @@ func (s *SupplyTestSuite) TestStop() {
 // Tests the insertBlock -> go catchup, where the catchup enters the big-step mode.
 func (s *SupplyTestSuite) TestCatchupBigStep() {
 	t := s.T()
-	s.setupHistory() // head block is already 400
+	s.insertBlocks() // head block is already 400
 	s.sm.Start()     // start catchup
 	defer s.sm.Stop()
-	s.waitAccReward() // Wait for catchup to finish
+	s.waitCatchup() // Wait for catchup to finish
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
-		accReward, err := s.sm.GetAccReward(tc.number)
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
 		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, accReward.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, accReward.BurntFee, tc.number)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
 	}
 }
 
@@ -188,29 +218,58 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	t := s.T()
 	s.sm.Start() // start catchup
 	defer s.sm.Stop()
-	time.Sleep(10 * time.Millisecond) // yield to the catchup goroutine to start
-	s.setupHistory()                  // block is inserted after the catchup started
-	s.waitAccReward()
+	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+	s.insertBlocks()                   // block is inserted after the catchup started
+	s.waitCatchup()
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
-		accReward, err := s.sm.GetAccReward(tc.number)
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
 		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, accReward.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, accReward.BurntFee, tc.number)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
+	}
+}
+
+// Tests go catchup -> insertBlock case, where the catchup follows the chain head event.
+func (s *SupplyTestSuite) TestCatchupRewind() {
+	t := s.T()
+	s.sm.Start() // start catchup
+	defer s.sm.Stop()
+	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+	s.insertBlocks()                   // block is inserted after the catchup started
+	s.waitCatchup()                    // catchup to block 400
+
+	// Rewind to 200; relevant data must have been deleted.
+	s.chain.SetHead(200)
+	assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
+	assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
+	assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
+
+	// Re-insert blocks.
+	// The catchup thread should correctly handle ChainHeadEvents less than 400.
+	s.insertBlocks()
+
+	testcases := s.testcases()
+	for _, tc := range testcases {
+		checkpoint, err := s.sm.GetCheckpoint(tc.number)
+		require.NoError(t, err)
+		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
 	}
 }
 
 // Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start()
 	defer s.sm.Stop()
-	s.waitAccReward()
+	s.waitCatchup()
 
 	testcases := s.testcases()
 	for _, tc := range testcases {
+		s.sm.checkpointCache.Purge() // To test re-accumulate
 		ts, err := s.sm.GetTotalSupply(tc.number)
 		require.NoError(t, err)
 
@@ -228,12 +287,12 @@ func (s *SupplyTestSuite) TestTotalSupply() {
 }
 
 // Test that when some data are missing, GetTotalSupply leaves some fields nil and returns an error.
-func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
+func (s *SupplyTestSuite) TestPartialInfo() {
 	t := s.T()
-	s.setupHistory()
+	s.insertBlocks()
 	s.sm.Start()
-	s.waitAccReward()
-	s.sm.Stop()
+	defer s.sm.Stop()
+	s.waitCatchup()
 
 	var num uint64 = 200
 	var expected *TotalSupply
@@ -274,28 +333,24 @@ func (s *SupplyTestSuite) TestTotalSupplyPartialInfo() {
 	assert.Nil(t, ts.Kip103Burn)
 	assert.Equal(t, expected.Kip160Burn, ts.Kip160Burn)
 
-	// No AccReward
-	s.db.WriteLastAccRewardBlockNumber(num - 1)
-	s.sm.accRewardCache.Purge()
+	// No SupplyCheckpoint
+	s.db.WriteLastSupplyCheckpointNumber(num - (num % 128))
+	s.db.DeleteSupplyCheckpoint(num - (num % 128))
+	s.sm.checkpointCache.Purge()
+
 	ts, err = s.sm.GetTotalSupply(num)
-	assert.ErrorIs(t, err, errNoAccReward)
+	assert.ErrorIs(t, err, errNoCheckpoint)
 	assert.Nil(t, ts)
 }
 
-func (s *SupplyTestSuite) waitAccReward() {
+func (s *SupplyTestSuite) waitCatchup() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
-		if s.db.ReadLastAccRewardBlockNumber() >= 400 {
-			break
+		if s.sm.checkpointCache.Contains(uint64(400)) {
+			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if s.db.ReadLastAccRewardBlockNumber() < 400 {
-		s.T().Fatal("Catchup not finished in time")
-	}
-}
-
-func TestSupplyManager(t *testing.T) {
-	suite.Run(t, new(SupplyTestSuite))
+	s.T().Fatal("Catchup not finished in time")
 }
 
 // ----------------------------------------------------------------------------
@@ -396,8 +451,9 @@ func (s *SupplyTestSuite) SetupTest() {
 	t := s.T()
 
 	s.db = database.NewMemoryDBManager()
+	chainConfig := s.config.Copy() // to avoid some tests (i.e. PartialInfo) breaking other tests
 	genesis := &blockchain.Genesis{
-		Config:     s.config,
+		Config:     chainConfig,
 		Timestamp:  uint64(time.Now().Unix()),
 		BlockScore: common.Big1,
 		Alloc: blockchain.GenesisAlloc{
@@ -418,15 +474,9 @@ func (s *SupplyTestSuite) SetupTest() {
 		TriesInMemory:       128,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 	}
-	chain, err := blockchain.NewBlockChain(s.db, cacheConfig, s.config, s.engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(s.db, cacheConfig, chainConfig, s.engine, vm.Config{})
 	require.NoError(t, err)
 	s.chain = chain
-
-	s.sm = NewSupplyManager(s.chain, s.gov, s.db, 1)
-}
-
-func (s *SupplyTestSuite) setupHistory() {
-	t := s.T()
 
 	var ( // Generate blocks with 1 tx per block. Send 1 kei from Genesis4 to Genesis3.
 		signer   = types.LatestSignerForChainID(s.config.ChainID)
@@ -453,13 +503,22 @@ func (s *SupplyTestSuite) setupHistory() {
 			}
 		}
 	)
-	blocks, _ := blockchain.GenerateChain(s.config, s.genesis, s.engine, s.db, 400, genFunc)
-	require.NotEmpty(t, blocks)
+	s.blocks, _ = blockchain.GenerateChain(s.config, s.genesis, s.engine, s.db, 400, genFunc)
+	require.NotEmpty(t, s.blocks)
 
-	// Insert s.chain
-	_, err := s.chain.InsertChain(blocks)
-	require.NoError(t, err)
-	expected := blocks[len(blocks)-1]
+	s.sm = NewSupplyManager(s.chain, s.gov, s.db)
+}
+
+func (s *SupplyTestSuite) insertBlocks() {
+	t := s.T()
+
+	// Insert blocks to chain. Note that duplicating blocks will automatically be ignored.
+	// ChainHeadEvent will be published after each block insertion.
+	for _, block := range s.blocks {
+		_, err := s.chain.InsertChain([]*types.Block{block})
+		require.NoError(t, err)
+	}
+	expected := s.blocks[len(s.blocks)-1]
 	actual := s.chain.CurrentBlock()
 	assert.Equal(t, expected.Hash(), actual.Hash())
 }
@@ -493,7 +552,7 @@ func (s *SupplyTestSuite) testcases() []supplyTestTC {
 		zeroBurn = bigMult(amount1B, big.NewInt(1))
 		deadBurn = bigMult(amount1B, big.NewInt(2))
 	)
-	// accumulated rewards: segment sums
+	// supply checkpoints: segment sums
 	minted := make(map[uint64]*big.Int)
 	burntFee := make(map[uint64]*big.Int)
 

@@ -57,6 +57,11 @@ executors:
           KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  darwin-executor: # this executor is for packaging darwin binaries
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.m1.medium.gen1
   rpm-executor: # this executor is for packaging rpm binaries
     working_directory: /go/src/github.com/kaiachain/kaia
     docker:
@@ -70,6 +75,18 @@ executors:
       - image: cimg/go:1.22.1
 
 commands:
+  install-darwin-dependencies:
+    description: Install dependencies on darwin machine
+    steps:
+      - run:
+          name: "install darwin dependencies"
+          command: |
+            # install awscli
+            brew install awscli
+            # install golang
+            curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
+            mkdir $HOME/go1.22.1
+            tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -141,7 +158,7 @@ commands:
 
             for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
             done
   rpm-tagging-baobab:
@@ -158,7 +175,7 @@ commands:
           command: |
             for item in kcn kpn ken; do
               TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-kairos-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/prod/
+              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
               aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
             done
   createrepo-update:
@@ -166,9 +183,9 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/prod/ rhel/7/prod/
-            createrepo --update rhel/7/prod
-            aws s3 sync --delete rhel/7/prod/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/prod/repodata/
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
+            createrepo --update rhel/7/kaia
+            aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
   tag-verify:
     steps:
       - run:
@@ -231,7 +248,7 @@ commands:
           command: |
             export version=$(go run build/rpm/main.go version) >> $BASH_ENV
             echo "git tag $version"
-            git config --global user.email "team.devops@groundx.xyz"
+            git config --global user.email "devops@kaia.io"
             git config --global user.name "circleci-kaia"
             git tag -a $version -m "$CIRCLE_STAGE"
             git push origin $version
@@ -300,13 +317,14 @@ commands:
           no_output_timeout: 30m
           command: |
             make kcn
-            git clone https://$TEST_TOKEN@github.com/klaytn/klaytn-rpc-tester.git
-            cd klaytn-rpc-tester
+            git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+            cd kaia-rpc-tester
             cp ../build/bin/kcn script/cn/bin/
             cd script
             ./set_CNonly.sh
             cd ..
             cp config_template.json config.json
+            apt update
             apt install python3.8 python3-venv -y
             python3.8 -m venv --without-pip venv
             source venv/bin/activate
@@ -368,7 +386,7 @@ jobs:
           name: "Run test tests"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
             make test-tests
 
   test-others:
@@ -415,7 +433,7 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/klaytn/klaytn-tests.git tests/testdata
+            git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
             make cover
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
@@ -470,7 +488,27 @@ jobs:
           baobab: "-b"
       - upload-repo:
           item: "kcn kpn ken"
+  packaging-darwin:
+    executor: darwin-executor
+    steps:
+      - checkout
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging:
+          os-network: "darwin-arm64"
+      - upload-repo
 
+  packaging-darwin-baobab:
+    executor: darwin-executor
+    steps:
+      - checkout
+      - install-darwin-dependencies
+      - pre-build
+      - build-packaging:
+          os-network: "darwin-arm64"
+          baobab: "-b"
+      - upload-repo:
+          item: "kcn kpn ken"
   rpm-tagged:
     executor: rpm-executor
     steps:
@@ -593,6 +631,8 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]/
@@ -605,6 +645,8 @@ workflows:
             - rpm-tagged-baobab
             - packaging-linux
             - packaging-linux-baobab
+            - packaging-darwin
+            - packaging-darwin-baobab
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
@@ -627,7 +669,14 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-
+      - packaging-darwin:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - packaging-darwin-baobab:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
       - major-tagging:
           filters:
             branches:
