@@ -26,8 +26,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/VictoriaMetrics/fastcache"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/lru"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 )
@@ -144,7 +144,7 @@ func NewDatabaseWithNewCache(db database.DBManager, cacheConfig *statedb.TrieNod
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithNewCache(db, cacheConfig),
 		codeSizeCache: getCodeSizeCache(),
-		codeCache:     fastcache.New(codeCacheSize),
+		codeCache:     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
 	}
 }
 
@@ -155,14 +155,14 @@ func NewDatabaseWithExistingCache(db database.DBManager, cache statedb.TrieNodeC
 	return &cachingDB{
 		db:            statedb.NewDatabaseWithExistingCache(db, cache),
 		codeSizeCache: getCodeSizeCache(),
-		codeCache:     fastcache.New(codeCacheSize),
+		codeCache:     lru.NewSizeConstrainedCache[common.Hash, []byte](codeCacheSize),
 	}
 }
 
 type cachingDB struct {
 	db            *statedb.Database
 	codeSizeCache common.Cache
-	codeCache     *fastcache.Cache
+	codeCache     *lru.SizeConstrainedCache[common.Hash, []byte]
 }
 
 // OpenTrie opens the main account trie at a specific root hash.
@@ -187,12 +187,12 @@ func (db *cachingDB) CopyTrie(t Trie) Trie {
 
 // ContractCode retrieves a particular contract's code.
 func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
-	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+	if code, _ := db.codeCache.Get(codeHash); len(code) > 0 {
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCode(codeHash)
 	if len(code) > 0 {
-		db.codeCache.Set(codeHash.Bytes(), code)
+		db.codeCache.Add(codeHash, code)
 		db.codeSizeCache.Add(codeHash, len(code))
 		return code, nil
 	}
@@ -201,7 +201,8 @@ func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
 
 // DeleteCode deletes a particular contract's code.
 func (db *cachingDB) DeleteCode(codeHash common.Hash) {
-	db.codeCache.Del(codeHash.Bytes())
+	// there's no need to delete the item from the cache.
+	// first, it's only used in testcode, and second, it will be evicted automatically if not used
 	db.db.DiskDB().DeleteCode(codeHash)
 }
 
@@ -209,12 +210,12 @@ func (db *cachingDB) DeleteCode(codeHash common.Hash) {
 // code can't be found in the cache, then check the existence with **new**
 // db scheme.
 func (db *cachingDB) ContractCodeWithPrefix(codeHash common.Hash) ([]byte, error) {
-	if code := db.codeCache.Get(nil, codeHash.Bytes()); len(code) > 0 {
+	if code, _ := db.codeCache.Get(codeHash); len(code) > 0 {
 		return code, nil
 	}
 	code := db.db.DiskDB().ReadCodeWithPrefix(codeHash)
 	if len(code) > 0 {
-		db.codeCache.Set(codeHash.Bytes(), code)
+		db.codeCache.Add(codeHash, code)
 		db.codeSizeCache.Add(codeHash, len(code))
 		return code, nil
 	}
