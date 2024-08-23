@@ -201,8 +201,7 @@ func (db *cachingDB) ContractCode(codeHash common.Hash) ([]byte, error) {
 
 // DeleteCode deletes a particular contract's code.
 func (db *cachingDB) DeleteCode(codeHash common.Hash) {
-	// there's no need to delete the item from the cache.
-	// first, it's only used in testcode, and second, it will be evicted automatically if not used
+	db.codeCache.DeleteCode(codeHash)
 	db.db.DiskDB().DeleteCode(codeHash)
 }
 

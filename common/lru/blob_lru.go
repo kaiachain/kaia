@@ -82,3 +82,23 @@ func (c *SizeConstrainedCache[K, V]) Get(key K) (V, bool) {
 
 	return c.lru.Get(key)
 }
+
+// DeleteCode deletes the code from the cache. It's for testing purpose.
+// If it has the key, reduce the size and return true.
+func (c *SizeConstrainedCache[K, V]) DeleteCode(key K) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	value, ok := c.lru.Get(key)
+	if !ok {
+		return false
+	}
+
+	// it shouldn't happen.
+	if c.size-uint64(len(value)) < 0 {
+		return false
+	}
+
+	c.size -= uint64(len(value))
+	return c.lru.Remove(key)
+}
