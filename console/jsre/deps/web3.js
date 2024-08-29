@@ -3848,8 +3848,10 @@ var inputBlockNumberFormatter = function (blockNumber) {
         return undefined;
     } else if (isPredefinedBlockNumber(blockNumber)) {
         return blockNumber;
+    } else if (/^-?\d+$/.test(blockNumber)) {
+      return utils.toHex(blockNumber);
     }
-    return utils.toHex(blockNumber);
+    throw new Error(`input block number(${blockNumber}) is invalid`);
 };
 
 var inputEmptyFormatter = function (a) {
