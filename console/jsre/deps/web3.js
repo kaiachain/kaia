@@ -3848,7 +3848,7 @@ var inputBlockNumberFormatter = function (blockNumber) {
         return undefined;
     } else if (isPredefinedBlockNumber(blockNumber)) {
         return blockNumber;
-    } else if (/^-?\d+$/.test(blockNumber)) {
+    } else if (/^\d+$/.test(blockNumber) || /^0x[0-9a-fA-F]+$/.test(blockNumber)) { // test if input is decmial or hex
       return utils.toHex(blockNumber);
     }
     throw new Error(`input block number(${blockNumber}) is invalid`);
