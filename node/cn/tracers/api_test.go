@@ -23,11 +23,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
 	"sort"
+	"sync/atomic"
 	"testing"
 
 	kaiaapi "github.com/kaiachain/kaia/api"
@@ -193,62 +195,63 @@ func (b *testBackend) StateAtTransaction(ctx context.Context, block *types.Block
 	return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, fmt.Errorf("transaction index %d out of range for block %#x", txIndex, block.Hash())
 }
 
-// TODO-kaia: enable testcode
-//func TestTraceChain(t *testing.T) {
-//	// Initialize test accounts
-//	accounts := newAccounts(3)
-//	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
-//		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
-//		accounts[1].addr: {Balance: big.NewInt(params.KAIA)},
-//		accounts[2].addr: {Balance: big.NewInt(params.KAIA)},
-//	}}
-//	genBlocks := 50
-//	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
-//
-//	var (
-//		ref   uint32 // total refs has made
-//		rel   uint32 // total rels has made
-//		nonce uint64
-//	)
-//	backend := newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
-//		// Transfer from account[0] to account[1]
-//		//    value: 1000 wei
-//		//    fee:   0 wei
-//		for j := 0; j < i+1; j++ {
-//			tx, _ := types.SignTx(types.NewTransaction(nonce, accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
-//			b.AddTx(tx)
-//			nonce += 1
-//		}
-//	})
-//	backend.refHook = func() { atomic.AddUint32(&ref, 1) }
-//	backend.relHook = func() { atomic.AddUint32(&rel, 1) }
-//	api := NewAPI(backend)
-//
-//	single := `{"result":{"gas":21000,"failed":false,"returnValue":"","structLogs":[]}}`
-//	var cases = []struct {
-//		start  uint64
-//		end    uint64
-//		config *TraceConfig
-//	}{
-//		{0, 50, nil},  // the entire chain range, blocks [1, 50]
-//		{10, 20, nil}, // the middle chain range, blocks [11, 20]
-//	}
-//	for _, c := range cases {
-//		ref, rel = 0, 0 // clean up the counters
-//
-//		from, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.start))
-//		to, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.end))
-//		ret, err := api.traceChain(from, to, c.config, nil, nil)
-//		assert.NoError(t, err)
-//
-//		for _, trace := range result.Traces {
-//			blob, _ := json.Marshal(trace)
-//			if string(blob) != single {
-//				t.Error("Unexpected tracing result")
-//			}
-//		}
-//	}
-//}
+func TestTraceChain(t *testing.T) {
+	// Initialize test accounts
+	accounts := newAccounts(3)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[1].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[2].addr: {Balance: big.NewInt(params.KAIA)},
+	}}
+	genBlocks := 50
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+
+	var (
+		ref   uint32 // total refs has made
+		rel   uint32 // total rels has made
+		nonce uint64
+	)
+	backend := newTestBackend(t, genBlocks, genesis, func(i int, b *blockchain.BlockGen) {
+		// Transfer from account[0] to account[1]
+		//    value: 1000 wei
+		//    fee:   0 wei
+		for j := 0; j < i+1; j++ {
+			tx, _ := types.SignTx(types.NewTransaction(nonce, accounts[1].addr, big.NewInt(1000), params.TxGas, big.NewInt(0), nil), signer, accounts[0].key)
+			b.AddTx(tx)
+			nonce += 1
+		}
+	})
+	backend.refHook = func() { atomic.AddUint32(&ref, 1) }
+	backend.relHook = func() { atomic.AddUint32(&rel, 1) }
+	api := NewAPI(backend)
+
+	single := `{"gas":21000,"failed":false,"returnValue":"","structLogs":[]}`
+	cases := []struct {
+		start  uint64
+		end    uint64
+		config *TraceConfig
+	}{
+		{0, 50, nil},  // the entire chain range, blocks [1, 50]
+		{10, 20, nil}, // the middle chain range, blocks [11, 20]
+	}
+	for _, c := range cases {
+		ref, rel = 0, 0 // clean up the counters
+
+		from, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.start))
+		to, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.end))
+		ret, err := api.traceChain(from, to, c.config, nil, nil)
+		assert.NoError(t, err)
+
+		for _, trace := range ret {
+			for _, txTrace := range trace.Traces {
+				blob, _ := json.Marshal(txTrace.Result)
+				if string(blob) != single {
+					t.Error("Unexpected tracing result")
+				}
+			}
+		}
+	}
+}
 
 func TestTraceCall(t *testing.T) {
 	t.Parallel()
