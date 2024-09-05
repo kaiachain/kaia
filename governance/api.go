@@ -86,7 +86,7 @@ func (api *GovernanceKaiaAPI) NodeAddress() common.Address {
 // GetRewards returns detailed information of the block reward at a given block number.
 func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.chain.CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
@@ -365,8 +365,11 @@ func checkStateForStakingInfo(governance Engine, blockNumber uint64) error {
 	if !governance.BlockChain().Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
 		return nil
 	}
-
-	_, err := governance.BlockChain().StateAt(governance.BlockChain().GetHeaderByNumber(blockNumber).Root)
+	header := governance.BlockChain().GetHeaderByNumber(blockNumber)
+	if header == nil {
+		return errUnknownBlock
+	}
+	_, err := governance.BlockChain().StateAt(header.Root)
 	return err
 }
 
