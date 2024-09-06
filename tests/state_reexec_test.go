@@ -159,7 +159,10 @@ func testStateReexec_run(t *testing.T, node *blockchainTestNode, num uint64) {
 	block := node.cn.BlockChain().GetBlockByNumber(num)
 
 	t.Logf("Regenerating state at block %d", num)
-	state, err := node.cn.APIBackend.StateAtBlock(context.Background(), block, 10, nil, false, false)
+	state, release, err := node.cn.APIBackend.StateAtBlock(context.Background(), block, 10, nil, false, false)
+	if release != nil {
+		release()
+	}
 	require.Nil(t, err)
 
 	// Regenerated state must match the stored block's stateRoot
