@@ -17,6 +17,7 @@
 package kaiax
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -53,13 +54,20 @@ type JsonRpcModule interface {
 // e.g. VerifyHeader shall not actually record the governance change.
 type ConsensusModule interface {
 	// Additional checks to perform at the end of header verification.
-	VerifyHeader(*types.Header) error
+	VerifyHeader(header *types.Header) error
 
 	// Additional changes to the new header that is being created.
-	PrepareHeader(*types.Header) (*types.Header, error)
+	// Headers are modified in-place.
+	PrepareHeader(header *types.Header) error
 
 	// Additional state transitions after block txs have been executed.
-	FinalizeBlock(b *types.Block) (*types.Block, error)
+	// Header modifications and state transitions are applied in-place.
+	FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
+}
+
+// Any component or module that accomodate consensus modules.
+type ConsensusModuleHost interface {
+	RegisterConsensusModule(modules ...ConsensusModule)
 }
 
 // ExecutionModule deals with execution of confirmed blocks.
@@ -67,7 +75,12 @@ type ConsensusModule interface {
 // e.g. PostInsertBlock() may record the governance change.
 type ExecutionModule interface {
 	// Additional actions to perform after inserting a block.
-	PostInsertBlock(*types.Block) error
+	PostInsertBlock(block *types.Block) error
+}
+
+// Any component or module that accomodate execution modules.
+type ExecutionModuleHost interface {
+	RegisterExecutionModule(modules ...ExecutionModule)
 }
 
 // TxProcessModule intervenes how transactions are executed.
@@ -78,16 +91,26 @@ type TxProcessModule interface {
 	// Additional actions to perform before EVM execution.
 	// Optionally transform the tx to a regular Eth tx.
 	// Optionally populate VM envs e.g. feepayer
-	PreRunTx(*vm.EVM, *types.Transaction) (*types.Transaction, error)
+	PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error)
 
 	// Additional actions to perform after EVM execution.
-	PostRunTx(*vm.EVM, *types.Transaction) error
+	PostRunTx(evm *vm.EVM, tx *types.Transaction) error
+}
+
+// Any component or module that accomodate tx process modules.
+type TxProcessModuleHost interface {
+	RegisterTxProcessModule(modules ...TxProcessModule)
 }
 
 // UnwindableModule is a module that can erase its persistent data
 // associated to block numbers. If a module maintains block-number-dependent
 // data, the module should implement UnwindableModule.
 type RewindableModule interface {
+	// Actions to be taken before and after performing a block rewind session.
+	// e.g. Stop and restart a background goroutine.
+	PreRewind() error
+	PostRewind() error
+
 	// Actions to be taken when the header rewinds to given block number.
 	// e.g. Move the head pointer to `num`.
 	//
@@ -103,12 +126,22 @@ type RewindableModule interface {
 	RewindOneBlock(num uint64)
 }
 
+// Any component or module that accomodate rewindable modules.
+type RewindableModuleHost interface {
+	RegisterRewindableModule(modules ...RewindableModule)
+}
+
 // TxPoolModule can intervene how the txpool handles transactions
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
 	PreAddLocal(*types.Transaction) error
 	PreAddRemote(*types.Transaction) error
+}
+
+// Any component or module that accomodate txpool modules.
+type TxPoolModuleHost interface {
+	RegisterTxPoolModule(modules ...TxPoolModule)
 }
 
 // A module can freely add more methods.

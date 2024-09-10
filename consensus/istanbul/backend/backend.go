@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
@@ -147,6 +148,9 @@ type backend struct {
 	nodetype common.ConnType
 
 	isRestoringSnapshots atomic.Bool
+
+	// kaiax modules
+	consensusModules []kaiax.ConsensusModule
 }
 
 func (sb *backend) NodeType() common.ConnType {
@@ -449,4 +453,8 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
+}
+
+func (sb *backend) RegisterConsensusModule(module ...kaiax.ConsensusModule) {
+	sb.consensusModules = append(sb.consensusModules, module...)
 }

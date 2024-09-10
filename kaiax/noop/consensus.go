@@ -14,12 +14,21 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package noop
 
-import "github.com/kaiachain/kaia/kaiax"
+import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+)
 
-type NoopModule interface {
-	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
+func (m *NoopModule) VerifyHeader(header *types.Header) error {
+	return nil
+}
+
+func (m *NoopModule) PrepareHeader(header *types.Header) error {
+	return nil
+}
+
+func (m *NoopModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+	return nil
 }

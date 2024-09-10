@@ -517,8 +517,8 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	s.RegisterBaseModules(mNoop)
-
 	// s.RegisterJsonRpcModules()
+	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop)
 
 	return nil
 }
