@@ -141,6 +141,7 @@ type CN struct {
 	governance    governance.Engine
 	supplyManager reward.SupplyManager
 
+	// kaiax modules
 	baseModules    []kaiax.BaseModule
 	jsonRpcModules []kaiax.JsonRpcModule
 }
@@ -519,6 +520,8 @@ func (s *CN) SetupKaiaxModules() error {
 	s.RegisterBaseModules(mNoop)
 	// s.RegisterJsonRpcModules()
 	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop)
+	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
+	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop)
 
 	return nil
 }

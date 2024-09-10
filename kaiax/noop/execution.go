@@ -14,15 +14,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package noop
 
-import "github.com/kaiachain/kaia/kaiax"
+import (
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+)
 
-type NoopModule interface {
-	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
-	kaiax.TxProcessModule
+func (m *NoopModule) PostInsertBlock(block *types.Block) error {
+	return nil
+}
+
+func (m *NoopModule) RewindTo(block *types.Block) {
+}
+
+func (m *NoopModule) RewindDelete(hash common.Hash, num uint64) {
 }

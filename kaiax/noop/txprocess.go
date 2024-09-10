@@ -14,15 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package types
+package noop
 
-import "github.com/kaiachain/kaia/kaiax"
+import (
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
+)
 
-type NoopModule interface {
-	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
-	kaiax.TxProcessModule
+func (m *NoopModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {
+	return tx, nil
+}
+
+func (m *NoopModule) PostRunTx(evm *vm.EVM, tx *types.Transaction) error {
+	return nil
 }

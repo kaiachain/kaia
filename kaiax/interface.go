@@ -20,6 +20,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -83,6 +84,37 @@ type ExecutionModuleHost interface {
 	RegisterExecutionModule(modules ...ExecutionModule)
 }
 
+// RewindableModule is a module that can erase its persistent data
+// associated to block numbers. If a module maintains block-number-dependent
+// data, the module should implement RewindableModule.
+type RewindableModule interface {
+	// RewindableModule must implement Start() and Stop() methods so it can be reset after rewind.
+	// In other words, non-Rewindable modules must be indifferent to block rewinds.
+	BaseModule
+
+	// Actions to be taken when the header rewinds to given block.
+	// The block is the new head block and the new current block.
+	// e.g. Move the head pointer to `num`.
+	//
+	// Happens when "soft" rewind occurs such as --start-block-num or startup repair.
+	// and also when "hard" rewind occurs such as debug_setHead.
+	RewindTo(newBlock *types.Block)
+
+	// Actions to be taken when the block data should be deleted at given block hash and number.
+	// This method should deal with exactly one block.
+	// e.g. Delete data associated with the block number `num`.
+	//
+	// Happens when "hard" rewind occurs such as debug_setHead.
+	RewindDelete(hash common.Hash, num uint64)
+}
+
+// Any component or module that accomodate rewindable modules.
+type RewindableModuleHost interface {
+	RegisterRewindableModule(modules ...RewindableModule)
+	StopRewindableModules()
+	StartRewindableModules()
+}
+
 // TxProcessModule intervenes how transactions are executed.
 // Tx processing can happen on temporary states (e.g. eth_call),
 // or run on states before confirmation (e.g. miner),
@@ -100,35 +132,6 @@ type TxProcessModule interface {
 // Any component or module that accomodate tx process modules.
 type TxProcessModuleHost interface {
 	RegisterTxProcessModule(modules ...TxProcessModule)
-}
-
-// UnwindableModule is a module that can erase its persistent data
-// associated to block numbers. If a module maintains block-number-dependent
-// data, the module should implement UnwindableModule.
-type RewindableModule interface {
-	// Actions to be taken before and after performing a block rewind session.
-	// e.g. Stop and restart a background goroutine.
-	PreRewind() error
-	PostRewind() error
-
-	// Actions to be taken when the header rewinds to given block number.
-	// e.g. Move the head pointer to `num`.
-	//
-	// Happens when "soft" rewind occurs such as --start-block-num or startup repair.
-	// and also when "hard" rewind occurs such as debug_setHead.
-	RewindToHeader(num uint64) error
-
-	// Actions to be taken when the block data should be deleted at given block number.
-	// This method should deal with exactly one block.
-	// e.g. Delete data associated with the block number `num`.
-	//
-	// Happens when "hard" rewind occurs such as debug_setHead.
-	RewindOneBlock(num uint64)
-}
-
-// Any component or module that accomodate rewindable modules.
-type RewindableModuleHost interface {
-	RegisterRewindableModule(modules ...RewindableModule)
 }
 
 // TxPoolModule can intervene how the txpool handles transactions

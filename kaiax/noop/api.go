@@ -16,8 +16,33 @@
 
 package noop
 
-import "github.com/kaiachain/kaia/networks/rpc"
+import (
+	"context"
+
+	"github.com/kaiachain/kaia/networks/rpc"
+)
 
 func (m *NoopModule) APIs() []rpc.API {
-	return []rpc.API{}
+	return []rpc.API{
+		/*
+			{
+				Namespace: "noop",
+				Version:   "1.0",
+				Service:   NewNoopAPI(m),
+				Public:    true,
+			},
+		*/
+	}
+}
+
+type NoopAPI struct {
+	m *NoopModule
+}
+
+func NewNoopAPI(m *NoopModule) *NoopAPI {
+	return &NoopAPI{m: m}
+}
+
+func (api *NoopAPI) GetNoop(ctx context.Context) (string, error) {
+	return "noop", nil
 }
