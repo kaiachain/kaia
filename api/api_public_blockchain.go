@@ -413,12 +413,16 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.
-func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (hexutil.Uint64, error) {
+func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	gasCap := uint64(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	return DoEstimateGas(ctx, s.b, args, s.b.RPCEVMTimeout(), new(big.Int).SetUint64(gasCap))
+	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	if blockNrOrHash != nil {
+		bNrOrHash = *blockNrOrHash
+	}
+	return DoEstimateGas(ctx, s.b, args, bNrOrHash, s.b.RPCEVMTimeout(), new(big.Int).SetUint64(gasCap))
 }
 
 func deriveCallArgToMsg(b Backend, args CallMsg, header *types.Header, gasCap uint64) (*types.Transaction, error) {
@@ -437,7 +441,7 @@ func deriveCallArgToMsg(b Backend, args CallMsg, header *types.Header, gasCap ui
 	return args.ToMessage(gasCap, baseFee, intrinsicGas)
 }
 
-func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.Duration, gasCap *big.Int) (hexutil.Uint64, error) {
+func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, timeout time.Duration, gasCap *big.Int) (hexutil.Uint64, error) {
 	var feeCap *big.Int
 	if args.GasPrice != nil {
 		feeCap = args.GasPrice.ToInt()
@@ -445,7 +449,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.D
 		feeCap = common.Big0
 	}
 
-	state, header, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return 0, err
 	}
@@ -462,7 +466,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.D
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = hexutil.Uint64(gas)
-		result, _, err := DoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, timeout, gasCap)
+		result, _, err := DoCall(ctx, b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, timeout, gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit
