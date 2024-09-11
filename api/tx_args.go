@@ -559,6 +559,14 @@ type EthTransactionArgs struct {
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 }
 
+func (args *EthTransactionArgs) GetMsgIngredients() (*common.Address, types.AccessList, []byte) {
+	if args.AccessList != nil {
+		return args.To, *args.AccessList, args.data()
+	} else {
+		return args.To, nil, args.data()
+	}
+}
+
 // from retrieves the transaction sender address.
 func (args *EthTransactionArgs) from() common.Address {
 	if args.From == nil {

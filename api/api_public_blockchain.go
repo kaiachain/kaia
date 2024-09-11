@@ -273,6 +273,11 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 	return s.b.IsSenderTxHashIndexingEnabled()
 }
 
+type CallMsg interface {
+	GetMsgIngredients() (*common.Address, types.AccessList, []byte)
+	ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error)
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From                 common.Address  `json:"from"`
@@ -288,6 +293,14 @@ type CallArgs struct {
 	// Introduced by AccessListTxType transaction.
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+}
+
+func (args *CallArgs) GetMsgIngredients() (*common.Address, types.AccessList, []byte) {
+	if args.AccessList != nil {
+		return args.To, *args.AccessList, args.InputData()
+	} else {
+		return args.To, nil, args.InputData()
+	}
 }
 
 func (args *CallArgs) InputData() []byte {
@@ -408,6 +421,22 @@ func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs) (h
 	return DoEstimateGas(ctx, s.b, args, s.b.RPCEVMTimeout(), new(big.Int).SetUint64(gasCap))
 }
 
+func deriveCallArgToMsg(b Backend, args CallMsg, header *types.Header, gasCap uint64) (*types.Transaction, error) {
+	var (
+		baseFee       = new(big.Int).SetUint64(params.ZeroBaseFee)
+		to, acl, data = args.GetMsgIngredients()
+	)
+
+	if header.BaseFee != nil {
+		baseFee = header.BaseFee
+	}
+	intrinsicGas, err := types.IntrinsicGas(data, acl, to == nil, b.ChainConfig().Rules(header.Number))
+	if err != nil {
+		return nil, err
+	}
+	return args.ToMessage(gasCap, baseFee, intrinsicGas)
+}
+
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.Duration, gasCap *big.Int) (hexutil.Uint64, error) {
 	var feeCap *big.Int
 	if args.GasPrice != nil {
@@ -416,11 +445,19 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.D
 		feeCap = common.Big0
 	}
 
-	state, _, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	state, header, err := b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if err != nil {
 		return 0, err
 	}
 	balance := state.GetBalance(args.From) // from can't be nil
+	msg, err := deriveCallArgToMsg(b, &args, header, gasCap.Uint64())
+	if err != nil {
+		return 0, err
+	}
+	requiredMinBalance := new(big.Int).Mul(new(big.Int).SetUint64(uint64(args.Gas)), msg.EffectiveGasPrice(header, b.ChainConfig()))
+	if balance.Cmp(requiredMinBalance) < 0 {
+		balance.Add(balance, requiredMinBalance)
+	}
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {

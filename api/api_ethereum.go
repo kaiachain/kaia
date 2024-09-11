@@ -1455,11 +1455,19 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		feeCap = args.MaxFeePerGas.ToInt()
 	}
 
-	state, _, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return 0, err
 	}
 	balance := state.GetBalance(*args.From) // from can't be nil
+	msg, err := deriveCallArgToMsg(b, &args, header, gasCap)
+	if err != nil {
+		return 0, err
+	}
+	requiredMinBalance := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), msg.EffectiveGasPrice(header, b.ChainConfig()))
+	if balance.Cmp(requiredMinBalance) < 0 {
+		balance.Add(balance, requiredMinBalance)
+	}
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
