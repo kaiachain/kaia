@@ -456,7 +456,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, timeout time.D
 	}
 	requiredMinBalance := new(big.Int).Mul(new(big.Int).SetUint64(uint64(args.Gas)), msg.EffectiveGasPrice(header, b.ChainConfig()))
 	if balance.Cmp(requiredMinBalance) < 0 {
-		balance.Add(balance, requiredMinBalance)
+		balance = new(big.Int).Add(balance, requiredMinBalance)
 	}
 
 	// Create a helper to check if a gas allowance results in an executable transaction

@@ -1466,7 +1466,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	}
 	requiredMinBalance := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), msg.EffectiveGasPrice(header, b.ChainConfig()))
 	if balance.Cmp(requiredMinBalance) < 0 {
-		balance.Add(balance, requiredMinBalance)
+		balance = new(big.Int).Add(balance, requiredMinBalance)
 	}
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
