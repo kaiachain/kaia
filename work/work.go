@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -264,6 +265,7 @@ type BlockChain interface {
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
 	SetHead(head uint64) error
 	Stop()
+	kaiax.RewindableModuleHost
 
 	SubscribeRemovedLogsEvent(ch chan<- blockchain.RemovedLogsEvent) event.Subscription
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription

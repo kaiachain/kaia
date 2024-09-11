@@ -17,6 +17,7 @@ import (
 	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 	params "github.com/kaiachain/kaia/params"
 	rlp "github.com/kaiachain/kaia/rlp"
 	snapshot "github.com/kaiachain/kaia/snapshot"
@@ -705,6 +706,22 @@ func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
+// RegisterRewindableModule mocks base method.
+func (m *MockBlockChain) RegisterRewindableModule(arg0 ...kaiax.RewindableModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterRewindableModule", varargs...)
+}
+
+// RegisterRewindableModule indicates an expected call of RegisterRewindableModule.
+func (mr *MockBlockChainMockRecorder) RegisterRewindableModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterRewindableModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterRewindableModule), arg0...)
+}
+
 // ResetWithGenesisBlock mocks base method.
 func (m *MockBlockChain) ResetWithGenesisBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
@@ -799,6 +816,18 @@ func (m *MockBlockChain) StartContractWarmUp(arg0 common.Address, arg1 uint) err
 func (mr *MockBlockChainMockRecorder) StartContractWarmUp(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartContractWarmUp", reflect.TypeOf((*MockBlockChain)(nil).StartContractWarmUp), arg0, arg1)
+}
+
+// StartRewindableModules mocks base method.
+func (m *MockBlockChain) StartRewindableModules() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StartRewindableModules")
+}
+
+// StartRewindableModules indicates an expected call of StartRewindableModules.
+func (mr *MockBlockChainMockRecorder) StartRewindableModules() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRewindableModules", reflect.TypeOf((*MockBlockChain)(nil).StartRewindableModules))
 }
 
 // StartStateMigration mocks base method.
@@ -933,6 +962,18 @@ func (m *MockBlockChain) Stop() {
 func (mr *MockBlockChainMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockBlockChain)(nil).Stop))
+}
+
+// StopRewindableModules mocks base method.
+func (m *MockBlockChain) StopRewindableModules() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StopRewindableModules")
+}
+
+// StopRewindableModules indicates an expected call of StopRewindableModules.
+func (mr *MockBlockChainMockRecorder) StopRewindableModules() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopRewindableModules", reflect.TypeOf((*MockBlockChain)(nil).StopRewindableModules))
 }
 
 // StopStateMigration mocks base method.

@@ -27,8 +27,7 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxMeta)
 )
 
-type NoopModule struct {
-}
+type NoopModule struct{}
 
 func NewNoopModule() *NoopModule {
 	return &NoopModule{}

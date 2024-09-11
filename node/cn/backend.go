@@ -512,9 +512,7 @@ func (s *CN) SetComponents(component []interface{}) {
 
 func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
-	var (
-		mNoop = noop.NewNoopModule()
-	)
+	mNoop := noop.NewNoopModule()
 
 	// Register modules to respective components
 	s.RegisterBaseModules(mNoop)
