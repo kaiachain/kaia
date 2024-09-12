@@ -155,7 +155,7 @@ func (v *Vrank) Log() {
 
 	v.updateMetrics()
 
-	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
+	logger.Debug("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
 		"bitmap", v.Bitmap(),
 		"late", encodeDurationBatch(lateCommits),
