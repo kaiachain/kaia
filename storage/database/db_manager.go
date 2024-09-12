@@ -822,7 +822,7 @@ func (dbm *databaseManager) CreateMigrationDBAndSetStatus(blockNum uint64) error
 
 // FinishStateMigration updates stateTrieDB and removes the old one.
 // The function should be called only after when state trie migration is finished.
-// It returns a channel that closes when removeDB is finished.
+// It returns a channel that closes when removeOldDB is finished.
 func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	// lock to prevent from a conflict of reading state DB and changing state DB
 	dbm.lockInMigration.Lock()
@@ -844,8 +844,6 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	dbm.setDBDir(StateTrieDB, dbDirToBeUsed)
 	dbm.dbs[StateTrieDB] = dbToBeUsed
 
-	dbm.setStateTrieMigrationStatus(0)
-
 	dbm.dbs[StateTrieMigrationDB] = nil
 	dbm.setDBDir(StateTrieMigrationDB, "")
 
@@ -853,11 +851,14 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	dbToBeRemoved.Close()
 
 	endCheck := make(chan struct{})
-	go removeDB(dbPathToBeRemoved, endCheck)
+	go dbm.removeOldDB(dbPathToBeRemoved, endCheck)
+
+	// Used only for testing. Closing it takes time due to the large size of the database
 	return endCheck
 }
 
-func removeDB(dbPath string, endCheck chan struct{}) {
+// Remove old database. This is called once migration(copy) is done.
+func (dbm *databaseManager) removeOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
 		if endCheck != nil {
 			close(endCheck)
@@ -868,6 +869,8 @@ func removeDB(dbPath string, endCheck chan struct{}) {
 		return
 	}
 	logger.Info("Successfully removed database", "path", dbPath)
+	// Set the completion mark if old database is completely removed
+	dbm.setStateTrieMigrationStatus(0)
 }
 
 func (dbm *databaseManager) GetStateTrieDB() Database {
