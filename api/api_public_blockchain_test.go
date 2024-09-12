@@ -59,6 +59,6 @@ func TestKaiaAPI_EstimateGas(t *testing.T) {
 		if ethArgs.Value != nil {
 			args.Value = *ethArgs.Value
 		}
-		return api.EstimateGas(context.Background(), args)
+		return api.EstimateGas(context.Background(), args, nil, nil)
 	})
 }
