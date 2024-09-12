@@ -860,6 +860,8 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 // Remove old database. This is called once migration(copy) is done.
 func (dbm *databaseManager) removeOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
+		// Set the completion mark if old database is completely removed (possibly not be removed if error occurs)
+		dbm.setStateTrieMigrationStatus(0)
 		if endCheck != nil {
 			close(endCheck)
 		}
@@ -869,8 +871,6 @@ func (dbm *databaseManager) removeOldDB(dbPath string, endCheck chan struct{}) {
 		return
 	}
 	logger.Info("Successfully removed database", "path", dbPath)
-	// Set the completion mark if old database is completely removed
-	dbm.setStateTrieMigrationStatus(0)
 }
 
 func (dbm *databaseManager) GetStateTrieDB() Database {
