@@ -3,28 +3,28 @@ package contractgov
 import (
 	contractgov_types "github.com/kaiachain/kaia/kaiax/gov/contractgov/types"
 	headergov_types "github.com/kaiachain/kaia/kaiax/gov/headergov/types"
-	govtypes "github.com/kaiachain/kaia/kaiax/gov/types"
+	gov_types "github.com/kaiachain/kaia/kaiax/gov/types"
 )
 
 type (
-	ParamEnum         = govtypes.ParamEnum
-	ParamSet          = govtypes.ParamSet
+	ParamEnum         = gov_types.ParamEnum
+	ParamSet          = gov_types.ParamSet
 	ContractGovModule = contractgov_types.ContractGovModule
 	HeaderGovModule   = headergov_types.HeaderGovModule
 )
 
 // Enums
 var (
-	GovernanceUnitPrice = govtypes.GovernanceUnitPrice
+	GovernanceUnitPrice = gov_types.GovernanceUnitPrice
 )
 
 // Vars
 var (
-	Params          = govtypes.Params
-	ParamNameToEnum = govtypes.ParamNameToEnum
+	Params          = gov_types.Params
+	ParamNameToEnum = gov_types.ParamNameToEnum
 )
 
 // Functions
 var (
-	GetParamByName = govtypes.GetParamByName
+	GetParamByName = gov_types.GetParamByName
 )

@@ -1,10 +1,10 @@
 package types
 
 import (
-	govtypes "github.com/kaiachain/kaia/kaiax/gov/types"
+	gov_types "github.com/kaiachain/kaia/kaiax/gov/types"
 )
 
 type (
-	ParamEnum = govtypes.ParamEnum
-	ParamSet  = govtypes.ParamSet
+	ParamEnum = gov_types.ParamEnum
+	ParamSet  = gov_types.ParamSet
 )
