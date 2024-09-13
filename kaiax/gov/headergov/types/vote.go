@@ -61,7 +61,7 @@ func (vote *voteData) Name() string {
 	return vote.name
 }
 
-func (vote *voteData) Type() govtypes.ParamEnum {
+func (vote *voteData) Enum() govtypes.ParamEnum {
 	return vote.ty
 }
 

@@ -26,7 +26,7 @@ type GovData interface {
 type VoteData interface {
 	Voter() common.Address
 	Name() string
-	Type() govtypes.ParamEnum
+	Enum() govtypes.ParamEnum
 	Value() interface{}
 
 	Serialize() ([]byte, error)

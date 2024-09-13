@@ -7,7 +7,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	headergov_types "github.com/kaiachain/kaia/kaiax/gov/headergov/types"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -105,7 +104,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]VoteData {
 	if voteBlocks != nil {
 		for _, blockNum := range *voteBlocks {
 			header := chain.GetHeaderByNumber(blockNum)
-			parsedVote, err := headergov_types.DeserializeHeaderVote(header.Vote, blockNum)
+			parsedVote, err := DeserializeHeaderVote(header.Vote, blockNum)
 			if err != nil {
 				logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			}
@@ -127,7 +126,7 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]GovData {
 
 	for _, blockNum := range *govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
-		parsedGov, err := headergov_types.DeserializeHeaderGov(header.Governance, blockNum)
+		parsedGov, err := DeserializeHeaderGov(header.Governance, blockNum)
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			panic(err)
