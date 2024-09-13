@@ -33,8 +33,8 @@ type ParamSet struct {
 // GetDefaultGovernanceParamSet must not return nil, which is unit-tested.
 func GetDefaultGovernanceParamSet() *ParamSet {
 	p := &ParamSet{}
-	for _, param := range Params {
-		err := p.Set(param.Name, param.DefaultValue)
+	for enum, param := range Params {
+		err := p.Set(enum, param.DefaultValue)
 		if err != nil {
 			return nil
 		}
@@ -44,10 +44,10 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 }
 
 // Set the canonical value in the ParamSet for the corresponding parameter name.
-func (p *ParamSet) Set(name string, cv interface{}) error {
-	param, err := GetParamByName(name)
-	if err != nil {
-		return err
+func (p *ParamSet) Set(enum ParamEnum, cv interface{}) error {
+	param, ok := Params[enum]
+	if !ok {
+		return ErrInvalidParamEnum
 	}
 
 	field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
@@ -64,7 +64,7 @@ func (p *ParamSet) Set(name string, cv interface{}) error {
 	return nil
 }
 
-func (p *ParamSet) SetFromStrMap(m map[string]interface{}) error {
+func (p *ParamSet) SetFromEnumMap(m map[ParamEnum]interface{}) error {
 	for name, value := range m {
 		err := p.Set(name, value)
 		if err != nil {

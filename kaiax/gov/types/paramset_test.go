@@ -39,9 +39,8 @@ func TestParamSet_Set(t *testing.T) {
 
 	p := ParamSet{}
 	for _, tc := range tcs {
-		param := Params[tc.ty]
-		t.Run(param.Name, func(t *testing.T) {
-			err := p.Set(param.Name, tc.value)
+		t.Run(Params[tc.ty].Name, func(t *testing.T) {
+			err := p.Set(tc.ty, tc.value)
 			assert.NoError(t, err)
 		})
 	}
