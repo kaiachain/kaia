@@ -10,10 +10,11 @@ type (
 	HeaderCache     = headergov_types.HeaderCache
 	HeaderGovModule = headergov_types.HeaderGovModule
 	History         = headergov_types.History
-	ParamSet        = headergov_types.ParamSet
 	VoteData        = headergov_types.VoteData
 	VotesInEpoch    = headergov_types.VotesInEpoch
-	ParamEnum       = govtypes.ParamEnum
+
+	ParamEnum = govtypes.ParamEnum
+	ParamSet  = govtypes.ParamSet
 )
 
 // Enums
