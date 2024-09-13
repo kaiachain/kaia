@@ -1,13 +1,19 @@
-package types
+package headergov
 
 import (
+	headergov_types "github.com/kaiachain/kaia/kaiax/gov/headergov/types"
 	govtypes "github.com/kaiachain/kaia/kaiax/gov/types"
 )
 
 type (
-	Param     = govtypes.Param
-	ParamEnum = govtypes.ParamEnum
-	ParamSet  = govtypes.ParamSet
+	GovData         = headergov_types.GovData
+	HeaderCache     = headergov_types.HeaderCache
+	HeaderGovModule = headergov_types.HeaderGovModule
+	History         = headergov_types.History
+	ParamSet        = headergov_types.ParamSet
+	VoteData        = headergov_types.VoteData
+	VotesInEpoch    = headergov_types.VotesInEpoch
+	ParamEnum       = govtypes.ParamEnum
 )
 
 // Enums
@@ -43,5 +49,10 @@ var (
 
 // Functions
 var (
-	GetParamByName = govtypes.GetParamByName
+	DeserializeHeaderGov         = headergov_types.DeserializeHeaderGov
+	DeserializeHeaderVote        = headergov_types.DeserializeHeaderVote
+	GetDefaultGovernanceParamSet = govtypes.GetDefaultGovernanceParamSet
+	NewGovData                   = headergov_types.NewGovData
+	NewHeaderGovCache            = headergov_types.NewHeaderGovCache
+	NewVoteData                  = headergov_types.NewVoteData
 )

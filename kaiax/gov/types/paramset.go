@@ -82,19 +82,19 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
-// ToStrMap is used for test and getParams API.
-func (p *ParamSet) ToStrMap() (map[string]interface{}, error) {
-	ret := make(map[string]interface{})
+// ToEnumMap is used for test and getParams API.
+func (p *ParamSet) ToEnumMap() (map[ParamEnum]interface{}, error) {
+	ret := make(map[ParamEnum]interface{})
 
 	// Iterate through all params in Params and ensure they're in the result
-	for _, param := range Params {
+	for enum, param := range Params {
 		field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
 		if field.IsValid() {
-			// Convert big.Int to string for JSON compatibility
+			// Convert big.Int to string for JSON compatibility at API
 			if bigIntValue, ok := field.Interface().(*big.Int); ok {
-				ret[param.Name] = bigIntValue.String()
+				ret[enum] = bigIntValue.String()
 			} else {
-				ret[param.Name] = field.Interface()
+				ret[enum] = field.Interface()
 			}
 		}
 	}
