@@ -8,17 +8,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type VoteData interface {
-	Voter() common.Address
-	Name() string
-	Type() govtypes.ParamEnum
-	Value() interface{}
-
-	Serialize() ([]byte, error)
-}
-
-var _ VoteData = (*voteData)(nil)
-
 type voteData struct {
 	voter common.Address
 	name  string

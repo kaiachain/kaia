@@ -8,13 +8,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type GovData interface {
-	Items() map[ParamEnum]interface{}
-	Serialize() ([]byte, error)
-}
-
-var _ GovData = (*govData)(nil)
-
 type govData struct {
 	items map[ParamEnum]interface{}
 }

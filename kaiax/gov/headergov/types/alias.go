@@ -7,6 +7,7 @@ import (
 type (
 	Param     = govtypes.Param
 	ParamEnum = govtypes.ParamEnum
+	ParamSet  = govtypes.ParamSet
 )
 
 var (
