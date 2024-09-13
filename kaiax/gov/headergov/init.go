@@ -1,7 +1,6 @@
 package headergov
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -13,11 +12,9 @@ import (
 )
 
 var (
-	_      HeaderGovModule = (*headerGovModule)(nil)
-	logger                 = log.NewModuleLogger(log.KaiaXGov)
+	_ HeaderGovModule = (*headerGovModule)(nil)
 
-	errZeroEpoch     = errors.New("epoch cannot be zero")
-	errNoChainConfig = errors.New("ChainConfig or Istanbul is not set")
+	logger = log.NewModuleLogger(log.KaiaXGov)
 )
 
 type chain interface {

@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
-	govtypes "github.com/kaiachain/kaia/kaiax/gov/types"
 )
 
 //go:generate mockgen -destination=kaiax/gov/headergov/mocks/headergov_mock.go github.com/kaiachain/kaia/kaiax/gov/headergov/types HeaderGovModule
@@ -26,7 +25,7 @@ type GovData interface {
 type VoteData interface {
 	Voter() common.Address
 	Name() string
-	Enum() govtypes.ParamEnum
+	Enum() ParamEnum
 	Value() interface{}
 
 	Serialize() ([]byte, error)
