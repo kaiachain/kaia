@@ -200,6 +200,8 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
+	mockBlockChain.EXPECT().StopRewindableModules().Times(1)
+	mockBlockChain.EXPECT().StartRewindableModules().Times(1)
 
 	api.SetHead(number)
 	block := newBlock(int(number))

@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
@@ -103,6 +104,10 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	defer b.cn.protocolManager.SetSyncStop(false)
 	b.cn.supplyManager.Stop()
 	defer b.cn.supplyManager.Start()
+
+	b.cn.blockchain.(kaiax.RewindableModuleHost).StopRewindableModules()
+	defer b.cn.blockchain.(kaiax.RewindableModuleHost).StartRewindableModules()
+
 	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
 }
 

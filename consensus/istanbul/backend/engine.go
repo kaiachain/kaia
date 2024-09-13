@@ -234,7 +234,18 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidBlockScore
 	}
 
-	return sb.verifyCascadingFields(chain, header, parents)
+	// TODO-kaiax: further flatten the code inside
+	if err := sb.verifyCascadingFields(chain, header, parents); err != nil {
+		return err
+	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.VerifyHeader(header); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
@@ -484,6 +495,13 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.Time = big.NewInt(t.Unix())
 		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
 	}
+
+	for _, module := range sb.consensusModules {
+		if err = module.PrepareHeader(header); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -577,6 +595,12 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 				return nil, err
 			}
 			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
+		}
+	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.FinalizeHeader(header, state, txs, receipts); err != nil {
+			return nil, err
 		}
 	}
 
