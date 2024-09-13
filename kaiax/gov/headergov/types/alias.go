@@ -43,5 +43,6 @@ var (
 
 // Functions
 var (
-	GetParamByName = govtypes.GetParamByName
+	GetParamByName  = govtypes.GetParamByName
+	StrMapToEnumMap = govtypes.StrMapToEnumMap
 )

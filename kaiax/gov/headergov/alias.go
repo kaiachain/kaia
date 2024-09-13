@@ -49,10 +49,14 @@ var (
 
 // Functions
 var (
-	DeserializeHeaderGov         = headergov_types.DeserializeHeaderGov
-	DeserializeHeaderVote        = headergov_types.DeserializeHeaderVote
+	DeserializeHeaderGov  = headergov_types.DeserializeHeaderGov
+	DeserializeHeaderVote = headergov_types.DeserializeHeaderVote
+
+	NewGovData        = headergov_types.NewGovData
+	NewHeaderGovCache = headergov_types.NewHeaderGovCache
+	NewVoteData       = headergov_types.NewVoteData
+
 	GetDefaultGovernanceParamSet = govtypes.GetDefaultGovernanceParamSet
-	NewGovData                   = headergov_types.NewGovData
-	NewHeaderGovCache            = headergov_types.NewHeaderGovCache
-	NewVoteData                  = headergov_types.NewVoteData
+	EnumMapToStrMap              = govtypes.EnumMapToStrMap
+	StrMapToEnumMap              = govtypes.StrMapToEnumMap
 )

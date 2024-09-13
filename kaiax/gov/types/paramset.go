@@ -82,8 +82,7 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
-// ToEnumMap is used for test and getParams API.
-func (p *ParamSet) ToEnumMap() (map[ParamEnum]interface{}, error) {
+func (p *ParamSet) ToEnumMap() map[ParamEnum]interface{} {
 	ret := make(map[ParamEnum]interface{})
 
 	// Iterate through all params in Params and ensure they're in the result
@@ -99,5 +98,21 @@ func (p *ParamSet) ToEnumMap() (map[ParamEnum]interface{}, error) {
 		}
 	}
 
-	return ret, nil
+	return ret
+}
+
+func EnumMapToStrMap(enumMap map[ParamEnum]interface{}) map[string]interface{} {
+	ret := make(map[string]interface{})
+	for enum, value := range enumMap {
+		ret[Params[enum].Name] = value
+	}
+	return ret
+}
+
+func StrMapToEnumMap(strMap map[string]interface{}) map[ParamEnum]interface{} {
+	ret := make(map[ParamEnum]interface{})
+	for name, value := range strMap {
+		ret[ParamNameToEnum[name]] = value
+	}
+	return ret
 }

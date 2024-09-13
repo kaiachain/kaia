@@ -20,7 +20,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		chain = mocks.NewMockBlockChain(gomock.NewController(t))
 		db    = database.NewMemDB()
 
-		m, _   = GetDefaultGovernanceParamSet().ToEnumMap()
+		m      = GetDefaultGovernanceParamSet().ToEnumMap()
 		gov, _ = NewGovData(m).Serialize()
 	)
 

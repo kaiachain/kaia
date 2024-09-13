@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
@@ -60,7 +61,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 	return h.VerifyGov(header.Number.Uint64(), gov)
 }
 
-func (h *headerGovModule) PrepareHeader(header *types.Header) (*types.Header, error) {
+func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if epoch block & vote exists in the last epoch, put Governance to header.
 	if len(h.myVotes) > 0 {
 		header.Vote, _ = h.myVotes[0].Serialize()
@@ -73,11 +74,11 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) (*types.Header, er
 		}
 	}
 
-	return header, nil
+	return nil
 }
 
-func (h *headerGovModule) FinalizeBlock(b *types.Block) (*types.Block, error) {
-	return b, nil
+func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+	return nil
 }
 
 // VerifyVote takes canonical VoteData and performs the semantic check.

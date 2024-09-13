@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	logger = log.NewModuleLogger(log.KaiaXGov)
+	_      HeaderGovModule = (*headerGovModule)(nil)
+	logger                 = log.NewModuleLogger(log.KaiaXGov)
 
 	errZeroEpoch     = errors.New("epoch cannot be zero")
 	errNoChainConfig = errors.New("ChainConfig or Istanbul is not set")

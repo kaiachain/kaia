@@ -89,18 +89,10 @@ func DeserializeHeaderGov(b []byte, blockNum uint64) (GovData, error) {
 		strMap[name] = cv
 	}
 
-	gov := NewGovData(strMapToEnumMap(strMap))
+	gov := NewGovData(StrMapToEnumMap(strMap))
 	if gov == nil {
 		return nil, errors.New("failed to create gov data")
 	}
 
 	return gov, nil
-}
-
-func strMapToEnumMap(strMap map[string]interface{}) map[ParamEnum]interface{} {
-	ret := make(map[ParamEnum]interface{})
-	for name, value := range strMap {
-		ret[ParamNameToEnum[name]] = value
-	}
-	return ret
 }
