@@ -331,7 +331,26 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 	if err != nil {
 		return nil, err
 	}
-	return pset.StrMap(), nil
+	sm := pset.StrMap()
+
+	// Hide some parameters that are deprecated since hardforks.
+	// Reduces the confusion like, e.g., stakingupdateinterval is shown as 86400 but actually irrelevant.
+	rule := governance.BlockChain().Config().Rules(new(big.Int).SetUint64(blockNumber))
+	if rule.IsKore {
+		// Gini option deprecated since Kore, as All committee members have an equal chance
+		// of being elected block proposers.
+		delete(sm, "reward.useginicoeff")
+	}
+	if rule.IsRandao {
+		// Block proposer is randomly elected at every block with Randao,
+		// no more precalculated proposer list.
+		delete(sm, "reward.proposerupdateinterval")
+	}
+	if rule.IsKaia {
+		// Staking information updated every block since Kaia.
+		delete(sm, "reward.stakingupdateinterval")
+	}
+	return sm, nil
 }
 
 func (api *GovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
