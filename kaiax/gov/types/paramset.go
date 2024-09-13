@@ -64,11 +64,11 @@ func (p *ParamSet) Set(name string, cv interface{}) error {
 	return nil
 }
 
-func (p *ParamSet) SetFromGovernanceData(g GovData) error {
-	for name, value := range g.Items() {
+func (p *ParamSet) SetFromStrMap(m map[string]interface{}) error {
+	for name, value := range m {
 		err := p.Set(name, value)
 		if err != nil {
-			continue
+			return err
 		}
 	}
 	return nil

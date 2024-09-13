@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	govtypes "github.com/kaiachain/kaia/kaiax/gov/types"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -23,7 +24,7 @@ type govData struct {
 func NewGovData(m map[string]interface{}) GovData {
 	items := make(map[string]interface{})
 	for name, value := range m {
-		param, err := GetParamByName(name)
+		param, err := govtypes.GetParamByName(name)
 		if err != nil {
 			return nil
 		}
@@ -83,7 +84,7 @@ func DeserializeHeaderGov(b []byte, blockNum uint64) (GovData, error) {
 	}
 
 	for name, value := range ret {
-		param, err := GetParamByName(name)
+		param, err := govtypes.GetParamByName(name)
 		if err != nil {
 			return nil, err
 		}

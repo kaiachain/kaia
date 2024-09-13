@@ -416,17 +416,17 @@ var Params = map[ParamEnum]*Param{
 	},
 }
 
-var paramNameToEnum map[string]ParamEnum
+var ParamNameToEnum map[string]ParamEnum
 
 func init() {
-	paramNameToEnum = make(map[string]ParamEnum)
+	ParamNameToEnum = make(map[string]ParamEnum)
 	for k, v := range Params {
-		paramNameToEnum[v.Name] = k
+		ParamNameToEnum[v.Name] = k
 	}
 }
 
 func GetParamByName(name string) (*Param, error) {
-	enum, ok := paramNameToEnum[name]
+	enum, ok := ParamNameToEnum[name]
 	if !ok {
 		return nil, ErrInvalidParamName
 	}
