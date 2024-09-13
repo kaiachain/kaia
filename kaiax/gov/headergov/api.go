@@ -13,12 +13,12 @@ var (
 	errInvalidKeyValue  = errors.New("your vote couldn't be placed. Please check your vote's key and value")
 )
 
-func (s *headerGovModule) APIs() []rpc.API {
+func (h *headerGovModule) APIs() []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "governance",
 			Version:   "1.0",
-			Service:   newHeaderGovAPI(s),
+			Service:   NewHeaderGovAPI(h),
 			Public:    true,
 		},
 	}
@@ -28,7 +28,7 @@ type headerGovAPI struct {
 	h *headerGovModule
 }
 
-func newHeaderGovAPI(s *headerGovModule) *headerGovAPI {
+func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 	return &headerGovAPI{s}
 }
 
