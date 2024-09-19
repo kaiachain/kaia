@@ -31,12 +31,12 @@ func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) (map[ParamEn
 func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[ParamEnum]interface{}, error) {
 	chain := c.Chain
 	if chain == nil {
-		return nil, errContractEngineNotReady
+		return nil, ErrNotReady
 	}
 
 	config := c.ChainConfig
 	if !config.IsKoreForkEnabled(new(big.Int).SetUint64(blockNum)) {
-		return nil, errContractEngineNotReady
+		return nil, ErrNotReady
 	}
 
 	addr, err := c.contractAddrAt(blockNum)
@@ -81,7 +81,7 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[ParamEn
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
 	headerParams, err := c.hgm.EffectiveParamSet(blockNum)
 	if err != nil {
-		return common.Address{}, errParamsAtFail
+		return common.Address{}, ErrHeaderGovFail
 	}
 
 	return headerParams.GovParamContract, nil
