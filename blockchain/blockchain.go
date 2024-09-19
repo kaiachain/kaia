@@ -1581,6 +1581,12 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 		return status, err
 	}
 
+	for _, module := range bc.executionModules {
+		if err := module.PostInsertBlock(block); err != nil {
+			return WriteResult{Status: NonStatTy}, err
+		}
+	}
+
 	// Publish the committed block to the redis cache of stateDB.
 	// The cache uses the block to distinguish the latest state.
 	if bc.cacheConfig.TrieNodeCacheConfig.RedisPublishBlockEnable {
