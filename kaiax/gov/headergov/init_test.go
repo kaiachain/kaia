@@ -31,12 +31,13 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		Governance: gov,
 	})
 
-	h := &headerGovModule{}
-	h.Init(&InitOpts{
+	h := NewHeaderGovModule()
+	err := h.Init(&InitOpts{
 		Chain:       chain,
 		ChainKv:     db,
 		ChainConfig: config,
 	})
+	require.NoError(t, err)
 
 	return h
 }
