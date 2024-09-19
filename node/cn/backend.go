@@ -48,6 +48,9 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/contractgov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -129,7 +132,8 @@ type CN struct {
 	miner    Miner
 	gasPrice *big.Int
 
-	rewardbase common.Address
+	nodeAddress common.Address
+	rewardbase  common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -249,7 +253,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
-		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
+		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		governance.SetNodeAddress(cn.nodeAddress)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -514,13 +519,35 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 	mNoop := noop_impl.NewNoopModule()
 
+	mGov := gov.NewGovModule()
+	hgm := headergov.NewHeaderGovModule()
+	hgm.Init(&headergov.InitOpts{
+		ChainKv:     s.chainDB.GetMiscDB(),
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+		NodeAddress: s.nodeAddress,
+	})
+
+	cgm := contractgov.NewContractGovModule()
+	cgm.Init(&contractgov.InitOpts{
+		ChainKv:     s.chainDB.GetMiscDB(),
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+		Hgm:         hgm,
+	})
+
+	mGov.Init(&gov.InitOpts{
+		Hgm: hgm,
+		Cgm: cgm,
+	})
+
 	// Register modules to respective components
-	s.RegisterBaseModules(mNoop)
-	// s.RegisterJsonRpcModules()
-	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop)
-	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
+	s.RegisterBaseModules(mNoop, mGov)
+	s.RegisterJsonRpcModules(mGov)
+	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop, mGov)
+	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
 	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
-	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop)
+	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov)
 
 	return nil
 }

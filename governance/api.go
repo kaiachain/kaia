@@ -245,8 +245,8 @@ func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.
 	return accumRewards, nil
 }
 
-// Vote injects a new vote for governance targets such as unitprice and governingnode.
-func (api *GovernanceAPI) Vote(key string, val interface{}) (string, error) {
+// LegacyVote injects a new vote for governance targets such as unitprice and governingnode.
+func (api *GovernanceAPI) LegacyVote(key string, val interface{}) (string, error) {
 	blockNumber := api.governance.BlockChain().CurrentBlock().NumberU64()
 	pset, err := api.governance.EffectiveParams(blockNumber + 1)
 	if err != nil {
@@ -377,10 +377,6 @@ func (api *GovernanceAPI) PendingChanges() map[string]interface{} {
 	return api.governance.PendingChanges()
 }
 
-func (api *GovernanceAPI) Votes() []GovernanceVote {
-	return api.governance.Votes()
-}
-
 func (api *GovernanceAPI) IdxCache() []uint64 {
 	return api.governance.IdxCache()
 }
@@ -406,22 +402,6 @@ type VoteList struct {
 	Value    interface{}
 	Casted   bool
 	BlockNum uint64
-}
-
-func (api *GovernanceAPI) MyVotes() []*VoteList {
-	ret := []*VoteList{}
-
-	for k, v := range api.governance.GetVoteMapCopy() {
-		item := &VoteList{
-			Key:      k,
-			Value:    v.Value,
-			Casted:   v.Casted,
-			BlockNum: v.Num,
-		}
-		ret = append(ret, item)
-	}
-
-	return ret
 }
 
 func (api *GovernanceAPI) MyVotingPower() (float64, error) {

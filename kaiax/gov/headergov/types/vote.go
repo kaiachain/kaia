@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
@@ -84,6 +85,22 @@ func (vote *voteData) Serialize() ([]byte, error) {
 	}
 
 	return rlp.EncodeToBytes(v)
+}
+
+func (vote *voteData) MarshalJSON() ([]byte, error) {
+	v := &struct {
+		Voter common.Address
+		Name  string
+		Enum  ParamEnum
+		Value interface{}
+	}{
+		Voter: vote.voter,
+		Name:  vote.name,
+		Enum:  vote.enum,
+		Value: vote.value,
+	}
+
+	return json.Marshal(v)
 }
 
 func DeserializeHeaderVote(b []byte) (VoteData, error) {
