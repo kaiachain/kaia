@@ -2,15 +2,9 @@ package headergov
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/rpc"
-)
-
-var (
-	errPermissionDenied = errors.New("you don't have the right to vote")
-	errInvalidKeyValue  = errors.New("your vote couldn't be placed. Please check your vote's key and value")
 )
 
 func (h *headerGovModule) APIs() []rpc.API {
@@ -41,12 +35,12 @@ func (api *headerGovAPI) Vote(name string, value interface{}) (string, error) {
 
 	gMode := gp.GovernanceMode
 	if gMode == "single" && api.h.NodeAddress != gp.GoverningNode {
-		return "", errPermissionDenied
+		return "", ErrVotePermissionDenied
 	}
 
 	vote := NewVoteData(api.h.NodeAddress, name, value)
 	if vote == nil {
-		return "", errInvalidKeyValue
+		return "", ErrInvalidKeyValue
 	}
 
 	err = api.h.VerifyVote(blockNumber+1, vote)

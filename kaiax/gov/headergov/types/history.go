@@ -38,6 +38,6 @@ func (g *History) Search(blockNum uint64) (gov_types.ParamSet, error) {
 	if ret, ok := (*g)[idx]; ok {
 		return ret, nil
 	} else {
-		return gov_types.ParamSet{}, ErrNotFoundInHistory
+		return gov_types.ParamSet{}, ErrNoHistory
 	}
 }

@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia/rlp"
@@ -91,7 +90,7 @@ func DeserializeHeaderGov(b []byte, blockNum uint64) (GovData, error) {
 
 	gov := NewGovData(StrMapToEnumMap(strMap))
 	if gov == nil {
-		return nil, errors.New("failed to create gov data")
+		return nil, ErrInvalidGovData
 	}
 
 	return gov, nil

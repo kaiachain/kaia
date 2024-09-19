@@ -53,12 +53,12 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.NodeAddress = opts.NodeAddress
 	h.myVotes = make([]VoteData, 0)
 	if h.ChainConfig == nil || h.ChainConfig.Istanbul == nil {
-		return errNoChainConfig
+		return ErrNoChainConfig
 	}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {
-		return errZeroEpoch
+		return ErrZeroEpoch
 	}
 
 	votes := readVoteDataFromDB(h.Chain, h.ChainKv)
