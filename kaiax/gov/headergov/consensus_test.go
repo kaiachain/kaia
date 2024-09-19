@@ -105,3 +105,31 @@ func TestGetExpectedGovernance(t *testing.T) {
 	assert.Equal(t, g1, h.getExpectedGovernance(1000))
 	assert.Equal(t, g2, h.getExpectedGovernance(2000))
 }
+
+func TestPrepareHeader(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
+	var (
+		h      = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
+		vote   = NewVoteData(h.NodeAddress, Params[GovernanceUnitPrice].Name, uint64(100))
+		header = &types.Header{}
+	)
+
+	h.PushMyVotes(vote)
+	header.Number = big.NewInt(999)
+	err := h.PrepareHeader(header)
+	assert.Nil(t, err)
+	assert.NotNil(t, header.Vote)
+	assert.Nil(t, header.Governance)
+
+	h.PostInsertBlock(types.NewBlockWithHeader(header))
+	header = &types.Header{}
+	header.Number = big.NewInt(1000)
+	err = h.PrepareHeader(header)
+	assert.Nil(t, err)
+	assert.Nil(t, header.Vote)
+	assert.NotNil(t, header.Governance)
+
+	h.PostInsertBlock(types.NewBlockWithHeader(header))
+	ps, _ := h.EffectiveParamSet(2001)
+	assert.Equal(t, ps.UnitPrice, uint64(100))
+}

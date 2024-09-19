@@ -42,8 +42,9 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote VoteData) error {
 	var data StoredUint64Array = h.cache.VoteBlockNums()
 	WriteVoteDataBlockNums(h.ChainKv, &data)
 
+	// if the vote was mine, remove it.
 	for i, myvote := range h.myVotes {
-		if reflect.DeepEqual(&myvote, vote) {
+		if reflect.DeepEqual(myvote, vote) {
 			h.PopMyVotes(i)
 			break
 		}
