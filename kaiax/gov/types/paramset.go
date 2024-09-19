@@ -32,15 +32,15 @@ type ParamSet struct {
 
 // GetDefaultGovernanceParamSet must not return nil, which is unit-tested.
 func GetDefaultGovernanceParamSet() *ParamSet {
-	p := &ParamSet{}
+	ps := &ParamSet{}
 	for enum, param := range Params {
-		err := p.Set(enum, param.DefaultValue)
+		err := ps.Set(enum, param.DefaultValue)
 		if err != nil {
 			return nil
 		}
 	}
 
-	return p
+	return ps
 }
 
 // Set the canonical value in the ParamSet for the corresponding parameter name.

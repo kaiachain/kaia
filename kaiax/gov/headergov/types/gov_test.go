@@ -13,60 +13,60 @@ import (
 func TestNewGovData(t *testing.T) {
 	// These are params where VoteForbidden=true.
 	goodGovs := []struct {
-		ty    ParamEnum
+		enum  ParamEnum
 		value interface{}
 	}{
-		{ty: IstanbulEpoch, value: uint64(30000)},
-		{ty: IstanbulEpoch, value: float64(30000.00)},
-		{ty: IstanbulPolicy, value: uint64(0)},
-		{ty: IstanbulPolicy, value: uint64(1)},
-		{ty: IstanbulPolicy, value: uint64(2)},
-		{ty: GovernanceGovernanceMode, value: "none"},
-		{ty: GovernanceGovernanceMode, value: "single"},
-		{ty: RewardUseGiniCoeff, value: true},
-		{ty: RewardUseGiniCoeff, value: false},
-		{ty: RewardUseGiniCoeff, value: []byte{0}},
-		{ty: RewardUseGiniCoeff, value: []byte{1}},
-		{ty: RewardMinimumStake, value: "2000000000000000000000000"},
-		{ty: RewardMinimumStake, value: "0"},
-		{ty: RewardStakingUpdateInterval, value: uint64(20)},
-		{ty: RewardStakingUpdateInterval, value: float64(20.0)},
-		{ty: RewardProposerUpdateInterval, value: uint64(20)},
-		{ty: RewardProposerUpdateInterval, value: float64(20.0)},
+		{enum: IstanbulEpoch, value: uint64(30000)},
+		{enum: IstanbulEpoch, value: float64(30000.00)},
+		{enum: IstanbulPolicy, value: uint64(0)},
+		{enum: IstanbulPolicy, value: uint64(1)},
+		{enum: IstanbulPolicy, value: uint64(2)},
+		{enum: GovernanceGovernanceMode, value: "none"},
+		{enum: GovernanceGovernanceMode, value: "single"},
+		{enum: RewardUseGiniCoeff, value: true},
+		{enum: RewardUseGiniCoeff, value: false},
+		{enum: RewardUseGiniCoeff, value: []byte{0}},
+		{enum: RewardUseGiniCoeff, value: []byte{1}},
+		{enum: RewardMinimumStake, value: "2000000000000000000000000"},
+		{enum: RewardMinimumStake, value: "0"},
+		{enum: RewardStakingUpdateInterval, value: uint64(20)},
+		{enum: RewardStakingUpdateInterval, value: float64(20.0)},
+		{enum: RewardProposerUpdateInterval, value: uint64(20)},
+		{enum: RewardProposerUpdateInterval, value: float64(20.0)},
 	}
 
 	for _, tc := range goodGovs {
-		param := Params[tc.ty]
+		param := Params[tc.enum]
 		t.Run("goodGov/"+param.Name, func(t *testing.T) {
-			gov := NewGovData(map[ParamEnum]interface{}{tc.ty: tc.value})
+			gov := NewGovData(map[ParamEnum]interface{}{tc.enum: tc.value})
 			assert.NotNil(t, gov)
 		})
 	}
 
 	badGovs := []struct {
-		ty    ParamEnum
+		enum  ParamEnum
 		value interface{}
 	}{
-		{ty: GovernanceGovernanceMode, value: 0},
-		{ty: GovernanceGovernanceMode, value: 1},
-		{ty: GovernanceGovernanceMode, value: "unexpected"},
-		{ty: RewardUseGiniCoeff, value: "false"},
-		{ty: RewardUseGiniCoeff, value: 0},
-		{ty: RewardUseGiniCoeff, value: 1},
-		{ty: RewardMinimumStake, value: 200000000000000},
-		{ty: RewardMinimumStake, value: "-1"},
-		{ty: RewardMinimumStake, value: 0},
-		{ty: RewardMinimumStake, value: 1.1},
-		{ty: RewardStakingUpdateInterval, value: float64(20.2)},
-		{ty: RewardStakingUpdateInterval, value: "20"},
-		{ty: RewardProposerUpdateInterval, value: float64(20.2)},
-		{ty: RewardProposerUpdateInterval, value: "20"},
+		{enum: GovernanceGovernanceMode, value: 0},
+		{enum: GovernanceGovernanceMode, value: 1},
+		{enum: GovernanceGovernanceMode, value: "unexpected"},
+		{enum: RewardUseGiniCoeff, value: "false"},
+		{enum: RewardUseGiniCoeff, value: 0},
+		{enum: RewardUseGiniCoeff, value: 1},
+		{enum: RewardMinimumStake, value: 200000000000000},
+		{enum: RewardMinimumStake, value: "-1"},
+		{enum: RewardMinimumStake, value: 0},
+		{enum: RewardMinimumStake, value: 1.1},
+		{enum: RewardStakingUpdateInterval, value: float64(20.2)},
+		{enum: RewardStakingUpdateInterval, value: "20"},
+		{enum: RewardProposerUpdateInterval, value: float64(20.2)},
+		{enum: RewardProposerUpdateInterval, value: "20"},
 	}
 
 	for _, tc := range badGovs {
-		param := Params[tc.ty]
+		param := Params[tc.enum]
 		t.Run("badGov/"+param.Name, func(t *testing.T) {
-			gov := NewGovData(map[ParamEnum]interface{}{tc.ty: tc.value})
+			gov := NewGovData(map[ParamEnum]interface{}{tc.enum: tc.value})
 			assert.Nil(t, gov)
 		})
 	}
@@ -138,7 +138,7 @@ func TestGovSerialization(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		t.Run(fmt.Sprintf("TestCase_%d", tc.blockNum), func(t *testing.T) {
+		t.Run(fmt.Sprintf("blockNum_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
 			actual, err := DeserializeHeaderGov(hexutil.MustDecode(tc.serializedGovData))
 			assert.NoError(t, err)

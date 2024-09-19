@@ -93,7 +93,7 @@ func (h *HeaderCache) RemoveVotesAfter(blockNum uint64) {
 	}
 }
 
-func (h *HeaderCache) RemoveGovernanceAfter(blockNum uint64) {
+func (h *HeaderCache) RemoveGovAfter(blockNum uint64) {
 	for blockNumIter := range h.governances {
 		if blockNumIter > blockNum {
 			delete(h.governances, blockNumIter)

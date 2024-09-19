@@ -104,7 +104,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]VoteData {
 			header := chain.GetHeaderByNumber(blockNum)
 			parsedVote, err := DeserializeHeaderVote(header.Vote)
 			if err != nil {
-				logger.Error("Failed to parse vote", "num", blockNum, "err", err)
+				panic(err)
 			}
 
 			votes[blockNum] = parsedVote
@@ -118,6 +118,7 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]GovData {
 	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]GovData)
 
+	// gov at genesis block must exist
 	if govBlocks == nil {
 		panic("govBlocks does not exist")
 	}

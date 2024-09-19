@@ -4,14 +4,13 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
-	gov_types "github.com/kaiachain/kaia/kaiax/gov/types"
 	"github.com/kaiachain/kaia/rlp"
 )
 
 type voteData struct {
 	voter common.Address
 	name  string
-	ty    gov_types.ParamEnum
+	enum  ParamEnum
 	value interface{} // canonicalized value
 }
 
@@ -19,7 +18,7 @@ type voteData struct {
 // If return is not nil, the name and the value is valid.
 // The format of the value is checked, but consistency is NOT checked.
 func NewVoteData(voter common.Address, name string, value interface{}) VoteData {
-	param, err := gov_types.GetParamByName(name)
+	param, err := GetParamByName(name)
 	if err != nil {
 		if name == "governance.addvalidator" || name == "governance.removevalidator" {
 			return &voteData{
@@ -48,7 +47,7 @@ func NewVoteData(voter common.Address, name string, value interface{}) VoteData 
 	return &voteData{
 		voter: voter,
 		name:  name,
-		ty:    gov_types.ParamNameToEnum[name],
+		enum:  ParamNameToEnum[name],
 		value: cv,
 	}
 }
@@ -61,8 +60,8 @@ func (vote *voteData) Name() string {
 	return vote.name
 }
 
-func (vote *voteData) Enum() gov_types.ParamEnum {
-	return vote.ty
+func (vote *voteData) Enum() ParamEnum {
+	return vote.enum
 }
 
 func (vote *voteData) Value() interface{} {

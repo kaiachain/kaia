@@ -12,7 +12,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
 	"github.com/kaiachain/kaia/crypto"
-	mock_headergov "github.com/kaiachain/kaia/kaiax/gov/headergov/mocks"
+	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mocks"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -56,7 +56,7 @@ func createSimulateBackend(t *testing.T) ([]*bind.TransactOpts, *backends.Simula
 }
 
 func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr common.Address) *contractGovModule {
-	mockHGM := mock_headergov.NewMockHeaderGovModule(gomock.NewController(t))
+	mockHGM := headergov_mock.NewMockHeaderGovModule(gomock.NewController(t))
 	cgm := &contractGovModule{}
 	cgm.Init(&InitOpts{
 		Chain:       bc,
@@ -84,9 +84,9 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		pset, err := cgm.EffectiveParamSet(1000)
+		ps, err := cgm.EffectiveParamSet(activation.Uint64())
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(25), pset.UnitPrice)
+		assert.Equal(t, uint64(25), ps.UnitPrice)
 	}
 
 	{
@@ -100,8 +100,8 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		pset, err := cgm.EffectiveParamSet(2000)
+		ps, err := cgm.EffectiveParamSet(activation.Uint64())
 		assert.NoError(t, err)
-		assert.Equal(t, uint64(125), pset.UnitPrice)
+		assert.Equal(t, uint64(125), ps.UnitPrice)
 	}
 }

@@ -2,14 +2,13 @@ package types
 
 import (
 	"sort"
-
-	gov_types "github.com/kaiachain/kaia/kaiax/gov/types"
 )
 
-type History map[uint64]gov_types.ParamSet
+type History map[uint64]ParamSet
 
+// GetHistory generates history based on sorted gov blocks.
 func GetHistory(govs map[uint64]GovData) History {
-	gh := make(map[uint64]gov_types.ParamSet)
+	gh := make(map[uint64]ParamSet)
 
 	var sortedNums []uint64
 	for num := range govs {
@@ -19,7 +18,7 @@ func GetHistory(govs map[uint64]GovData) History {
 		return sortedNums[i] < sortedNums[j]
 	})
 
-	gp := gov_types.ParamSet{}
+	gp := ParamSet{}
 	for _, num := range sortedNums {
 		govData := govs[num]
 		gp.SetFromEnumMap(govData.Items())
@@ -28,7 +27,8 @@ func GetHistory(govs map[uint64]GovData) History {
 	return gh
 }
 
-func (g *History) Search(blockNum uint64) (gov_types.ParamSet, error) {
+// Search finds the maximum gov block number that is less than or equal to the given block number.
+func (g *History) Search(blockNum uint64) (ParamSet, error) {
 	idx := uint64(0)
 	for num := range *g {
 		if idx < num && num <= blockNum {
@@ -38,6 +38,6 @@ func (g *History) Search(blockNum uint64) (gov_types.ParamSet, error) {
 	if ret, ok := (*g)[idx]; ok {
 		return ret, nil
 	} else {
-		return gov_types.ParamSet{}, ErrNoHistory
+		return ParamSet{}, ErrNoHistory
 	}
 }

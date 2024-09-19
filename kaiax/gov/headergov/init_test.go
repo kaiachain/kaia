@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// genesis block has the default governance params
+// genesis block must have the default governance params
 func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModule {
 	var (
 		chain = mocks.NewMockBlockChain(gomock.NewController(t))
@@ -71,12 +71,8 @@ func TestReadGovDataFromDB(t *testing.T) {
 	chain := mocks.NewMockBlockChain(mockCtrl)
 	db := database.NewMemDB()
 
-	ps1 := &ParamSet{
-		UnitPrice: uint64(100),
-	}
-	ps2 := &ParamSet{
-		UnitPrice: uint64(200),
-	}
+	ps1 := &ParamSet{UnitPrice: uint64(100)}
+	ps2 := &ParamSet{UnitPrice: uint64(200)}
 
 	WriteGovDataBlockNums(db, &StoredUint64Array{1, 2})
 

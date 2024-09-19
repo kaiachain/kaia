@@ -83,7 +83,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesAPI {
 
 	for _, vote := range api.h.myVotes {
 		ret = append(ret, MyVotesAPI{
-			BlockNum: 0,
+			BlockNum: 0, // TODO: remove
 			Casted:   false,
 			Key:      vote.Name(),
 			Value:    vote.Value(),
@@ -93,6 +93,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesAPI {
 	return ret
 }
 
+// PendingVotes returns all pending votes in the current epoch.
 func (api *headerGovAPI) PendingVotes() []VoteData {
 	epochIdx := calcEpochIdx(api.h.Chain.CurrentBlock().NumberU64(), api.h.epoch)
 	votesInEpoch := api.h.getVotesInEpoch(epochIdx)

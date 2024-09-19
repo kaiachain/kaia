@@ -15,8 +15,8 @@ type govData struct {
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
 func NewGovData(m map[ParamEnum]interface{}) GovData {
 	items := make(map[ParamEnum]interface{})
-	for ty, value := range m {
-		param, ok := Params[ty]
+	for enum, value := range m {
+		param, ok := Params[enum]
 		if !ok {
 			return nil
 		}
@@ -30,7 +30,7 @@ func NewGovData(m map[ParamEnum]interface{}) GovData {
 			return nil
 		}
 
-		items[ty] = cv
+		items[enum] = cv
 	}
 	return &govData{
 		items: items,
@@ -39,11 +39,11 @@ func NewGovData(m map[ParamEnum]interface{}) GovData {
 
 func (g *govData) MarshalJSON() ([]byte, error) {
 	tmp := make(map[string]interface{})
-	for ty, value := range g.items {
+	for enum, value := range g.items {
 		if bigInt, ok := value.(*big.Int); ok {
-			tmp[Params[ty].Name] = bigInt.String()
+			tmp[Params[enum].Name] = bigInt.String()
 		} else {
-			tmp[Params[ty].Name] = value
+			tmp[Params[enum].Name] = value
 		}
 	}
 
@@ -72,7 +72,7 @@ func DeserializeHeaderGov(b []byte) (GovData, error) {
 	strMap := make(map[string]interface{})
 	err = json.Unmarshal(rlpDecoded, &strMap)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidJson
 	}
 
 	for name, value := range strMap {

@@ -8,12 +8,12 @@ import (
 func (h *headerGovModule) RewindTo(newBlock *types.Block) {
 	// Remove entries from h.cache that are larger than num
 	h.cache.RemoveVotesAfter(newBlock.NumberU64())
-	h.cache.RemoveGovernanceAfter(newBlock.NumberU64())
+	h.cache.RemoveGovAfter(newBlock.NumberU64())
 }
 
 func (h *headerGovModule) RewindDelete(hash common.Hash, num uint64) {
 	h.cache.RemoveVotesAfter(num)
-	h.cache.RemoveGovernanceAfter(num)
+	h.cache.RemoveGovAfter(num)
 
 	// Update stored block numbers for votes and governance
 	var voteBlockNums StoredUint64Array = h.cache.VoteBlockNums()

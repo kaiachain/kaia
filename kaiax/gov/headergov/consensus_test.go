@@ -25,12 +25,8 @@ func TestVerifyHeader(t *testing.T) {
 		voteBytes, _       = NewVoteData(common.Address{1}, Params[GovernanceUnitPrice].Name, uint64(100)).Serialize()
 		govBytes, _        = NewGovData(map[ParamEnum]interface{}{GovernanceUnitPrice: uint64(100)}).Serialize()
 		invalidGovBytes, _ = NewGovData(map[ParamEnum]interface{}{GovernanceUnitPrice: uint64(200)}).Serialize()
-		h                  = newHeaderGovModule(t, &params.ChainConfig{
-			Istanbul: &params.IstanbulConfig{
-				Epoch: 1000,
-			},
-		})
-		twoTuple = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
+		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
+		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
 
 	h.HandleVote(1, vote)
@@ -42,7 +38,7 @@ func TestVerifyHeader(t *testing.T) {
 	}{
 		{desc: "valid vote", header: &types.Header{Number: big.NewInt(1), Vote: voteBytes}, expectedError: nil},
 		{desc: "invalid vote rlp", header: &types.Header{Number: big.NewInt(1), Vote: []byte{1, 2, 3}}, expectedError: ErrInvalidRlp},
-		{desc: "invalid vote bytes", header: &types.Header{Number: big.NewInt(1), Vote: twoTuple}, expectedError: ErrInvalidRlp},
+		{desc: "invalid vote bytes", header: &types.Header{Number: big.NewInt(1), Vote: invalidVoteRlp}, expectedError: ErrInvalidRlp},
 		{desc: "valid gov", header: &types.Header{Number: big.NewInt(1000), Governance: govBytes}, expectedError: nil},
 		{desc: "invalid gov rlp", header: &types.Header{Number: big.NewInt(1000), Governance: []byte{1, 2, 3}}, expectedError: ErrInvalidRlp},
 		{desc: "gov must not be nil", header: &types.Header{Number: big.NewInt(1000), Governance: nil}, expectedError: ErrGovVerification},

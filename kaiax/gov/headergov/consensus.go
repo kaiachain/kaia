@@ -90,6 +90,9 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote VoteData) error {
 		return ErrNilVote
 	}
 
+	// TODO: check if Voter is valid.
+	// TODO: check if Voter is the block proposer.
+
 	// consistency check
 	switch vote.Enum() {
 	case GovernanceGoverningNode:
