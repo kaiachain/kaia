@@ -4,6 +4,6 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
-func (g *govModule) APIs() []rpc.API {
+func (g *GovModule) APIs() []rpc.API {
 	return g.hgm.APIs()
 }

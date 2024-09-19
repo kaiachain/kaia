@@ -10,7 +10,6 @@ import (
 type (
 	ContractGovModule = contractgov_types.ContractGovModule
 
-	GovModule = gov_types.GovModule
 	ParamEnum = gov_types.ParamEnum
 	ParamSet  = gov_types.ParamSet
 

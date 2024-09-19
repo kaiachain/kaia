@@ -1,36 +1,41 @@
 package gov
 
 import (
+	gov_types "github.com/kaiachain/kaia/kaiax/gov/types"
 	"github.com/kaiachain/kaia/log"
 )
 
 var (
-	_ GovModule = (*govModule)(nil)
+	_ gov_types.GovModule = (*GovModule)(nil)
 
 	logger = log.NewModuleLogger(log.KaiaXGov)
 )
 
-type govModule struct {
+type GovModule struct {
 	hgm HeaderGovModule
 	cgm ContractGovModule
 }
 
 type InitOpts struct {
-	hgm HeaderGovModule
-	cgm ContractGovModule
+	Hgm HeaderGovModule
+	Cgm ContractGovModule
 }
 
-func (m *govModule) Init(opts *InitOpts) error {
-	m.hgm = opts.hgm
-	m.cgm = opts.cgm
+func NewGovModule() *GovModule {
+	return &GovModule{}
+}
+
+func (m *GovModule) Init(opts *InitOpts) error {
+	m.hgm = opts.Hgm
+	m.cgm = opts.Cgm
 	return nil
 }
 
-func (m *govModule) Start() error {
+func (m *GovModule) Start() error {
 	logger.Info("GovModule started")
 	return nil
 }
 
-func (m *govModule) Stop() {
+func (m *GovModule) Stop() {
 	logger.Info("GovModule stopped")
 }

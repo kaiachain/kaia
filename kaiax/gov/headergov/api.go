@@ -51,7 +51,7 @@ func (api *headerGovAPI) Vote(name string, value interface{}) (string, error) {
 	// TODO-kaiax: add removevalidator vote check
 
 	api.h.PushMyVotes(vote)
-	return "Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
+	return "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {

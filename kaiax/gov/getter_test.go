@@ -22,7 +22,7 @@ func newContractGovModuleMock(t *testing.T) *contractgov_mock.MockContractGovMod
 func TestEffectiveParamSet(t *testing.T) {
 	hgm := newHeaderGovModuleMock(t)
 	cgm := newContractGovModuleMock(t)
-	m := &govModule{
+	m := &GovModule{
 		hgm: hgm,
 		cgm: cgm,
 	}

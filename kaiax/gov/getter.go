@@ -1,6 +1,6 @@
 package gov
 
-func (m *govModule) EffectiveParamSet(blockNum uint64) (ParamSet, error) {
+func (m *GovModule) EffectiveParamSet(blockNum uint64) (ParamSet, error) {
 	ret := GetDefaultGovernanceParamSet()
 
 	p1, err := m.hgm.EffectiveParamsPartial(blockNum)
