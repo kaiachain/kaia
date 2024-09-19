@@ -41,12 +41,27 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 		}
 	}
 
-	gov, err := DeserializeHeaderGov(header.Governance, header.Number.Uint64())
+	expected := h.getExpectedGovernance(header.Number.Uint64())
+	if len(header.Governance) == 0 {
+		if len(expected.Items()) != 0 {
+			return ErrGovVerification
+		}
+
+		return nil
+	}
+
+	actual, err := DeserializeHeaderGov(header.Governance, header.Number.Uint64())
 	if err != nil {
 		logger.Error("Failed to parse governance", "num", header.Number.Uint64(), "err", err)
 		return err
 	}
-	return h.VerifyGov(header.Number.Uint64(), gov)
+
+	if !reflect.DeepEqual(expected, actual) {
+		logger.Error("Governance mismatch", "expected", expected, "actual", actual)
+		return ErrGovVerification
+	}
+
+	return nil
 }
 
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
@@ -112,15 +127,6 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote VoteData) error {
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
 		}
-	}
-
-	return nil
-}
-
-func (h *headerGovModule) VerifyGov(blockNum uint64, gov GovData) error {
-	expected := h.getExpectedGovernance(blockNum)
-	if !reflect.DeepEqual(expected, gov) {
-		return ErrGovVerifcation
 	}
 
 	return nil

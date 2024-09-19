@@ -96,7 +96,7 @@ func DeserializeHeaderVote(b []byte, blockNum uint64) (VoteData, error) {
 
 	err := rlp.DecodeBytes(b, &v)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidRlp
 	}
 
 	vote := NewVoteData(v.Validator, v.Key, v.Value)

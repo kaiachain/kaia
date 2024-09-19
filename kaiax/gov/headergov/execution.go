@@ -13,7 +13,11 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 			logger.Error("DeserializeHeaderVote error", "vote", b.Header().Vote, "err", err)
 			return err
 		}
-		h.HandleVote(b.NumberU64(), vote)
+		err = h.HandleVote(b.NumberU64(), vote)
+		if err != nil {
+			logger.Error("HandleVote error", "vote", b.Header().Vote, "err", err)
+			return err
+		}
 	}
 
 	if len(b.Header().Governance) > 0 {
@@ -22,7 +26,11 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 			logger.Error("DeserializeHeaderGov error", "governance", b.Header().Governance, "err", err)
 			return err
 		}
-		h.HandleGov(b.NumberU64(), gov)
+		err = h.HandleGov(b.NumberU64(), gov)
+		if err != nil {
+			logger.Error("HandleGov error", "governance", b.Header().Governance, "err", err)
+			return err
+		}
 	}
 
 	return nil

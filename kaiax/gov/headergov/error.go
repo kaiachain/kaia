@@ -11,7 +11,7 @@ var (
 
 	ErrGovInNonEpochBlock = errors.New("governance is not allowed in non-epoch block")
 	ErrNilVote            = errors.New("vote is nil")
-	ErrGovVerifcation     = errors.New("header.Governance does not match the vote in previous epoch")
+	ErrGovVerification    = errors.New("header.Governance does not match the vote in previous epoch")
 
 	ErrGovParamNotAccount  = errors.New("govparamcontract is not an account")
 	ErrGovParamNotContract = errors.New("govparamcontract is not an contract account")

@@ -66,7 +66,7 @@ func DeserializeHeaderGov(b []byte, blockNum uint64) (GovData, error) {
 	rlpDecoded := []byte("")
 	err := rlp.DecodeBytes(b, &rlpDecoded)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidRlp
 	}
 
 	strMap := make(map[string]interface{})
