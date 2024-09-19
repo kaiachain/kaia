@@ -22,13 +22,16 @@ import (
 )
 
 func (m *NoopModule) VerifyHeader(header *types.Header) error {
+	logger.Info("NoopModule VerifyHeader")
 	return nil
 }
 
 func (m *NoopModule) PrepareHeader(header *types.Header) error {
+	logger.Info("NoopModule PrepareHeader")
 	return nil
 }
 
 func (m *NoopModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+	logger.Info("NoopModule FinalizeHeader")
 	return nil
 }
