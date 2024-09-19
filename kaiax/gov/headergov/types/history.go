@@ -10,7 +10,7 @@ type History map[uint64]ParamSet
 func GetHistory(govs map[uint64]GovData) History {
 	gh := make(map[uint64]ParamSet)
 
-	var sortedNums []uint64
+	sortedNums := make([]uint64, 0, len(govs))
 	for num := range govs {
 		sortedNums = append(sortedNums, num)
 	}
