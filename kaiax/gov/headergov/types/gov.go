@@ -62,7 +62,7 @@ func (g *govData) Serialize() ([]byte, error) {
 	return rlp.EncodeToBytes(j)
 }
 
-func DeserializeHeaderGov(b []byte, blockNum uint64) (GovData, error) {
+func DeserializeHeaderGov(b []byte) (GovData, error) {
 	rlpDecoded := []byte("")
 	err := rlp.DecodeBytes(b, &rlpDecoded)
 	if err != nil {

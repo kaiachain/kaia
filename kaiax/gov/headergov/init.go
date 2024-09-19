@@ -102,7 +102,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]VoteData {
 	if voteBlocks != nil {
 		for _, blockNum := range *voteBlocks {
 			header := chain.GetHeaderByNumber(blockNum)
-			parsedVote, err := DeserializeHeaderVote(header.Vote, blockNum)
+			parsedVote, err := DeserializeHeaderVote(header.Vote)
 			if err != nil {
 				logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			}
@@ -124,7 +124,7 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]GovData {
 
 	for _, blockNum := range *govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
-		parsedGov, err := DeserializeHeaderGov(header.Governance, blockNum)
+		parsedGov, err := DeserializeHeaderGov(header.Governance)
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			panic(err)

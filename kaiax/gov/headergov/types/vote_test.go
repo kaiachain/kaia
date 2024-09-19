@@ -227,7 +227,7 @@ func TestVoteSerialization(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("TestCase_block_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
-			actual, err := DeserializeHeaderVote(hexutil.MustDecode(tc.serializedVoteData), tc.blockNum)
+			actual, err := DeserializeHeaderVote(hexutil.MustDecode(tc.serializedVoteData))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.voteData, actual, "DeserializeHeaderVote() failed")
 

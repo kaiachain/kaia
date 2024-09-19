@@ -87,7 +87,7 @@ func (vote *voteData) Serialize() ([]byte, error) {
 	return rlp.EncodeToBytes(v)
 }
 
-func DeserializeHeaderVote(b []byte, blockNum uint64) (VoteData, error) {
+func DeserializeHeaderVote(b []byte) (VoteData, error) {
 	var v struct {
 		Validator common.Address
 		Key       string

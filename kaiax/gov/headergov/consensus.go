@@ -18,7 +18,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 
 	// 1. Check Vote
 	if len(header.Vote) > 0 {
-		vote, err := DeserializeHeaderVote(header.Vote, header.Number.Uint64())
+		vote, err := DeserializeHeaderVote(header.Vote)
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", header.Number.Uint64(), "err", err)
 			return err
@@ -50,7 +50,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
-	actual, err := DeserializeHeaderGov(header.Governance, header.Number.Uint64())
+	actual, err := DeserializeHeaderGov(header.Governance)
 	if err != nil {
 		logger.Error("Failed to parse governance", "num", header.Number.Uint64(), "err", err)
 		return err
