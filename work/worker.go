@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
@@ -167,6 +168,8 @@ type worker struct {
 	atWork int32
 
 	nodetype common.ConnType
+
+	executionModules []kaiax.ExecutionModule
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool) *worker {
@@ -445,6 +448,12 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				logger.Error("Failed to call snapshot", "err", err)
 			}
 
+			for _, module := range self.executionModules {
+				if err := module.PostInsertBlock(block); err != nil {
+					logger.Error("Failed to call PostInsertBlock", "err", err)
+				}
+			}
+
 			// update governance parameters
 			if istanbul, ok := self.engine.(consensus.Istanbul); ok {
 				if err := istanbul.UpdateParam(block.NumberU64()); err != nil {
@@ -642,6 +651,10 @@ func (self *worker) updateSnapshot() {
 		self.current.receipts,
 	)
 	self.snapshotState = self.current.state.Copy()
+}
+
+func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
+	self.executionModules = append(self.executionModules, modules...)
 }
 
 func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {

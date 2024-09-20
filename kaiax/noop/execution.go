@@ -22,11 +22,14 @@ import (
 )
 
 func (m *NoopModule) PostInsertBlock(block *types.Block) error {
+	logger.Info("NoopModule PostInsertBlock", "blockNum", block.Header().Number.Uint64())
 	return nil
 }
 
 func (m *NoopModule) RewindTo(block *types.Block) {
+	logger.Info("NoopModule RewindTo", "blockNum", block.Header().Number.Uint64())
 }
 
 func (m *NoopModule) RewindDelete(hash common.Hash, num uint64) {
+	logger.Info("NoopModule RewindDelete", "num", num)
 }

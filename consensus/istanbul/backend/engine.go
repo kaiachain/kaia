@@ -234,15 +234,15 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidBlockScore
 	}
 
-	// TODO-kaiax: further flatten the code inside
-	if err := sb.verifyCascadingFields(chain, header, parents); err != nil {
-		return err
-	}
-
 	for _, module := range sb.consensusModules {
 		if err := module.VerifyHeader(header); err != nil {
 			return err
 		}
+	}
+
+	// TODO-kaiax: further flatten the code inside
+	if err := sb.verifyCascadingFields(chain, header, parents); err != nil {
+		return err
 	}
 
 	return nil

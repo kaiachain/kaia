@@ -22,9 +22,11 @@ import (
 )
 
 func (m *NoopModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {
+	logger.Info("NoopModule PreRunTx")
 	return tx, nil
 }
 
 func (m *NoopModule) PostRunTx(evm *vm.EVM, tx *types.Transaction) error {
+	logger.Info("NoopModule PostRunTx")
 	return nil
 }

@@ -519,6 +519,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// s.RegisterJsonRpcModules()
 	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop)
 	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
+	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
 	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop)
 
 	return nil
