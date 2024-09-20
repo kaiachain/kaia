@@ -215,6 +215,9 @@ func buildFlags(env build.Environment) (flags []string) {
 		// Pass the static link flag to the external linker.
 		// By default, cmd/link will use external linking mode when non-standard cgo packages are involved.
 		ld = append(ld, "-linkmode", "external", "-extldflags", "-static")
+		// Even if the binary is statically linked, some glibc features (e.g., libnss) can have dependencies on
+		// specific version of glibc. So we should try to avoid using them.
+		flags = append(flags, "-tags", "osusergo,netgo")
 	}
 	if env.IsKaiaRaceDetectionOn {
 		flags = append(flags, "-race")
