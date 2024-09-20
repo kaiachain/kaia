@@ -14,35 +14,35 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package noop
+package impl
 
 import (
-	noop_types "github.com/kaiachain/kaia/kaiax/noop/types"
-	"github.com/kaiachain/kaia/log"
+	"context"
+
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
-var (
-	_ (noop_types.NoopModule) = (*NoopModule)(nil)
-
-	logger = log.NewModuleLogger(log.KaiaxMeta)
-)
-
-type NoopModule struct{}
-
-func NewNoopModule() *NoopModule {
-	return &NoopModule{}
+func (m *NoopModule) APIs() []rpc.API {
+	return []rpc.API{
+		/*
+			{
+				Namespace: "noop",
+				Version:   "1.0",
+				Service:   NewNoopAPI(m),
+				Public:    true,
+			},
+		*/
+	}
 }
 
-func (m *NoopModule) Init() error {
-	logger.Info("NoopModule Init")
-	return nil
+type NoopAPI struct {
+	m *NoopModule
 }
 
-func (m *NoopModule) Start() error {
-	logger.Info("NoopModule Start")
-	return nil
+func NewNoopAPI(m *NoopModule) *NoopAPI {
+	return &NoopAPI{m: m}
 }
 
-func (m *NoopModule) Stop() {
-	logger.Info("NoopModule Stop")
+func (api *NoopAPI) GetNoop(ctx context.Context) (string, error) {
+	return "noop", nil
 }

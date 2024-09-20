@@ -48,7 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/noop"
+	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -512,7 +512,7 @@ func (s *CN) SetComponents(component []interface{}) {
 
 func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
-	mNoop := noop.NewNoopModule()
+	mNoop := noop_impl.NewNoopModule()
 
 	// Register modules to respective components
 	s.RegisterBaseModules(mNoop)
