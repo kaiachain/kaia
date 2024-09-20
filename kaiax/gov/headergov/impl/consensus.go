@@ -1,0 +1,159 @@
+package impl
+
+import (
+	"bytes"
+	"reflect"
+
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+)
+
+func (h *headerGovModule) VerifyHeader(header *types.Header) error {
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+
+	// 1. Check Vote
+	if len(header.Vote) > 0 {
+		vote, err := headergov.DeserializeHeaderVote(header.Vote)
+		if err != nil {
+			logger.Error("Failed to parse vote", "num", header.Number.Uint64(), "err", err)
+			return err
+		}
+
+		err = h.VerifyVote(header.Number.Uint64(), vote)
+		if err != nil {
+			logger.Error("Failed to verify vote", "num", header.Number.Uint64(), "err", err)
+			return err
+		}
+	}
+
+	// 2. Check Governance
+	if header.Number.Uint64()%h.epoch != 0 {
+		if len(header.Governance) > 0 {
+			logger.Error("governance is not allowed in non-epoch block", "num", header.Number.Uint64())
+			return ErrGovInNonEpochBlock
+		} else {
+			return nil
+		}
+	}
+
+	expected := h.getExpectedGovernance(header.Number.Uint64())
+	if len(header.Governance) == 0 {
+		if len(expected.Items()) != 0 {
+			return ErrGovVerification
+		}
+
+		return nil
+	}
+
+	actual, err := headergov.DeserializeHeaderGov(header.Governance)
+	if err != nil {
+		logger.Error("Failed to parse governance", "num", header.Number.Uint64(), "err", err)
+		return err
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		logger.Error("Governance mismatch", "expected", expected, "actual", actual)
+		return ErrGovVerification
+	}
+
+	return nil
+}
+
+func (h *headerGovModule) PrepareHeader(header *types.Header) error {
+	// if epoch block & vote exists in the last epoch, put Governance to header.
+	if len(h.myVotes) > 0 {
+		header.Vote, _ = h.myVotes[0].Serialize()
+	}
+
+	if header.Number.Uint64()%h.epoch == 0 {
+		gov := h.getExpectedGovernance(header.Number.Uint64())
+		if len(gov.Items()) > 0 {
+			header.Governance, _ = gov.Serialize()
+		}
+	}
+
+	return nil
+}
+
+func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+	return nil
+}
+
+// VerifyVote takes canonical VoteData and performs the semantic check.
+func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) error {
+	if vote == nil {
+		return ErrNilVote
+	}
+
+	// TODO: check if Voter is valid.
+	// TODO: check if Voter is the block proposer.
+
+	// consistency check
+	switch vote.Enum() {
+	case gov.GovernanceGoverningNode:
+		// TODO: check in valset
+		break
+	case gov.GovernanceGovParamContract:
+		state, err := h.Chain.State()
+		if err != nil {
+			return err
+		}
+
+		acc := state.GetAccount(vote.Value().(common.Address))
+		if acc == nil {
+			return ErrGovParamNotAccount
+		}
+
+		pa := account.GetProgramAccount(acc)
+		emptyCodeHash := crypto.Keccak256(nil)
+		if pa != nil && !bytes.Equal(pa.GetCodeHash(), emptyCodeHash) {
+			return ErrGovParamNotContract
+		}
+	case gov.Kip71LowerBoundBaseFee:
+		params, err := h.EffectiveParamSet(blockNum)
+		if err != nil {
+			return err
+		}
+		if vote.Value().(uint64) > params.UpperBoundBaseFee {
+			return ErrLowerBoundBaseFee
+		}
+	case gov.Kip71UpperBoundBaseFee:
+		params, err := h.EffectiveParamSet(blockNum)
+		if err != nil {
+			return err
+		}
+		if vote.Value().(uint64) < params.LowerBoundBaseFee {
+			return ErrUpperBoundBaseFee
+		}
+	}
+
+	return nil
+}
+
+// blockNum must be greater than epoch.
+func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
+	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
+	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
+	govs := make(map[gov.ParamEnum]interface{})
+
+	for _, vote := range prevEpochVotes {
+		govs[vote.Enum()] = vote.Value()
+	}
+
+	return headergov.NewGovData(govs)
+}
+
+func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
+	votes := make(map[uint64]headergov.VoteData)
+	for blockNum, vote := range h.cache.GroupedVotes()[epochIdx] {
+		votes[blockNum] = vote
+	}
+	return votes
+}

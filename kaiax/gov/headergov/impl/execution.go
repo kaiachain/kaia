@@ -1,0 +1,88 @@
+package impl
+
+import (
+	"bytes"
+
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+)
+
+func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
+	logger.Info("headergov.PostInsertBlock", "block number", b.NumberU64())
+	if len(b.Header().Vote) > 0 {
+		vote, err := headergov.DeserializeHeaderVote(b.Header().Vote)
+		if err != nil {
+			logger.Error("DeserializeHeaderVote error", "vote", b.Header().Vote, "err", err)
+			return err
+		}
+		err = h.HandleVote(b.NumberU64(), vote)
+		if err != nil {
+			logger.Error("HandleVote error", "vote", b.Header().Vote, "err", err)
+			return err
+		}
+	}
+
+	if len(b.Header().Governance) > 0 {
+		gov, err := headergov.DeserializeHeaderGov(b.Header().Governance)
+		if err != nil {
+			logger.Error("DeserializeHeaderGov error", "governance", b.Header().Governance, "err", err)
+			return err
+		}
+		err = h.HandleGov(b.NumberU64(), gov)
+		if err != nil {
+			logger.Error("HandleGov error", "governance", b.Header().Governance, "err", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
+	h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+
+	var data StoredUint64Array = h.cache.VoteBlockNums()
+	WriteVoteDataBlockNums(h.ChainKv, &data)
+
+	// if the vote was mine, remove it.
+	logger.Error("kaiax.HandleVote", "myVotes", h.myVotes)
+	for i, myvote := range h.myVotes {
+		logger.Error("kaiax.HandleVote",
+			"myvote.Voter()", myvote.Voter(),
+			"myvote.Name()", myvote.Name(),
+			"myvote.Value()", myvote.Value(),
+			"vote.Voter()", vote.Voter(),
+			"vote.Name()", vote.Name(),
+			"vote.Value()", vote.Value(),
+		)
+		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
+			myvote.Name() == vote.Name() &&
+			myvote.Value() == vote.Value() {
+			h.PopMyVotes(i)
+			break
+		}
+	}
+
+	return nil
+}
+
+func (h *headerGovModule) HandleGov(blockNum uint64, gov headergov.GovData) error {
+	h.cache.AddGov(blockNum, gov)
+
+	// merge gov based on latest effective params.
+	gp, err := h.EffectiveParamSet(blockNum)
+	if err != nil {
+		logger.Error("kaiax.HandleGov error fetching EffectiveParams", "blockNum", blockNum, "gov", gov, "err", err)
+		return err
+	}
+
+	err = gp.SetFromEnumMap(gov.Items())
+	if err != nil {
+		logger.Error("kaiax.HandleGov error setting paramset", "blockNum", blockNum, "gov", gov, "err", err, "gp", gp)
+		return err
+	}
+
+	var data StoredUint64Array = h.cache.GovBlockNums()
+	WriteGovDataBlockNums(h.ChainKv, &data)
+	return nil
+}
