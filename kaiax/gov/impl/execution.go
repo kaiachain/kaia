@@ -5,6 +5,5 @@ import (
 )
 
 func (g *GovModule) PostInsertBlock(b *types.Block) error {
-	logger.Info("PostInsertBlock", "block number", b.NumberU64())
 	return g.hgm.PostInsertBlock(b)
 }

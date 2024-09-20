@@ -48,9 +48,9 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/contractgov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -519,24 +519,24 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 	mNoop := noop_impl.NewNoopModule()
 
-	mGov := gov.NewGovModule()
-	hgm := headergov.NewHeaderGovModule()
-	hgm.Init(&headergov.InitOpts{
+	mGov := gov_impl.NewGovModule()
+	hgm := headergov_impl.NewHeaderGovModule()
+	hgm.Init(&headergov_impl.InitOpts{
 		ChainKv:     s.chainDB.GetMiscDB(),
 		ChainConfig: s.chainConfig,
 		Chain:       s.blockchain,
 		NodeAddress: s.nodeAddress,
 	})
 
-	cgm := contractgov.NewContractGovModule()
-	cgm.Init(&contractgov.InitOpts{
+	cgm := contractgov_impl.NewContractGovModule()
+	cgm.Init(&contractgov_impl.InitOpts{
 		ChainKv:     s.chainDB.GetMiscDB(),
 		ChainConfig: s.chainConfig,
 		Chain:       s.blockchain,
 		Hgm:         hgm,
 	})
 
-	mGov.Init(&gov.InitOpts{
+	mGov.Init(&gov_impl.InitOpts{
 		Hgm: hgm,
 		Cgm: cgm,
 	})
@@ -546,7 +546,7 @@ func (s *CN) SetupKaiaxModules() error {
 	s.RegisterJsonRpcModules(mGov)
 	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop, mGov)
 	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
-	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
+	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
 	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov)
 
 	return nil

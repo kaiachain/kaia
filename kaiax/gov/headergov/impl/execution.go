@@ -8,7 +8,6 @@ import (
 )
 
 func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
-	logger.Info("headergov.PostInsertBlock", "block number", b.NumberU64())
 	if len(b.Header().Vote) > 0 {
 		vote, err := headergov.DeserializeHeaderVote(b.Header().Vote)
 		if err != nil {
@@ -45,16 +44,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 	WriteVoteDataBlockNums(h.ChainKv, &data)
 
 	// if the vote was mine, remove it.
-	logger.Error("kaiax.HandleVote", "myVotes", h.myVotes)
 	for i, myvote := range h.myVotes {
-		logger.Error("kaiax.HandleVote",
-			"myvote.Voter()", myvote.Voter(),
-			"myvote.Name()", myvote.Name(),
-			"myvote.Value()", myvote.Value(),
-			"vote.Voter()", vote.Voter(),
-			"vote.Name()", vote.Name(),
-			"vote.Value()", vote.Value(),
-		)
 		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
 			myvote.Name() == vote.Name() &&
 			myvote.Value() == vote.Value() {
