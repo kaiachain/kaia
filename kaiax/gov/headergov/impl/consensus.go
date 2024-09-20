@@ -113,7 +113,7 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 
 		pa := account.GetProgramAccount(acc)
 		emptyCodeHash := crypto.Keccak256(nil)
-		if pa != nil && !bytes.Equal(pa.GetCodeHash(), emptyCodeHash) {
+		if pa != nil || bytes.Equal(pa.GetCodeHash(), emptyCodeHash) {
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:

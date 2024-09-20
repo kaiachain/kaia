@@ -128,6 +128,11 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 
 	for _, blockNum := range *govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
+		// TODO: remove this temporary code for test.
+		if len(header.Governance) == 0 {
+			continue
+		}
+
 		parsedGov, err := headergov.DeserializeHeaderGov(header.Governance)
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
