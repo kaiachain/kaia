@@ -20,6 +20,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
+//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/staking StakingModule
 type StakingModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
