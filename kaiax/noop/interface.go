@@ -16,17 +16,14 @@
 
 package noop
 
-import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-)
+import "github.com/kaiachain/kaia/kaiax"
 
-func (m *NoopModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {
-	logger.Info("NoopModule PreRunTx")
-	return tx, nil
-}
-
-func (m *NoopModule) PostRunTx(evm *vm.EVM, tx *types.Transaction) error {
-	logger.Info("NoopModule PostRunTx")
-	return nil
+//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/noop NoopModule
+type NoopModule interface {
+	kaiax.BaseModule
+	kaiax.JsonRpcModule
+	kaiax.ConsensusModule
+	kaiax.ExecutionModule
+	kaiax.RewindableModule
+	kaiax.TxProcessModule
 }

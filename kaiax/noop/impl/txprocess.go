@@ -14,22 +14,19 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package noop
+package impl
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/blockchain/vm"
 )
 
-func (m *NoopModule) PostInsertBlock(block *types.Block) error {
-	logger.Info("NoopModule PostInsertBlock", "blockNum", block.Header().Number.Uint64())
+func (m *NoopModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {
+	logger.Info("NoopModule PreRunTx", "tx", tx.Hash())
+	return tx, nil
+}
+
+func (m *NoopModule) PostRunTx(evm *vm.EVM, tx *types.Transaction) error {
+	logger.Info("NoopModule PostRunTx", "tx", tx.Hash())
 	return nil
-}
-
-func (m *NoopModule) RewindTo(block *types.Block) {
-	logger.Info("NoopModule RewindTo", "blockNum", block.Header().Number.Uint64())
-}
-
-func (m *NoopModule) RewindDelete(hash common.Hash, num uint64) {
-	logger.Info("NoopModule RewindDelete", "num", num)
 }
