@@ -1,0 +1,69 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
+
+package staking
+
+import (
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
+)
+
+var logger = log.NewModuleLogger(log.KaiaxStaking)
+var _ staking.StakingModule = &StakingModule{}
+
+type InitOpts struct {
+	ChainKv     database.Database
+	ChainConfig *params.ChainConfig
+	Chain       backends.BlockChainForCaller
+}
+
+type StakingModule struct {
+	InitOpts
+
+	stakingInterval  uint64 // Staking interval since Genesis until Kaia
+	stakingInfoCache *lru.ARCCache
+}
+
+func NewStakingModule() *StakingModule {
+	cache, _ := lru.NewARC(128)
+	return &StakingModule{
+		stakingInfoCache: cache,
+	}
+}
+
+func (s *StakingModule) Init(opts InitOpts) error {
+	s.InitOpts = opts
+
+	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
+	if s.stakingInterval == 0 {
+		return staking.ErrZeroStakingInterval
+	}
+
+	return nil
+}
+
+func (s *StakingModule) Start() error {
+	// This module may have restarted after a rewind. Purge the cache.
+	s.stakingInfoCache.Purge()
+	return nil
+}
+
+func (s *StakingModule) Stop() {
+}
