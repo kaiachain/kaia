@@ -58,13 +58,13 @@ func TestVerifyVote(t *testing.T) {
 				Epoch: 1000,
 			},
 		})
+		statedb, _ = h.Chain.State()
+
+		eoa      = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+		contract = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	)
 
-	eoa := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	statedb, _ := h.Chain.State()
 	statedb.SetNonce(eoa, 1)
-
-	contract := common.HexToAddress("0x0000000000000000000000000000000000000400")
 	statedb.SetCode(contract, []byte{1})
 
 	tcs := []struct {
