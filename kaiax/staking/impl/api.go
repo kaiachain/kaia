@@ -17,6 +17,8 @@
 package staking
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
@@ -51,9 +53,18 @@ func (api *stakingAPI) GetStakingInfo(num rpc.BlockNumber) (*staking.StakingInfo
 		num = rpc.BlockNumber(api.s.Chain.CurrentBlock().NumberU64())
 	}
 
-	if si, err := api.s.GetStakingInfo(num.Uint64()); err != nil {
+	si, err := api.s.GetStakingInfo(num.Uint64())
+	if err != nil {
 		return nil, err
-	} else {
-		return si.ToResponse(api.s.useGiniCoeff, api.s.stakingInterval), nil
 	}
+
+	var useGini bool
+	// Gini option deprecated since Kore, as All committee members have an equal chance
+	if api.s.ChainConfig.IsKoreForkEnabled(new(big.Int).SetUint64(num.Uint64())) {
+		useGini = false
+	} else {
+		useGini = api.s.useGiniCoeff
+	}
+	// Calculate Gini coefficient regardless of useGini flag
+	return si.ToResponse(useGini, api.s.stakingInterval), nil
 }
