@@ -1,14 +1,12 @@
 package impl
 
 import (
-	"bytes"
 	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
@@ -112,8 +110,7 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 		}
 
 		pa := account.GetProgramAccount(acc)
-		emptyCodeHash := crypto.Keccak256(nil)
-		if pa != nil || bytes.Equal(pa.GetCodeHash(), emptyCodeHash) {
+		if pa == nil || pa.Empty() {
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:
