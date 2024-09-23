@@ -9,7 +9,7 @@ set -e
 function printUsage {
     echo "Usage: ${0} [-b] <arch> <target>"
     echo "         -b: use Kairos configuration"
-    echo "     <arch>:  linux-386 | linux-amd64 | darwin-arm64 | windows-386 | windows-amd64"
+    echo "     <arch>:  linux-386 | linux-amd64 | linux-arm64 | darwin-arm64"
     echo "   <target>:  kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     echo ""
     echo "    ${0} linux-amd64 kcn"
@@ -39,20 +39,16 @@ case "$SUBCOMMAND" in
 		PLATFORM_SUFFIX="linux-amd64"
 		shift
 		;;
+	linux-arm64)
+		PLATFORM_SUFFIX="linux-arm64"
+		shift
+		;;
 	darwin-arm64)
 		PLATFORM_SUFFIX="darwin-arm64"
 		shift
 		;;
-	windows-386)
-		PLATFORM_SUFFIX="windows-386"
-		shift
-		;;
-	windows-amd64)
-		PLATFORM_SUFFIX="windows-amd64"
-		shift
-		;;
 	*)
-		echo "Undefined architecture for packaging. Supported architectures: linux-386, linux-amd64, darwin-arm64, windows-386, windows-amd64"
+		echo "Undefined architecture for packaging. Supported architectures: linux-386, linux-amd64, linux-arm64, darwin-arm64"
 		printUsage
 		;;
 esac
@@ -127,3 +123,6 @@ fi
 # Compress!
 mkdir -p packages
 tar czf packages/$KAIA_PACKAGE_NAME $PACK_NAME
+
+# Clean-up code except the packages folder
+rm -rf ${PACK_NAME}
