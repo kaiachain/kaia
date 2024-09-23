@@ -46,6 +46,14 @@ func newStakingAPI(s *StakingModule) *stakingAPI {
 	return &stakingAPI{s}
 }
 
-func (api *stakingAPI) GetStakingInfo(num *rpc.BlockNumber) (*staking.StakingInfoResponse, error) {
-	return nil, nil
+func (api *stakingAPI) GetStakingInfo(num rpc.BlockNumber) (*staking.StakingInfoResponse, error) {
+	if num == rpc.LatestBlockNumber {
+		num = rpc.BlockNumber(api.s.Chain.CurrentBlock().NumberU64())
+	}
+
+	if si, err := api.s.GetStakingInfo(num.Uint64()); err != nil {
+		return nil, err
+	} else {
+		return si.ToResponse(api.s.useGiniCoeff, api.s.stakingInterval), nil
+	}
 }

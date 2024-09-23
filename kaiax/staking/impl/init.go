@@ -17,6 +17,8 @@
 package staking
 
 import (
+	"math/big"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -37,7 +39,11 @@ type InitOpts struct {
 type StakingModule struct {
 	InitOpts
 
-	stakingInterval  uint64        // Staking interval since Genesis until Kaia
+	// Genesis configurations
+	stakingInterval uint64
+	useGiniCoeff    bool
+	minimumStake    *big.Int
+
 	stakingInfoCache *lru.ARCCache // cached by sourceNum
 }
 
@@ -52,6 +58,8 @@ func (s *StakingModule) Init(opts *InitOpts) error {
 	s.InitOpts = *opts
 
 	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
+	s.useGiniCoeff = s.ChainConfig.Governance.Reward.UseGiniCoeff
+	s.minimumStake = s.ChainConfig.Governance.Reward.MinimumStake
 	if s.stakingInterval == 0 {
 		return staking.ErrZeroStakingInterval
 	}
