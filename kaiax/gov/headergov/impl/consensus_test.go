@@ -51,6 +51,38 @@ func TestVerifyHeader(t *testing.T) {
 	}
 }
 
+func TestVerifyVote(t *testing.T) {
+	var (
+		h = newHeaderGovModule(t, &params.ChainConfig{
+			Istanbul: &params.IstanbulConfig{
+				Epoch: 1000,
+			},
+		})
+	)
+
+	eoa := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	statedb, _ := h.Chain.State()
+	statedb.SetNonce(eoa, 1)
+
+	tcs := []struct {
+		desc          string
+		vote          headergov.VoteData
+		expectedError error
+	}{
+		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, common.Address{}), expectedError: ErrGovParamNotAccount},
+		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, eoa), expectedError: ErrGovParamNotContract},
+		{desc: "invalid lower", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71LowerBoundBaseFee].Name, uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
+		{desc: "invalid upper", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71UpperBoundBaseFee].Name, uint64(1)), expectedError: ErrUpperBoundBaseFee},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			err := h.VerifyVote(1, tc.vote)
+			assert.Equal(t, tc.expectedError, err)
+		})
+	}
+}
+
 func TestGetVotesInEpoch(t *testing.T) {
 	h := newHeaderGovModule(t, &params.ChainConfig{
 		Istanbul: &params.IstanbulConfig{

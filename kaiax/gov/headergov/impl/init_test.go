@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -20,7 +21,8 @@ import (
 func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModule {
 	var (
 		chain = mocks.NewMockBlockChain(gomock.NewController(t))
-		db    = database.NewMemDB()
+		dbm   = database.NewMemoryDBManager()
+		db    = dbm.GetMemDB()
 
 		m      = gov.GetDefaultGovernanceParamSet().ToEnumMap()
 		gov, _ = headergov.NewGovData(m).Serialize()
@@ -32,6 +34,10 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		Number:     big.NewInt(0),
 		Governance: gov,
 	})
+
+	cachingDb := state.NewDatabase(dbm)
+	statedb, _ := state.New(common.Hash{}, cachingDb, nil, nil)
+	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
 
 	h := NewHeaderGovModule()
 	err := h.Init(&InitOpts{
