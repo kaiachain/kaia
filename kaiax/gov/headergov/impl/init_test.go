@@ -30,10 +30,12 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 
 	WriteVoteDataBlockNums(db, &StoredUint64Array{})
 	WriteGovDataBlockNums(db, &StoredUint64Array{0})
-	chain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{
+	genesisHeader := &types.Header{
 		Number:     big.NewInt(0),
 		Governance: gov,
-	})
+	}
+	dbm.WriteHeader(genesisHeader)
+	chain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesisHeader)
 
 	cachingDb := state.NewDatabase(dbm)
 	statedb, _ := state.New(common.Hash{}, cachingDb, nil, nil)

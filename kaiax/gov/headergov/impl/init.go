@@ -119,19 +119,13 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]headergov.GovData)
 
-	// gov at genesis block must exist
+	// in production, govBlocks must not be nil
 	if govBlocks == nil {
-		// TODO: remove this temporary code for test.
-		govBlocks = &StoredUint64Array{0}
-		// panic("govBlocks does not exist")
+		return govs
 	}
 
 	for _, blockNum := range *govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
-		// TODO: remove this temporary code for test.
-		if len(header.Governance) == 0 {
-			continue
-		}
 
 		parsedGov, err := headergov.DeserializeHeaderGov(header.Governance)
 		if err != nil {
