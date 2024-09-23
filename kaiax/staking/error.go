@@ -16,8 +16,16 @@
 
 package staking
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrZeroStakingInterval = errors.New("staking interval cannot be zero")
+	ErrAddressBookResult   = errors.New("invalid result from AddressBook")
 )
+
+func ErrAddressBookCall(err error) error {
+	return fmt.Errorf("error calling AddressBook: %w", err)
+}

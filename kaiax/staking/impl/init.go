@@ -37,8 +37,8 @@ type InitOpts struct {
 type StakingModule struct {
 	InitOpts
 
-	stakingInterval  uint64 // Staking interval since Genesis until Kaia
-	stakingInfoCache *lru.ARCCache
+	stakingInterval  uint64        // Staking interval since Genesis until Kaia
+	stakingInfoCache *lru.ARCCache // cached by sourceNum
 }
 
 func NewStakingModule() *StakingModule {
@@ -48,8 +48,8 @@ func NewStakingModule() *StakingModule {
 	}
 }
 
-func (s *StakingModule) Init(opts InitOpts) error {
-	s.InitOpts = opts
+func (s *StakingModule) Init(opts *InitOpts) error {
+	s.InitOpts = *opts
 
 	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
 	if s.stakingInterval == 0 {
