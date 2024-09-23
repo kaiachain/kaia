@@ -24,9 +24,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-var (
-	stakingInfoPrefix = []byte("stakingInfo")
-)
+var stakingInfoPrefix = []byte("stakingInfo")
 
 func stakingInfoKey(num uint64) []byte {
 	return append(stakingInfoPrefix, common.Int64ToByteLittleEndian(num)...)

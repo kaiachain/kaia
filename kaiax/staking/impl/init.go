@@ -27,8 +27,11 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-var logger = log.NewModuleLogger(log.KaiaxStaking)
-var _ staking.StakingModule = &StakingModule{}
+var (
+	_ staking.StakingModule = &StakingModule{}
+
+	logger = log.NewModuleLogger(log.KaiaxStaking)
+)
 
 type InitOpts struct {
 	ChainKv     database.Database

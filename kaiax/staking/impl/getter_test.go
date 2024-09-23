@@ -64,13 +64,16 @@ func TestGetStakingInfo_Uncached(t *testing.T) {
 			SourceBlockNum: 0,
 			NodeIds: []common.Address{
 				common.HexToAddress("0x0000000000000000000000000000000000000F00"),
-				common.HexToAddress("0x0000000000000000000000000000000000000F03")},
+				common.HexToAddress("0x0000000000000000000000000000000000000F03"),
+			},
 			StakingContracts: []common.Address{
 				common.HexToAddress("0x0000000000000000000000000000000000000F01"),
-				common.HexToAddress("0x0000000000000000000000000000000000000f04")},
+				common.HexToAddress("0x0000000000000000000000000000000000000f04"),
+			},
 			RewardAddrs: []common.Address{
 				common.HexToAddress("0x0000000000000000000000000000000000000f02"),
-				common.HexToAddress("0x0000000000000000000000000000000000000f05")},
+				common.HexToAddress("0x0000000000000000000000000000000000000f05"),
+			},
 			KIFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000F06"),
 			KEFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000f07"),
 			StakingAmounts: []uint64{42_000_000, 99_000_000},
