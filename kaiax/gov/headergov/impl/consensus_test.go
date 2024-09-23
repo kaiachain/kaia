@@ -64,11 +64,17 @@ func TestVerifyVote(t *testing.T) {
 	statedb, _ := h.Chain.State()
 	statedb.SetNonce(eoa, 1)
 
+	contract := common.HexToAddress("0x0000000000000000000000000000000000000400")
+	statedb.SetCode(contract, []byte{1})
+
 	tcs := []struct {
 		desc          string
 		vote          headergov.VoteData
 		expectedError error
 	}{
+		{desc: "valid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, contract), expectedError: nil},
+		{desc: "valid lower", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71LowerBoundBaseFee].Name, uint64(1)), expectedError: nil},
+		{desc: "valid upper", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71UpperBoundBaseFee].Name, uint64(1e18)), expectedError: nil},
 		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, common.Address{}), expectedError: ErrGovParamNotAccount},
 		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, eoa), expectedError: ErrGovParamNotContract},
 		{desc: "invalid lower", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71LowerBoundBaseFee].Name, uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
