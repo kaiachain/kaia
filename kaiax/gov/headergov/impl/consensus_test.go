@@ -139,7 +139,7 @@ func TestPrepareHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
 		h      = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
-		vote   = headergov.NewVoteData(h.NodeAddress, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
+		vote   = headergov.NewVoteData(h.nodeAddress, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
 		header = &types.Header{}
 	)
 

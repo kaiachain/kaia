@@ -40,6 +40,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	cachingDb := state.NewDatabase(dbm)
 	statedb, _ := state.New(common.Hash{}, cachingDb, nil, nil)
 	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(genesisHeader)).AnyTimes()
 
 	h := NewHeaderGovModule()
 	err := h.Init(&InitOpts{

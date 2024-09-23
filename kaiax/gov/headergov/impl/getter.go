@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
@@ -10,12 +11,9 @@ func (h *headerGovModule) EffectiveParamSet(blockNum uint64) (gov.ParamSet, erro
 	gh := h.GetGovernanceHistory()
 	gp, err := gh.Search(prevEpochStart)
 	if err != nil {
-		logger.Error("EffectiveParams error", "prevEpochStart", prevEpochStart, "blockNum", blockNum, "err", err,
-			"govHistory", gh, "govs", h.cache.Govs())
-		return gov.ParamSet{}, err
-	} else {
-		return gp, nil
+		return *gov.GetDefaultGovernanceParamSet(), nil
 	}
+	return gp, nil
 }
 
 func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]interface{}, error) {
@@ -30,6 +28,10 @@ func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.Param
 	}
 
 	return ret, nil
+}
+
+func (h *headerGovModule) NodeAddress() common.Address {
+	return h.nodeAddress
 }
 
 func (h *headerGovModule) GetGovernanceHistory() headergov.History {

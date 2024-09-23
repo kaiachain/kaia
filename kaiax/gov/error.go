@@ -7,6 +7,7 @@ var (
 	ErrInvalidParamName  = errors.New("invalid param name")
 	ErrInvalidParamValue = errors.New("invalid param value")
 	ErrCannotSet         = errors.New("invalid field or cannot set the value")
+	ErrUnknownBlock      = errors.New("unknown block")
 
 	ErrCanonicalizeUint64        = errors.New("could not canonicalize value to uint64")
 	ErrCanonicalizeString        = errors.New("could not canonicalize value to string")

@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 type ParamSet struct {
@@ -99,6 +100,21 @@ func (p *ParamSet) ToEnumMap() map[ParamEnum]interface{} {
 	}
 
 	return ret
+}
+
+// TODO: remove this. Currently it's used for GetRewards API.
+func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
+	m := make(map[string]interface{})
+	for enum := range Params {
+		param := Params[enum]
+		fieldValue := reflect.ValueOf(p).FieldByName(param.ParamSetFieldName)
+		if fieldValue.IsValid() {
+			m[param.Name] = fieldValue.Interface()
+		}
+	}
+
+	ps, _ := params.NewGovParamSetStrMap(m)
+	return ps
 }
 
 func EnumMapToStrMap(enumMap map[ParamEnum]interface{}) map[string]interface{} {

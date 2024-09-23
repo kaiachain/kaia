@@ -55,11 +55,11 @@ func (api *headerGovAPI) Vote(name string, value interface{}) (string, error) {
 	}
 
 	gMode := gp.GovernanceMode
-	if gMode == "single" && api.h.NodeAddress != gp.GoverningNode {
+	if gMode == "single" && api.h.nodeAddress != gp.GoverningNode {
 		return "", ErrVotePermissionDenied
 	}
 
-	vote := headergov.NewVoteData(api.h.NodeAddress, name, value)
+	vote := headergov.NewVoteData(api.h.nodeAddress, name, value)
 	if vote == nil {
 		return "", ErrInvalidKeyValue
 	}
@@ -107,7 +107,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesApi {
 
 	ret := make([]MyVotesApi, 0)
 	for blockNum, vote := range votesInEpoch {
-		if vote.Voter() == api.h.NodeAddress {
+		if vote.Voter() == api.h.nodeAddress {
 			ret = append(ret, MyVotesApi{
 				BlockNum: blockNum,
 				Casted:   true,
@@ -130,7 +130,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesApi {
 }
 
 func (api *headerGovAPI) NodeAddress() common.Address {
-	return api.h.NodeAddress
+	return api.h.nodeAddress
 }
 
 func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
@@ -157,7 +157,7 @@ func (api *headerGovAPI) Status() StatusApi {
 		GroupedVotes: api.h.cache.GroupedVotes(),
 		Governances:  api.h.cache.Govs(),
 		GovHistory:   api.h.cache.History(),
-		NodeAddress:  api.h.NodeAddress,
+		NodeAddress:  api.h.nodeAddress,
 		MyVotes:      api.h.myVotes,
 	}
 }

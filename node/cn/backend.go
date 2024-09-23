@@ -537,8 +537,9 @@ func (s *CN) SetupKaiaxModules() error {
 	})
 
 	mGov.Init(&gov_impl.InitOpts{
-		Hgm: hgm,
-		Cgm: cgm,
+		Hgm:   hgm,
+		Cgm:   cgm,
+		Chain: s.blockchain,
 	})
 
 	// Register modules to respective components
@@ -668,7 +669,6 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
 	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
@@ -737,11 +737,6 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "governance",
 			Version:   "1.0",
 			Service:   governanceAPI,
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   governanceKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",

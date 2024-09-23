@@ -96,6 +96,20 @@ func (mr *MockHeaderGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockHeaderGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
 }
 
+// NodeAddress mocks base method.
+func (m *MockHeaderGovModule) NodeAddress() common.Address {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NodeAddress")
+	ret0, _ := ret[0].(common.Address)
+	return ret0
+}
+
+// NodeAddress indicates an expected call of NodeAddress.
+func (mr *MockHeaderGovModuleMockRecorder) NodeAddress() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeAddress", reflect.TypeOf((*MockHeaderGovModule)(nil).NodeAddress))
+}
+
 // PostInsertBlock mocks base method.
 func (m *MockHeaderGovModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()

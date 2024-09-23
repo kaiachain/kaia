@@ -16,6 +16,7 @@ type HeaderGovModule interface {
 
 	EffectiveParamSet(blockNum uint64) (gov.ParamSet, error)
 	EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]interface{}, error)
+	NodeAddress() common.Address
 }
 
 type GovData interface {

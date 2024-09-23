@@ -36,7 +36,7 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
-	NodeAddress common.Address
+	nodeAddress common.Address
 	myVotes     []headergov.VoteData // queue
 
 	epoch uint64
@@ -51,7 +51,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.ChainKv = opts.ChainKv
 	h.ChainConfig = opts.ChainConfig
 	h.Chain = opts.Chain
-	h.NodeAddress = opts.NodeAddress
+	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
 	if h.ChainConfig == nil || h.ChainConfig.Istanbul == nil {
 		return ErrNoChainConfig
@@ -119,9 +119,9 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]headergov.GovData)
 
-	// in production, govBlocks must not be nil
+	// TODO: in production, govBlocks must not be nil. Remove this after implementing kcn init and data migration.
 	if govBlocks == nil {
-		return govs
+		govBlocks = &StoredUint64Array{0}
 	}
 
 	for _, blockNum := range *govBlocks {
@@ -130,7 +130,7 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 		parsedGov, err := headergov.DeserializeHeaderGov(header.Governance)
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
-			panic(err)
+			continue
 		}
 
 		govs[blockNum] = parsedGov
