@@ -52,6 +52,7 @@ import (
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -517,37 +518,50 @@ func (s *CN) SetComponents(component []interface{}) {
 
 func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
-	mNoop := noop_impl.NewNoopModule()
+	var (
+		mNoop    = noop_impl.NewNoopModule()
+		mGov     = gov_impl.NewGovModule()
+		hgm      = headergov_impl.NewHeaderGovModule()
+		cgm      = contractgov_impl.NewContractGovModule()
+		mStaking = staking_impl.NewStakingModule()
+	)
 
-	mGov := gov_impl.NewGovModule()
-	hgm := headergov_impl.NewHeaderGovModule()
-	hgm.Init(&headergov_impl.InitOpts{
-		ChainKv:     s.chainDB.GetMiscDB(),
-		ChainConfig: s.chainConfig,
-		Chain:       s.blockchain,
-		NodeAddress: s.nodeAddress,
-	})
-
-	cgm := contractgov_impl.NewContractGovModule()
-	cgm.Init(&contractgov_impl.InitOpts{
-		ChainConfig: s.chainConfig,
-		Chain:       s.blockchain,
-		Hgm:         hgm,
-	})
-
-	mGov.Init(&gov_impl.InitOpts{
-		Hgm:   hgm,
-		Cgm:   cgm,
-		Chain: s.blockchain,
-	})
+	// Initialize modules
+	err := errors.Join(
+		mNoop.Init(),
+		hgm.Init(&headergov_impl.InitOpts{
+			ChainKv:     s.chainDB.GetMiscDB(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			NodeAddress: s.nodeAddress,
+		}),
+		cgm.Init(&contractgov_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Hgm:         hgm,
+		}),
+		mGov.Init(&gov_impl.InitOpts{
+			Hgm:   hgm,
+			Cgm:   cgm,
+			Chain: s.blockchain,
+		}),
+		mStaking.Init(&staking_impl.InitOpts{
+			ChainKv:     s.chainDB.GetMiscDB(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+		}),
+	)
+	if err != nil {
+		return err
+	}
 
 	// Register modules to respective components
-	s.RegisterBaseModules(mNoop, mGov)
-	s.RegisterJsonRpcModules(mGov)
+	s.RegisterBaseModules(mNoop, mGov, mStaking)
+	s.RegisterJsonRpcModules(mGov, mStaking)
 	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop, mGov)
 	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
 	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
-	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov)
+	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov, mStaking)
 
 	return nil
 }
