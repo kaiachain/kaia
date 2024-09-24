@@ -53,8 +53,8 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.Chain = opts.Chain
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
-	if h.ChainConfig == nil || h.ChainConfig.Istanbul == nil {
-		return ErrNoChainConfig
+	if h.ChainKv == nil || h.ChainConfig == nil || h.ChainConfig.Istanbul == nil || h.Chain == nil {
+		return ErrInitNil
 	}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch

@@ -52,8 +52,8 @@ func (c *contractGovModule) Init(opts *InitOpts) error {
 	c.ChainConfig = opts.ChainConfig
 	c.Chain = opts.Chain
 	c.hgm = opts.Hgm
-	if c.ChainConfig == nil || c.ChainConfig.Istanbul == nil {
-		return ErrNoChainConfig
+	if c.ChainKv == nil || c.ChainConfig == nil || c.ChainConfig.Istanbul == nil || c.hgm == nil {
+		return ErrInitNil
 	}
 
 	return nil

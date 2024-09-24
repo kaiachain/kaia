@@ -3,6 +3,8 @@ package gov
 import "errors"
 
 var (
+	ErrInitNil = errors.New("cannot init gov module because of nil")
+
 	ErrInvalidParamEnum  = errors.New("invalid param enum")
 	ErrInvalidParamName  = errors.New("invalid param name")
 	ErrInvalidParamValue = errors.New("invalid param value")

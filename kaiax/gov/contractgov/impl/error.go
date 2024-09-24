@@ -3,7 +3,8 @@ package impl
 import "errors"
 
 var (
-	ErrNoChainConfig = errors.New("ChainConfig or Istanbul is not set")
+	ErrInitNil = errors.New("cannot init contractgov module because of nil")
+
 	ErrNotReady      = errors.New("ContractEngine is not ready")
 	ErrHeaderGovFail = errors.New("headerGov EffectiveParams() failed")
 )

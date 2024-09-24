@@ -1,8 +1,6 @@
 package impl
 
 import (
-	"errors"
-
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -50,7 +48,7 @@ func (m *GovModule) Init(opts *InitOpts) error {
 	m.chain = opts.Chain
 
 	if m.hgm == nil || m.cgm == nil || m.chain == nil {
-		return errors.New("nil is not allowed")
+		return gov.ErrInitNil
 	}
 	return nil
 }
