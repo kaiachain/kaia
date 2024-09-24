@@ -174,16 +174,20 @@ commands:
             source ~/.bashrc
             KAIA_VERSION=$(go run build/rpm/main.go version)
             PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-            for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+                     
+            for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
               if [[ << parameters.package-type >> = "tar" ]]; then
-                  aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/;
+                aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
               elif [[ << parameters.package-type >> = "rpm" ]]; then
-                  TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-(kairos-)?v" '$0~pat')
-                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
-                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
-                  TARGET_RPM=$(find $item-linux-aarch64/rpmbuild/RPMS/aarch64/ | awk -v pat="$item(d)?-(kairos-)?v" '$0~pat')
-                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
-                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+                BINARY=$item
+                KAIROS=""
+                if [[ $BINARY = *-kairos ]]; then
+                  BINARY="${BINARY%-kairos}"
+                  KAIROS="-kairos"
+                fi
+                TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
               fi
             done
   createrepo-update:
