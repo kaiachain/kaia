@@ -66,8 +66,8 @@ func (p *ParamSet) Set(enum ParamEnum, cv interface{}) error {
 }
 
 func (p *ParamSet) SetFromEnumMap(m map[ParamEnum]interface{}) error {
-	for name, value := range m {
-		err := p.Set(name, value)
+	for enum, value := range m {
+		err := p.Set(enum, value)
 		if err != nil {
 			return err
 		}
