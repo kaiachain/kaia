@@ -19,7 +19,7 @@ orbs:
   docker: circleci/docker@2.1.1
 
 executors:
-  linux-executor: # this executor is for general testing and packaging linux binaries
+  tar-linux-amd64-executor: # this executor is for linux-amd64 tar packaging
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
@@ -27,7 +27,44 @@ executors:
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
-  linux-others-executor: # this executor is for test-others job
+  tar-linux-arm64-executor: # this executor is for linux-arm64 tar packaging
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    resource_class: arm.medium
+    docker:
+      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04-arm
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  rpm-linux-amd64-executor: # this executor is for linux-amd64 rpm packaging
+    working_directory: /go/src/github.com/kaiachain/kaia
+    resource_class: medium
+    docker:
+      - image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  rpm-linux-arm64-executor: # this executor is for linux-arm64 rpm packaging
+    working_directory: /go/src/github.com/kaiachain/kaia
+    resource_class: arm.medium
+    docker:
+      - image: kaiachain/circleci-rpmbuild:1.22.1-gcc7-arm
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  tar-darwin-arm64-executor: # this executor is for darwin-arm64 tar packaging
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    macos:
+      xcode: 14.2.0
+    resource_class: macos.m1.medium.gen1
+  test-executor: # this executor is for general test jobs
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    resource_class: medium
+    docker:
+      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  test-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
@@ -57,36 +94,12 @@ executors:
           KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
           KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
           KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  darwin-executor: # this executor is for packaging darwin binaries
-    working_directory: ~/go/src/github.com/kaiachain/kaia
-    macos:
-      xcode: 14.2.0
-    resource_class: macos.m1.medium.gen1
-  rpm-executor: # this executor is for packaging rpm binaries
-    working_directory: /go/src/github.com/kaiachain/kaia
-    docker:
-      - image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   default:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     docker:
       - image: cimg/go:1.22.1
 
 commands:
-  install-darwin-dependencies:
-    description: Install dependencies on darwin machine
-    steps:
-      - run:
-          name: "install darwin dependencies"
-          command: |
-            # install awscli
-            brew install awscli
-            # install golang
-            curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
-            mkdir $HOME/go1.22.1
-            tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
   pre-build:
     description: "before build, set version"
     steps:
@@ -108,75 +121,70 @@ commands:
               echo "this is not RC version"
             fi
             echo "export KAIA_VERSION=$(go run build/rpm/main.go version)" >> $BASH_ENV
-  build-packaging:
-    description: "Build for each OS/Network"
+  packaging-and-upload:
+    description: "Build and upload tar/rpm packages to S3 for each OS/Network"
     parameters:
+      package-type:
+        type: string
+        default: "tar"
       os-network:
         type: string
         default: "linux-amd64"
-      baobab:
-        type: string
-        default: ""
     steps:
+      - checkout
       - run:
-          name: "build and packaging"
+          name: "install darwin dependencies when package is darwin"
           command: |
-            export GOPATH=~/go
-            export PATH=$HOME/go1.22.1/go/bin:$PATH
+            if [[ << parameters.os-network >> = "darwin-arm64" ]]; then
+              # install awscli
+              brew install awscli
+              # install golang
+              curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
+              mkdir $HOME/go1.22.1
+              tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
+              # Set GOPATH and update PATH
+              echo 'export GOPATH=~/go' >> ~/.bashrc
+              echo 'export PATH=$HOME/go1.22.1/go/bin:$PATH' >> ~/.bashrc
+              source ~/.bashrc
+            fi
+      - pre-build
+      - run:
+          name: "build binaries"
+          command: |
+            source ~/.bashrc
             make all
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
-              ./build/package-tar.sh << parameters.baobab >> << parameters.os-network >> $item
-            done
-  upload-repo:
-    description: "upload packaging tar.gz"
-    parameters:
-      item:
-        type: string
-        default: "kcn kpn ken kgen kscn kbn kspn ksen homi"
-    steps:
       - run:
-          name: "upload S3 repo"
+          name: "build mainnet and kairos packages"
           command: |
-            export GOPATH=~/go
-            export PATH=$HOME/go1.22.1/go/bin:$PATH
+            source ~/.bashrc
+            second_parameter=""
+            if [[ << parameters.package-type >> = "tar" ]]; then
+              second_parameter=<< parameters.os-network >>
+            fi
+            for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+              ./build/package-<< parameters.package-type >>.sh $second_parameter $item
+            done
+            
+            for item in kcn kpn ken; do
+              ./build/package-<< parameters.package-type >>.sh -b $second_parameter $item
+            done
+      - run:
+          name: "upload << parameters.package-type >>-<<parameters.os-network >> packages to S3 repo"
+          command: |
+            source ~/.bashrc
             KAIA_VERSION=$(go run build/rpm/main.go version)
-            for item in << parameters.item >>; do aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/; done
-  rpm-tagging:
-    description: "rpm tagging for cypress"
-    steps:
-      - run:
-          name: "rpm tagging"
-          command: |
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
-              ./build/package-rpm.sh $item
-            done
-      - run:
-          name: "upload S3 repo"
-          command: |
             PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
-            KAIA_VERSION=$(go run build/rpm/main.go version)
-
-            for item in kcn kpn ken kscn kspn ksen kbn kgen homi; do
-              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
-            done
-  rpm-tagging-baobab:
-    description: "rpm tagging for baobab"
-    steps:
-      - run:
-          name: "rpm tagging baobab"
-          command: |
-            for item in kcn kpn ken; do
-              ./build/package-rpm.sh -b $item
-            done
-      - run:
-          name: "upload S3 repo"
-          command: |
-            for item in kcn kpn ken; do
-              TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-kairos-v" '$0~pat')
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
-              aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+            for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+              if [[ << parameters.package-type >> = "tar" ]]; then
+                  aws s3 cp packages/${item}-*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/;
+              elif [[ << parameters.package-type >> = "rpm" ]]; then
+                  TARGET_RPM=$(find $item-linux-x86_64/rpmbuild/RPMS/x86_64/ | awk -v pat="$item(d)?-(kairos-)?v" '$0~pat')
+                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+                  TARGET_RPM=$(find $item-linux-aarch64/rpmbuild/RPMS/aarch64/ | awk -v pat="$item(d)?-(kairos-)?v" '$0~pat')
+                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                  aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+              fi
             done
   createrepo-update:
     steps:
@@ -331,27 +339,26 @@ commands:
             curl https://bootstrap.pypa.io/get-pip.py | python
             pip3 install -r requirements.txt
             python3 main.py --protocol rpc
+
 jobs:
   build:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - pre-build
       - run:
           name: "Build"
           command: make all
-
   test-linter:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run golangci-lint"
           no_output_timeout: 30m
           command: go run build/ci.go lint -v --new-from-rev=dev
-
   test-datasync:
-    executor: linux-others-executor
+    executor: test-others-executor
     steps:
       - checkout
       - wait-other-containers-ready
@@ -359,27 +366,24 @@ jobs:
           name: "Run test datasync"
           no_output_timeout: 30m
           command: make test-datasync
-
   test-networks:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run test networks"
           no_output_timeout: 30m
           command: make test-networks
-
   test-node:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - run:
           name: "Run test node"
           no_output_timeout: 30m
           command: make test-node
-
   test-tests:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - run:
@@ -388,9 +392,8 @@ jobs:
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
             make test-tests
-
   test-others:
-    executor: linux-others-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - checkout
@@ -400,29 +403,25 @@ jobs:
           no_output_timeout: 30m
           command: |
             make test-others
-
   test-rpc:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - pre-build
       - run-rpc
-
   pass-tests:
     executor: default
     steps:
       - run:
           name: "tests pass!"
           command: echo "tests pass!"
-
   tagger-verify:
     executor: default
     steps:
       - checkout
       - tagger-verify
-
   coverage:
-    executor: linux-others-executor
+    executor: test-others-executor
     resource_class: xlarge
     steps:
       - checkout
@@ -444,9 +443,8 @@ jobs:
           path: /tmp/coverage_reports
       - codecov/upload:
           file: /tmp/coverage_reports/coverage_*
-
   linters:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - run:
@@ -459,84 +457,56 @@ jobs:
       - notify-success
       - store_artifacts:
           path: /tmp/linter_reports
-
   rpc-tester-report:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - pre-build
       - run-rpc
       - notify-failure
       - notify-success
-
-  packaging-linux:
-    executor: linux-executor
-    resource_class: large
+  rpm-linux-amd64-packaging:
+    executor: rpm-linux-amd64-executor
     steps:
-      - checkout
-      - pre-build
-      - build-packaging
-      - upload-repo
-
-  packaging-linux-baobab:
-    executor: linux-executor
-    resource_class: large
+      - packaging-and-upload:
+          os-network: "linux-amd64"
+          package-type: "rpm"
+  tar-linux-amd64-packaging:
+    executor: tar-linux-amd64-executor
     steps:
-      - checkout
-      - pre-build
-      - build-packaging:
-          baobab: "-b"
-      - upload-repo:
-          item: "kcn kpn ken"
-  packaging-darwin:
-    executor: darwin-executor
+      - packaging-and-upload:
+          os-network: "linux-amd64"
+          package-type: "tar"
+  rpm-linux-arm64-packaging:
+    executor: rpm-linux-arm64-executor
     steps:
-      - checkout
-      - install-darwin-dependencies
-      - pre-build
-      - build-packaging:
+      - packaging-and-upload:
+          os-network: "linux-arm64"
+          package-type: "rpm"
+  tar-linux-arm64-packaging:
+    executor: tar-linux-arm64-executor
+    steps:
+      - packaging-and-upload:
+          os-network: "linux-arm64"
+          package-type: "tar"
+  tar-darwin-arm64-packaging:
+    executor: tar-darwin-arm64-executor
+    steps:
+      - packaging-and-upload:
           os-network: "darwin-arm64"
-      - upload-repo
-
-  packaging-darwin-baobab:
-    executor: darwin-executor
-    steps:
-      - checkout
-      - install-darwin-dependencies
-      - pre-build
-      - build-packaging:
-          os-network: "darwin-arm64"
-          baobab: "-b"
-      - upload-repo:
-          item: "kcn kpn ken"
-  rpm-tagged:
-    executor: rpm-executor
-    steps:
-      - checkout
-      - pre-build
-      - rpm-tagging
-
-  rpm-tagged-baobab:
-    executor: rpm-executor
-    steps:
-      - checkout
-      - pre-build
-      - rpm-tagging-baobab
-
+          package-type: "tar"
   deploy-rpm-public:
-    executor: rpm-executor
+    executor: rpm-linux-amd64-executor
     steps:
       - add_ssh_keys
       - createrepo-update
       - notify-failure
       - notify-success
-
   tag-verify:
-    executor: linux-executor
+    executor: test-executor
     steps:
       - checkout
       - tag-verify
-
   release-PR:
     executor: default
     steps:
@@ -545,7 +515,6 @@ jobs:
       - make-pr
       - notify-failure
       - notify-success
-
   major-tagging:
     executor: default
     steps:
@@ -579,7 +548,6 @@ workflows:
               ignore: /.*/
       - test-rpc:
           filters: *filter-only-version-tag
-
       - pass-tests:
           requires:
             - build
@@ -591,7 +559,6 @@ workflows:
             - tag-verify
             - tagger-verify
           filters: *filter-version-not-release
-
       - docker/publish: # for dev branch
           filters:
             branches:
@@ -605,7 +572,6 @@ workflows:
           use-remote-docker: true
           remote-docker-version: 20.10.14
           use-buildkit: true
-
       - docker/publish: # for release versions
           filters:
             tags:
@@ -621,59 +587,49 @@ workflows:
           use-remote-docker: true
           remote-docker-version: 20.10.14
           use-buildkit: true
-
       - tag-verify:
           filters: *filter-only-version-tag
-
       - deploy-rpm-public:
           requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
-            - packaging-linux
-            - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
+            - rpm-linux-amd64-packaging
+            - tar-linux-amd64-packaging
+            - rpm-linux-arm64-packaging
+            - tar-linux-arm64-packaging
+            - tar-darwin-arm64-packaging
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]/
             branches:
               ignore: /.*/
-
       - release-PR:
           requires:
-            - rpm-tagged
-            - rpm-tagged-baobab
-            - packaging-linux
-            - packaging-linux-baobab
-            - packaging-darwin
-            - packaging-darwin-baobab
+            - rpm-linux-amd64-packaging
+            - tar-linux-amd64-packaging
+            - rpm-linux-arm64-packaging
+            - tar-linux-arm64-packaging
+            - tar-darwin-arm64-packaging
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*/
             branches:
               ignore: /.*/
-
-      - rpm-tagged:
+      - rpm-linux-amd64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - rpm-tagged-baobab:
+      - tar-linux-amd64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux:
+      - rpm-linux-arm64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-linux-baobab:
+      - tar-linux-arm64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
-      - packaging-darwin:
-          filters: *filter-only-version-tag
-          requires:
-            - pass-tests
-      - packaging-darwin-baobab:
+      - tar-darwin-arm64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
