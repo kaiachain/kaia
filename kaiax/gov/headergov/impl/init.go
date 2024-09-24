@@ -48,6 +48,10 @@ func NewHeaderGovModule() *headerGovModule {
 }
 
 func (h *headerGovModule) Init(opts *InitOpts) error {
+	if opts == nil {
+		return ErrInitNil
+	}
+
 	h.ChainKv = opts.ChainKv
 	h.ChainConfig = opts.ChainConfig
 	h.Chain = opts.Chain

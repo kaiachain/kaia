@@ -48,6 +48,10 @@ func NewContractGovModule() *contractGovModule {
 }
 
 func (c *contractGovModule) Init(opts *InitOpts) error {
+	if opts == nil {
+		return ErrInitNil
+	}
+
 	c.ChainKv = opts.ChainKv
 	c.ChainConfig = opts.ChainConfig
 	c.Chain = opts.Chain

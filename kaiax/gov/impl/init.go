@@ -43,6 +43,10 @@ func NewGovModule() *GovModule {
 }
 
 func (m *GovModule) Init(opts *InitOpts) error {
+	if opts == nil {
+		return gov.ErrInitNil
+	}
+
 	m.hgm = opts.Hgm
 	m.cgm = opts.Cgm
 	m.chain = opts.Chain
