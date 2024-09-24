@@ -9,7 +9,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
@@ -30,14 +29,12 @@ type chain interface {
 }
 
 type InitOpts struct {
-	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
 	Hgm         headergov.HeaderGovModule
 }
 
 type contractGovModule struct {
-	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
 	hgm         headergov.HeaderGovModule
@@ -52,11 +49,10 @@ func (c *contractGovModule) Init(opts *InitOpts) error {
 		return ErrInitNil
 	}
 
-	c.ChainKv = opts.ChainKv
 	c.ChainConfig = opts.ChainConfig
 	c.Chain = opts.Chain
 	c.hgm = opts.Hgm
-	if c.ChainKv == nil || c.ChainConfig == nil || c.ChainConfig.Istanbul == nil || c.hgm == nil {
+	if c.ChainConfig == nil || c.ChainConfig.Istanbul == nil || c.hgm == nil {
 		return ErrInitNil
 	}
 

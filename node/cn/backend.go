@@ -530,7 +530,6 @@ func (s *CN) SetupKaiaxModules() error {
 
 	cgm := contractgov_impl.NewContractGovModule()
 	cgm.Init(&contractgov_impl.InitOpts{
-		ChainKv:     s.chainDB.GetMiscDB(),
 		ChainConfig: s.chainConfig,
 		Chain:       s.blockchain,
 		Hgm:         hgm,
