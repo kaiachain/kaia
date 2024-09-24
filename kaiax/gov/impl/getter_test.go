@@ -1,12 +1,15 @@
 package impl
 
 import (
+	"math/big"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
 	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
+	blockchain_mock "github.com/kaiachain/kaia/kaiax/gov/impl/mock"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,38 +23,73 @@ func newContractGovModuleMock(t *testing.T) *contractgov_mock.MockContractGovMod
 	return mock
 }
 
-func TestEffectiveParamSet(t *testing.T) {
+func newGovModuleMock(t *testing.T, config *params.ChainConfig) (*headergov_mock.MockHeaderGovModule, *contractgov_mock.MockContractGovModule, *GovModule) {
 	hgm := newHeaderGovModuleMock(t)
 	cgm := newContractGovModuleMock(t)
-	m := &GovModule{
-		hgm: hgm,
-		cgm: cgm,
-	}
+	chain := blockchain_mock.NewMockBlockChain(gomock.NewController(t))
+	chain.EXPECT().Config().Return(config).AnyTimes()
+	m := NewGovModule()
+	m.Init(&InitOpts{
+		Hgm:   hgm,
+		Cgm:   cgm,
+		Chain: chain,
+	})
+	return hgm, cgm, m
+}
 
-	// default value returned
-	{
-		defaultVal := uint64(250e9)
-		hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
-		cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
-		ps, _ := m.EffectiveParamSet(1)
-		assert.Equal(t, defaultVal, ps.UnitPrice)
-	}
+func TestEffectiveParamSet(t *testing.T) {
+	var (
+		defaultVal     = uint64(250e9)
+		headerGovVal   = uint64(123)
+		contractGovVal = uint64(456)
+	)
 
-	// headergov value returned
-	{
-		headerGovVal := uint64(123)
-		hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: headerGovVal}, nil)
-		cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{}, nil)
-		ps, _ := m.EffectiveParamSet(1)
-		assert.Equal(t, headerGovVal, ps.UnitPrice)
-	}
+	t.Run("pre-kore", func(t *testing.T) {
+		hgm, cgm, m := newGovModuleMock(t, &params.ChainConfig{KoreCompatibleBlock: nil})
+		t.Run("default", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, defaultVal, ps.UnitPrice)
+		})
 
-	// contractgov value returned
-	{
-		contractGovVal := uint64(456)
-		hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: 0}, nil)
-		cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: contractGovVal}, nil)
-		ps, _ := m.EffectiveParamSet(1)
-		assert.Equal(t, contractGovVal, ps.UnitPrice)
-	}
+		t.Run("headergov", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: headerGovVal}, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{}, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, headerGovVal, ps.UnitPrice)
+		})
+
+		t.Run("contractgov ignored", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: headerGovVal}, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: contractGovVal}, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, headerGovVal, ps.UnitPrice)
+		})
+	})
+
+	t.Run("post-kore", func(t *testing.T) {
+		hgm, cgm, m := newGovModuleMock(t, &params.ChainConfig{KoreCompatibleBlock: big.NewInt(0)})
+
+		t.Run("default", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(nil, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, defaultVal, ps.UnitPrice)
+		})
+
+		t.Run("headergov", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: headerGovVal}, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{}, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, headerGovVal, ps.UnitPrice)
+		})
+
+		t.Run("contractgov", func(t *testing.T) {
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: headerGovVal}, nil)
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: contractGovVal}, nil)
+			ps, _ := m.EffectiveParamSet(1)
+			assert.Equal(t, contractGovVal, ps.UnitPrice)
+		})
+	})
 }

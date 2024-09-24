@@ -19,7 +19,8 @@ var (
 	logger = log.NewModuleLogger(log.KaiaXGov)
 )
 
-type blockChain interface {
+//go:generate mockgen -destination=kaiax/gov/impl/mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
+type BlockChain interface {
 	CurrentBlock() *types.Block
 	Config() *params.ChainConfig
 	GetHeaderByNumber(val uint64) *types.Header
@@ -31,13 +32,13 @@ type blockChain interface {
 type GovModule struct {
 	hgm   headergov.HeaderGovModule
 	cgm   contractgov.ContractGovModule
-	chain blockChain
+	chain BlockChain
 }
 
 type InitOpts struct {
 	Hgm   headergov.HeaderGovModule
 	Cgm   contractgov.ContractGovModule
-	Chain blockChain
+	Chain BlockChain
 }
 
 func NewGovModule() *GovModule {
@@ -53,7 +54,7 @@ func (m *GovModule) Init(opts *InitOpts) error {
 	m.cgm = opts.Cgm
 	m.chain = opts.Chain
 
-	if m.hgm == nil || m.cgm == nil || m.chain == nil {
+	if m.hgm == nil || m.cgm == nil || m.chain == nil || m.chain.Config() == nil {
 		return gov.ErrInitNil
 	}
 	return nil
