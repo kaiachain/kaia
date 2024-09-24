@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -64,4 +66,8 @@ func (m *GovModule) Start() error {
 
 func (m *GovModule) Stop() {
 	logger.Info("GovModule stopped")
+}
+
+func (m *GovModule) isKoreHF(num uint64) bool {
+	return m.chain.Config().IsKoreForkEnabled(new(big.Int).SetUint64(num))
 }

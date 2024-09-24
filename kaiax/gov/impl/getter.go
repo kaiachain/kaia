@@ -13,12 +13,14 @@ func (m *GovModule) EffectiveParamSet(blockNum uint64) (gov.ParamSet, error) {
 		ret.Set(k, v)
 	}
 
-	p2, err := m.cgm.EffectiveParamsPartial(blockNum)
-	if err != nil {
-		return gov.ParamSet{}, err
-	}
-	for k, v := range p2 {
-		ret.Set(k, v)
+	if m.isKoreHF(blockNum) {
+		p2, err := m.cgm.EffectiveParamsPartial(blockNum)
+		if err != nil {
+			return gov.ParamSet{}, err
+		}
+		for k, v := range p2 {
+			ret.Set(k, v)
+		}
 	}
 	return *ret, nil
 }
