@@ -46,8 +46,10 @@ func (h *HeaderCache) History() History {
 
 func (h *HeaderCache) VoteBlockNums() []uint64 {
 	blockNums := make([]uint64, 0)
-	for num := range h.groupedVotes {
-		blockNums = append(blockNums, num)
+	for _, group := range h.groupedVotes {
+		for num := range group {
+			blockNums = append(blockNums, num)
+		}
 	}
 	sort.Slice(blockNums, func(i, j int) bool {
 		return blockNums[i] < blockNums[j]
