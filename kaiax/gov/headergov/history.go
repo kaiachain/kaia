@@ -12,6 +12,9 @@ type History map[uint64]gov.ParamSet
 func GetHistory(govs map[uint64]GovData) History {
 	gh := make(map[uint64]gov.ParamSet)
 
+	// we must ensure that gov history is not empty
+	gh[0] = *gov.GetDefaultGovernanceParamSet()
+
 	sortedNums := make([]uint64, 0, len(govs))
 	for num := range govs {
 		sortedNums = append(sortedNums, num)
@@ -20,7 +23,7 @@ func GetHistory(govs map[uint64]GovData) History {
 		return sortedNums[i] < sortedNums[j]
 	})
 
-	gp := gov.ParamSet{}
+	gp := *gov.GetDefaultGovernanceParamSet()
 	for _, num := range sortedNums {
 		govData := govs[num]
 		if err := gp.SetFromEnumMap(govData.Items()); err != nil {
@@ -28,6 +31,7 @@ func GetHistory(govs map[uint64]GovData) History {
 		}
 		gh[num] = gp
 	}
+
 	return gh
 }
 
@@ -41,7 +45,7 @@ func (g *History) Search(blockNum uint64) (gov.ParamSet, error) {
 	}
 	if ret, ok := (*g)[idx]; ok {
 		return ret, nil
-	} else {
-		return gov.ParamSet{}, ErrNoHistory
 	}
+
+	panic("must not happen")
 }
