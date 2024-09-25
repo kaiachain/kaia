@@ -133,8 +133,13 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 
 		parsedGov, err := headergov.DeserializeHeaderGov(header.Governance)
 		if err != nil {
-			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
-			continue
+			// For tests, genesis' governance can be nil.
+			if blockNum == 0 {
+				continue
+			}
+
+			logger.Error("Failed to parse gov", "num", blockNum, "err", err)
+			panic("failed to parse gov")
 		}
 
 		govs[blockNum] = parsedGov
