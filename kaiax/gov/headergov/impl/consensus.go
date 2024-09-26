@@ -116,18 +116,12 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:
-		params, err := h.EffectiveParamSet(blockNum)
-		if err != nil {
-			return err
-		}
+		params := h.EffectiveParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {
 			return ErrLowerBoundBaseFee
 		}
 	case gov.Kip71UpperBoundBaseFee:
-		params, err := h.EffectiveParamSet(blockNum)
-		if err != nil {
-			return err
-		}
+		params := h.EffectiveParamSet(blockNum)
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
 		}

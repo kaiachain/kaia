@@ -49,11 +49,7 @@ func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 
 func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	blockNumber := api.h.Chain.CurrentBlock().NumberU64()
-	gp, err := api.h.EffectiveParamSet(blockNumber + 1)
-	if err != nil {
-		return "", err
-	}
-
+	gp := api.h.EffectiveParamSet(blockNumber + 1)
 	gMode := gp.GovernanceMode
 	if gMode == "single" && api.h.nodeAddress != gp.GoverningNode {
 		return "", ErrVotePermissionDenied
@@ -64,7 +60,7 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", ErrInvalidKeyValue
 	}
 
-	err = api.h.VerifyVote(blockNumber+1, vote)
+	err := api.h.VerifyVote(blockNumber+1, vote)
 	if err != nil {
 		return "", err
 	}
@@ -145,10 +141,7 @@ func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[string]any, error)
 		blockNumber = uint64(num.Int64())
 	}
 
-	gp, err := api.h.EffectiveParamSet(blockNumber)
-	if err != nil {
-		return nil, err
-	}
+	gp := api.h.EffectiveParamSet(blockNumber)
 	return gov.EnumMapToStrMap(gp.ToEnumMap()), nil
 }
 

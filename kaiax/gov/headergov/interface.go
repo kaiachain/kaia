@@ -14,8 +14,8 @@ type HeaderGovModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
-	EffectiveParamSet(blockNum uint64) (gov.ParamSet, error)
-	EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error)
+	EffectiveParamSet(blockNum uint64) gov.ParamSet
+	EffectiveParamsPartial(blockNum uint64) map[gov.ParamEnum]any
 	NodeAddress() common.Address
 }
 

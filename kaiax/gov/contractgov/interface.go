@@ -9,6 +9,6 @@ import (
 type ContractGovModule interface {
 	kaiax.BaseModule
 
-	EffectiveParamSet(blockNum uint64) (gov.ParamSet, error)
-	EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error)
+	EffectiveParamSet(blockNum uint64) gov.ParamSet
+	EffectiveParamsPartial(blockNum uint64) map[gov.ParamEnum]any
 }

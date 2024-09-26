@@ -6,17 +6,17 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
 
-func (h *headerGovModule) EffectiveParamSet(blockNum uint64) (gov.ParamSet, error) {
+func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	prevEpochStart := PrevEpochStart(blockNum, h.epoch, h.isKoreHF(blockNum))
 	gh := h.GetGovernanceHistory()
 	gp, err := gh.Search(prevEpochStart)
 	if err != nil {
-		return *gov.GetDefaultGovernanceParamSet(), nil
+		return *gov.GetDefaultGovernanceParamSet()
 	}
-	return gp, nil
+	return gp
 }
 
-func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error) {
+func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamEnum]any {
 	ret := make(map[gov.ParamEnum]any)
 	for num, gov := range h.cache.Govs() {
 		if num > blockNum {
@@ -27,7 +27,7 @@ func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.Param
 		}
 	}
 
-	return ret, nil
+	return ret
 }
 
 func (h *headerGovModule) NodeAddress() common.Address {

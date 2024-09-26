@@ -159,6 +159,6 @@ func TestPrepareHeader(t *testing.T) {
 	assert.NotNil(t, header.Governance)
 
 	h.PostInsertBlock(types.NewBlockWithHeader(header))
-	ps, _ := h.EffectiveParamSet(2001)
+	ps := h.EffectiveParamSet(2001)
 	assert.Equal(t, ps.UnitPrice, uint64(100))
 }

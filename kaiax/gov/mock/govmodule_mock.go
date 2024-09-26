@@ -53,12 +53,11 @@ func (mr *MockGovModuleMockRecorder) APIs() *gomock.Call {
 }
 
 // EffectiveParamSet mocks base method.
-func (m *MockGovModule) EffectiveParamSet(arg0 uint64) (gov.ParamSet, error) {
+func (m *MockGovModule) EffectiveParamSet(arg0 uint64) gov.ParamSet {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EffectiveParamSet", arg0)
 	ret0, _ := ret[0].(gov.ParamSet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // EffectiveParamSet indicates an expected call of EffectiveParamSet.

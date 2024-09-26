@@ -64,7 +64,7 @@ func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr comm
 		ChainConfig: &params.ChainConfig{KoreCompatibleBlock: big.NewInt(100)},
 		Hgm:         mockHGM,
 	})
-	mockHGM.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{GovParamContract: addr}, nil).AnyTimes()
+	mockHGM.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{GovParamContract: addr}).AnyTimes()
 	return cgm
 }
 
@@ -85,8 +85,8 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		ps, err := cgm.EffectiveParamSet(activation.Uint64())
-		assert.NoError(t, err)
+		ps := cgm.EffectiveParamSet(activation.Uint64())
+		assert.NotNil(t, ps)
 		assert.Equal(t, uint64(25), ps.UnitPrice)
 	}
 
@@ -101,8 +101,8 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		ps, err := cgm.EffectiveParamSet(activation.Uint64())
-		assert.NoError(t, err)
+		ps := cgm.EffectiveParamSet(activation.Uint64())
+		assert.NotNil(t, ps)
 		assert.Equal(t, uint64(125), ps.UnitPrice)
 	}
 }

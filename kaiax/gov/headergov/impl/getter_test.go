@@ -10,7 +10,6 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEffectiveParams(t *testing.T) {
@@ -54,8 +53,7 @@ func TestEffectiveParams(t *testing.T) {
 				h.HandleGov(num, g)
 			}
 
-			gp, err := h.EffectiveParamSet(tc.blockNum)
-			require.NoError(t, err)
+			gp := h.EffectiveParamSet(tc.blockNum)
 			assert.Equal(t, tc.expectedPrice, gp.UnitPrice)
 		})
 	}

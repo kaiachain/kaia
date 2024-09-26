@@ -53,12 +53,11 @@ func (mr *MockHeaderGovModuleMockRecorder) APIs() *gomock.Call {
 }
 
 // EffectiveParamSet mocks base method.
-func (m *MockHeaderGovModule) EffectiveParamSet(arg0 uint64) (gov.ParamSet, error) {
+func (m *MockHeaderGovModule) EffectiveParamSet(arg0 uint64) gov.ParamSet {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EffectiveParamSet", arg0)
 	ret0, _ := ret[0].(gov.ParamSet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // EffectiveParamSet indicates an expected call of EffectiveParamSet.
@@ -68,12 +67,11 @@ func (mr *MockHeaderGovModuleMockRecorder) EffectiveParamSet(arg0 interface{}) *
 }
 
 // EffectiveParamsPartial mocks base method.
-func (m *MockHeaderGovModule) EffectiveParamsPartial(arg0 uint64) (map[gov.ParamEnum]interface{}, error) {
+func (m *MockHeaderGovModule) EffectiveParamsPartial(arg0 uint64) map[gov.ParamEnum]interface{} {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EffectiveParamsPartial", arg0)
 	ret0, _ := ret[0].(map[gov.ParamEnum]interface{})
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // EffectiveParamsPartial indicates an expected call of EffectiveParamsPartial.

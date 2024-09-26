@@ -229,16 +229,9 @@ func (api *KaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error)
 	}
 
 	rules := api.g.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	pset, err := api.g.EffectiveParamSet(blockNumber)
-	if err != nil {
-		return nil, err
-	}
-	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch, rules)
-	rewardParamSet, err := api.g.EffectiveParamSet(rewardParamNum)
-	if err != nil {
-		return nil, err
-	}
-
+	ps := api.g.EffectiveParamSet(blockNumber)
+	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), ps.Epoch, rules)
+	rewardParamSet := api.g.EffectiveParamSet(rewardParamNum)
 	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet.ToGovParamSet())
 }
 
@@ -250,11 +243,7 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 		blocknum = num.Uint64()
 	}
 
-	pset, err := g.EffectiveParamSet(blocknum)
-	if err != nil {
-		return nil
-	}
-
+	pset := g.EffectiveParamSet(blocknum)
 	latestConfig := g.chain.Config()
 	config := pset.ToGovParamSet().ToChainConfig()
 	config.ChainID = latestConfig.ChainID
@@ -318,11 +307,7 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (map[string]any, error) {
 		blockNumber = uint64(num.Int64())
 	}
 
-	gp, err := g.EffectiveParamSet(blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
+	gp := g.EffectiveParamSet(blockNumber)
 	ret := gov.EnumMapToStrMap(gp.ToEnumMap())
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)

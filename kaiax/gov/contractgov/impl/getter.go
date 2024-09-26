@@ -9,26 +9,32 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
-func (c *contractGovModule) EffectiveParamSet(blockNum uint64) (gov.ParamSet, error) {
+func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
-		return gov.ParamSet{}, err
+		return *gov.GetDefaultGovernanceParamSet()
 	}
 
 	ret := gov.ParamSet{}
 	for k, v := range m {
 		err = ret.Set(k, v)
 		if err != nil {
-			return gov.ParamSet{}, err
+			return *gov.GetDefaultGovernanceParamSet()
 		}
 	}
-	return ret, nil
+
+	return ret
 }
 
-func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error) {
-	return c.contractGetAllParamsAt(blockNum)
+func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamEnum]any {
+	m, err := c.contractGetAllParamsAt(blockNum)
+	if err != nil {
+		return nil
+	}
+	return m
 }
 
+// TODO: add comments
 func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamEnum]any, error) {
 	chain := c.Chain
 	if chain == nil {
@@ -80,10 +86,6 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 }
 
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
-	headerParams, err := c.hgm.EffectiveParamSet(blockNum)
-	if err != nil {
-		return common.Address{}, ErrHeaderGovFail
-	}
-
+	headerParams := c.hgm.EffectiveParamSet(blockNum)
 	return headerParams.GovParamContract, nil
 }
