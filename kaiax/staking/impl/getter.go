@@ -55,16 +55,17 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	}
 
 	// Read from the state
-	// 3. Read from state
 	si, err := s.getFromStateByNumber(sourceNum)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Write to DB, cache it
-	if isKaia {
+	// Only before Kaia, write to database
+	if !isKaia {
 		WriteStakingInfo(s.ChainKv, sourceNum, si)
 	}
+
+	// Cache it
 	s.stakingInfoCache.Add(sourceNum, si)
 	return si, nil
 }
