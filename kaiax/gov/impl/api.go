@@ -44,13 +44,13 @@ type KaiaAPI struct {
 type VotesAPI struct {
 	BlockNum uint64
 	Key      string
-	Value    interface{}
+	Value    any
 }
 
 type MyVotesAPI struct {
 	BlockNum uint64
 	Key      string
-	Value    interface{}
+	Value    any
 	Casted   bool
 }
 
@@ -83,7 +83,7 @@ func NewGovAPI(g *GovModule) *GovAPI {
 	return &GovAPI{g}
 }
 
-func (api *GovAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *GovAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
 	return getParams(api.g, num)
 }
 
@@ -201,7 +201,7 @@ func (api *KaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, e
 	return getStakingInfo(api.g, num)
 }
 
-func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
 	return getParams(api.g, num)
 }
 
@@ -310,7 +310,7 @@ func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
 	return err
 }
 
-func getParams(g *GovModule, num *rpc.BlockNumber) (map[string]interface{}, error) {
+func getParams(g *GovModule, num *rpc.BlockNumber) (map[string]any, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = g.chain.CurrentBlock().NumberU64()

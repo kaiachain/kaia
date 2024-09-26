@@ -138,7 +138,7 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
 	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
-	govs := make(map[gov.ParamEnum]interface{})
+	govs := make(map[gov.ParamEnum]any)
 
 	for _, vote := range prevEpochVotes {
 		govs[vote.Enum()] = vote.Value()

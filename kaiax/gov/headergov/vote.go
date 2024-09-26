@@ -13,13 +13,13 @@ type voteData struct {
 	voter common.Address
 	name  string
 	enum  gov.ParamEnum
-	value interface{} // canonicalized value
+	value any // canonicalized value
 }
 
 // NewVoteData returns a valid, canonical vote data.
 // If return is not nil, the name and the value is valid.
 // The format of the value is checked, but consistency is NOT checked.
-func NewVoteData(voter common.Address, name string, value interface{}) VoteData {
+func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, err := gov.GetParamByName(name)
 	if err != nil {
 		if name == "governance.addvalidator" || name == "governance.removevalidator" {
@@ -66,7 +66,7 @@ func (vote *voteData) Enum() gov.ParamEnum {
 	return vote.enum
 }
 
-func (vote *voteData) Value() interface{} {
+func (vote *voteData) Value() any {
 	return vote.value
 }
 
@@ -74,7 +74,7 @@ func (vote *voteData) Serialize() ([]byte, error) {
 	v := &struct {
 		Validator common.Address
 		Key       string
-		Value     interface{}
+		Value     any
 	}{
 		Validator: vote.voter,
 		Key:       vote.name,
@@ -93,7 +93,7 @@ func (vote *voteData) MarshalJSON() ([]byte, error) {
 		Voter common.Address
 		Name  string
 		Enum  gov.ParamEnum
-		Value interface{}
+		Value any
 	}{
 		Voter: vote.voter,
 		Name:  vote.name,

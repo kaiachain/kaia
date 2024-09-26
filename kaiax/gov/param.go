@@ -9,20 +9,20 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
-type canonicalizerT func(v interface{}) (interface{}, error)
+type canonicalizerT func(v any) (any, error)
 
 type Param struct {
 	Name              string
 	ParamSetFieldName string
 	Canonicalizer     canonicalizerT
-	FormatChecker     func(cv interface{}) bool // validation on canonical value.
+	FormatChecker     func(cv any) bool // validation on canonical value.
 
-	DefaultValue  interface{}
+	DefaultValue  any
 	VoteForbidden bool
 }
 
 var (
-	addressCanonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	addressCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
 			if len(v) != common.AddressLength {
@@ -40,7 +40,7 @@ var (
 		return nil, ErrCanonicalizeToAddress
 	}
 
-	addressListCanonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		stringToAddressList := func(v string) ([]common.Address, error) {
 			ret := []common.Address{}
 			for _, address := range strings.Split(v, ",") {
@@ -61,7 +61,7 @@ var (
 		return nil, ErrCanonicalizeToAddressList
 	}
 
-	bigIntCanonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	bigIntCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
 			cv, ok := new(big.Int).SetString(string(v), 10)
@@ -81,7 +81,7 @@ var (
 		return nil, ErrCanonicalizeBigInt
 	}
 
-	boolCanonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	boolCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
 			if bytes.Equal(v, []byte{0x01}) {
@@ -97,7 +97,7 @@ var (
 		return nil, ErrCanonicalizeBool
 	}
 
-	stringCanonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	stringCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
 			return string(v), nil
@@ -107,7 +107,7 @@ var (
 		return nil, ErrCanonicalizeString
 	}
 
-	uint64Canonicalizer canonicalizerT = func(v interface{}) (interface{}, error) {
+	uint64Canonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
 			if len(v) > 8 {
@@ -127,7 +127,7 @@ var (
 	}
 )
 
-func noopFormatChecker(cv interface{}) bool {
+func noopFormatChecker(cv any) bool {
 	return true
 }
 
@@ -164,7 +164,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "governance.deriveshaimpl",
 		ParamSetFieldName: "DeriveShaImpl",
 		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
 				return false
@@ -178,7 +178,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "governance.governancemode",
 		ParamSetFieldName: "GovernanceMode",
 		Canonicalizer:     stringCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
 				return false
@@ -195,7 +195,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "governance.governingnode",
 		ParamSetFieldName: "GoverningNode",
 		Canonicalizer:     addressCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			_, ok := cv.(common.Address)
 			return ok
 		},
@@ -206,7 +206,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "governance.govparamcontract",
 		ParamSetFieldName: "GovParamContract",
 		Canonicalizer:     addressCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			_, ok := cv.(common.Address)
 			return ok
 		},
@@ -225,7 +225,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "istanbul.committeesize",
 		ParamSetFieldName: "CommitteeSize",
 		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
 				return false
@@ -247,7 +247,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "istanbul.policy",
 		ParamSetFieldName: "ProposerPolicy",
 		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
 				return false
@@ -261,7 +261,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "kip71.basefeedenominator",
 		ParamSetFieldName: "BaseFeeDenominator",
 		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			return ok && v != 0
 		},
@@ -312,7 +312,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "reward.kip82ratio",
 		ParamSetFieldName: "Kip82Ratio",
 		Canonicalizer:     stringCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
 				return false
@@ -350,7 +350,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "reward.minimumstake",
 		ParamSetFieldName: "MinimumStake",
 		Canonicalizer:     bigIntCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(*big.Int)
 			if !ok {
 				return false
@@ -372,7 +372,7 @@ var Params = map[ParamEnum]*Param{
 		Name:              "reward.ratio",
 		ParamSetFieldName: "Ratio",
 		Canonicalizer:     stringCanonicalizer,
-		FormatChecker: func(cv interface{}) bool {
+		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
 				return false

@@ -12,7 +12,7 @@ import (
 func TestParamSet_Set(t *testing.T) {
 	tcs := []struct {
 		enum  ParamEnum
-		value interface{}
+		value any
 	}{
 		{enum: GovernanceDeriveShaImpl, value: uint64(2)},
 		{enum: GovernanceGovernanceMode, value: "none"},

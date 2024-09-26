@@ -14,7 +14,7 @@ import (
 func TestNewVoteData(t *testing.T) {
 	goodVotes := []struct {
 		enum  gov.ParamEnum
-		value interface{}
+		value any
 	}{
 		{enum: gov.GovernanceDeriveShaImpl, value: uint64(2)},
 		{enum: gov.GovernanceGoverningNode, value: "000000000000000000000000000abcd000000000"},
@@ -65,7 +65,7 @@ func TestNewVoteData(t *testing.T) {
 
 	badVotes := []struct {
 		enum  gov.ParamEnum
-		value interface{}
+		value any
 	}{
 		{enum: gov.GovernanceDeriveShaImpl, value: "2"},
 		{enum: gov.GovernanceDeriveShaImpl, value: false},

@@ -15,12 +15,12 @@ type HeaderGovModule interface {
 	kaiax.RewindableModule
 
 	EffectiveParamSet(blockNum uint64) (gov.ParamSet, error)
-	EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]interface{}, error)
+	EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error)
 	NodeAddress() common.Address
 }
 
 type GovData interface {
-	Items() map[gov.ParamEnum]interface{}
+	Items() map[gov.ParamEnum]any
 	Serialize() ([]byte, error)
 }
 
@@ -28,7 +28,7 @@ type VoteData interface {
 	Voter() common.Address
 	Name() string
 	Enum() gov.ParamEnum
-	Value() interface{}
+	Value() any
 
 	Serialize() ([]byte, error)
 }

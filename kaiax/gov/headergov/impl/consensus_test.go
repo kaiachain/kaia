@@ -18,8 +18,8 @@ func TestVerifyHeader(t *testing.T) {
 	var (
 		vote               = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
 		voteBytes, _       = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).Serialize()
-		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: uint64(100)}).Serialize()
-		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: uint64(200)}).Serialize()
+		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(100)}).Serialize()
+		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(200)}).Serialize()
 		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
@@ -117,10 +117,10 @@ func TestGetExpectedGovernance(t *testing.T) {
 		h  = newHeaderGovModule(t, config)
 		v1 = headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
 		v2 = headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
-		g1 = headergov.NewGovData(map[gov.ParamEnum]interface{}{
+		g1 = headergov.NewGovData(map[gov.ParamEnum]any{
 			gov.GovernanceUnitPrice: uint64(100),
 		})
-		g2 = headergov.NewGovData(map[gov.ParamEnum]interface{}{
+		g2 = headergov.NewGovData(map[gov.ParamEnum]any{
 			gov.GovernanceUnitPrice: uint64(200),
 		})
 	)

@@ -9,13 +9,13 @@ import (
 )
 
 type govData struct {
-	items map[gov.ParamEnum]interface{}
+	items map[gov.ParamEnum]any
 }
 
 // NewGovData returns a canonical & formatted gov data. VoteForbidden flag and consistency is NOT checked.
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
-func NewGovData(m map[gov.ParamEnum]interface{}) GovData {
-	items := make(map[gov.ParamEnum]interface{})
+func NewGovData(m map[gov.ParamEnum]any) GovData {
+	items := make(map[gov.ParamEnum]any)
 	for enum, value := range m {
 		param, ok := gov.Params[enum]
 		if !ok {
@@ -39,7 +39,7 @@ func NewGovData(m map[gov.ParamEnum]interface{}) GovData {
 }
 
 func (g *govData) MarshalJSON() ([]byte, error) {
-	tmp := make(map[string]interface{})
+	tmp := make(map[string]any)
 	for enum, value := range g.items {
 		if bigInt, ok := value.(*big.Int); ok {
 			tmp[gov.Params[enum].Name] = bigInt.String()
@@ -51,7 +51,7 @@ func (g *govData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tmp)
 }
 
-func (g *govData) Items() map[gov.ParamEnum]interface{} {
+func (g *govData) Items() map[gov.ParamEnum]any {
 	return g.items
 }
 
@@ -70,7 +70,7 @@ func DeserializeHeaderGov(b []byte) (GovData, error) {
 		return nil, ErrInvalidRlp
 	}
 
-	strMap := make(map[string]interface{})
+	strMap := make(map[string]any)
 	err = json.Unmarshal(rlpDecoded, &strMap)
 	if err != nil {
 		return nil, ErrInvalidJson

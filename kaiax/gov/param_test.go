@@ -19,7 +19,7 @@ func TestParam(t *testing.T) {
 func TestAddressCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		desc          string
-		input         interface{}
+		input         any
 		expected      common.Address
 		expectedError error
 	}{
@@ -50,7 +50,7 @@ func TestAddressCanonicalizer(t *testing.T) {
 func TestAddressListCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		desc          string
-		input         interface{}
+		input         any
 		expected      []common.Address
 		expectedError error
 	}{
@@ -75,7 +75,7 @@ func TestAddressListCanonicalizer(t *testing.T) {
 func TestBigIntCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		name          string
-		input         interface{}
+		input         any
 		expected      *big.Int
 		expectedError error
 	}{
@@ -101,7 +101,7 @@ func TestBigIntCanonicalizer(t *testing.T) {
 func TestBoolCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		name          string
-		input         interface{}
+		input         any
 		expected      bool
 		expectedError error
 	}{
@@ -128,7 +128,7 @@ func TestBoolCanonicalizer(t *testing.T) {
 func TestStringCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		desc          string
-		input         interface{}
+		input         any
 		expected      string
 		expectedError error
 	}{
@@ -154,7 +154,7 @@ func TestStringCanonicalizer(t *testing.T) {
 func TestUint64Canonicalizer(t *testing.T) {
 	tcs := []struct {
 		desc          string
-		input         interface{}
+		input         any
 		expected      uint64
 		expectedError error
 	}{

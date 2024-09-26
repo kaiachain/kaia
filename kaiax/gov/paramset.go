@@ -45,7 +45,7 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 }
 
 // Set the canonical value in the ParamSet for the corresponding parameter name.
-func (p *ParamSet) Set(enum ParamEnum, cv interface{}) error {
+func (p *ParamSet) Set(enum ParamEnum, cv any) error {
 	param, ok := Params[enum]
 	if !ok {
 		return ErrInvalidParamEnum
@@ -65,7 +65,7 @@ func (p *ParamSet) Set(enum ParamEnum, cv interface{}) error {
 	return nil
 }
 
-func (p *ParamSet) SetFromEnumMap(m map[ParamEnum]interface{}) error {
+func (p *ParamSet) SetFromEnumMap(m map[ParamEnum]any) error {
 	for enum, value := range m {
 		err := p.Set(enum, value)
 		if err != nil {
@@ -83,8 +83,8 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
-func (p *ParamSet) ToEnumMap() map[ParamEnum]interface{} {
-	ret := make(map[ParamEnum]interface{})
+func (p *ParamSet) ToEnumMap() map[ParamEnum]any {
+	ret := make(map[ParamEnum]any)
 
 	// Iterate through all params in Params and ensure they're in the result
 	for enum, param := range Params {
@@ -104,7 +104,7 @@ func (p *ParamSet) ToEnumMap() map[ParamEnum]interface{} {
 
 // TODO: remove this. Currently it's used for GetRewards API.
 func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	for enum := range Params {
 		param := Params[enum]
 		fieldValue := reflect.ValueOf(p).FieldByName(param.ParamSetFieldName)
@@ -117,16 +117,16 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 	return ps
 }
 
-func EnumMapToStrMap(enumMap map[ParamEnum]interface{}) map[string]interface{} {
-	ret := make(map[string]interface{})
+func EnumMapToStrMap(enumMap map[ParamEnum]any) map[string]any {
+	ret := make(map[string]any)
 	for enum, value := range enumMap {
 		ret[Params[enum].Name] = value
 	}
 	return ret
 }
 
-func StrMapToEnumMap(strMap map[string]interface{}) map[ParamEnum]interface{} {
-	ret := make(map[ParamEnum]interface{})
+func StrMapToEnumMap(strMap map[string]any) map[ParamEnum]any {
+	ret := make(map[ParamEnum]any)
 	for name, value := range strMap {
 		ret[ParamNameToEnum[name]] = value
 	}

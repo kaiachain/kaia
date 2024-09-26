@@ -25,13 +25,13 @@ type headerGovAPI struct {
 type VotesApi struct {
 	BlockNum uint64
 	Key      string
-	Value    interface{}
+	Value    any
 }
 
 type MyVotesApi struct {
 	BlockNum uint64
 	Key      string
-	Value    interface{}
+	Value    any
 	Casted   bool
 }
 
@@ -47,7 +47,7 @@ func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 	return &headerGovAPI{s}
 }
 
-func (api *headerGovAPI) Vote(name string, value interface{}) (string, error) {
+func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	blockNumber := api.h.Chain.CurrentBlock().NumberU64()
 	gp, err := api.h.EffectiveParamSet(blockNumber + 1)
 	if err != nil {
@@ -133,11 +133,11 @@ func (api *headerGovAPI) NodeAddress() common.Address {
 	return api.h.nodeAddress
 }
 
-func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
 	return api.getParams(num)
 }
 
-func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[string]any, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.h.Chain.CurrentBlock().NumberU64()

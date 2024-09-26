@@ -25,11 +25,11 @@ func (c *contractGovModule) EffectiveParamSet(blockNum uint64) (gov.ParamSet, er
 	return ret, nil
 }
 
-func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]interface{}, error) {
+func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) (map[gov.ParamEnum]any, error) {
 	return c.contractGetAllParamsAt(blockNum)
 }
 
-func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamEnum]interface{}, error) {
+func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamEnum]any, error) {
 	chain := c.Chain
 	if chain == nil {
 		return nil, ErrNotReady
@@ -63,7 +63,7 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 		return nil, nil
 	}
 
-	ret := make(map[gov.ParamEnum]interface{})
+	ret := make(map[gov.ParamEnum]any)
 	for i := 0; i < len(names); i++ {
 		param, err := gov.GetParamByName(names[i])
 		if err != nil {
