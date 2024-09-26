@@ -21,7 +21,7 @@ type HeaderGovModule interface {
 
 type GovData interface {
 	Items() map[gov.ParamEnum]any
-	Serialize() ([]byte, error)
+	ToGovBytes() (GovBytes, error)
 }
 
 type VoteData interface {

@@ -18,8 +18,8 @@ func TestVerifyHeader(t *testing.T) {
 	var (
 		vote               = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
 		voteBytes, _       = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).ToVoteBytes()
-		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(100)}).Serialize()
-		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(200)}).Serialize()
+		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
+		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
 		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)

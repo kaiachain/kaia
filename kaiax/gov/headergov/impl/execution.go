@@ -23,14 +23,15 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 	}
 
 	if len(b.Header().Governance) > 0 {
-		gov, err := headergov.DeserializeHeaderGov(b.Header().Governance)
+		var gb headergov.GovBytes = b.Header().Governance
+		gov, err := gb.ToGovData()
 		if err != nil {
-			logger.Error("DeserializeHeaderGov error", "governance", b.Header().Governance, "err", err)
+			logger.Error("DeserializeHeaderGov error", "governance", gb, "err", err)
 			return err
 		}
 		err = h.HandleGov(b.NumberU64(), gov)
 		if err != nil {
-			logger.Error("HandleGov error", "governance", b.Header().Governance, "err", err)
+			logger.Error("HandleGov error", "governance", gb, "err", err)
 			return err
 		}
 	}

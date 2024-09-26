@@ -131,7 +131,7 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 	for _, blockNum := range *govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
 
-		parsedGov, err := headergov.DeserializeHeaderGov(header.Governance)
+		parsedGov, err := headergov.GovBytes(header.Governance).ToGovData()
 		if err != nil {
 			// For tests, genesis' governance can be nil.
 			if blockNum == 0 {

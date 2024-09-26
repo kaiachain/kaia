@@ -25,7 +25,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		db    = dbm.GetMemDB()
 
 		m      = gov.GetDefaultGovernanceParamSet().ToEnumMap()
-		gov, _ = headergov.NewGovData(m).Serialize()
+		gov, _ = headergov.NewGovData(m).ToGovBytes()
 	)
 
 	WriteVoteDataBlockNums(db, &StoredUint64Array{})
@@ -92,7 +92,7 @@ func TestReadGovDataFromDB(t *testing.T) {
 		2: headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: ps2.UnitPrice}),
 	}
 	for num, govData := range govs {
-		headerGovData, err := govData.Serialize()
+		headerGovData, err := govData.ToGovBytes()
 		require.NoError(t, err)
 		chain.EXPECT().GetHeaderByNumber(num).Return(&types.Header{Governance: headerGovData})
 	}

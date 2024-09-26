@@ -141,14 +141,15 @@ func TestGovSerialization(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("blockNum_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
-			actual, err := DeserializeHeaderGov(hexutil.MustDecode(tc.serializedGovData))
+			var gb GovBytes = hexutil.MustDecode(tc.serializedGovData)
+			actual, err := gb.ToGovData()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.data, actual, "DeserializeHeaderGov() failed")
 
 			// Test serialization
-			serialized, err := actual.Serialize()
+			serialized, err := actual.ToGovBytes()
 			assert.NoError(t, err)
-			deserialized, err := DeserializeHeaderGov(serialized)
+			deserialized, err := GovBytes(serialized).ToGovData()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.data, deserialized, "governanceData.Serialize() failed")
 		})

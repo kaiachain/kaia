@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/rlp"
 )
+
+type GovBytes []byte
 
 type govData struct {
 	items map[gov.ParamEnum]any
@@ -55,7 +58,7 @@ func (g *govData) Items() map[gov.ParamEnum]any {
 	return g.items
 }
 
-func (g *govData) Serialize() ([]byte, error) {
+func (g *govData) ToGovBytes() (GovBytes, error) {
 	j, err := g.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -63,9 +66,9 @@ func (g *govData) Serialize() ([]byte, error) {
 	return rlp.EncodeToBytes(j)
 }
 
-func DeserializeHeaderGov(b []byte) (GovData, error) {
+func (gb GovBytes) ToGovData() (GovData, error) {
 	rlpDecoded := []byte("")
-	err := rlp.DecodeBytes(b, &rlpDecoded)
+	err := rlp.DecodeBytes(gb, &rlpDecoded)
 	if err != nil {
 		return nil, ErrInvalidRlp
 	}
@@ -95,4 +98,8 @@ func DeserializeHeaderGov(b []byte) (GovData, error) {
 	}
 
 	return gov, nil
+}
+
+func (gb GovBytes) String() string {
+	return hexutil.Encode(gb)
 }

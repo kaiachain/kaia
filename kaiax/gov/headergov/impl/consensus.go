@@ -51,9 +51,10 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
-	actual, err := headergov.DeserializeHeaderGov(header.Governance)
+	var gb headergov.GovBytes = header.Governance
+	actual, err := gb.ToGovData()
 	if err != nil {
-		logger.Error("Failed to parse governance", "num", header.Number.Uint64(), "err", err)
+		logger.Error("DeserializeHeaderGov error", "num", header.Number.Uint64(), "governance", gb, "err", err)
 		return err
 	}
 
@@ -74,7 +75,7 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	if header.Number.Uint64()%h.epoch == 0 {
 		gov := h.getExpectedGovernance(header.Number.Uint64())
 		if len(gov.Items()) > 0 {
-			header.Governance, _ = gov.Serialize()
+			header.Governance, _ = gov.ToGovBytes()
 		}
 	}
 
