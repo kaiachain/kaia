@@ -78,7 +78,7 @@ func (h *HeaderCache) AddVote(epochIdx, blockNum uint64, vote VoteData) {
 func (h *HeaderCache) AddGov(blockNum uint64, gov GovData) {
 	h.governances[blockNum] = gov
 
-	h.history = GetHistory(h.governances)
+	h.history = GovsToHistory(h.governances)
 }
 
 func (h *HeaderCache) RemoveVotesAfter(blockNum uint64) {
@@ -103,5 +103,5 @@ func (h *HeaderCache) RemoveGovAfter(blockNum uint64) {
 	}
 
 	// Regenerate the governance history after removing entries
-	h.history = GetHistory(h.governances)
+	h.history = GovsToHistory(h.governances)
 }

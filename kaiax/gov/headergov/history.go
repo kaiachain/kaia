@@ -8,8 +8,8 @@ import (
 
 type History map[uint64]gov.ParamSet
 
-// GetHistory generates history based on sorted gov blocks.
-func GetHistory(govs map[uint64]GovData) History {
+// GovsToHistory generates history based on sorted gov blocks.
+func GovsToHistory(govs map[uint64]GovData) History {
 	gh := make(map[uint64]gov.ParamSet)
 
 	// we must ensure that gov history is not empty

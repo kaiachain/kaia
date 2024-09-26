@@ -18,7 +18,7 @@ func TestGetHistory(t *testing.T) {
 		}),
 	}
 
-	history := GetHistory(govs)
+	history := GovsToHistory(govs)
 	assert.Equal(t, uint64(100), history[0].UnitPrice)
 	assert.Equal(t, uint64(200), history[4].UnitPrice)
 }
@@ -33,7 +33,7 @@ func TestSearch(t *testing.T) {
 		}),
 	}
 
-	gh := GetHistory(govs)
+	gh := GovsToHistory(govs)
 	for i := 0; i < 4; i++ {
 		t.Run(fmt.Sprintf("Block %d", i), func(t *testing.T) {
 			gp, err := gh.Search(uint64(i))
