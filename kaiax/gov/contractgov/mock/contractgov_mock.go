@@ -49,10 +49,10 @@ func (mr *MockContractGovModuleMockRecorder) EffectiveParamSet(arg0 interface{})
 }
 
 // EffectiveParamsPartial mocks base method.
-func (m *MockContractGovModule) EffectiveParamsPartial(arg0 uint64) map[gov.ParamEnum]interface{} {
+func (m *MockContractGovModule) EffectiveParamsPartial(arg0 uint64) map[gov.ParamName]interface{} {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EffectiveParamsPartial", arg0)
-	ret0, _ := ret[0].(map[gov.ParamEnum]interface{})
+	ret0, _ := ret[0].(map[gov.ParamName]interface{})
 	return ret0
 }
 

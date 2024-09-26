@@ -16,7 +16,7 @@ func TestEffectiveParams(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 	epoch := uint64(1000)
 	gov := map[uint64]headergov.GovData{
-		1000: headergov.NewGovData(map[gov.ParamEnum]any{
+		1000: headergov.NewGovData(map[gov.ParamName]any{
 			gov.GovernanceUnitPrice: uint64(750),
 		}),
 	}

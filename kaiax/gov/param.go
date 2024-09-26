@@ -12,7 +12,6 @@ import (
 type canonicalizerT func(v any) (any, error)
 
 type Param struct {
-	Name              string
 	ParamSetFieldName string
 	Canonicalizer     canonicalizerT
 	FormatChecker     func(cv any) bool // validation on canonical value.
@@ -131,37 +130,35 @@ func noopFormatChecker(cv any) bool {
 	return true
 }
 
-// ParamEnum represents the name of a governance parameter
-type ParamEnum int
+type ParamName string
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
 const (
-	GovernanceDeriveShaImpl ParamEnum = iota
-	GovernanceGovernanceMode
-	GovernanceGoverningNode
-	GovernanceGovParamContract
-	GovernanceUnitPrice
-	IstanbulCommitteeSize
-	IstanbulEpoch
-	IstanbulPolicy
-	Kip71BaseFeeDenominator
-	Kip71GasTarget
-	Kip71LowerBoundBaseFee
-	Kip71MaxBlockGasUsedForBaseFee
-	Kip71UpperBoundBaseFee
-	RewardDeferredTxFee
-	RewardKip82Ratio
-	RewardMintingAmount
-	RewardMinimumStake
-	RewardProposerUpdateInterval
-	RewardRatio
-	RewardStakingUpdateInterval
-	RewardUseGiniCoeff
+	GovernanceDeriveShaImpl        ParamName = "governance.deriveshaimpl"
+	GovernanceGovernanceMode       ParamName = "governance.governancemode"
+	GovernanceGoverningNode        ParamName = "governance.governingnode"
+	GovernanceGovParamContract     ParamName = "governance.govparamcontract"
+	GovernanceUnitPrice            ParamName = "governance.unitprice"
+	IstanbulCommitteeSize          ParamName = "istanbul.committeesize"
+	IstanbulEpoch                  ParamName = "istanbul.epoch"
+	IstanbulPolicy                 ParamName = "istanbul.policy"
+	Kip71BaseFeeDenominator        ParamName = "kip71.basefeedenominator"
+	Kip71GasTarget                 ParamName = "kip71.gastarget"
+	Kip71LowerBoundBaseFee         ParamName = "kip71.lowerboundbasefee"
+	Kip71MaxBlockGasUsedForBaseFee ParamName = "kip71.maxblockgasusedforbasefee"
+	Kip71UpperBoundBaseFee         ParamName = "kip71.upperboundbasefee"
+	RewardDeferredTxFee            ParamName = "reward.deferredtxfee"
+	RewardKip82Ratio               ParamName = "reward.kip82ratio"
+	RewardMintingAmount            ParamName = "reward.mintingamount"
+	RewardMinimumStake             ParamName = "reward.minimumstake"
+	RewardProposerUpdateInterval   ParamName = "reward.proposerupdateinterval"
+	RewardRatio                    ParamName = "reward.ratio"
+	RewardStakingUpdateInterval    ParamName = "reward.stakingupdateinterval"
+	RewardUseGiniCoeff             ParamName = "reward.useginicoeff"
 )
 
-var Params = map[ParamEnum]*Param{
+var Params = map[ParamName]*Param{
 	GovernanceDeriveShaImpl: {
-		Name:              "governance.deriveshaimpl",
 		ParamSetFieldName: "DeriveShaImpl",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -169,13 +166,12 @@ var Params = map[ParamEnum]*Param{
 			if !ok {
 				return false
 			}
-			return v <= 2
+			return v <= 2 // deriveShaImpl has only three options.
 		},
 		DefaultValue:  uint64(0),
 		VoteForbidden: false,
 	},
 	GovernanceGovernanceMode: {
-		Name:              "governance.governancemode",
 		ParamSetFieldName: "GovernanceMode",
 		Canonicalizer:     stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -192,7 +188,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: true,
 	},
 	GovernanceGoverningNode: {
-		Name:              "governance.governingnode",
 		ParamSetFieldName: "GoverningNode",
 		Canonicalizer:     addressCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -203,7 +198,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	GovernanceGovParamContract: {
-		Name:              "governance.govparamcontract",
 		ParamSetFieldName: "GovParamContract",
 		Canonicalizer:     addressCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -214,7 +208,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	GovernanceUnitPrice: {
-		Name:              "governance.unitprice",
 		ParamSetFieldName: "UnitPrice",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -222,7 +215,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	IstanbulCommitteeSize: {
-		Name:              "istanbul.committeesize",
 		ParamSetFieldName: "CommitteeSize",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -236,7 +228,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	IstanbulEpoch: {
-		Name:              "istanbul.epoch",
 		ParamSetFieldName: "Epoch",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -244,7 +235,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     true,
 	},
 	IstanbulPolicy: {
-		Name:              "istanbul.policy",
 		ParamSetFieldName: "ProposerPolicy",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -258,7 +248,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: true,
 	},
 	Kip71BaseFeeDenominator: {
-		Name:              "kip71.basefeedenominator",
 		ParamSetFieldName: "BaseFeeDenominator",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -269,7 +258,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	Kip71GasTarget: {
-		Name:              "kip71.gastarget",
 		ParamSetFieldName: "GasTarget",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -277,7 +265,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	Kip71LowerBoundBaseFee: {
-		Name:              "kip71.lowerboundbasefee",
 		ParamSetFieldName: "LowerBoundBaseFee",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -285,7 +272,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	Kip71MaxBlockGasUsedForBaseFee: {
-		Name:              "kip71.maxblockgasusedforbasefee",
 		ParamSetFieldName: "MaxBlockGasUsedForBaseFee",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -293,7 +279,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	Kip71UpperBoundBaseFee: {
-		Name:              "kip71.upperboundbasefee",
 		ParamSetFieldName: "UpperBoundBaseFee",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -301,7 +286,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	RewardDeferredTxFee: {
-		Name:              "reward.deferredtxfee",
 		ParamSetFieldName: "DeferredTxFee",
 		Canonicalizer:     boolCanonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -309,7 +293,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     true,
 	},
 	RewardKip82Ratio: {
-		Name:              "reward.kip82ratio",
 		ParamSetFieldName: "Kip82Ratio",
 		Canonicalizer:     stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -339,7 +322,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	RewardMintingAmount: {
-		Name:              "reward.mintingamount",
 		ParamSetFieldName: "MintingAmount",
 		Canonicalizer:     bigIntCanonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -347,7 +329,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     false,
 	},
 	RewardMinimumStake: {
-		Name:              "reward.minimumstake",
 		ParamSetFieldName: "MinimumStake",
 		Canonicalizer:     bigIntCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -361,7 +342,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: true,
 	},
 	RewardProposerUpdateInterval: {
-		Name:              "reward.proposerupdateinterval",
 		ParamSetFieldName: "ProposerUpdateInterval",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -369,7 +349,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     true,
 	},
 	RewardRatio: {
-		Name:              "reward.ratio",
 		ParamSetFieldName: "Ratio",
 		Canonicalizer:     stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
@@ -399,7 +378,6 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden: false,
 	},
 	RewardStakingUpdateInterval: {
-		Name:              "reward.stakingupdateinterval",
 		ParamSetFieldName: "StakingUpdateInterval",
 		Canonicalizer:     uint64Canonicalizer,
 		FormatChecker:     noopFormatChecker,
@@ -407,30 +385,12 @@ var Params = map[ParamEnum]*Param{
 		VoteForbidden:     true,
 	},
 	RewardUseGiniCoeff: {
-		Name:              "reward.useginicoeff",
 		ParamSetFieldName: "UseGiniCoeff",
 		Canonicalizer:     boolCanonicalizer,
 		FormatChecker:     noopFormatChecker,
 		DefaultValue:      false,
 		VoteForbidden:     true,
 	},
-}
-
-var ParamNameToEnum map[string]ParamEnum
-
-func init() {
-	ParamNameToEnum = make(map[string]ParamEnum)
-	for k, v := range Params {
-		ParamNameToEnum[v.Name] = k
-	}
-}
-
-func GetParamByName(name string) (*Param, error) {
-	enum, ok := ParamNameToEnum[name]
-	if !ok {
-		return nil, ErrInvalidParamName
-	}
-	return Params[enum], nil
 }
 
 const (

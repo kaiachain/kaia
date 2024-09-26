@@ -16,10 +16,10 @@ import (
 func TestVerifyHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
-		vote               = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
-		voteBytes, _       = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).ToVoteBytes()
-		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
-		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
+		vote               = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
+		voteBytes, _       = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
+		govBytes, _        = headergov.NewGovData(map[gov.ParamName]any{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
+		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamName]any{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
 		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
@@ -72,13 +72,13 @@ func TestVerifyVote(t *testing.T) {
 		vote          headergov.VoteData
 		expectedError error
 	}{
-		{desc: "valid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, contract), expectedError: nil},
-		{desc: "valid lower", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71LowerBoundBaseFee].Name, uint64(1)), expectedError: nil},
-		{desc: "valid upper", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71UpperBoundBaseFee].Name, uint64(1e18)), expectedError: nil},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, common.Address{}), expectedError: ErrGovParamNotAccount},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.GovernanceGovParamContract].Name, eoa), expectedError: ErrGovParamNotContract},
-		{desc: "invalid lower", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71LowerBoundBaseFee].Name, uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
-		{desc: "invalid upper", vote: headergov.NewVoteData(common.Address{}, gov.Params[gov.Kip71UpperBoundBaseFee].Name, uint64(1)), expectedError: ErrUpperBoundBaseFee},
+		{desc: "valid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
+		{desc: "valid lower", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71LowerBoundBaseFee), uint64(1)), expectedError: nil},
+		{desc: "valid upper", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71UpperBoundBaseFee), uint64(1e18)), expectedError: nil},
+		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), common.Address{}), expectedError: ErrGovParamNotAccount},
+		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), eoa), expectedError: ErrGovParamNotContract},
+		{desc: "invalid lower", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71LowerBoundBaseFee), uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
+		{desc: "invalid upper", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
 	}
 
 	for _, tc := range tcs {
@@ -96,7 +96,7 @@ func TestGetVotesInEpoch(t *testing.T) {
 		},
 	})
 
-	paramName := gov.Params[gov.GovernanceUnitPrice].Name
+	paramName := string(gov.GovernanceUnitPrice)
 	v1 := headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
 	h.HandleVote(500, v1)
 	v2 := headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
@@ -108,7 +108,7 @@ func TestGetVotesInEpoch(t *testing.T) {
 
 func TestGetExpectedGovernance(t *testing.T) {
 	var (
-		paramName = gov.Params[gov.GovernanceUnitPrice].Name
+		paramName = string(gov.GovernanceUnitPrice)
 		config    = &params.ChainConfig{
 			Istanbul: &params.IstanbulConfig{
 				Epoch: 1000,
@@ -117,10 +117,10 @@ func TestGetExpectedGovernance(t *testing.T) {
 		h  = newHeaderGovModule(t, config)
 		v1 = headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
 		v2 = headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
-		g1 = headergov.NewGovData(map[gov.ParamEnum]any{
+		g1 = headergov.NewGovData(map[gov.ParamName]any{
 			gov.GovernanceUnitPrice: uint64(100),
 		})
-		g2 = headergov.NewGovData(map[gov.ParamEnum]any{
+		g2 = headergov.NewGovData(map[gov.ParamName]any{
 			gov.GovernanceUnitPrice: uint64(200),
 		})
 	)
@@ -139,7 +139,7 @@ func TestPrepareHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
 		h      = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
-		vote   = headergov.NewVoteData(h.nodeAddress, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
+		vote   = headergov.NewVoteData(h.nodeAddress, string(gov.GovernanceUnitPrice), uint64(100))
 		header = &types.Header{}
 	)
 

@@ -19,8 +19,8 @@ func TestPostInsertBlock(t *testing.T) {
 			Epoch: 10,
 		},
 	})
-	vote, _ := headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).ToVoteBytes()
-	gov, _ := headergov.NewGovData(map[gov.ParamEnum]any{
+	vote, _ := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
+	gov, _ := headergov.NewGovData(map[gov.ParamName]any{
 		gov.GovernanceUnitPrice: uint64(100),
 	}).ToGovBytes()
 
@@ -52,7 +52,7 @@ func TestHandleVoteGov(t *testing.T) {
 		},
 	})
 
-	v := headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
+	v := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
 	require.NotNil(t, v)
 	require.Equal(t, 0, len(h.cache.GroupedVotes()))
 	require.Equal(t, 1, len(h.cache.Govs())) // gov at genesis
@@ -68,7 +68,7 @@ func TestHandleVoteGov(t *testing.T) {
 
 	// test duplicate gov handling
 	for range 2 {
-		err := h.HandleGov(govBlock, headergov.NewGovData(map[gov.ParamEnum]any{
+		err := h.HandleGov(govBlock, headergov.NewGovData(map[gov.ParamName]any{
 			gov.GovernanceUnitPrice: uint64(100),
 		}))
 		assert.NoError(t, err)

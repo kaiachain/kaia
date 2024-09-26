@@ -90,7 +90,7 @@ func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesApi {
 	for blockNum, vote := range votesInEpoch {
 		ret = append(ret, VotesApi{
 			BlockNum: blockNum,
-			Key:      vote.Name(),
+			Key:      string(vote.Name()),
 			Value:    vote.Value(),
 		})
 	}
@@ -107,7 +107,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesApi {
 			ret = append(ret, MyVotesApi{
 				BlockNum: blockNum,
 				Casted:   true,
-				Key:      vote.Name(),
+				Key:      string(vote.Name()),
 				Value:    vote.Value(),
 			})
 		}
@@ -117,7 +117,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesApi {
 		ret = append(ret, MyVotesApi{
 			BlockNum: 0,
 			Casted:   false,
-			Key:      vote.Name(),
+			Key:      string(vote.Name()),
 			Value:    vote.Value(),
 		})
 	}
@@ -129,11 +129,11 @@ func (api *headerGovAPI) NodeAddress() common.Address {
 	return api.h.nodeAddress
 }
 
-func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
+func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	return api.getParams(num)
 }
 
-func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[string]any, error) {
+func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
@@ -142,7 +142,7 @@ func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[string]any, error)
 	}
 
 	gp := api.h.EffectiveParamSet(blockNumber)
-	return gov.EnumMapToStrMap(gp.ToEnumMap()), nil
+	return gp.ToEnumMap(), nil
 }
 
 func (api *headerGovAPI) Status() StatusApi {

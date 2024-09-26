@@ -14,8 +14,7 @@ type VoteBytes []byte
 
 type voteData struct {
 	voter common.Address
-	name  string
-	enum  gov.ParamEnum
+	name  gov.ParamName
 	value any // canonicalized value
 }
 
@@ -23,12 +22,12 @@ type voteData struct {
 // If return is not nil, the name and the value is valid.
 // The format of the value is checked, but consistency is NOT checked.
 func NewVoteData(voter common.Address, name string, value any) VoteData {
-	param, err := gov.GetParamByName(name)
-	if err != nil {
+	param, ok := gov.Params[gov.ParamName(name)]
+	if !ok {
 		if name == "governance.addvalidator" || name == "governance.removevalidator" {
 			return &voteData{
 				voter: voter,
-				name:  name,
+				name:  gov.ParamName(name),
 				value: []common.Address{},
 			}
 		}
@@ -51,8 +50,7 @@ func NewVoteData(voter common.Address, name string, value any) VoteData {
 
 	return &voteData{
 		voter: voter,
-		name:  name,
-		enum:  gov.ParamNameToEnum[name],
+		name:  gov.ParamName(name),
 		value: cv,
 	}
 }
@@ -61,12 +59,8 @@ func (vote *voteData) Voter() common.Address {
 	return vote.voter
 }
 
-func (vote *voteData) Name() string {
+func (vote *voteData) Name() gov.ParamName {
 	return vote.name
-}
-
-func (vote *voteData) Enum() gov.ParamEnum {
-	return vote.enum
 }
 
 func (vote *voteData) Value() any {
@@ -80,7 +74,7 @@ func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 		Value     any
 	}{
 		Validator: vote.voter,
-		Key:       vote.name,
+		Key:       string(vote.name),
 		Value:     vote.value,
 	}
 
@@ -95,12 +89,10 @@ func (vote *voteData) MarshalJSON() ([]byte, error) {
 	v := &struct {
 		Voter common.Address
 		Name  string
-		Enum  gov.ParamEnum
 		Value any
 	}{
 		Voter: vote.voter,
-		Name:  vote.name,
-		Enum:  vote.enum,
+		Name:  string(vote.name),
 		Value: vote.value,
 	}
 

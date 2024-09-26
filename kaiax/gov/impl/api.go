@@ -83,7 +83,7 @@ func NewGovAPI(g *GovModule) *GovAPI {
 	return &GovAPI{g}
 }
 
-func (api *GovAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
+func (api *GovAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	return getParams(api.g, num)
 }
 
@@ -201,7 +201,7 @@ func (api *KaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, e
 	return getStakingInfo(api.g, num)
 }
 
-func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]any, error) {
+func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	return getParams(api.g, num)
 }
 
@@ -299,7 +299,7 @@ func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
 	return err
 }
 
-func getParams(g *GovModule, num *rpc.BlockNumber) (map[string]any, error) {
+func getParams(g *GovModule, num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = g.chain.CurrentBlock().NumberU64()
@@ -308,28 +308,28 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (map[string]any, error) {
 	}
 
 	gp := g.EffectiveParamSet(blockNumber)
-	ret := gov.EnumMapToStrMap(gp.ToEnumMap())
+	ret := gp.ToEnumMap()
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
 	rule := g.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
 	if rule.IsKore {
 		// Gini option deprecated since Kore, as All committee members have an equal chance
 		// of being elected block proposers.
-		if _, ok := ret[gov.Params[gov.RewardUseGiniCoeff].Name]; ok {
-			ret[gov.Params[gov.RewardUseGiniCoeff].Name] = false
+		if _, ok := ret[gov.RewardUseGiniCoeff]; ok {
+			ret[gov.RewardUseGiniCoeff] = false
 		}
 	}
 	if rule.IsRandao {
 		// Block proposer is randomly elected at every block with Randao,
 		// no more precalculated proposer list.
-		if _, ok := ret[gov.Params[gov.RewardProposerUpdateInterval].Name]; ok {
-			ret[gov.Params[gov.RewardProposerUpdateInterval].Name] = 1
+		if _, ok := ret[gov.RewardProposerUpdateInterval]; ok {
+			ret[gov.RewardProposerUpdateInterval] = 1
 		}
 	}
 	if rule.IsKaia {
 		// Staking information updated every block since Kaia.
-		if _, ok := ret[gov.Params[gov.RewardStakingUpdateInterval].Name]; ok {
-			ret[gov.Params[gov.RewardStakingUpdateInterval].Name] = 1
+		if _, ok := ret[gov.RewardStakingUpdateInterval]; ok {
+			ret[gov.RewardStakingUpdateInterval] = 1
 		}
 	}
 

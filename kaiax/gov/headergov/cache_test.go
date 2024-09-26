@@ -12,7 +12,7 @@ import (
 func TestVote(t *testing.T) {
 	var (
 		cache = NewHeaderGovCache()
-		v     = NewVoteData(common.HexToAddress("0x1"), gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
+		v     = NewVoteData(common.HexToAddress("0x1"), string(gov.GovernanceUnitPrice), uint64(100))
 		epoch = 3
 		n     = 10
 	)
@@ -29,7 +29,7 @@ func TestVote(t *testing.T) {
 func TestGov(t *testing.T) {
 	var (
 		cache = NewHeaderGovCache()
-		g     = NewGovData(map[gov.ParamEnum]interface{}{gov.GovernanceUnitPrice: uint64(100)})
+		g     = NewGovData(map[gov.ParamName]interface{}{gov.GovernanceUnitPrice: uint64(100)})
 		n     = 10
 	)
 

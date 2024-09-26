@@ -96,7 +96,7 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 	// TODO: check if Voter is the block proposer.
 
 	// consistency check
-	switch vote.Enum() {
+	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
 		// TODO: check in valset
 		break
@@ -134,10 +134,10 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
 	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
-	govs := make(map[gov.ParamEnum]any)
+	govs := make(map[gov.ParamName]any)
 
 	for _, vote := range prevEpochVotes {
-		govs[vote.Enum()] = vote.Value()
+		govs[vote.Name()] = vote.Value()
 	}
 
 	return headergov.NewGovData(govs)

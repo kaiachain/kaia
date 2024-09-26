@@ -26,7 +26,7 @@ func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	return ret
 }
 
-func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamEnum]any {
+func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamName]any {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
 		return nil
@@ -35,7 +35,7 @@ func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.Para
 }
 
 // TODO: add comments
-func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamEnum]any, error) {
+func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamName]any, error) {
 	chain := c.Chain
 	if chain == nil {
 		return nil, ErrNotReady
@@ -69,17 +69,17 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 		return nil, nil
 	}
 
-	ret := make(map[gov.ParamEnum]any)
+	ret := make(map[gov.ParamName]any)
 	for i := 0; i < len(names); i++ {
-		param, err := gov.GetParamByName(names[i])
-		if err != nil {
-			return nil, err
+		param, ok := gov.Params[gov.ParamName(names[i])]
+		if !ok {
+			return nil, gov.ErrInvalidParamName
 		}
 		cv, err := param.Canonicalizer(values[i])
 		if err != nil {
 			return nil, err
 		}
-		ret[gov.ParamNameToEnum[names[i]]] = cv
+		ret[gov.ParamName(names[i])] = cv
 	}
 
 	return ret, nil

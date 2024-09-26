@@ -54,7 +54,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 }
 
 func TestReadGovVoteBlockNumsFromDB(t *testing.T) {
-	paramName := gov.Params[gov.GovernanceUnitPrice].Name
+	paramName := string(gov.GovernanceUnitPrice)
 	votes := map[uint64]headergov.VoteData{
 		1:   headergov.NewVoteData(common.Address{1}, paramName, uint64(100)),
 		50:  headergov.NewVoteData(common.Address{2}, paramName, uint64(200)),
@@ -88,8 +88,8 @@ func TestReadGovDataFromDB(t *testing.T) {
 	WriteGovDataBlockNums(db, &StoredUint64Array{1, 2})
 
 	govs := map[uint64]headergov.GovData{
-		1: headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: ps1.UnitPrice}),
-		2: headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: ps2.UnitPrice}),
+		1: headergov.NewGovData(map[gov.ParamName]any{gov.GovernanceUnitPrice: ps1.UnitPrice}),
+		2: headergov.NewGovData(map[gov.ParamName]any{gov.GovernanceUnitPrice: ps2.UnitPrice}),
 	}
 	for num, govData := range govs {
 		headerGovData, err := govData.ToGovBytes()

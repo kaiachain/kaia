@@ -70,7 +70,7 @@ func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr comm
 
 func TestEffectiveParamSet(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
-	paramName := gov.Params[gov.GovernanceUnitPrice].Name
+	paramName := string(gov.GovernanceUnitPrice)
 	accounts, sim, addr, gp := createSimulateBackend(t)
 	cgm := prepareContractGovModule(t, sim.BlockChain(), addr)
 

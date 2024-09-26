@@ -12,13 +12,13 @@ import (
 type GovBytes []byte
 
 type govData struct {
-	items map[gov.ParamEnum]any
+	items map[gov.ParamName]any
 }
 
 // NewGovData returns a canonical & formatted gov data. VoteForbidden flag and consistency is NOT checked.
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
-func NewGovData(m map[gov.ParamEnum]any) GovData {
-	items := make(map[gov.ParamEnum]any)
+func NewGovData(m map[gov.ParamName]any) GovData {
+	items := make(map[gov.ParamName]any)
 	for enum, value := range m {
 		param, ok := gov.Params[enum]
 		if !ok {
@@ -42,19 +42,19 @@ func NewGovData(m map[gov.ParamEnum]any) GovData {
 }
 
 func (g *govData) MarshalJSON() ([]byte, error) {
-	tmp := make(map[string]any)
-	for enum, value := range g.items {
+	tmp := make(map[gov.ParamName]any)
+	for name, value := range g.items {
 		if bigInt, ok := value.(*big.Int); ok {
-			tmp[gov.Params[enum].Name] = bigInt.String()
+			tmp[name] = bigInt.String()
 		} else {
-			tmp[gov.Params[enum].Name] = value
+			tmp[name] = value
 		}
 	}
 
 	return json.Marshal(tmp)
 }
 
-func (g *govData) Items() map[gov.ParamEnum]any {
+func (g *govData) Items() map[gov.ParamName]any {
 	return g.items
 }
 
@@ -73,26 +73,26 @@ func (gb GovBytes) ToGovData() (GovData, error) {
 		return nil, ErrInvalidRlp
 	}
 
-	strMap := make(map[string]any)
-	err = json.Unmarshal(rlpDecoded, &strMap)
+	m := make(map[gov.ParamName]any)
+	err = json.Unmarshal(rlpDecoded, &m)
 	if err != nil {
 		return nil, ErrInvalidJson
 	}
 
-	for name, value := range strMap {
-		param, err := gov.GetParamByName(name)
-		if err != nil {
-			return nil, err
+	for name, value := range m {
+		param, ok := gov.Params[name]
+		if !ok {
+			return nil, gov.ErrInvalidParamName
 		}
 
 		cv, err := param.Canonicalizer(value)
 		if err != nil {
 			return nil, err
 		}
-		strMap[name] = cv
+		m[name] = cv
 	}
 
-	gov := NewGovData(gov.StrMapToEnumMap(strMap))
+	gov := NewGovData(m)
 	if gov == nil {
 		return nil, ErrInvalidGovData
 	}
