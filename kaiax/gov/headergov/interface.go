@@ -30,7 +30,7 @@ type VoteData interface {
 	Enum() gov.ParamEnum
 	Value() any
 
-	Serialize() ([]byte, error)
+	ToVoteBytes() (VoteBytes, error)
 }
 
 var (

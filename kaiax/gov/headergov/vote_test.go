@@ -228,12 +228,13 @@ func TestVoteSerialization(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(fmt.Sprintf("TestCase_block_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
-			actual, err := DeserializeHeaderVote(hexutil.MustDecode(tc.serializedVoteData))
+			var vb VoteBytes = hexutil.MustDecode(tc.serializedVoteData)
+			actual, err := vb.ToVoteData()
 			assert.NoError(t, err)
-			assert.Equal(t, tc.voteData, actual, "DeserializeHeaderVote() failed")
+			assert.Equal(t, tc.voteData, actual, "ToVoteData() failed")
 
 			// Test serialization
-			serialized, err := tc.voteData.Serialize()
+			serialized, err := tc.voteData.ToVoteBytes()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.serializedVoteData, hexutil.Encode(serialized), "voteData.Serialize() failed")
 		})

@@ -5,9 +5,12 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/rlp"
 )
+
+type VoteBytes []byte
 
 type voteData struct {
 	voter common.Address
@@ -70,7 +73,7 @@ func (vote *voteData) Value() any {
 	return vote.value
 }
 
-func (vote *voteData) Serialize() ([]byte, error) {
+func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 	v := &struct {
 		Validator common.Address
 		Key       string
@@ -104,14 +107,14 @@ func (vote *voteData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func DeserializeHeaderVote(b []byte) (VoteData, error) {
+func (vb VoteBytes) ToVoteData() (VoteData, error) {
 	var v struct {
 		Validator common.Address
 		Key       string
 		Value     []byte
 	}
 
-	err := rlp.DecodeBytes(b, &v)
+	err := rlp.DecodeBytes(vb, &v)
 	if err != nil {
 		return nil, ErrInvalidRlp
 	}
@@ -122,4 +125,8 @@ func DeserializeHeaderVote(b []byte) (VoteData, error) {
 	}
 
 	return vote, nil
+}
+
+func (vb VoteBytes) String() string {
+	return hexutil.Encode(vb)
 }

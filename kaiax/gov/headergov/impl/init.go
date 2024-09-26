@@ -107,7 +107,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.
 	if voteBlocks != nil {
 		for _, blockNum := range *voteBlocks {
 			header := chain.GetHeaderByNumber(blockNum)
-			parsedVote, err := headergov.DeserializeHeaderVote(header.Vote)
+			parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
 			if err != nil {
 				panic(err)
 			}

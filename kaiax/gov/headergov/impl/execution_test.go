@@ -19,7 +19,7 @@ func TestPostInsertBlock(t *testing.T) {
 			Epoch: 10,
 		},
 	})
-	vote, _ := headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).Serialize()
+	vote, _ := headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).ToVoteBytes()
 	gov, _ := headergov.NewGovData(map[gov.ParamEnum]any{
 		gov.GovernanceUnitPrice: uint64(100),
 	}).Serialize()

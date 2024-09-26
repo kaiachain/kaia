@@ -67,7 +67,7 @@ func TestReadGovVoteBlockNumsFromDB(t *testing.T) {
 	db := database.NewMemDB()
 	voteDataBlockNums := make(StoredUint64Array, 0, len(votes))
 	for num, voteData := range votes {
-		headerVoteData, err := voteData.Serialize()
+		headerVoteData, err := voteData.ToVoteBytes()
 		require.NoError(t, err)
 		chain.EXPECT().GetHeaderByNumber(num).Return(&types.Header{Vote: headerVoteData})
 		voteDataBlockNums = append(voteDataBlockNums, num)

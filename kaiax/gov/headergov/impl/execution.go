@@ -9,14 +9,15 @@ import (
 
 func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 	if len(b.Header().Vote) > 0 {
-		vote, err := headergov.DeserializeHeaderVote(b.Header().Vote)
+		var vb headergov.VoteBytes = b.Header().Vote
+		vote, err := vb.ToVoteData()
 		if err != nil {
-			logger.Error("DeserializeHeaderVote error", "vote", b.Header().Vote, "err", err)
+			logger.Error("ToVoteData error", "vote", vb, "err", err)
 			return err
 		}
 		err = h.HandleVote(b.NumberU64(), vote)
 		if err != nil {
-			logger.Error("HandleVote error", "vote", b.Header().Vote, "err", err)
+			logger.Error("HandleVote error", "vote", vb, "err", err)
 			return err
 		}
 	}

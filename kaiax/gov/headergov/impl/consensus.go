@@ -18,15 +18,16 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 
 	// 1. Check Vote
 	if len(header.Vote) > 0 {
-		vote, err := headergov.DeserializeHeaderVote(header.Vote)
+		var vb headergov.VoteBytes = header.Vote
+		vote, err := vb.ToVoteData()
 		if err != nil {
-			logger.Error("Failed to parse vote", "num", header.Number.Uint64(), "err", err)
+			logger.Error("ToVoteData error", "num", header.Number.Uint64(), "vote", vb, "err", err)
 			return err
 		}
 
 		err = h.VerifyVote(header.Number.Uint64(), vote)
 		if err != nil {
-			logger.Error("Failed to verify vote", "num", header.Number.Uint64(), "err", err)
+			logger.Error("VerifyVote error", "num", header.Number.Uint64(), "vote", vb, "err", err)
 			return err
 		}
 	}
@@ -67,7 +68,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if epoch block & vote exists in the last epoch, put Governance to header.
 	if len(h.myVotes) > 0 {
-		header.Vote, _ = h.myVotes[0].Serialize()
+		header.Vote, _ = h.myVotes[0].ToVoteBytes()
 	}
 
 	if header.Number.Uint64()%h.epoch == 0 {

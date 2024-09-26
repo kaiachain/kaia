@@ -17,7 +17,7 @@ func TestVerifyHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
 		vote               = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100))
-		voteBytes, _       = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).Serialize()
+		voteBytes, _       = headergov.NewVoteData(common.Address{1}, gov.Params[gov.GovernanceUnitPrice].Name, uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(100)}).Serialize()
 		invalidGovBytes, _ = headergov.NewGovData(map[gov.ParamEnum]any{gov.GovernanceUnitPrice: uint64(200)}).Serialize()
 		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
