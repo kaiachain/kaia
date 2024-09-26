@@ -242,7 +242,7 @@ var Params = map[ParamName]*Param{
 			if !ok {
 				return false
 			}
-			return v <= 2
+			return v <= 2 // policy has only three options.
 		},
 		DefaultValue:  uint64(RoundRobin),
 		VoteForbidden: true,
