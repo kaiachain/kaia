@@ -411,15 +411,30 @@ func (sm *supplyManager) accumulateReward(from, to uint64, fromCheckpoint *datab
 
 		// Accumulate one block
 		var (
-			header    = sm.chain.GetHeaderByNumber(num)
-			block     = sm.chain.GetBlockByNumber(num)
-			receipts  = sm.chain.GetReceiptsByBlockHash(block.Hash())
-			rules     = sm.chain.Config().Rules(new(big.Int).SetUint64(num))
-			pset, err = sm.gov.EffectiveParams(num)
+			header = sm.chain.GetHeaderByNumber(num)
+			block  = sm.chain.GetBlockByNumber(num)
+			rules  = sm.chain.Config().Rules(new(big.Int).SetUint64(num))
 		)
+		if header == nil {
+			logger.Error("Header not found", "number", num)
+			return nil, errNoBlock
+		}
+		if block == nil {
+			logger.Error("Block not found", "number", num)
+			return nil, errNoBlock
+		}
+
+		receipts := sm.chain.GetReceiptsByBlockHash(block.Hash())
+		if receipts == nil {
+			logger.Error("Receipts not found", "number", num)
+			return nil, errNoBlock
+		}
+
+		pset, err := sm.gov.EffectiveParams(num)
 		if err != nil {
 			return nil, err
 		}
+
 		blockTotal, err := GetTotalReward(header, block.Transactions(), receipts, rules, pset)
 		if err != nil {
 			return nil, err

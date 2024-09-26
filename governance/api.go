@@ -86,7 +86,7 @@ func (api *GovernanceKaiaAPI) NodeAddress() common.Address {
 // GetRewards returns detailed information of the block reward at a given block number.
 func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
 	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber {
+	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = api.chain.CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
@@ -331,7 +331,32 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 	if err != nil {
 		return nil, err
 	}
-	return pset.StrMap(), nil
+	sm := pset.StrMap()
+
+	// To avoid confusion, override some parameters that are deprecated after hardforks.
+	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
+	rule := governance.BlockChain().Config().Rules(new(big.Int).SetUint64(blockNumber))
+	if rule.IsKore {
+		// Gini option deprecated since Kore, as All committee members have an equal chance
+		// of being elected block proposers.
+		if _, ok := sm["reward.useginicoeff"]; ok {
+			sm["reward.useginicoeff"] = false
+		}
+	}
+	if rule.IsRandao {
+		// Block proposer is randomly elected at every block with Randao,
+		// no more precalculated proposer list.
+		if _, ok := sm["reward.proposerupdateinterval"]; ok {
+			sm["reward.proposerupdateinterval"] = 1
+		}
+	}
+	if rule.IsKaia {
+		// Staking information updated every block since Kaia.
+		if _, ok := sm["reward.stakingupdateinterval"]; ok {
+			sm["reward.stakingupdateinterval"] = 1
+		}
+	}
+	return sm, nil
 }
 
 func (api *GovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
@@ -365,8 +390,11 @@ func checkStateForStakingInfo(governance Engine, blockNumber uint64) error {
 	if !governance.BlockChain().Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
 		return nil
 	}
-
-	_, err := governance.BlockChain().StateAt(governance.BlockChain().GetHeaderByNumber(blockNumber).Root)
+	header := governance.BlockChain().GetHeaderByNumber(blockNumber)
+	if header == nil {
+		return errUnknownBlock
+	}
+	_, err := governance.BlockChain().StateAt(header.Root)
 	return err
 }
 
@@ -445,6 +473,7 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 		return nil
 	}
 
+	// Fill in the non-governance-parameter fields of ChainConfig
 	latestConfig := governance.BlockChain().Config()
 	config := pset.ToChainConfig()
 	config.ChainID = latestConfig.ChainID
@@ -461,6 +490,24 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
+
+	// To avoid confusion, override some parameters that are deprecated after hardforks.
+	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
+	rule := governance.BlockChain().Config().Rules(new(big.Int).SetUint64(blocknum))
+	if rule.IsKore {
+		// Gini option deprecated since Kore, as All committee members have an equal chance
+		// of being elected block proposers.
+		config.Governance.Reward.UseGiniCoeff = false
+	}
+	if rule.IsRandao {
+		// Block proposer is randomly elected at every block with Randao,
+		// no more precalculated proposer list.
+		config.Governance.Reward.ProposerUpdateInterval = 1
+	}
+	if rule.IsKaia {
+		// Staking information updated every block since Kaia.
+		config.Governance.Reward.StakingUpdateInterval = 1
+	}
 
 	return config
 }

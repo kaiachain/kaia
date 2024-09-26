@@ -2600,6 +2600,6 @@ func TestEthereumAPI_EstimateGas(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	testEstimateGas(t, mockBackend, func(args EthTransactionArgs) (hexutil.Uint64, error) {
-		return api.EstimateGas(context.Background(), args, nil)
+		return api.EstimateGas(context.Background(), args, nil, nil)
 	})
 }

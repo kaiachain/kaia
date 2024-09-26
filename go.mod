@@ -4,7 +4,7 @@ go 1.22.1
 
 require (
 	github.com/Shopify/sarama v1.26.4
-	github.com/VictoriaMetrics/fastcache v1.6.0
+	github.com/VictoriaMetrics/fastcache v1.12.2
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 	github.com/aristanetworks/goarista v0.0.0-20191001182449-186a6201b8ef
 	github.com/aws/aws-sdk-go v1.34.28

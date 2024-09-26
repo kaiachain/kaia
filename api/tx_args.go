@@ -702,7 +702,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 		if rpcGasCap := b.RPCGasCap(); rpcGasCap != nil {
 			gasCap = rpcGasCap.Uint64()
 		}
-		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, gasCap)
+		estimated, err := EthDoEstimateGas(ctx, b, callArgs, pendingBlockNr, nil, gasCap)
 		if err != nil {
 			return err
 		}

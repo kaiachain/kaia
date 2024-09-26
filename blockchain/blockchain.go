@@ -181,8 +181,10 @@ type BlockChain struct {
 	currentBlock     atomic.Value // Current head of the block chain
 	currentFastBlock atomic.Value // Current head of the fast-sync chain (may be above the block chain!)
 
-	stateCache   state.Database // State database to reuse between imports (contains state cache)
-	futureBlocks *lru.Cache     // future blocks are blocks added for later processing
+	stateCache state.Database // State database to reuse between imports (contains state cache)
+
+	// future blocks are blocks added for later processing
+	futureBlocks *lru.Cache
 
 	quit    chan struct{} // blockchain quit channel
 	running int32         // running must be called atomically
@@ -1088,8 +1090,8 @@ func (bc *BlockChain) Stop() {
 		if snapBase, err = bc.snaps.Journal(bc.CurrentBlock().Root()); err != nil {
 			logger.Error("Failed to journal state snapshot", "err", err)
 		}
+		bc.snaps.Release()
 	}
-
 	triedb := bc.stateCache.TrieDB()
 	if !bc.isArchiveMode() {
 		number := bc.CurrentBlock().NumberU64()

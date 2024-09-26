@@ -4,7 +4,7 @@ The public delegation (PD) is a non-transferable ERC-4626 based contract that al
 
 It mints the tokenized shares to the delegator, which is called `pdKAIA`. The `pdKAIA` is a non-transferable interest-bearing token that represents the delegator's share of the total KAIA delegated to the GC. As rewards are compounded, the exchange rate of `pdKAIA` to KAIA increases. The delegator can burn the `pdKAIA` to get the KAIA back. All the math comes from the ERC-4626 standard.
 
-Unlike usual ERC-4626 vault contracts, the reward is directly distributed to PD contract by state modification at the consensus-level. The reward will be automatically compounded to the CnSV3 contract.
+Unlike usual ERC-4626 vault contracts, the KAIA rewards are directly distributed to PD contract by state modification at the consensus-level.
 
 It is deployed during setup process of CnSV3 contract, namely `setPublicDelegation` function. The PD is only compatible with the CnSV3 contract.
 
@@ -37,7 +37,7 @@ The PD contract can collect the commission from the rewards. The commission info
 Related functions:
 
 - `updateCommissionTo(addr)`: Update the commission receiver address.
-- `updateCommissionRate(commissionRate)`: Update the commission rate. `MAX_COMMISSION_RATE` is 3,000, which is 30%.
+- `updateCommissionRate(commissionRate)`: Update the commission rate. `MAX_COMMISSION_RATE` is 10,000, which is 100%.
 
 The commission is calculated and sent to the commission receiver whenever the rewards are compounded. The commission is calculated as follows:
 
@@ -56,7 +56,7 @@ The delegators will receive the corresponding `pdKAIA` as shares. The shares are
 
 $pdKAIA = ⌊stakedKAIA * totalShares / totalStakedKAIA⌋$
 
-Note that `totalStakedKAIA⌋` includes the current rewards, which are not yet compounded.
+Note that `totalStakedKAIA` includes the current rewards, which are not yet compounded.
 
 ### Withdrawal
 

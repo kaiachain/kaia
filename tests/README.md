@@ -1,6 +1,6 @@
 # How to use Kaia tests
 
-[Kaia tests](https://github.com/kaiachain/kaia-tests) is not currently included
+[Kaia tests](https://github.com/kaiachain/kaia-core-tests) is not currently included
 here due to its relatively large size.  It will be added as a git submodule
 later.
 
@@ -17,7 +17,7 @@ clone it in `$HOME/workspace`.
 
 ```
 $ cd $HOME/workspace
-$ git clone git@github.com:kaiachain/kaia-tests.git
+$ git clone git@github.com:kaiachain/kaia-core-tests.git
 ```
 
 
@@ -28,7 +28,7 @@ We assume Kaia source tree is located in
 
 ```
 $ cd $HOME/workspace/go/src/github.com/kaiachain/kaia/tests
-$ ln -s $HOME/workspace/kaia-tests testdata
+$ ln -s $HOME/workspace/kaia-core-tests testdata
 ```
 
 
