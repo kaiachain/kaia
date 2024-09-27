@@ -48,14 +48,18 @@ func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 }
 
 func (api *headerGovAPI) Vote(name string, value any) (string, error) {
-	blockNumber := api.h.Chain.CurrentBlock().NumberU64()
-	gp := api.h.EffectiveParamSet(blockNumber + 1)
-	gMode := gp.GovernanceMode
-	if gMode == "single" && api.h.nodeAddress != gp.GoverningNode {
+	var (
+		voter       = api.h.nodeAddress
+		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
+		gp          = api.h.EffectiveParamSet(blockNumber + 1)
+		gMode       = gp.GovernanceMode
+	)
+
+	if gMode == "single" && voter != gp.GoverningNode {
 		return "", ErrVotePermissionDenied
 	}
 
-	vote := headergov.NewVoteData(api.h.nodeAddress, name, value)
+	vote := headergov.NewVoteData(voter, name, value)
 	if vote == nil {
 		return "", ErrInvalidKeyValue
 	}

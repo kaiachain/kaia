@@ -9,13 +9,15 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
+// EffectiveParamSet returns default parameter set in case of any error, such as invalid value in the contract.
+// It will also return default parameter set when contractgov is disabled (e.g., pre-Kore).
 func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
 		return *gov.GetDefaultGovernanceParamSet()
 	}
 
-	ret := gov.ParamSet{}
+	ret := *gov.GetDefaultGovernanceParamSet()
 	for k, v := range m {
 		err = ret.Set(k, v)
 		if err != nil {
@@ -56,7 +58,10 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 	}
 
 	caller := backends.NewBlockchainContractBackend(chain, nil, nil)
-	contract, _ := govcontract.NewGovParamCaller(addr, caller)
+	contract, err := govcontract.NewGovParamCaller(addr, caller)
+	if err != nil {
+		return nil, err
+	}
 
 	names, values, err := contract.GetAllParamsAt(nil, new(big.Int).SetUint64(blockNum))
 	if err != nil {
