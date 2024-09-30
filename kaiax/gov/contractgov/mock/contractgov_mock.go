@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
+	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
 // MockContractGovModule is a mock of ContractGovModule interface.
@@ -32,6 +33,20 @@ func NewMockContractGovModule(ctrl *gomock.Controller) *MockContractGovModule {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockContractGovModule) EXPECT() *MockContractGovModuleMockRecorder {
 	return m.recorder
+}
+
+// APIs mocks base method.
+func (m *MockContractGovModule) APIs() []rpc.API {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "APIs")
+	ret0, _ := ret[0].([]rpc.API)
+	return ret0
+}
+
+// APIs indicates an expected call of APIs.
+func (mr *MockContractGovModuleMockRecorder) APIs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockContractGovModule)(nil).APIs))
 }
 
 // EffectiveParamSet mocks base method.
