@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParamSet_Set(t *testing.T) {
+func TestParametersSetAndAdd(t *testing.T) {
 	tcs := []struct {
 		name  ParamName
 		value any
@@ -42,6 +42,10 @@ func TestParamSet_Set(t *testing.T) {
 		t.Run(string(tc.name), func(t *testing.T) {
 			err := ps.Set(tc.name, tc.value)
 			assert.NoError(t, err)
+
+			pps := PartialParamSet{}
+			pps.Add(string(tc.name), tc.value)
+			assert.Equal(t, 1, len(pps))
 		})
 	}
 }

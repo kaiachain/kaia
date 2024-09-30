@@ -9,6 +9,8 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
+type PartialParamSet map[ParamName]any
+
 type ParamSet struct {
 	// governance
 	GovernanceMode                  string
@@ -65,7 +67,7 @@ func (p *ParamSet) Set(name ParamName, cv any) error {
 	return nil
 }
 
-func (p *ParamSet) SetFromMap(m map[ParamName]any) error {
+func (p *ParamSet) SetFromMap(m PartialParamSet) error {
 	for name, value := range m {
 		err := p.Set(name, value)
 		if err != nil {
@@ -115,4 +117,22 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 
 	ps, _ := params.NewGovParamSetStrMap(m)
 	return ps
+}
+
+func (p PartialParamSet) Add(name string, value any) {
+	param, ok := Params[ParamName(name)]
+	if !ok {
+		return
+	}
+
+	cv, err := param.Canonicalizer(value)
+	if err != nil {
+		return
+	}
+
+	if !param.FormatChecker(cv) {
+		return
+	}
+
+	p[ParamName(name)] = cv
 }

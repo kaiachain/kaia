@@ -10,5 +10,5 @@ type ContractGovModule interface {
 	kaiax.BaseModule
 
 	EffectiveParamSet(blockNum uint64) gov.ParamSet
-	EffectiveParamsPartial(blockNum uint64) map[gov.ParamName]any
+	EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet
 }

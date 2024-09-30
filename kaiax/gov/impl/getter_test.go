@@ -54,15 +54,15 @@ func TestEffectiveParamSet(t *testing.T) {
 		})
 
 		t.Run("headergov", func(t *testing.T) {
-			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: headerGovVal})
-			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{})
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: headerGovVal})
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{})
 			ps := m.EffectiveParamSet(1)
 			assert.Equal(t, headerGovVal, ps.UnitPrice)
 		})
 
 		t.Run("contractgov ignored", func(t *testing.T) {
-			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: headerGovVal})
-			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: contractGovVal})
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: headerGovVal})
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: contractGovVal})
 			ps := m.EffectiveParamSet(1)
 			assert.Equal(t, headerGovVal, ps.UnitPrice)
 		})
@@ -79,15 +79,15 @@ func TestEffectiveParamSet(t *testing.T) {
 		})
 
 		t.Run("headergov", func(t *testing.T) {
-			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: headerGovVal})
-			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{})
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: headerGovVal})
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{})
 			ps := m.EffectiveParamSet(1)
 			assert.Equal(t, headerGovVal, ps.UnitPrice)
 		})
 
 		t.Run("contractgov", func(t *testing.T) {
-			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: headerGovVal})
-			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(map[gov.ParamName]any{gov.GovernanceUnitPrice: contractGovVal})
+			hgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: headerGovVal})
+			cgm.EXPECT().EffectiveParamsPartial(gomock.Any()).Return(gov.PartialParamSet{gov.GovernanceUnitPrice: contractGovVal})
 			ps := m.EffectiveParamSet(1)
 			assert.Equal(t, contractGovVal, ps.UnitPrice)
 		})

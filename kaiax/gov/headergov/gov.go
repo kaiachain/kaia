@@ -12,29 +12,15 @@ import (
 type GovBytes []byte
 
 type govData struct {
-	items map[gov.ParamName]any
+	items gov.PartialParamSet
 }
 
 // NewGovData returns a canonical & formatted gov data. VoteForbidden flag and consistency is NOT checked.
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
-func NewGovData(m map[gov.ParamName]any) GovData {
-	items := make(map[gov.ParamName]any)
+func NewGovData(m gov.PartialParamSet) GovData {
+	items := make(gov.PartialParamSet)
 	for name, value := range m {
-		param, ok := gov.Params[name]
-		if !ok {
-			return nil
-		}
-
-		cv, err := param.Canonicalizer(value)
-		if err != nil {
-			return nil
-		}
-
-		if !param.FormatChecker(cv) {
-			return nil
-		}
-
-		items[name] = cv
+		items.Add(string(name), value)
 	}
 	return &govData{
 		items: items,
@@ -42,7 +28,7 @@ func NewGovData(m map[gov.ParamName]any) GovData {
 }
 
 func (g *govData) MarshalJSON() ([]byte, error) {
-	tmp := make(map[gov.ParamName]any)
+	tmp := make(gov.PartialParamSet)
 	for name, value := range g.items {
 		if bigInt, ok := value.(*big.Int); ok {
 			tmp[name] = bigInt.String()
@@ -54,7 +40,7 @@ func (g *govData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tmp)
 }
 
-func (g *govData) Items() map[gov.ParamName]any {
+func (g *govData) Items() gov.PartialParamSet {
 	return g.items
 }
 
@@ -73,23 +59,14 @@ func (gb GovBytes) ToGovData() (GovData, error) {
 		return nil, ErrInvalidRlp
 	}
 
-	m := make(map[gov.ParamName]any)
+	m := make(gov.PartialParamSet)
 	err = json.Unmarshal(rlpDecoded, &m)
 	if err != nil {
 		return nil, ErrInvalidJson
 	}
 
 	for name, value := range m {
-		param, ok := gov.Params[name]
-		if !ok {
-			return nil, gov.ErrInvalidParamName
-		}
-
-		cv, err := param.Canonicalizer(value)
-		if err != nil {
-			return nil, err
-		}
-		m[name] = cv
+		m.Add(string(name), value)
 	}
 
 	gov := NewGovData(m)

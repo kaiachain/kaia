@@ -20,7 +20,7 @@ func TestPostInsertBlock(t *testing.T) {
 		},
 	})
 	vote, _ := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
-	gov, _ := headergov.NewGovData(map[gov.ParamName]any{
+	gov, _ := headergov.NewGovData(gov.PartialParamSet{
 		gov.GovernanceUnitPrice: uint64(100),
 	}).ToGovBytes()
 
@@ -68,7 +68,7 @@ func TestHandleVoteGov(t *testing.T) {
 
 	// test duplicate gov handling
 	for range 2 {
-		err := h.HandleGov(govBlock, headergov.NewGovData(map[gov.ParamName]any{
+		err := h.HandleGov(govBlock, headergov.NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(100),
 		}))
 		assert.NoError(t, err)

@@ -31,7 +31,7 @@ func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	return ret
 }
 
-func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamName]any {
+func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
 		return nil
@@ -40,7 +40,7 @@ func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.Para
 }
 
 // TODO: add comments
-func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.ParamName]any, error) {
+func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (gov.PartialParamSet, error) {
 	chain := c.Chain
 	if chain == nil {
 		return nil, ErrNotReady
@@ -77,24 +77,20 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 		return nil, nil
 	}
 
-	ret := make(map[gov.ParamName]any)
-	for i := 0; i < len(names); i++ {
-		param, ok := gov.Params[gov.ParamName(names[i])]
-		if !ok {
-			continue
-		}
-
-		cv, err := param.Canonicalizer(values[i])
-		if err != nil {
-			continue
-		}
-		ret[gov.ParamName(names[i])] = cv
-	}
-
+	ret := ParseContractCall(names, values)
 	return ret, nil
 }
 
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
 	headerParams := c.hgm.EffectiveParamSet(blockNum)
 	return headerParams.GovParamContract, nil
+}
+
+func ParseContractCall(names []string, values [][]byte) gov.PartialParamSet {
+	ret := make(gov.PartialParamSet)
+	for i := 0; i < len(names); i++ {
+		ret.Add(names[i], values[i])
+	}
+
+	return ret
 }

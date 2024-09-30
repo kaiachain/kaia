@@ -10,10 +10,10 @@ import (
 
 func TestGetHistory(t *testing.T) {
 	govs := map[uint64]GovData{
-		0: NewGovData(map[gov.ParamName]any{
+		0: NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(100),
 		}),
-		4: NewGovData(map[gov.ParamName]any{
+		4: NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(200),
 		}),
 	}
@@ -25,10 +25,10 @@ func TestGetHistory(t *testing.T) {
 
 func TestSearch(t *testing.T) {
 	govs := map[uint64]GovData{
-		0: NewGovData(map[gov.ParamName]any{
+		0: NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(100),
 		}),
-		4: NewGovData(map[gov.ParamName]any{
+		4: NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(200),
 		}),
 	}

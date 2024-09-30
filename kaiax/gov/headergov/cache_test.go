@@ -29,7 +29,7 @@ func TestVote(t *testing.T) {
 func TestGov(t *testing.T) {
 	var (
 		cache = NewHeaderGovCache()
-		g     = NewGovData(map[gov.ParamName]interface{}{gov.GovernanceUnitPrice: uint64(100)})
+		g     = NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)})
 		n     = 10
 	)
 

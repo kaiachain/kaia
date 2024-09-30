@@ -83,7 +83,7 @@ func NewGovAPI(g *GovModule) *GovAPI {
 	return &GovAPI{g}
 }
 
-func (api *GovAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
+func (api *GovAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	return getParams(api.g, num)
 }
 
@@ -197,7 +197,7 @@ func (api *KaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.g, num)
 }
 
-func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
+func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	return getParams(api.g, num)
 }
 
@@ -279,7 +279,7 @@ func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
 	return err
 }
 
-func getParams(g *GovModule, num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
+func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNumber = g.chain.CurrentBlock().NumberU64()
@@ -288,7 +288,7 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (map[gov.ParamName]any, error
 	}
 
 	gp := g.EffectiveParamSet(blockNumber)
-	ret := gp.ToEnumMap()
+	ret := gp.ToMap()
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
 	rule := g.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))

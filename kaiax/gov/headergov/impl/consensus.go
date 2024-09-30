@@ -141,7 +141,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
 	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
-	govs := make(map[gov.ParamName]any)
+	govs := make(gov.PartialParamSet)
 
 	for _, vote := range prevEpochVotes {
 		govs[vote.Name()] = vote.Value()

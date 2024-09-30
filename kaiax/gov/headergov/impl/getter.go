@@ -16,8 +16,8 @@ func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	return gp
 }
 
-func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamName]any {
-	ret := make(map[gov.ParamName]any)
+func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
+	ret := make(gov.PartialParamSet)
 	for num, gov := range h.cache.Govs() {
 		if num > blockNum {
 			continue

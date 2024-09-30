@@ -1,4 +1,5 @@
 # kaiax/gov
+
 This submodule is responsible for providing the governance parameter set at a given block number.
 
 ## Concepts
@@ -58,9 +59,9 @@ See [headergov schema](./headergov/README.md#persistent-schema).
 
 ## In-memory Structures
 
-
 ## Module lifecycle
-###  Init
+
+### Init
 
 - Dependencies:
   - headergov: To retrieve header governance parameters.
@@ -70,8 +71,8 @@ See [headergov schema](./headergov/README.md#persistent-schema).
   - kaiax/reward: Provides parameters related to rewards.
   - kaiax/staking: Provides the useGini and minStake for the API.
 
+### Start and stop
 
-###  Start and stop
 This module does not have any background threads.
 
 ## Block processing
