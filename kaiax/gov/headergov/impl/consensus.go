@@ -86,16 +86,23 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 	return nil
 }
 
-// VerifyVote takes canonical VoteData and performs the semantic check.
+// VerifyVote checks the followings:
+// (1) if voter is in valset,
+// (2) integrity of the voter (ensures that voter is the block proposer),
+// (3) consistency check of the vote value.
 func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) error {
 	if vote == nil {
 		return ErrNilVote
 	}
 
-	// TODO: check if Voter is valid.
+	// TODO: check if if voter is in valset.
 	// TODO: check if Voter is the block proposer.
 
 	// consistency check
+	return h.checkConsistency(blockNum, vote)
+}
+
+func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
 		// TODO: check in valset
