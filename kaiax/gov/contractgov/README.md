@@ -66,19 +66,21 @@ Returns the effective parameter set at the block `num` from GovParam contract.
 
 - Parameters:
   - `num`: block number
+  - `govparam`: (optional) GovParam address. Defaults to headergov's GovParam address.
 - Returns
-  - `VotesResponse`: votes
+  - `PartialParamSet`: partial parameter set.
 - Example
 
-### governance_getContractParamFromGovParam
-
-Returns all votes in the epoch that the given block number belongs to.
-
-- Parameters:
-  - `num`: block number
-- Returns
-  - `VotesResponse`: votes
-- Example
+```
+curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
+  {"jsonrpc":"2.0","id":1,"method":"governance_getContractParams","params":[
+    100,
+    "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+  ]}' | jq '.result'
+{
+  "governance.unitprice": 4660
+}
+```
 
 ## Getters
 

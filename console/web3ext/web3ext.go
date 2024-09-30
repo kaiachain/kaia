@@ -349,6 +349,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'getContractParams',
+			call: 'governance_getContractParams',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputAddressFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getChainConfig',
 			call: 'governance_getChainConfig',
 			params: 1,

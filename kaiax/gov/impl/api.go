@@ -17,7 +17,8 @@ import (
 )
 
 func (g *GovModule) APIs() []rpc.API {
-	return append(g.hgm.APIs(), []rpc.API{
+	ret := append(g.hgm.APIs(), g.cgm.APIs()...)
+	return append(ret, []rpc.API{
 		{
 			Namespace: "governance",
 			Version:   "1.0",

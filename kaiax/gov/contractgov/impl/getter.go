@@ -39,8 +39,20 @@ func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialP
 	return m
 }
 
-// TODO: add comments
 func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (gov.PartialParamSet, error) {
+	addr, err := c.contractAddrAt(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	if common.EmptyAddress(addr) {
+		logger.Trace("ContractEngine disabled: GovParamContract address not set")
+		return nil, nil
+	}
+
+	return c.contractGetAllParamsAtFromAddr(blockNum, addr)
+}
+
+func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr common.Address) (gov.PartialParamSet, error) {
 	chain := c.Chain
 	if chain == nil {
 		return nil, ErrNotReady
@@ -49,15 +61,6 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (gov.Partial
 	config := c.ChainConfig
 	if !config.IsKoreForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, ErrNotReady
-	}
-
-	addr, err := c.contractAddrAt(blockNum)
-	if err != nil {
-		return nil, err
-	}
-	if common.EmptyAddress(addr) {
-		logger.Trace("ContractEngine disabled: GovParamContract address not set")
-		return nil, nil
 	}
 
 	caller := backends.NewBlockchainContractBackend(chain, nil, nil)
