@@ -197,10 +197,6 @@ func (api *KaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
 	return getChainConfig(api.g, num)
 }
 
-func (api *KaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.g, num)
-}
-
 func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (map[gov.ParamName]any, error) {
 	return getParams(api.g, num)
 }
@@ -262,22 +258,6 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
 
 	return config
-}
-
-func getStakingInfo(g *GovModule, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = g.chain.CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
-	// Check if the node has state to calculate the snapshot.
-	err := checkStateForStakingInfo(g, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	return reward.GetStakingInfo(blockNumber), nil
 }
 
 // checkStateForStakingInfo checks the state of block for the given block number for staking info
