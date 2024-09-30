@@ -22,20 +22,20 @@ type headerGovAPI struct {
 	h *headerGovModule
 }
 
-type VotesApi struct {
+type VotesResponse struct {
 	BlockNum uint64
 	Key      string
 	Value    any
 }
 
-type MyVotesApi struct {
+type MyVotesResponse struct {
 	BlockNum uint64
 	Key      string
 	Value    any
 	Casted   bool
 }
 
-type StatusApi struct {
+type StatusResponse struct {
 	GroupedVotes map[uint64]headergov.VotesInEpoch `json:"groupedVotes"`
 	Governances  map[uint64]headergov.GovData      `json:"governances"`
 	GovHistory   headergov.History                 `json:"govHistory"`
@@ -79,7 +79,7 @@ func (api *headerGovAPI) IdxCache() []uint64 {
 	return api.h.cache.GovBlockNums()
 }
 
-func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesApi {
+func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesResponse {
 	var blockNum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		blockNum = api.h.Chain.CurrentBlock().NumberU64()
@@ -90,9 +90,9 @@ func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesApi {
 	epochIdx := calcEpochIdx(blockNum, api.h.epoch)
 	votesInEpoch := api.h.getVotesInEpoch(epochIdx)
 
-	ret := make([]VotesApi, 0)
+	ret := make([]VotesResponse, 0)
 	for blockNum, vote := range votesInEpoch {
-		ret = append(ret, VotesApi{
+		ret = append(ret, VotesResponse{
 			BlockNum: blockNum,
 			Key:      string(vote.Name()),
 			Value:    vote.Value(),
@@ -101,14 +101,14 @@ func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesApi {
 	return ret
 }
 
-func (api *headerGovAPI) MyVotes() []MyVotesApi {
+func (api *headerGovAPI) MyVotes() []MyVotesResponse {
 	epochIdx := calcEpochIdx(api.h.Chain.CurrentBlock().NumberU64(), api.h.epoch)
 	votesInEpoch := api.h.getVotesInEpoch(epochIdx)
 
-	ret := make([]MyVotesApi, 0)
+	ret := make([]MyVotesResponse, 0)
 	for blockNum, vote := range votesInEpoch {
 		if vote.Voter() == api.h.nodeAddress {
-			ret = append(ret, MyVotesApi{
+			ret = append(ret, MyVotesResponse{
 				BlockNum: blockNum,
 				Casted:   true,
 				Key:      string(vote.Name()),
@@ -118,7 +118,7 @@ func (api *headerGovAPI) MyVotes() []MyVotesApi {
 	}
 
 	for _, vote := range api.h.myVotes {
-		ret = append(ret, MyVotesApi{
+		ret = append(ret, MyVotesResponse{
 			BlockNum: 0,
 			Casted:   false,
 			Key:      string(vote.Name()),
@@ -149,8 +149,8 @@ func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[gov.ParamName]any,
 	return gp.ToEnumMap(), nil
 }
 
-func (api *headerGovAPI) Status() StatusApi {
-	return StatusApi{
+func (api *headerGovAPI) Status() StatusResponse {
+	return StatusResponse{
 		GroupedVotes: api.h.cache.GroupedVotes(),
 		Governances:  api.h.cache.Govs(),
 		GovHistory:   api.h.cache.History(),

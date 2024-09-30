@@ -122,6 +122,24 @@ In that sense, writing to the cache will write to DB as well.
 
 See [cache.go](./cache.go).
 
+### VotesResponse
+
+The response type for `governance_votes`.
+
+See [impl/api.go](./impl/api.go).
+
+### MyVotesResponse
+
+The response type for `governance_myVotes`. `MyVotes` indicates all votes that the node casted in this epoch and will cast when it becomes a proposer.
+
+See [impl/api.go](./impl/api.go).
+
+### StatusResponse
+
+The response type for `governance_status`.
+
+See [impl/api.go](./impl/api.go).
+
 ## Module lifecycle
 ###  Init
 
@@ -223,7 +241,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ### governance_myVotes
 
-Returns all votes that the node casted and will cast.
+Returns all votes that the node casted in this epoch and will cast when it becomes a proposer.
 
 - Parameters: none
 - Returns
