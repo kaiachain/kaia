@@ -9,8 +9,11 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
-// EffectiveParamSet returns default parameter set in case of any error, such as invalid value in the contract.
-// It will also return default parameter set when contractgov is disabled (e.g., pre-Kore).
+// EffectiveParamSet returns default parameter set in case of the following errors:
+// (1) contractgov is disabled (i.e., pre-Kore or GovParam address is zero)
+// (2) GovParam address is not set
+// (3) Contract call to GovParam failed
+// Invalid parameters in the contract (i.e., invalid parameter name or non-canonical value) are ignored.
 func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
@@ -78,11 +81,12 @@ func (c *contractGovModule) contractGetAllParamsAt(blockNum uint64) (map[gov.Par
 	for i := 0; i < len(names); i++ {
 		param, ok := gov.Params[gov.ParamName(names[i])]
 		if !ok {
-			return nil, gov.ErrInvalidParamName
+			continue
 		}
+
 		cv, err := param.Canonicalizer(values[i])
 		if err != nil {
-			return nil, err
+			continue
 		}
 		ret[gov.ParamName(names[i])] = cv
 	}

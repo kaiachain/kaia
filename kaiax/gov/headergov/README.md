@@ -1,5 +1,5 @@
 # kaiax/gov/headergov
-This submodule is responsible for providing the governance parameter set from **header governance** at a given block number.
+This module is responsible for providing the governance parameter set from **header governance** at a given block number.
 
 ## Concepts
 
@@ -60,7 +60,7 @@ The effective parameter set at block `N` (in `k`-th epoch) is determined as foll
 
 This is the description of `EffectiveParamSet(N)`, which is implemented [here](./impl/getter.go#L9).
 
-For example, given `epoch=1000`,
+For example, given `epoch=1000`, assume that `header` is as follows:
 ```
 num  |  header
 --------------
@@ -71,10 +71,10 @@ num  |  header
 1000 |  Governance: {"governance.unitprice": 100 kei, "reward.mintingamount": 10 KAIA}
 ```
 
-Effective parameter set:
+Then, this module will return the effective parameter set as follows:
 
 ```
-num  |  effective parameter set(num)
+num  |  effective parameter set at num
 ------------------------------------
 1999 |  {"governance.unitprice": 25 kei, "reward.mintingamount": 5 KAIA}
 2000 |  {"governance.unitprice": 100 kei, "reward.mintingamount": 10 KAIA}
@@ -141,20 +141,15 @@ The response type for `governance_status`.
 See [impl/api.go](./impl/api.go).
 
 ## Module lifecycle
-###  Init
+### Init
 
 - Dependencies:
   - ChainDB: Raw key-value database to access this module's persistent schema.
   - ChainConfig: Holds the epoch value at genesis.
   - Chain: Provides the blocks and states.
   - NodeAddress: Provides `governance_nodeAddress` API. Facilitates checks in `governance_vote`.
-- Notable dependents:
-  - kaiax/valset: Provides committee size.
-  - kaiax/reward: Provides parameters related to rewards.
-  - kaiax/staking: Provides the useGini and minStake for the API.
 
-
-###  Start and stop
+### Start and stop
 This module does not have any background threads.
 
 ## Block processing
@@ -305,7 +300,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   EffectiveParamSet(num) -> ParamSet
   ```
 
-- `EffectiveParamsPartial(num)`: Returns the union of `header.governance` from block 0 to `num`. It is used for assembling parameters in a gov module.
+- `EffectiveParamsPartial(num)`: Returns only the parameters effective by header governance, which is the union of `header.governance` from block 0 to `num`. It is used for assembling parameters in a gov module.
   ```
   EffectiveParamsPartial(num) -> map[ParamName]any
   ```

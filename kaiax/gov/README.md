@@ -59,6 +59,24 @@ See [headergov schema](./headergov/README.md#persistent-schema).
 ## In-memory Structures
 
 
+## Module lifecycle
+###  Init
+
+- Dependencies:
+  - headergov: To retrieve header governance parameters.
+  - contractgov: To retrieve contract governance parameters.
+- Notable dependents:
+  - kaiax/valset: Provides committee size.
+  - kaiax/reward: Provides parameters related to rewards.
+  - kaiax/staking: Provides the useGini and minStake for the API.
+
+
+###  Start and stop
+This module does not have any background threads.
+
+## Block processing
+
+See [headergov](./headergov/README.md#Block-processing).
 
 ## APIs
 
