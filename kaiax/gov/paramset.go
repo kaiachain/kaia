@@ -109,7 +109,7 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 	m := make(map[string]any)
 	for name := range Params {
 		param := Params[name]
-		fieldValue := reflect.ValueOf(p).FieldByName(param.ParamSetFieldName)
+		fieldValue := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
 		if fieldValue.IsValid() {
 			m[string(name)] = fieldValue.Interface()
 		}

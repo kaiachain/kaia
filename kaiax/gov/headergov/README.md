@@ -208,8 +208,8 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   {"jsonrpc":"2.0","id":1,"method":"governance_vote","params":[
     "governance.unitprice",
     100
-  ]}' | jq
-=> "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate."
+  ]}' | jq '.result'
+"(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate."
 ```
 
 ### governance_idxCache
@@ -223,8 +223,8 @@ Returns all vote block numbers from cache.
 
 ```
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_idxCache","params":[]}' | jq
-=> [100, 200, 300]
+  {"jsonrpc":"2.0","id":1,"method":"governance_idxCache","params":[]}' | jq '.result'
+[100, 200, 300]
 ```
 
 ### governance_votes
@@ -241,8 +241,14 @@ Returns all votes in the epoch that the given block number belongs to.
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
   {"jsonrpc":"2.0","id":1,"method":"governance_votes","params":[
     100
-  ]}' | jq
-=> TODO
+  ]}' | jq '.result'
+[
+  {
+    "BlockNum": 102,
+    "Key": "governance.unitprice",
+    "Value": 100
+  }
+]
 ```
 
 ### governance_myVotes
@@ -256,41 +262,16 @@ Returns all votes that the node casted in this epoch and will cast when it becom
 
 ```
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_myVotes","params":[]}' | jq
-=> TODO
-```
+  {"jsonrpc":"2.0","id":1,"method":"governance_myVotes","params":[]}' | jq '.result'
+[
+  {
+    "BlockNum": 102,
+    "Key": "governance.unitprice",
+    "Value": 100,
+    "Casted": true
+  }
+]
 
-### governance_nodeAddress
-
-Returns the node address.
-
-- Parameters: none
-- Returns
-  - `address`: node address
-- Example
-
-```
-curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_nodeAddress","params":[]}' | jq
-=> TODO
-```
-
-### governance_getParams
-
-Returns the effective parameter set at the block `num`.
-
-- Parameters:
-  - `num`: block number
-- Returns
-  - `map[ParamName]any`: parameter set
-- Example
-
-```
-curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_getParams","params":[
-    100
-  ]}' | jq
-=> TODO
 ```
 
 ### governance_status
@@ -304,8 +285,155 @@ Returns in-memory data of this module.
 
 ```
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_status","params":[]}' | jq
-=> TODO
+  {"jsonrpc":"2.0","id":1,"method":"governance_status","params":[]}' | jq '.result'
+{
+  "groupedVotes": {
+    "3": {
+      "102": {
+        "Voter": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "Name": "governance.unitprice",
+        "Value": 100
+      }
+    },
+    "4": {
+      "143": {
+        "Voter": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "Name": "governance.unitprice",
+        "Value": 400
+      }
+    },
+    "7": {
+      "215": {
+        "Voter": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "Name": "governance.unitprice",
+        "Value": 500
+      }
+    }
+  },
+  "governances": {
+    "0": {
+      "governance.deriveshaimpl": 2,
+      "governance.governancemode": "single",
+      "governance.governingnode": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "governance.unitprice": 25000000000,
+      "istanbul.committeesize": 13,
+      "istanbul.epoch": 30,
+      "istanbul.policy": 2,
+      "reward.deferredtxfee": true,
+      "reward.minimumstake": "5000000",
+      "reward.mintingamount": "9600000000000000000",
+      "reward.proposerupdateinterval": 30,
+      "reward.ratio": "34/54/12",
+      "reward.stakingupdateinterval": 60,
+      "reward.useginicoeff": false
+    },
+    "120": {
+      "governance.unitprice": 100
+    },
+    "150": {
+      "governance.unitprice": 400
+    },
+    "240": {
+      "governance.unitprice": 500
+    }
+  },
+  "govHistory": {
+    "0": {
+      "GovernanceMode": "single",
+      "GoverningNode": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "GovParamContract": "0x0000000000000000000000000000000000000000",
+      "CommitteeSize": 13,
+      "ProposerPolicy": 2,
+      "Epoch": 30,
+      "Ratio": "34/54/12",
+      "Kip82Ratio": "20/80",
+      "StakingUpdateInterval": 60,
+      "ProposerUpdateInterval": 30,
+      "MintingAmount": 9600000000000000000,
+      "MinimumStake": 5000000,
+      "UseGiniCoeff": false,
+      "DeferredTxFee": true,
+      "LowerBoundBaseFee": 25000000000,
+      "UpperBoundBaseFee": 750000000000,
+      "GasTarget": 30000000,
+      "MaxBlockGasUsedForBaseFee": 60000000,
+      "BaseFeeDenominator": 20,
+      "DeriveShaImpl": 2,
+      "UnitPrice": 25000000000
+    },
+    "120": {
+      "GovernanceMode": "single",
+      "GoverningNode": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "GovParamContract": "0x0000000000000000000000000000000000000000",
+      "CommitteeSize": 13,
+      "ProposerPolicy": 2,
+      "Epoch": 30,
+      "Ratio": "34/54/12",
+      "Kip82Ratio": "20/80",
+      "StakingUpdateInterval": 60,
+      "ProposerUpdateInterval": 30,
+      "MintingAmount": 9600000000000000000,
+      "MinimumStake": 5000000,
+      "UseGiniCoeff": false,
+      "DeferredTxFee": true,
+      "LowerBoundBaseFee": 25000000000,
+      "UpperBoundBaseFee": 750000000000,
+      "GasTarget": 30000000,
+      "MaxBlockGasUsedForBaseFee": 60000000,
+      "BaseFeeDenominator": 20,
+      "DeriveShaImpl": 2,
+      "UnitPrice": 100
+    },
+    "150": {
+      "GovernanceMode": "single",
+      "GoverningNode": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "GovParamContract": "0x0000000000000000000000000000000000000000",
+      "CommitteeSize": 13,
+      "ProposerPolicy": 2,
+      "Epoch": 30,
+      "Ratio": "34/54/12",
+      "Kip82Ratio": "20/80",
+      "StakingUpdateInterval": 60,
+      "ProposerUpdateInterval": 30,
+      "MintingAmount": 9600000000000000000,
+      "MinimumStake": 5000000,
+      "UseGiniCoeff": false,
+      "DeferredTxFee": true,
+      "LowerBoundBaseFee": 25000000000,
+      "UpperBoundBaseFee": 750000000000,
+      "GasTarget": 30000000,
+      "MaxBlockGasUsedForBaseFee": 60000000,
+      "BaseFeeDenominator": 20,
+      "DeriveShaImpl": 2,
+      "UnitPrice": 400
+    },
+    "240": {
+      "GovernanceMode": "single",
+      "GoverningNode": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "GovParamContract": "0x0000000000000000000000000000000000000000",
+      "CommitteeSize": 13,
+      "ProposerPolicy": 2,
+      "Epoch": 30,
+      "Ratio": "34/54/12",
+      "Kip82Ratio": "20/80",
+      "StakingUpdateInterval": 60,
+      "ProposerUpdateInterval": 30,
+      "MintingAmount": 9600000000000000000,
+      "MinimumStake": 5000000,
+      "UseGiniCoeff": false,
+      "DeferredTxFee": true,
+      "LowerBoundBaseFee": 25000000000,
+      "UpperBoundBaseFee": 750000000000,
+      "GasTarget": 30000000,
+      "MaxBlockGasUsedForBaseFee": 60000000,
+      "BaseFeeDenominator": 20,
+      "DeriveShaImpl": 2,
+      "UnitPrice": 500
+    }
+  },
+  "nodeAddress": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "myVotes": []
+}
 ```
 
 ## Getters

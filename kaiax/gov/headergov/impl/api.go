@@ -129,14 +129,6 @@ func (api *headerGovAPI) MyVotes() []MyVotesResponse {
 	return ret
 }
 
-func (api *headerGovAPI) NodeAddress() common.Address {
-	return api.h.nodeAddress
-}
-
-func (api *headerGovAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) {
-	return api.getParams(num)
-}
-
 func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {

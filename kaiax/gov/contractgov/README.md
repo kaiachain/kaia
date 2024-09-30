@@ -31,6 +31,8 @@ This module does not have any persistent data.
 
 ## In-memory Structures
 
+This module does not have any in-memory data structures.
+
 ## Module lifecycle
 
 ### Init
@@ -58,7 +60,25 @@ This module does not have any rewind-related block processing logic.
 
 ## APIs
 
-### governance_getContractParam
+### governance_getContractParams
+
+Returns the effective parameter set at the block `num` from GovParam contract.
+
+- Parameters:
+  - `num`: block number
+- Returns
+  - `VotesResponse`: votes
+- Example
+
+### governance_getContractParamFromGovParam
+
+Returns all votes in the epoch that the given block number belongs to.
+
+- Parameters:
+  - `num`: block number
+- Returns
+  - `VotesResponse`: votes
+- Example
 
 ## Getters
 

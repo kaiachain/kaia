@@ -62,7 +62,7 @@ type StatusAPI struct {
 	MyVotes      []headergov.VoteData              `json:"myVotes"`
 }
 
-type AccumulatedRewards struct {
+type AccumulatedRewardsResponse struct {
 	FirstBlockTime string   `json:"firstBlockTime"`
 	LastBlockTime  string   `json:"lastBlockTime"`
 	FirstBlock     *big.Int `json:"firstBlock"`
@@ -87,16 +87,16 @@ func (api *GovAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 	return getParams(api.g, num)
 }
 
-func (api *GovAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
+func (api *GovAPI) GetRewardsAccumulated(lower rpc.BlockNumber, upper rpc.BlockNumber) (*AccumulatedRewardsResponse, error) {
 	currentBlock := api.g.chain.CurrentBlock().NumberU64()
 	firstBlock := currentBlock
-	if first >= rpc.EarliestBlockNumber {
-		firstBlock = uint64(first.Int64())
+	if lower >= rpc.EarliestBlockNumber {
+		firstBlock = uint64(lower.Int64())
 	}
 
 	lastBlock := currentBlock
-	if last >= rpc.EarliestBlockNumber {
-		lastBlock = uint64(last.Int64())
+	if upper >= rpc.EarliestBlockNumber {
+		lastBlock = uint64(upper.Int64())
 	}
 
 	if firstBlock > lastBlock {
@@ -112,7 +112,7 @@ func (api *GovAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNu
 		return nil, errors.New("block range should be equal or less than 604800")
 	}
 	// initialize structures before request a job
-	accumRewards := &AccumulatedRewards{}
+	accumRewards := &AccumulatedRewardsResponse{}
 	blockRewards := reward.NewRewardSpec()
 	mu := sync.Mutex{} // protect blockRewards
 
@@ -187,6 +187,10 @@ func (api *GovAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNu
 	accumRewards.TotalKEFRewards = blockRewards.KEF
 
 	return accumRewards, nil
+}
+
+func (api *GovAPI) NodeAddress() (common.Address, error) {
+	return api.g.hgm.NodeAddress(), nil
 }
 
 func NewKaiaAPI(g *GovModule) *KaiaAPI {
