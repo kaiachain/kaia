@@ -19,8 +19,8 @@ type govData struct {
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
 func NewGovData(m map[gov.ParamName]any) GovData {
 	items := make(map[gov.ParamName]any)
-	for enum, value := range m {
-		param, ok := gov.Params[enum]
+	for name, value := range m {
+		param, ok := gov.Params[name]
 		if !ok {
 			return nil
 		}
@@ -34,7 +34,7 @@ func NewGovData(m map[gov.ParamName]any) GovData {
 			return nil
 		}
 
-		items[enum] = cv
+		items[name] = cv
 	}
 	return &govData{
 		items: items,

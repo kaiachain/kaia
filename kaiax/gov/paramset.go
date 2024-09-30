@@ -34,8 +34,8 @@ type ParamSet struct {
 // GetDefaultGovernanceParamSet must not return nil, which is unit-tested.
 func GetDefaultGovernanceParamSet() *ParamSet {
 	ps := &ParamSet{}
-	for enum, param := range Params {
-		err := ps.Set(enum, param.DefaultValue)
+	for name, param := range Params {
+		err := ps.Set(name, param.DefaultValue)
 		if err != nil {
 			return nil
 		}
@@ -48,7 +48,7 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 func (p *ParamSet) Set(name ParamName, cv any) error {
 	param, ok := Params[name]
 	if !ok {
-		return ErrInvalidParamEnum
+		return ErrInvalidParamName
 	}
 
 	field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
@@ -65,9 +65,9 @@ func (p *ParamSet) Set(name ParamName, cv any) error {
 	return nil
 }
 
-func (p *ParamSet) SetFromEnumMap(m map[ParamName]any) error {
-	for enum, value := range m {
-		err := p.Set(enum, value)
+func (p *ParamSet) SetFromMap(m map[ParamName]any) error {
+	for name, value := range m {
+		err := p.Set(name, value)
 		if err != nil {
 			return err
 		}
@@ -83,18 +83,18 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
-func (p *ParamSet) ToEnumMap() map[ParamName]any {
+func (p *ParamSet) ToMap() map[ParamName]any {
 	ret := make(map[ParamName]any)
 
 	// Iterate through all params in Params and ensure they're in the result
-	for enum, param := range Params {
+	for name, param := range Params {
 		field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
 		if field.IsValid() {
 			// Convert big.Int to string for JSON compatibility at API
 			if bigIntValue, ok := field.Interface().(*big.Int); ok {
-				ret[enum] = bigIntValue.String()
+				ret[name] = bigIntValue.String()
 			} else {
-				ret[enum] = field.Interface()
+				ret[name] = field.Interface()
 			}
 		}
 	}

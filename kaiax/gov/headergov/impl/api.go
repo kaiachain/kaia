@@ -146,7 +146,7 @@ func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (map[gov.ParamName]any,
 	}
 
 	gp := api.h.EffectiveParamSet(blockNumber)
-	return gp.ToEnumMap(), nil
+	return gp.ToMap(), nil
 }
 
 func (api *headerGovAPI) Status() StatusResponse {

@@ -22,8 +22,8 @@ func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) map[gov.ParamN
 		if num > blockNum {
 			continue
 		}
-		for enum, value := range gov.Items() {
-			ret[enum] = value
+		for name, value := range gov.Items() {
+			ret[name] = value
 		}
 	}
 

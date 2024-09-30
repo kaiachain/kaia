@@ -26,7 +26,7 @@ func GovsToHistory(govs map[uint64]GovData) History {
 	gp := *gov.GetDefaultGovernanceParamSet()
 	for _, num := range sortedNums {
 		govData := govs[num]
-		if err := gp.SetFromEnumMap(govData.Items()); err != nil {
+		if err := gp.SetFromMap(govData.Items()); err != nil {
 			continue
 		}
 		gh[num] = gp

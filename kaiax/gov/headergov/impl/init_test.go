@@ -24,7 +24,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		dbm   = database.NewMemoryDBManager()
 		db    = dbm.GetMemDB()
 
-		m      = gov.GetDefaultGovernanceParamSet().ToEnumMap()
+		m      = gov.GetDefaultGovernanceParamSet().ToMap()
 		gov, _ = headergov.NewGovData(m).ToGovBytes()
 	)
 
