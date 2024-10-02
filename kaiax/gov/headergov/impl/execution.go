@@ -61,14 +61,6 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 func (h *headerGovModule) HandleGov(blockNum uint64, gov headergov.GovData) error {
 	h.cache.AddGov(blockNum, gov)
 
-	// merge gov based on latest effective params.
-	gp := h.EffectiveParamSet(blockNum)
-	err := gp.SetFromMap(gov.Items())
-	if err != nil {
-		logger.Error("kaiax.HandleGov error setting paramset", "blockNum", blockNum, "gov", gov, "err", err, "gp", gp)
-		return err
-	}
-
 	var data StoredUint64Array = h.cache.GovBlockNums()
 	WriteGovDataBlockNums(h.ChainKv, &data)
 	return nil

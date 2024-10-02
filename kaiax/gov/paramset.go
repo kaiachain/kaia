@@ -119,20 +119,21 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 	return ps
 }
 
-func (p PartialParamSet) Add(name string, value any) {
+func (p PartialParamSet) Add(name string, value any) error {
 	param, ok := Params[ParamName(name)]
 	if !ok {
-		return
+		return ErrInvalidParamName
 	}
 
 	cv, err := param.Canonicalizer(value)
 	if err != nil {
-		return
+		return err
 	}
 
 	if !param.FormatChecker(cv) {
-		return
+		return ErrInvalidParamValue
 	}
 
 	p[ParamName(name)] = cv
+	return nil
 }

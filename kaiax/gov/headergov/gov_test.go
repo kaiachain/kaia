@@ -69,7 +69,7 @@ func TestNewGovData(t *testing.T) {
 	for _, tc := range badGovs {
 		t.Run("badGov/"+string(tc.name), func(t *testing.T) {
 			gov := NewGovData(gov.PartialParamSet{tc.name: tc.value})
-			assert.Equal(t, 0, len(gov.Items()))
+			assert.Nil(t, gov)
 		})
 	}
 }

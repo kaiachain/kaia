@@ -16,7 +16,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
-	// 1. Check Vote
+	// 1. Verify Vote
 	if len(header.Vote) > 0 {
 		var vb headergov.VoteBytes = header.Vote
 		vote, err := vb.ToVoteData()
@@ -32,38 +32,7 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 		}
 	}
 
-	// 2. Check Governance
-	if header.Number.Uint64()%h.epoch != 0 {
-		if len(header.Governance) > 0 {
-			logger.Error("governance is not allowed in non-epoch block", "num", header.Number.Uint64())
-			return ErrGovInNonEpochBlock
-		} else {
-			return nil
-		}
-	}
-
-	expected := h.getExpectedGovernance(header.Number.Uint64())
-	if len(header.Governance) == 0 {
-		if len(expected.Items()) != 0 {
-			return ErrGovVerification
-		}
-
-		return nil
-	}
-
-	var gb headergov.GovBytes = header.Governance
-	actual, err := gb.ToGovData()
-	if err != nil {
-		logger.Error("DeserializeHeaderGov error", "num", header.Number.Uint64(), "governance", gb, "err", err)
-		return err
-	}
-
-	if !reflect.DeepEqual(expected, actual) {
-		logger.Error("Governance mismatch", "expected", expected, "actual", actual)
-		return ErrGovVerification
-	}
-
-	return nil
+	return h.VerifyGov(header)
 }
 
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
@@ -87,9 +56,9 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 }
 
 // VerifyVote checks the followings:
-// (1) if voter is in valset,
-// (2) integrity of the voter (ensures that voter is the block proposer),
-// (3) consistency check of the vote value.
+// (1) voter must be in valset,
+// (2) integrity of the voter (the voter must be the block proposer),
+// (3) the vote value must be consistent compared to the latest ParamSet.
 func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) error {
 	if vote == nil {
 		return ErrNilVote
@@ -98,8 +67,52 @@ func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) e
 	// TODO: check if if voter is in valset.
 	// TODO: check if Voter is the block proposer.
 
-	// consistency check
+	// (3)
 	return h.checkConsistency(blockNum, vote)
+}
+
+// VerifyGov checks the followings:
+// (1) governance must be empty in non-epoch block,
+// (2) if there are no votes in the previous epoch, governance must be empty,
+// (3) if any vote exists in the previous epoch, governance must not be empty,
+// (4) the json must not contain unknown fields,
+// (5) the parsed json must exactly match the map derived locally from the previous epoch's votes.
+func (h *headerGovModule) VerifyGov(header *types.Header) error {
+	// (1)
+	if header.Number.Uint64()%h.epoch != 0 {
+		if len(header.Governance) > 0 {
+			logger.Error("governance is not allowed in non-epoch block", "num", header.Number.Uint64())
+			return ErrGovInNonEpochBlock
+		} else {
+			return nil
+		}
+	}
+
+	// (2), (3)
+	expected := h.getExpectedGovernance(header.Number.Uint64())
+	if len(header.Governance) == 0 {
+		if len(expected.Items()) != 0 {
+			return ErrGovVerification
+		}
+
+		return nil
+	}
+
+	// (4)
+	var gb headergov.GovBytes = header.Governance
+	actual, err := gb.ToGovData()
+	if err != nil {
+		logger.Error("DeserializeHeaderGov error", "num", header.Number.Uint64(), "governance", gb, "err", err)
+		return err
+	}
+
+	// (5)
+	if !reflect.DeepEqual(expected, actual) {
+		logger.Error("Governance mismatch", "expected", expected, "actual", actual)
+		return ErrGovVerification
+	}
+
+	return nil
 }
 
 func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
@@ -137,16 +150,17 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 	return nil
 }
 
-// blockNum must be greater than epoch.
+// The blockNum's epoch index must be greater than 0. That is, it must be blockNum >= epoch.
 func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
 	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
 	govs := make(gov.PartialParamSet)
 
 	for _, vote := range prevEpochVotes {
-		govs[vote.Name()] = vote.Value()
+		govs.Add(string(vote.Name()), vote.Value())
 	}
 
+	// assert(len(headergov.NewGovData(govs).Items()) == len(govs))
 	return headergov.NewGovData(govs)
 }
 

@@ -15,12 +15,16 @@ type govData struct {
 	items gov.PartialParamSet
 }
 
-// NewGovData returns a canonical & formatted gov data. VoteForbidden flag and consistency is NOT checked.
+// NewGovData returns a canonical & formatted gov data. It returns nil if any entry from `m` is invalid.
+// VoteForbidden flag and consistency is NOT checked.
 // In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
 func NewGovData(m gov.PartialParamSet) GovData {
 	items := make(gov.PartialParamSet)
 	for name, value := range m {
-		items.Add(string(name), value)
+		err := items.Add(string(name), value)
+		if err != nil {
+			return nil
+		}
 	}
 	return &govData{
 		items: items,
