@@ -2,7 +2,6 @@ package impl
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
@@ -127,18 +126,6 @@ func (api *headerGovAPI) MyVotes() []MyVotesResponse {
 	}
 
 	return ret
-}
-
-func (api *headerGovAPI) getParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
-
-	gp := api.h.EffectiveParamSet(blockNumber)
-	return gp.ToMap(), nil
 }
 
 func (api *headerGovAPI) Status() StatusResponse {
