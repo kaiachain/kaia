@@ -6,9 +6,7 @@ import (
 )
 
 func (h *headerGovModule) RewindTo(newBlock *types.Block) {
-	// Remove entries from h.cache that are larger than num
-	h.cache.RemoveVotesAfter(newBlock.NumberU64())
-	h.cache.RemoveGovAfter(newBlock.NumberU64())
+	// do nothing
 }
 
 func (h *headerGovModule) RewindDelete(hash common.Hash, num uint64) {

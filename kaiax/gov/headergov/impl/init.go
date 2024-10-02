@@ -80,25 +80,25 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	return nil
 }
 
-func (s *headerGovModule) Start() error {
+func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
 	return nil
 }
 
-func (s *headerGovModule) Stop() {
+func (h *headerGovModule) Stop() {
 	logger.Info("HeaderGovModule stopped")
 }
 
-func (s *headerGovModule) isKoreHF(num uint64) bool {
-	return s.ChainConfig.IsKoreForkEnabled(new(big.Int).SetUint64(num))
+func (h *headerGovModule) isKoreHF(num uint64) bool {
+	return h.ChainConfig.IsKoreForkEnabled(new(big.Int).SetUint64(num))
 }
 
-func (s *headerGovModule) PushMyVotes(vote headergov.VoteData) {
-	s.myVotes = append(s.myVotes, vote)
+func (h *headerGovModule) PushMyVotes(vote headergov.VoteData) {
+	h.myVotes = append(h.myVotes, vote)
 }
 
-func (s *headerGovModule) PopMyVotes(idx int) {
-	s.myVotes = append(s.myVotes[:idx], s.myVotes[idx+1:]...)
+func (h *headerGovModule) PopMyVotes(idx int) {
+	h.myVotes = append(h.myVotes[:idx], h.myVotes[idx+1:]...)
 }
 
 func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {

@@ -20,7 +20,7 @@ func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialPar
 	ret := make(gov.PartialParamSet)
 	for _, num := range h.cache.GovBlockNums() {
 		if num > blockNum {
-			continue
+			break
 		}
 		for name, value := range h.cache.Govs()[num].Items() {
 			ret[name] = value
