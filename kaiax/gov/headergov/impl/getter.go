@@ -18,11 +18,11 @@ func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 
 func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
 	ret := make(gov.PartialParamSet)
-	for num, gov := range h.cache.Govs() {
+	for _, num := range h.cache.GovBlockNums() {
 		if num > blockNum {
 			continue
 		}
-		for name, value := range gov.Items() {
+		for name, value := range h.cache.Govs()[num].Items() {
 			ret[name] = value
 		}
 	}
