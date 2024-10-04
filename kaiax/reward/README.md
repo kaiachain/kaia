@@ -22,7 +22,7 @@ The rules have changed over hardforks.
   - Before KIP-162, the formula is simplified as `block.gasUsed * block.baseFeePerGas`
   - Before KIP-71, the formula is simplified as `block.gasUsed * UnitPrice` where UnitPrice is the fixed value determined by the `governance.unitprice` parameter in the genesis configuration and can be modified by governance.
 
-### Reward distribution overview
+### Reward distribution
 
 - **Minting reward (MR)**: The reward from the minting amount.
 - The fees originated from transaction fees can use one of either methods of accounting depending on the `reward.deferredtxfee` parameter in the genesis configuration. The two methods are mutually exclusive.
@@ -33,7 +33,7 @@ The rules have changed over hardforks.
     - DF method is used when `reward.deferredtxfee` is set to `true`. Kaia Mainnet and Kairos testnet use this method.
     - The `Finalize()` function shall pay the transaction fees to various recipients. The deferred fees are calculated along with the minting amount.
 
-### Reward recipients
+### Recipients
 
 - **Validators (G)**: The block validators also known as the GC.
   - **Proposer (P)**: The validator who proposed the block. Receives rewards to its reward address.
@@ -42,13 +42,11 @@ The rules have changed over hardforks.
 - **Fund2 (Y; KEF, KCF, KIR)**: The second fund. Its address is specified in the AddressBook contract. Current name is KEF (Kaia Ecosystem Fund).
 - **Burnt (B)**: The amount burnt. Tokens are implicitly burnt during reward distribution; the transaction fees are deducted from the transaction senders but less amount are added to the reward recipients.
 - **Reward ratio**: The reward distribution ratio among GC, Fund1, and Fund2 (G/X/Y).
-  - Determined by the `reward.ratio` parameter in three nonnegative integers sums up to 100. e.g. `34/54/12`
-  - Often notated as percentiles (G+X+Y = 100) and fractions (g+x+y = 1).
+  - Determined by the `reward.ratio` parameter in three nonnegative integer percentiles sums up to 100. e.g. `34/54/12`
 - **KIP-82 ratio**: The reward distribution ratio between proposer and stakers (P/S).
-  - Determined by the `reward.kip82` parameter in two nonnegative integers sums up to 100. e.g. `20/80`
-  - Often notated as percentiles (P+S = 100) and fractions (p+s = 1).
+  - Determined by the `reward.kip82` parameter in two nonnegative integer percentiles sums up to 100. e.g. `20/80`
 
-### Reward allocation
+### Allocation
 
 - **Block Reward (R)**: Refers to all rewards distributed in a block including the minting amount, non-deferred fees, and deferred fees.
 - **Pre-Magma rule**: The rule had been used since the genesis.
