@@ -2,6 +2,7 @@ package headergov
 
 import (
 	"sort"
+	"sync"
 )
 
 type VotesInEpoch map[uint64]VoteData
@@ -11,6 +12,7 @@ type HeaderCache struct {
 	groupedVotes map[uint64]VotesInEpoch
 	governances  map[uint64]GovData
 	history      History
+	mu           *sync.RWMutex
 }
 
 func NewHeaderGovCache() *HeaderCache {
@@ -18,10 +20,14 @@ func NewHeaderGovCache() *HeaderCache {
 		groupedVotes: make(map[uint64]VotesInEpoch),
 		governances:  make(map[uint64]GovData),
 		history:      History{},
+		mu:           &sync.RWMutex{},
 	}
 }
 
 func (h *HeaderCache) GroupedVotes() map[uint64]VotesInEpoch {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	votes := make(map[uint64]VotesInEpoch)
 	for epochIdx, votesInEpoch := range h.groupedVotes {
 		votes[epochIdx] = make(VotesInEpoch)
@@ -33,6 +39,9 @@ func (h *HeaderCache) GroupedVotes() map[uint64]VotesInEpoch {
 }
 
 func (h *HeaderCache) Govs() map[uint64]GovData {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	govs := make(map[uint64]GovData)
 	for blockNum, gov := range h.governances {
 		govs[blockNum] = gov
@@ -41,10 +50,16 @@ func (h *HeaderCache) Govs() map[uint64]GovData {
 }
 
 func (h *HeaderCache) History() History {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return h.history
 }
 
 func (h *HeaderCache) VoteBlockNums() []uint64 {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	blockNums := make([]uint64, 0)
 	for _, group := range h.groupedVotes {
 		for num := range group {
@@ -58,6 +73,9 @@ func (h *HeaderCache) VoteBlockNums() []uint64 {
 }
 
 func (h *HeaderCache) GovBlockNums() []uint64 {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	blockNums := make([]uint64, 0)
 	for num := range h.governances {
 		blockNums = append(blockNums, num)
@@ -69,6 +87,9 @@ func (h *HeaderCache) GovBlockNums() []uint64 {
 }
 
 func (h *HeaderCache) AddVote(epochIdx, blockNum uint64, vote VoteData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if _, ok := h.groupedVotes[epochIdx]; !ok {
 		h.groupedVotes[epochIdx] = make(VotesInEpoch)
 	}
@@ -76,12 +97,18 @@ func (h *HeaderCache) AddVote(epochIdx, blockNum uint64, vote VoteData) {
 }
 
 func (h *HeaderCache) AddGov(blockNum uint64, gov GovData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.governances[blockNum] = gov
 
 	h.history = GovsToHistory(h.governances)
 }
 
 func (h *HeaderCache) RemoveVotesAfter(blockNum uint64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	for epochIdxIter, votes := range h.groupedVotes {
 		for blockNumIter := range votes {
 			if blockNumIter > blockNum {
@@ -96,6 +123,9 @@ func (h *HeaderCache) RemoveVotesAfter(blockNum uint64) {
 }
 
 func (h *HeaderCache) RemoveGovAfter(blockNum uint64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	for blockNumIter := range h.governances {
 		if blockNumIter > blockNum {
 			delete(h.governances, blockNumIter)

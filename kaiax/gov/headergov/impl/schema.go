@@ -2,6 +2,7 @@ package impl
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -9,11 +10,15 @@ import (
 var (
 	voteDataBlockNumsKey = []byte("governanceVoteDataBlockNums")
 	govDataBlockNumsKey  = []byte("governanceDataBlockNums")
+	mu                   = &sync.RWMutex{}
 )
 
 type StoredUint64Array []uint64
 
 func readStoredUint64Array(db database.Database, key []byte) *StoredUint64Array {
+	mu.RLock()
+	defer mu.RUnlock()
+
 	b, err := db.Get(key)
 	if err != nil || len(b) == 0 {
 		return nil
@@ -28,6 +33,9 @@ func readStoredUint64Array(db database.Database, key []byte) *StoredUint64Array 
 }
 
 func writeStoredUint64Array(db database.Database, key []byte, data *StoredUint64Array) {
+	mu.Lock()
+	defer mu.Unlock()
+
 	b, err := json.Marshal(data)
 	if err != nil {
 		logger.Error("Failed to marshal voteDataBlocks", "err", err)
