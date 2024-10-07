@@ -1,0 +1,12 @@
+linters:
+  disable-all: true
+  presets:
+    - format
+    - performance
+
+run:
+  timeout: 10m
+  tests: true
+
+issues:
+  new-from-rev: dev

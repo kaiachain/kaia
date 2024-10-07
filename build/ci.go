@@ -344,10 +344,8 @@ func doCover(cmdline []string) {
 // if exitOnError is false, prepare a report file for linters and run additional linters without stopping
 func doLint(cmdline []string, exitOnError bool) {
 	var (
-		vFlag      = flag.Bool("v", false, "verbose output")
-		newFromRev = flag.String("new-from-rev", "", "Show only new issues created after git revision REV")
-
-		fname = "linter_report.txt"
+		vFlag = flag.Bool("v", false, "verbose output")
+		cFlag = flag.String("c", "", "")
 	)
 	flag.CommandLine.Parse(cmdline)
 
@@ -358,71 +356,22 @@ func doLint(cmdline []string, exitOnError bool) {
 
 	lintBin := installLinter()
 
-	// linters for "lint" command
-	lintersSet := [][]string{
-		{
-			"--presets=format",
-			"--presets=performance",
-		},
+	// linter configs
+	config := "build/linter/golangci.yml"
+	if *cFlag != "" {
+		config = *cFlag
 	}
 
-	if !exitOnError {
-		// Prepare a report file for linters
-		fileOut, err := os.Create(fname)
-		defer fileOut.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("Generating a linter report %s using above linters.\n", fname)
-
-		oldStdout := os.Stdout
-		os.Stdout = fileOut
-		defer func() {
-			// Restore stdout
-			os.Stdout = oldStdout
-			fmt.Printf("Successfully generating %s.\n", fname)
-		}()
-
-		// linters for "lint-try" command
-		lintersSet = [][]string{
-			{
-				"--enable=misspell",
-				"--enable=goconst",
-			},
-			{
-				"--enable=dupl",
-				"--enable=errcheck",
-				"--enable=ineffassign",
-				"--enable=unparam",
-				"--enable=unused",
-			},
-			{"--enable=unconvert"},
-			{"--enable=gosimple"},
-			{"--enable=staticcheck"},
-			{"--enable=gocyclo"},
-		}
+	lflags := []string{"run", "-c", config}
+	if *vFlag {
+		lflags = append(lflags, "-v")
 	}
 
-	for _, linters := range lintersSet {
-		configs := []string{
-			"run",
-			"--tests",
-			"--disable-all",
-			"--timeout=10m",
-		}
-		if *vFlag {
-			configs = append(configs, "-v")
-		}
-		if *newFromRev != "" {
-			configs = append(configs, "--new-from-rev="+*newFromRev)
-		}
-		configs = append(configs, linters...)
-		args := append(configs, packages...)
-		if exitOnError {
-			build.MustRunCommand(lintBin, args...)
-		} else {
-			build.TryRunCommand(lintBin, args...)
-		}
+	args := append(lflags, packages...)
+	if exitOnError {
+		build.MustRunCommand(lintBin, args...)
+	} else {
+		build.TryRunCommand(lintBin, args...)
 	}
 }
 

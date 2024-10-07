@@ -116,6 +116,7 @@ func (h *headerGovModule) VerifyGov(header *types.Header) error {
 }
 
 func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
+	//nolint:exhaustive
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
 		// TODO: check in valset

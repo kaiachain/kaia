@@ -1,0 +1,26 @@
+linters:
+  disable-all: true
+  enable:
+    - misspell
+    - goconst
+    - dupl
+    - errcheck
+    - ineffassign
+    - unparam
+    - unused
+    - unconvert
+    - gosimple
+    - staticcheck
+    - gocyclo
+
+run:
+  timeout: 10m
+  tests: true
+
+issues:
+  new-from-rev: dev
+
+output:
+  formats:
+    - format: html
+      path: linter_report.html
