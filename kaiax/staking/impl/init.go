@@ -58,14 +58,20 @@ func NewStakingModule() *StakingModule {
 }
 
 func (s *StakingModule) Init(opts *InitOpts) error {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.ChainKv == nil {
+		return staking.ErrInitUnexpectedNil
+	}
 	s.InitOpts = *opts
 
+	if s.ChainConfig.Governance == nil || s.ChainConfig.Governance.Reward == nil {
+		return staking.ErrInitUnexpectedNil
+	}
+	if s.ChainConfig.Governance.Reward.StakingUpdateInterval == 0 {
+		return staking.ErrZeroStakingInterval
+	}
 	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
 	s.useGiniCoeff = s.ChainConfig.Governance.Reward.UseGiniCoeff
 	s.minimumStake = s.ChainConfig.Governance.Reward.MinimumStake
-	if s.stakingInterval == 0 {
-		return staking.ErrZeroStakingInterval
-	}
 
 	return nil
 }

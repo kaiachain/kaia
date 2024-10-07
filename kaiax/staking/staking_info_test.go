@@ -86,7 +86,7 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			},
 			expectedGini: 0.0,
 		},
-		"unrelated 4 nodes": {
+		"4 individual nodes": {
 			stakingInfo: &StakingInfo{
 				SourceBlockNum:   2 * 86400,
 				NodeIds:          []common.Address{n1, n2, n3, n4},

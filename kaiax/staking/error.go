@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	ErrInitUnexpectedNil   = errors.New("unexpected nil during module init")
 	ErrZeroStakingInterval = errors.New("staking interval cannot be zero")
 	ErrAddressBookResult   = errors.New("invalid result from AddressBook")
 )
