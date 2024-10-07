@@ -3,7 +3,6 @@ package gov
 import (
 	"encoding/json"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
@@ -48,22 +47,57 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 
 // Set the canonical value in the ParamSet for the corresponding parameter name.
 func (p *ParamSet) Set(name ParamName, cv any) error {
-	param, ok := Params[name]
-	if !ok {
+	var ok bool
+	switch name {
+	case GovernanceGovernanceMode:
+		p.GovernanceMode, ok = cv.(string)
+	case GovernanceGoverningNode:
+		p.GoverningNode, ok = cv.(common.Address)
+	case GovernanceGovParamContract:
+		p.GovParamContract, ok = cv.(common.Address)
+	case GovernanceUnitPrice:
+		p.UnitPrice, ok = cv.(uint64)
+	case IstanbulCommitteeSize:
+		p.CommitteeSize, ok = cv.(uint64)
+	case IstanbulEpoch:
+		p.Epoch, ok = cv.(uint64)
+	case IstanbulPolicy:
+		p.ProposerPolicy, ok = cv.(uint64)
+	case Kip71BaseFeeDenominator:
+		p.BaseFeeDenominator, ok = cv.(uint64)
+	case Kip71GasTarget:
+		p.GasTarget, ok = cv.(uint64)
+	case Kip71LowerBoundBaseFee:
+		p.LowerBoundBaseFee, ok = cv.(uint64)
+	case Kip71MaxBlockGasUsedForBaseFee:
+		p.MaxBlockGasUsedForBaseFee, ok = cv.(uint64)
+	case Kip71UpperBoundBaseFee:
+		p.UpperBoundBaseFee, ok = cv.(uint64)
+	case RewardDeferredTxFee:
+		p.DeferredTxFee, ok = cv.(bool)
+	case RewardKip82Ratio:
+		p.Kip82Ratio, ok = cv.(string)
+	case RewardMintingAmount:
+		p.MintingAmount, ok = cv.(*big.Int)
+	case RewardMinimumStake:
+		p.MinimumStake, ok = cv.(*big.Int)
+	case RewardProposerUpdateInterval:
+		p.ProposerUpdateInterval, ok = cv.(uint64)
+	case RewardRatio:
+		p.Ratio, ok = cv.(string)
+	case RewardStakingUpdateInterval:
+		p.StakingUpdateInterval, ok = cv.(uint64)
+	case RewardUseGiniCoeff:
+		p.UseGiniCoeff, ok = cv.(bool)
+	case GovernanceDeriveShaImpl:
+		p.DeriveShaImpl, ok = cv.(uint64)
+	default:
 		return ErrInvalidParamName
 	}
 
-	field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
-	if !field.IsValid() || !field.CanSet() {
-		return ErrCannotSet
-	}
-
-	fieldValue := reflect.ValueOf(cv)
-	if !fieldValue.Type().AssignableTo(field.Type()) {
+	if !ok {
 		return ErrInvalidParamValue
 	}
-
-	field.Set(fieldValue)
 	return nil
 }
 
@@ -85,19 +119,55 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
+// TODO: remove this. Currently it's used for kaia_getParams API.
 func (p *ParamSet) ToMap() map[ParamName]any {
 	ret := make(map[ParamName]any)
 
 	// Iterate through all params in Params and ensure they're in the result
-	for name, param := range Params {
-		field := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
-		if field.IsValid() {
-			// Convert big.Int to string for JSON compatibility at API
-			if bigIntValue, ok := field.Interface().(*big.Int); ok {
-				ret[name] = bigIntValue.String()
-			} else {
-				ret[name] = field.Interface()
-			}
+	for name := range Params {
+		switch name {
+		case GovernanceGovernanceMode:
+			ret[name] = p.GovernanceMode
+		case GovernanceGoverningNode:
+			ret[name] = p.GoverningNode
+		case GovernanceGovParamContract:
+			ret[name] = p.GovParamContract
+		case GovernanceUnitPrice:
+			ret[name] = p.UnitPrice
+		case IstanbulCommitteeSize:
+			ret[name] = p.CommitteeSize
+		case IstanbulEpoch:
+			ret[name] = p.Epoch
+		case IstanbulPolicy:
+			ret[name] = p.ProposerPolicy
+		case Kip71BaseFeeDenominator:
+			ret[name] = p.BaseFeeDenominator
+		case Kip71GasTarget:
+			ret[name] = p.GasTarget
+		case Kip71LowerBoundBaseFee:
+			ret[name] = p.LowerBoundBaseFee
+		case Kip71MaxBlockGasUsedForBaseFee:
+			ret[name] = p.MaxBlockGasUsedForBaseFee
+		case Kip71UpperBoundBaseFee:
+			ret[name] = p.UpperBoundBaseFee
+		case RewardDeferredTxFee:
+			ret[name] = p.DeferredTxFee
+		case RewardKip82Ratio:
+			ret[name] = p.Kip82Ratio
+		case RewardMintingAmount:
+			ret[name] = p.MintingAmount
+		case RewardMinimumStake:
+			ret[name] = p.MinimumStake
+		case RewardProposerUpdateInterval:
+			ret[name] = p.ProposerUpdateInterval
+		case RewardRatio:
+			ret[name] = p.Ratio
+		case RewardStakingUpdateInterval:
+			ret[name] = p.StakingUpdateInterval
+		case RewardUseGiniCoeff:
+			ret[name] = p.UseGiniCoeff
+		case GovernanceDeriveShaImpl:
+			ret[name] = p.DeriveShaImpl
 		}
 	}
 
@@ -107,12 +177,8 @@ func (p *ParamSet) ToMap() map[ParamName]any {
 // TODO: remove this. Currently it's used for GetRewards API.
 func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 	m := make(map[string]any)
-	for name := range Params {
-		param := Params[name]
-		fieldValue := reflect.ValueOf(p).Elem().FieldByName(param.ParamSetFieldName)
-		if fieldValue.IsValid() {
-			m[string(name)] = fieldValue.Interface()
-		}
+	for name, val := range p.ToMap() {
+		m[string(name)] = val
 	}
 
 	ps, _ := params.NewGovParamSetStrMap(m)
