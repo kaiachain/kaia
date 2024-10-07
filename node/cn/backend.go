@@ -48,6 +48,9 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -129,7 +132,8 @@ type CN struct {
 	miner    Miner
 	gasPrice *big.Int
 
-	rewardbase common.Address
+	nodeAddress common.Address
+	rewardbase  common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -249,7 +253,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
-		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
+		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		governance.SetNodeAddress(cn.nodeAddress)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -514,13 +519,35 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 	mNoop := noop_impl.NewNoopModule()
 
+	mGov := gov_impl.NewGovModule()
+	hgm := headergov_impl.NewHeaderGovModule()
+	hgm.Init(&headergov_impl.InitOpts{
+		ChainKv:     s.chainDB.GetMiscDB(),
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+		NodeAddress: s.nodeAddress,
+	})
+
+	cgm := contractgov_impl.NewContractGovModule()
+	cgm.Init(&contractgov_impl.InitOpts{
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+		Hgm:         hgm,
+	})
+
+	mGov.Init(&gov_impl.InitOpts{
+		Hgm:   hgm,
+		Cgm:   cgm,
+		Chain: s.blockchain,
+	})
+
 	// Register modules to respective components
-	s.RegisterBaseModules(mNoop)
-	// s.RegisterJsonRpcModules()
-	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop)
-	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
-	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop)
-	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop)
+	s.RegisterBaseModules(mNoop, mGov)
+	s.RegisterJsonRpcModules(mGov)
+	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop, mGov)
+	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
+	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
+	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov)
 
 	return nil
 }
@@ -641,7 +668,6 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
 	governanceAPI := governance.NewGovernanceAPI(s.governance)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
@@ -710,11 +736,6 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "governance",
 			Version:   "1.0",
 			Service:   governanceAPI,
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   governanceKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
