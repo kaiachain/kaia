@@ -2,7 +2,6 @@ package gov
 
 import (
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
@@ -53,11 +52,4 @@ func TestParametersSetAndAdd(t *testing.T) {
 func TestGetDefaultGovernanceParamSet(t *testing.T) {
 	ps := GetDefaultGovernanceParamSet()
 	assert.NotNil(t, ps)
-	for name, param := range Params {
-		t.Run(string(name), func(t *testing.T) {
-			fieldName := param.ParamSetFieldName
-			fieldValue := reflect.ValueOf(ps).Elem().FieldByName(fieldName).Interface()
-			assert.Equal(t, param.DefaultValue, fieldValue, "Mismatch for %s", name)
-		})
-	}
 }

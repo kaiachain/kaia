@@ -12,9 +12,8 @@ import (
 type canonicalizerT func(v any) (any, error)
 
 type Param struct {
-	ParamSetFieldName string
-	Canonicalizer     canonicalizerT
-	FormatChecker     func(cv any) bool // validation on canonical value.
+	Canonicalizer canonicalizerT
+	FormatChecker func(cv any) bool // validation on canonical value.
 
 	DefaultValue  any
 	VoteForbidden bool
@@ -159,8 +158,7 @@ const (
 
 var Params = map[ParamName]*Param{
 	GovernanceDeriveShaImpl: {
-		ParamSetFieldName: "DeriveShaImpl",
-		Canonicalizer:     uint64Canonicalizer,
+		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
@@ -172,8 +170,7 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	GovernanceGovernanceMode: {
-		ParamSetFieldName: "GovernanceMode",
-		Canonicalizer:     stringCanonicalizer,
+		Canonicalizer: stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
@@ -188,8 +185,7 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: true,
 	},
 	GovernanceGoverningNode: {
-		ParamSetFieldName: "GoverningNode",
-		Canonicalizer:     addressCanonicalizer,
+		Canonicalizer: addressCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			_, ok := cv.(common.Address)
 			return ok
@@ -198,8 +194,7 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	GovernanceGovParamContract: {
-		ParamSetFieldName: "GovParamContract",
-		Canonicalizer:     addressCanonicalizer,
+		Canonicalizer: addressCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			_, ok := cv.(common.Address)
 			return ok
@@ -208,15 +203,13 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	GovernanceUnitPrice: {
-		ParamSetFieldName: "UnitPrice",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(250e9),
-		VoteForbidden:     false,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(250e9),
+		VoteForbidden: false,
 	},
 	IstanbulCommitteeSize: {
-		ParamSetFieldName: "CommitteeSize",
-		Canonicalizer:     uint64Canonicalizer,
+		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
@@ -228,15 +221,13 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	IstanbulEpoch: {
-		ParamSetFieldName: "Epoch",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(604800),
-		VoteForbidden:     true,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(604800),
+		VoteForbidden: true,
 	},
 	IstanbulPolicy: {
-		ParamSetFieldName: "ProposerPolicy",
-		Canonicalizer:     uint64Canonicalizer,
+		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			if !ok {
@@ -248,8 +239,7 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: true,
 	},
 	Kip71BaseFeeDenominator: {
-		ParamSetFieldName: "BaseFeeDenominator",
-		Canonicalizer:     uint64Canonicalizer,
+		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(uint64)
 			return ok && v != 0
@@ -258,43 +248,37 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	Kip71GasTarget: {
-		ParamSetFieldName: "GasTarget",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(30000000),
-		VoteForbidden:     false,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(30000000),
+		VoteForbidden: false,
 	},
 	Kip71LowerBoundBaseFee: {
-		ParamSetFieldName: "LowerBoundBaseFee",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(25000000000),
-		VoteForbidden:     false,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(25000000000),
+		VoteForbidden: false,
 	},
 	Kip71MaxBlockGasUsedForBaseFee: {
-		ParamSetFieldName: "MaxBlockGasUsedForBaseFee",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(60000000),
-		VoteForbidden:     false,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(60000000),
+		VoteForbidden: false,
 	},
 	Kip71UpperBoundBaseFee: {
-		ParamSetFieldName: "UpperBoundBaseFee",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(750000000000),
-		VoteForbidden:     false,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(750000000000),
+		VoteForbidden: false,
 	},
 	RewardDeferredTxFee: {
-		ParamSetFieldName: "DeferredTxFee",
-		Canonicalizer:     boolCanonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      false,
-		VoteForbidden:     true,
+		Canonicalizer: boolCanonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  false,
+		VoteForbidden: true,
 	},
 	RewardKip82Ratio: {
-		ParamSetFieldName: "Kip82Ratio",
-		Canonicalizer:     stringCanonicalizer,
+		Canonicalizer: stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
@@ -322,15 +306,13 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	RewardMintingAmount: {
-		ParamSetFieldName: "MintingAmount",
-		Canonicalizer:     bigIntCanonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      big.NewInt(0),
-		VoteForbidden:     false,
+		Canonicalizer: bigIntCanonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  big.NewInt(0),
+		VoteForbidden: false,
 	},
 	RewardMinimumStake: {
-		ParamSetFieldName: "MinimumStake",
-		Canonicalizer:     bigIntCanonicalizer,
+		Canonicalizer: bigIntCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(*big.Int)
 			if !ok {
@@ -342,15 +324,13 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: true,
 	},
 	RewardProposerUpdateInterval: {
-		ParamSetFieldName: "ProposerUpdateInterval",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(3600),
-		VoteForbidden:     true,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(3600),
+		VoteForbidden: true,
 	},
 	RewardRatio: {
-		ParamSetFieldName: "Ratio",
-		Canonicalizer:     stringCanonicalizer,
+		Canonicalizer: stringCanonicalizer,
 		FormatChecker: func(cv any) bool {
 			v, ok := cv.(string)
 			if !ok {
@@ -378,18 +358,16 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: false,
 	},
 	RewardStakingUpdateInterval: {
-		ParamSetFieldName: "StakingUpdateInterval",
-		Canonicalizer:     uint64Canonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      uint64(86400),
-		VoteForbidden:     true,
+		Canonicalizer: uint64Canonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  uint64(86400),
+		VoteForbidden: true,
 	},
 	RewardUseGiniCoeff: {
-		ParamSetFieldName: "UseGiniCoeff",
-		Canonicalizer:     boolCanonicalizer,
-		FormatChecker:     noopFormatChecker,
-		DefaultValue:      false,
-		VoteForbidden:     true,
+		Canonicalizer: boolCanonicalizer,
+		FormatChecker: noopFormatChecker,
+		DefaultValue:  false,
+		VoteForbidden: true,
 	},
 }
 
