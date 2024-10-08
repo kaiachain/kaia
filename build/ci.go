@@ -951,7 +951,7 @@ func installLinter() string {
 		fmt.Println("Installing golangci-lint.")
 
 		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh")
-		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.52.0")
+		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.61.0")
 		cmdSh.Stdin, err = cmdCurl.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)
