@@ -77,7 +77,7 @@ func testGasOverflowLegacyTransaction(t *testing.T) {
 	intrinsic := getIntrinsicGas(types.TxTypeLegacyTransaction)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
-	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataNonZeroGas)
+	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataNonZeroGasFrontier)
 
 	gas := addUint64(t, intrinsic, senderValidationGas)
 	gas = addUint64(t, gas, maxDataGas)
