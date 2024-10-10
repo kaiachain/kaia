@@ -461,6 +461,7 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
+	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
 
 	return config
 }
