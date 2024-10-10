@@ -216,7 +216,7 @@ type ChainConfig struct {
 	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
-	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatibl switch block (nil = no fork)
+	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatible switch block (nil = no fork)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -714,7 +714,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsCancun:    c.IsCancunForkEnabled(num),
 		IsKaia:      c.IsKaiaForkEnabled(num),
 		IsRandao:    c.IsRandaoForkEnabled(num),
-		IsPrague:    c.IsPragueForkEnabeld(num),
+		IsPrague:    c.IsPragueForkEnabled(num),
 	}
 }
 
