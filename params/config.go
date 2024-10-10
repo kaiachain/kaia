@@ -216,6 +216,7 @@ type ChainConfig struct {
 	ShanghaiCompatibleBlock  *big.Int `json:"shanghaiCompatibleBlock,omitempty"`  // ShanghaiCompatible switch block (nil = no fork, 0 already on shanghai)
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
+	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatibl activate block (nil = no fork)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -231,8 +232,6 @@ type ChainConfig struct {
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
 	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
-
-	PragueCompatibleBlock *big.Int `json:"pragueCompatibleBlock,omitempty"` // PragueCompatibl activate block (nil = no fork)
 
 	// Various consensus engines
 	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
@@ -434,7 +433,7 @@ func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)
 }
 
-// IsPragueForkEnabeld returns whether num is either equal to the randao block or greater.
+// IsPragueForkEnabeld returns whether num is either equal to the prague block or greater.
 func (c *ChainConfig) IsPragueForkEnabeld(num *big.Int) bool {
 	return isForked(c.PragueCompatibleBlock, num)
 }
@@ -501,7 +500,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
 		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
 		{name: "kaiaBlock", block: c.KaiaCompatibleBlock},
-		{name: "pragueBlock", block: c.PragueCompatibleBlock, optional: true},
+		{name: "pragueBlock", block: c.PragueCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
