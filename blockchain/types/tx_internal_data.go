@@ -553,30 +553,9 @@ func toWordSize(size uint64) uint64 {
 }
 
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
+	dataLen := uint64(len(data))
 	// Bump the required gas by the amount of transactional data
-	length := uint64(len(data))
-	if length == 0 {
-		return gas, nil
-	}
-	// Make sure we don't exceed uint64 for all data combinations
-	if (math.MaxUint64-gas)/params.TxDataGas < length {
-		return 0, ErrGasUintOverflow
-	}
-	gas += length * params.TxDataGas
-
-	if isContractCreation && rules.IsShanghai {
-		lenWords := toWordSize(length)
-		if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
-			return 0, ErrGasUintOverflow
-		}
-		gas += lenWords * params.InitCodeWordGas
-	}
-	return gas, nil
-}
-
-func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
-	length := uint64(len(data))
-	if length > 0 {
+	if dataLen > 0 {
 		// Zero and non-zero bytes are priced differently
 		var nz uint64
 		for _, byt := range data {
@@ -585,23 +564,42 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
-			return 0, ErrGasUintOverflow
+		nonZeroGas, zeroGas := uint64(0), uint64(0)
+		if rules.IsPrague {
+			nonZeroGas = params.TxDataNonZeroGasEIP2028
+			zeroGas = params.TxDataZeroGas
+		} else if rules.IsIstanbul {
+			nonZeroGas = params.TxDataGas
+			zeroGas = params.TxDataGas
+		} else {
+			nonZeroGas = params.TxDataNonZeroGasFrontier
+			zeroGas = params.TxDataZeroGas
 		}
-		gas += nz * params.TxDataNonZeroGas
 
-		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+		if (math.MaxUint64-gas)/nonZeroGas < nz {
 			return 0, ErrGasUintOverflow
 		}
-		gas += z * params.TxDataZeroGas
+		gas += nz * nonZeroGas
+
+		z := dataLen - nz
+		if (math.MaxUint64-gas)/zeroGas < z {
+			return 0, ErrGasUintOverflow
+		}
+		gas += z * zeroGas
+
+		if isContractCreation && rules.IsShanghai {
+			lenWords := toWordSize(dataLen)
+			if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
+				return 0, ErrGasUintOverflow
+			}
+			gas += lenWords * params.InitCodeWordGas
+		}
 	}
-
 	return gas, nil
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, rules params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if contractCreation {
@@ -610,14 +608,7 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 		gas = params.TxGas
 	}
 
-	var gasPayloadWithGas uint64
-	var err error
-	if r.IsIstanbul {
-		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
-	} else {
-		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
-	}
-
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, data, contractCreation, rules)
 	if err != nil {
 		return 0, err
 	}
