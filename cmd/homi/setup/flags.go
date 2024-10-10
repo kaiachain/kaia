@@ -554,6 +554,13 @@ var (
 		Aliases: []string{"genesis.hardfork.randao-compatible-blocknumber"},
 	}
 
+	pragueCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "prague-compatible-blocknumber",
+		Usage:   "pragueCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.prague-compatible-blocknumber"},
+	}
+
 	kip113ProxyAddressFlag = &cli.StringFlag{
 		Name:    "kip113-proxy-contract-address",
 		Usage:   "kip113 proxy contract address",
