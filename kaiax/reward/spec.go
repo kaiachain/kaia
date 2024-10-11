@@ -28,6 +28,12 @@ type RewardSummary struct {
 	BurntFee *big.Int `json:"burntFee"`
 }
 
+func (summary *RewardSummary) Add(delta *RewardSummary) {
+	summary.Minted.Add(summary.Minted, delta.Minted)
+	summary.TotalFee.Add(summary.TotalFee, delta.TotalFee)
+	summary.BurntFee.Add(summary.BurntFee, delta.BurntFee)
+}
+
 type RewardSpec struct {
 	RewardSummary
 	Proposer *big.Int                    `json:"proposer"`
@@ -62,14 +68,14 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	spec.KEF.Add(spec.KEF, delta.KEF)
 
 	for addr, amount := range delta.Rewards {
-		incrementRewardsMap(spec.Rewards, addr, amount)
+		spec.IncReceipient(addr, amount)
 	}
 }
 
-func incrementRewardsMap(m map[common.Address]*big.Int, addr common.Address, amount *big.Int) {
-	_, ok := m[addr]
+func (spec *RewardSpec) IncReceipient(addr common.Address, amount *big.Int) {
+	_, ok := spec.Rewards[addr]
 	if !ok {
-		m[addr] = big.NewInt(0)
+		spec.Rewards[addr] = big.NewInt(0)
 	}
-	m[addr] = m[addr].Add(m[addr], amount)
+	spec.Rewards[addr].Add(spec.Rewards[addr], amount)
 }

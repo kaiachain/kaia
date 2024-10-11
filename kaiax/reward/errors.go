@@ -21,7 +21,12 @@ import (
 	"fmt"
 )
 
-var ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
+var (
+	ErrInitUnexpectedNil     = errors.New("unexpected nil during module init")
+	ErrTxReceiptsLenMismatch = errors.New("txs and receipts length mismatch")
+	ErrNoBlock               = errors.New("block not found")
+	ErrNoReceipts            = errors.New("receipts not found")
+)
 
 func errMalformedRewardRatio(ratio string) error {
 	return fmt.Errorf("malformed reward.ratio: %s", ratio)

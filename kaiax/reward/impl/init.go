@@ -17,7 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -27,10 +28,16 @@ import (
 
 var _ reward.RewardModule = &RewardModule{}
 
+type blockChain interface {
+	GetHeaderByNumber(number uint64) *types.Header
+	GetBlockByNumber(number uint64) *types.Block
+	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
+}
+
 type InitOpts struct {
 	ChainKv       database.Database
 	ChainConfig   *params.ChainConfig
-	Chain         kaia.ChainReader
+	Chain         blockChain
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
 }

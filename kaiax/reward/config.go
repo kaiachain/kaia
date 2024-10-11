@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
@@ -31,8 +33,11 @@ var (
 )
 
 type RewardConfig struct {
-	Rules         params.Rules
+	Rules      params.Rules
+	Rewardbase common.Address // Proposer's reward receipient address
+
 	IsSimple      bool              // istanbul.policy != WeightedRandom in which case simple rules are used
+	UnitPrice     *big.Int          // governance.unitprice
 	MintingAmount *big.Int          // reward.mintingamount
 	MinimumStake  *big.Int          // reward.minimumstake
 	DeferredTxFee bool              // reward.deferredtxfee
@@ -40,13 +45,14 @@ type RewardConfig struct {
 	Kip82Ratio    *RewardKip82Ratio // reward.kip82ratio
 }
 
-func NewRewardConfig(chainConfig *params.ChainConfig, num uint64, govModule gov.GovModule) (*RewardConfig, error) {
+func NewRewardConfig(chainConfig *params.ChainConfig, govModule gov.GovModule, header *types.Header) (*RewardConfig, error) {
 	rc := &RewardConfig{}
 
-	rc.Rules = chainConfig.Rules(new(big.Int).SetUint64(num))
+	rc.Rules = chainConfig.Rules(header.Number)
 
-	paramset := govModule.EffectiveParamSet(num)
+	paramset := govModule.EffectiveParamSet(header.Number.Uint64())
 	rc.IsSimple = paramset.ProposerPolicy != uint64(istanbul.WeightedRandom)
+	rc.UnitPrice = new(big.Int).SetUint64(paramset.UnitPrice)
 	rc.MintingAmount = new(big.Int).Set(paramset.MintingAmount)
 	rc.MinimumStake = new(big.Int).Set(paramset.MinimumStake)
 	rc.DeferredTxFee = paramset.DeferredTxFee
