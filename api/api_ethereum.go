@@ -693,7 +693,7 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
-func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Uint64, error) {
 	bcAPI := api.publicBlockChainAPI.b
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
@@ -703,7 +703,7 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	return EthDoEstimateGas(ctx, bcAPI, args, bNrOrHash, gasCap)
+	return EthDoEstimateGas(ctx, bcAPI, args, bNrOrHash, overrides, gasCap)
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
@@ -1389,7 +1389,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
@@ -1434,7 +1434,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	return result, nil
 }
 
-func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, gasCap uint64) (hexutil.Uint64, error) {
+func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, gasCap uint64) (hexutil.Uint64, error) {
 	// Use zero address if sender unspecified.
 	if args.From == nil {
 		args.From = new(common.Address)
@@ -1459,11 +1459,14 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 	if err != nil {
 		return 0, err
 	}
+	if err := overrides.Apply(state); err != nil {
+		return 0, err
+	}
 	balance := state.GetBalance(*args.From) // from can't be nil
 
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		result, err := EthDoCall(ctx, b, args, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber), nil, b.RPCEVMTimeout(), gasCap)
+		result, err := EthDoCall(ctx, b, args, blockNrOrHash, overrides, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) {
 				return true, nil, nil // Special case, raise gas limit

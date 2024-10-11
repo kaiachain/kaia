@@ -131,6 +131,8 @@ func RecoverWeightedCouncilProposer(valSet istanbul.ValidatorSet, proposerAddrs 
 		_, val := weightedCouncil.GetByAddress(proposerAddr)
 		if val == nil {
 			logger.Error("Proposer is not available now.", "proposer address", proposerAddr)
+			// The valSet.proposers hasn't been used since Randao HF.
+			continue
 		}
 		proposers = append(proposers, val)
 
