@@ -609,12 +609,12 @@ func TestIntrinsicGas(t *testing.T) {
 		expectGas5  uint64 // contractCreate - true,  isIstanbul - true
 		expectGas6  uint64 // contractCreate - true, isPrague   - true
 	}{
-		{"0000", 21008, 21200, 21008, 53008, 53200, 53008},
-		{"1000", 21072, 21200, 21020, 53072, 53200, 53020},
-		{"0100", 21072, 21200, 21020, 53072, 53200, 53020},
-		{"ff3d", 21136, 21200, 21032, 53136, 53200, 53032},
-		{"0000a6bc", 21144, 21400, 21040, 53144, 53400, 53040},
-		{"fd00fd00", 21144, 21400, 21040, 53144, 53400, 53040},
+		{"0000", 21008, 21200, 21008, 53008, 53010, 53008},
+		{"1000", 21072, 21200, 21020, 53072, 53022, 53020},
+		{"0100", 21072, 21200, 21020, 53072, 53022, 53020},
+		{"ff3d", 21136, 21200, 21032, 53136, 53034, 53032},
+		{"0000a6bc", 21144, 21400, 21040, 53144, 53042, 53040},
+		{"fd00fd00", 21144, 21400, 21040, 53144, 53042, 53040},
 		{"", 21000, 21000, 21000, 53000, 53000, 53000},
 	}
 	for _, tc := range testData {
@@ -635,7 +635,7 @@ func TestIntrinsicGas(t *testing.T) {
 		assert.Equal(t, tc.expectGas2, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsPrague: true})
+		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 		assert.Equal(t, tc.expectGas3, gas)
 		assert.Equal(t, nil, err)
 
@@ -643,7 +643,7 @@ func TestIntrinsicGas(t *testing.T) {
 		assert.Equal(t, tc.expectGas4, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: true})
+		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 		assert.Equal(t, tc.expectGas5, gas)
 		assert.Equal(t, nil, err)
 
