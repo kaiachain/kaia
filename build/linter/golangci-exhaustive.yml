@@ -1,0 +1,11 @@
+linters:
+  disable-all: true
+  enable:
+    - exhaustive
+
+run:
+  timeout: 10m
+  tests: true
+
+issues:
+  new-from-rev: dev

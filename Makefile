@@ -58,7 +58,7 @@ lint:
 	$(GORUN) build/ci.go lint
 
 lint-try:
-	$(GORUN) build/ci.go lint-try
+	$(GORUN) build/ci.go lint-try -c build/linter/golangci-try.yml
 
 clean:
 	env GO111MODULE=on go clean -cache
