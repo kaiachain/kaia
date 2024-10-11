@@ -14,19 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package reward
+package impl
 
-import (
-	"errors"
-	"fmt"
-)
+import "github.com/kaiachain/kaia/networks/rpc"
 
-var ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
-
-func errMalformedRewardRatio(ratio string) error {
-	return fmt.Errorf("malformed reward.ratio: %s", ratio)
-}
-
-func errMalformedRewardKip82Ratio(ratio string) error {
-	return fmt.Errorf("malformed reward.kip82ratio: %s", ratio)
+func (r *RewardModule) APIs() []rpc.API {
+	return nil
 }

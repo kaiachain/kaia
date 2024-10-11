@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -29,36 +31,36 @@ var (
 )
 
 type RewardConfig struct {
-	rules params.Rules
-
-	// Governance parameters
-	mintingAmount *big.Int          // reward.mintingamount
-	minimumStake  *big.Int          // reward.minimumstake
-	deferredTxFee bool              // reward.deferredtxfee
-	rewardRatio   *RewardRatio      // reward.ratio
-	kip82Ratio    *RewardKip82Ratio // reward.kip82ratio
+	Rules         params.Rules
+	IsSimple      bool              // istanbul.policy != WeightedRandom in which case simple rules are used
+	MintingAmount *big.Int          // reward.mintingamount
+	MinimumStake  *big.Int          // reward.minimumstake
+	DeferredTxFee bool              // reward.deferredtxfee
+	RewardRatio   *RewardRatio      // reward.ratio
+	Kip82Ratio    *RewardKip82Ratio // reward.kip82ratio
 }
 
-// TODO: use kaiax/gov
-func NewRewardConfig(chainConfig *params.ChainConfig, num uint64) (*RewardConfig, error) {
+func NewRewardConfig(chainConfig *params.ChainConfig, num uint64, govModule gov.GovModule) (*RewardConfig, error) {
 	rc := &RewardConfig{}
 
-	rc.rules = chainConfig.Rules(new(big.Int).SetUint64(num))
+	rc.Rules = chainConfig.Rules(new(big.Int).SetUint64(num))
 
-	rc.mintingAmount = new(big.Int).Set(chainConfig.Governance.Reward.MintingAmount)
-	rc.minimumStake = new(big.Int).Set(chainConfig.Governance.Reward.MinimumStake)
-	rc.deferredTxFee = chainConfig.Governance.Reward.DeferredTxFee
+	paramset := govModule.EffectiveParamSet(num)
+	rc.IsSimple = paramset.ProposerPolicy != uint64(istanbul.WeightedRandom)
+	rc.MintingAmount = new(big.Int).Set(paramset.MintingAmount)
+	rc.MinimumStake = new(big.Int).Set(paramset.MinimumStake)
+	rc.DeferredTxFee = paramset.DeferredTxFee
 
-	if ratio, err := NewRewardRatio(chainConfig.Governance.Reward.Ratio); err != nil {
+	if ratio, err := NewRewardRatio(paramset.Ratio); err != nil {
 		return nil, err
 	} else {
-		rc.rewardRatio = ratio
+		rc.RewardRatio = ratio
 	}
 
-	if kip82Ratio, err := NewRewardKip82Ratio(chainConfig.Governance.Reward.Kip82Ratio); err != nil {
+	if kip82Ratio, err := NewRewardKip82Ratio(paramset.Kip82Ratio); err != nil {
 		return nil, err
 	} else {
-		rc.kip82Ratio = kip82Ratio
+		rc.Kip82Ratio = kip82Ratio
 	}
 
 	return rc, nil

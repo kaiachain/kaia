@@ -14,19 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package reward
+package impl
 
 import (
-	"errors"
-	"fmt"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 )
 
-var ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
-
-func errMalformedRewardRatio(ratio string) error {
-	return fmt.Errorf("malformed reward.ratio: %s", ratio)
+func (r *RewardModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {
+	return tx, nil
 }
 
-func errMalformedRewardKip82Ratio(ratio string) error {
-	return fmt.Errorf("malformed reward.kip82ratio: %s", ratio)
+func (r *RewardModule) PostRunTx(evm *vm.EVM, tx *types.Transaction) error {
+	return nil
 }
