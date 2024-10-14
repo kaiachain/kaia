@@ -26,7 +26,110 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
-var big2 = big.NewInt(2)
+// GetRewardSummary retrospectively calculates the reward summary at the given block number.
+func (r *RewardModule) GetRewardSummary(num uint64) (*reward.RewardSummary, error) {
+	config, _, totalFee, err := r.loadBlockData(num)
+	if err != nil {
+		return nil, err
+	}
+	return getRewardSummary(config, totalFee), nil
+}
+
+func (r *RewardModule) loadBlockData(num uint64) (*reward.RewardConfig, *types.Header, *big.Int, error) {
+	block := r.Chain.GetBlockByNumber(num)
+	if block == nil {
+		return nil, nil, nil, reward.ErrNoBlock
+	}
+	receipts := r.Chain.GetReceiptsByBlockHash(block.Hash())
+	if receipts == nil {
+		return nil, nil, nil, reward.ErrNoReceipts
+	}
+	header := block.Header()
+	txs := block.Transactions()
+
+	config, err := reward.NewRewardConfig(r.ChainConfig, r.GovModule, header)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	totalFee, err := getTotalFee(config, header, txs, receipts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return config, header, totalFee, nil
+}
+
+func getRewardSummary(config *reward.RewardConfig, totalFee *big.Int) *reward.RewardSummary {
+	minted := new(big.Int).Set(config.MintingAmount)
+
+	burntFee := big.NewInt(0)
+	if config.IsSimple { // simplified getDeferredRewardSimple
+		if config.Rules.IsMagma {
+			burntFee = getBurnAmountMagma(totalFee)
+		}
+	} else { // simplified getDeferredRewardFull
+		if config.Rules.IsKore {
+			burntFee = getBurnAmountKore(config, totalFee)
+		} else if config.Rules.IsMagma {
+			burntFee = getBurnAmountMagma(totalFee)
+		}
+	}
+
+	return &reward.RewardSummary{
+		Minted:   minted,
+		TotalFee: totalFee,
+		BurntFee: burntFee,
+	}
+}
+
+// GetBlockReward retrospectively calculates the block reward distributed at the given block number.
+// The result includes both non-deferred and deferred fees, so it may differ from GetDeferredReward.
+func (r *RewardModule) GetBlockReward(num uint64) (*reward.RewardSpec, error) {
+	config, header, totalFee, err := r.loadBlockData(num)
+	if err != nil {
+		return nil, err
+	}
+
+	spec, err := r.getDeferredReward(config, header, totalFee)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.specWithNonDeferredFee(spec, config, header, totalFee)
+}
+
+// specWithNonDeferredFee adds non-deferred fees to the reward spec.
+func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *reward.RewardConfig, header *types.Header, totalFee *big.Int) (*reward.RewardSpec, error) {
+	if config.DeferredTxFee {
+		return spec, nil // nothing to do under deferred mode
+	}
+
+	if config.Rules.IsMagma {
+		burntFee := getBurnAmountMagma(totalFee)
+		reward := new(big.Int).Sub(totalFee, burntFee)
+
+		spec.TotalFee.Add(spec.TotalFee, totalFee)
+		spec.BurntFee.Add(spec.BurntFee, burntFee)
+		spec.Proposer.Add(spec.Proposer, reward)
+
+		// Since Magma, non-deferred fees are assigned to header.Rewardbase.
+		spec.IncReceipient(config.Rewardbase, reward)
+	} else {
+		reward := new(big.Int).Set(totalFee)
+
+		spec.TotalFee.Add(spec.TotalFee, totalFee)
+		spec.Proposer.Add(spec.Proposer, reward)
+
+		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from Engine().Author(header).
+		coinbase, err := r.Chain.Engine().Author(header)
+		if err != nil {
+			return nil, err
+		}
+		spec.IncReceipient(coinbase, reward)
+	}
+
+	return spec, nil
+}
 
 // GetDeferredReward returns the rewards to be applied at the end of the block.
 // Under non-deferred mode, transaction fees are ignored.
@@ -40,6 +143,10 @@ func (r *RewardModule) GetDeferredReward(header *types.Header, txs []*types.Tran
 		return nil, err
 	}
 
+	return r.getDeferredReward(config, header, totalFee)
+}
+
+func (r *RewardModule) getDeferredReward(config *reward.RewardConfig, header *types.Header, totalFee *big.Int) (*reward.RewardSpec, error) {
 	if config.IsSimple {
 		return getDeferredRewardSimple(config, totalFee)
 	} else {
@@ -51,10 +158,33 @@ func (r *RewardModule) GetDeferredReward(header *types.Header, txs []*types.Tran
 	}
 }
 
+// getTotalFee calculates the total transaction fees in the block.
+func getTotalFee(config *reward.RewardConfig, header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*big.Int, error) {
+	if config.Rules.IsKaia {
+		// sum { tx[i].gasUsed * tx[i].effectiveGasPrice }
+		// = block.gasUsed * block.baseFeePerGas + sum { tx[i].gasUsed * tx[i].effectiveGasTip }
+		if len(txs) != len(receipts) {
+			return nil, reward.ErrTxReceiptsLenMismatch
+		}
+		totalFee := new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee)
+		for i, tx := range txs {
+			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
+			totalFee = totalFee.Add(totalFee, tip)
+		}
+		return totalFee, nil
+	} else if config.Rules.IsMagma {
+		// Optimized to block.gasUsed * block.baseFeePerGas
+		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee), nil
+	} else {
+		// Optimized to block.gasUsed * governance.unitprice
+		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), config.UnitPrice), nil
+	}
+}
+
 // getDeferredRewardSimple is for Simple policy.
 func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*reward.RewardSpec, error) {
 	spec := reward.NewRewardSpec()
-	minted := config.MintingAmount
+	minted := new(big.Int).Set(config.MintingAmount)
 
 	// Non-deferred mode
 	if !config.DeferredTxFee {
@@ -62,16 +192,16 @@ func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*r
 		if config.Rules.IsMagma {
 			// In non-deferred mode, no fees to distribute here at the end of block processing.
 			// Just distribute the minting reward to the proposer and stop.
-			proposer = minted
-			totalFee = common.Big0
+			proposer = new(big.Int).Set(minted)
+			totalFee = big.NewInt(0)
 		} else {
 			// But Simple policy had a bug where transaction fees were distributed to the proposer here at the end of block processing
 			// despite configured to non-deferred mode. To keep the backward compatibility, the buggy behavior retains until Magma.
 			proposer = new(big.Int).Add(minted, totalFee)
 		}
-		spec.Minted = minted
+		spec.Minted = new(big.Int).Set(minted)
 		spec.TotalFee = totalFee
-		spec.BurntFee = common.Big0
+		spec.BurntFee = big.NewInt(0)
 		spec.Proposer = proposer
 		spec.IncReceipient(config.Rewardbase, proposer)
 		return spec, nil
@@ -99,15 +229,15 @@ func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *s
 	// except that in non-deferred mode the block fees are considered zero.
 	var burntFee *big.Int
 	if !config.DeferredTxFee {
-		totalFee = common.Big0
-		burntFee = common.Big0
+		totalFee = big.NewInt(0)
+		burntFee = big.NewInt(0)
 	} else {
 		if config.Rules.IsKore {
 			burntFee = getBurnAmountKore(config, totalFee)
 		} else if config.Rules.IsMagma {
 			burntFee = getBurnAmountMagma(totalFee)
 		} else {
-			burntFee = common.Big0
+			burntFee = big.NewInt(0)
 		}
 	}
 
@@ -123,7 +253,7 @@ func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *s
 func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
 		spec         = reward.NewRewardSpec()
-		minted       = config.MintingAmount
+		minted       = new(big.Int).Set(config.MintingAmount)
 		remainingFee = new(big.Int).Sub(totalFee, burntFee)
 	)
 
@@ -157,7 +287,7 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
 		spec         = reward.NewRewardSpec()
-		minted       = config.MintingAmount
+		minted       = new(big.Int).Set(config.MintingAmount)
 		remainingFee = new(big.Int).Sub(totalFee, burntFee)
 		totalReward  = new(big.Int).Add(minted, remainingFee)
 	)
@@ -177,13 +307,13 @@ func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee
 
 // getBurnAmountMagma returns the amount of fees to be burnt by Magma.
 func getBurnAmountMagma(totalFee *big.Int) *big.Int {
-	return new(big.Int).Div(totalFee, big2)
+	return new(big.Int).Div(totalFee, big.NewInt(2))
 }
 
 // getBurnAmountKore returns the amount of fees to be burnt by Kore.
 // This includes Magma burnt amount (half of the total fee).
 func getBurnAmountKore(config *reward.RewardConfig, totalFee *big.Int) *big.Int {
-	firstHalf := new(big.Int).Div(totalFee, big2)
+	firstHalf := new(big.Int).Div(totalFee, big.NewInt(2))
 	secondHalf := new(big.Int).Sub(totalFee, firstHalf)
 
 	validatorMintingReward, _, _ := config.RewardRatio.Split(config.MintingAmount)
@@ -193,29 +323,6 @@ func getBurnAmountKore(config *reward.RewardConfig, totalFee *big.Int) *big.Int 
 		firstHalf, // half the fee is always burnt
 		math.BigMin(secondHalf, proposerMintingReward), // the rest is burnt up to the proposer's minting reward
 	)
-}
-
-// getTotalFee calculates the total transaction fees in the block.
-func getTotalFee(config *reward.RewardConfig, header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*big.Int, error) {
-	if config.Rules.IsKaia {
-		// sum { tx[i].gasUsed * tx[i].effectiveGasPrice }
-		// = block.gasUsed * block.baseFeePerGas + sum { tx[i].gasUsed * tx[i].effectiveGasTip }
-		if len(txs) != len(receipts) {
-			return nil, reward.ErrTxReceiptsLenMismatch
-		}
-		totalFee := new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee)
-		for i, tx := range txs {
-			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
-			totalFee = totalFee.Add(totalFee, tip)
-		}
-		return totalFee, nil
-	} else if config.Rules.IsMagma {
-		// Optimized to block.gasUsed * block.baseFeePerGas
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee), nil
-	} else {
-		// Optimized to block.gasUsed * governance.unitprice
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), config.UnitPrice), nil
-	}
 }
 
 // calcRemainder returns total - sum(parts).

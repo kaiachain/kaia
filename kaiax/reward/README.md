@@ -81,15 +81,34 @@ The rules have changed over hardforks.
 
 `RewardConfig` is a refined reward-related parameters.
 
-### RewardSpec
-
-`RewardSpec` is a reward distribution specification for a block. Describes each reward component and their recipients.
-
-- `Add()`: Accumulates two `RewardSpec` objects.
-
 ### RewardSummary
 
-`RewardSummary` is a simplified version of `RewardSpec` that only contains the total minted and burnt amounts.
+```go
+type RewardSummary struct {
+	Minted   *big.Int `json:"minted"`
+	TotalFee *big.Int `json:"totalFee"`
+	BurntFee *big.Int `json:"burntFee"`
+}
+```
+
+`RewardSummary` is a summary of reward components. Calculation of it does not require StakingInfo so it can be calculated in full nodes. Useful for tracking the total supply of the native token.
+
+### RewardSpec
+
+```go
+type RewardSpec struct {
+	RewardSummary
+	Proposer *big.Int                    `json:"proposer"`
+	Stakers  *big.Int                    `json:"stakers"`
+	KIF      *big.Int                    `json:"kif"`
+	KEF      *big.Int                    `json:"kef"`
+	Rewards  map[common.Address]*big.Int `json:"rewards"`
+}
+```
+
+`RewardSpec` is a reward distribution specification for a block. Describes each reward component and their recipients.
+- It can represent the deferred reward to be distributed at the end of the block (e.g. FinalizeBlock).
+- It can also represent the block reward including both non-deferred and deferred fees (e.g. kaia_getReward API).
 
 ### RewardResponse
 

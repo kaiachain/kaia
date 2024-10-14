@@ -49,6 +49,7 @@ func NewRewardConfig(chainConfig *params.ChainConfig, govModule gov.GovModule, h
 	rc := &RewardConfig{}
 
 	rc.Rules = chainConfig.Rules(header.Number)
+	rc.Rewardbase = header.Rewardbase
 
 	paramset := govModule.EffectiveParamSet(header.Number.Uint64())
 	rc.IsSimple = paramset.ProposerPolicy != uint64(istanbul.WeightedRandom)

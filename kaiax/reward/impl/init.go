@@ -19,11 +19,11 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 var _ reward.RewardModule = &RewardModule{}
@@ -32,10 +32,10 @@ type blockChain interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlockByNumber(number uint64) *types.Block
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
+	Engine() consensus.Engine
 }
 
 type InitOpts struct {
-	ChainKv       database.Database
 	ChainConfig   *params.ChainConfig
 	Chain         blockChain
 	GovModule     gov.GovModule
@@ -51,7 +51,7 @@ func NewRewardModule() *RewardModule {
 }
 
 func (r *RewardModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.ChainKv == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil {
 		return reward.ErrInitUnexpectedNil
 	}
 	r.InitOpts = *opts
