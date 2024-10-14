@@ -554,7 +554,7 @@ func toWordSize(size uint64) uint64 {
 
 // Klaytn-TxTypes since genesis, and EthTxTypes since istanbul use this.
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
-	// // Bump the required gas by the amount of transactional data
+	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
 	if length > 0 {
 		// Zero and non-zero bytes are priced differently
