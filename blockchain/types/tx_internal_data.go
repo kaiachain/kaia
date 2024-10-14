@@ -552,6 +552,7 @@ func toWordSize(size uint64) uint64 {
 	return (size + 31) / 32
 }
 
+// Klaytn-TxTypes since genesis, and EthTxTypes since istanbul use this.
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// // Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
@@ -593,6 +594,7 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 	return gas, nil
 }
 
+// Eth-TxTypes before istanbul use this. Only 0 tx type exists before Istanbul (No dynamic and access list types correspond to)
 // Calculate gas cost for type 0 transactions:
 // 68 gas for each non-zero byte and 16 gas for each zero byte in the data field.
 func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
@@ -634,8 +636,11 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 	var gasPayloadWithGas uint64
 	var err error
 	if r.IsIstanbul {
+		// tx types 1,2 only exist after istanbul; so they take this path.
+		// tx types 8+ take this path as well.
 		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
 	} else {
+		// only for tx type 0 before istanbul.
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
 
