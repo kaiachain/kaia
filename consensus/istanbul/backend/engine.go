@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
@@ -692,6 +693,10 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 // SetChain sets chain of the Istanbul backend
 func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
+}
+
+func (sb *backend) RegisterStakingModule(module staking.StakingModule) {
+	sb.stakingModule = module
 }
 
 // Start implements consensus.Istanbul.Start

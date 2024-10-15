@@ -30,5 +30,5 @@ type StakingModule interface {
 }
 
 type StakingModuleHost interface {
-	RegisterStakingModule(modules ...StakingModule)
+	RegisterStakingModule(module StakingModule)
 }
