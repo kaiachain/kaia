@@ -71,10 +71,6 @@ func (api *GovernanceKaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.Chain
 	return getChainConfig(api.governance, num)
 }
 
-func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
-}
-
 func (api *GovernanceKaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
@@ -357,26 +353,6 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 		}
 	}
 	return sm, nil
-}
-
-func (api *GovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
-}
-
-func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
-	// Check if the node has state to calculate the snapshot.
-	err := checkStateForStakingInfo(governance, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	return reward.GetStakingInfo(blockNumber), nil
 }
 
 // Checks the state of block for the given block number for staking info
