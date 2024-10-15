@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 )
@@ -650,7 +651,7 @@ func (valSet *weightedCouncil) Policy() istanbul.ProposerPolicy { return valSet.
 // - due to lack of staking information
 // It returns no error when weightedCouncil:
 // - successfully calculated up-to-date validators
-func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error {
+func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64, stakingModule staking.StakingModule) error {
 	valSet.validatorMu.Lock()
 	defer valSet.validatorMu.Unlock()
 
@@ -667,11 +668,27 @@ func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.Cha
 	if !chainRules.IsKaia {
 		stakingBlockNum = params.CalcProposerBlockNumber(blockNum) + 1
 	}
-	newStakingInfo := reward.GetStakingInfo(stakingBlockNum)
 
-	if newStakingInfo == nil {
+	// Temporary patch to use kaiax/staking + weightedCouncil
+	si, err := stakingModule.GetStakingInfo(stakingBlockNum)
+	if err != nil {
 		// Just return without refreshing validators
 		return errors.New("skip refreshing validators due to no staking info")
+	}
+	newStakingInfo := &reward.StakingInfo{
+		BlockNum:              si.SourceBlockNum,
+		CouncilNodeAddrs:      si.NodeIds,
+		CouncilStakingAddrs:   si.StakingContracts,
+		CouncilRewardAddrs:    si.RewardAddrs,
+		KEFAddr:               si.KEFAddr,
+		KIFAddr:               si.KIFAddr,
+		Gini:                  si.Gini(minStaking),
+		CouncilStakingAmounts: si.StakingAmounts,
+	}
+	if chainRules.IsKore {
+		newStakingInfo.UseGini = false
+	} else {
+		newStakingInfo.UseGini = config.Governance.Reward.UseGiniCoeff
 	}
 	valSet.stakingInfo = newStakingInfo
 

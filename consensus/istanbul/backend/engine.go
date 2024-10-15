@@ -969,7 +969,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	if err != nil {
 		return nil, err
 	}
-	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, writable)
+	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err
 	}
