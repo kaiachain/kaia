@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -321,4 +322,7 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
+
+	// kaiax module host
+	kaiax.RewindableModuleHost
 }

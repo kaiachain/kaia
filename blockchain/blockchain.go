@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -215,6 +216,9 @@ type BlockChain struct {
 	quitWarmUp         chan struct{}
 
 	prefetchTxCh chan prefetchTx
+
+	// kaiax modules
+	rewindableModules []kaiax.RewindableModule
 }
 
 // prefetchTx is used to prefetch transactions, when fetcher works.
@@ -596,6 +600,10 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 			// to low, so it's safe the update in-memory markers directly.
 			bc.currentBlock.Store(newHeadBlock)
 			headBlockNumberGauge.Update(int64(newHeadBlock.NumberU64()))
+
+			for _, module := range bc.rewindableModules {
+				module.RewindTo(newHeadBlock)
+			}
 		}
 
 		// Rewind the fast block in a simpleton way to the target head
@@ -637,7 +645,20 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 			bc.db.DeleteStakingInfo(num)
 		}
 		bc.db.DeleteSupplyCheckpoint(num)
+
+		for _, module := range bc.rewindableModules {
+			module.RewindDelete(hash, num)
+		}
 	}
+
+	for _, module := range bc.rewindableModules {
+		module.Stop()
+	}
+	defer func() {
+		for _, module := range bc.rewindableModules {
+			module.Start()
+		}
+	}()
 
 	// If SetHead was only called as a chain reparation method, try to skip
 	// touching the header chain altogether
@@ -2788,6 +2809,14 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	return receipt, internalTrace, err
+}
+
+func (bc *BlockChain) RegisterRewindableModule(modules ...kaiax.RewindableModule) {
+	bc.rewindableModules = append(bc.rewindableModules, modules...)
+}
+
+func (bc *BlockChain) RewindableModules() []kaiax.RewindableModule {
+	return bc.rewindableModules
 }
 
 func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
