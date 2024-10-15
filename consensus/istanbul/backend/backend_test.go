@@ -32,12 +32,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
@@ -1010,8 +1012,13 @@ func TestCommit(t *testing.T) {
 func TestGetProposer(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+
+	si := makeTestStakingInfo(nil, 0)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+	engine.RegisterStakingModule(mStaking)
 
 	block := makeBlock(chain, engine, chain.Genesis())
 	_, err := chain.InsertChain(types.Blocks{block})

@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
@@ -790,6 +791,27 @@ func stakingInfo(amounts []uint64, blockNum uint64) *reward.StakingInfo {
 		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
 	}
 	return stakingInfo
+}
+
+func makeTestStakingInfo(amounts []uint64, blockNum uint64) *staking.StakingInfo {
+	if amounts == nil {
+		amounts = make([]uint64, len(nodeKeys))
+	}
+	si := &staking.StakingInfo{
+		SourceBlockNum: blockNum,
+	}
+	for idx, key := range nodeKeys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+
+		pk, _ := crypto.GenerateKey()
+		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
+
+		si.NodeIds = append(si.NodeIds, addr)
+		si.StakingContracts = append(si.StakingContracts, addr)
+		si.RewardAddrs = append(si.RewardAddrs, rewardAddr)
+		si.StakingAmounts = append(si.StakingAmounts, amounts[idx])
+	}
+	return si
 }
 
 func toAddressList(validators []istanbul.Validator) []common.Address {
