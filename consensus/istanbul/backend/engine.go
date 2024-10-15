@@ -538,7 +538,22 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
 
-		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset)
+		// Temporary patch to use kaiax/staking + weightedCouncil
+		si, err := sb.stakingModule.GetStakingInfo(header.Number.Uint64())
+		if err != nil {
+			return nil, err
+		}
+		oldSi := &reward.StakingInfo{
+			BlockNum:              si.SourceBlockNum,
+			CouncilNodeAddrs:      si.NodeIds,
+			CouncilStakingAddrs:   si.StakingContracts,
+			CouncilRewardAddrs:    si.RewardAddrs,
+			KEFAddr:               si.KEFAddr,
+			KIFAddr:               si.KIFAddr,
+			CouncilStakingAmounts: si.StakingAmounts,
+		}
+
+		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset, oldSi)
 	} else {
 		rewardSpec, err = reward.CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 	}
