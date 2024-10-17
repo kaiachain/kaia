@@ -314,8 +314,6 @@ func TestRewardDistributor_GetTotalReward(t *testing.T) {
 		},
 	}
 
-	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
-
 	for _, tc := range testcases {
 		config := getTestConfig()
 		if !tc.deferredTxFee {
@@ -330,7 +328,7 @@ func TestRewardDistributor_GetTotalReward(t *testing.T) {
 		require.Nil(t, err, tc.desc)
 
 		// Compare GetTotalReward with GetBlockReward
-		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset, stakingInfo)
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, spec.Minted.String(), delta.Minted.String(), tc.desc)
 		assert.Equal(t, spec.BurntFee.String(), delta.BurntFee.String(), tc.desc)
@@ -449,8 +447,6 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 		},
 	}
 
-	SetTestStakingManagerWithStakingInfoCache(stakingInfo)
-
 	for i, tc := range testcases {
 		config := getTestConfig()
 		if !tc.deferredTxFee {
@@ -461,7 +457,7 @@ func TestRewardDistributor_GetBlockReward(t *testing.T) {
 		pset, err := params.NewGovParamSetChainConfig(config)
 		require.Nil(t, err)
 
-		spec, err := GetBlockReward(header, txs, receipts, rules, pset)
+		spec, err := GetBlockReward(header, txs, receipts, rules, pset, stakingInfo)
 		require.Nil(t, err, "testcases[%d] failed", i)
 		assertEqualRewardSpecs(t, tc.expected, spec, "testcases[%d] failed", i)
 	}

@@ -26,6 +26,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
@@ -48,7 +50,7 @@ func newTestBlockchain(config *params.ChainConfig) *testBlockChain {
 func newTestGovernanceApi() *GovernanceAPI {
 	config := params.MainnetChainConfig
 	config.Governance.KIP71 = params.GetDefaultKIP71Config()
-	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()))
+	govApi := NewGovernanceAPI(NewMixedEngine(config, database.NewMemoryDBManager()), nil)
 	govApi.governance.SetNodeAddress(common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"))
 	bc := newTestBlockchain(config)
 	govApi.governance.SetBlockchain(bc)
@@ -156,7 +158,12 @@ func TestGetRewards(t *testing.T) {
 			e.headerGov.WriteGovernance(uint64(o.num), gset, override)
 		}
 
-		govKaiaApi := NewGovernanceKaiaAPI(e, bc)
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		si := &staking.StakingInfo{SourceBlockNum: 0}
+		mStaking := mock.NewMockStakingModule(mockCtrl)
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+		govKaiaApi := NewGovernanceKaiaAPI(e, bc, mStaking)
 
 		for num := 1; num <= tc.length; num++ {
 			bc.SetBlockNum(uint64(num))
@@ -261,7 +268,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	mockGovEngine.EXPECT().BlockChain().Return(mockBlockchain).AnyTimes()
 
 	// execute a target function
-	govAPI := NewGovernanceAPI(mockGovEngine)
+	govAPI := NewGovernanceAPI(mockGovEngine, nil)
 	ret, err := govAPI.GetRewardsAccumulated(rpc.BlockNumber(startBlockNum), rpc.BlockNumber(endBlockNum))
 	if err != nil {
 		t.Fatal(err)

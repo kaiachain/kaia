@@ -257,7 +257,7 @@ func GetTotalReward(header *types.Header, txs []*types.Transaction, receipts []*
 
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in kaia_getReward RPC API
-func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet, stakingInfo *StakingInfo) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 
@@ -267,7 +267,7 @@ func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*
 			return nil, err
 		}
 	} else {
-		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset, GetStakingInfo(header.Number.Uint64()))
+		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset, stakingInfo)
 		if err != nil {
 			return nil, err
 		}

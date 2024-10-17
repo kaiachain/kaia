@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -144,6 +145,7 @@ type CN struct {
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
 	jsonRpcModules []kaiax.JsonRpcModule
+	stakingModule  staking.StakingModule // TODO-kaiax: temporary for governance/api.go. Remove it after having kaiax/reward.
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -530,6 +532,8 @@ func (s *CN) SetupKaiaxModules() error {
 		engine.RegisterStakingModule(mStaking)
 	}
 
+	s.stakingModule = mStaking
+
 	return nil
 }
 
@@ -649,8 +653,8 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
-	governanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain, s.stakingModule)
+	governanceAPI := governance.NewGovernanceAPI(s.governance, s.stakingModule)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
