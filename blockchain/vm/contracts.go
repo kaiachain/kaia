@@ -964,7 +964,9 @@ func (c *bls12381G1MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G1MulGas * discount) / 1000,
-		params.Bls12381G1MultiExpBaseComputationCost + (uint64(k-1) * params.Bls12381G1MultiExpKComputationCost)
+		710 * (uint64(k) * params.Bls12381G1MulGas * discount) / 1000 / 16
+	// 710 = opAddCC(150) + opMulCC(200) + opAddmodCC(360)
+	// 16 = opAddGas(3) + opMulGas(5) + opMulAddmod(8)
 }
 
 func (c *bls12381G1MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1100,7 +1102,9 @@ func (c *bls12381G2MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G2MulGas * discount) / 1000,
-		params.Bls12381G2MultiExpBaseComputationCost + (uint64(k-1) * params.Bls12381G2MultiExpKComputationCost)
+		710 * (uint64(k) * params.Bls12381G2MulGas * discount) / 1000 / 16
+	// 710 = opAddCC(150) + opMulCC(200) + opAddmodCC(360)
+	// 16 = opAddGas(3) + opMulGas(5) + opMulAddmod(8)
 }
 
 func (c *bls12381G2MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {

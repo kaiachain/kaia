@@ -203,18 +203,14 @@ const (
 	Log3ComputationCostCancun   = 500
 	Log4ComputationCostCancun   = 500
 
-	Bls12381G1AddComputationCost          = 12796
-	Bls12381G1MulComputationCost          = 456956
-	Bls12381G1MultiExpBaseComputationCost = 863331
-	Bls12381G1MultiExpKComputationCost    = 281994
-	Bls12381G2AddComputationCost          = 21539
-	Bls12381G2MulComputationCost          = 891686
-	Bls12381G2MultiExpBaseComputationCost = 1490842
-	Bls12381G2MultiExpKComputationCost    = 314140
-	Bls12381PairingBaseComputationCost    = 2205915
-	Bls12381PairingPerPairComputationCost = 761099
-	Bls12381MapG1ComputationCost          = 198651
-	Bls12381MapG2ComputationCost          = 794806
+	Bls12381G1AddComputationCost          = 22500
+	Bls12381G1MulComputationCost          = 540000
+	Bls12381G2AddComputationCost          = 36000
+	Bls12381G2MulComputationCost          = 2025000
+	Bls12381PairingBaseComputationCost    = 2925000
+	Bls12381PairingPerPairComputationCost = 1935000
+	Bls12381MapG1ComputationCost          = 247500
+	Bls12381MapG2ComputationCost          = 3375000
 
 	OpcodeComputationCostLimit         = 100000000      // 100ms
 	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
