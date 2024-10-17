@@ -964,9 +964,7 @@ func (c *bls12381G1MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G1MulGas * discount) / 1000,
-		710 * (uint64(k) * params.Bls12381G1MulGas * discount) / 1000 / 16
-	// 710 = opAddCC(150) + opMulCC(200) + opAddmodCC(360)
-	// 16 = opAddGas(3) + opMulGas(5) + opMulAddmod(8)
+		(uint64(k) * params.Bls12381G1MulGas * discount) / 1000
 }
 
 func (c *bls12381G1MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1102,9 +1100,7 @@ func (c *bls12381G2MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G2MulGas * discount) / 1000,
-		710 * (uint64(k) * params.Bls12381G2MulGas * discount) / 1000 / 16
-	// 710 = opAddCC(150) + opMulCC(200) + opAddmodCC(360)
-	// 16 = opAddGas(3) + opMulGas(5) + opMulAddmod(8)
+		(uint64(k) * params.Bls12381G2MulGas * discount) / 1000
 }
 
 func (c *bls12381G2MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1152,7 +1148,7 @@ type bls12381Pairing struct{}
 func (c *bls12381Pairing) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
 	k := uint64(len(input) / 384)
 	return params.Bls12381PairingBaseGas + k*params.Bls12381PairingPerPairGas,
-		params.Bls12381PairingBaseComputationCost + (k-1)*params.Bls12381PairingPerPairComputationCost
+		params.Bls12381PairingBaseComputationCost + k*params.Bls12381PairingPerPairComputationCost
 }
 
 func (c *bls12381Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
