@@ -195,7 +195,6 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	mockBlockchain := mocks.NewMockBlockChain(mockCtrl)
 	mockGovEngine := NewMockEngine(mockCtrl)
 	mockStakingModule := staking_mock.NewMockStakingModule(mockCtrl)
-	db := database.NewMemoryDBManager()
 
 	// prepare configurations and data for the test environment
 	chainConfig := params.MainnetChainConfig.Copy()
@@ -207,10 +206,6 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	oldSm := reward.GetStakingManager()
-	defer reward.SetTestStakingManager(oldSm)
-	reward.SetTestStakingManagerWithChain(mockBlockchain, mockGovEngine, db)
 
 	testAddrList := []common.Address{
 		common.HexToAddress("0x1111111111111111111111111111111111111111"),

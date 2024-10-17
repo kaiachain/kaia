@@ -761,7 +761,6 @@ func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []int
 }
 
 // Set StakingInfo with given amount for nodeKeys. If amounts == nil, set to 0 amounts.
-// Returns the original (old) StakingManager. Call `reward.SetTestStakingManager(oldStakingManager)`
 func setTestStakingInfo(t *testing.T, b *backend, amounts []uint64, blockNum uint64) *gomock.Controller {
 	if amounts == nil {
 		amounts = make([]uint64, len(nodeKeys))
