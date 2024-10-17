@@ -34,6 +34,25 @@ func (h *headerGovModule) NodeAddress() common.Address {
 	return h.nodeAddress
 }
 
+// GetLatestValidatorVote returns non-zero voteBlk and latest addvalidator or removevalidator vote
+// If there's no vote, return 0, nil.
+func (h *headerGovModule) GetLatestValidatorVote(num uint64) (uint64, headergov.VoteData) {
+	votesBlks := h.cache.VoteBlockNums()
+
+	for i := len(votesBlks) - 1; i >= 0; i-- {
+		voteBlk := votesBlks[i]
+		vote := h.cache.GroupedVotes()[calcEpochIdx(voteBlk, h.epoch)][voteBlk]
+		if voteBlk < num && (vote.Name() == "governance.addvalidator" || vote.Name() == "governance.removevalidator") {
+			return voteBlk, vote
+		}
+	}
+	return 0, nil
+}
+
+func (h *headerGovModule) GetMyVotes() []headergov.VoteData {
+	return h.myVotes
+}
+
 func (h *headerGovModule) GetGovernanceHistory() headergov.History {
 	return h.cache.History()
 }

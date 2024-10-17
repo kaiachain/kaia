@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
+	headergov "github.com/kaiachain/kaia/kaiax/gov/headergov"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -92,6 +93,21 @@ func (m *MockHeaderGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.Sta
 func (mr *MockHeaderGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockHeaderGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+}
+
+// GetLatestValidatorVote mocks base method.
+func (m *MockHeaderGovModule) GetLatestValidatorVote(arg0 uint64) (uint64, headergov.VoteData) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestValidatorVote", arg0)
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(headergov.VoteData)
+	return ret0, ret1
+}
+
+// GetLatestValidatorVote indicates an expected call of GetLatestValidatorVote.
+func (mr *MockHeaderGovModuleMockRecorder) GetLatestValidatorVote(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestValidatorVote", reflect.TypeOf((*MockHeaderGovModule)(nil).GetLatestValidatorVote), arg0)
 }
 
 // NodeAddress mocks base method.

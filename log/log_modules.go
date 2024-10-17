@@ -132,6 +132,9 @@ const (
 	KaiaXGov
 	KaiaxStaking
 
+	// 61~70
+	KaiaxValset
+
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
 )

@@ -53,6 +53,7 @@ import (
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -524,6 +525,7 @@ func (s *CN) SetupKaiaxModules() error {
 		hgm      = headergov_impl.NewHeaderGovModule()
 		cgm      = contractgov_impl.NewContractGovModule()
 		mStaking = staking_impl.NewStakingModule()
+		mValset  = valset_impl.NewValsetModule()
 	)
 
 	// Initialize modules
@@ -550,18 +552,25 @@ func (s *CN) SetupKaiaxModules() error {
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
 		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:     s.chainDB.GetMiscDB(),
+			Chain:       s.blockchain,
+			HeaderGov:   hgm,
+			StakingInfo: mStaking,
+			NodeAddress: s.nodeAddress,
+		}),
 	)
 	if err != nil {
 		return err
 	}
 
 	// Register modules to respective components
-	s.RegisterBaseModules(mNoop, mGov, mStaking)
-	s.RegisterJsonRpcModules(mGov, mStaking)
+	s.RegisterBaseModules(mNoop, mGov, mStaking, mValset)
+	s.RegisterJsonRpcModules(mGov, mStaking, mValset)
 	s.engine.(kaiax.ConsensusModuleHost).RegisterConsensusModule(mNoop, mGov)
-	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
+	s.blockchain.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov, mValset)
 	s.miner.(kaiax.ExecutionModuleHost).RegisterExecutionModule(mNoop, mGov)
-	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov, mStaking)
+	s.blockchain.(kaiax.RewindableModuleHost).RegisterRewindableModule(mNoop, mGov, mStaking, mValset)
 
 	return nil
 }
