@@ -121,16 +121,7 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 	if err != nil {
 		return nil, err
 	}
-	oldSi := &reward.StakingInfo{
-		BlockNum:              si.SourceBlockNum,
-		CouncilNodeAddrs:      si.NodeIds,
-		CouncilStakingAddrs:   si.StakingContracts,
-		CouncilRewardAddrs:    si.RewardAddrs,
-		KEFAddr:               si.KEFAddr,
-		KIFAddr:               si.KIFAddr,
-		CouncilStakingAmounts: si.StakingAmounts,
-	}
-	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet, oldSi)
+	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet, reward.FromKaiax(si))
 }
 
 type AccumulatedRewards struct {

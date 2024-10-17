@@ -84,10 +84,10 @@ type SupplyTestSuite struct {
 	suite.Suite
 
 	// Setup per-Suite
-	config            *params.ChainConfig
-	gov               governanceHelper
-	engine            consensus.Engine
-	oldStakingManager *StakingManager
+	config      *params.ChainConfig
+	stakingInfo *StakingInfo
+	gov         governanceHelper
+	engine      consensus.Engine
 
 	// Setup per-Test
 	db      database.DBManager
@@ -437,14 +437,12 @@ func (s *SupplyTestSuite) SetupSuite() {
 		Kip160ContractAddress: addrKip160,
 	}
 
-	s.gov = newSupplyTestGovernance(s.config)
-	s.engine = newSupplyTestEngine(s.T(), s.config, s.gov)
-
-	s.oldStakingManager = GetStakingManager()
-	SetTestStakingManagerWithStakingInfoCache(&StakingInfo{
+	s.stakingInfo = &StakingInfo{
 		KIFAddr: addrFund1,
 		KEFAddr: addrFund2,
-	})
+	}
+	s.gov = newSupplyTestGovernance(s.config)
+	s.engine = newSupplyTestEngine(s.T(), s.config, s.gov, s.stakingInfo)
 }
 
 func (s *SupplyTestSuite) SetupTest() {
@@ -701,7 +699,6 @@ func (s *SupplyTestSuite) TearDownTest() {
 }
 
 func (s *SupplyTestSuite) TearDownSuite() {
-	SetTestStakingManager(s.oldStakingManager)
 }
 
 // ----------------------------------------------------------------------------
@@ -762,16 +759,18 @@ func (g *supplyTestGovernance) EffectiveParams(num uint64) (*params.GovParamSet,
 
 // Minimally implements the consensus.Engine interface for testing reward distribution.
 type supplyTestEngine struct {
-	t      *testing.T
-	config *params.ChainConfig
-	gov    governanceHelper
+	t           *testing.T
+	config      *params.ChainConfig
+	gov         governanceHelper
+	stakingInfo *StakingInfo
 }
 
-func newSupplyTestEngine(t *testing.T, config *params.ChainConfig, gov governanceHelper) *supplyTestEngine {
+func newSupplyTestEngine(t *testing.T, config *params.ChainConfig, gov governanceHelper, stakingInfo *StakingInfo) *supplyTestEngine {
 	return &supplyTestEngine{
-		t:      t,
-		config: config,
-		gov:    gov,
+		t:           t,
+		config:      config,
+		gov:         gov,
+		stakingInfo: stakingInfo,
 	}
 }
 
@@ -816,7 +815,7 @@ func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.H
 
 	rules := s.config.Rules(header.Number)
 	pset, _ := s.gov.EffectiveParams(header.Number.Uint64())
-	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset, nil)
+	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset, s.stakingInfo)
 	if err != nil {
 		return nil, err
 	}

@@ -539,21 +539,11 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		}
 
 		// Temporary patch to use kaiax/staking + weightedCouncil
-		si, err := sb.stakingModule.GetStakingInfo(header.Number.Uint64())
-		if err != nil {
-			return nil, err
+		si, siErr := sb.stakingModule.GetStakingInfo(header.Number.Uint64())
+		if siErr != nil {
+			return nil, siErr
 		}
-		oldSi := &reward.StakingInfo{
-			BlockNum:              si.SourceBlockNum,
-			CouncilNodeAddrs:      si.NodeIds,
-			CouncilStakingAddrs:   si.StakingContracts,
-			CouncilRewardAddrs:    si.RewardAddrs,
-			KEFAddr:               si.KEFAddr,
-			KIFAddr:               si.KIFAddr,
-			CouncilStakingAmounts: si.StakingAmounts,
-		}
-
-		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset, oldSi)
+		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset, reward.FromKaiax(si))
 	} else {
 		rewardSpec, err = reward.CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 	}

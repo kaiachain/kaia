@@ -675,21 +675,13 @@ func (valSet *weightedCouncil) RefreshValSet(blockNum uint64, config *params.Cha
 		// Just return without refreshing validators
 		return errors.New("skip refreshing validators due to no staking info")
 	}
-	newStakingInfo := &reward.StakingInfo{
-		BlockNum:              si.SourceBlockNum,
-		CouncilNodeAddrs:      si.NodeIds,
-		CouncilStakingAddrs:   si.StakingContracts,
-		CouncilRewardAddrs:    si.RewardAddrs,
-		KEFAddr:               si.KEFAddr,
-		KIFAddr:               si.KIFAddr,
-		Gini:                  si.Gini(minStaking),
-		CouncilStakingAmounts: si.StakingAmounts,
-	}
+	var useGini bool
 	if chainRules.IsKore {
-		newStakingInfo.UseGini = false
+		useGini = false
 	} else {
-		newStakingInfo.UseGini = config.Governance.Reward.UseGiniCoeff
+		useGini = config.Governance.Reward.UseGiniCoeff
 	}
+	newStakingInfo := reward.FromKaiaxWithGini(si, useGini, minStaking)
 	valSet.stakingInfo = newStakingInfo
 
 	candidates := append(valSet.validators, valSet.demotedValidators...)

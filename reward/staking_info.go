@@ -28,6 +28,7 @@ import (
 	"sort"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -61,6 +62,30 @@ type StakingInfo struct {
 
 	// Derived from CouncilStakingAddrs
 	CouncilStakingAmounts []uint64 `json:"councilStakingAmounts"` // Staking amounts of Council
+}
+
+func FromKaiax(si *staking.StakingInfo) *StakingInfo {
+	return &StakingInfo{
+		BlockNum:              si.SourceBlockNum,
+		CouncilNodeAddrs:      si.NodeIds,
+		CouncilStakingAddrs:   si.StakingContracts,
+		CouncilRewardAddrs:    si.RewardAddrs,
+		KEFAddr:               si.KEFAddr,
+		KIFAddr:               si.KIFAddr,
+		CouncilStakingAmounts: si.StakingAmounts,
+	}
+}
+
+func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *StakingInfo {
+	return &StakingInfo{
+		BlockNum:              si.SourceBlockNum,
+		CouncilNodeAddrs:      si.NodeIds,
+		CouncilStakingAddrs:   si.StakingContracts,
+		CouncilRewardAddrs:    si.RewardAddrs,
+		KEFAddr:               si.KEFAddr,
+		KIFAddr:               si.KIFAddr,
+		CouncilStakingAmounts: si.StakingAmounts,
+	}
 }
 
 // MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
