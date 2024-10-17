@@ -964,7 +964,7 @@ func (c *bls12381G1MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G1MulGas * discount) / 1000,
-		(uint64(k) * params.Bls12381G1MulGas * discount) / 1000
+		(uint64(k) * params.Bls12381G1MulComputationCost * discount) / 1000
 }
 
 func (c *bls12381G1MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
@@ -1100,7 +1100,7 @@ func (c *bls12381G2MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G2MulGas * discount) / 1000,
-		(uint64(k) * params.Bls12381G2MulGas * discount) / 1000
+		(uint64(k) * params.Bls12381G2MulComputationCost * discount) / 1000
 }
 
 func (c *bls12381G2MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
