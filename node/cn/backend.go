@@ -437,6 +437,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
+	if err := cn.SetupKaiaxModules(); err != nil {
+		logger.Error("Failed to setup kaiax modules", "err", err)
+	}
+
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
 		restartInterval := config.RestartTimeOutFlag

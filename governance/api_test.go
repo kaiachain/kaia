@@ -16,7 +16,6 @@
 package governance
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 	"time"
@@ -27,7 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/kaiax/staking/mock"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
@@ -161,7 +160,7 @@ func TestGetRewards(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		defer mockCtrl.Finish()
 		si := &staking.StakingInfo{SourceBlockNum: 0}
-		mStaking := mock.NewMockStakingModule(mockCtrl)
+		mStaking := staking_mock.NewMockStakingModule(mockCtrl)
 		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 		govKaiaApi := NewGovernanceKaiaAPI(e, bc, mStaking)
 
@@ -195,6 +194,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 
 	mockBlockchain := mocks.NewMockBlockChain(mockCtrl)
 	mockGovEngine := NewMockEngine(mockCtrl)
+	mockStakingModule := staking_mock.NewMockStakingModule(mockCtrl)
 	db := database.NewMemoryDBManager()
 
 	// prepare configurations and data for the test environment
@@ -226,19 +226,14 @@ func TestGetRewardsAccumulated(t *testing.T) {
 		uint64(20000000),
 	}
 
-	stInfo := reward.StakingInfo{
-		BlockNum:              0,
-		CouncilNodeAddrs:      testAddrList,
-		CouncilStakingAddrs:   testAddrList,
-		CouncilRewardAddrs:    testAddrList,
-		KEFAddr:               common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
-		KIFAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-		CouncilStakingAmounts: testStakingAmountList,
-	}
-
-	siBytes, _ := json.Marshal(stInfo)
-	if err := db.WriteStakingInfo(stInfo.BlockNum, siBytes); err != nil {
-		t.Fatal(err)
+	stInfo := &staking.StakingInfo{
+		SourceBlockNum:   0,
+		NodeIds:          testAddrList,
+		StakingContracts: testAddrList,
+		RewardAddrs:      testAddrList,
+		KEFAddr:          common.HexToAddress("0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"),
+		KIFAddr:          common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		StakingAmounts:   testStakingAmountList,
 	}
 
 	startBlockNum := 0
@@ -249,7 +244,7 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	for i := startBlockNum; i <= endBlockNum; i++ {
 		blocks[i] = types.NewBlockWithHeader(&types.Header{
 			Number:     big.NewInt(int64(i)),
-			Rewardbase: stInfo.CouncilRewardAddrs[i%4], // round-robin way
+			Rewardbase: testAddrList[i%4], // round-robin way
 			GasUsed:    uint64(1000),
 			BaseFee:    big.NewInt(25 * params.Gkei),
 			Time:       big.NewInt(int64(1000 + i)),
@@ -267,8 +262,10 @@ func TestGetRewardsAccumulated(t *testing.T) {
 	mockGovEngine.EXPECT().EffectiveParams(gomock.Any()).Return(govParamSet, nil).AnyTimes()
 	mockGovEngine.EXPECT().BlockChain().Return(mockBlockchain).AnyTimes()
 
+	mockStakingModule.EXPECT().GetStakingInfo(gomock.Any()).Return(stInfo, nil).AnyTimes()
+
 	// execute a target function
-	govAPI := NewGovernanceAPI(mockGovEngine, nil)
+	govAPI := NewGovernanceAPI(mockGovEngine, mockStakingModule)
 	ret, err := govAPI.GetRewardsAccumulated(rpc.BlockNumber(startBlockNum), rpc.BlockNumber(endBlockNum))
 	if err != nil {
 		t.Fatal(err)
