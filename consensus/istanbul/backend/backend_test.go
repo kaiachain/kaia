@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -940,8 +939,8 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	backend := newTestBackend()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl := setTestStakingInfo(t, backend, nil, 0)
+	defer mockCtrl.Finish()
 
 	commitCh := make(chan *types.Block)
 	// Case: it's a proposer, so the backend.commit will receive channel result from backend.Commit function
