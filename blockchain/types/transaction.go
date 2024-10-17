@@ -333,6 +333,14 @@ func (tx *Transaction) AccessList() AccessList {
 	return nil
 }
 
+func (tx *Transaction) AuthorizationList() AuthorizationList {
+	if tx.Type() == TxTypeEthereumSetCode {
+		te := tx.GetTxInternalData().(*TxInternalDataEthereumSetCode)
+		return te.GetAuthorizationList()
+	}
+	return nil
+}
+
 func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
 func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {

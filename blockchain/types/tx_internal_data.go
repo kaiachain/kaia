@@ -58,7 +58,8 @@ const (
 	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
-	TxTypeEthereumLast       = TxType(0x7803)
+	TxTypeEthereumSetCode    = TxType(0x7803)
+	TxTypeEthereumLast       = TxType(0x7804)
 )
 
 type TxValueKeyType uint
@@ -83,6 +84,7 @@ const (
 	TxValueKeyChainID
 	TxValueKeyGasTipCap
 	TxValueKeyGasFeeCap
+	TxValueKeyAuthorizationList
 )
 
 type TxTypeMask uint8
@@ -115,6 +117,7 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyAuthorizationListInvalid  = errors.New("AuthorizationList must be a type of AuthorizationList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
 	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
@@ -164,6 +167,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyGasTipCap"
 	case TxValueKeyGasFeeCap:
 		return "TxValueKeyGasFeeCap"
+	case TxValueKeyAuthorizationList:
+		return "TxValueKeyAuthorizationList"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -223,6 +228,8 @@ func (t TxType) String() string {
 		return "TxTypeEthereumAccessList"
 	case TxTypeEthereumDynamicFee:
 		return "TxTypeEthereumDynamicFee"
+	case TxTypeEthereumSetCode:
+		return "TxTypeEthereumSetCode"
 	}
 
 	return "UndefinedTxType"
@@ -481,6 +488,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFee(), nil
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCode(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -538,6 +547,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFeeWithMap(values)
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCodeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType

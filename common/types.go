@@ -49,6 +49,8 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	extHashT = reflect.TypeOf(ExtHash{})
 	addressT = reflect.TypeOf(Address{})
+	// ZeroAddress represents the zero address value.
+	ZeroAddress = Address{}
 )
 
 var (

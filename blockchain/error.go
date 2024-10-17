@@ -147,4 +147,11 @@ var (
 
 	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
 	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
+
+	// ErrEmptyAuthList is returned if a set code transaction has an empty auth list.
+	ErrEmptyAuthList = errors.New("set code transaction with empty auth list")
+
+	// ErrAuthSignatureVeryHigh is returned if a set code transaction has a
+	// signature with R or S larger than 2^256-1.
+	ErrAuthSignatureVeryHigh = errors.New("set code transaction has authorization with R or S value greater than 2^256 - 1")
 )
