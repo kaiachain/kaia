@@ -12,30 +12,30 @@ import (
 	p2p "github.com/kaiachain/kaia/networks/p2p"
 )
 
-// MockLesServer is a mock of LesServer interface
+// MockLesServer is a mock of LesServer interface.
 type MockLesServer struct {
 	ctrl     *gomock.Controller
 	recorder *MockLesServerMockRecorder
 }
 
-// MockLesServerMockRecorder is the mock recorder for MockLesServer
+// MockLesServerMockRecorder is the mock recorder for MockLesServer.
 type MockLesServerMockRecorder struct {
 	mock *MockLesServer
 }
 
-// NewMockLesServer creates a new mock instance
+// NewMockLesServer creates a new mock instance.
 func NewMockLesServer(ctrl *gomock.Controller) *MockLesServer {
 	mock := &MockLesServer{ctrl: ctrl}
 	mock.recorder = &MockLesServerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockLesServer) EXPECT() *MockLesServerMockRecorder {
 	return m.recorder
 }
 
-// Protocols mocks base method
+// Protocols mocks base method.
 func (m *MockLesServer) Protocols() []p2p.Protocol {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Protocols")
@@ -43,43 +43,43 @@ func (m *MockLesServer) Protocols() []p2p.Protocol {
 	return ret0
 }
 
-// Protocols indicates an expected call of Protocols
+// Protocols indicates an expected call of Protocols.
 func (mr *MockLesServerMockRecorder) Protocols() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Protocols", reflect.TypeOf((*MockLesServer)(nil).Protocols))
 }
 
-// SetBloomBitsIndexer mocks base method
+// SetBloomBitsIndexer mocks base method.
 func (m *MockLesServer) SetBloomBitsIndexer(arg0 *blockchain.ChainIndexer) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetBloomBitsIndexer", arg0)
 }
 
-// SetBloomBitsIndexer indicates an expected call of SetBloomBitsIndexer
+// SetBloomBitsIndexer indicates an expected call of SetBloomBitsIndexer.
 func (mr *MockLesServerMockRecorder) SetBloomBitsIndexer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBloomBitsIndexer", reflect.TypeOf((*MockLesServer)(nil).SetBloomBitsIndexer), arg0)
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockLesServer) Start(arg0 p2p.Server) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start", arg0)
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockLesServerMockRecorder) Start(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockLesServer)(nil).Start), arg0)
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockLesServer) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockLesServerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockLesServer)(nil).Stop))
