@@ -17,6 +17,7 @@ import (
 	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 	params "github.com/kaiachain/kaia/params"
 	rlp "github.com/kaiachain/kaia/rlp"
 	snapshot "github.com/kaiachain/kaia/snapshot"
@@ -703,6 +704,22 @@ func (m *MockBlockChain) PrunableStateAt(arg0 common.Hash, arg1 uint64) (*state.
 func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
+}
+
+// RegisterRewindableModule mocks base method.
+func (m *MockBlockChain) RegisterRewindableModule(arg0 ...kaiax.RewindableModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterRewindableModule", varargs...)
+}
+
+// RegisterRewindableModule indicates an expected call of RegisterRewindableModule.
+func (mr *MockBlockChainMockRecorder) RegisterRewindableModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterRewindableModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterRewindableModule), arg0...)
 }
 
 // ResetWithGenesisBlock mocks base method.

@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
@@ -109,6 +110,7 @@ type backend struct {
 	logger           log.Logger
 	db               database.DBManager
 	chain            consensus.ChainReader
+	stakingModule    staking.StakingModule
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
 

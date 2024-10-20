@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -171,6 +172,8 @@ type Istanbul interface {
 
 	// UpdateParam updates the governance parameter
 	UpdateParam(num uint64) error
+
+	staking.StakingModuleHost
 }
 
 type ConsensusInfo struct {

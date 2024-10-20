@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -48,7 +49,7 @@ var logger = log.NewModuleLogger(log.Work)
 
 // TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
 //
-//go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
+//go:generate mockgen -destination=mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -321,4 +322,7 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
+
+	// kaiax module host
+	kaiax.RewindableModuleHost
 }
