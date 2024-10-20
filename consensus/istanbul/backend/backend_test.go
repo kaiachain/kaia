@@ -939,7 +939,8 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	backend := newTestBackend()
-	mockCtrl := setTestStakingInfo(t, backend, nil, 0)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	backend.RegisterStakingModule(mStaking)
 	defer mockCtrl.Finish()
 
 	commitCh := make(chan *types.Block)
@@ -955,6 +956,7 @@ func TestCommit(t *testing.T) {
 			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-1)...)},
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
+				engine.RegisterStakingModule(mStaking)
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -968,6 +970,7 @@ func TestCommit(t *testing.T) {
 			nil,
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
+				engine.RegisterStakingModule(mStaking)
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
