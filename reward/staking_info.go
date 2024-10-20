@@ -85,6 +85,8 @@ func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *
 		KEFAddr:               si.KEFAddr,
 		KIFAddr:               si.KIFAddr,
 		CouncilStakingAmounts: si.StakingAmounts,
+		UseGini:               useGini,
+		Gini:                  si.Gini(minStake),
 	}
 }
 
