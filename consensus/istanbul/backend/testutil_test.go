@@ -286,7 +286,6 @@ func (ctx *testContext) MakeCommittedSeals(hash common.Hash) [][]byte {
 func (ctx *testContext) Cleanup() {
 	ctx.chain.Stop()
 	ctx.engine.Stop()
-	reward.SetTestStakingManager(ctx.sm)
 }
 
 func makeGenesisExtra(addrs []common.Address) []byte {

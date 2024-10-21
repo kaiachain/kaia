@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -110,7 +111,7 @@ type ValidatorSet interface {
 	IsSubSet() bool
 
 	// Refreshes a list of validators at given blockNum
-	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
+	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64, stakingModule staking.StakingModule) error
 
 	// Refreshes a list of candidate proposers with given hash and blockNum
 	RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error

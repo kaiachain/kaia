@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
@@ -135,6 +136,8 @@ type ProtocolManager struct {
 
 	// syncStop is a flag to stop peer sync
 	syncStop int32
+
+	stakingModule staking.StakingModule
 }
 
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
@@ -344,6 +347,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 // istanbul BFT
 func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator) {
 	pm.peers.RegisterValidator(connType, validator)
+}
+
+func (pm *ProtocolManager) RegisterStakingModule(stakingModule staking.StakingModule) {
+	pm.stakingModule = stakingModule
 }
 
 func (pm *ProtocolManager) getWSEndPoint() string {
@@ -1046,23 +1053,27 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if header == nil {
 			continue
 		}
-		var result *reward.StakingInfo
 		number := header.Number.Uint64()
+		var result *reward.StakingInfo
 		if pm.chainconfig.IsKaiaForkEnabled(header.Number) {
-			if number > 0 {
-				number--
+			st, err := pm.stakingModule.GetStakingInfo(number)
+			if st == nil || err != nil {
+				continue
 			}
-			result = reward.GetStakingInfoForKaiaBlock(number)
+			result = reward.FromKaiaxWithGini(st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		} else {
-			result = reward.GetStakingInfoOnStakingBlock(number)
+			st, err := pm.stakingModule.GetStakingInfoFromDB(number)
+			if st == nil || err != nil {
+				continue
+			}
+			result = reward.FromKaiaxWithGini(st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		}
-		if result == nil {
-			continue
-		}
+
 		// If known, encode and queue for response packet
 		if encoded, err := rlp.EncodeToBytes(result); err != nil {
 			logger.Error("Failed to encode staking info", "err", err)
 		} else {
+			fmt.Println("encoding", result, "len", len(encoded))
 			stakingInfos = append(stakingInfos, encoded)
 			bytes += len(encoded)
 		}

@@ -66,6 +66,21 @@ func (mr *MockStakingModuleMockRecorder) GetStakingInfo(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfo", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfo), arg0)
 }
 
+// GetStakingInfoFromDB mocks base method.
+func (m *MockStakingModule) GetStakingInfoFromDB(arg0 uint64) (*staking.StakingInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStakingInfoFromDB", arg0)
+	ret0, _ := ret[0].(*staking.StakingInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStakingInfoFromDB indicates an expected call of GetStakingInfoFromDB.
+func (mr *MockStakingModuleMockRecorder) GetStakingInfoFromDB(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfoFromDB", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfoFromDB), arg0)
+}
+
 // RewindDelete mocks base method.
 func (m *MockStakingModule) RewindDelete(arg0 common.Hash, arg1 uint64) {
 	m.ctrl.T.Helper()

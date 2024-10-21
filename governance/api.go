@@ -28,13 +28,15 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 )
 
 type GovernanceAPI struct {
-	governance Engine // Node interfaced by this API
+	governance    Engine // Node interfaced by this API
+	stakingModule staking.StakingModule
 }
 
 type returnTally struct {
@@ -43,17 +45,18 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov Engine) *GovernanceAPI {
-	return &GovernanceAPI{governance: gov}
+func NewGovernanceAPI(gov Engine, stakingModule staking.StakingModule) *GovernanceAPI {
+	return &GovernanceAPI{governance: gov, stakingModule: stakingModule}
 }
 
 type GovernanceKaiaAPI struct {
-	governance Engine
-	chain      blockChain
+	governance    Engine
+	chain         blockChain
+	stakingModule staking.StakingModule
 }
 
-func NewGovernanceKaiaAPI(gov Engine, chain blockChain) *GovernanceKaiaAPI {
-	return &GovernanceKaiaAPI{governance: gov, chain: chain}
+func NewGovernanceKaiaAPI(gov Engine, chain blockChain, stakingModule staking.StakingModule) *GovernanceKaiaAPI {
+	return &GovernanceKaiaAPI{governance: gov, chain: chain, stakingModule: stakingModule}
 }
 
 var (
@@ -114,7 +117,11 @@ func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSp
 		return nil, err
 	}
 
-	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet)
+	si, err := api.stakingModule.GetStakingInfo(header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet, reward.FromKaiax(si))
 }
 
 type AccumulatedRewards struct {
@@ -137,7 +144,7 @@ type AccumulatedRewards struct {
 // GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
 func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
 	blockchain := api.governance.BlockChain()
-	govKaiaAPI := NewGovernanceKaiaAPI(api.governance, blockchain)
+	govKaiaAPI := NewGovernanceKaiaAPI(api.governance, blockchain, api.stakingModule)
 
 	currentBlock := blockchain.CurrentBlock().NumberU64()
 
