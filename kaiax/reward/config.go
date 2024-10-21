@@ -28,9 +28,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-var (
-	big100 = big.NewInt(100)
-)
+var big100 = big.NewInt(100)
 
 type RewardConfig struct {
 	Rules      params.Rules

@@ -75,11 +75,11 @@ func getRewardSummary(config *reward.RewardConfig, totalFee *big.Int) *reward.Re
 		}
 	}
 
-	return &reward.RewardSummary{
-		Minted:   minted,
-		TotalFee: totalFee,
-		BurntFee: burntFee,
-	}
+	summary := reward.NewRewardSummary()
+	summary.Minted = minted
+	summary.TotalFee = totalFee
+	summary.BurntFee = burntFee
+	return summary
 }
 
 // GetBlockReward retrospectively calculates the block reward distributed at the given block number.

@@ -28,10 +28,26 @@ type RewardSummary struct {
 	BurntFee *big.Int `json:"burntFee"`
 }
 
-func (summary *RewardSummary) Add(delta *RewardSummary) {
-	summary.Minted.Add(summary.Minted, delta.Minted)
-	summary.TotalFee.Add(summary.TotalFee, delta.TotalFee)
-	summary.BurntFee.Add(summary.BurntFee, delta.BurntFee)
+func NewRewardSummary() *RewardSummary {
+	return &RewardSummary{
+		Minted:   big.NewInt(0),
+		TotalFee: big.NewInt(0),
+		BurntFee: big.NewInt(0),
+	}
+}
+
+func (s *RewardSummary) Add(delta *RewardSummary) {
+	s.Minted.Add(s.Minted, delta.Minted)
+	s.TotalFee.Add(s.TotalFee, delta.TotalFee)
+	s.BurntFee.Add(s.BurntFee, delta.BurntFee)
+}
+
+func (s RewardSummary) Copy() *RewardSummary {
+	return &RewardSummary{
+		Minted:   new(big.Int).Set(s.Minted),
+		TotalFee: new(big.Int).Set(s.TotalFee),
+		BurntFee: new(big.Int).Set(s.BurntFee),
+	}
 }
 
 type RewardSpec struct {
@@ -59,9 +75,7 @@ func NewRewardSpec() *RewardSpec {
 }
 
 func (spec *RewardSpec) Add(delta *RewardSpec) {
-	spec.Minted.Add(spec.Minted, delta.Minted)
-	spec.TotalFee.Add(spec.TotalFee, delta.TotalFee)
-	spec.BurntFee.Add(spec.BurntFee, delta.BurntFee)
+	spec.RewardSummary.Add(&delta.RewardSummary)
 	spec.Proposer.Add(spec.Proposer, delta.Proposer)
 	spec.Stakers.Add(spec.Stakers, delta.Stakers)
 	spec.KIF.Add(spec.KIF, delta.KIF)
@@ -74,16 +88,12 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 
 func (spec *RewardSpec) Copy() *RewardSpec {
 	newSpec := &RewardSpec{
-		RewardSummary: RewardSummary{
-			Minted:   new(big.Int).Set(spec.Minted),
-			TotalFee: new(big.Int).Set(spec.TotalFee),
-			BurntFee: new(big.Int).Set(spec.BurntFee),
-		},
-		Proposer: new(big.Int).Set(spec.Proposer),
-		Stakers:  new(big.Int).Set(spec.Stakers),
-		KIF:      new(big.Int).Set(spec.KIF),
-		KEF:      new(big.Int).Set(spec.KEF),
-		Rewards:  make(map[common.Address]*big.Int),
+		RewardSummary: *spec.RewardSummary.Copy(),
+		Proposer:      new(big.Int).Set(spec.Proposer),
+		Stakers:       new(big.Int).Set(spec.Stakers),
+		KIF:           new(big.Int).Set(spec.KIF),
+		KEF:           new(big.Int).Set(spec.KEF),
+		Rewards:       make(map[common.Address]*big.Int),
 	}
 	for addr, amount := range spec.Rewards {
 		newSpec.Rewards[addr] = new(big.Int).Set(amount)
