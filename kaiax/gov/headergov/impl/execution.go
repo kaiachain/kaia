@@ -40,10 +40,10 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 }
 
 func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
-	h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
-
-	var data StoredUint64Array = h.cache.VoteBlockNums()
-	WriteVoteDataBlockNums(h.ChainKv, &data)
+	if vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+		h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+		InsertVoteDataBlockNum(h.ChainKv, blockNum)
+	}
 
 	// if the vote was mine, remove it.
 	for i, myvote := range h.myVotes {

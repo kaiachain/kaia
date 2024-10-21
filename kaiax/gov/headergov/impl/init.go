@@ -82,6 +82,27 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 
 func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
+
+	go func() {
+		lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
+		if lastInsertedBlockPtr == nil {
+			panic("last inserted block must exist")
+		}
+
+		lastInsertedBlock := *lastInsertedBlockPtr
+		for lastInsertedBlock > 0 {
+			voteBlocks := h.scanAllVotesInHeader(calcEpochIdx(lastInsertedBlock, h.epoch))
+			for blockNum, vote := range voteBlocks {
+				h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+				InsertVoteDataBlockNum(h.ChainKv, blockNum)
+			}
+
+			WriteLastInsertedBlock(h.ChainKv, lastInsertedBlock)
+			logger.Info("Scanned votes in header", "num", lastInsertedBlock)
+			lastInsertedBlock -= 604800
+		}
+	}()
+
 	return nil
 }
 
@@ -99,6 +120,28 @@ func (h *headerGovModule) PushMyVotes(vote headergov.VoteData) {
 
 func (h *headerGovModule) PopMyVotes(idx int) {
 	h.myVotes = append(h.myVotes[:idx], h.myVotes[idx+1:]...)
+}
+
+// scanAllVotesInHeader scans all votes from headers in the given epoch.
+func (h *headerGovModule) scanAllVotesInHeader(epochIdx uint64) map[uint64]headergov.VoteData {
+	rangeStart := epochIdx * h.epoch
+	rangeEnd := (epochIdx + 1) * h.epoch
+
+	votes := make(map[uint64]headergov.VoteData)
+	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
+		header := h.Chain.GetHeaderByNumber(blockNum)
+		vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+		if err != nil {
+			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
+			continue
+		}
+		// TODO-kaiax: consider writing addval/removeval votes to validator DB.
+		if vote != nil && vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+			votes[blockNum] = vote
+		}
+	}
+
+	return votes
 }
 
 func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {

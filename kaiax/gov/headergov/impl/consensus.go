@@ -166,9 +166,19 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 }
 
 func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
-	votes := make(map[uint64]headergov.VoteData)
-	for blockNum, vote := range h.cache.GroupedVotes()[epochIdx] {
-		votes[blockNum] = vote
+	lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
+	if lastInsertedBlockPtr == nil {
+		panic("last inserted block must exist")
 	}
-	return votes
+	lastInsertedBlock := *lastInsertedBlockPtr
+
+	if lastInsertedBlock <= epochIdx*h.epoch {
+		votes := make(map[uint64]headergov.VoteData)
+		for blockNum, vote := range h.cache.GroupedVotes()[epochIdx] {
+			votes[blockNum] = vote
+		}
+		return votes
+	} else {
+		return h.scanAllVotesInHeader(epochIdx)
+	}
 }
