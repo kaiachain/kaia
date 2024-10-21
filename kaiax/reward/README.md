@@ -213,20 +213,21 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- GetDeferredReward: Returns the deferred reward specification for the given block that is being created. Used in FinalizeHeader.
+- GetDeferredReward: GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created. Intended to be used in FinalizeHeader. Under non-deferred mode, transaction fees are ignored.
   ```
   GetDeferredReward(header, txs, receipts) -> RewardSpec
 
-  if DeferredTxFee, return distribution of (MR + DF)
-  else, return distribution of (MR)
+  if DeferredTxFee, return (MR + DF)
+  else, return (MR)
   ```
-- GetBlockReward: Returns the reward distribution specification for the given block number. Includes both non-deferred fees and deferred fees. Therefore its result may differ from GetDeferredReward if the non-deferred fees method is used.
+- GetBlockReward: retrospectively calculates the block reward distributed at the given block number. Considers both non-deferred fees and deferred fees.
   ```
   GetBlockReward(num) -> RewardSpec
 
-  return GetDeferredReward() + distribution of (NDF)
+  if DeferredTxFee, return GetDeferredReward() = (MR + DF)
+  else, return GetDeferredReward() + (NDF) = (MR + NDF)
   ```
-- GetRewardSummary: Returns the reward summary for the given block number. It is equivalent to the Summary part of a `GetBlockReward` result, which means it includes both non-deferred fees and deferred fees.
+- GetRewardSummary: retrospectively calculates the reward summary at the given block number. It is equivalent to the Summary part of a `GetBlockReward` result, which means it considers both non-deferred fees and deferred fees.
   ```
   GetRewardSummary(num) -> RewardSummary
   ```

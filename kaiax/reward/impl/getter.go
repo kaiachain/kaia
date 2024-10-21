@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
-// GetRewardSummary retrospectively calculates the reward summary at the given block number.
 func (r *RewardModule) GetRewardSummary(num uint64) (*reward.RewardSummary, error) {
 	config, _, totalFee, err := r.loadBlockData(num)
 	if err != nil {
@@ -82,8 +81,6 @@ func getRewardSummary(config *reward.RewardConfig, totalFee *big.Int) *reward.Re
 	return summary
 }
 
-// GetBlockReward retrospectively calculates the block reward distributed at the given block number.
-// The result includes both non-deferred and deferred fees, so it may differ from GetDeferredReward.
 func (r *RewardModule) GetBlockReward(num uint64) (*reward.RewardSpec, error) {
 	config, header, totalFee, err := r.loadBlockData(num)
 	if err != nil {
@@ -133,7 +130,6 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 	return newSpec, nil
 }
 
-// GetDeferredReward returns the rewards to be applied at the end of the block.
 // Under non-deferred mode, transaction fees are ignored.
 func (r *RewardModule) GetDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*reward.RewardSpec, error) {
 	config, err := reward.NewRewardConfig(r.ChainConfig, r.GovModule, header)

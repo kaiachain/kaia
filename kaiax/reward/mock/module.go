@@ -11,6 +11,7 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	vm "github.com/kaiachain/kaia/blockchain/vm"
+	reward "github.com/kaiachain/kaia/kaiax/reward"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -63,6 +64,51 @@ func (m *MockRewardModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateD
 func (mr *MockRewardModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockRewardModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+}
+
+// GetBlockReward mocks base method.
+func (m *MockRewardModule) GetBlockReward(arg0 uint64) (*reward.RewardSpec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlockReward", arg0)
+	ret0, _ := ret[0].(*reward.RewardSpec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlockReward indicates an expected call of GetBlockReward.
+func (mr *MockRewardModuleMockRecorder) GetBlockReward(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockReward", reflect.TypeOf((*MockRewardModule)(nil).GetBlockReward), arg0)
+}
+
+// GetDeferredReward mocks base method.
+func (m *MockRewardModule) GetDeferredReward(arg0 *types.Header, arg1 []*types.Transaction, arg2 []*types.Receipt) (*reward.RewardSpec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeferredReward", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*reward.RewardSpec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeferredReward indicates an expected call of GetDeferredReward.
+func (mr *MockRewardModuleMockRecorder) GetDeferredReward(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeferredReward", reflect.TypeOf((*MockRewardModule)(nil).GetDeferredReward), arg0, arg1, arg2)
+}
+
+// GetRewardSummary mocks base method.
+func (m *MockRewardModule) GetRewardSummary(arg0 uint64) (*reward.RewardSummary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRewardSummary", arg0)
+	ret0, _ := ret[0].(*reward.RewardSummary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRewardSummary indicates an expected call of GetRewardSummary.
+func (mr *MockRewardModuleMockRecorder) GetRewardSummary(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardSummary", reflect.TypeOf((*MockRewardModule)(nil).GetRewardSummary), arg0)
 }
 
 // PostRunTx mocks base method.

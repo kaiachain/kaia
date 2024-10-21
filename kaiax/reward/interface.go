@@ -16,7 +16,10 @@
 
 package reward
 
-import "github.com/kaiachain/kaia/kaiax"
+import (
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax"
+)
 
 //go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/reward RewardModule
 type RewardModule interface {
@@ -24,4 +27,13 @@ type RewardModule interface {
 	kaiax.JsonRpcModule
 	kaiax.ConsensusModule
 	kaiax.TxProcessModule
+
+	// GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created.
+	GetDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*RewardSpec, error)
+
+	// GetBlockReward retrospectively calculates the block reward distributed at the given block number.
+	GetBlockReward(num uint64) (*RewardSpec, error)
+
+	// GetRewardSummary retrospectively calculates the reward summary at the given block number.
+	GetRewardSummary(num uint64) (*RewardSummary, error)
 }

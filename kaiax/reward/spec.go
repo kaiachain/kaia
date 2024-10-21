@@ -19,6 +19,7 @@ package reward
 import (
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
 
@@ -107,4 +108,45 @@ func (spec *RewardSpec) IncReceipient(addr common.Address, amount *big.Int) {
 		spec.Rewards[addr] = big.NewInt(0)
 	}
 	spec.Rewards[addr].Add(spec.Rewards[addr], amount)
+}
+
+// RewardResponse is the response type for the kaia_getReward API.
+// TODO-kaiax: RewardResponse to use hexutil.Big for big.Int fields.
+type RewardResponse = RewardSpec
+
+// AccumulatedRewardsResponse is the response type for the governance_getRewardsAccumulated API.
+// TODO-kaiax: AccumulatedRewardsResponse to use hexutil.Big for time (as timestamp) and big.Int fields.
+type AccumulatedRewardsResponse struct {
+	FirstBlockTime string   `json:"firstBlockTime"`
+	LastBlockTime  string   `json:"lastBlockTime"`
+	FirstBlock     *big.Int `json:"firstBlock"`
+	LastBlock      *big.Int `json:"lastBlock"`
+
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards
+	TotalMinted          *big.Int                    `json:"totalMinted"`
+	TotalTxFee           *big.Int                    `json:"totalTxFee"`
+	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
+	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
+	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
+	TotalKIFRewards      *big.Int                    `json:"totalKIFRewards"`
+	TotalKEFRewards      *big.Int                    `json:"totalKEFRewards"`
+	Rewards              map[common.Address]*big.Int `json:"rewards"`
+}
+
+func (spec RewardSpec) ToAccumulatedResponse(firstHeader, lastHeader *types.Header) *AccumulatedRewardsResponse {
+	return &AccumulatedRewardsResponse{
+		FirstBlockTime: firstHeader.Time.String(),
+		LastBlockTime:  lastHeader.Time.String(),
+		FirstBlock:     new(big.Int).SetUint64(firstHeader.Number.Uint64()),
+		LastBlock:      new(big.Int).SetUint64(lastHeader.Number.Uint64()),
+
+		TotalMinted:          spec.Minted,
+		TotalTxFee:           spec.TotalFee,
+		TotalBurntTxFee:      spec.BurntFee,
+		TotalProposerRewards: spec.Proposer,
+		TotalStakingRewards:  spec.Stakers,
+		TotalKIFRewards:      spec.KIF,
+		TotalKEFRewards:      spec.KEF,
+		Rewards:              spec.Rewards,
+	}
 }
