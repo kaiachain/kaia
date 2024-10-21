@@ -18,10 +18,8 @@ var (
 
 type StoredUint64Array []uint64
 
-func readStoredUint64Array(db database.Database, key []byte) *StoredUint64Array {
-	mu.RLock()
-	defer mu.RUnlock()
-
+// readStoredUint64ArrayNoLock should be called only when the caller holds the lock.
+func readStoredUint64ArrayNoLock(db database.Database, key []byte) *StoredUint64Array {
 	b, err := db.Get(key)
 	if err != nil || len(b) == 0 {
 		return nil
@@ -35,19 +33,32 @@ func readStoredUint64Array(db database.Database, key []byte) *StoredUint64Array 
 	return ret
 }
 
+// writeStoredUint64ArrayNoLock should be called only when the caller holds the lock.
+func writeStoredUint64ArrayNoLock(db database.Database, key []byte, data *StoredUint64Array) {
+	b, err := db.Get(key)
+	if err != nil || len(b) == 0 {
+		return
+	}
+
+	ret := new(StoredUint64Array)
+	if err := json.Unmarshal(b, ret); err != nil {
+		logger.Error("Invalid voteDataBlocks JSON", "err", err)
+		return
+	}
+}
+
+func readStoredUint64Array(db database.Database, key []byte) *StoredUint64Array {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	return readStoredUint64ArrayNoLock(db, key)
+}
+
 func writeStoredUint64Array(db database.Database, key []byte, data *StoredUint64Array) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	b, err := json.Marshal(data)
-	if err != nil {
-		logger.Error("Failed to marshal voteDataBlocks", "err", err)
-		return
-	}
-
-	if err := db.Put(key, b); err != nil {
-		logger.Crit("Failed to write voteDataBlocks", "err", err)
-	}
+	writeStoredUint64ArrayNoLock(db, key, data)
 }
 
 func ReadVoteDataBlockNums(db database.Database) *StoredUint64Array {
@@ -62,7 +73,7 @@ func InsertVoteDataBlockNum(db database.Database, blockNum uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	blockNums := ReadVoteDataBlockNums(db)
+	blockNums := readStoredUint64ArrayNoLock(db, voteDataBlockNumsKey)
 	if blockNums == nil {
 		blockNums = new(StoredUint64Array)
 	}
@@ -80,7 +91,7 @@ func InsertVoteDataBlockNum(db database.Database, blockNum uint64) {
 		return (*blockNums)[i] < (*blockNums)[j]
 	})
 
-	writeStoredUint64Array(db, voteDataBlockNumsKey, blockNums)
+	writeStoredUint64ArrayNoLock(db, voteDataBlockNumsKey, blockNums)
 }
 
 func ReadGovDataBlockNums(db database.Database) *StoredUint64Array {
@@ -113,6 +124,7 @@ func WriteLastInsertedBlock(db database.Database, lastInsertedBlock uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	binary.BigEndian.PutUint64(lastInsertedBlockKey, lastInsertedBlock)
-	db.Put(lastInsertedBlockKey, lastInsertedBlockKey)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, lastInsertedBlock)
+	db.Put(lastInsertedBlockKey, b)
 }

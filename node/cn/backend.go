@@ -462,6 +462,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			headergov_impl.InsertVoteDataBlockNum(cn.chainDB.GetMiscDB(), blockNum)
 		}
 		headergov_impl.WriteLastInsertedBlock(cn.chainDB.GetMiscDB(), currentEpochStart)
+		logger.Info("Initialized last inserted block", "num", currentEpochStart)
 	}
 
 	// Setup kaiax Modules

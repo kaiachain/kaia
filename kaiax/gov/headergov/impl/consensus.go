@@ -173,12 +173,14 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 	lastInsertedBlock := *lastInsertedBlockPtr
 
 	if lastInsertedBlock <= epochIdx*h.epoch {
+		logger.Info("scanning votes fastpath")
 		votes := make(map[uint64]headergov.VoteData)
 		for blockNum, vote := range h.cache.GroupedVotes()[epochIdx] {
 			votes[blockNum] = vote
 		}
 		return votes
 	} else {
+		logger.Info("scanning votes slowpath")
 		return h.scanAllVotesInHeader(epochIdx)
 	}
 }
