@@ -49,6 +49,7 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
@@ -440,6 +441,28 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
+
+	currentEpochStart := cn.blockchain.CurrentBlock().NumberU64() % pset.Epoch()
+	lastInsertedBlockPtr := headergov_impl.ReadLastInsertedBlock(cn.chainDB.GetMiscDB())
+	if lastInsertedBlockPtr == nil {
+		votes := make(map[uint64]headergov.VoteData)
+		for blockNum := currentEpochStart; blockNum <= cn.blockchain.CurrentBlock().NumberU64(); blockNum++ {
+			header := cn.blockchain.GetHeaderByNumber(blockNum)
+			vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+			if err != nil {
+				continue
+			}
+			// TODO-kaiax: consider writing addval/removeval votes to validator DB.
+			if vote != nil && vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+				votes[blockNum] = vote
+			}
+		}
+
+		for blockNum := range votes {
+			headergov_impl.InsertVoteDataBlockNum(cn.chainDB.GetMiscDB(), blockNum)
+		}
+		headergov_impl.WriteLastInsertedBlock(cn.chainDB.GetMiscDB(), currentEpochStart)
+	}
 
 	// Setup kaiax Modules
 	if err := cn.SetupKaiaxModules(); err != nil {
