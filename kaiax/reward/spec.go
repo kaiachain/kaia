@@ -72,6 +72,25 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	}
 }
 
+func (spec *RewardSpec) Copy() *RewardSpec {
+	newSpec := &RewardSpec{
+		RewardSummary: RewardSummary{
+			Minted:   new(big.Int).Set(spec.Minted),
+			TotalFee: new(big.Int).Set(spec.TotalFee),
+			BurntFee: new(big.Int).Set(spec.BurntFee),
+		},
+		Proposer: new(big.Int).Set(spec.Proposer),
+		Stakers:  new(big.Int).Set(spec.Stakers),
+		KIF:      new(big.Int).Set(spec.KIF),
+		KEF:      new(big.Int).Set(spec.KEF),
+		Rewards:  make(map[common.Address]*big.Int),
+	}
+	for addr, amount := range spec.Rewards {
+		newSpec.Rewards[addr] = new(big.Int).Set(amount)
+	}
+	return newSpec
+}
+
 func (spec *RewardSpec) IncReceipient(addr common.Address, amount *big.Int) {
 	_, ok := spec.Rewards[addr]
 	if !ok {

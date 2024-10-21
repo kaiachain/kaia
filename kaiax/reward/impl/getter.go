@@ -104,31 +104,33 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 		return spec, nil // nothing to do under deferred mode
 	}
 
+	newSpec := spec.Copy()
+
 	if config.Rules.IsMagma {
 		burntFee := getBurnAmountMagma(totalFee)
-		reward := new(big.Int).Sub(totalFee, burntFee)
+		distributedFee := new(big.Int).Sub(totalFee, burntFee)
 
-		spec.TotalFee.Add(spec.TotalFee, totalFee)
-		spec.BurntFee.Add(spec.BurntFee, burntFee)
-		spec.Proposer.Add(spec.Proposer, reward)
+		newSpec.TotalFee.Add(newSpec.TotalFee, totalFee)
+		newSpec.BurntFee.Add(newSpec.BurntFee, burntFee)
+		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
 		// Since Magma, non-deferred fees are assigned to header.Rewardbase.
-		spec.IncReceipient(config.Rewardbase, reward)
+		newSpec.IncReceipient(config.Rewardbase, distributedFee)
 	} else {
-		reward := new(big.Int).Set(totalFee)
+		distributedFee := new(big.Int).Set(totalFee)
 
-		spec.TotalFee.Add(spec.TotalFee, totalFee)
-		spec.Proposer.Add(spec.Proposer, reward)
+		newSpec.TotalFee.Add(newSpec.TotalFee, totalFee)
+		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
 		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from Engine().Author(header).
 		coinbase, err := r.Chain.Engine().Author(header)
 		if err != nil {
 			return nil, err
 		}
-		spec.IncReceipient(coinbase, reward)
+		newSpec.IncReceipient(coinbase, distributedFee)
 	}
 
-	return spec, nil
+	return newSpec, nil
 }
 
 // GetDeferredReward returns the rewards to be applied at the end of the block.
@@ -252,25 +254,25 @@ func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *s
 // getDeferredRewardFullKore is for non-Simple policy and after Kore.
 func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
-		spec         = reward.NewRewardSpec()
-		minted       = new(big.Int).Set(config.MintingAmount)
-		remainingFee = new(big.Int).Sub(totalFee, burntFee)
+		spec             = reward.NewRewardSpec()
+		minted           = new(big.Int).Set(config.MintingAmount)
+		distributableFee = new(big.Int).Sub(totalFee, burntFee)
 	)
 
 	// Distribute using RewardRatio first. Unlike Legacy, fees are not distributed here
-	// because fees are exclusively allocated to proposer. Remainder goes to KIF.
+	// because fees are exclusively allocated to proposer. By the way, remainder goes to KIF.
 	validators, kif, kef := config.RewardRatio.Split(minted)
-	ratioRemainder := calcRemainder(minted, validators, kif, kef)
+	proposer, stakers := config.Kip82Ratio.Split(validators)
+	ratioRemainder := calcRemainder(minted, proposer, stakers, kif, kef)
 	kif.Add(kif, ratioRemainder)
 
-	// Further distribute using Kip82Ratio. Remainder goes to proposer.
-	proposer, stakers := config.Kip82Ratio.Split(validators)
+	// Further distribute using Kip82Ratio. By the way, remainder goes to proposer.
 	stakersAlloc, kip82Remainder := assignStakingRewards(config, stakers, si)
 	proposer.Add(proposer, kip82Remainder)
 	stakers.Sub(stakers, kip82Remainder)
 
 	// Proposer gets the fees.
-	proposer.Add(proposer, remainingFee)
+	proposer.Add(proposer, distributableFee)
 
 	spec.Minted = minted
 	spec.TotalFee = totalFee
@@ -286,10 +288,10 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 // getDeferredRewardFullLegacy is for non-Simple policy and before Kore.
 func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
-		spec         = reward.NewRewardSpec()
-		minted       = new(big.Int).Set(config.MintingAmount)
-		remainingFee = new(big.Int).Sub(totalFee, burntFee)
-		totalReward  = new(big.Int).Add(minted, remainingFee)
+		spec             = reward.NewRewardSpec()
+		minted           = new(big.Int).Set(config.MintingAmount)
+		distributableFee = new(big.Int).Sub(totalFee, burntFee)
+		totalReward      = new(big.Int).Add(minted, distributableFee)
 	)
 
 	// Distribute using RewardRatio. Remainder goes to KIF.
@@ -372,24 +374,26 @@ func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, s
 // specWithProposerAndFunds assigns proposer, kif, kef to the reward spec.
 // This must be the last step of building the RewardSpec as it finalizes the Proposer, KEF, KIF fields.
 func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConfig, proposer, kif, kef *big.Int, si *staking.StakingInfo) *reward.RewardSpec {
+	newSpec := spec.Copy()
+
 	// If KIF or KEF address is not set, proposer takes it.
 	if common.EmptyAddress(si.KIFAddr) {
-		spec.KIF = common.Big0
+		newSpec.KIF = common.Big0
 		proposer.Add(proposer, kif)
 	} else {
-		spec.KIF = kif
-		spec.IncReceipient(si.KIFAddr, kif)
+		newSpec.KIF = kif
+		newSpec.IncReceipient(si.KIFAddr, kif)
 	}
 
 	if common.EmptyAddress(si.KEFAddr) {
-		spec.KEF = common.Big0
+		newSpec.KEF = common.Big0
 		proposer.Add(proposer, kef)
 	} else {
-		spec.KEF = kef
-		spec.IncReceipient(si.KEFAddr, kef)
+		newSpec.KEF = kef
+		newSpec.IncReceipient(si.KEFAddr, kef)
 	}
 
-	spec.Proposer = proposer
-	spec.IncReceipient(config.Rewardbase, proposer)
-	return spec
+	newSpec.Proposer = proposer
+	newSpec.IncReceipient(config.Rewardbase, proposer)
+	return newSpec
 }
