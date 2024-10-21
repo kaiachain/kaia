@@ -154,19 +154,79 @@ This module does not have any persistent data to delete.
 
 ### kaia_getReward
 
-### kaia_getRewardsAccumulated
+Returns the distributed reward specification of a given block.
+
+```sh
+curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
+  {"jsonrpc":"2.0","id":1,"method":"kaia_getReward","params":[
+    "latest"
+  ]}' | jq .result
+```
+```json
+{
+  "minted": "6400000000000000000",
+  "totalFee": "1075975000000000",
+  "burntFee": "537987500000000",
+  "proposer": "3200268993750000000",
+  "stakers": "0",
+  "kgf": "2560215195000000000",
+  "kir": "640053798750000000"
+  "rewards": {
+    "0xa86fd667c6a340c53cc5d796ba84dbe1f29cb2f7": "3200268993750000000",
+    "0x2bcf9d3e4a846015e7e3152a614c684de16f37c6": "2560215195000000000",
+    "0x716f89d9bc333286c79db4ebb05516897c8d208a": "640053798750000000"
+  }
+}
+```
+
+### governance_getRewardsAccumulated
+
+Returns the accumulated reward specification over a range of blocks.
+
+```sh
+curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
+  {"jsonrpc":"2.0","id":1,"method":"governance_getRewardsAccumulated","params":[
+    "0x1000", "0x1010"
+  ]}' | jq .result
+```
+```json
+{
+  "firstBlockTime": "2019-06-26 20:19:52 +0900 KST",
+  "lastBlockTime": "2019-06-26 20:20:08 +0900 KST",
+  "firstBlock": 4096,
+  "lastBlock": 4112,
+  "totalMinted": 163200000000000000000,
+  "totalTxFee": 0,
+  "totalBurntTxFee": 0,
+  "totalProposerRewards": 163200000000000000000,
+  "totalStakingRewards": 0,
+  "totalKIFRewards": 0,
+  "totalKEFRewards": 0,
+  "rewards": {
+    "0x571e53df607be97431a5bbefca1dffe5aef56f4d": 38400000000000000000,
+    "0x5cb1a7dccbd0dc446e3640898ede8820368554c8": 48000000000000000000,
+    "0x99fb17d324fa0e07f23b49d09028ac0919414db6": 38400000000000000000,
+    "0xb74ff9dea397fe9e231df545eb53fe2adf776cb2": 38400000000000000000
+  }
+}
+```
 
 ## Getters
 
 - GetDeferredReward: Returns the deferred reward specification for the given block that is being created. Used in FinalizeHeader.
   ```
   GetDeferredReward(header, txs, receipts) -> RewardSpec
+
+  if DeferredTxFee, return distribution of (MR + DF)
+  else, return distribution of (MR)
   ```
 - GetBlockReward: Returns the reward distribution specification for the given block number. Includes both non-deferred fees and deferred fees. Therefore its result may differ from GetDeferredReward if the non-deferred fees method is used.
   ```
   GetBlockReward(num) -> RewardSpec
+
+  return GetDeferredReward() + distribution of (NDF)
   ```
-- GetRewardSummary: Returns the reward summary for the given block number.
+- GetRewardSummary: Returns the reward summary for the given block number. It is equivalent to the Summary part of a `GetBlockReward` result, which means it includes both non-deferred fees and deferred fees.
   ```
   GetRewardSummary(num) -> RewardSummary
   ```
