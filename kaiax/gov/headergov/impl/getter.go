@@ -17,13 +17,15 @@ func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 }
 
 func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
+	prevEpochStart := PrevEpochStart(blockNum, h.epoch, h.isKoreHF(blockNum))
 	ret := make(gov.PartialParamSet)
+
+	// merge all governance sets before num's prevEpochStart.
 	for _, num := range h.cache.GovBlockNums() {
-		if num > blockNum {
-			break
-		}
-		for name, value := range h.cache.Govs()[num].Items() {
-			ret[name] = value
+		if num <= prevEpochStart {
+			for name, value := range h.cache.Govs()[num].Items() {
+				ret[name] = value
+			}
 		}
 	}
 
