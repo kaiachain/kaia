@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	staking "github.com/kaiachain/kaia/kaiax/staking"
@@ -49,6 +50,44 @@ func (m *MockStakingModule) APIs() []rpc.API {
 func (mr *MockStakingModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockStakingModule)(nil).APIs))
+}
+
+// AddSideState mocks base method.
+func (m *MockStakingModule) AddSideState(arg0 uint64, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddSideState", arg0, arg1)
+}
+
+// AddSideState indicates an expected call of AddSideState.
+func (mr *MockStakingModuleMockRecorder) AddSideState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSideState", reflect.TypeOf((*MockStakingModule)(nil).AddSideState), arg0, arg1)
+}
+
+// AllocSideStateRef mocks base method.
+func (m *MockStakingModule) AllocSideStateRef() uint64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllocSideStateRef")
+	ret0, _ := ret[0].(uint64)
+	return ret0
+}
+
+// AllocSideStateRef indicates an expected call of AllocSideStateRef.
+func (mr *MockStakingModuleMockRecorder) AllocSideStateRef() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocSideStateRef", reflect.TypeOf((*MockStakingModule)(nil).AllocSideStateRef))
+}
+
+// FreeSideStateRef mocks base method.
+func (m *MockStakingModule) FreeSideStateRef(arg0 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "FreeSideStateRef", arg0)
+}
+
+// FreeSideStateRef indicates an expected call of FreeSideStateRef.
+func (mr *MockStakingModuleMockRecorder) FreeSideStateRef(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreeSideStateRef", reflect.TypeOf((*MockStakingModule)(nil).FreeSideStateRef), arg0)
 }
 
 // GetStakingInfo mocks base method.

@@ -17,6 +17,7 @@
 package staking
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -34,6 +35,11 @@ type StakingModule interface {
 	// The given number indicates the number that the staking info is measured from, not when the staking info is used.
 	// This is useful when syncing the staking info database over p2p.
 	GetStakingInfoFromDB(sourceNum uint64) (*StakingInfo, error)
+
+	// SideState management
+	AllocSideStateRef() uint64
+	FreeSideStateRef(refId uint64)
+	AddSideState(refId uint64, statedb *state.StateDB)
 }
 
 type StakingModuleHost interface {

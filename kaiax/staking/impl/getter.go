@@ -84,9 +84,12 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 	if header == nil {
 		return nil, fmt.Errorf("failed to get header for block number %d", num)
 	}
-	statedb, err := s.Chain.StateAt(header.Root)
+	statedb, err := s.Chain.StateAt(header.Root) // First lookup the database
 	if err != nil {
-		return nil, fmt.Errorf("failed to get state for block number %d: %v", num, err)
+		statedb = s.sideStates.GetState(header.Root) // Then lookup the temporary state
+		if statedb == nil {
+			return nil, fmt.Errorf("failed to get state for block number %d: %v", num, err)
+		}
 	}
 
 	return s.getFromState(header, statedb)
