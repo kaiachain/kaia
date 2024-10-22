@@ -1,7 +1,9 @@
 package impl
 
 import (
+	"encoding/json"
 	"math/big"
+	"sort"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -64,6 +66,34 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {
 		return ErrZeroEpoch
+	}
+
+	// migrate Gov DB, just once.
+	if ReadGovDataBlockNums(h.ChainKv) == nil {
+		// equals to chainDB.ReadRecentGovernanceIdx(0)
+		readRecentGovIdx := func() ([]uint64, error) {
+			if history, err := h.ChainKv.Get([]byte("governanceIdxHistory")); err != nil {
+				return nil, err
+			} else {
+				idxHistory := make([]uint64, 0)
+				if e := json.Unmarshal(history, &idxHistory); e != nil {
+					return nil, e
+				}
+
+				// Make sure idxHistory should be in ascending order
+				sort.Slice(idxHistory, func(i, j int) bool {
+					return idxHistory[i] < idxHistory[j]
+				})
+
+				return idxHistory, nil
+			}
+		}
+		govIndices, err := readRecentGovIdx()
+		if err != nil {
+			panic("Failed to read recent governance idx")
+		}
+		govIndicesStoredArray := StoredUint64Array(govIndices)
+		WriteGovDataBlockNums(h.ChainKv, &govIndicesStoredArray)
 	}
 
 	votes := readVoteDataFromDB(h.Chain, h.ChainKv)
