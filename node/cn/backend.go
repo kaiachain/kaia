@@ -442,6 +442,15 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
+	// migrate gov DB
+	govIndices, err := chainDB.ReadRecentGovernanceIdx(0)
+	if err != nil {
+		panic("Failed to read recent governance idx")
+	}
+	govIndicesStoredArray := headergov_impl.StoredUint64Array(govIndices)
+	headergov_impl.WriteGovDataBlockNums(cn.chainDB.GetMiscDB(), &govIndicesStoredArray)
+
+	// migrate vote DB for the current epoch
 	currentEpochStart := cn.blockchain.CurrentBlock().NumberU64() % pset.Epoch()
 	lastInsertedBlockPtr := headergov_impl.ReadLastInsertedBlock(cn.chainDB.GetMiscDB())
 	if lastInsertedBlockPtr == nil {
