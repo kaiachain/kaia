@@ -35,15 +35,14 @@ func readStoredUint64ArrayNoLock(db database.Database, key []byte) *StoredUint64
 
 // writeStoredUint64ArrayNoLock should be called only when the caller holds the lock.
 func writeStoredUint64ArrayNoLock(db database.Database, key []byte, data *StoredUint64Array) {
-	b, err := db.Get(key)
-	if err != nil || len(b) == 0 {
+	b, err := json.Marshal(data)
+	if err != nil {
+		logger.Error("Failed to marshal voteDataBlocks", "err", err)
 		return
 	}
 
-	ret := new(StoredUint64Array)
-	if err := json.Unmarshal(b, ret); err != nil {
-		logger.Error("Invalid voteDataBlocks JSON", "err", err)
-		return
+	if err := db.Put(key, b); err != nil {
+		logger.Crit("Failed to write voteDataBlocks", "err", err)
 	}
 }
 
