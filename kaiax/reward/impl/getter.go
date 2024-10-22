@@ -26,6 +26,27 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
+// Below outlines the relationship between the getters and their helper functions.
+//
+// GetRewardSummary
+// - loadBlockData
+// - - getTotalFee = F
+// - getRewardSummary = MR + DF + NDF
+//
+// GetBlockReward
+// - loadBlockData
+// - - getTotalFee = F
+// - getDeferredReward = MR + DF
+// - specWithNonDeferredFee = MR + DF + NDF
+//
+// GetDeferredReward
+// - getTotalFee = F
+// - getDeferredReward = MR + DF
+// - - getDeferredRewardSimple   for istanbul.policy != 2
+// - - getDeferredRewardFull     for istanbul.policy == 2
+// - - - getDeferredRewardFullKore    for IsKore
+// - - - getDeferredRewardFullLegacy  for !IsKore
+
 func (r *RewardModule) GetRewardSummary(num uint64) (*reward.RewardSummary, error) {
 	config, _, totalFee, err := r.loadBlockData(num)
 	if err != nil {
