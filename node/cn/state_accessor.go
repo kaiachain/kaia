@@ -163,10 +163,10 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			return nil, nil, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
 		}
 		// Preload StakingInfo from the current block and state. Needed for next block's engine.Finalize() post-Kaia.
-		preloadedStakingBlockNums = append(preloadedStakingBlockNums, current.NumberU64())
-		if err := reward.PreloadStakingInfoWithState(current.Header(), statedb); err != nil {
-			return nil, nil, fmt.Errorf("preloading staking info from block %d failed: %v", current.NumberU64(), err)
-		}
+		// preloadedStakingBlockNums = append(preloadedStakingBlockNums, current.NumberU64())
+		// if err := reward.PreloadStakingInfoWithState(current.Header(), statedb); err != nil {
+		// 	return nil, nil, fmt.Errorf("preloading staking info from block %d failed: %v", current.NumberU64(), err)
+		// }
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
