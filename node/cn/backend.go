@@ -443,14 +443,19 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.engine)
 
 	// migrate vote DB for the current epoch
-	currentEpochStart := cn.blockchain.CurrentBlock().NumberU64() % pset.Epoch()
+	currentEpochStart := currBlock.NumberU64() / pset.Epoch() * pset.Epoch()
 	lastInsertedBlockPtr := headergov_impl.ReadLastInsertedBlock(cn.chainDB.GetMiscDB())
 	if lastInsertedBlockPtr == nil {
 		votes := make(map[uint64]headergov.VoteData)
 		for blockNum := currentEpochStart; blockNum <= cn.blockchain.CurrentBlock().NumberU64(); blockNum++ {
 			header := cn.blockchain.GetHeaderByNumber(blockNum)
+			if len(header.Vote) == 0 {
+				continue
+			}
+
 			vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
 			if err != nil {
+				logger.Error("Error parsing vote", "err", err, "num", blockNum)
 				continue
 			}
 			// TODO-kaiax: consider writing addval/removeval votes to validator DB.

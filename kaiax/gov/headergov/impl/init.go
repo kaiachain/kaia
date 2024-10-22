@@ -125,8 +125,12 @@ func (h *headerGovModule) Start() error {
 		WriteLastInsertedBlock(h.ChainKv, curr)
 	}
 
-	epochIdxIter := calcEpochIdx(*lastInsertedBlockPtr, h.epoch) - 1
+	epochIdxIter := calcEpochIdx(*lastInsertedBlockPtr, h.epoch)
+	if epochIdxIter == 0 {
+		return nil
+	}
 
+	epochIdxIter = epochIdxIter - 1
 	go func() {
 		for int64(epochIdxIter) >= 0 {
 			voteBlocks := h.scanAllVotesInHeader(epochIdxIter)
@@ -136,7 +140,7 @@ func (h *headerGovModule) Start() error {
 			}
 
 			WriteLastInsertedBlock(h.ChainKv, epochIdxIter*h.epoch)
-			logger.Info("Scanned votes in header", "num", epochIdxIter)
+			logger.Info("Scanned votes in header", "num", epochIdxIter*h.epoch)
 
 			epochIdxIter -= 1
 		}
@@ -169,6 +173,10 @@ func (h *headerGovModule) scanAllVotesInHeader(epochIdx uint64) map[uint64]heade
 	votes := make(map[uint64]headergov.VoteData)
 	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
 		header := h.Chain.GetHeaderByNumber(blockNum)
+		if len(header.Vote) == 0 {
+			continue
+		}
+
 		vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
 		if err != nil {
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
