@@ -115,14 +115,7 @@ func (h *headerGovModule) Start() error {
 
 	lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
 	if lastInsertedBlockPtr == nil {
-		// TODO-kaiax: must panic, but commented for unit tests.
-		// panic("last inserted block must exist")
-
-		curr := h.Chain.CurrentBlock().NumberU64()
-		curr = curr - curr%h.epoch
-		lastInsertedBlockPtr = &curr
-
-		WriteLastInsertedBlock(h.ChainKv, curr)
+		return ErrLastInsertedBlockNotFound
 	}
 
 	epochIdxIter := calcEpochIdx(*lastInsertedBlockPtr, h.epoch)
