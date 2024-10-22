@@ -125,19 +125,20 @@ func (h *headerGovModule) Start() error {
 		WriteLastInsertedBlock(h.ChainKv, curr)
 	}
 
-	lastInsertedBlock := *lastInsertedBlockPtr
+	epochIdxIter := calcEpochIdx(*lastInsertedBlockPtr, h.epoch) - 1
 
 	go func() {
-		for lastInsertedBlock > 0 {
-			voteBlocks := h.scanAllVotesInHeader(calcEpochIdx(lastInsertedBlock, h.epoch))
+		for int64(epochIdxIter) >= 0 {
+			voteBlocks := h.scanAllVotesInHeader(epochIdxIter)
 			for blockNum, vote := range voteBlocks {
-				h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+				h.cache.AddVote(epochIdxIter, blockNum, vote)
 				InsertVoteDataBlockNum(h.ChainKv, blockNum)
 			}
 
-			WriteLastInsertedBlock(h.ChainKv, lastInsertedBlock)
-			logger.Info("Scanned votes in header", "num", lastInsertedBlock)
-			lastInsertedBlock -= 604800
+			WriteLastInsertedBlock(h.ChainKv, epochIdxIter*h.epoch)
+			logger.Info("Scanned votes in header", "num", epochIdxIter)
+
+			epochIdxIter -= 1
 		}
 	}()
 
