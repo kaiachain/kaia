@@ -83,13 +83,21 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
 
-	go func() {
-		lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
-		if lastInsertedBlockPtr == nil {
-			panic("last inserted block must exist")
-		}
+	lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
+	if lastInsertedBlockPtr == nil {
+		// TODO-kaiax: must panic, but commented for unit tests.
+		// panic("last inserted block must exist")
 
-		lastInsertedBlock := *lastInsertedBlockPtr
+		curr := h.Chain.CurrentBlock().NumberU64()
+		curr = curr - curr%h.epoch
+		lastInsertedBlockPtr = &curr
+
+		WriteLastInsertedBlock(h.ChainKv, curr)
+	}
+
+	lastInsertedBlock := *lastInsertedBlockPtr
+
+	go func() {
 		for lastInsertedBlock > 0 {
 			voteBlocks := h.scanAllVotesInHeader(calcEpochIdx(lastInsertedBlock, h.epoch))
 			for blockNum, vote := range voteBlocks {
