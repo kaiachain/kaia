@@ -133,7 +133,7 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
 		// Since Magma, non-deferred fees are assigned to header.Rewardbase.
-		newSpec.IncReceipient(config.Rewardbase, distributedFee)
+		newSpec.IncRecipient(config.Rewardbase, distributedFee)
 	} else {
 		distributedFee := new(big.Int).Set(totalFee)
 
@@ -145,7 +145,7 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 		if err != nil {
 			return nil, err
 		}
-		newSpec.IncReceipient(coinbase, distributedFee)
+		newSpec.IncRecipient(coinbase, distributedFee)
 	}
 
 	return newSpec, nil
@@ -222,7 +222,7 @@ func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*r
 		spec.TotalFee = totalFee
 		spec.BurntFee = big.NewInt(0)
 		spec.Proposer = proposer
-		spec.IncReceipient(config.Rewardbase, proposer)
+		spec.IncRecipient(config.Rewardbase, proposer)
 		return spec, nil
 	}
 
@@ -238,7 +238,7 @@ func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*r
 	spec.TotalFee = totalFee
 	spec.BurntFee = burntFee
 	spec.Proposer = proposer
-	spec.IncReceipient(config.Rewardbase, proposer)
+	spec.IncRecipient(config.Rewardbase, proposer)
 	return spec, nil
 }
 
@@ -296,7 +296,7 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 	spec.BurntFee = burntFee
 	spec.Stakers = stakers
 	for addr, amount := range stakersAlloc {
-		spec.IncReceipient(addr, amount)
+		spec.IncRecipient(addr, amount)
 	}
 	spec = specWithProposerAndFunds(spec, config, proposer, kif, kef, si)
 	return spec, nil
@@ -399,7 +399,7 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 		proposer.Add(proposer, kif)
 	} else {
 		newSpec.KIF = kif
-		newSpec.IncReceipient(si.KIFAddr, kif)
+		newSpec.IncRecipient(si.KIFAddr, kif)
 	}
 
 	if common.EmptyAddress(si.KEFAddr) {
@@ -407,10 +407,10 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 		proposer.Add(proposer, kef)
 	} else {
 		newSpec.KEF = kef
-		newSpec.IncReceipient(si.KEFAddr, kef)
+		newSpec.IncRecipient(si.KEFAddr, kef)
 	}
 
 	newSpec.Proposer = proposer
-	newSpec.IncReceipient(config.Rewardbase, proposer)
+	newSpec.IncRecipient(config.Rewardbase, proposer)
 	return newSpec
 }

@@ -83,7 +83,7 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	spec.KEF.Add(spec.KEF, delta.KEF)
 
 	for addr, amount := range delta.Rewards {
-		spec.IncReceipient(addr, amount)
+		spec.IncRecipient(addr, amount)
 	}
 }
 
@@ -102,7 +102,7 @@ func (spec *RewardSpec) Copy() *RewardSpec {
 	return newSpec
 }
 
-func (spec *RewardSpec) IncReceipient(addr common.Address, amount *big.Int) {
+func (spec *RewardSpec) IncRecipient(addr common.Address, amount *big.Int) {
 	_, ok := spec.Rewards[addr]
 	if !ok {
 		spec.Rewards[addr] = big.NewInt(0)
