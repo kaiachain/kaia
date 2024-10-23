@@ -442,7 +442,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	// migrate vote DB for the current epoch
+	// migrate vote DB for the current epoch. Gov module requires votes for current epoch.
 	currentEpochStart := currBlock.NumberU64() / pset.Epoch() * pset.Epoch()
 	lastInsertedBlockPtr := headergov_impl.ReadLastInsertedBlock(cn.chainDB.GetMiscDB())
 	if lastInsertedBlockPtr == nil {

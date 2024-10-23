@@ -126,14 +126,14 @@ func (h *headerGovModule) Start() error {
 	epochIdxIter = epochIdxIter - 1
 	go func() {
 		for int64(epochIdxIter) >= 0 {
-			voteBlocks := h.scanAllVotesInHeader(epochIdxIter)
+			voteBlocks := h.scanAllVotesInEpoch(epochIdxIter)
 			for blockNum, vote := range voteBlocks {
 				h.cache.AddVote(epochIdxIter, blockNum, vote)
 				InsertVoteDataBlockNum(h.ChainKv, blockNum)
 			}
 
-			WriteLastInsertedBlock(h.ChainKv, epochIdxIter*h.epoch)
-			logger.Info("Scanned votes in header", "num", epochIdxIter*h.epoch)
+			WriteLastInsertedBlock(h.ChainKv, calcEpochStartBlock(epochIdxIter, h.epoch))
+			logger.Info("Scanned votes in header", "num", calcEpochStartBlock(epochIdxIter, h.epoch))
 
 			epochIdxIter -= 1
 		}
@@ -158,10 +158,10 @@ func (h *headerGovModule) PopMyVotes(idx int) {
 	h.myVotes = append(h.myVotes[:idx], h.myVotes[idx+1:]...)
 }
 
-// scanAllVotesInHeader scans all votes from headers in the given epoch.
-func (h *headerGovModule) scanAllVotesInHeader(epochIdx uint64) map[uint64]headergov.VoteData {
-	rangeStart := epochIdx * h.epoch
-	rangeEnd := (epochIdx + 1) * h.epoch
+// scanAllVotesInEpoch scans all votes from headers in the given epoch.
+func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
+	rangeStart := calcEpochStartBlock(epochIdx, h.epoch)
+	rangeEnd := calcEpochStartBlock(epochIdx+1, h.epoch)
 
 	votes := make(map[uint64]headergov.VoteData)
 	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
@@ -233,4 +233,8 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 
 func calcEpochIdx(blockNum uint64, epoch uint64) uint64 {
 	return blockNum / epoch
+}
+
+func calcEpochStartBlock(epochIdx uint64, epoch uint64) uint64 {
+	return epochIdx * epoch
 }
