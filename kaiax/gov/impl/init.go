@@ -71,6 +71,8 @@ func (m *GovModule) Start() error {
 
 func (m *GovModule) Stop() {
 	logger.Info("GovModule stopped")
+	m.hgm.Stop()
+	m.cgm.Stop()
 }
 
 func (m *GovModule) isKoreHF(num uint64) bool {
