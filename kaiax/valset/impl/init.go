@@ -17,7 +17,10 @@
 package impl
 
 import (
+	"strings"
+
 	lru "github.com/hashicorp/golang-lru"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -94,7 +97,30 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 }
 
 func (v *ValsetModule) Start() error {
-	// TODO-kaiax-valset: check the genesis is stored. if stored, check the valset list for genesis is stored.
+	// TODO-kaiax-valset: move below logic to setupGenesisBlock(or other init process?)
+	_, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
+	if strings.Contains(err.Error(), "failed to read council addresses from db") == false {
+		return err
+	}
+	if err == nil {
+		return nil
+	}
+	// the chain db just created. store initial vote blocks and council address list with voteBlk 0
+	initialVoteBlks := []uint64{0}
+	if err = WriteValidatorVoteDataBlockNums(v.ChainKv, &initialVoteBlks); err != nil {
+		return err
+	}
+	header := v.chain.GetHeaderByNumber(0)
+	if header != nil {
+		return errNilHeader
+	}
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return errExtractIstanbulExtra
+	}
+	if err = WriteCouncilAddressListToDb(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
+		return err
+	}
 	return nil
 }
 

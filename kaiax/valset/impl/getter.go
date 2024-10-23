@@ -1,18 +1,23 @@
 package impl
 
 import (
+	"math/big"
+	"strconv"
+	"strings"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/params"
 )
 
 type blockResult struct {
-	councilAddrList []common.Address
-	staking         *staking.StakingInfo
-	header          *types.Header
-	author          common.Address
-	pSet            gov.ParamSet
+	proposerPolicy ProposerPolicy // prevBlockResult.pSet.proposerPolicy
+	staking        *staking.StakingInfo
+	header         *types.Header
+	author         common.Address
+	pSet           gov.ParamSet
 }
 
 // consolidatedStakingAmounts get total staking amounts per staking contracts by nodeIds
@@ -24,48 +29,49 @@ func (br *blockResult) consolidatedStakingAmount() map[common.Address]uint64 {
 	return consolidatedStakingAmounts
 }
 
-func (v *ValsetModule) getBlockResultsByNumber(num uint64) (*blockResult, error) {
-	councilAddrList, err := v.GetCouncilAddressList(num)
+type valSetContext struct {
+	blockNumber     uint64 // id of valSetContext
+	rules           params.Rules
+	prevBlockResult *blockResult // previous block's results - states
+}
+
+func newValSetContext(v *ValsetModule, bn uint64) (*valSetContext, error) {
+	if bn == 0 {
+		return nil, errGenesisNotCalculable
+	}
+	// 1. get previous block's results
+	sInfo, err := v.stakingInfo.GetStakingInfo(bn - 1) // stakingInfo after processing block N-1
 	if err != nil {
 		return nil, err
 	}
-	sInfo, err := v.stakingInfo.GetStakingInfo(num)
-	if err != nil {
-		return nil, err
-	}
-	header := v.chain.GetHeaderByNumber(num)
+	header := v.chain.GetHeaderByNumber(bn - 1)
 	if header == nil {
 		return nil, errNilHeader
 	}
-	author, err := v.chain.Engine().Author(header)
+	author, err := v.chain.Engine().Author(header) // author of block N-1
 	if err != nil {
 		return nil, err
 	}
-	pSet := v.headerGov.EffectiveParamSet(num)
+	pSet := v.headerGov.EffectiveParamSet(bn - 1) // govParam after processing block N-1
+	if pSet.CommitteeSize == 0 {
+		return nil, errInvalidCommitteeSize // it cannot happen. just to make sure
+	}
+	// if config.Istanbul is nil, it means the consensus is not 'istanbul' so use defualt proposer policy( = RoundRobin).
+	proposerPolicy := ProposerPolicy(params.DefaultProposerPolicy)
+	if v.chain.Config().Istanbul != nil {
+		proposerPolicy = ProposerPolicy(pSet.ProposerPolicy)
+	}
+	prevBlockResult := &blockResult{proposerPolicy, sInfo, header, author, pSet}
 
-	return &blockResult{councilAddrList, sInfo, header, author, pSet}, nil
+	// 2. get network config - Rules
+	rules := v.chain.Config().Rules(big.NewInt(int64(bn)))
+	return &valSetContext{bn, rules, prevBlockResult}, nil
 }
 
 // GetCouncilAddressList returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
 func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, error) {
-	closestValidateVoteBlk, _ := v.headerGov.GetLatestValidatorVote(num)
-
-	// The committee of genesis block can not be calculated because it requires a previous block.
-	if closestValidateVoteBlk == 0 {
-		header := v.chain.GetHeaderByNumber(num)
-		if header != nil {
-			return nil, errNilHeader
-		}
-
-		istanbulExtra, err := types.ExtractIstanbulExtra(header)
-		if err != nil {
-			return nil, errExtractIstanbulExtra
-		}
-		return istanbulExtra.Validators, nil
-	}
-
-	councilAddresses, err := ReadCouncilAddressListFromDb(v.ChainKv, closestValidateVoteBlk)
+	councilAddresses, err := ReadCouncilAddressListFromDb(v.ChainKv, num)
 	if err != nil {
 		return nil, err
 	}
@@ -74,39 +80,132 @@ func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, erro
 
 // GetCommitteeAddressList returns the current round or block's committee.
 func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]common.Address, error) {
-	// if the block number is genesis, directly return council as committee.
+	// if the block number is genesis, directly return councilAddressList as committee.
 	if num == 0 {
-		committee, err := v.GetCouncilAddressList(0)
+		councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
 		if err != nil {
 			return nil, err
 		}
-		return committee, nil
+		return councilAddressList, nil
 	}
-	// prepare council
-	council, err := v.NewCouncil(num)
+
+	valCtx, err := newValSetContext(v, num)
 	if err != nil {
 		return nil, err
 	}
-	return council.selectCommittee(round)
+
+	c, err := newCouncil(v.ChainKv, valCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		proposerPolicy = valCtx.prevBlockResult.proposerPolicy
+		rules          = valCtx.rules
+	)
+	if valCtx.prevBlockResult.pSet.CommitteeSize >= uint64(len(c.qualifiedValidators)) {
+		return c.qualifiedValidators, nil
+	}
+	if !proposerPolicy.IsWeightedRandom() || !rules.IsRandao {
+		proposers, err := v.getProposers(num)
+		if err != nil {
+			return nil, err
+		}
+		return c.selectRandomCommittee(valCtx, round, proposers)
+	}
+	return c.selectRandaoCommittee(valCtx.prevBlockResult)
 }
 
+// GetProposer picks a proposer for the (N, Round) view. it is picked from different sources.
+// - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
+// - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
+// - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
 func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, error) {
-	// if the block number is genesis, directly return council as committee.
+	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
 	if num == 0 {
-		committee, err := v.GetCouncilAddressList(0)
+		councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
 		if err != nil {
 			return common.Address{}, err
 		}
-		return committee[0], nil
+		return councilAddressList[0], nil
 	}
-	// prepare council
-	council, err := v.NewCouncil(num)
+
+	valCtx, err := newValSetContext(v, num)
 	if err != nil {
 		return common.Address{}, err
 	}
-	proposer, idx := council.proposer(round)
-	if idx == -1 {
-		return common.Address{}, errUnknownProposer
+	c, err := newCouncil(v.ChainKv, valCtx)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	var (
+		proposerPolicy = valCtx.prevBlockResult.proposerPolicy
+		rules          = valCtx.rules
+	)
+	if proposerPolicy.IsDefaultSet() {
+		lastProposerIdx := c.councilAddressList.getIdxByAddress(valCtx.prevBlockResult.author)
+		seed := defaultSetNextProposerSeed(proposerPolicy, valCtx.prevBlockResult.author, lastProposerIdx, round)
+		idx := int(seed) % len(c.councilAddressList)
+		return c.councilAddressList[idx], nil
+	}
+
+	// before Randao, weightedrandom uses proposers to pick the proposer.
+	// the proposers have always been calculated before entering proposer
+	if !rules.IsRandao {
+		proposers, err := v.getProposers(num)
+		if err != nil {
+			return common.Address{}, err
+		}
+		proposer, proposerIdx := c.getProposerFromProposers(proposers, round)
+		if proposerIdx == -1 {
+			return common.Address{}, errUnknownProposer
+		}
+		return proposer, nil
+	}
+
+	// after Randao, pick proposer from randao committee.
+	committee, err := c.selectRandaoCommittee(valCtx.prevBlockResult)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	idx := int(round) % len(c.qualifiedValidators)
+	proposer, proposerIdx := committee[idx], idx
+
+	// for non-default, fall-back to roundrobin proposer
+	if proposerIdx == -1 {
+		logger.Warn("Failed to select a new proposer, thus fall back to roundRobinProposer")
+		idx = c.qualifiedValidators.getIdxByAddress(proposer)
+		seed := defaultSetNextProposerSeed(params.Sticky, valCtx.prevBlockResult.author, idx, round)
+		proposerIdx = int(seed) % len(c.qualifiedValidators)
+		proposer = c.qualifiedValidators[proposerIdx]
 	}
 	return proposer, nil
+}
+
+func defaultSetNextProposerSeed(policy ProposerPolicy, proposer common.Address, proposerIdx int, round uint64) uint64 {
+	seed := round
+	if proposerIdx > -1 {
+		seed += uint64(proposerIdx)
+	}
+	if policy == params.RoundRobin && !common.EmptyAddress(proposer) {
+		seed += 1
+	}
+	return seed
+}
+
+// convertHashToSeed takes the first 8 bytes (64 bits) and convert to int64
+func convertHashToSeed(hash common.Hash) (int64, error) {
+	hashstring := strings.TrimPrefix(hash.Hex(), "0x")
+	if len(hashstring) > 15 {
+		hashstring = hashstring[:15]
+	}
+
+	seed, err := strconv.ParseInt(hashstring, 16, 64)
+	if err != nil {
+		logger.Error("fail to make sub-list of validators", "hash", hash.Hex(), "seed", seed, "err", err)
+		return 0, err
+	}
+	return seed, nil
 }

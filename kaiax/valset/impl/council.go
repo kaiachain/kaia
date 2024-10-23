@@ -3,35 +3,15 @@ package impl
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
-	"math"
-	"math/big"
 	"math/rand"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/storage/database"
 )
-
-type ProposerPolicy uint64
-
-const (
-	RoundRobin ProposerPolicy = iota
-	Sticky
-	WeightedRandom
-)
-
-func (p ProposerPolicy) IsDefaultSet() bool {
-	return p == RoundRobin || p == Sticky
-}
-
-func (p ProposerPolicy) IsWeightedRandom() bool {
-	return p == WeightedRandom
-}
 
 type subsetCouncilSlice []common.Address
 
@@ -90,255 +70,97 @@ func (sc subsetCouncilSlice) sortedAddressList(public bool) []common.Address {
 	return copiedSlice
 }
 
-type Council struct {
-	blockNumber    uint64
-	round          uint64
-	rules          params.Rules
-	proposerPolicy ProposerPolicy // prevBlockResult.pSet.proposerPolicy
+// council for block N is created based on the previous block's council.
+// It is used to calculate committee or proposer. It's not display purpose.
+// councilList(N-1) -> apply demoted rule -> council(N) -> block proposed and apply votes -> councilList(N)
+type council struct {
+	blockNumber uint64
 
-	// To calculate committee(num), we need council,prevHash,stakingInfo of lastProposal/prevBlock
-	// which blocknumber is num - 1.
-	prevBlockResult *blockResult
-	qualified       subsetCouncilSlice // qualified is a subset of prev block's council
-	demoted         subsetCouncilSlice // demoted is a subset of prev block's council which doesn't fulfill the minimum staking amount
+	qualifiedValidators subsetCouncilSlice // qualified is a subset of prev block's council list
+	demotedValidators   subsetCouncilSlice // demoted is a subset of prev block's council who are demoted as a member of committee
 
-	// latest proposer update block's information for calculating the current block's proposers, however it is deprecated since kaia KF
-	// if Council.UseProposers is false, do not use and do not calculate the proposers. see the condition at Council.UseProposers method
-	// if it uses cached proposers, do not calculate the proposers
-	proposers []common.Address
+	councilAddressList subsetCouncilSlice // total council node address list. the order is reserved.
 }
 
-// NewCouncil returns preprocessed council(N-1). It is useful to calculate the committee(N,R) or proposer(N,R).
-// defaultSet - do nothing, weightedrandom - filter out by minimum staking amount after istanbul HF and sort it
-func (v *ValsetModule) NewCouncil(blockNumber uint64) (*Council, error) {
-	prevBlockResult, err := v.getBlockResultsByNumber(blockNumber - 1)
+func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
+	var (
+		blockNumber    = valCtx.blockNumber
+		rules          = valCtx.rules
+		proposerPolicy = valCtx.prevBlockResult.proposerPolicy
+		stakingAmount  = valCtx.prevBlockResult.consolidatedStakingAmount()
+
+		isSingleMode = valCtx.prevBlockResult.pSet.GovernanceMode == "single"
+		govNode      = valCtx.prevBlockResult.pSet.GoverningNode
+		minStaking   = valCtx.prevBlockResult.pSet.MinimumStake.Uint64()
+	)
+
+	// read council list of block N-1
+	councilAddressList, err := ReadCouncilAddressListFromDb(db, blockNumber-1)
 	if err != nil {
 		return nil, err
 	}
 
-	council := &Council{
-		blockNumber:     blockNumber,
-		rules:           v.chain.Config().Rules(big.NewInt(int64(blockNumber))),
-		prevBlockResult: prevBlockResult,
+	// create council struct for block N
+	c := &council{
+		blockNumber:        blockNumber,
+		councilAddressList: make(subsetCouncilSlice, len(councilAddressList)),
 	}
-	// if config.Istanbul is nil, it means the consensus is not 'istanbul'.
-	// use default proposer policy (= RoundRobin). If not, use paramSet.proposerPolicy.
-	if v.chain.Config().Istanbul == nil {
-		council.proposerPolicy = ProposerPolicy(params.DefaultProposerPolicy)
-	} else {
-		council.proposerPolicy = ProposerPolicy(prevBlockResult.pSet.ProposerPolicy)
+	copy(c.councilAddressList, councilAddressList)
+
+	// either proposer-policy is not weighted random or before istanbul HF,
+	// do not filter out the demoted validators
+	if !proposerPolicy.IsWeightedRandom() || !rules.IsIstanbul {
+		c.qualifiedValidators = make(subsetCouncilSlice, len(councilAddressList))
+		copy(c.qualifiedValidators, councilAddressList)
+		return c, nil
 	}
 
-	// defaultSet does not filter out demoted validators or calculate proposers since it is PoA
-	if council.proposerPolicy.IsDefaultSet() {
-		council.qualified = make([]common.Address, len(council.prevBlockResult.councilAddrList))
-		copy(council.qualified, council.prevBlockResult.councilAddrList)
-		return council, nil
-	}
-
-	// weighted random filter out under-staked nodes since istanbul HF
-	if council.rules.IsIstanbul {
-		council.qualified, council.demoted = splitByMinimumStakingAmount(council.prevBlockResult)
-	}
-
-	// latest proposer update block's information for calculating the current block's proposers, however it is deprecated since kaia KF
-	// in some cases, skip the proposers calculation
-	//   case1. already cached at proposers
-	//   case2. after Randao HF, proposers is deprecated
-	//   case3. if proposer policy is not weighted random, proposers is not used
-	if council.UseProposers() {
-		proposerUpdateBlock := params.CalcProposerBlockNumber(blockNumber)
-		cachedProposers, ok := v.proposers.Get(proposerUpdateBlock)
-		if !ok {
-			proposerUpdateBlockRules := v.chain.Config().Rules(big.NewInt(int64(proposerUpdateBlock)))
-			proposerUpdatePrevBlockResult, err := v.getBlockResultsByNumber(proposerUpdateBlock - 1)
-			if err != nil {
-				return nil, err
-			}
-			proposerUpdateBlockQualified, _ := splitByMinimumStakingAmount(proposerUpdatePrevBlockResult)
-			council.proposers = calculateProposers(proposerUpdateBlockQualified, proposerUpdatePrevBlockResult, proposerUpdateBlockRules)
-			v.proposers.Add(blockNumber, council.proposers)
+	// Split the councilList(N-1) into qualified and demoted.
+	// Qualified is a subset of the council who are qualified to be a committee member.
+	// (1) If governance mode is single, always include the governing node.
+	// (2) If no council members has enough KAIA, all members become qualified.
+	for addr, val := range stakingAmount {
+		if val >= minStaking || (isSingleMode && addr == govNode) {
+			c.qualifiedValidators = append(c.qualifiedValidators, addr)
 		} else {
-			council.proposers = cachedProposers.([]common.Address)
+			c.demotedValidators = append(c.qualifiedValidators, addr)
 		}
 	}
 
-	return council, nil
+	// include all council members if case1 or case2
+	//   case1. not a single mode && no qualified
+	//   case2. single mode && len(qualified) is 1 && govNode is not qualified
+	if len(c.qualifiedValidators) == 0 || (isSingleMode && len(c.qualifiedValidators) == 1 && stakingAmount[govNode] < minStaking) {
+		c.demotedValidators = subsetCouncilSlice{} // ensure demoted is empty
+		c.qualifiedValidators = make(subsetCouncilSlice, len(councilAddressList))
+		copy(c.qualifiedValidators, councilAddressList)
+	}
+
+	sort.Sort(c.qualifiedValidators)
+	sort.Sort(c.demotedValidators)
+
+	return c, nil
 }
 
-// calcWeight updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func calcWeight(qualified subsetCouncilSlice, prevBnResult *blockResult) []uint64 {
-	var (
-		sInfo                     = prevBnResult.staking
-		pSet                      = prevBnResult.pSet
-		consolidatedStakingAmount = prevBnResult.consolidatedStakingAmount()
-	)
-	// stakingInfo.Gini is calculated among all CNs (i.e. AddressBook.cnStakingContracts)
-	// But we want the gini calculated among the subset of CNs (i.e. validators)
-	totalStaking, gini := float64(0), reward.DefaultGiniCoefficient
-	if pSet.UseGiniCoeff {
-		gini = sInfo.Gini(pSet.MinimumStake.Uint64())
-		for _, st := range consolidatedStakingAmount {
-			if st > pSet.MinimumStake.Uint64() {
-				totalStaking += math.Round(math.Pow(float64(st), 1.0/(1+gini)))
-			}
-		}
-	} else {
-		for _, st := range consolidatedStakingAmount {
-			if st > pSet.MinimumStake.Uint64() {
-				totalStaking += float64(st)
-			}
-		}
-	}
-	logger.Debug("calculate totalStaking", "UseGini", pSet.UseGiniCoeff, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", consolidatedStakingAmount)
-
-	// calculate and store each weight
-	weights := make([]uint64, 0, len(qualified))
-	if totalStaking == 0 {
-		return weights
-	}
-	for idx, addr := range qualified {
-		weight := uint64(math.Round(float64(consolidatedStakingAmount[addr]) * 100 / totalStaking))
-		if weight <= 0 {
-			// A validator, who holds zero or small stake, has minimum weight, 1.
-			weight = 1
-		}
-		weights[idx] = weight
-	}
-	return weights
-}
-
-func calculateProposers(qualified subsetCouncilSlice, prevBnResult *blockResult, rules params.Rules) []common.Address {
-	// Although this is for selecting proposer, update it
-	// otherwise, all parameters should be re-calculated at `RefreshProposers` method.
-	var candidateValsIdx []int
-	if !rules.IsKore {
-		weights := calcWeight(qualified, prevBnResult)
-		for index := range qualified {
-			for i := uint64(0); i < weights[index]; i++ {
-				candidateValsIdx = append(candidateValsIdx, index)
-			}
-		}
-	}
-
-	// All validators has zero weight. Let's use all validators as candidate proposers.
-	if len(candidateValsIdx) == 0 {
-		for index := 0; index < len(qualified); index++ {
-			candidateValsIdx = append(candidateValsIdx, index)
-		}
-		logger.Trace("Refresh uses all validators as candidate proposers, because all weight is zero.", "candidateValsIdx", candidateValsIdx)
-	}
-
-	// shuffle it
-	proposers := make([]common.Address, len(candidateValsIdx))
-	seed, err := convertHashToSeed(prevBnResult.header.Hash())
-	if err != nil {
-		return nil
-	}
-	picker := rand.New(rand.NewSource(seed))
-	for i := 0; i < len(candidateValsIdx); i++ {
-		randIndex := picker.Intn(len(candidateValsIdx))
-		candidateValsIdx[i], candidateValsIdx[randIndex] = candidateValsIdx[randIndex], candidateValsIdx[i]
-	}
-
-	// copy it
-	for i := 0; i < len(candidateValsIdx); i++ {
-		proposers[i] = qualified[candidateValsIdx[i]]
-	}
-	return proposers
-}
-
-func (c Council) UseProposers() bool {
-	return c.proposerPolicy.IsWeightedRandom() && !c.rules.IsRandao
-}
-
-// proposer picks a proposer for the (N, Round) view. it is picked from different sources.
-// - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
-// - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
-// - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
-func (c Council) proposer(round uint64) (common.Address, int) {
-	if c.proposerPolicy.IsDefaultSet() {
-		lastProposerIdx := c.qualified.getIdxByAddress(c.prevBlockResult.author)
-		seed := defaultSetNextProposerSeed(c.proposerPolicy, c.prevBlockResult.author, lastProposerIdx, round)
-		idx := int(seed) % len(c.qualified)
-		return c.qualified[idx], idx
-	}
-
-	var (
-		proposer    common.Address
-		proposerIdx int
-	)
-
-	// before Randao, weightedrandom uses proposers to pick the proposer.
-	// the proposers have always been calculated before entering proposer
-	if !c.rules.IsRandao {
-		proposer = c.proposers[int(c.blockNumber+round)%3600%len(c.proposers)]
-		proposerIdx = c.qualified.getIdxByAddress(proposer)
-	}
-
-	// after Randao, proposers is deprecated. pick proposer from qualified council member list.
-	committee, err := c.selectRandaoCommittee()
-	if err != nil {
-		return common.Address{}, -1
-	}
-
-	// for non-default, fall-back to roundrobin proposer
-	idx := int(round) % len(c.qualified)
-	proposer, proposerIdx = committee[idx], idx
-	if proposerIdx == -1 {
-		logger.Warn("Failed to select a new proposer, thus fall back to roundRobinProposer")
-		idx = c.qualified.getIdxByAddress(proposer)
-		seed := defaultSetNextProposerSeed(params.Sticky, c.prevBlockResult.author, idx, round)
-		proposerIdx = int(seed) % len(c.qualified)
-		proposer = c.qualified[proposerIdx]
-	}
+func (c *council) getProposerFromProposers(proposers []common.Address, round uint64) (common.Address, int) {
+	proposer := proposers[int(c.blockNumber+round)%3600%len(proposers)]
+	proposerIdx := c.qualifiedValidators.getIdxByAddress(proposer)
 	return proposer, proposerIdx
-}
-
-func defaultSetNextProposerSeed(policy ProposerPolicy, proposer common.Address, proposerIdx int, round uint64) uint64 {
-	seed := round
-	if proposerIdx > -1 {
-		seed += uint64(proposerIdx)
-	}
-	if policy == params.RoundRobin && !common.EmptyAddress(proposer) {
-		seed += 1
-	}
-	return seed
-}
-
-func (c Council) selectCommittee(round uint64) (subsetCouncilSlice, error) {
-	var (
-		committeeSize = c.prevBlockResult.pSet.CommitteeSize
-		policy        = c.proposerPolicy
-		rules         = c.rules
-		validators    = c.qualified
-	)
-	if committeeSize >= uint64(len(validators)) {
-		committee := make([]common.Address, len(validators))
-		copy(committee, validators)
-		return committee, nil
-	}
-
-	// it cannot be happened. just to make sure
-	if committeeSize == 0 {
-		return nil, errors.New("invalid committee size")
-	}
-
-	if policy.IsDefaultSet() || (policy.IsWeightedRandom() && !rules.IsRandao) {
-		return c.selectRandomCommittee(round)
-	}
-	return c.selectRandaoCommittee()
 }
 
 // selectRandomCommittee composes a committee selecting validators randomly based on the seed value.
 // It returns nil if the given committeeSize is bigger than validatorSize or proposer indexes are invalid.
-func (c Council) selectRandomCommittee(round uint64) ([]common.Address, error) {
+func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, proposers []common.Address) ([]common.Address, error) {
 	var (
-		validatorSize                                         = len(c.qualified)
-		validator                                             = c.qualified
-		committeeSize                                         = c.prevBlockResult.pSet.CommitteeSize
-		proposer, proposerIdx                                 = c.proposer(round)
-		closestDifferentProposer, closestDifferentProposerIdx = c.proposer(round + 1)
+		validatorSize = len(c.qualifiedValidators)
+		validator     = c.qualifiedValidators
+		rules         = valCtx.rules
+		committeeSize = valCtx.prevBlockResult.pSet.CommitteeSize
+		prevHeader    = valCtx.prevBlockResult.header
+
+		// pick current round's proposer and next proposer which address is different from current proposer
+		proposer, proposerIdx                                 = c.getProposerFromProposers(proposers, round)
+		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+1)
 	)
 
 	// return early if the committee size is 1
@@ -347,11 +169,11 @@ func (c Council) selectRandomCommittee(round uint64) ([]common.Address, error) {
 	}
 
 	// closest next proposer who has different address with the proposer
-	for i := uint64(1); i < params.ProposerUpdateInterval(); i++ {
+	for i := uint64(2); i < params.ProposerUpdateInterval(); i++ {
 		if proposer != closestDifferentProposer {
 			break
 		}
-		closestDifferentProposer, closestDifferentProposerIdx = c.proposer(round + i)
+		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+i)
 	}
 
 	// ensure validator indexes are valid
@@ -361,12 +183,12 @@ func (c Council) selectRandomCommittee(round uint64) ([]common.Address, error) {
 			validatorSize, proposerIdx, closestDifferentProposerIdx)
 	}
 
-	seed, err := convertHashToSeed(c.prevBlockResult.header.Hash())
+	seed, err := convertHashToSeed(prevHeader.Hash())
 	if err != nil {
 		return nil, err
 	}
 	// shuffle the qualified validators except two proposers
-	if c.rules.IsIstanbul {
+	if rules.IsIstanbul {
 		seed += int64(round)
 	}
 	committee := make([]common.Address, committeeSize)
@@ -402,70 +224,15 @@ func (c Council) selectRandomCommittee(round uint64) ([]common.Address, error) {
 //
 //	shuffled = shuffle_validators_KIP146(validators, seed)
 //	return shuffled[:min(committee_size, len(validators))]
-func (c Council) selectRandaoCommittee() ([]common.Address, error) {
-	if c.prevBlockResult.header.MixHash == nil {
+func (c *council) selectRandaoCommittee(prevBnRes *blockResult) ([]common.Address, error) {
+	if prevBnRes.header.MixHash == nil {
 		return nil, fmt.Errorf("nil mixHash")
 	}
 
-	copied := make(subsetCouncilSlice, len(c.qualified))
-	copy(copied, c.qualified)
+	copied := make(subsetCouncilSlice, len(c.qualifiedValidators))
+	copy(copied, c.qualifiedValidators)
 
-	seed := int64(binary.BigEndian.Uint64(c.prevBlockResult.header.MixHash[:8]))
+	seed := int64(binary.BigEndian.Uint64(prevBnRes.header.MixHash[:8]))
 	rand.New(rand.NewSource(seed)).Shuffle(len(copied), copied.Swap)
-	return copied[:c.prevBlockResult.pSet.CommitteeSize], nil
-}
-
-// splitByMinimumStakingAmount split the council members into qualified, demoted.
-// Qualified is a subset of the council who have staked more than minimum staking amount. Demoted stakes less than minimum.
-// There's two rules.
-// (1) If governance mode is single, always include the governing node.
-// (2) If no council members has enough KAIA, all members become qualified.
-func splitByMinimumStakingAmount(prevBlockResult *blockResult) (subsetCouncilSlice, subsetCouncilSlice) {
-	var (
-		qualified subsetCouncilSlice
-		demoted   subsetCouncilSlice
-
-		// get params
-		isSingleMode  = prevBlockResult.pSet.GovernanceMode == "single"
-		govNode       = prevBlockResult.pSet.GoverningNode
-		minStaking    = prevBlockResult.pSet.MinimumStake.Uint64()
-		stakingAmount = prevBlockResult.consolidatedStakingAmount()
-	)
-
-	// filter out the demoted members who have staked less than minimum staking amounts
-	for addr, val := range stakingAmount {
-		if val >= minStaking || (isSingleMode && addr == govNode) {
-			qualified = append(qualified, addr)
-		} else {
-			demoted = append(qualified, addr)
-		}
-	}
-
-	// include all council members if case1 or case2
-	//   case1. not a single mode && no qualified
-	//   case2. single mode && len(qualified) is 1 && govNode is not qualified
-	if len(qualified) == 0 || (isSingleMode && len(qualified) == 1 && stakingAmount[govNode] < minStaking) {
-		demoted = subsetCouncilSlice{} // ensure demoted is empty
-		qualified = make(subsetCouncilSlice, len(prevBlockResult.councilAddrList))
-		copy(qualified, prevBlockResult.councilAddrList)
-	}
-
-	sort.Sort(qualified)
-	sort.Sort(demoted)
-	return qualified, demoted
-}
-
-// convertHashToSeed takes the first 8 bytes (64 bits) and convert to int64
-func convertHashToSeed(hash common.Hash) (int64, error) {
-	hashstring := strings.TrimPrefix(hash.Hex(), "0x")
-	if len(hashstring) > 15 {
-		hashstring = hashstring[:15]
-	}
-
-	seed, err := strconv.ParseInt(hashstring, 16, 64)
-	if err != nil {
-		logger.Error("fail to make sub-list of validators", "hash", hash.Hex(), "seed", seed, "err", err)
-		return 0, err
-	}
-	return seed, nil
+	return copied[:prevBnRes.pSet.CommitteeSize], nil
 }

@@ -25,8 +25,11 @@ import (
 )
 
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
+	if block.Header() == nil {
+		return errNilHeader
+	}
 	if len(block.Header().Vote) == 0 {
-		return nil
+		return nil // nothing to do
 	}
 
 	var vb headergov.VoteBytes = block.Header().Vote
@@ -39,7 +42,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 		return nil
 	}
 
-	if err = v.HandleValidatorVote(block.NumberU64(), vote); err != nil {
+	if err = v.HandleValidatorVote(block.Header(), vote); err != nil {
 		return err
 	}
 	return nil
@@ -47,17 +50,20 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 
 // HandleValidatorVote handles addvalidator or removevalidator votes and remove them from MyVotes.
 // If succeed, the voteBlk and councilAddressList db is updated.
-func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteData headergov.VoteData) error {
-	prevBlockResult, err := v.getBlockResultsByNumber(blockNumber - 1)
+func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData headergov.VoteData) error {
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+	councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, header.Number.Uint64()-1)
 	if err != nil {
 		return err
 	}
-
 	var (
-		valset    = subsetCouncilSlice(prevBlockResult.councilAddrList)
-		value     = voteData.Value()
-		name      = voteData.Name()
-		addresses []common.Address
+		blockNumber = header.Number.Uint64()
+		valset      = subsetCouncilSlice(councilAddressList)
+		value       = voteData.Value()
+		name        = voteData.Name()
+		addresses   []common.Address
 	)
 	// parse the vote
 	if addr, ok := value.(common.Address); ok {
@@ -90,7 +96,11 @@ func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteData headergo
 	}
 
 	// pop my vote from voteData
-	if prevBlockResult.author == v.nodeAddress {
+	author, err := v.chain.Engine().Author(header)
+	if err != nil {
+		return err
+	}
+	if author == v.nodeAddress {
 		for i, myvote := range v.headerGov.GetMyVotes() {
 			if bytes.Equal(myvote.Voter().Bytes(), voteData.Voter().Bytes()) &&
 				myvote.Name() == name &&

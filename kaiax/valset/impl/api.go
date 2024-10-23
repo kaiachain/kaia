@@ -53,11 +53,11 @@ func (api *ValidatorAPI) GetCouncil(number *rpc.BlockNumber) ([]common.Address, 
 }
 
 func (api *ValidatorAPI) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
-	council, err := api.GetCouncil(number)
+	c, err := api.GetCouncil(number)
 	if err != nil {
 		return -1, err
 	}
-	return len(council), nil
+	return len(c), nil
 }
 
 func (api *ValidatorAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
@@ -81,12 +81,15 @@ func (api *ValidatorAPI) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	if err != nil {
 		return nil, err
 	}
-	prevBlockResult, err := api.v.getBlockResultsByNumber(header.Number.Uint64() - 1)
+	valCtx, err := newValSetContext(api.v, header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
-	qualified, _ := splitByMinimumStakingAmount(prevBlockResult)
-	return qualified.sortedAddressList(true), nil
+	c, err := newCouncil(api.v.ChainKv, valCtx)
+	if err != nil {
+		return nil, err
+	}
+	return c.qualifiedValidators.sortedAddressList(true), nil
 }
 
 // GetValidatorsAtHash retrieves the list of qualified validators with the given block hash.
@@ -104,12 +107,15 @@ func (api *ValidatorAPI) GetDemotedValidators(number *rpc.BlockNumber) ([]common
 	if err != nil {
 		return nil, err
 	}
-	prevBlockResult, err := api.v.getBlockResultsByNumber(header.Number.Uint64() - 1)
+	valCtx, err := newValSetContext(api.v, header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
-	_, demoted := splitByMinimumStakingAmount(prevBlockResult)
-	return demoted.sortedAddressList(true), nil
+	c, err := newCouncil(api.v.ChainKv, valCtx)
+	if err != nil {
+		return nil, err
+	}
+	return c.demotedValidators.sortedAddressList(true), nil
 }
 
 // GetDemotedValidatorsAtHash retrieves the list of demoted validators with the given block hash.
