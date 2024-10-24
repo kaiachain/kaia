@@ -74,11 +74,117 @@ The mechanism of the same policy works differently on the hardfork.
 
 Here are the list of policies: (the number in the paranthesis indicates the value of "istanbul.proposerpolicy")
 - `RoundRobin` (0): every council member takes each turn. That is, `council(N-1)[(prevAuthorIdx+round)%len(council(N-1))]`
+  <details>
+    <summary>RoundRobin Example</summary>
+  
+  ```
+  proposers=[0,1,2,3]
+  
+  block  | round | proposer
+  -------------------------
+   1     |   0   |    0
+   2     |   0   |    1
+   3     |   0   |    2
+   4     |   0   |    3
+   5     |   0   |    0
+   6     |   0   |    1
+   7     |   0   |    2
+   8     |   0   |    3
+   9     |   0   |    0
+  10     |   0   |    1
+  11     |   0   |    2        << round change
+  11     |   1   |    3        << round change
+  11     |   2   |    0
+  12     |   0   |    1
+  13     |   0   |    2
+  14     |   0   |    3
+  ```
+  </details>
+
 - `Sticky` (1): every council member takes each turn. That is, `council(N-1)[(prevAuthorIdx+round+1)%len(council(N-1))]`
+  <details>
+    <summary>Sticky Example</summary>
+
+  ```
+  proposers=[0,1,2,3]
+  
+  block  | round | proposer
+  -------------------------
+   1     |   0   |    0
+   2     |   0   |    0
+   3     |   0   |    0
+   4     |   0   |    0
+   5     |   0   |    0
+   6     |   0   |    0
+   7     |   0   |    0
+   8     |   0   |    0
+   9     |   0   |    0
+  10     |   0   |    0
+  11     |   0   |    0        << round change
+  11     |   1   |    1        << round change
+  11     |   2   |    2
+  12     |   0   |    0
+  13     |   0   |    0
+  14     |   0   |    0
+  ```
+  </details>
 - `WeightedRandom` (2):
   - Since Randao HF, the proposer is randomly selected among the committee. That is, `Proposer(N, R) = Committee(N)[R]`.
+      <details>
+        <summary>Weightedrandom Randao Example</summary>
+
+      ```
+      proposers=[0,1,2,3]
+          
+      block  | round | proposer
+      -------------------------
+         1   |   0   |    3
+         2   |   0   |    1
+         3   |   0   |    2
+         4   |   0   |    3
+         5   |   0   |    3
+         6   |   0   |    0
+         7   |   0   |    1
+         8   |   0   |    0
+         9   |   0   |    2
+        10   |   0   |    3
+        11   |   0   |    1        << round change
+        11   |   1   |    2        << round change
+        11   |   2   |    2
+        12   |   0   |    3
+        13   |   0   |    0
+        14   |   0   |    1
+      ```
+      </details>
   - Before Randao HF, the proposer is randomly selected where the probability is proportional to the gini-coeff-applied staking amount.
     That is, `Proposer(N, R) = proposers[(N + R) % len(proposers)]` where `proposers` is refreshed at every "reward.stakingupdateinterval".
+
+      <details>
+        <summary>Weightedrandom Default Example</summary>
+  
+      ```
+      proposers=[0,1,0,0,2,0,3,0,0,2,2,3,3,0,2,3]
+  
+      block  | round | proposer
+      -------------------------
+         1   |   0   |    0
+         2   |   0   |    1
+         3   |   0   |    0
+         4   |   0   |    0
+         5   |   0   |    2
+         6   |   0   |    0
+         7   |   0   |    3
+         8   |   0   |    0
+         9   |   0   |    0
+        10   |   0   |    2
+        11   |   0   |    2        << round change
+        11   |   1   |    3        << round change
+        11   |   2   |    3
+        12   |   0   |    2        << next proposer of block 11
+        13   |   0   |    3
+        14   |   0   |    3
+      ```
+      </details>
 
 The Mainnet and Kairos uses `WeightedRandom` policy.
 
