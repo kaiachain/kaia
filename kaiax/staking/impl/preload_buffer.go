@@ -26,7 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
-type refCountedState struct {
+type refCountedInfo struct {
 	info *staking.StakingInfo
 	refs map[uint64]struct{}
 }
@@ -34,14 +34,14 @@ type refCountedState struct {
 // PreloadBuffer remembers temporary StakingInfo for StakingModule to refer to.
 // The temporary info are created during state reexec(regen) when the states are not available in the database.
 type PreloadBuffer struct {
-	preloaded map[common.Hash]*refCountedState // keyed by state root
-	nextRefId uint64                           // uint64 should be enough during the node process runtime
+	preloaded map[common.Hash]*refCountedInfo // keyed by state root
+	nextRefId uint64                          // uint64 should be enough during the node process runtime
 	mu        sync.RWMutex
 }
 
 func NewPreloadBuffer() *PreloadBuffer {
 	return &PreloadBuffer{
-		preloaded: make(map[common.Hash]*refCountedState),
+		preloaded: make(map[common.Hash]*refCountedInfo),
 		nextRefId: 1,
 	}
 }
@@ -113,7 +113,7 @@ func (s *StakingModule) PreloadFromState(refId uint64, header *types.Header, sta
 	defer ss.mu.Unlock()
 
 	if ss.preloaded[root] == nil {
-		ss.preloaded[root] = &refCountedState{
+		ss.preloaded[root] = &refCountedInfo{
 			info: info,
 			refs: make(map[uint64]struct{}),
 		}
