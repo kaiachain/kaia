@@ -3,68 +3,88 @@
 This module is responsible for getting council and calculating committee or proposer.
 
 ## Concepts
-| Components               | [Block 0]                          | [Block N-1] <br/>"AddValidator" <br/>"RemoveValidator"                                      | [Block N]                                        |
-|--------------------------|------------------------------------|---------------------------------------------------------------------------------------------|--------------------------------------------------|
-| demoted(Block)           | None                               | Council(N-2).demotedByQualification(state(N-2))                                             | Council(N-1).demotedByQualification(*state(N-1)) | 
-| qualified(Block)         | GenesisCouncil                     | Council(N-2) - demoted(N-1)                                                                 | Council(N-1) - demoted(N)                        |
-| └ Committee(Block,Round) | GenesisCouncil                     | qualified(N-1).sublist(Round)                                                               | qualified(N).sublist(Round')                     |
-| └└ proposer(Block,Round) | GenesisCouncil's<br/>first element | Committee(N-1,Round).proposer(Round)                                                        | *Committee(N,Round').proposer(Round')            |
-| Council(Block)           | GenesisCouncil                     | Council(N-2) <br/>+ validator(i), i is not in Council <br/>- validator(j), j is in Council  | ...                                              |
-*Committee(N,Round').proposer(Round'): Actually, before Randao, proposer is not picked from Committee. Nevertheless, proposer is a member of the Committee, so it is representeas as belonging to the Committee.<br/>
+| Components                  | [Block 0]                          | [Block N]  <br/>"Add Validator i" ,"Remove Validator j"                                    |
+|-----------------------------|------------------------------------|--------------------------------------------------------------------------------------------|
+| demoted validators(Block)   | None                               | Council(N-1).demotedByQualification(*state(N-1))                                           | 
+| qualified validators(Block) | GenesisCouncil                     | Council(N-1) - demoted(N)                                                                  |
+| └ Committee(Block,Round)    | GenesisCouncil                     | qualified(N).sublist(Round')                                                               |
+| └└ proposer(Block,Round)    | GenesisCouncil's<br/>first element | *Committee(N,Round').proposer(Round')                                                      |
+| Council(Block)              | GenesisCouncil                     | Council(N-1) <br/>+ validator(i), i is not in Council <br/>- validator(j), j is in Council |
+*Committee(N,Round').proposer(Round'): A Proposer is calculated first than the committee unless the Randao hardfork is activated. 
+Nevertheless, proposer is ensured to be a committee member, so it is represented that the proposer is a member of committee.<br/>
 *state(N-1): It's a result of processing block N-1 including state transition. The results are govParamSet, stakingInfo, and author.
 
 ### council: a set of registered CN
-The genesis council is restored via genesis block(block 0)'s extraData. 
-Then, the member of council is added/removed by "governance.addvalidator"/"governance.removevalidator" vote.
-The council of Block N is finalized after the block(N).vote is applied, and it will be used to calculate the next committee or proposer.
+A `Council(N)` refers to the council determined after the block `N` is executed, based on `header(N).Vote` and `gov.EffectiveParamsAt(N)`.
+In other words, to reach consensus on block N, `Council(N-1)` is used as a superset of Committee(N) or proposer(N).
+Additionally, the genesis council is directly restored from the extraData of the genesis block(block 0).
 
-The council is classified into two groups: qualified validators and demoted validators. 
-* Qualified validators: the validators who are qualified to be a committee member. 
-* Demoted validators: the remainder after removing the qualified validators.
+### qualified validators: a subset of council members who are qualified to be a committee
+To determine a committee or proposer at block N, the council members must be filtered based on their qualification.
+* Qualified validators: Validators who meet the criteria to be a committee member.
+* Demoted validators: The remaining council members after excluding the qualified validators.
 
-The qualifications differ depending on the proposer policy.
-* clique consensus: it implements default proposer policy (round-robin). 
+Committee members are selected only from the qualified validators, and the qualifications vary depending on the proposer policy:
+* clique consensus: Uses default proposer policy (`round-robin`).
   * round-robin: all council members are qualified
-* istanbul consensus: it implements three proposer policies(round-robin, sticky, weighted-random).
+* istanbul consensus: Supports three proposer policies(`round-robin`, `sticky`, `weighted-random`).
   * round-robin: all council members are qualified
   * sticky: all council members are qualified
-  * istanbul: Validators that meet the minimum staking requirement are qualified. 
-    * If no node meet this requirement, all nodes are deemed qualified. In single mode, governingnode is qualified without any conditions.
+  * weighted-random: Validators who staked more than **[minimum staking amount]** are qualified.
+    * If no nodes meet this requirement, all nodes are considered qualified. In single mode, governingnode is qualified without any conditions.
 
-### committee: a subset of qualified council members
-A committee of Block N, Round R is calculated based on previous block's council and results(header.author, stakingInfo, govParamSet). However, the committee of genesis block doesn't have previous block, so it is copied from the genesis council.
+### committee: a subset of qualified validators
+A `Committee(N, R)` is randomly selected as a subset of `Council(N-1)` for mining the block `N` at the round `R`.
 
-- committeesize - The committee size can be updated via "istanbul.committeeSize". It decides the size of committee.
-- committee shuffle seed - The seed is calculated using previous block's information. The copied qualified council is shuffled with the calculated seed to get the committee.
+The `Committee(N, R)` is chosen based on the followings: `Header(N-1)`, `StakingInfo(N-1)`, `gov.EffectiveParamsAt(N)`, and `Council(N-1)`.
+The committee size is determined by the governance parameter value, "istanbul.committeeSize", which indicates the maximum size of committee.
+Additionally, the genesis block doesn't have previous block, so genesis committee is copied from the genesis council.
 
-Committee selection logic is different before/after Randao Hardfork when it's proposer policy is weightedCouncil. So the condition to activate RandaoCommittee is `policy.IsDefaultSet() || (policy.IsWeightedCouncil() && !rules.IsRandao)`
-- committee shuffle seed calculation logic
-  - before Randao: the seed is calculated using prevHash. `seed = int64(binary.BigEndian.Uint64(prevHash.Bytes()[:8]))`. 
-  - after Randao: the seed is calculated using mixHash. `seed = int64(binary.BigEndian.Uint64(mixHash[:8]))`
-- qualified council shuffle
-  - before Randao: extract (proposer, next proposer which is differnt from proposer) and shuffle it. Attach the proposers again and slice the it.
-  - after Randao: shuffle the qualified council and slice the committee.
-
-Example of BeforeRandaoCommittee
+#### Committee selection logic
+- Selection logic involves a shuffling algorithms: `SimpleRandomCommittee` and `RandaoRandomCommittee` which differs depending on whether it's before/after Randao hardfork and the proposer policy.
+  - More specifically, `RandaoCommittee` logic is used when `policy.IsDefaultSet() || (policy.IsWeightedCouncil() && !rules.IsRandao)`, which corresponds to Mainnet and Kairos.
+- Calculate the shuffling seed
+  - `SimpleRandomCommittee`: Calculate the seed using prevHash. `seed = int64(binary.BigEndian.Uint64(prevHash.Bytes()[:8]))`.
+  - `RandaoRandomCommittee`: Calculate the seed using mixHash. `seed = int64(binary.BigEndian.Uint64(mixHash[:8]))`
+- Shuffle the qualified validators
+  - `SimpleRandomCommittee`: To secure the proposers, extract the current round's proposer and next distinct proposer which has different address. Shuffle the rest and attach the two proposers.
+  - `RandaoRandomCommittee`: Shuffle the qualified validators.
+- After shuffling, the council is "sliced" up to "istanbul.committeesize".
 ```
-Condition: proposerIdx = 3, nextProposerIdx = 7, committeesize = 6, council = [0,1,2,3,4,5,6,7,8,9]
-Step1. extract proposers to committee: proposers = [3,7], council = [0,1,2,4,5,6,8,9]
-Step2. shuffle the council. proposers = [3,7], council = [4,5,6,8,9,0,1,2]
-Step3. merge. council = [3,7,4,5,6,8,9,0,1,2]
-Step4. slice the council by committee size. committee = [3,7,4,5,6,8]
+Condition: proposerIdx = 3, nextProposerIdx = 7, committeesize = 6, qualified validators = [0,1,2,3,4,5,6,7,8,9]
+
+SimpleRandomCommittee:
+- Step1. secure the proposer and the next distinct proposer: proposers = [3,7], council = [0,1,2,4,5,6,8,9]
+- Step2. shuffle the council: proposers = [3,7], council = [4,5,6,8,9,0,1,2]
+- Step3. merge. council = [3,7,4,5,6,8,9,0,1,2]
+- Step4. slice by committeesize: committee = [3,7,4,5,6,8]
+
+RandaoCommittee:
+- Step1. shuffle the council: council = [4,7,5,6,8,3,9,0,1,2]
+- Step2. slice by committeesize: committee = [4,7,5,6,8,3]
 ```
+
 ### proposer: a member of committee who proposes the block
-A proposer means the member of committee who proposes the block. We call as author after the block is created. Proposer is selected based on the proposer policy the network chosen. Also, each proposer selection logic has been updated per HF.
-#### ProposerPolicy
-- RoundRobin: `council(N-1)[(prevAuthorIdx+round)%len(council(N-1))]`
-- Sticky: `council(N-1)[(prevAuthorIdx+round+1)%len(council(N-1))]`
-- WeightedRandom
-  - Before Randao: proposer of (block N, Round R) is picked from "proposers" array which is created at proposerupdateinterval block with staking amount and gini. 
-  - After Randao: proposer of (block N, Round R) is the n'th element of the committee(N)
+A `Proposer(N, R)` proposes the block N at round R who are selected from the committee.
+Note that proposer is called an "author" once the block is created.
 
-The selection of proposer policy is limited by consensus algorithm.
-  - clique - 0: RoundRobin [default: 0]
-  - istanbul - 0: RoundRobin, 1: Sticky, 2: WeightedRandom [default: 0]
+#### ProposerPolicy
+Proposer is selected based on the governance parameter "istanbul.proposerpolicy".
+The mechanism of the same policy works differently on the hardfork.
+
+Here are the list of policies: (the number in the paranthesis indicates the value of "istanbul.proposerpolicy")
+- `RoundRobin` (0): every council member takes each turn. That is, `council(N-1)[(prevAuthorIdx+round)%len(council(N-1))]`
+- `Sticky` (1): every council member takes each turn. That is, `council(N-1)[(prevAuthorIdx+round+1)%len(council(N-1))]`
+- `WeightedRandom` (2):
+  - Since Randao HF, the proposer is randomly selected among the committee. That is, `Proposer(N, R) = Committee(N)[R]`.
+  - Before Randao HF, the proposer is randomly selected where the probability is proportional to the gini-coeff-applied staking amount.
+    That is, `Proposer(N, R) = proposers[(N + R) % len(proposers)]` where `proposers` is refreshed at every "reward.stakingupdateinterval".
+
+The Mainnet and Kairos uses `WeightedRandom` policy.
+
+The selection of proposer policy is limited by consensus algorithm:
+- clique: RoundRobin [default: RoundRobin]
+- istanbul - RoundRobin, Sticky, WeightedRandom [default: WeightedRandom]
 
 ## Persistent Schema
 The voting blocks and the council addressList is stored at miscDB.
