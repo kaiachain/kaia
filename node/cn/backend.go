@@ -396,12 +396,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		sideStateRef, err := reward.PreloadStakingInfo(headers, mStaking)
+		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
 		defer func() {
-			mStaking.FreeSideStateRef(sideStateRef)
+			mStaking.FreePreloadRef(preloadRef)
 		}()
 	}
 	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {

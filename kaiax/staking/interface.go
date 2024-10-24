@@ -37,10 +37,12 @@ type StakingModule interface {
 	// This is useful when syncing the staking info database over p2p.
 	GetStakingInfoFromDB(sourceNum uint64) (*StakingInfo, error)
 
-	// SideState management
-	AllocSideStateRef() uint64
-	FreeSideStateRef(refId uint64)
-	AddSideState(refId uint64, header *types.Header, statedb *state.StateDB) error
+	// Preload features allow staking info to be preloaded into memory
+	// which helps the situation where the state is not available in the database
+	// but the state is only in the memory temporarily (e.g., state regen).
+	AllocPreloadRef() uint64
+	FreePreloadRef(refId uint64)
+	PreloadFromState(refId uint64, header *types.Header, statedb *state.StateDB) error
 }
 
 type StakingModuleHost interface {

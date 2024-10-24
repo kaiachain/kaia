@@ -48,14 +48,14 @@ type StakingModule struct {
 	minimumStake    *big.Int
 
 	stakingInfoCache *lru.ARCCache // cached by sourceNum
-	sideStates       *sideStates
+	preloadBuffer    *PreloadBuffer
 }
 
 func NewStakingModule() *StakingModule {
 	cache, _ := lru.NewARC(128)
 	return &StakingModule{
 		stakingInfoCache: cache,
-		sideStates:       NewSideStates(),
+		preloadBuffer:    NewPreloadBuffer(),
 	}
 }
 

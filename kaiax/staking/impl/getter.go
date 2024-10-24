@@ -86,7 +86,7 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 	}
 
 	// If found in side state, no bother getting from the state.
-	if si := s.sideStates.GetInfo(header.Root); si != nil { // Try side state
+	if si := s.preloadBuffer.GetInfo(header.Root); si != nil { // Try side state
 		return si, nil
 	}
 

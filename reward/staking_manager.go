@@ -295,13 +295,13 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 	}
 
 	var (
-		parent       common.Hash
-		sideStateRef = stakingModule.AllocSideStateRef()
+		parent     common.Hash
+		preloadRef = stakingModule.AllocPreloadRef()
 	)
 
 	// Include target since we want staking info at `target`, not for `target`.
 	for current.NumberU64() <= target {
-		stakingModule.AddSideState(sideStateRef, current.Header(), statedb)
+		stakingModule.PreloadFromState(preloadRef, current.Header(), statedb)
 		if current.NumberU64() == target {
 			break
 		}
@@ -335,7 +335,7 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 		parent = root
 	}
 
-	return sideStateRef, nil
+	return preloadRef, nil
 }
 
 // PreloadStakingInfoWithState fetches the stakingInfo based on the given state trie

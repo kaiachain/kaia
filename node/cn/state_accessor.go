@@ -144,7 +144,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		logged time.Time
 		parent common.Hash
 
-		sideStateRef = cn.stakingModule.AllocSideStateRef()
+		preloadRef = cn.stakingModule.AllocPreloadRef()
 	)
 	for current.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
@@ -157,7 +157,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			return nil, nil, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
 		}
 		// Make StakingModule remember the current block state. Needed for next block's engine.Finalize() post-Kaia.
-		cn.stakingModule.AddSideState(sideStateRef, current.Header(), statedb)
+		cn.stakingModule.PreloadFromState(preloadRef, current.Header(), statedb)
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
@@ -195,7 +195,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 
 	return statedb, func() {
 		database.TrieDB().Dereference(block.Root())
-		cn.stakingModule.FreeSideStateRef(sideStateRef)
+		cn.stakingModule.FreePreloadRef(preloadRef)
 	}, nil
 }
 

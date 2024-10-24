@@ -52,44 +52,30 @@ func (mr *MockStakingModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockStakingModule)(nil).APIs))
 }
 
-// AddSideState mocks base method.
-func (m *MockStakingModule) AddSideState(arg0 uint64, arg1 *types.Header, arg2 *state.StateDB) error {
+// AllocPreloadRef mocks base method.
+func (m *MockStakingModule) AllocPreloadRef() uint64 {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddSideState", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddSideState indicates an expected call of AddSideState.
-func (mr *MockStakingModuleMockRecorder) AddSideState(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSideState", reflect.TypeOf((*MockStakingModule)(nil).AddSideState), arg0, arg1, arg2)
-}
-
-// AllocSideStateRef mocks base method.
-func (m *MockStakingModule) AllocSideStateRef() uint64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllocSideStateRef")
+	ret := m.ctrl.Call(m, "AllocPreloadRef")
 	ret0, _ := ret[0].(uint64)
 	return ret0
 }
 
-// AllocSideStateRef indicates an expected call of AllocSideStateRef.
-func (mr *MockStakingModuleMockRecorder) AllocSideStateRef() *gomock.Call {
+// AllocPreloadRef indicates an expected call of AllocPreloadRef.
+func (mr *MockStakingModuleMockRecorder) AllocPreloadRef() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocSideStateRef", reflect.TypeOf((*MockStakingModule)(nil).AllocSideStateRef))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocPreloadRef", reflect.TypeOf((*MockStakingModule)(nil).AllocPreloadRef))
 }
 
-// FreeSideStateRef mocks base method.
-func (m *MockStakingModule) FreeSideStateRef(arg0 uint64) {
+// FreePreloadRef mocks base method.
+func (m *MockStakingModule) FreePreloadRef(arg0 uint64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "FreeSideStateRef", arg0)
+	m.ctrl.Call(m, "FreePreloadRef", arg0)
 }
 
-// FreeSideStateRef indicates an expected call of FreeSideStateRef.
-func (mr *MockStakingModuleMockRecorder) FreeSideStateRef(arg0 interface{}) *gomock.Call {
+// FreePreloadRef indicates an expected call of FreePreloadRef.
+func (mr *MockStakingModuleMockRecorder) FreePreloadRef(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreeSideStateRef", reflect.TypeOf((*MockStakingModule)(nil).FreeSideStateRef), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreePreloadRef", reflect.TypeOf((*MockStakingModule)(nil).FreePreloadRef), arg0)
 }
 
 // GetStakingInfo mocks base method.
@@ -120,6 +106,20 @@ func (m *MockStakingModule) GetStakingInfoFromDB(arg0 uint64) (*staking.StakingI
 func (mr *MockStakingModuleMockRecorder) GetStakingInfoFromDB(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfoFromDB", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfoFromDB), arg0)
+}
+
+// PreloadFromState mocks base method.
+func (m *MockStakingModule) PreloadFromState(arg0 uint64, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreloadFromState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreloadFromState indicates an expected call of PreloadFromState.
+func (mr *MockStakingModuleMockRecorder) PreloadFromState(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreloadFromState", reflect.TypeOf((*MockStakingModule)(nil).PreloadFromState), arg0, arg1, arg2)
 }
 
 // RewindDelete mocks base method.

@@ -31,22 +31,22 @@ type refCountedState struct {
 	refs map[uint64]struct{}
 }
 
-// sideStates remembers temporary StateDBs for StakingModule to refer to.
-// The temporary states are created during state reexec(regen) when the states are not available in the database.
-type sideStates struct {
-	states    map[common.Hash]*refCountedState // keyed by state root
+// PreloadBuffer remembers temporary StakingInfo for StakingModule to refer to.
+// The temporary info are created during state reexec(regen) when the states are not available in the database.
+type PreloadBuffer struct {
+	preloaded map[common.Hash]*refCountedState // keyed by state root
 	nextRefId uint64                           // uint64 should be enough during the node process runtime
 	mu        sync.RWMutex
 }
 
-func NewSideStates() *sideStates {
-	return &sideStates{
-		states:    make(map[common.Hash]*refCountedState),
+func NewPreloadBuffer() *PreloadBuffer {
+	return &PreloadBuffer{
+		preloaded: make(map[common.Hash]*refCountedState),
 		nextRefId: 1,
 	}
 }
 
-func (ss *sideStates) AllocRefId() uint64 {
+func (ss *PreloadBuffer) AllocRefId() uint64 {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
@@ -55,38 +55,38 @@ func (ss *sideStates) AllocRefId() uint64 {
 	return id
 }
 
-func (ss *sideStates) FreeRefId(refId uint64) {
+func (ss *PreloadBuffer) FreeRefId(refId uint64) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
-	for root, state := range ss.states {
+	for root, state := range ss.preloaded {
 		delete(state.refs, refId) // delete reference
 		if len(state.refs) == 0 { // no more references
-			delete(ss.states, root)
+			delete(ss.preloaded, root)
 		}
 	}
 }
 
-func (ss *sideStates) GetInfo(root common.Hash) *staking.StakingInfo {
+func (ss *PreloadBuffer) GetInfo(root common.Hash) *staking.StakingInfo {
 	ss.mu.RLock()
 	defer ss.mu.RUnlock()
 
-	if ss.states[root] == nil {
+	if ss.preloaded[root] == nil {
 		return nil
 	}
-	return ss.states[root].info
+	return ss.preloaded[root].info
 }
 
-func (s *StakingModule) AllocSideStateRef() uint64 {
-	return s.sideStates.AllocRefId()
+func (s *StakingModule) AllocPreloadRef() uint64 {
+	return s.preloadBuffer.AllocRefId()
 }
 
-func (s *StakingModule) FreeSideStateRef(refId uint64) {
-	s.sideStates.FreeRefId(refId)
+func (s *StakingModule) FreePreloadRef(refId uint64) {
+	s.preloadBuffer.FreeRefId(refId)
 }
 
-func (s *StakingModule) AddSideState(refId uint64, header *types.Header, statedb *state.StateDB) error {
-	ss := s.sideStates
+func (s *StakingModule) PreloadFromState(refId uint64, header *types.Header, statedb *state.StateDB) error {
+	ss := s.preloadBuffer
 	root := statedb.IntermediateRoot(false)
 	// Sanity check
 	if header.Root != root {
@@ -95,7 +95,7 @@ func (s *StakingModule) AddSideState(refId uint64, header *types.Header, statedb
 
 	// Quickly check if the info is already stored.
 	ss.mu.RLock()
-	_, ok := ss.states[root]
+	_, ok := ss.preloaded[root]
 	ss.mu.RUnlock()
 	if ok {
 		return nil
@@ -108,16 +108,16 @@ func (s *StakingModule) AddSideState(refId uint64, header *types.Header, statedb
 		return err
 	}
 
+	// Check again, if info is still not stored, store it.
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
-	// Check again, if info is still not stored, store it.
-	if ss.states[root] == nil {
-		ss.states[root] = &refCountedState{
+	if ss.preloaded[root] == nil {
+		ss.preloaded[root] = &refCountedState{
 			info: info,
 			refs: make(map[uint64]struct{}),
 		}
 	}
-	ss.states[root].refs[refId] = struct{}{}
+	ss.preloaded[root].refs[refId] = struct{}{}
 	return nil
 }
