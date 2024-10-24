@@ -144,7 +144,10 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		logged time.Time
 		parent common.Hash
 
-		preloadRef = cn.stakingModule.AllocPreloadRef()
+		preloadRef        = cn.stakingModule.AllocPreloadRef()
+		releasePreloadRef = func() {
+			cn.stakingModule.FreePreloadRef(preloadRef)
+		}
 	)
 	for current.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
@@ -154,27 +157,27 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		}
 		// Quit the state regeneration if time limit exceeds
 		if cn.config.DisableUnsafeDebug && time.Since(start) > cn.config.StateRegenerationTimeLimit {
-			return nil, nil, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
+			return nil, releasePreloadRef, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
 		}
 		// Make StakingModule remember the current block state. Needed for next block's engine.Finalize() post-Kaia.
 		cn.stakingModule.PreloadFromState(preloadRef, current.Header(), statedb)
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
-			return nil, nil, fmt.Errorf("block #%d not found", next)
+			return nil, releasePreloadRef, fmt.Errorf("block #%d not found", next)
 		}
 		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{})
 		if err != nil {
-			return nil, nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
+			return nil, releasePreloadRef, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
 		// Finalize the state so any modifications are written to the trie
 		root, err := statedb.Commit(true)
 		if err != nil {
-			return nil, nil, err
+			return nil, releasePreloadRef, err
 		}
 		statedb, err = state.New(root, database, nil, nil)
 		if err != nil {
-			return nil, nil, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
+			return nil, releasePreloadRef, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
 		}
 		database.TrieDB().ReferenceRoot(root)
 		if !common.EmptyHash(parent) {
@@ -194,8 +197,8 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 	}
 
 	return statedb, func() {
+		releasePreloadRef()
 		database.TrieDB().Dereference(block.Root())
-		cn.stakingModule.FreePreloadRef(preloadRef)
 	}, nil
 }
 

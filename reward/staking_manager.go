@@ -308,19 +308,19 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1
 		if current = bc.GetBlockByNumber(next); current == nil {
-			return 0, fmt.Errorf("block #%d not found", next)
+			return preloadRef, fmt.Errorf("block #%d not found", next)
 		}
 		_, _, _, _, _, err := bc.Processor().Process(current, statedb, vm.Config{})
 		if err != nil {
-			return 0, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
+			return preloadRef, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
 		// Finalize the state so any modifications are written to the trie
 		root, err := statedb.Commit(true)
 		if err != nil {
-			return 0, err
+			return preloadRef, err
 		}
 		if err := statedb.Reset(root); err != nil {
-			return 0, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
+			return preloadRef, fmt.Errorf("state reset after block %d failed: %v", current.NumberU64(), err)
 		}
 		database.TrieDB().ReferenceRoot(root)
 		if !common.EmptyHash(parent) {
@@ -330,7 +330,7 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 			err = fmt.Errorf("mistmatching state root block expected %x reexecuted %x", current.Root(), root)
 			// Logging here because something went wrong when the state roots disagree even if the execution was successful.
 			logger.Error("incorrectly regenerated historical state", "block", current.NumberU64(), "err", err)
-			return 0, fmt.Errorf("incorrectly regenerated historical state for block %d: %v", current.NumberU64(), err)
+			return preloadRef, fmt.Errorf("incorrectly regenerated historical state for block %d: %v", current.NumberU64(), err)
 		}
 		parent = root
 	}
