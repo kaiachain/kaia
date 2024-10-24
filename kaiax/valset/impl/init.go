@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"

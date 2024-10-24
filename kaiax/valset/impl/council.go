@@ -28,7 +28,7 @@ func (sc subsetCouncilSlice) Swap(i, j int) {
 }
 
 func (sc subsetCouncilSlice) AddressStringList() []string {
-	var stringAddrs []string
+	stringAddrs := make([]string, len(sc))
 	for _, val := range sc {
 		stringAddrs = append(stringAddrs, val.String())
 	}
@@ -226,7 +226,7 @@ func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, pro
 //	return shuffled[:min(committee_size, len(validators))]
 func (c *council) selectRandaoCommittee(prevBnRes *blockResult) ([]common.Address, error) {
 	if prevBnRes.header.MixHash == nil {
-		return nil, fmt.Errorf("nil mixHash")
+		return nil, errNilMixHash
 	}
 
 	copied := make(subsetCouncilSlice, len(c.qualifiedValidators))

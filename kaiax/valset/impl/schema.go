@@ -62,7 +62,7 @@ func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Add
 		voteBlock  = uint64(0)
 	)
 	if voteBlocks == nil {
-		return nil, fmt.Errorf("failed to read vote blocks from db")
+		return nil, errEmptyVoteBlock
 	}
 	for i := len(voteBlocks) - 1; i >= 0; i-- {
 		if voteBlocks[i] <= bn {
