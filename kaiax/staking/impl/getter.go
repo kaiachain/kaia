@@ -70,6 +70,14 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	return si, nil
 }
 
+// GetStakingInfoFromDB returns the staking info from the database.
+// Even if the staking info is already cached, it reads from the database to make sure it's only returning
+// what is stored in the database. This function is to sync the database state over p2p, not to provide
+// the staking info at arbitrary block number.
+func (s *StakingModule) GetStakingInfoFromDB(sourceNum uint64) (*staking.StakingInfo, error) {
+	return ReadStakingInfo(s.ChainKv, sourceNum), nil
+}
+
 // Read the staking status from the blockchain state.
 func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, error) {
 	header := s.Chain.GetHeaderByNumber(num)

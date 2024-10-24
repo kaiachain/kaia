@@ -26,7 +26,14 @@ type StakingModule interface {
 	kaiax.JsonRpcModule
 	kaiax.RewindableModule
 
+	// GetStakingInfo returns the staking info to be used for the given block number.
+	// This is the most commonly used getter.
 	GetStakingInfo(num uint64) (*StakingInfo, error)
+
+	// GetStakingInfoFromDB returns the staking info from the database.
+	// The given number indicates the number that the staking info is measured from, not when the staking info is used.
+	// This is useful when syncing the staking info database over p2p.
+	GetStakingInfoFromDB(sourceNum uint64) (*StakingInfo, error)
 }
 
 type StakingModuleHost interface {

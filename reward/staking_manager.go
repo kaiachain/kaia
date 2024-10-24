@@ -206,7 +206,7 @@ func GetStakingInfoForKaiaBlock(blockNum uint64) *StakingInfo {
 // - If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
 func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
 	if stakingManager == nil {
-		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
+		logger.ErrorWithStack("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
 		return nil
 	}
 
