@@ -48,11 +48,8 @@ type chain interface {
 }
 
 type headerGov interface {
-	// TODO-kaiax-valset: do not read valset voting vlks from headergov. read valset voting blks from valset db.
-	//   voting blks is updated when adding validator.
-	GetLatestValidatorVote(num uint64) (uint64, headergov.VoteData)
-	GetMyVotes() []headergov.VoteData
 	EffectiveParamSet(blockNum uint64) gov.ParamSet
+	GetMyVotes() []headergov.VoteData
 	PopMyVotes(idx int)
 }
 
