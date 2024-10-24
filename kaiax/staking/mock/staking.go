@@ -53,15 +53,17 @@ func (mr *MockStakingModuleMockRecorder) APIs() *gomock.Call {
 }
 
 // AddSideState mocks base method.
-func (m *MockStakingModule) AddSideState(arg0 uint64, arg1 *state.StateDB) {
+func (m *MockStakingModule) AddSideState(arg0 uint64, arg1 *types.Header, arg2 *state.StateDB) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddSideState", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddSideState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AddSideState indicates an expected call of AddSideState.
-func (mr *MockStakingModuleMockRecorder) AddSideState(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockStakingModuleMockRecorder) AddSideState(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSideState", reflect.TypeOf((*MockStakingModule)(nil).AddSideState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSideState", reflect.TypeOf((*MockStakingModule)(nil).AddSideState), arg0, arg1, arg2)
 }
 
 // AllocSideStateRef mocks base method.

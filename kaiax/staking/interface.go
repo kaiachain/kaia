@@ -18,6 +18,7 @@ package staking
 
 import (
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -39,7 +40,7 @@ type StakingModule interface {
 	// SideState management
 	AllocSideStateRef() uint64
 	FreeSideStateRef(refId uint64)
-	AddSideState(refId uint64, statedb *state.StateDB)
+	AddSideState(refId uint64, header *types.Header, statedb *state.StateDB) error
 }
 
 type StakingModuleHost interface {

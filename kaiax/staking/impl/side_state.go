@@ -17,15 +17,18 @@
 package impl
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
 type refCountedState struct {
-	state *state.StateDB
-	refs  map[uint64]struct{}
+	info *staking.StakingInfo
+	refs map[uint64]struct{}
 }
 
 // sideStates remembers temporary StateDBs for StakingModule to refer to.
@@ -64,29 +67,14 @@ func (ss *sideStates) FreeRefId(refId uint64) {
 	}
 }
 
-func (ss *sideStates) AddState(refId uint64, statedb *state.StateDB) {
-	root := statedb.IntermediateRoot(false)
-
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
-
-	if ss.states[root] == nil {
-		ss.states[root] = &refCountedState{
-			state: statedb.Copy(),
-			refs:  make(map[uint64]struct{}),
-		}
-	}
-	ss.states[root].refs[refId] = struct{}{}
-}
-
-func (ss *sideStates) GetState(root common.Hash) *state.StateDB {
+func (ss *sideStates) GetInfo(root common.Hash) *staking.StakingInfo {
 	ss.mu.RLock()
 	defer ss.mu.RUnlock()
 
 	if ss.states[root] == nil {
 		return nil
 	}
-	return ss.states[root].state
+	return ss.states[root].info
 }
 
 func (s *StakingModule) AllocSideStateRef() uint64 {
@@ -97,6 +85,39 @@ func (s *StakingModule) FreeSideStateRef(refId uint64) {
 	s.sideStates.FreeRefId(refId)
 }
 
-func (s *StakingModule) AddSideState(refId uint64, statedb *state.StateDB) {
-	s.sideStates.AddState(refId, statedb)
+func (s *StakingModule) AddSideState(refId uint64, header *types.Header, statedb *state.StateDB) error {
+	ss := s.sideStates
+	root := statedb.IntermediateRoot(false)
+	// Sanity check
+	if header.Root != root {
+		return fmt.Errorf("header root mismatch: %s != %s", header.Root, root)
+	}
+
+	// Quickly check if the info is already stored.
+	ss.mu.RLock()
+	_, ok := ss.states[root]
+	ss.mu.RUnlock()
+	if ok {
+		return nil
+	}
+
+	// Calculate staking info from the state.
+	// Do not lock here because it may take time.
+	info, err := s.getFromState(header, statedb)
+	if err != nil {
+		return err
+	}
+
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+
+	// Check again, if info is still not stored, store it.
+	if ss.states[root] == nil {
+		ss.states[root] = &refCountedState{
+			info: info,
+			refs: make(map[uint64]struct{}),
+		}
+	}
+	ss.states[root].refs[refId] = struct{}{}
+	return nil
 }

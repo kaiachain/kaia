@@ -301,7 +301,7 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 
 	// Include target since we want staking info at `target`, not for `target`.
 	for current.NumberU64() <= target {
-		stakingModule.AddSideState(sideStateRef, statedb)
+		stakingModule.AddSideState(sideStateRef, current.Header(), statedb)
 		if current.NumberU64() == target {
 			break
 		}
