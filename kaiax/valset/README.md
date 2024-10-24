@@ -54,16 +54,14 @@ The selection of proposer policy is limited by consensus algorithm.
 ## Persistent Schema
 The voting blks and the council addressList is stored at miscDB
 ### Voting Blks
-- ReadVoteBlks - it reads whole addvalidator/removevalidator voting blks 
-- StoreVoteBlks - it stores/updates whole addvalidator/removevalidator voting blks
+- valSetVoteBlockNums: The block numbers whose header contains addvalidator/removevalidator vote data.
 
 ### ValSetSnapshot
 - ReadValSetSnapshot - it reads the closest ValSetSnapshot of block N. 
 - StoreValSetSnapshot - deprecated. kaiax no longer stores ValSetSnapshot.
 
 ### Valset
-- ReadCouncilAddressListFromDb(n) - n is the addvalidator/removevalidator voting blks
-- WriteCouncilAddressListToDb(n, council) - n is the addvalidator/removevalidator voting blks
+- councilAddressPrefix(n) - The council at block number `n`, where `n` is a addvalidator/removevalidator voting block.
 
 ## In-memory Structures
 ###  Council
