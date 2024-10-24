@@ -442,10 +442,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	// migrate vote DB for the current epoch. Gov module requires votes for current epoch.
+	// Scan votes for the current epoch. Gov module requires votes for current epoch.
+	// equivalent to `scanAllVotesInEpoch` in headerGovModule.
 	currentEpochStart := currBlock.NumberU64() / pset.Epoch() * pset.Epoch()
-	lastInsertedBlockPtr := headergov_impl.ReadLastInsertedBlock(cn.chainDB.GetMiscDB())
-	if lastInsertedBlockPtr == nil {
+	lowestVoteScannedBlockNumPtr := headergov_impl.ReadLowestVoteScannedBlockNum(cn.chainDB.GetMiscDB())
+	if lowestVoteScannedBlockNumPtr == nil {
 		votes := make(map[uint64]headergov.VoteData)
 		for blockNum := currentEpochStart; blockNum <= cn.blockchain.CurrentBlock().NumberU64(); blockNum++ {
 			header := cn.blockchain.GetHeaderByNumber(blockNum)
@@ -467,8 +468,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		for blockNum := range votes {
 			headergov_impl.InsertVoteDataBlockNum(cn.chainDB.GetMiscDB(), blockNum)
 		}
-		headergov_impl.WriteLastInsertedBlock(cn.chainDB.GetMiscDB(), currentEpochStart)
-		logger.Info("Initialized last inserted block", "num", currentEpochStart)
+		headergov_impl.WriteLowestVoteScannedBlockNum(cn.chainDB.GetMiscDB(), currentEpochStart)
+		logger.Info("Initialized lowest vote scanned block", "num", currentEpochStart)
 	}
 
 	// Setup kaiax Modules

@@ -113,12 +113,12 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
 
-	lastInsertedBlockPtr := ReadLastInsertedBlock(h.ChainKv)
-	if lastInsertedBlockPtr == nil {
-		return ErrLastInsertedBlockNotFound
+	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
+	if lowestVoteScannedBlockNumPtr == nil {
+		return ErrLowestVoteScannedBlockNotFound
 	}
 
-	epochIdxIter := calcEpochIdx(*lastInsertedBlockPtr, h.epoch)
+	epochIdxIter := calcEpochIdx(*lowestVoteScannedBlockNumPtr, h.epoch)
 	if epochIdxIter == 0 {
 		return nil
 	}
@@ -132,7 +132,7 @@ func (h *headerGovModule) Start() error {
 				InsertVoteDataBlockNum(h.ChainKv, blockNum)
 			}
 
-			WriteLastInsertedBlock(h.ChainKv, calcEpochStartBlock(epochIdxIter, h.epoch))
+			WriteLowestVoteScannedBlockNum(h.ChainKv, calcEpochStartBlock(epochIdxIter, h.epoch))
 			logger.Info("Scanned votes in header", "num", calcEpochStartBlock(epochIdxIter, h.epoch))
 
 			epochIdxIter -= 1

@@ -49,7 +49,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		ChainConfig: config,
 	})
 	require.NoError(t, err)
-	WriteLastInsertedBlock(db, 0)
+	WriteLowestVoteScannedBlockNum(db, 0)
 	h.Start()
 
 	return h

@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	voteDataBlockNumsKey = []byte("governanceVoteDataBlockNums")
-	govDataBlockNumsKey  = []byte("governanceDataBlockNums")
-	lastInsertedBlockKey = []byte("governanceLastInsertedBlock") // grows downwards
-	mu                   = &sync.RWMutex{}
+	voteDataBlockNumsKey         = []byte("governanceVoteDataBlockNums")
+	govDataBlockNumsKey          = []byte("governanceDataBlockNums")
+	lowestVoteScannedBlockNumKey = []byte("governanceLowestVoteScannedBlockNum") // grows downwards
+	mu                           = &sync.RWMutex{}
 )
 
 type StoredUint64Array []uint64
@@ -101,17 +101,17 @@ func WriteGovDataBlockNums(db database.Database, govDataBlockNums *StoredUint64A
 	writeStoredUint64Array(db, govDataBlockNumsKey, govDataBlockNums)
 }
 
-func ReadLastInsertedBlock(db database.Database) *uint64 {
+func ReadLowestVoteScannedBlockNum(db database.Database) *uint64 {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	b, err := db.Get(lastInsertedBlockKey)
+	b, err := db.Get(lowestVoteScannedBlockNumKey)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
 	if len(b) != 8 {
-		logger.Error("Invalid lastInsertedBlock data length", "length", len(b))
+		logger.Error("Invalid lowestVoteScannedBlockNum data length", "length", len(b))
 		return nil
 	}
 
@@ -119,11 +119,11 @@ func ReadLastInsertedBlock(db database.Database) *uint64 {
 	return &ret
 }
 
-func WriteLastInsertedBlock(db database.Database, lastInsertedBlock uint64) {
+func WriteLowestVoteScannedBlockNum(db database.Database, lowestVoteScannedBlockNum uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, lastInsertedBlock)
-	db.Put(lastInsertedBlockKey, b)
+	binary.BigEndian.PutUint64(b, lowestVoteScannedBlockNum)
+	db.Put(lowestVoteScannedBlockNumKey, b)
 }
