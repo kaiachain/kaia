@@ -3,6 +3,14 @@
 This module is responsible for getting council and calculating committee or proposer.
 
 ## Concepts
+| Components          | [Block 0]                          | [Block N]<br/>"AddValidator" <br/>"RemoveValidator"                                          | [Block N+1]                             |
+|---------------------|------------------------------------|----------------------------------------------------------------------------------------------|-----------------------------------------|
+| Council(N)          | GenesisCouncil                     | GenesisCouncil <br/>+ validator(i), i is not in Council <br/>- validator(j), j is in Council | ---                                     |
+| ㄴ qualified(N)      | GenesisCouncil                     | Council(N-1).filter()                                                                        | Council(N).filter()                     |
+| ㄴ demoted(N)        | None                               | Council(N-1)<br/>- Council(N-1).qualified()                                                  | Council(N)<br/>- Council(N).qualified() | 
+| Committee(N,Round)  | GenesisCouncil                     | qualified(N).sublist(Round)                                                                  | qualified(N).sublist(R)                 |
+| ㄴ proposer(N,Round) | GenesisCouncil's<br/>first element | Committee(N,R).proposer(Round)                                                               | Committee(N,R).proposer(Round)          | 
+
 ### council: a list of registered CN
 A member of council is added/removed by "governance.addvalidator" vote. The genesis council is restored via genesis extraData.
 The council(N) is decided after the block(N).vote and govParam(N) is applied, and it will be used to calculate next committee or proposer.
@@ -49,40 +57,36 @@ The voting blks and the council addressList is stored at miscDB
 - ReadVoteBlks - it reads whole addvalidator/removevalidator voting blks 
 - StoreVoteBlks - it stores/updates whole addvalidator/removevalidator voting blks
 
+### ValSetSnapshot
+- ReadValSetSnapshot - it reads the closest ValSetSnapshot of block N. 
+- StoreValSetSnapshot - deprecated. kaiax no longer stores ValSetSnapshot.
+
 ### Valset
 - ReadCouncilAddressListFromDb(n) - n is the addvalidator/removevalidator voting blks
 - WriteCouncilAddressListToDb(n, council) - n is the addvalidator/removevalidator voting blks
 
 ## In-memory Structures
-###  ValidatorSet
-- Council: it stores validator list and additional block results to calculate the committee/proposer
+###  Council
+- Council: it categorizes the previous council list for block N. it's not for display purpose, but it's for calculating committee or proposer of block N.
 ```go
-type Council struct {
-  blockNumber    uint64
-  round          uint64
-  rules          params.Rules
-  proposerPolicy params.ProposerPolicy // prevBlockResult.pSet.proposerPolicy
-
-  // To calculate committee(num), we need council,prevHash,stakingInfo of lastProposal/prevBlock
-  // which blocknumber is num - 1.
-  prevBlockResult *blockResult
-  qualified       subsetCouncilSlice // qualified is a subset of prev block's council
-  demoted         subsetCouncilSlice // demoted is a subset of prev block's council which doesn't fulfill the minimum staking amount
-
-  // latest proposer update block's information for calculating the current block's proposers, however it is deprecated since kaia KF
-  // if Council.UseProposers is false, do not use and do not calculate the proposers. see the condition at Council.UseProposers method
-  // if it uses cached proposers, do not calculate the proposers
-  proposers []common.Address
+type council struct {
+  blockNumber uint64  // id of Council
+  
+  qualifiedValidators subsetCouncilSlice // qualified is a subset of prev block's council list
+  demotedValidators   subsetCouncilSlice // demoted is a subset of prev block's council who are demoted as a member of committee
+  
+  councilAddressList subsetCouncilSlice // total council node address list. the order is reserved.
 }
 ```
 - Validators: sorting purpose
 ```go
 type subsetCouncilSlice []common.Address
 ```
-- block result: it is used to calculate the committee/proposer of next block
+
+### ValsetContext
+- blockResult: it's a result(state) of previous block N. the committee/proposer of next block
 ```go
 type blockResult struct {
-  councilAddrList []common.Address
   staking         *staking.StakingInfo
   header          *types.Header
   author          common.Address
