@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	staking "github.com/kaiachain/kaia/kaiax/staking"
@@ -51,6 +52,32 @@ func (mr *MockStakingModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockStakingModule)(nil).APIs))
 }
 
+// AllocPreloadRef mocks base method.
+func (m *MockStakingModule) AllocPreloadRef() uint64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllocPreloadRef")
+	ret0, _ := ret[0].(uint64)
+	return ret0
+}
+
+// AllocPreloadRef indicates an expected call of AllocPreloadRef.
+func (mr *MockStakingModuleMockRecorder) AllocPreloadRef() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllocPreloadRef", reflect.TypeOf((*MockStakingModule)(nil).AllocPreloadRef))
+}
+
+// FreePreloadRef mocks base method.
+func (m *MockStakingModule) FreePreloadRef(arg0 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "FreePreloadRef", arg0)
+}
+
+// FreePreloadRef indicates an expected call of FreePreloadRef.
+func (mr *MockStakingModuleMockRecorder) FreePreloadRef(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FreePreloadRef", reflect.TypeOf((*MockStakingModule)(nil).FreePreloadRef), arg0)
+}
+
 // GetStakingInfo mocks base method.
 func (m *MockStakingModule) GetStakingInfo(arg0 uint64) (*staking.StakingInfo, error) {
 	m.ctrl.T.Helper()
@@ -79,6 +106,20 @@ func (m *MockStakingModule) GetStakingInfoFromDB(arg0 uint64) (*staking.StakingI
 func (mr *MockStakingModuleMockRecorder) GetStakingInfoFromDB(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfoFromDB", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfoFromDB), arg0)
+}
+
+// PreloadFromState mocks base method.
+func (m *MockStakingModule) PreloadFromState(arg0 uint64, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreloadFromState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreloadFromState indicates an expected call of PreloadFromState.
+func (mr *MockStakingModuleMockRecorder) PreloadFromState(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreloadFromState", reflect.TypeOf((*MockStakingModule)(nil).PreloadFromState), arg0, arg1, arg2)
 }
 
 // RewindDelete mocks base method.

@@ -384,25 +384,31 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		currBlock = cn.blockchain.CurrentBlock()
 		headers   []*types.Header
 	)
+	// Temporarily supply blockchain for `Finalize`, staking module for `snapshot`.
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
+	mStaking := staking_impl.NewStakingModule()
+	mStaking.Init(&staking_impl.InitOpts{
+		ChainKv:     cn.chainDB.GetMiscDB(),
+		ChainConfig: cn.chainConfig,
+		Chain:       cn.blockchain,
+	})
+	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
 	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		// Temporarily supply blockchain for `Finalize`.
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
-		preloadNums, err := reward.PreloadStakingInfo(headers)
+		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
 		defer func() {
-			for _, num := range preloadNums {
-				reward.UnloadStakingInfo(num)
-			}
+			mStaking.FreePreloadRef(preloadRef)
 		}()
 	}
 	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
+	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(nil)
 	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
