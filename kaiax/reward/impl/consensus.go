@@ -29,6 +29,14 @@ func (r *RewardModule) PrepareHeader(header *types.Header) error {
 	return nil
 }
 
+// Distribute the deferred rewards at the end of block processing
 func (r *RewardModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+	spec, err := r.GetDeferredReward(header, txs, receipts)
+	if err != nil {
+		return err
+	}
+	for addr, amount := range spec.Rewards {
+		state.AddBalance(addr, amount)
+	}
 	return nil
 }
