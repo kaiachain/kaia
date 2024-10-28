@@ -547,7 +547,7 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	s.RegisterBaseModules(mStaking)
-	s.RegisterJsonRpcModules(mStaking)
+	s.RegisterJsonRpcModules(mStaking, mReward)
 	s.blockchain.RegisterRewindableModule(mStaking)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
