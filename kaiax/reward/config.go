@@ -43,7 +43,12 @@ type RewardConfig struct {
 	Kip82Ratio    *RewardKip82Ratio // reward.kip82ratio
 }
 
-func NewRewardConfig(chainConfig *params.ChainConfig, govModule gov.GovModule, header *types.Header) (*RewardConfig, error) {
+// TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
+type GovModule interface {
+	EffectiveParamSet(blockNum uint64) gov.ParamSet
+}
+
+func NewRewardConfig(chainConfig *params.ChainConfig, govModule GovModule, header *types.Header) (*RewardConfig, error) {
 	rc := &RewardConfig{}
 
 	rc.Rules = chainConfig.Rules(header.Number)

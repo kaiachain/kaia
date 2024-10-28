@@ -17,16 +17,23 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
 
-var _ reward.RewardModule = &RewardModule{}
+var (
+	_ reward.RewardModule = &RewardModule{}
+
+	logger = log.NewModuleLogger(log.KaiaxReward)
+)
 
 type blockChain interface {
 	CurrentBlock() *types.Block
@@ -39,7 +46,7 @@ type blockChain interface {
 type InitOpts struct {
 	ChainConfig   *params.ChainConfig
 	Chain         blockChain
-	GovModule     gov.GovModule
+	GovModule     reward.GovModule // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 	StakingModule staking.StakingModule
 }
 
@@ -64,4 +71,36 @@ func (r *RewardModule) Start() error {
 }
 
 func (r *RewardModule) Stop() {
+}
+
+// TODO-kaiax: remove FromLegacy after introducing kaiax/gov
+type LegacyGovEngine interface {
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
+}
+
+type LegacyGovModule struct {
+	engine LegacyGovEngine
+}
+
+// Wraps LegacyGovEngine to implement govModule
+func FromLegacy(engine LegacyGovEngine) reward.GovModule {
+	return &LegacyGovModule{engine: engine}
+}
+
+func (l *LegacyGovModule) EffectiveParamSet(num uint64) gov.ParamSet {
+	pset, err := l.engine.EffectiveParams(num)
+	if err != nil {
+		logger.Crit("Failed to get effective params", "num", num, "err", err)
+		return gov.ParamSet{}
+	}
+	// Only implement the ones needed in RewardConfig.
+	return gov.ParamSet{
+		ProposerPolicy: pset.Policy(),
+		UnitPrice:      pset.UnitPrice(),
+		MintingAmount:  new(big.Int).Set(pset.MintingAmountBig()),
+		MinimumStake:   new(big.Int).Set(pset.MinimumStakeBig()),
+		DeferredTxFee:  pset.DeferredTxFee(),
+		Ratio:          pset.Ratio(),
+		Kip82Ratio:     pset.Kip82Ratio(),
+	}
 }
