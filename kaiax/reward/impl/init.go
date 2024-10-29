@@ -19,6 +19,7 @@ package impl
 import (
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -41,6 +42,7 @@ type blockChain interface {
 	GetBlockByNumber(number uint64) *types.Block
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
 	Engine() consensus.Engine
+	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
 type InitOpts struct {
