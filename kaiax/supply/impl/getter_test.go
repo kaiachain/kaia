@@ -17,34 +17,29 @@
 package supply
 
 import (
-	"errors"
-	"math/big"
+	"testing"
 
-	"github.com/kaiachain/kaia/kaiax/supply"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
-	return nil, nil
+func TestSupply(t *testing.T) {
+	suite.Run(t, new(SupplyTestSuite))
 }
 
-func (s *SupplyModule) totalSupplyFromState(num uint64) (*big.Int, error) {
-	header := s.Chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, supply.ErrNoBlock
-	}
-	stateDB, err := s.Chain.StateAt(header.Root)
-	if err != nil {
-		return nil, err
-	}
-	dump := stateDB.RawDump()
+func (s *SupplyTestSuite) TestFromState() {
+	t := s.T()
+	s.insertBlocks()
 
-	totalSupply := new(big.Int)
-	for _, account := range dump.Accounts {
-		balance, ok := new(big.Int).SetString(account.Balance, 10)
-		if !ok {
-			return nil, errors.New("malformed state dump")
+	testcases := s.testcases()
+	for _, tc := range testcases {
+		fromState, err := s.s.totalSupplyFromState(tc.number)
+		require.NoError(t, err)
+		bigEqual(t, tc.expectFromState, fromState, tc.number)
+
+		if s.T().Failed() {
+			s.dumpState(tc.number)
+			break
 		}
-		totalSupply.Add(totalSupply, balance)
 	}
-	return totalSupply, nil
 }

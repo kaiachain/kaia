@@ -20,4 +20,5 @@ import "errors"
 
 var (
 	ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
+	ErrNoBlock           = errors.New("block not found")
 )
