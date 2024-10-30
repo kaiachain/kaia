@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -30,9 +31,11 @@ func TestSupply(t *testing.T) {
 	suite.Run(t, new(SupplyTestSuite))
 }
 
-// Test individual private getters.
+// Test individual getters.
+
 func (s *SupplyTestSuite) TestFromState() {
 	t := s.T()
+	require.Nil(t, s.s.Start())
 	s.insertBlocks()
 
 	testcases := s.testcases()
@@ -48,14 +51,29 @@ func (s *SupplyTestSuite) TestFromState() {
 	}
 }
 
-// Test reading canonical burn amounts from the state.
+func (s *SupplyTestSuite) TestCheckpoint() {
+	t := s.T()
+	require.Nil(t, s.s.Start())
+	s.insertBlocks()
+
+	for _, tc := range s.testcases() {
+		checkpoint, err := s.s.getCheckpoint(tc.number)
+		require.NoError(t, err)
+
+		expected := tc.expectTotalSupply
+		bigEqual(t, expected.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, expected.BurntFee, checkpoint.BurntFee, tc.number)
+	}
+}
+
 func (s *SupplyTestSuite) TestCanonicalBurn() {
 	t := s.T()
+	require.Nil(t, s.s.Start())
 	s.insertBlocks()
 
 	// Delete state at 199
-	root := s.db.ReadBlockByNumber(199).Root()
-	s.db.DeleteTrieNode(root.ExtendZero())
+	root := s.dbm.ReadBlockByNumber(199).Root()
+	s.dbm.DeleteTrieNode(root.ExtendZero())
 
 	// State unavailable at 199
 	zero, dead, err := s.s.getCanonicalBurn(199)
@@ -70,9 +88,9 @@ func (s *SupplyTestSuite) TestCanonicalBurn() {
 	assert.Equal(t, "2000000000000000000000000000", dead.String())
 }
 
-// Test reading rebalance memo from the contract.
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
+	require.Nil(t, s.s.Start())
 	s.insertBlocks()
 
 	// rebalance not configured
@@ -98,4 +116,87 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 	amount, err = s.s.getRebalanceBurn(200, big.NewInt(200), addrFund1)
 	require.Error(t, err)
 	require.Nil(t, amount)
+}
+
+func (s *SupplyTestSuite) TestGetTotalSupply() {
+	t := s.T()
+	require.Nil(t, s.s.Start())
+	s.insertBlocks()
+
+	for _, tc := range s.testcases() {
+		ts, err := s.s.GetTotalSupply(tc.number)
+		require.NoError(t, err)
+		assert.Equal(t, tc.expectTotalSupply, ts)
+	}
+}
+
+func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
+	t := s.T()
+	require.Nil(t, s.s.Start())
+	s.insertBlocks()
+
+	// We will test on block 200.
+	var num uint64 = 200
+	var expected *supply.TotalSupply
+	for _, tc := range s.testcases() {
+		if tc.number == num {
+			expected = tc.expectTotalSupply
+			break
+		}
+	}
+
+	// Missing state trie; returns partial data.
+	root := s.dbm.ReadBlockByNumber(num).Root()
+	s.dbm.DeleteTrieNode(root.ExtendZero())
+
+	ts, err := s.s.GetTotalSupply(num)
+	assert.ErrorContains(t, err, "missing trie node")
+	partial := &supply.TotalSupply{
+		TotalSupply: nil,
+		TotalMinted: expected.TotalMinted,
+		TotalBurnt:  nil,
+		BurntFee:    expected.BurntFee,
+		ZeroBurn:    nil,
+		DeadBurn:    nil,
+		Kip103Burn:  expected.Kip103Burn,
+		Kip160Burn:  expected.Kip160Burn,
+	}
+	assert.Equal(t, partial, ts)
+
+	// Misconfigured KIP-103; returns partial data.
+	s.chain.Config().Kip103ContractAddress = addrFund1
+
+	ts, err = s.s.GetTotalSupply(num)
+	assert.ErrorContains(t, err, "missing trie node") // Errors are concatenated
+	assert.ErrorContains(t, err, "no contract code")
+	partial = &supply.TotalSupply{
+		TotalSupply: nil,
+		TotalMinted: expected.TotalMinted,
+		TotalBurnt:  nil,
+		BurntFee:    expected.BurntFee,
+		ZeroBurn:    nil,
+		DeadBurn:    nil,
+		Kip103Burn:  nil,
+		Kip160Burn:  expected.Kip160Burn,
+	}
+	assert.Equal(t, partial, ts)
+
+	// No SupplyCheckpoint; returns nil.
+	WriteLastSupplyCheckpointNumber(s.s.ChainKv, num-(num%128))
+	DeleteSupplyCheckpoint(s.s.ChainKv, num-(num%128))
+	s.s.checkpointCache.Purge()
+
+	ts, err = s.s.GetTotalSupply(num)
+	assert.ErrorIs(t, err, supply.ErrNoCheckpoint)
+	assert.Nil(t, ts)
+}
+
+// Test if last checkpoint is advanced correctly, so that GetTotalSupply() works.
+
+// Test the Start() then Insert() case, where the background thread does nothing
+// and only PostInsertBlock() updates the SupplyCheckpoint.
+func (s *SupplyTestSuite) TestNoCatchup() {
+	t := s.T()
+	require.Nil(t, s.s.Start())
+	s.insertBlocks()
 }

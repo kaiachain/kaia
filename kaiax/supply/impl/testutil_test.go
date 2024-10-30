@@ -43,6 +43,7 @@ import (
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -66,15 +67,11 @@ import (
 type SupplyTestSuite struct {
 	suite.Suite
 
-	// components and modules
-	mockCtrl      *gomock.Controller
-	db            database.DBManager
-	chain         *blockchain.BlockChain
-	stakingModule staking.StakingModule
-	s             *SupplyModule
-
-	// resulting canonical chain
-	blocks []*types.Block
+	mockCtrl *gomock.Controller
+	dbm      database.DBManager
+	chain    *blockchain.BlockChain
+	s        *SupplyModule
+	blocks   []*types.Block
 }
 
 // ----------------------------------------------------------------------------
@@ -181,14 +178,14 @@ func (s *SupplyTestSuite) SetupTest() {
 		Chain:        chain,
 		RewardModule: mReward,
 	})
+	chain.RegisterExecutionModule(mSupply)
 
 	// With every modules ready, generate the blocks
 	blocks := setupBlocks(config, genesisBlock, engine, dbm)
 
 	s.mockCtrl = mockCtrl
-	s.db = dbm
+	s.dbm = dbm
 	s.chain = chain
-	s.stakingModule = mStaking
 	s.s = mSupply
 	s.blocks = blocks
 }
@@ -200,7 +197,7 @@ func (s *SupplyTestSuite) TearDownTest() {
 func (s *SupplyTestSuite) insertBlocks() {
 	t := s.T()
 
-	// Insert blocks to chain, triggers ChainHeadEvent and ExecutionModule.PostInsertBlock.
+	// Insert blocks to chain, triggers ExecutionModule.PostInsertBlock.
 	for _, block := range s.blocks {
 		_, err := s.chain.InsertChain([]*types.Block{block})
 		require.NoError(t, err)
@@ -243,8 +240,8 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 			addrGenesis4: {Balance: big.NewInt(params.KAIA)},
 			addr:         {Balance: common.Big0, Code: code},
 		}
-		db          = database.NewMemoryDBManager()
-		backend     = backends.NewSimulatedBackendWithDatabase(db, alloc, &params.ChainConfig{})
+		dbm         = database.NewMemoryDBManager()
+		backend     = backends.NewSimulatedBackendWithDatabase(dbm, alloc, &params.ChainConfig{})
 		contract, _ = system_contracts.NewTreasuryRebalanceMockV2Transactor(addr, backend)
 	)
 	_, err := contract.TestSetAll(
@@ -430,9 +427,9 @@ func bigMult(a, b *big.Int) *big.Int {
 }
 
 type supplyTC struct {
-	number uint64
-
-	expectFromState *big.Int
+	number            uint64
+	expectTotalSupply *supply.TotalSupply
+	expectFromState   *big.Int
 }
 
 func (s *SupplyTestSuite) testcases() []supplyTC {
@@ -454,8 +451,8 @@ func (s *SupplyTestSuite) testcases() []supplyTC {
 		kip160Burn, _ = new(big.Int).SetString("-79200000000000000000", 10)
 
 		// Allocated at genesis
-		// zeroBurn = bigMult(amount1B, big.NewInt(1))
-		// deadBurn = bigMult(amount1B, big.NewInt(2))
+		zeroBurn = bigMult(amount1B, big.NewInt(1))
+		deadBurn = bigMult(amount1B, big.NewInt(2))
 	)
 	// supply checkpoints: segment sums
 	minted := make(map[uint64]*big.Int)
@@ -495,12 +492,22 @@ func (s *SupplyTestSuite) testcases() []supplyTC {
 
 		var (
 			// fromState = AccMinted - (AccBurntFee + Kip103Burn + Kip160Burn)
-			fromState = bigSub(minted[num], bigAdd(burntFee[num], kip103BurnAtNum, kip160BurnAtNum))
-			// totalBurnt = bigAdd(burntFee[num], zeroBurn, deadBurn, kip103BurnAtNum, kip160BurnAtNum)
-			// totalSupply = bigSub(minted[num], totalBurnt)
+			fromState   = bigSub(minted[num], bigAdd(burntFee[num], kip103BurnAtNum, kip160BurnAtNum))
+			totalBurnt  = bigAdd(burntFee[num], zeroBurn, deadBurn, kip103BurnAtNum, kip160BurnAtNum)
+			totalSupply = bigSub(minted[num], totalBurnt)
 		)
 		testcases = append(testcases, supplyTC{
-			number:          num,
+			number: num,
+			expectTotalSupply: &supply.TotalSupply{
+				TotalSupply: totalSupply,
+				TotalMinted: minted[num],
+				TotalBurnt:  totalBurnt,
+				BurntFee:    burntFee[num],
+				ZeroBurn:    zeroBurn,
+				DeadBurn:    deadBurn,
+				Kip103Burn:  kip103BurnAtNum,
+				Kip160Burn:  kip160BurnAtNum,
+			},
 			expectFromState: fromState,
 		})
 	}

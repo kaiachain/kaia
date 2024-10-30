@@ -23,14 +23,14 @@ import (
 )
 
 type TotalSupply struct {
-	TotalSupply *big.Int
-	TotalMinted *big.Int
-	TotalBurnt  *big.Int
-	BurntFee    *big.Int
-	ZeroBurn    *big.Int
-	DeadBurn    *big.Int
-	Kip103Burn  *big.Int
-	Kip160Burn  *big.Int
+	TotalSupply *big.Int // TotalMinted - TotalBurnt
+	TotalMinted *big.Int // Genesis + Minted[1..n]
+	TotalBurnt  *big.Int // BurntFee[1..n] + CanonicalBurn[n] + RebalanceBurn[n]
+	BurntFee    *big.Int // BurntFee[1..n]
+	ZeroBurn    *big.Int // CanonicalBurn[n] at 0x0
+	DeadBurn    *big.Int // CanonicalBurn[n] at 0xdead
+	Kip103Burn  *big.Int // RebalanceBurn[n] by KIP-103
+	Kip160Burn  *big.Int // RebalanceBurn[n] by KIP-160
 }
 
 type TotalSupplyResponse struct {

@@ -14,7 +14,7 @@ The total supply of the token can be theoretically calculated by traversing ever
 
 Therefore, total supply at a given block N is calculated by:
 
-- TotalMinted
+- Minted
   - (+) Genesis supply
   - (+) Minted tokens in blocks 1 through N
   - Must be accumulated for every block.
@@ -28,14 +28,13 @@ Therefore, total supply at a given block N is calculated by:
   - (-) Rebalance net burnt amount up to block N
     - KIP-103 burn amount if N >= Kip103ForkNum
     - KIP-160 burn amount if N >= Kip160ForkNum
-    - Read the TreasuryRebalance contract's `memo` variable. Note 
-
+    - Read the TreasuryRebalance contract's `memo` variable.
 
 ## Persistent schema
 
-- `SupplyCheckpoint(num)`: Accumulated TotalMinted and BurntFee up to block `num`.
+- `SupplyCheckpoint(num)`: Accumulated Minted and BurntFee up to block `num`.
   ```
-  "supplyCheckpoint" || Uint64BE(num) => RLP(TotalMinted.Bytes(), BurntFee.Bytes())
+  "supplyCheckpoint" || Uint64BE(num) => RLP([Minted.Bytes(), BurntFee.Bytes()])
   ```
 - `lastSupplyCheckpointNumber`: The largest block number where the SupplyCheckpoint is stored.
   ```
@@ -46,11 +45,35 @@ Therefore, total supply at a given block N is calculated by:
 
 ### SupplyCheckpoint
 
+SupplyCheckpoint represents the accumulated Minted and BurntFee up to a specific block number.
+
+```go
+type SupplyCheckpoint struct {
+	Minted   *big.Int
+	BurntFee *big.Int
+}
+```
 
 ### TotalSupply
 
+TotalSupply represents the native token's total supply and its breakdown at a specific block number.
+
+```go
+type TotalSupply struct {
+	TotalSupply *big.Int // TotalMinted - TotalBurnt
+	TotalMinted *big.Int // Genesis + Minted[1..n]
+	TotalBurnt  *big.Int // BurntFee[1..n] + CanonicalBurn[n] + RebalanceBurn[n]
+	BurntFee    *big.Int // BurntFee[1..n]
+	ZeroBurn    *big.Int // CanonicalBurn[n] at 0x0
+	DeadBurn    *big.Int // CanonicalBurn[n] at 0xdead
+	Kip103Burn  *big.Int // RebalanceBurn[n] by KIP-103
+	Kip160Burn  *big.Int // RebalanceBurn[n] by KIP-160
+}
+```
 
 ### TotalSupplyResponse
+
+TotalSupplyResponse is the response type for the `kaia_getTotalSupply` API. In addition to TotalSupply fields, it includes the block number and error (if showPartial=true and some information is missing).
 
 ## Module lifecycle
 

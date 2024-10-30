@@ -17,6 +17,8 @@
 package supply
 
 import (
+	"sync"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/kaiax/reward"
@@ -30,6 +32,10 @@ var (
 	_ supply.SupplyModule = &SupplyModule{}
 
 	logger = log.NewModuleLogger(log.KaiaxSupply)
+
+	// A day; Some total supply consumers might want daily supply.
+	// It may be evicted by the historic query though.
+	checkpointCacheSize = 86400
 )
 
 type InitOpts struct {
@@ -42,13 +48,27 @@ type InitOpts struct {
 type SupplyModule struct {
 	InitOpts
 
-	memoCache *lru.ARCCache
+	// Accumulated supply checkpoint so far.
+	// This in-memory variables advance every block, but the database is updated every checkpointInterval.
+	mu             sync.Mutex
+	lastNum        uint64            // Last in-memory supply checkpoint number
+	lastCheckpoint *supplyCheckpoint // Last in-memory supply checkpoint
+
+	// Stops long-running tasks.
+	quit   uint32         // stops the synchronous loop in accumulateCheckpoint
+	quitCh chan struct{}  // stops the goroutine in select loop
+	wg     sync.WaitGroup // wait for the goroutine to finish
+
+	checkpointCache *lru.ARCCache // (number uint64) -> (checkpoint *supplyCheckpoint)
+	memoCache       *lru.ARCCache // (contract Address) -> (memo.Burnt *big.Int)
 }
 
 func NewSupplyModule() *SupplyModule {
+	checkpointCache, _ := lru.NewARC(checkpointCacheSize)
 	memoCache, _ := lru.NewARC(10)
 	return &SupplyModule{
-		memoCache: memoCache,
+		checkpointCache: checkpointCache,
+		memoCache:       memoCache,
 	}
 }
 
@@ -61,8 +81,9 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 }
 
 func (s *SupplyModule) Start() error {
+	s.checkpointCache.Purge()
 	s.memoCache.Purge()
-	return nil
+	return s.loadLastCheckpoint()
 }
 
 func (s *SupplyModule) Stop() {

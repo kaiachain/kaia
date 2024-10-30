@@ -21,12 +21,30 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+// PostInsertBlock will try to advance the supplyCheckpoint by one block.
+// If the new block is right after the last checkpoint, it will advance the supplyCheckpoint.
+// Otherwise, it will leave the work to the catchup thread.
 func (s *SupplyModule) PostInsertBlock(block *types.Block) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	newNum := block.NumberU64()
+	if s.lastNum+1 == newNum && s.lastCheckpoint != nil {
+		newCheckpoint, err := s.accumulateCheckpoint(s.lastNum, newNum, s.lastCheckpoint, true)
+		if err != nil {
+			return err
+		}
+		s.lastNum = newNum
+		s.lastCheckpoint = newCheckpoint
+	}
 	return nil
 }
 
 func (s *SupplyModule) RewindTo(newBlock *types.Block) {
-	// Nothing to do
+	// Soft reset to the nearest checkpoint interval less than the new block number,
+	// so that the next accumulation will start below the rewound block.
+	newLastNum := nearestCheckpointInterval(newBlock.NumberU64())
+	WriteLastSupplyCheckpointNumber(s.ChainKv, newLastNum)
 }
 
 func (s *SupplyModule) RewindDelete(hash common.Hash, num uint64) {

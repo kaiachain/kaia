@@ -35,7 +35,45 @@ var (
 )
 
 func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
-	return nil, nil
+	errs := make([]error, 0)
+	ts := new(supply.TotalSupply)
+
+	// Read accumulated supply checkpoint (minted, burntFee)
+	// This is an essential component, so failure to read it immediately aborts the function.
+	checkpoint, err := s.getCheckpoint(num)
+	if err != nil {
+		return nil, err
+	}
+	ts.TotalMinted = checkpoint.Minted
+	ts.BurntFee = checkpoint.BurntFee
+
+	ts.ZeroBurn, ts.DeadBurn, err = s.getCanonicalBurn(num)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	config := s.ChainConfig
+	ts.Kip103Burn, err = s.getRebalanceBurn(num, config.Kip103CompatibleBlock, config.Kip103ContractAddress)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	ts.Kip160Burn, err = s.getRebalanceBurn(num, config.Kip160CompatibleBlock, config.Kip160ContractAddress)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	// TotalBurnt and TotalSupply is only calculated if all components are available.
+	if ts.BurntFee != nil && ts.ZeroBurn != nil && ts.DeadBurn != nil && ts.Kip103Burn != nil && ts.Kip160Burn != nil {
+		ts.TotalBurnt = new(big.Int)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.BurntFee)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.ZeroBurn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.DeadBurn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip103Burn)
+		ts.TotalBurnt.Add(ts.TotalBurnt, ts.Kip160Burn)
+		ts.TotalSupply = new(big.Int).Sub(ts.TotalMinted, ts.TotalBurnt)
+	}
+
+	return ts, errors.Join(errs...)
 }
 
 // totalSupplyFromState exhausitively traverses all accounts in the state at the given block number.
@@ -59,6 +97,36 @@ func (s *SupplyModule) totalSupplyFromState(num uint64) (*big.Int, error) {
 		totalSupply.Add(totalSupply, balance)
 	}
 	return totalSupply, nil
+}
+
+// getCheckpoint reads the supply checkpoint at the given block number.
+// If the checkpoint is not found, it will re-accumulate from the nearest checkpoint.
+func (s *SupplyModule) getCheckpoint(num uint64) (*supplyCheckpoint, error) {
+	if cached, ok := s.checkpointCache.Get(num); ok {
+		return cached.(*supplyCheckpoint), nil
+	}
+
+	// Find from the database.
+	checkpoint := ReadSupplyCheckpoint(s.ChainKv, num)
+	if checkpoint != nil {
+		s.checkpointCache.Add(num, checkpoint)
+		return checkpoint, nil
+	}
+
+	// If not found, re-accumulate from the nearest checkpoint.
+	fromNum := nearestCheckpointInterval(num)
+	fromCheckpoint := ReadSupplyCheckpoint(s.ChainKv, fromNum)
+	if fromCheckpoint == nil {
+		return nil, supply.ErrNoCheckpoint
+	}
+	logger.Trace("on-demand reaccumulating supply checkpoint", "from", fromNum, "to", num)
+	checkpoint, err := s.accumulateCheckpoint(fromNum, num, fromCheckpoint, false)
+	if err != nil {
+		return nil, err
+	}
+
+	s.checkpointCache.Add(num, checkpoint)
+	return checkpoint, nil
 }
 
 // getCanonicalBurn reads the balances of the canonical burn addresses (0x0, 0xdead) from the state.
