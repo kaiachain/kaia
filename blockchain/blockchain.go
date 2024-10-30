@@ -218,6 +218,7 @@ type BlockChain struct {
 	prefetchTxCh chan prefetchTx
 
 	// kaiax modules
+	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
 }
 
@@ -2159,6 +2160,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		cache, _, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, i, cache)
 
+		// Invoke ExecutionModules after inserting a block.
+		for _, module := range bc.executionModules {
+			if err := module.PostInsertBlock(block); err != nil {
+				return i, events, coalescedLogs, err
+			}
+		}
+
 		// update governance CurrentSet if it is at an epoch block
 		if bc.engine.CreateSnapshot(bc, block.NumberU64(), block.Hash(), nil) != nil {
 			return i, events, coalescedLogs, err
@@ -2811,12 +2819,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	return receipt, internalTrace, err
 }
 
-func (bc *BlockChain) RegisterRewindableModule(modules ...kaiax.RewindableModule) {
-	bc.rewindableModules = append(bc.rewindableModules, modules...)
+func (bc *BlockChain) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
+	bc.executionModules = append(bc.executionModules, modules...)
 }
 
-func (bc *BlockChain) RewindableModules() []kaiax.RewindableModule {
-	return bc.rewindableModules
+func (bc *BlockChain) RegisterRewindableModule(modules ...kaiax.RewindableModule) {
+	bc.rewindableModules = append(bc.rewindableModules, modules...)
 }
 
 func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {
