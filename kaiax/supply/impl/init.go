@@ -17,10 +17,12 @@
 package supply
 
 import (
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -32,20 +34,26 @@ var (
 
 type InitOpts struct {
 	ChainKv      database.Database
+	ChainConfig  *params.ChainConfig
 	Chain        backends.BlockChainForCaller
 	RewardModule reward.RewardModule
 }
 
 type SupplyModule struct {
 	InitOpts
+
+	memoCache *lru.ARCCache
 }
 
 func NewSupplyModule() *SupplyModule {
-	return &SupplyModule{}
+	memoCache, _ := lru.NewARC(10)
+	return &SupplyModule{
+		memoCache: memoCache,
+	}
 }
 
 func (s *SupplyModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainKv == nil || opts.Chain == nil || opts.RewardModule == nil {
+	if opts == nil || opts.ChainKv == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.RewardModule == nil {
 		return supply.ErrInitUnexpectedNil
 	}
 	s.InitOpts = *opts
@@ -53,6 +61,7 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 }
 
 func (s *SupplyModule) Start() error {
+	s.memoCache.Purge()
 	return nil
 }
 

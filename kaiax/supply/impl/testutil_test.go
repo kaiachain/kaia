@@ -177,6 +177,7 @@ func (s *SupplyTestSuite) SetupTest() {
 	})
 	mSupply.Init(&InitOpts{
 		ChainKv:      dbm.GetMiscDB(),
+		ChainConfig:  config,
 		Chain:        chain,
 		RewardModule: mReward,
 	})

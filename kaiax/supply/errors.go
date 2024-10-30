@@ -16,9 +16,21 @@
 
 package supply
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
 	ErrNoBlock           = errors.New("block not found")
+	ErrNoRebalanceMemo   = errors.New("rebalance memo empty")
 )
+
+func ErrNoCanonicalBurn(err error) error {
+	return fmt.Errorf("cannot determine canonical (0x0, 0xdead) burn amount: %w", err)
+}
+
+func ErrNoRebalanceBurn(err error) error {
+	return fmt.Errorf("cannot determine rebalance (kip103, kip160) burn amount: %w", err)
+}
