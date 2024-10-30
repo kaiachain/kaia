@@ -150,6 +150,9 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	dataCode := common.FromHex(code)
 	values := map[types.TxValueKeyType]interface{}{}
 
+	// Default authorization list
+	authorizationList := types.AuthorizationList{{ChainID: big.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
+
 	switch txType {
 	case types.TxTypeValueTransfer:
 		values[types.TxValueKeyNonce] = sender.Nonce
@@ -341,6 +344,17 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
+	case types.TxTypeEthereumSetCode:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyTo] = &recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasFeeCap] = gasFeeCap
+		values[types.TxValueKeyGasTipCap] = gasTipCap
+		values[types.TxValueKeyChainID] = big.NewInt(1)
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyAccessList] = types.AccessList{}
+		values[types.TxValueKeyAuthorizationList] = authorizationList
 	}
 
 	tx, err := types.NewTransactionWithMap(txType, values)

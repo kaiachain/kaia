@@ -96,6 +96,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
 	}
 
+	if txType == types.TxTypeEthereumSetCode {
+		valueMap, gas = genMapForSetCodeTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 

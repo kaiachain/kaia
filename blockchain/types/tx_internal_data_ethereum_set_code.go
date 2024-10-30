@@ -96,10 +96,20 @@ type TxInternalDataEthereumSetCodeJSON struct {
 }
 
 func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
-	h := common.Hash{}
-
 	return &TxInternalDataEthereumSetCode{
-		Hash: &h,
+		ChainID:           new(big.Int),
+		AccountNonce:      0,
+		GasTipCap:         new(big.Int),
+		GasFeeCap:         new(big.Int),
+		GasLimit:          0,
+		Recipient:         nil,
+		Amount:            new(big.Int),
+		Payload:           []byte{},
+		AccessList:        AccessList{},
+		AuthorizationList: AuthorizationList{},
+		V:                 new(big.Int),
+		R:                 new(big.Int),
+		S:                 new(big.Int),
 	}
 }
 
@@ -239,7 +249,7 @@ func (t *TxInternalDataEthereumSetCode) SetHash(h *common.Hash) {
 
 func (t *TxInternalDataEthereumSetCode) SetSignature(signatures TxSignatures) {
 	if len(signatures) != 1 {
-		logger.Crit("TxTypeSetCode can receive only single signature!")
+		logger.Crit("TxTypeEthereum can receive only single signature!")
 	}
 
 	t.V = signatures[0].V
@@ -315,6 +325,24 @@ func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
 		t.AccessList,
 		t.AuthorizationList,
 	}
+}
+
+func (t *TxInternalDataEthereumSetCode) TxHash() common.Hash {
+	return prefixedRlpHash(byte(t.Type()), []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.GasTipCap,
+		t.GasFeeCap,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+		t.AuthorizationList,
+		t.V,
+		t.R,
+		t.S,
+	})
 }
 
 func (t *TxInternalDataEthereumSetCode) SenderTxHash() common.Hash {
@@ -495,6 +523,10 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
+}
+
+func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big.Int) {
+	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
 }
 
 // ------------- Authorization -------------
