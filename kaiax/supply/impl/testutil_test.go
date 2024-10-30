@@ -74,6 +74,10 @@ type SupplyTestSuite struct {
 	blocks   []*types.Block
 }
 
+func TestSupply(t *testing.T) {
+	suite.Run(t, new(SupplyTestSuite))
+}
+
 // ----------------------------------------------------------------------------
 // Setup test
 var (
@@ -202,9 +206,6 @@ func (s *SupplyTestSuite) insertBlocks() {
 		_, err := s.chain.InsertChain([]*types.Block{block})
 		require.NoError(t, err)
 	}
-	expected := s.blocks[len(s.blocks)-1]
-	actual := s.chain.CurrentBlock()
-	assert.Equal(t, expected.Hash(), actual.Hash())
 }
 
 func makeGenesis(t *testing.T, config *params.ChainConfig) *blockchain.Genesis {

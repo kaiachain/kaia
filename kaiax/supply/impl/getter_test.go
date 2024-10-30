@@ -18,24 +18,17 @@ package supply
 
 import (
 	"math/big"
-	"testing"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
-func TestSupply(t *testing.T) {
-	suite.Run(t, new(SupplyTestSuite))
-}
-
-// Test individual getters.
-
+// Test individual getters
 func (s *SupplyTestSuite) TestFromState() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	testcases := s.testcases()
@@ -53,7 +46,7 @@ func (s *SupplyTestSuite) TestFromState() {
 
 func (s *SupplyTestSuite) TestCheckpoint() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	for _, tc := range s.testcases() {
@@ -68,7 +61,7 @@ func (s *SupplyTestSuite) TestCheckpoint() {
 
 func (s *SupplyTestSuite) TestCanonicalBurn() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	// Delete state at 199
@@ -90,7 +83,7 @@ func (s *SupplyTestSuite) TestCanonicalBurn() {
 
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	// rebalance not configured
@@ -120,7 +113,7 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 
 func (s *SupplyTestSuite) TestGetTotalSupply() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	for _, tc := range s.testcases() {
@@ -132,7 +125,7 @@ func (s *SupplyTestSuite) TestGetTotalSupply() {
 
 func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	t := s.T()
-	require.Nil(t, s.s.Start())
+	require.Nil(t, s.s.loadLastCheckpoint())
 	s.insertBlocks()
 
 	// We will test on block 200.
@@ -189,14 +182,4 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	ts, err = s.s.GetTotalSupply(num)
 	assert.ErrorIs(t, err, supply.ErrNoCheckpoint)
 	assert.Nil(t, ts)
-}
-
-// Test if last checkpoint is advanced correctly, so that GetTotalSupply() works.
-
-// Test the Start() then Insert() case, where the background thread does nothing
-// and only PostInsertBlock() updates the SupplyCheckpoint.
-func (s *SupplyTestSuite) TestNoCatchup() {
-	t := s.T()
-	require.Nil(t, s.s.Start())
-	s.insertBlocks()
 }

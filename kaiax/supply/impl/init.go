@@ -18,6 +18,7 @@ package supply
 
 import (
 	"sync"
+	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -50,7 +51,7 @@ type SupplyModule struct {
 
 	// Accumulated supply checkpoint so far.
 	// This in-memory variables advance every block, but the database is updated every checkpointInterval.
-	mu             sync.Mutex
+	mu             sync.RWMutex
 	lastNum        uint64            // Last in-memory supply checkpoint number
 	lastCheckpoint *supplyCheckpoint // Last in-memory supply checkpoint
 
@@ -69,6 +70,7 @@ func NewSupplyModule() *SupplyModule {
 	return &SupplyModule{
 		checkpointCache: checkpointCache,
 		memoCache:       memoCache,
+		quitCh:          make(chan struct{}, 1), // 1 slot to prevent Stop() from blocking when catchup() has already exited
 	}
 }
 
@@ -83,8 +85,19 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 func (s *SupplyModule) Start() error {
 	s.checkpointCache.Purge()
 	s.memoCache.Purge()
-	return s.loadLastCheckpoint()
+
+	if err := s.loadLastCheckpoint(); err != nil {
+		return err
+	}
+
+	atomic.StoreUint32(&s.quit, 0)
+	s.wg.Add(1)
+	go s.catchup()
+	return nil
 }
 
 func (s *SupplyModule) Stop() {
+	atomic.StoreUint32(&s.quit, 1)
+	s.quitCh <- struct{}{}
+	s.wg.Wait()
 }

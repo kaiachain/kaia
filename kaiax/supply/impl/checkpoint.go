@@ -19,6 +19,7 @@ package supply
 import (
 	"math/big"
 	"sync/atomic"
+	"time"
 
 	"github.com/kaiachain/kaia/kaiax/supply"
 )
@@ -105,4 +106,38 @@ func (s *SupplyModule) accumulateCheckpoint(fromNum, toNum uint64, fromCheckpoin
 		}
 	}
 	return checkpoint, nil
+}
+
+// catchup is a long-running goroutine that accumulates the supply checkpoint until the current head block.
+func (s *SupplyModule) catchup() {
+	defer s.wg.Done()
+
+	for {
+		currNum := s.Chain.CurrentBlock().NumberU64()
+		s.mu.RLock()
+		lastNum := s.lastNum
+		lastCheckpoint := s.lastCheckpoint.Copy()
+		s.mu.RUnlock()
+
+		if lastNum < currNum {
+			currCheckpoint, err := s.accumulateCheckpoint(lastNum, currNum, lastCheckpoint, true)
+			if err != nil {
+				if err != supply.ErrSupplyModuleQuit {
+					logger.Error("Total supply accumulate failed", "from", lastNum, "to", currNum, "err", err)
+				}
+				return
+			}
+			s.mu.Lock()
+			s.lastNum = currNum
+			s.lastCheckpoint = currCheckpoint
+			s.mu.Unlock()
+		} else {
+			timer := time.NewTimer(time.Second)
+			select {
+			case <-s.quitCh:
+				return
+			case <-timer.C:
+			}
+		}
+	}
 }
