@@ -777,13 +777,11 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	_, _, _, api := newCNAPIBackend(t)
 
 	var (
-		epoch                 uint64 = 5
-		govBlockNum                  = 10
-		appliedGovBlockNum    uint64 = 20
-		stakingUpdateInterval uint64 = 1
-		stakingUpdateBlockNum uint64 = 15
-		gov                          = governance.NewMixedEngine(testCfg(epoch), db)
-		gpo                          = gasprice.NewOracle(api, gasprice.Config{}, nil, gov)
+		epoch              uint64 = 5
+		govBlockNum               = 10
+		appliedGovBlockNum uint64 = 20
+		gov                       = governance.NewMixedEngine(testCfg(epoch), db)
+		gpo                       = gasprice.NewOracle(api, gasprice.Config{}, nil, gov)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
 
@@ -808,20 +806,6 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
 	assert.Nil(t, err)
 
-	// Initiailize staking info manager
-	dummy := reward.StakingInfo{BlockNum: stakingUpdateInterval}
-	blob, err = json.Marshal(dummy)
-	assert.Nil(t, err)
-	reward.SetTestStakingManagerWithStakingInfoCache(&dummy)
-	assert.NotNil(t, reward.GetStakingManager())
-	params.SetStakingUpdateInterval(stakingUpdateInterval)
-	// Write a value to DB
-	err = db.WriteStakingInfo(stakingUpdateBlockNum, blob)
-	assert.Nil(t, err)
-	_, err = db.ReadStakingInfo(stakingUpdateBlockNum)
-	assert.Nil(t, err)
-	assert.Equal(t, reward.TestGetStakingCacheSize(), 1)
-
 	// Before setHead
 	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
 
@@ -841,11 +825,6 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	// After setHead
 	// governance db and cachelookup
 	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "0", 0)
-
-	// staking db and cache lookup
-	assert.Equal(t, reward.TestGetStakingCacheSize(), 0)
-	_, err = db.ReadStakingInfo(stakingUpdateBlockNum)
-	assert.Equal(t, err.Error(), "data is not found with the given key")
 
 	// snapshot db lookup
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)

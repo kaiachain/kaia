@@ -574,7 +574,7 @@ workflows:
           tag: dev
           executor: docker/docker
           use-remote-docker: true
-          remote-docker-version: 20.10.14
+          remote-docker-version: default
           use-buildkit: true
       - docker/publish: # for release versions
           filters:
@@ -589,7 +589,7 @@ workflows:
           tag: latest,$CIRCLE_TAG
           executor: docker/docker
           use-remote-docker: true
-          remote-docker-version: 20.10.14
+          remote-docker-version: default
           use-buildkit: true
       - tag-verify:
           filters: *filter-only-version-tag

@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -64,7 +65,7 @@ import (
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
+//go:generate mockgen -destination=mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -74,7 +75,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
+//go:generate mockgen -destination=mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -88,7 +89,7 @@ type Miner interface {
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/kaiachain/kaia/node/cn BackendProtocolManager
+//go:generate mockgen -destination=protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -100,6 +101,7 @@ type BackendProtocolManager interface {
 	Start(maxPeers int)
 	Stop()
 	SetSyncStop(flag bool)
+	staking.StakingModuleHost
 }
 
 // CN implements the Kaia consensus node service.
@@ -144,6 +146,7 @@ type CN struct {
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
 	jsonRpcModules []kaiax.JsonRpcModule
+	stakingModule  staking.StakingModule // TODO-kaiax: temporary for governance/api.go. Remove it after having kaiax/reward.
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -381,25 +384,31 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		currBlock = cn.blockchain.CurrentBlock()
 		headers   []*types.Header
 	)
+	// Temporarily supply blockchain for `Finalize`, staking module for `snapshot`.
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
+	mStaking := staking_impl.NewStakingModule()
+	mStaking.Init(&staking_impl.InitOpts{
+		ChainKv:     cn.chainDB.GetMiscDB(),
+		ChainConfig: cn.chainConfig,
+		Chain:       cn.blockchain,
+	})
+	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
 	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		// Temporarily supply blockchain for `Finalize`.
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
-		preloadNums, err := reward.PreloadStakingInfo(headers)
+		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
 		defer func() {
-			for _, num := range preloadNums {
-				reward.UnloadStakingInfo(num)
-			}
+			mStaking.FreePreloadRef(preloadRef)
 		}()
 	}
 	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
 		logger.Error("CreateSnapshot failed", "err", err)
 	}
+	cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
+	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(nil)
 	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
@@ -434,6 +443,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
+
+	if err := cn.SetupKaiaxModules(); err != nil {
+		logger.Error("Failed to setup kaiax modules", "err", err)
+	}
 
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
@@ -529,6 +542,9 @@ func (s *CN) SetupKaiaxModules() error {
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
 	}
+	s.protocolManager.RegisterStakingModule(mStaking)
+
+	s.stakingModule = mStaking
 
 	return nil
 }
@@ -649,8 +665,8 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
-	governanceAPI := governance.NewGovernanceAPI(s.governance)
+	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain, s.stakingModule)
+	governanceAPI := governance.NewGovernanceAPI(s.governance, s.stakingModule)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 

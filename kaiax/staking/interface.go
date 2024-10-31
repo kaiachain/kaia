@@ -17,6 +17,8 @@
 package staking
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -26,7 +28,21 @@ type StakingModule interface {
 	kaiax.JsonRpcModule
 	kaiax.RewindableModule
 
+	// GetStakingInfo returns the staking info to be used for the given block number.
+	// This is the most commonly used getter.
 	GetStakingInfo(num uint64) (*StakingInfo, error)
+
+	// GetStakingInfoFromDB returns the staking info from the database.
+	// The given number indicates the number that the staking info is measured from, not when the staking info is used.
+	// This is useful when syncing the staking info database over p2p.
+	GetStakingInfoFromDB(sourceNum uint64) (*StakingInfo, error)
+
+	// Preload features allow staking info to be preloaded into memory
+	// which helps the situation where the state is not available in the database
+	// but the state is only in the memory temporarily (e.g., state regen).
+	AllocPreloadRef() uint64
+	FreePreloadRef(refId uint64)
+	PreloadFromState(refId uint64, header *types.Header, statedb *state.StateDB) error
 }
 
 type StakingModuleHost interface {
