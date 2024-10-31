@@ -29,16 +29,14 @@ func (s *SupplyModule) PostInsertBlock(block *types.Block) error {
 	defer s.mu.Unlock()
 
 	newNum := block.NumberU64()
-	if s.lastNum+1 != newNum {
-		return nil
+	if s.lastNum+1 == newNum && s.lastCheckpoint != nil {
+		newCheckpoint, err := s.accumulateCheckpoint(s.lastNum, newNum, s.lastCheckpoint, true)
+		if err != nil {
+			return err
+		}
+		s.lastNum = newNum
+		s.lastCheckpoint = newCheckpoint
 	}
-
-	newCheckpoint, err := s.accumulateCheckpoint(s.lastNum, newNum, s.lastCheckpoint, true)
-	if err != nil {
-		return err
-	}
-	s.lastNum = newNum
-	s.lastCheckpoint = newCheckpoint
 	return nil
 }
 
@@ -50,5 +48,7 @@ func (s *SupplyModule) RewindTo(newBlock *types.Block) {
 }
 
 func (s *SupplyModule) RewindDelete(hash common.Hash, num uint64) {
-	// TODO
+	if num%checkpointInterval != 0 {
+		DeleteSupplyCheckpoint(s.ChainKv, num)
+	}
 }

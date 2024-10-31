@@ -70,7 +70,6 @@ func NewSupplyModule() *SupplyModule {
 	return &SupplyModule{
 		checkpointCache: checkpointCache,
 		memoCache:       memoCache,
-		quitCh:          make(chan struct{}, 1), // 1 slot to prevent Stop() from blocking when catchup() has already exited
 	}
 }
 
@@ -83,14 +82,18 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 }
 
 func (s *SupplyModule) Start() error {
-	s.checkpointCache.Purge()
-	s.memoCache.Purge()
-
+	// Reload the last checkpoint from database.
 	if err := s.loadLastCheckpoint(); err != nil {
 		return err
 	}
 
+	// Reset the caches.
+	s.checkpointCache.Purge()
+	s.memoCache.Purge()
+
+	// Reset the quit state.
 	atomic.StoreUint32(&s.quit, 0)
+	s.quitCh = make(chan struct{}, 1)
 	s.wg.Add(1)
 	go s.catchup()
 	return nil
