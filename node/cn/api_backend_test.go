@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	mocks2 "github.com/kaiachain/kaia/node/cn/mocks"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -173,18 +172,6 @@ func testGov() *governance.MixedEngine {
 	return governance.NewMixedEngine(config, db)
 }
 
-type testSupplyManager struct{}
-
-func (sm *testSupplyManager) Start() {
-}
-
-func (sm *testSupplyManager) Stop() {
-}
-
-func (sm *testSupplyManager) GetTotalSupply(num uint64) (*reward.TotalSupply, error) {
-	return &reward.TotalSupply{}, nil
-}
-
 func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
@@ -195,7 +182,6 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	api.cn.protocolManager = pm
 	api.cn.engine = gxhash.NewFullFaker()
 	api.cn.governance = testGov()
-	api.cn.supplyManager = &testSupplyManager{}
 	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, api.cn.governance)
 
 	number := uint64(123)

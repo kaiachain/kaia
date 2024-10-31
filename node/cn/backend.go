@@ -143,8 +143,7 @@ type CN struct {
 
 	components []interface{}
 
-	governance    governance.Engine
-	supplyManager reward.SupplyManager
+	governance governance.Engine
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -375,7 +374,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
-	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB)
 
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
@@ -880,7 +878,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
 		reward.StakingManagerSubscribe()
 	}
-	s.supplyManager.Start()
 
 	return nil
 }
@@ -903,7 +900,6 @@ func (s *CN) Stop() error {
 	s.txPool.Stop()
 	s.miner.Stop()
 	reward.StakingManagerUnsubscribe()
-	s.supplyManager.Stop()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()
