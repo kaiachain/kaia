@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build
         run: |
+          git config --global --add safe.directory /__w/kaia/kaia
           make all
   test-linter:
     runs-on: ubuntu-latest
