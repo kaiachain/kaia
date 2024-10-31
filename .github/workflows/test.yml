@@ -40,7 +40,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
-          apt update && apt install git-all -y
+          apt update && apt install git -y
+          git --version
           go run build/ci.go lint -v --new-from-rev=dev
 #  test-networks:
 #    runs-on: ubuntu-latest
