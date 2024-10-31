@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
       - name: Build
         run: |
           make all
@@ -34,8 +32,7 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
       - name: Run golangci-lint
         run: |
+          apt update && apt install -y git
           go run build/ci.go lint -v --new-from-rev=dev
