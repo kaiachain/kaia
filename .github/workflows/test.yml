@@ -34,14 +34,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: dev
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Run golangci-lint
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
-          apt-get update && apt-get install git-all -y
-          git --version
           go run build/ci.go lint -v --new-from-rev=dev
 #  test-networks:
 #    runs-on: ubuntu-latest
