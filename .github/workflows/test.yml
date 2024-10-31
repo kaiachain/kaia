@@ -36,7 +36,7 @@ jobs:
       - name: Download dev branch
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
-          git branch dev remotes/origin/dev
+          git fetch origin dev:dev
       - name: Run golangci-lint
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
