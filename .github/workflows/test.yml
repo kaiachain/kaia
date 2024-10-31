@@ -32,7 +32,10 @@ jobs:
       image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      - name: Download dev branch
+        run: |
+          git branch dev remotes/origin/dev
       - name: Run golangci-lint
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
