@@ -59,10 +59,15 @@ type TotalSupplyResponse struct {
 	Kip160Burn *hexutil.Big `json:"kip160Burn"`
 }
 
-func (ts *TotalSupply) ToResponse(num *big.Int, err *string) *TotalSupplyResponse {
+func (ts *TotalSupply) ToResponse(num uint64, err error) *TotalSupplyResponse {
+	var pErrStr *string
+	if err != nil {
+		errStr := err.Error()
+		pErrStr = &errStr
+	}
 	return &TotalSupplyResponse{
-		Number:      (*hexutil.Big)(num),
-		Error:       err,
+		Number:      (*hexutil.Big)(new(big.Int).SetUint64(num)),
+		Error:       pErrStr,
 		TotalSupply: (*hexutil.Big)(ts.TotalSupply),
 		TotalMinted: (*hexutil.Big)(ts.TotalMinted),
 		TotalBurnt:  (*hexutil.Big)(ts.TotalBurnt),

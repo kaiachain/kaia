@@ -28,5 +28,8 @@ type SupplyModule interface {
 	kaiax.RewindableModule
 
 	// GetTotalSupply returns the total supply at the given block number.
+	// Returns (nil, err) if essential components are missing.
+	// Returns (ts, err) if partial components (e.g. canonical burn amounts) are missing.
+	// Otherwise, returns (ts, nil).
 	GetTotalSupply(num uint64) (*TotalSupply, error)
 }
