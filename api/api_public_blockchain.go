@@ -635,7 +635,7 @@ func newRPCTransaction(header *types.Header, tx *types.Transaction, blockHash co
 	output["from"] = getFrom(tx)
 	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
-	if tx.Type() == types.TxTypeEthereumDynamicFee {
+	if tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode {
 		if header != nil {
 			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(header, config))
 		} else {

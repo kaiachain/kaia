@@ -495,7 +495,7 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 // decreaseGasPrice changes gasPrice to 12345678
 func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrInvalidGasTipCap
@@ -511,7 +511,7 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 // decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
 func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrFeeCapBelowBaseFee
