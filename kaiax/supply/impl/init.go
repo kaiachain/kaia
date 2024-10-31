@@ -70,6 +70,7 @@ func NewSupplyModule() *SupplyModule {
 	return &SupplyModule{
 		checkpointCache: checkpointCache,
 		memoCache:       memoCache,
+		quitCh:          make(chan struct{}, 1),
 	}
 }
 

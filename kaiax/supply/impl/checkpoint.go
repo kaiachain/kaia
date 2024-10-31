@@ -119,6 +119,7 @@ func (s *SupplyModule) catchup() {
 		lastCheckpoint := s.lastCheckpoint.Copy()
 		s.mu.RUnlock()
 
+		// A gap detected. Accumulate to the current block as of now.
 		if lastNum < currNum {
 			currCheckpoint, err := s.accumulateCheckpoint(lastNum, currNum, lastCheckpoint, true)
 			if err != nil {
@@ -131,13 +132,17 @@ func (s *SupplyModule) catchup() {
 			s.lastNum = currNum
 			s.lastCheckpoint = currCheckpoint
 			s.mu.Unlock()
-		} else {
-			timer := time.NewTimer(time.Second)
-			select {
-			case <-s.quitCh:
-				return
-			case <-timer.C:
-			}
+			// Because current head may have increased while we accumulate, we need to check again.
+			continue
+		}
+
+		// No gap detected. Sleep a while and check again just in case.
+		// If PostInsertBlock() is filling in the gap, this loop would do nothing but waiting.
+		timer := time.NewTimer(time.Second)
+		select {
+		case <-s.quitCh:
+			return
+		case <-timer.C:
 		}
 	}
 }

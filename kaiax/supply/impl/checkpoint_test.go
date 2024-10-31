@@ -29,7 +29,7 @@ import (
 func (s *SupplyTestSuite) TestStop() {
 	doneCh := make(chan struct{})
 	go func() {
-		s.s.Stop() // immediately stop. there is no catchup() to receive <-quitCh.
+		s.s.Stop() // Stop() should immediately finish even if catchup() is not running.
 		close(doneCh)
 	}()
 
