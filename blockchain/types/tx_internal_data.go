@@ -60,9 +60,9 @@ const (
 	TxTypeEthereumDynamicFee = TxType(0x7802)
 	// Kaia has determined that BLOB_TX defined in EIP4844 is not necessary.
 	// https://github.com/ethereum/EIPs/blob/70471d02d48a81ca963407abe9c48706059dc8e8/EIPS/eip-4844.md
-	_ = TxType(0x7803)
-	TxTypeEthereumSetCode    = TxType(0x7804)
-	TxTypeEthereumLast       = TxType(0x7805)
+	_                     = TxType(0x7803)
+	TxTypeEthereumSetCode = TxType(0x7804)
+	TxTypeEthereumLast    = TxType(0x7805)
 )
 
 type TxValueKeyType uint

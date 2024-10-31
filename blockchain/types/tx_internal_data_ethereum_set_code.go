@@ -21,6 +21,7 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -70,9 +71,9 @@ type TxInternalDataEthereumSetCode struct {
 	AuthorizationList AuthorizationList
 
 	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	V *big.Int `gencodec:"required" json:"v"`
+	R *big.Int `gencodec:"required" json:"r"`
+	S *big.Int `gencodec:"required" json:"s"`
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -394,7 +395,7 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
 			from = "[invalid sender: invalid sig]"
 		} else {
-			from = fmt.Sprintf("%x", f[:])
+			from = hex.EncodeToString(f[:])
 		}
 	} else {
 		from = "[invalid sender: nil V field]"
@@ -403,7 +404,7 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 	if t.GetRecipient() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+		to = hex.EncodeToString(t.GetRecipient().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
