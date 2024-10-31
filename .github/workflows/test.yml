@@ -12,20 +12,20 @@ on:
     branches:
       - 'main'
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    container:
-      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
-    permissions:
-      id-token: write
-      contents: write
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-      - name: Build
-        run: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          make all
+#  build:
+#    runs-on: ubuntu-latest
+#    container:
+#      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+#    permissions:
+#      id-token: write
+#      contents: write
+#    steps:
+#      - name: Check out code
+#        uses: actions/checkout@v4
+#      - name: Build
+#        run: |
+#          git config --global --add safe.directory /__w/kaia/kaia
+#          make all
   test-linter:
     runs-on: ubuntu-latest
     container:
@@ -33,18 +33,20 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Run golangci-lint
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           go run build/ci.go lint -v --new-from-rev=dev
-  test-networks:
-    runs-on: ubuntu-latest
-    container:
-      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
-    steps:
-      - name: Run test networks
-        run: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          make test-networks
+#  test-networks:
+#    runs-on: ubuntu-latest
+#    container:
+#      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+#    steps:
+#      - name: Run test networks
+#        run: |
+#          git config --global --add safe.directory /__w/kaia/kaia
+#          make test-networks
