@@ -1,0 +1,37 @@
+name: Testing Workflow
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+    branches:
+      - 'main'
+      - 'release/**'
+  pull_request:
+    branches:
+      - 'main'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Build
+        script: |
+          make all
+  test-linter:
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Run golangci-lint
+        script: |
+          go run build/ci.go lint -v --new-from-rev=dev
