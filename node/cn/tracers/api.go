@@ -451,6 +451,14 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				failed = err
 				break
 			}
+			// Insert parent hash in history contract.                                                                                                                                  │
+			if api.backend.ChainConfig().IsPragueForkEnabled(next.Number()) {
+				header := next.Header()
+				context := blockchain.NewEVMBlockContext(header, newChainContext(localctx, api.backend), nil)
+				vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
+				blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(next.Number()))
+			}
+
 			// Clean out any pending derefs. Note this step must be done after
 			// constructing tracing state, because the tracing state of block
 			// next depends on the parent state and construction may fail if
@@ -639,6 +647,13 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	}
 	defer release()
 
+	header := block.Header()
+	blockCtx := blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
+	if api.backend.ChainConfig().IsPragueForkEnabled(block.Number()) {
+		vmenv := vm.NewEVM(blockCtx, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(header.Number))
+	}
+
 	// Execute all the transaction contained within the block concurrently
 	var (
 		signer  = types.MakeSigner(api.backend.ChainConfig(), block.Number())
@@ -667,7 +682,6 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 				}
 
 				txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
-				blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 				res, err := api.traceTx(ctx, msg, blockCtx, txCtx, task.statedb, config)
 				if err != nil {
 					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
@@ -751,6 +765,13 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	}
 	logConfig.Debug = true
 
+	header := block.Header()
+	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+	if api.backend.ChainConfig().IsPragueForkEnabled(block.Number()) {
+		vmenv := vm.NewEVM(blockCtx, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(header.Number))
+	}
+
 	// Execute transaction, either tracing all or just the requested one
 	var (
 		signer = types.MakeSigner(api.backend.ChainConfig(), block.Number())
@@ -765,8 +786,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 		}
 
 		var (
-			txCtx    = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
-			blockCtx = blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+			txCtx = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 
 			vmConf vm.Config
 			dump   *os.File

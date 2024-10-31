@@ -573,6 +573,11 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
+	if self.config.IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, self.chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, self.current.state, self.chain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, self.current.state, self.chain.Config().Rules(header.Number))
+	}
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {

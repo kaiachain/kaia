@@ -214,6 +214,13 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 	if err != nil {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
+	// If prague hardfork, insert parent block hash in the state as per EIP-2935.
+	if cn.chainConfig.IsPragueForkEnabled(block.Number()) {
+		header := block.Header()
+		context := blockchain.NewEVMBlockContext(header, cn.blockchain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, cn.blockchain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, statedb, cn.chainConfig.Rules(header.Number))
+	}
 	if txIndex == 0 && len(block.Transactions()) == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, release, nil
 	}

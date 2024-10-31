@@ -192,6 +192,12 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)
 
+		if config.IsPragueForkEnabled(b.header.Number) {
+			context := NewEVMBlockContext(b.header, blockchain, &params.AuthorAddressForTesting)
+			vmenv := vm.NewEVM(context, vm.TxContext{}, stateDB, config, &vm.Config{})
+			ProcessParentBlockHash(b.header, vmenv, stateDB, config.Rules(b.header.Number))
+		}
+
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
