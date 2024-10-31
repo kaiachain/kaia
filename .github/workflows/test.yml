@@ -33,12 +33,13 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          set-safe-directory: false
       - name: Download dev branch
         run: |
           git branch dev remotes/origin/dev
       - name: Run golangci-lint
         run: |
-          git config --global --add safe.directory /__w/kaia/kaia
           go run build/ci.go lint -v --new-from-rev=dev
 #  test-networks:
 #    runs-on: ubuntu-latest
