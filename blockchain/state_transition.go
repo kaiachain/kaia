@@ -399,13 +399,16 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			if exists := st.state.Exist(authority); exists {
 				st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
 			}
-			st.state.SetNonce(authority, auth.Nonce+1)
+			st.state.IncNonce(authority)
 			delegation := types.AddressToDelegation(auth.Address)
 			if auth.Address == common.ZeroAddress {
 				// If the delegation is for the zero address, completely clear all
 				// delegations from the account.
 				delegation = []byte{}
 			}
+			// TODO: Change to a method that adds code to EOA
+			// This is currently expected to be an error. This will be addressed in a PR that adds a code hash field to the EOA.
+			// https://github.com/kaiachain/kaia/blob/v1.0.3/blockchain/state/state_object.go#L542
 			st.state.SetCode(authority, delegation)
 
 			// Usually the transaction destination and delegation target are added to
