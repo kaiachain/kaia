@@ -455,7 +455,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				failed = err
 				break
 			}
-			// Insert parent hash in history contract.                                                                                                                                  │
+			// Insert parent hash in history contract.
 			api.backend.Engine().Initialize(newChainContext(localctx, api.backend), next.Header(), statedb)
 
 			// Clean out any pending derefs. Note this step must be done after
