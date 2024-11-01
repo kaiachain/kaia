@@ -31,9 +31,11 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -486,6 +488,15 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
 	}
 	return nil
+}
+
+func (sb *backend) Initialize(chain consensus.ChainContext, header *types.Header, state *state.StateDB) {
+	// [EIP-2935] stores the parent block hash in the history storage contract
+	if chain.Config().IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+	}
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)

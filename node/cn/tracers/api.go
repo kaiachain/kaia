@@ -159,6 +159,10 @@ func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.H
 	return header
 }
 
+func (context *chainContext) Config() *params.ChainConfig {
+	return context.backend.ChainConfig()
+}
+
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
 func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
@@ -452,12 +456,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				break
 			}
 			// Insert parent hash in history contract.                                                                                                                                  │
-			if api.backend.ChainConfig().IsPragueForkEnabled(next.Number()) {
-				header := next.Header()
-				context := blockchain.NewEVMBlockContext(header, newChainContext(localctx, api.backend), nil)
-				vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
-				blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(next.Number()))
-			}
+			api.backend.Engine().Initialize(newChainContext(localctx, api.backend), next.Header(), statedb)
 
 			// Clean out any pending derefs. Note this step must be done after
 			// constructing tracing state, because the tracing state of block
@@ -647,13 +646,6 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	}
 	defer release()
 
-	header := block.Header()
-	blockCtx := blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
-	if api.backend.ChainConfig().IsPragueForkEnabled(block.Number()) {
-		vmenv := vm.NewEVM(blockCtx, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(header.Number))
-	}
-
 	// Execute all the transaction contained within the block concurrently
 	var (
 		signer  = types.MakeSigner(api.backend.ChainConfig(), block.Number())
@@ -662,7 +654,12 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 
 		pend = new(sync.WaitGroup)
 		jobs = make(chan *txTraceTask, len(txs))
+
+		header   = block.Header()
+		blockCtx = blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
 	)
+	api.backend.Engine().Initialize(newChainContext(ctx, api.backend), header, statedb)
+
 	threads := runtime.NumCPU()
 	if threads > len(txs) {
 		threads = len(txs)
@@ -766,11 +763,8 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	logConfig.Debug = true
 
 	header := block.Header()
-	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
-	if api.backend.ChainConfig().IsPragueForkEnabled(block.Number()) {
-		vmenv := vm.NewEVM(blockCtx, vm.TxContext{}, statedb, api.backend.ChainConfig(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, statedb, api.backend.ChainConfig().Rules(header.Number))
-	}
+	blockCtx := blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
+	api.backend.Engine().Initialize(newChainContext(ctx, api.backend), header, statedb)
 
 	// Execute transaction, either tracing all or just the requested one
 	var (

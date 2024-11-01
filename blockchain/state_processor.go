@@ -75,11 +75,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	if p.config.IsPragueForkEnabled(block.Number()) {
-		context := NewEVMBlockContext(header, p.bc, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, p.config, &cfg)
-		ProcessParentBlockHash(header, vmenv, statedb, p.config.Rules(header.Number))
-	}
+	p.engine.Initialize(p.bc, header, statedb)
 
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation

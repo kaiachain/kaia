@@ -101,6 +101,9 @@ type Engine interface {
 	// rules of a particular engine. The changes are executed inline.
 	Prepare(chain ChainReader, header *types.Header) error
 
+	// Initialize runs any pre-transaction state modifications (e.g., EIP-2539)
+	Initialize(chain ChainContext, header *types.Header, state *state.StateDB)
+
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.
 	// Note: The block header and state database might be updated to reflect any
@@ -184,4 +187,10 @@ type ConsensusInfo struct {
 	Committee      []common.Address
 	Committers     []common.Address
 	Round          byte
+}
+
+type ChainContext interface {
+	Config() *params.ChainConfig
+	Engine() Engine
+	GetHeader(hash common.Hash, number uint64) *types.Header
 }
