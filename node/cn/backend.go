@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -521,7 +522,10 @@ func (s *CN) SetComponents(component []interface{}) {
 func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
-	mStaking := staking_impl.NewStakingModule()
+	var (
+		mStaking = staking_impl.NewStakingModule()
+		mReward  = reward_impl.NewRewardModule()
+	)
 
 	// Initialize modules
 	err := errors.Join(
@@ -530,6 +534,12 @@ func (s *CN) SetupKaiaxModules() error {
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
 		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			Chain:         s.blockchain,
+			GovModule:     reward_impl.FromLegacy(s.governance),
+			StakingModule: mStaking,
+		}),
 	)
 	if err != nil {
 		return err
@@ -537,10 +547,11 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	s.RegisterBaseModules(mStaking)
-	s.RegisterJsonRpcModules(mStaking)
+	s.RegisterJsonRpcModules(mStaking, mReward)
 	s.blockchain.RegisterRewindableModule(mStaking)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
+		engine.RegisterConsensusModule(mReward)
 	}
 	s.protocolManager.RegisterStakingModule(mStaking)
 

@@ -42,7 +42,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -725,6 +727,18 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
+	defer engine.Stop()
+	mReward := reward_impl.NewRewardModule()
+	if err := mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   chain.Config(),
+		Chain:         chain,
+		GovModule:     reward_impl.FromLegacy(engine.governance),
+		StakingModule: staking_impl.NewStakingModule(), // Irrelevant in ProposerPolicy=0. Won't inject mock.
+	}); err != nil {
+		t.Fatalf("Failed to initialize reward module: %v", err)
+	}
+	engine.RegisterConsensusModule(mReward)
+
 	assert.Equal(t, uint64(testEpoch), engine.governance.CurrentParams().Epoch())
 	assert.Equal(t, mintAmount, engine.governance.CurrentParams().MintingAmountBig().Uint64())
 
