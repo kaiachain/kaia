@@ -167,6 +167,18 @@ func (mr *MockEngineMockRecorder) InitSnapshot() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitSnapshot", reflect.TypeOf((*MockEngine)(nil).InitSnapshot))
 }
 
+// Initialize mocks base method.
+func (m *MockEngine) Initialize(arg0 consensus.ChainContext, arg1 *types.Header, arg2 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2)
+}
+
+// Initialize indicates an expected call of Initialize.
+func (mr *MockEngineMockRecorder) Initialize(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockEngine)(nil).Initialize), arg0, arg1, arg2)
+}
+
 // Prepare mocks base method.
 func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) error {
 	m.ctrl.T.Helper()

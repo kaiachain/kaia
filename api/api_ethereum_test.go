@@ -2438,6 +2438,10 @@ func (mc *testChainContext) Engine() consensus.Engine {
 	return gxhash.NewFaker()
 }
 
+func (mc *testChainContext) Config() *params.ChainConfig {
+	return nil
+}
+
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
 }
