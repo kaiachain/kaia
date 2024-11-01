@@ -397,6 +397,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			// If the account already exists in state, refund the new account cost
 			// charged in the initrinsic calculation.
 			if exists := st.state.Exist(authority); exists {
+				// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
+				if !st.state.GetKey(authority).Type().IsLegacyAccountKey() {
+					continue
+				}
 				st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
 			}
 			st.state.IncNonce(authority)
