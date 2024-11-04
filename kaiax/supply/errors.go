@@ -22,11 +22,11 @@ import (
 )
 
 var (
-	ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
-	ErrNoBlock           = errors.New("block not found")
-	ErrNoRebalanceMemo   = errors.New("rebalance memo empty")
-	ErrSupplyModuleQuit  = errors.New("supply module quit")
-	ErrNoCheckpoint      = errors.New("supply checkpoint not found")
+	ErrInitUnexpectedNil  = errors.New("unexpected nil during module init")
+	ErrNoBlock            = errors.New("block not found")
+	ErrNoRebalanceMemo    = errors.New("rebalance memo empty")
+	ErrSupplyModuleQuit   = errors.New("supply module quit")
+	ErrNoSupplyCheckpoint = errors.New("supply checkpoint not found")
 )
 
 func ErrNoCanonicalBurn(err error) error {

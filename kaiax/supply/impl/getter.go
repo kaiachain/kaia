@@ -36,6 +36,10 @@ var (
 )
 
 func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
+	if cached, ok := s.supplyCache.Get(num); ok {
+		return cached.(*supply.TotalSupply), nil
+	}
+
 	// Read accumulated supply checkpoint (minted, burntFee)
 	// This is an essential component, so failure to read it immediately aborts the function.
 	accReward, err := s.getAccReward(num)
@@ -65,12 +69,14 @@ func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
 		errs = append(errs, err)
 	}
 
-	return accReward.ToTotalSupply(
+	ts := accReward.ToTotalSupply(
 		zeroBurn,
 		deadBurn,
 		kip103Burn,
 		kip160Burn,
-	), errors.Join(errs...)
+	)
+	s.supplyCache.Add(num, ts)
+	return ts, errors.Join(errs...)
 }
 
 // totalSupplyFromState exhausitively traverses all accounts in the state at the given block number.
@@ -99,14 +105,9 @@ func (s *SupplyModule) totalSupplyFromState(num uint64) (*big.Int, error) {
 // getAccReward reads the supply checkpoint at the given block number.
 // If the checkpoint is not found, it will re-accumulate from the nearest checkpoint.
 func (s *SupplyModule) getAccReward(num uint64) (*supply.AccReward, error) {
-	if cached, ok := s.accRewardCache.Get(num); ok {
-		return cached.(*supply.AccReward), nil
-	}
-
 	// Find from the database.
 	accReward := ReadAccReward(s.ChainKv, num)
 	if accReward != nil {
-		s.accRewardCache.Add(num, accReward)
 		return accReward, nil
 	}
 
@@ -114,16 +115,10 @@ func (s *SupplyModule) getAccReward(num uint64) (*supply.AccReward, error) {
 	fromNum := nearestCheckpointNumber(num)
 	fromAccReward := ReadAccReward(s.ChainKv, fromNum)
 	if fromAccReward == nil {
-		return nil, supply.ErrNoCheckpoint
+		return nil, supply.ErrNoSupplyCheckpoint
 	}
 	logger.Trace("on-demand reaccumulating supply checkpoint", "from", fromNum, "to", num)
-	accReward, err := s.accumulateRewards(fromNum, num, fromAccReward, false)
-	if err != nil {
-		return nil, err
-	}
-
-	s.accRewardCache.Add(num, accReward)
-	return accReward, nil
+	return s.accumulateRewards(fromNum, num, fromAccReward, false) // do not commit when re-accumulating
 }
 
 // getCanonicalBurn reads the balances of the canonical burn addresses (0x0, 0xdead) from the state.

@@ -38,7 +38,7 @@ var (
 
 	// A day; Some total supply consumers might want daily supply.
 	// It may be evicted by the historic query though.
-	checkpointCacheSize   = 86400
+	supplyCacheSize       = 86400
 	checkpointInterval    = uint64(128)    // AccReward checkpoint interval
 	accumulateLogInterval = uint64(102400) // Periodic log in accumulateRewards().
 )
@@ -68,17 +68,17 @@ type SupplyModule struct {
 	quitCh chan struct{}  // stops the goroutine in select loop
 	wg     sync.WaitGroup // wait for the goroutine to finish
 
-	accRewardCache *lru.ARCCache // (number uint64) -> (accReward *AccReward)
-	memoCache      *lru.ARCCache // (contract Address) -> (memo.Burnt *big.Int)
+	supplyCache *lru.ARCCache // (number uint64) -> (totalSupply *TotalSupply)
+	memoCache   *lru.ARCCache // (contract Address) -> (memo.Burnt *big.Int)
 }
 
 func NewSupplyModule() *SupplyModule {
-	checkpointCache, _ := lru.NewARC(checkpointCacheSize)
+	supplyCache, _ := lru.NewARC(supplyCacheSize)
 	memoCache, _ := lru.NewARC(10)
 	return &SupplyModule{
-		accRewardCache: checkpointCache,
-		memoCache:      memoCache,
-		quitCh:         make(chan struct{}, 1),
+		supplyCache: supplyCache,
+		memoCache:   memoCache,
+		quitCh:      make(chan struct{}, 1),
 	}
 }
 
@@ -97,7 +97,7 @@ func (s *SupplyModule) Start() error {
 	}
 
 	// Reset the caches.
-	s.accRewardCache.Purge()
+	s.supplyCache.Purge()
 	s.memoCache.Purge()
 
 	// Reset the quit state.

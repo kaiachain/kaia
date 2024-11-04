@@ -141,6 +141,8 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	// Missing state trie; returns partial data.
 	root := s.dbm.ReadBlockByNumber(num).Root()
 	s.dbm.DeleteTrieNode(root.ExtendZero())
+	s.s.supplyCache.Purge()
+	s.s.memoCache.Purge()
 
 	ts, err := s.s.GetTotalSupply(num)
 	assert.ErrorContains(t, err, "missing trie node")
@@ -158,6 +160,8 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 
 	// Misconfigured KIP-103; returns partial data.
 	s.chain.Config().Kip103ContractAddress = addrFund1
+	s.s.supplyCache.Purge()
+	s.s.memoCache.Purge()
 
 	ts, err = s.s.GetTotalSupply(num)
 	assert.ErrorContains(t, err, "missing trie node") // Errors are concatenated
@@ -177,9 +181,10 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	// No SupplyCheckpoint; returns nil.
 	WriteLastAccRewardNumber(s.s.ChainKv, num-(num%128))
 	DeleteAccReward(s.s.ChainKv, num-(num%128))
-	s.s.accRewardCache.Purge()
+	s.s.supplyCache.Purge()
+	s.s.memoCache.Purge()
 
 	ts, err = s.s.GetTotalSupply(num)
-	assert.ErrorIs(t, err, supply.ErrNoCheckpoint)
+	assert.ErrorIs(t, err, supply.ErrNoSupplyCheckpoint)
 	assert.Nil(t, ts)
 }
