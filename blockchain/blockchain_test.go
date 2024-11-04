@@ -1947,7 +1947,7 @@ func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeHybrid,
 			LocalCacheSizeMiB:  100,
-			RedisEndpoints:     []string{"localhost:6379"},
+			RedisEndpoints:     []string{"redis:6379"},
 			RedisClusterEnable: false,
 		}),
 	}
