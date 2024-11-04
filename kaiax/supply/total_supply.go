@@ -24,26 +24,53 @@ import (
 
 // AccReward is a subset of TotalSupply that comprises the minted and burnt amounts by the block reward mechanism.
 type AccReward struct {
-	Minted   *big.Int // Genesis + Minted[1..n]
-	BurntFee *big.Int // BurntFee[1..n]
+	TotalMinted *big.Int // Genesis + Minted[1..n]
+	BurntFee    *big.Int // BurntFee[1..n]
 }
 
 func (ar *AccReward) Copy() *AccReward {
 	return &AccReward{
-		Minted:   new(big.Int).Set(ar.Minted),
-		BurntFee: new(big.Int).Set(ar.BurntFee),
+		TotalMinted: new(big.Int).Set(ar.TotalMinted),
+		BurntFee:    new(big.Int).Set(ar.BurntFee),
 	}
+}
+
+func (ar *AccReward) ToTotalSupply(zeroBurn, deadBurn, kip103Burn, kip160Burn *big.Int) *TotalSupply {
+	ts := &TotalSupply{
+		TotalSupply: nil, // will be filled below
+
+		TotalMinted: new(big.Int).Set(ar.TotalMinted),
+
+		TotalBurnt: nil, // will be filled below
+		BurntFee:   new(big.Int).Set(ar.BurntFee),
+		ZeroBurn:   zeroBurn,
+		DeadBurn:   deadBurn,
+		Kip103Burn: kip103Burn,
+		Kip160Burn: kip160Burn,
+	}
+
+	if ar.TotalMinted != nil && ar.BurntFee != nil && zeroBurn != nil && deadBurn != nil && kip103Burn != nil && kip160Burn != nil {
+		totalBurnt := new(big.Int).Set(ar.BurntFee)
+		totalBurnt.Add(totalBurnt, zeroBurn)
+		totalBurnt.Add(totalBurnt, deadBurn)
+		totalBurnt.Add(totalBurnt, kip103Burn)
+		totalBurnt.Add(totalBurnt, kip160Burn)
+		totalSupply := new(big.Int).Sub(ar.TotalMinted, totalBurnt)
+
+		ts.TotalSupply = totalSupply
+		ts.TotalBurnt = totalBurnt
+	}
+	return ts
 }
 
 type TotalSupply struct {
 	TotalSupply *big.Int // TotalMinted - TotalBurnt
 
-	// Because there is only minting source (block reward), TotalMinted equals to AccReward.Minted.
-	TotalMinted *big.Int // Sum of all minted amounts: Genesis + Minted[1..n]
+	TotalMinted *big.Int // AccReward.TotalMinted. It covers all minting amounts.
 
 	// Tokens are burnt by various mechanisms.
 	TotalBurnt *big.Int // Sum of all burnt amounts: BurntFee[1..n] + CanonicalBurn[n] + RebalanceBurn[n]
-	BurntFee   *big.Int // BurntFee[1..n]
+	BurntFee   *big.Int // AccReward.BurntFee
 	ZeroBurn   *big.Int // CanonicalBurn[n] at 0x0
 	DeadBurn   *big.Int // CanonicalBurn[n] at 0xdead
 	Kip103Burn *big.Int // RebalanceBurn[n] by KIP-103

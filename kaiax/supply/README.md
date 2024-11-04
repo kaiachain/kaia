@@ -27,14 +27,15 @@ Because AccReward has to be accumulated over the whole blocks, intermediate resu
 
 ## Persistent schema
 
-- `SupplyCheckpoint(num)`: Stores the AccReward up to block `num`. Periodically committed to the database.
+- `AccReward(num)`: Stores the AccReward up to block `num`. Periodically committed to the database.
   ```
   "supplyCheckpoint" || Uint64BE(num) => RLP([Minted.Bytes(), BurntFee.Bytes()])
   ```
-- `lastSupplyCheckpointNumber`: The largest block number where the SupplyCheckpoint is stored.
+- `LastAccRewardNumber()`: The highest block number where the AccReward is stored.
   ```
   "lastSupplyCheckpointNumber" => Uint64BE(num)
   ```
+- Note that the schema keys have "supplyCheckpoint" for backward compatibility.
 
 ## In-memory structures
 
@@ -44,7 +45,7 @@ AccReward represents the accumulated minted tokens and burnt fees up to a specif
 
 ```go
 type AccReward struct {
-	Minted   *big.Int // Genesis + Minted[1..n]
+	TotalMinted   *big.Int // Genesis + Minted[1..n]
 	BurntFee *big.Int // BurntFee[1..n]
 }
 ```
@@ -174,7 +175,6 @@ Query the total supply at the given block.
     }
   }
   ```
-
 
 
 ## Getters

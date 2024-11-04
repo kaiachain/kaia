@@ -36,14 +36,14 @@ func nearestCheckpointInterval(num uint64) uint64 {
 // loadLastCheckpoint loads the last supply checkpoint from the database.
 func (s *SupplyModule) loadLastCheckpoint() error {
 	var (
-		lastAccNum    = ReadLastSupplyCheckpointNumber(s.ChainKv)
-		lastAccReward = ReadSupplyCheckpoint(s.ChainKv, lastAccNum)
+		lastAccNum    = ReadLastAccRewardNumber(s.ChainKv)
+		lastAccReward = ReadAccReward(s.ChainKv, lastAccNum)
 	)
 
 	// Something is wrong. Reset to genesis.
 	if lastAccNum > 0 && lastAccReward == nil {
 		logger.Error("Last supply checkpoint not found. Restarting supply catchup", "last", lastAccNum)
-		WriteLastSupplyCheckpointNumber(s.ChainKv, 0) // soft reset to genesis
+		WriteLastAccRewardNumber(s.ChainKv, 0) // soft reset to genesis
 		lastAccNum = 0
 	}
 
@@ -54,11 +54,11 @@ func (s *SupplyModule) loadLastCheckpoint() error {
 			return err
 		}
 		lastAccReward = &supply.AccReward{
-			Minted:   genesisTotalSupply,
-			BurntFee: big.NewInt(0),
+			TotalMinted: genesisTotalSupply,
+			BurntFee:    big.NewInt(0),
 		}
-		WriteLastSupplyCheckpointNumber(s.ChainKv, 0)
-		WriteSupplyCheckpoint(s.ChainKv, 0, lastAccReward)
+		WriteLastAccRewardNumber(s.ChainKv, 0)
+		WriteAccReward(s.ChainKv, 0, lastAccReward)
 		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
 	}
 
@@ -81,15 +81,15 @@ func (s *SupplyModule) accumulateRewards(fromNum, toNum uint64, fromAccReward *s
 		if err != nil {
 			return nil, err
 		}
-		accReward.Minted.Add(accReward.Minted, summary.Minted)
+		accReward.TotalMinted.Add(accReward.TotalMinted, summary.Minted)
 		accReward.BurntFee.Add(accReward.BurntFee, summary.BurntFee)
 
 		if write && (num%checkpointInterval) == 0 {
-			WriteSupplyCheckpoint(s.ChainKv, num, accReward)
-			WriteLastSupplyCheckpointNumber(s.ChainKv, num)
+			WriteAccReward(s.ChainKv, num, accReward)
+			WriteLastAccRewardNumber(s.ChainKv, num)
 		}
 		if (num % accumulateLogInterval) == 0 {
-			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.Minted.String(), "burntFee", accReward.BurntFee.String())
+			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.TotalMinted.String(), "burntFee", accReward.BurntFee.String())
 		}
 	}
 	return accReward, nil

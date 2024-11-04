@@ -30,14 +30,14 @@ func TestSchema(t *testing.T) {
 	db := database.NewMemDB()
 
 	// When data is empty
-	assert.Equal(t, uint64(0), ReadLastSupplyCheckpointNumber(db))
-	assert.Nil(t, ReadSupplyCheckpoint(db, 100))
+	assert.Equal(t, uint64(0), ReadLastAccRewardNumber(db))
+	assert.Nil(t, ReadAccReward(db, 100))
 
-	// Test LastSupplyCheckpointNumber
-	WriteLastSupplyCheckpointNumber(db, 100)
-	assert.Equal(t, uint64(100), ReadLastSupplyCheckpointNumber(db))
+	// Test LastAccRewardNumber
+	WriteLastAccRewardNumber(db, 100)
+	assert.Equal(t, uint64(100), ReadLastAccRewardNumber(db))
 
-	// Test SupplyCheckpoint
+	// Test AccReward
 	testcases := []struct {
 		Minted           *big.Int
 		BurntFee         *big.Int
@@ -49,15 +49,15 @@ func TestSchema(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		accReward := &supply.AccReward{
-			Minted:   tc.Minted,
-			BurntFee: tc.BurntFee,
+			TotalMinted: tc.Minted,
+			BurntFee:    tc.BurntFee,
 		}
 		// Check read-write round trip
-		WriteSupplyCheckpoint(db, 200, accReward)
-		assert.Equal(t, accReward, ReadSupplyCheckpoint(db, 200))
+		WriteAccReward(db, 200, accReward)
+		assert.Equal(t, accReward, ReadAccReward(db, 200))
 
 		// Check encoding
-		b, err := db.Get(supplyCheckpointKey(200))
+		b, err := db.Get(accRewardKey(200))
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expectedEncoding, hexutil.Encode(b))
 	}

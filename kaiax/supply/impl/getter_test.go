@@ -54,7 +54,7 @@ func (s *SupplyTestSuite) TestCheckpoint() {
 		require.NoError(t, err)
 
 		expected := tc.expectTotalSupply
-		bigEqual(t, expected.TotalMinted, checkpoint.Minted, tc.number)
+		bigEqual(t, expected.TotalMinted, checkpoint.TotalMinted, tc.number)
 		bigEqual(t, expected.BurntFee, checkpoint.BurntFee, tc.number)
 	}
 }
@@ -175,8 +175,8 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	assert.Equal(t, partial, ts)
 
 	// No SupplyCheckpoint; returns nil.
-	WriteLastSupplyCheckpointNumber(s.s.ChainKv, num-(num%128))
-	DeleteSupplyCheckpoint(s.s.ChainKv, num-(num%128))
+	WriteLastAccRewardNumber(s.s.ChainKv, num-(num%128))
+	DeleteAccReward(s.s.ChainKv, num-(num%128))
 	s.s.accRewardCache.Purge()
 
 	ts, err = s.s.GetTotalSupply(num)

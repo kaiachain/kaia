@@ -44,11 +44,11 @@ func (s *SupplyModule) RewindTo(newBlock *types.Block) {
 	// Soft reset to the nearest checkpoint interval less than the new block number,
 	// so that the next accumulation will start below the rewound block.
 	newLastNum := nearestCheckpointInterval(newBlock.NumberU64())
-	WriteLastSupplyCheckpointNumber(s.ChainKv, newLastNum)
+	WriteLastAccRewardNumber(s.ChainKv, newLastNum)
 }
 
 func (s *SupplyModule) RewindDelete(hash common.Hash, num uint64) {
 	if num%checkpointInterval != 0 {
-		DeleteSupplyCheckpoint(s.ChainKv, num)
+		DeleteAccReward(s.ChainKv, num)
 	}
 }

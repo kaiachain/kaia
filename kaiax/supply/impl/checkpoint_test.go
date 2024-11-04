@@ -67,7 +67,7 @@ func (s *SupplyTestSuite) TestWithCatchup() {
 
 	// Though insertBlocks->InsertChain->PostInsertBlock() has already wrote to the database,
 	// we pretend the database is empty so we can test catchup() `lastNum < currNum` path.
-	WriteLastSupplyCheckpointNumber(s.s.ChainKv, 0)
+	WriteLastAccRewardNumber(s.s.ChainKv, 0)
 
 	require.Nil(t, s.s.Start())
 	s.waitCatchup()

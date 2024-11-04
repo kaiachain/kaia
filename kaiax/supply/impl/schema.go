@@ -27,66 +27,67 @@ import (
 )
 
 var (
-	lastSupplyCheckpointNumberKey = []byte("lastSupplyCheckpointNumber")
-	supplyCheckpointPrefix        = []byte("supplyCheckpoint")
+	// Using "supplyCheckpoint" for backward compatibility
+	lastAccRewardNumberKey = []byte("lastSupplyCheckpointNumber")
+	accRewardPrefix        = []byte("supplyCheckpoint")
 )
 
-// supplyCheckpoint is the disk format for checkpoints (i.e. periodically committed AccReward).
-type supplyCheckpoint struct {
+// accRewardStorage is the disk format for checkpoints (i.e. periodically committed AccReward).
+type accRewardStorage struct {
 	Minted   []byte
 	BurntFee []byte
 }
 
-func supplyCheckpointKey(blockNumber uint64) []byte {
-	return append(supplyCheckpointPrefix, common.Int64ToByteBigEndian(blockNumber)...)
+func accRewardKey(blockNumber uint64) []byte {
+	return append(accRewardPrefix, common.Int64ToByteBigEndian(blockNumber)...)
 }
 
-func ReadLastSupplyCheckpointNumber(db database.Database) uint64 {
-	b, err := db.Get(lastSupplyCheckpointNumberKey)
+func ReadLastAccRewardNumber(db database.Database) uint64 {
+	b, err := db.Get(lastAccRewardNumberKey)
 	if err != nil || len(b) == 0 {
 		return 0
 	}
 	return binary.BigEndian.Uint64(b)
 }
 
-func WriteLastSupplyCheckpointNumber(db database.Database, num uint64) {
+func WriteLastAccRewardNumber(db database.Database, num uint64) {
 	data := common.Int64ToByteBigEndian(num)
-	if err := db.Put(lastSupplyCheckpointNumberKey, data); err != nil {
-		logger.Crit("Failed to write last supply checkpoint number", "err", err)
+	if err := db.Put(lastAccRewardNumberKey, data); err != nil {
+		logger.Crit("Failed to write highest acc reward number", "err", err)
 	}
 }
 
-func ReadSupplyCheckpoint(db database.Database, num uint64) *supply.AccReward {
-	b, err := db.Get(supplyCheckpointKey(num))
+func ReadAccReward(db database.Database, num uint64) *supply.AccReward {
+	b, err := db.Get(accRewardKey(num))
 	if err != nil || len(b) == 0 {
 		return nil
 	}
-	stored := &supplyCheckpoint{}
+	stored := &accRewardStorage{}
 	if err := rlp.DecodeBytes(b, stored); err != nil {
-		logger.Crit("Failed to deserialize supply checkpoint", "err", err)
+		logger.Crit("Failed to deserialize acc reward", "err", err)
 	}
 	return &supply.AccReward{
-		Minted:   new(big.Int).SetBytes(stored.Minted),
-		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
+		TotalMinted: new(big.Int).SetBytes(stored.Minted),
+		BurntFee:    new(big.Int).SetBytes(stored.BurntFee),
 	}
 }
 
-func WriteSupplyCheckpoint(db database.Database, num uint64, checkpoint *supply.AccReward) {
-	stored := &supplyCheckpoint{
-		Minted:   checkpoint.Minted.Bytes(),
-		BurntFee: checkpoint.BurntFee.Bytes(),
+func WriteAccReward(db database.Database, num uint64, accReward *supply.AccReward) {
+	stored := &accRewardStorage{
+		Minted:   accReward.TotalMinted.Bytes(),
+		BurntFee: accReward.BurntFee.Bytes(),
 	}
 	b, err := rlp.EncodeToBytes(stored)
 	if err != nil {
-		logger.Crit("Failed to serialize supply checkpoint", "err", err)
+		logger.Crit("Failed to serialize acc reward", "err", err)
 	}
-	if err := db.Put(supplyCheckpointKey(num), b); err != nil {
-		logger.Crit("Failed to write supply checkpoint", "err", err)
+	if err := db.Put(accRewardKey(num), b); err != nil {
+		logger.Crit("Failed to write acc reward", "err", err)
 	}
 }
 
-func DeleteSupplyCheckpoint(db database.Database, num uint64) {
-	if err := db.Delete(supplyCheckpointKey(num)); err != nil {
-		logger.Crit("Failed to delete supply checkpoint", "err", err)
+func DeleteAccReward(db database.Database, num uint64) {
+	if err := db.Delete(accRewardKey(num)); err != nil {
+		logger.Crit("Failed to delete acc reward", "err", err)
 	}
 }
