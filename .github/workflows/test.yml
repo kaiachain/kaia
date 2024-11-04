@@ -2,15 +2,15 @@ name: Testing Workflow
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
+#    tags:
+#      - 'v*.*.*'
     branches:
-      - 'main'
-      - 'release/**'
+#      - 'main'
+#      - 'release/**'
       - 'test/github-action'
-  pull_request:
-    branches:
-      - 'main'
+#  pull_request:
+#    branches:
+#      - 'main'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -90,7 +90,7 @@ jobs:
           git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
           make test-tests
   test-others:
-    runs-on: ubuntu-latest
+    runs-on: kaia-xlarge-runner
     services:
       kafka:
         image: bitnami/kafka:3.7
