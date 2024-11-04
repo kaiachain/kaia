@@ -17,8 +17,10 @@
 package supply
 
 import (
+	"math/big"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -36,8 +38,14 @@ var (
 
 	// A day; Some total supply consumers might want daily supply.
 	// It may be evicted by the historic query though.
-	checkpointCacheSize = 86400
+	checkpointCacheSize   = 86400
+	checkpointInterval    = uint64(128)    // AccReward checkpoint interval
+	accumulateLogInterval = uint64(102400) // Periodic log in accumulateRewards().
 )
+
+func nearestCheckpointNumber(num uint64) uint64 {
+	return num - (num % checkpointInterval)
+}
 
 type InitOpts struct {
 	ChainKv      database.Database
@@ -104,4 +112,77 @@ func (s *SupplyModule) Stop() {
 	atomic.StoreUint32(&s.quit, 1)
 	s.quitCh <- struct{}{}
 	s.wg.Wait()
+}
+
+// loadLastCheckpoint loads the last supply checkpoint from the database.
+func (s *SupplyModule) loadLastCheckpoint() error {
+	var (
+		lastAccNum    = ReadLastAccRewardNumber(s.ChainKv)
+		lastAccReward = ReadAccReward(s.ChainKv, lastAccNum)
+	)
+
+	// Something is wrong. Reset to genesis.
+	if lastAccNum > 0 && lastAccReward == nil {
+		logger.Error("Last supply checkpoint not found. Restarting supply catchup", "last", lastAccNum)
+		WriteLastAccRewardNumber(s.ChainKv, 0) // soft reset to genesis
+		lastAccNum = 0
+	}
+
+	// If we are at genesis (either data empty or soft reset), write the genesis supply.
+	if lastAccNum == 0 {
+		genesisTotalSupply, err := s.totalSupplyFromState(0)
+		if err != nil {
+			return err
+		}
+		lastAccReward = &supply.AccReward{
+			TotalMinted: genesisTotalSupply,
+			BurntFee:    big.NewInt(0),
+		}
+		WriteLastAccRewardNumber(s.ChainKv, 0)
+		WriteAccReward(s.ChainKv, 0, lastAccReward)
+		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
+	}
+
+	s.lastAccNum = lastAccNum
+	s.lastAccReward = lastAccReward
+	return nil
+}
+
+// catchup is a long-running goroutine that accumulates the supply checkpoint until the current head block.
+func (s *SupplyModule) catchup() {
+	defer s.wg.Done()
+
+	for {
+		newAccNum := s.Chain.CurrentBlock().NumberU64()
+		s.mu.RLock()
+		lastAccNum := s.lastAccNum
+		lastAccReward := s.lastAccReward.Copy()
+		s.mu.RUnlock()
+
+		// A gap detected. Accumulate to the current block.
+		if lastAccNum < newAccNum {
+			newAccReward, err := s.accumulateRewards(lastAccNum, newAccNum, lastAccReward, true)
+			if err != nil {
+				if err != supply.ErrSupplyModuleQuit {
+					logger.Error("Total supply accumulate failed", "from", lastAccNum, "to", newAccNum, "err", err)
+				}
+				return
+			}
+			s.mu.Lock()
+			s.lastAccNum = newAccNum
+			s.lastAccReward = newAccReward
+			s.mu.Unlock()
+			// Because current head may have increased while we accumulate, we need to check again.
+			continue
+		}
+
+		// No gap detected. Sleep a while and check again just in case.
+		// If PostInsertBlock() is filling in the gap, this loop would do nothing but waiting.
+		timer := time.NewTimer(time.Second)
+		select {
+		case <-s.quitCh:
+			return
+		case <-timer.C:
+		}
+	}
 }

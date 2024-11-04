@@ -21,6 +21,7 @@ import (
 	"errors"
 	"math/big"
 	"strings"
+	"sync/atomic"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -110,7 +111,7 @@ func (s *SupplyModule) getAccReward(num uint64) (*supply.AccReward, error) {
 	}
 
 	// If not found, re-accumulate from the nearest checkpoint.
-	fromNum := nearestCheckpointInterval(num)
+	fromNum := nearestCheckpointNumber(num)
 	fromAccReward := ReadAccReward(s.ChainKv, fromNum)
 	if fromAccReward == nil {
 		return nil, supply.ErrNoCheckpoint
@@ -201,4 +202,32 @@ func (s *SupplyModule) getRebalanceBurn(num uint64, forkNum *big.Int, addr commo
 	// 2. found the memo in state.
 	s.memoCache.Add(addr, result.Burnt)
 	return result.Burnt, nil
+}
+
+// accumulateRewards accumulates the reward increments from `fromNum` to `toNum`, inclusive.
+// If `write` is true, the intermediate results at checkpointInterval will be written to the database.
+func (s *SupplyModule) accumulateRewards(fromNum, toNum uint64, fromAccReward *supply.AccReward, write bool) (*supply.AccReward, error) {
+	accReward := fromAccReward.Copy() // make a copy because we're updating it in-place.
+
+	for num := fromNum + 1; num <= toNum; num++ {
+		if atomic.LoadUint32(&s.quit) == 1 { // Received quit signal
+			return nil, supply.ErrSupplyModuleQuit
+		}
+
+		summary, err := s.RewardModule.GetRewardSummary(num)
+		if err != nil {
+			return nil, err
+		}
+		accReward.TotalMinted.Add(accReward.TotalMinted, summary.Minted)
+		accReward.BurntFee.Add(accReward.BurntFee, summary.BurntFee)
+
+		if write && (num%checkpointInterval) == 0 {
+			WriteAccReward(s.ChainKv, num, accReward)
+			WriteLastAccRewardNumber(s.ChainKv, num)
+		}
+		if (num % accumulateLogInterval) == 0 {
+			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.TotalMinted.String(), "burntFee", accReward.BurntFee.String())
+		}
+	}
+	return accReward, nil
 }

@@ -43,7 +43,7 @@ func (s *SupplyModule) PostInsertBlock(block *types.Block) error {
 func (s *SupplyModule) RewindTo(newBlock *types.Block) {
 	// Soft reset to the nearest checkpoint interval less than the new block number,
 	// so that the next accumulation will start below the rewound block.
-	newLastNum := nearestCheckpointInterval(newBlock.NumberU64())
+	newLastNum := nearestCheckpointNumber(newBlock.NumberU64())
 	WriteLastAccRewardNumber(s.ChainKv, newLastNum)
 }
 
