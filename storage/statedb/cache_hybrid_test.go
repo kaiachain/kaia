@@ -29,7 +29,7 @@ func getTestHybridConfig() *TrieNodeCacheConfig {
 		CacheType:          CacheTypeHybrid,
 		LocalCacheSizeMiB:  100,
 		FastCacheFileDir:   "",
-		RedisEndpoints:     []string{"localhost:6379"},
+		RedisEndpoints:     []string{"redis:6379"},
 		RedisClusterEnable: false,
 	}
 }
