@@ -22,15 +22,32 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 )
 
+// AccReward is a subset of TotalSupply that comprises the minted and burnt amounts by the block reward mechanism.
+type AccReward struct {
+	Minted   *big.Int // Genesis + Minted[1..n]
+	BurntFee *big.Int // BurntFee[1..n]
+}
+
+func (ar *AccReward) Copy() *AccReward {
+	return &AccReward{
+		Minted:   new(big.Int).Set(ar.Minted),
+		BurntFee: new(big.Int).Set(ar.BurntFee),
+	}
+}
+
 type TotalSupply struct {
 	TotalSupply *big.Int // TotalMinted - TotalBurnt
-	TotalMinted *big.Int // Genesis + Minted[1..n]
-	TotalBurnt  *big.Int // BurntFee[1..n] + CanonicalBurn[n] + RebalanceBurn[n]
-	BurntFee    *big.Int // BurntFee[1..n]
-	ZeroBurn    *big.Int // CanonicalBurn[n] at 0x0
-	DeadBurn    *big.Int // CanonicalBurn[n] at 0xdead
-	Kip103Burn  *big.Int // RebalanceBurn[n] by KIP-103
-	Kip160Burn  *big.Int // RebalanceBurn[n] by KIP-160
+
+	// Because there is only minting source (block reward), TotalMinted equals to AccReward.Minted.
+	TotalMinted *big.Int // Sum of all minted amounts: Genesis + Minted[1..n]
+
+	// Tokens are burnt by various mechanisms.
+	TotalBurnt *big.Int // Sum of all burnt amounts: BurntFee[1..n] + CanonicalBurn[n] + RebalanceBurn[n]
+	BurntFee   *big.Int // BurntFee[1..n]
+	ZeroBurn   *big.Int // CanonicalBurn[n] at 0x0
+	DeadBurn   *big.Int // CanonicalBurn[n] at 0xdead
+	Kip103Burn *big.Int // RebalanceBurn[n] by KIP-103
+	Kip160Burn *big.Int // RebalanceBurn[n] by KIP-160
 }
 
 type TotalSupplyResponse struct {

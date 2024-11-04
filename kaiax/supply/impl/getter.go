@@ -40,12 +40,12 @@ func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
 
 	// Read accumulated supply checkpoint (minted, burntFee)
 	// This is an essential component, so failure to read it immediately aborts the function.
-	checkpoint, err := s.getCheckpoint(num)
+	accReward, err := s.getAccReward(num)
 	if err != nil {
 		return nil, err
 	}
-	ts.TotalMinted = checkpoint.Minted
-	ts.BurntFee = checkpoint.BurntFee
+	ts.TotalMinted = accReward.Minted
+	ts.BurntFee = accReward.BurntFee
 
 	ts.ZeroBurn, ts.DeadBurn, err = s.getCanonicalBurn(num)
 	if err != nil {
@@ -99,34 +99,34 @@ func (s *SupplyModule) totalSupplyFromState(num uint64) (*big.Int, error) {
 	return totalSupply, nil
 }
 
-// getCheckpoint reads the supply checkpoint at the given block number.
+// getAccReward reads the supply checkpoint at the given block number.
 // If the checkpoint is not found, it will re-accumulate from the nearest checkpoint.
-func (s *SupplyModule) getCheckpoint(num uint64) (*supplyCheckpoint, error) {
-	if cached, ok := s.checkpointCache.Get(num); ok {
-		return cached.(*supplyCheckpoint), nil
+func (s *SupplyModule) getAccReward(num uint64) (*supply.AccReward, error) {
+	if cached, ok := s.accRewardCache.Get(num); ok {
+		return cached.(*supply.AccReward), nil
 	}
 
 	// Find from the database.
-	checkpoint := ReadSupplyCheckpoint(s.ChainKv, num)
-	if checkpoint != nil {
-		s.checkpointCache.Add(num, checkpoint)
-		return checkpoint, nil
+	accReward := ReadSupplyCheckpoint(s.ChainKv, num)
+	if accReward != nil {
+		s.accRewardCache.Add(num, accReward)
+		return accReward, nil
 	}
 
 	// If not found, re-accumulate from the nearest checkpoint.
 	fromNum := nearestCheckpointInterval(num)
-	fromCheckpoint := ReadSupplyCheckpoint(s.ChainKv, fromNum)
-	if fromCheckpoint == nil {
+	fromAccReward := ReadSupplyCheckpoint(s.ChainKv, fromNum)
+	if fromAccReward == nil {
 		return nil, supply.ErrNoCheckpoint
 	}
 	logger.Trace("on-demand reaccumulating supply checkpoint", "from", fromNum, "to", num)
-	checkpoint, err := s.accumulateCheckpoint(fromNum, num, fromCheckpoint, false)
+	accReward, err := s.accumulateRewards(fromNum, num, fromAccReward, false)
 	if err != nil {
 		return nil, err
 	}
 
-	s.checkpointCache.Add(num, checkpoint)
-	return checkpoint, nil
+	s.accRewardCache.Add(num, accReward)
+	return accReward, nil
 }
 
 // getCanonicalBurn reads the balances of the canonical burn addresses (0x0, 0xdead) from the state.

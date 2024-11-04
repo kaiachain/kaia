@@ -49,7 +49,7 @@ func (s *SupplyTestSuite) TestWithoutCatchup() {
 	defer s.s.Stop()
 	s.insertBlocks()
 
-	assert.Equal(t, uint64(400), s.s.lastNum)
+	assert.Equal(t, uint64(400), s.s.lastAccNum)
 
 	for _, tc := range s.testcases() {
 		ts, err := s.s.GetTotalSupply(tc.number)
@@ -82,7 +82,7 @@ func (s *SupplyTestSuite) TestWithCatchup() {
 
 func (s *SupplyTestSuite) waitCatchup() {
 	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
-		if s.s.lastNum == 400 {
+		if s.s.lastAccNum == 400 {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)

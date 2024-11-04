@@ -25,22 +25,9 @@ import (
 )
 
 var (
-	checkpointInterval    = uint64(128)
+	checkpointInterval    = uint64(128)    // AccReward checkpoint interval
 	accumulateLogInterval = uint64(102400) // Periodic log in accumulateCheckpoint().
 )
-
-// supplyCheckpoint represents the accumulated minted and burnt fee up to a specific block number.
-type supplyCheckpoint struct {
-	Minted   *big.Int
-	BurntFee *big.Int
-}
-
-func (sc *supplyCheckpoint) Copy() *supplyCheckpoint {
-	return &supplyCheckpoint{
-		Minted:   new(big.Int).Set(sc.Minted),
-		BurntFee: new(big.Int).Set(sc.BurntFee),
-	}
-}
 
 func nearestCheckpointInterval(num uint64) uint64 {
 	return num - (num % checkpointInterval)
@@ -49,41 +36,41 @@ func nearestCheckpointInterval(num uint64) uint64 {
 // loadLastCheckpoint loads the last supply checkpoint from the database.
 func (s *SupplyModule) loadLastCheckpoint() error {
 	var (
-		lastNum        = ReadLastSupplyCheckpointNumber(s.ChainKv)
-		lastCheckpoint = ReadSupplyCheckpoint(s.ChainKv, lastNum)
+		lastAccNum    = ReadLastSupplyCheckpointNumber(s.ChainKv)
+		lastAccReward = ReadSupplyCheckpoint(s.ChainKv, lastAccNum)
 	)
 
 	// Something is wrong. Reset to genesis.
-	if lastNum > 0 && lastCheckpoint == nil {
-		logger.Error("Last supply checkpoint not found. Restarting supply catchup", "last", lastNum)
+	if lastAccNum > 0 && lastAccReward == nil {
+		logger.Error("Last supply checkpoint not found. Restarting supply catchup", "last", lastAccNum)
 		WriteLastSupplyCheckpointNumber(s.ChainKv, 0) // soft reset to genesis
-		lastNum = 0
+		lastAccNum = 0
 	}
 
 	// If we are at genesis (either data empty or soft reset), write the genesis supply.
-	if lastNum == 0 {
+	if lastAccNum == 0 {
 		genesisTotalSupply, err := s.totalSupplyFromState(0)
 		if err != nil {
 			return err
 		}
-		lastCheckpoint = &supplyCheckpoint{
+		lastAccReward = &supply.AccReward{
 			Minted:   genesisTotalSupply,
 			BurntFee: big.NewInt(0),
 		}
 		WriteLastSupplyCheckpointNumber(s.ChainKv, 0)
-		WriteSupplyCheckpoint(s.ChainKv, 0, lastCheckpoint)
+		WriteSupplyCheckpoint(s.ChainKv, 0, lastAccReward)
 		logger.Info("Stored genesis total supply", "supply", genesisTotalSupply)
 	}
 
-	s.lastNum = lastNum
-	s.lastCheckpoint = lastCheckpoint
+	s.lastAccNum = lastAccNum
+	s.lastAccReward = lastAccReward
 	return nil
 }
 
-// accumulateCheckpoint accumulates the total supply increments from `fromNum` to `toNum`, inclusive.
+// accumulateRewards accumulates the reward increments from `fromNum` to `toNum`, inclusive.
 // If `write` is true, the intermediate results at checkpointInterval will be written to the database.
-func (s *SupplyModule) accumulateCheckpoint(fromNum, toNum uint64, fromCheckpoint *supplyCheckpoint, write bool) (*supplyCheckpoint, error) {
-	checkpoint := fromCheckpoint.Copy() // make a copy because we're updating it in-place.
+func (s *SupplyModule) accumulateRewards(fromNum, toNum uint64, fromAccReward *supply.AccReward, write bool) (*supply.AccReward, error) {
+	accReward := fromAccReward.Copy() // make a copy because we're updating it in-place.
 
 	for num := fromNum + 1; num <= toNum; num++ {
 		if atomic.LoadUint32(&s.quit) == 1 { // Received quit signal
@@ -94,18 +81,18 @@ func (s *SupplyModule) accumulateCheckpoint(fromNum, toNum uint64, fromCheckpoin
 		if err != nil {
 			return nil, err
 		}
-		checkpoint.Minted.Add(checkpoint.Minted, summary.Minted)
-		checkpoint.BurntFee.Add(checkpoint.BurntFee, summary.BurntFee)
+		accReward.Minted.Add(accReward.Minted, summary.Minted)
+		accReward.BurntFee.Add(accReward.BurntFee, summary.BurntFee)
 
 		if write && (num%checkpointInterval) == 0 {
-			WriteSupplyCheckpoint(s.ChainKv, num, checkpoint)
+			WriteSupplyCheckpoint(s.ChainKv, num, accReward)
 			WriteLastSupplyCheckpointNumber(s.ChainKv, num)
 		}
 		if (num % accumulateLogInterval) == 0 {
-			logger.Info("Accumulated block rewards", "number", num, "minted", checkpoint.Minted.String(), "burntFee", checkpoint.BurntFee.String())
+			logger.Info("Accumulated block rewards", "number", num, "minted", accReward.Minted.String(), "burntFee", accReward.BurntFee.String())
 		}
 	}
-	return checkpoint, nil
+	return accReward, nil
 }
 
 // catchup is a long-running goroutine that accumulates the supply checkpoint until the current head block.
@@ -113,24 +100,24 @@ func (s *SupplyModule) catchup() {
 	defer s.wg.Done()
 
 	for {
-		currNum := s.Chain.CurrentBlock().NumberU64()
+		newAccNum := s.Chain.CurrentBlock().NumberU64()
 		s.mu.RLock()
-		lastNum := s.lastNum
-		lastCheckpoint := s.lastCheckpoint.Copy()
+		lastAccNum := s.lastAccNum
+		lastAccReward := s.lastAccReward.Copy()
 		s.mu.RUnlock()
 
-		// A gap detected. Accumulate to the current block as of now.
-		if lastNum < currNum {
-			currCheckpoint, err := s.accumulateCheckpoint(lastNum, currNum, lastCheckpoint, true)
+		// A gap detected. Accumulate to the current block.
+		if lastAccNum < newAccNum {
+			newAccReward, err := s.accumulateRewards(lastAccNum, newAccNum, lastAccReward, true)
 			if err != nil {
 				if err != supply.ErrSupplyModuleQuit {
-					logger.Error("Total supply accumulate failed", "from", lastNum, "to", currNum, "err", err)
+					logger.Error("Total supply accumulate failed", "from", lastAccNum, "to", newAccNum, "err", err)
 				}
 				return
 			}
 			s.mu.Lock()
-			s.lastNum = currNum
-			s.lastCheckpoint = currCheckpoint
+			s.lastAccNum = newAccNum
+			s.lastAccReward = newAccReward
 			s.mu.Unlock()
 			// Because current head may have increased while we accumulate, we need to check again.
 			continue

@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,13 +48,17 @@ func TestSchema(t *testing.T) {
 		{big.NewInt(10000), big.NewInt(20000), "0xc6822710824e20"},
 	}
 	for _, tc := range testcases {
-		checkpoint := &supplyCheckpoint{
+		accReward := &supply.AccReward{
 			Minted:   tc.Minted,
 			BurntFee: tc.BurntFee,
 		}
-		assert.Equal(t, tc.expectedEncoding, hexutil.Encode(checkpoint.MustEncode()))
+		// Check read-write round trip
+		WriteSupplyCheckpoint(db, 200, accReward)
+		assert.Equal(t, accReward, ReadSupplyCheckpoint(db, 200))
 
-		WriteSupplyCheckpoint(db, 200, checkpoint)
-		assert.Equal(t, checkpoint, ReadSupplyCheckpoint(db, 200))
+		// Check encoding
+		b, err := db.Get(supplyCheckpointKey(200))
+		assert.NoError(t, err)
+		assert.Equal(t, tc.expectedEncoding, hexutil.Encode(b))
 	}
 }

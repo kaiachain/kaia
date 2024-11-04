@@ -50,7 +50,7 @@ func (s *SupplyTestSuite) TestCheckpoint() {
 	s.insertBlocks()
 
 	for _, tc := range s.testcases() {
-		checkpoint, err := s.s.getCheckpoint(tc.number)
+		checkpoint, err := s.s.getAccReward(tc.number)
 		require.NoError(t, err)
 
 		expected := tc.expectTotalSupply
@@ -177,7 +177,7 @@ func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	// No SupplyCheckpoint; returns nil.
 	WriteLastSupplyCheckpointNumber(s.s.ChainKv, num-(num%128))
 	DeleteSupplyCheckpoint(s.s.ChainKv, num-(num%128))
-	s.s.checkpointCache.Purge()
+	s.s.accRewardCache.Purge()
 
 	ts, err = s.s.GetTotalSupply(num)
 	assert.ErrorIs(t, err, supply.ErrNoCheckpoint)

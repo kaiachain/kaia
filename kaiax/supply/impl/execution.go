@@ -29,13 +29,13 @@ func (s *SupplyModule) PostInsertBlock(block *types.Block) error {
 	defer s.mu.Unlock()
 
 	newNum := block.NumberU64()
-	if s.lastNum+1 == newNum && s.lastCheckpoint != nil {
-		newCheckpoint, err := s.accumulateCheckpoint(s.lastNum, newNum, s.lastCheckpoint, true)
+	if s.lastAccNum+1 == newNum && s.lastAccReward != nil {
+		newCheckpoint, err := s.accumulateRewards(s.lastAccNum, newNum, s.lastAccReward, true)
 		if err != nil {
 			return err
 		}
-		s.lastNum = newNum
-		s.lastCheckpoint = newCheckpoint
+		s.lastAccNum = newNum
+		s.lastAccReward = newCheckpoint
 	}
 	return nil
 }

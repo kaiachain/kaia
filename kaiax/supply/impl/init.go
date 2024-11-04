@@ -51,26 +51,26 @@ type SupplyModule struct {
 
 	// Accumulated supply checkpoint so far.
 	// This in-memory variables advance every block, but the database is updated every checkpointInterval.
-	mu             sync.RWMutex
-	lastNum        uint64            // Last in-memory supply checkpoint number
-	lastCheckpoint *supplyCheckpoint // Last in-memory supply checkpoint
+	mu            sync.RWMutex
+	lastAccNum    uint64            // Last AccReward number
+	lastAccReward *supply.AccReward // Last AccReward
 
 	// Stops long-running tasks.
 	quit   uint32         // stops the synchronous loop in accumulateCheckpoint
 	quitCh chan struct{}  // stops the goroutine in select loop
 	wg     sync.WaitGroup // wait for the goroutine to finish
 
-	checkpointCache *lru.ARCCache // (number uint64) -> (checkpoint *supplyCheckpoint)
-	memoCache       *lru.ARCCache // (contract Address) -> (memo.Burnt *big.Int)
+	accRewardCache *lru.ARCCache // (number uint64) -> (accReward *AccReward)
+	memoCache      *lru.ARCCache // (contract Address) -> (memo.Burnt *big.Int)
 }
 
 func NewSupplyModule() *SupplyModule {
 	checkpointCache, _ := lru.NewARC(checkpointCacheSize)
 	memoCache, _ := lru.NewARC(10)
 	return &SupplyModule{
-		checkpointCache: checkpointCache,
-		memoCache:       memoCache,
-		quitCh:          make(chan struct{}, 1),
+		accRewardCache: checkpointCache,
+		memoCache:      memoCache,
+		quitCh:         make(chan struct{}, 1),
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *SupplyModule) Start() error {
 	}
 
 	// Reset the caches.
-	s.checkpointCache.Purge()
+	s.accRewardCache.Purge()
 	s.memoCache.Purge()
 
 	// Reset the quit state.

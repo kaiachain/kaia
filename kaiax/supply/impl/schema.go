@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/supply"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -30,31 +31,10 @@ var (
 	supplyCheckpointPrefix        = []byte("supplyCheckpoint")
 )
 
-// supplyCheckpointStorage is the RLP encoding format for SupplyCheckpoint.
-type supplyCheckpointStorage struct {
+// supplyCheckpoint is the disk format for checkpoints (i.e. periodically committed AccReward).
+type supplyCheckpoint struct {
 	Minted   []byte
 	BurntFee []byte
-}
-
-func (sc *supplyCheckpoint) MustEncode() []byte {
-	stored := &supplyCheckpointStorage{
-		Minted:   sc.Minted.Bytes(),
-		BurntFee: sc.BurntFee.Bytes(),
-	}
-	b, err := rlp.EncodeToBytes(stored)
-	if err != nil {
-		logger.Crit("Failed to serialize supply checkpoint", "err", err)
-	}
-	return b
-}
-
-func (sc *supplyCheckpoint) MustDecode(b []byte) {
-	stored := &supplyCheckpointStorage{}
-	if err := rlp.DecodeBytes(b, stored); err != nil {
-		logger.Crit("Failed to deserialize supply checkpoint", "err", err)
-	}
-	sc.Minted = new(big.Int).SetBytes(stored.Minted)
-	sc.BurntFee = new(big.Int).SetBytes(stored.BurntFee)
 }
 
 func supplyCheckpointKey(blockNumber uint64) []byte {
@@ -76,18 +56,31 @@ func WriteLastSupplyCheckpointNumber(db database.Database, num uint64) {
 	}
 }
 
-func ReadSupplyCheckpoint(db database.Database, num uint64) *supplyCheckpoint {
+func ReadSupplyCheckpoint(db database.Database, num uint64) *supply.AccReward {
 	b, err := db.Get(supplyCheckpointKey(num))
 	if err != nil || len(b) == 0 {
 		return nil
 	}
-	checkpoint := &supplyCheckpoint{}
-	checkpoint.MustDecode(b)
-	return checkpoint
+	stored := &supplyCheckpoint{}
+	if err := rlp.DecodeBytes(b, stored); err != nil {
+		logger.Crit("Failed to deserialize supply checkpoint", "err", err)
+	}
+	return &supply.AccReward{
+		Minted:   new(big.Int).SetBytes(stored.Minted),
+		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
+	}
 }
 
-func WriteSupplyCheckpoint(db database.Database, num uint64, checkpoint *supplyCheckpoint) {
-	if err := db.Put(supplyCheckpointKey(num), checkpoint.MustEncode()); err != nil {
+func WriteSupplyCheckpoint(db database.Database, num uint64, checkpoint *supply.AccReward) {
+	stored := &supplyCheckpoint{
+		Minted:   checkpoint.Minted.Bytes(),
+		BurntFee: checkpoint.BurntFee.Bytes(),
+	}
+	b, err := rlp.EncodeToBytes(stored)
+	if err != nil {
+		logger.Crit("Failed to serialize supply checkpoint", "err", err)
+	}
+	if err := db.Put(supplyCheckpointKey(num), b); err != nil {
 		logger.Crit("Failed to write supply checkpoint", "err", err)
 	}
 }
