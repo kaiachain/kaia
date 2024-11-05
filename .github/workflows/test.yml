@@ -116,6 +116,11 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           git fetch origin dev:dev
+      - name: Start LocalStack
+        uses: LocalStack/setup-localstack@v0.2.2
+        with:
+          image-tag: 'latest'
+          install-awslocal: 'true'
       - name: Run test tests
         run: |
           make test-others
