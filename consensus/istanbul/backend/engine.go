@@ -490,7 +490,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	return nil
 }
 
-func (sb *backend) Initialize(chain consensus.ChainContext, header *types.Header, state *state.StateDB) {
+func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	// [EIP-2935] stores the parent block hash in the history storage contract
 	if chain.Config().IsPragueForkEnabled(header.Number) {
 		context := blockchain.NewEVMBlockContext(header, chain, nil)

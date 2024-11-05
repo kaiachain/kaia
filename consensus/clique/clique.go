@@ -577,7 +577,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 
 func (c *Clique) InitSnapshot() {}
 
-func (c *Clique) Initialize(chain consensus.ChainContext, header *types.Header, state *state.StateDB) {
+func (c *Clique) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 }
 
 // Finalize implements consensus.Engine and returns the final block.

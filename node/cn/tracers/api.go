@@ -429,34 +429,12 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				logged = time.Now()
 				logger.Info("Tracing chain segment", "start", start.NumberU64(), "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin))
 			}
-			// Retrieve the parent block and target block for tracing.
-			block, err := api.blockByNumber(localctx, rpc.BlockNumber(number))
-			if err != nil {
-				failed = err
-				break
-			}
 			next, err := api.blockByNumber(localctx, rpc.BlockNumber(number+1))
 			if err != nil {
 				failed = err
 				break
 			}
-			// Prepare the statedb for tracing. Don't use the live database for
-			// tracing to avoid persisting state junks into the database. Switch
-			// over to `preferDisk` mode only if the memory usage exceeds the
-			// limit, the trie database will be reconstructed from scratch only
-			// if the relevant state is available in disk.
-			var preferDisk bool
-			if statedb != nil {
-				s1, s2, s3 := statedb.Database().TrieDB().Size()
-				preferDisk = s1+s2+s3 > defaultTracechainMemLimit
-			}
-			statedb, release, err = api.backend.StateAtBlock(localctx, block, reexec, statedb, false, preferDisk)
-			if err != nil {
-				failed = err
-				break
-			}
-			// Insert parent hash in history contract.
-			api.backend.Engine().Initialize(newChainContext(localctx, api.backend), next.Header(), statedb)
+			_, _, _, statedb, release, err = api.backend.StateAtTransaction(localctx, next, 0, reexec)
 
 			// Clean out any pending derefs. Note this step must be done after
 			// constructing tracing state, because the tracing state of block
@@ -630,17 +608,12 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	if block.NumberU64() == 0 {
 		return nil, errors.New("genesis is not traceable")
 	}
-	// Create the parent state database
-	parent, err := api.blockByNumberAndHash(ctx, rpc.BlockNumber(block.NumberU64()-1), block.ParentHash())
-	if err != nil {
-		return nil, err
-	}
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
 
-	statedb, release, err := api.backend.StateAtBlock(ctx, parent, reexec, nil, true, false)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, block, 0, reexec)
 	if err != nil {
 		return nil, err
 	}
@@ -658,7 +631,6 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 		header   = block.Header()
 		blockCtx = blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
 	)
-	api.backend.Engine().Initialize(newChainContext(ctx, api.backend), header, statedb)
 
 	threads := runtime.NumCPU()
 	if threads > len(txs) {
@@ -743,7 +715,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
-	statedb, release, err := api.backend.StateAtBlock(ctx, parent, reexec, nil, true, false)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, parent, 0, reexec)
 	if err != nil {
 		return nil, err
 	}
@@ -764,7 +736,6 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 
 	header := block.Header()
 	blockCtx := blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
-	api.backend.Engine().Initialize(newChainContext(ctx, api.backend), header, statedb)
 
 	// Execute transaction, either tracing all or just the requested one
 	var (

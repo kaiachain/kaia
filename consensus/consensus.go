@@ -102,7 +102,7 @@ type Engine interface {
 	Prepare(chain ChainReader, header *types.Header) error
 
 	// Initialize runs any pre-transaction state modifications (e.g., EIP-2539)
-	Initialize(chain ChainContext, header *types.Header, state *state.StateDB)
+	Initialize(chain ChainReader, header *types.Header, state *state.StateDB)
 
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.
@@ -187,10 +187,4 @@ type ConsensusInfo struct {
 	Committee      []common.Address
 	Committers     []common.Address
 	Round          byte
-}
-
-type ChainContext interface {
-	Config() *params.ChainConfig
-	Engine() Engine
-	GetHeader(hash common.Hash, number uint64) *types.Header
 }

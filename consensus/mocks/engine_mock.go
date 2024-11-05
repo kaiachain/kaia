@@ -168,7 +168,7 @@ func (mr *MockEngineMockRecorder) InitSnapshot() *gomock.Call {
 }
 
 // Initialize mocks base method.
-func (m *MockEngine) Initialize(arg0 consensus.ChainContext, arg1 *types.Header, arg2 *state.StateDB) {
+func (m *MockEngine) Initialize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2)
 }

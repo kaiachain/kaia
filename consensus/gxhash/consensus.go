@@ -402,7 +402,7 @@ func (gxhash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header)
 	return nil
 }
 
-func (gxhash *Gxhash) Initialize(chain consensus.ChainContext, header *types.Header, state *state.StateDB) {
+func (gxhash *Gxhash) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 }
 
 // Finalize implements consensus.Engine, accumulating the block rewards,

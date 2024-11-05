@@ -808,7 +808,7 @@ func (s *supplyTestEngine) Prepare(chain consensus.ChainReader, header *types.He
 	return nil
 }
 
-func (s *supplyTestEngine) Initialize(chain consensus.ChainContext, header *types.Header, state *state.StateDB) {
+func (s *supplyTestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 }
 
 // Simplfied version of istanbul Finalize for testing native token distribution.
