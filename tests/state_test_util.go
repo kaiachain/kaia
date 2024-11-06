@@ -23,6 +23,7 @@
 package tests
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -76,6 +77,7 @@ type stPostState struct {
 		Gas   int `json:"gas"`
 		Value int `json:"value"`
 	}
+	Alloc blockchain.GenesisAlloc
 }
 
 //go:generate gencodec -type stEnv -field-override stEnvMarshaling -out gen_stenv.go
@@ -179,7 +181,6 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		return statedb, fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
 	}
 
-	root, _ := statedb.Commit(true)
 	// Add 0-value mining reward. This only makes a difference in the cases
 	// where
 	// - the coinbase self-destructed, or
@@ -187,11 +188,29 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	//   the coinbase gets no txfee, so isn't created, and thus needs to be touched
 	statedb.AddBalance(block.Rewardbase(), new(big.Int))
 	// And _now_ get the state root
-	root = statedb.IntermediateRoot(true)
+	statedb.Commit(true)
 
-	if root != common.Hash(post.Root) {
-		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
+	for addr, a := range post.Alloc {
+		// TODO: skip checking balance of coinbase and sender because of the difference of reward system and fee system
+		if addr.String() != t.json.Env.Coinbase.String() && addr.String() != msg.ValidatedSender().String() {
+			if balance := statedb.GetBalance(addr); balance.Cmp(a.Balance) != 0 {
+				return nil, fmt.Errorf("address %s balance mismatch: got %v, want %v", addr.String(), balance, a.Balance)
+			}
+		}
+		if nonce := statedb.GetNonce(addr); nonce != a.Nonce {
+			return nil, fmt.Errorf("address %s nonce mismatch: got %v, want %v", addr.String(), nonce, a.Nonce)
+		}
+		if code := statedb.GetCode(addr); bytes.Compare(code, a.Code) != 0 {
+			return nil, fmt.Errorf("address %s code mismatch: got %x, want %x", addr.String(), code, a.Code)
+		}
+		// TODO: should check root hash
+		for pointer, d := range a.Storage {
+			if data := statedb.GetState(addr, pointer); bytes.Compare(data.Bytes(), d.Bytes()) != 0 {
+				return nil, fmt.Errorf("address %s storage %x mismatch: got %x, want %x", addr.String(), pointer, data, d)
+			}
+		}
 	}
+
 	return statedb, nil
 }
 

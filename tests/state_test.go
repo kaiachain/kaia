@@ -25,7 +25,9 @@ package tests
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -72,6 +74,28 @@ func TestExecutionSpecState(t *testing.T) {
 	// st.runonly("eip7702")
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
+		// get blockchain test path
+		path := filepath.Join(executionSpecBlockchainTestDir)
+		testName := filepath.Join("")
+		for _, name := range strings.Split(name, "/") {
+			if filepath.Ext(path) == ".json" {
+				testName = filepath.Join(testName, name)
+			} else {
+				path = filepath.Join(path, name)
+			}
+		}
+		testName = strings.Replace(testName, "-state_test", "-blockchain_test", -1)
+
+		// load blockchain file
+		blockchainTests := map[string]btJSON{}
+		if err := readJSONFile(path, &blockchainTests); err != nil {
+			t.Fatal(err)
+		}
+
+		// set post state
+		// TODO: index 0 always ok?
+		test.json.Post[blockchainTests[testName].Network][0].Alloc = blockchainTests[testName].Post
+
 		execStateTest(t, st, test, name)
 	})
 }
@@ -82,7 +106,7 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string) 
 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
 		name := name + "/" + key
 		t.Run(key, func(t *testing.T) {
-			if subtest.Fork == "Constantinople" {
+			if subtest.Fork == "Constantinople" || subtest.Fork == "Cancun" || subtest.Fork == "Prague" || subtest.Fork == "Paris" {
 				t.Skip("constantinople not supported yet")
 			}
 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {

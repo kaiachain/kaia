@@ -38,13 +38,14 @@ import (
 )
 
 var (
-	baseDir                   = filepath.Join(".", "testdata")
-	blockTestDir              = filepath.Join(baseDir, "BlockchainTests")
-	stateTestDir              = filepath.Join(baseDir, "GeneralStateTests")
-	transactionTestDir        = filepath.Join(baseDir, "TransactionTests")
-	vmTestDir                 = filepath.Join(baseDir, "VMTests")
-	rlpTestDir                = filepath.Join(baseDir, "RLPTests")
-	executionSpecStateTestDir = filepath.Join(".", "spec-tests", "fixtures", "state_tests")
+	baseDir                        = filepath.Join(".", "testdata")
+	blockTestDir                   = filepath.Join(baseDir, "BlockchainTests")
+	stateTestDir                   = filepath.Join(baseDir, "GeneralStateTests")
+	transactionTestDir             = filepath.Join(baseDir, "TransactionTests")
+	vmTestDir                      = filepath.Join(baseDir, "VMTests")
+	rlpTestDir                     = filepath.Join(baseDir, "RLPTests")
+	executionSpecBlockchainTestDir = filepath.Join(".", "spec-tests", "fixtures", "blockchain_tests")
+	executionSpecStateTestDir      = filepath.Join(".", "spec-tests", "fixtures", "state_tests")
 )
 
 func readJSON(reader io.Reader, value interface{}) error {
@@ -234,6 +235,7 @@ func (tm *testMatcher) runTestFile(t *testing.T, path, name string, runTest inte
 	// Run all tests from the map. Don't wrap in a subtest if there is only one test in the file.
 	keys := sortedMapKeys(m)
 	if len(keys) == 1 {
+		name := name + "/" + keys[0]
 		runTestFunc(runTest, t, name, m, keys[0])
 	} else {
 		for _, key := range keys {
