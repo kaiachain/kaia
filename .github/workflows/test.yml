@@ -106,7 +106,7 @@ jobs:
       redis:
         image: redis:6.0.8-alpine
       localstack:
-        image: localstack/localstack:0.13.0
+        image: localstack/localstack:3
     container:
       image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
     steps:
@@ -116,11 +116,9 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           git fetch origin dev:dev
-      - name: Start LocalStack
-        uses: LocalStack/setup-localstack@v0.2.2
-        with:
-          image-tag: 'latest'
-          install-awslocal: 'true'
       - name: Run test tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secret.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secret.AWS_SECRET_ACCESS_KEY }}
         run: |
           make test-others
