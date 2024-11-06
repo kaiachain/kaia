@@ -159,10 +159,6 @@ func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.H
 	return header
 }
 
-func (context *chainContext) Config() *params.ChainConfig {
-	return context.backend.ChainConfig()
-}
-
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
 func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
