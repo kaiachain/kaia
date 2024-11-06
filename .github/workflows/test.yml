@@ -89,7 +89,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
           make test-tests
-  test-others:
+  test-datasync:
     runs-on: kaia-xlarge-runner
     services:
       kafka:
@@ -116,9 +116,9 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           git fetch origin dev:dev
-      - name: Run test tests
+      - name: Run test datasync
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          make test-others
+          make test-datasync
