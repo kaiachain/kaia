@@ -42,7 +42,7 @@ type SuiteS3FileDB struct {
 func (s *SuiteS3FileDB) SetupSuite() {
 	// use local test configs
 	region := "us-east-1"
-	endpoint := "http://localhost:4566"
+	endpoint := "http://localstack:4566"
 	testBucketName := aws.String("test-bucket")
 
 	s3DB, err := newS3FileDB(region, endpoint, *testBucketName)
