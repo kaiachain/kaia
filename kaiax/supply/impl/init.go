@@ -92,7 +92,7 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 
 func (s *SupplyModule) Start() error {
 	// Reload the last checkpoint from database.
-	if err := s.loadLastCheckpoint(); err != nil {
+	if err := s.loadLastAccReward(); err != nil {
 		return err
 	}
 
@@ -114,8 +114,8 @@ func (s *SupplyModule) Stop() {
 	s.wg.Wait()
 }
 
-// loadLastCheckpoint loads the last supply checkpoint from the database.
-func (s *SupplyModule) loadLastCheckpoint() error {
+// loadLastAccReward loads the last supply checkpoint from the database.
+func (s *SupplyModule) loadLastAccReward() error {
 	var (
 		lastAccNum    = ReadLastAccRewardNumber(s.ChainKv)
 		lastAccReward = ReadAccReward(s.ChainKv, lastAccNum)

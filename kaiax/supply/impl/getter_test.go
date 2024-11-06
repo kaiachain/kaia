@@ -28,7 +28,7 @@ import (
 // Test individual getters
 func (s *SupplyTestSuite) TestFromState() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	testcases := s.testcases()
@@ -46,7 +46,7 @@ func (s *SupplyTestSuite) TestFromState() {
 
 func (s *SupplyTestSuite) TestCheckpoint() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	for _, tc := range s.testcases() {
@@ -61,7 +61,7 @@ func (s *SupplyTestSuite) TestCheckpoint() {
 
 func (s *SupplyTestSuite) TestCanonicalBurn() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	// Delete state at 199
@@ -83,7 +83,7 @@ func (s *SupplyTestSuite) TestCanonicalBurn() {
 
 func (s *SupplyTestSuite) TestRebalanceMemo() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	// rebalance not configured
@@ -113,7 +113,7 @@ func (s *SupplyTestSuite) TestRebalanceMemo() {
 
 func (s *SupplyTestSuite) TestGetTotalSupply() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	for _, tc := range s.testcases() {
@@ -125,7 +125,7 @@ func (s *SupplyTestSuite) TestGetTotalSupply() {
 
 func (s *SupplyTestSuite) TestGetTotalSupply_PartialInfo() {
 	t := s.T()
-	require.Nil(t, s.s.loadLastCheckpoint())
+	require.Nil(t, s.s.loadLastAccReward())
 	s.insertBlocks()
 
 	// We will test on block 200.
