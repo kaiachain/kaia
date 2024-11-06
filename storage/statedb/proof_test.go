@@ -183,7 +183,7 @@ func TestRangeProofWithNonExistentProof(t *testing.T) {
 	}
 	// Special case, two edge proofs for two edge key.
 	proof := database.NewMemoryDBManager()
-	first := common.MaxHash.Bytes()
+	first := common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000").Bytes()
 	last := common.MaxHash.Bytes()
 	if err := trie.Prove(first, 0, proof); err != nil {
 		t.Fatalf("Failed to prove the first node %v", err)
@@ -384,7 +384,7 @@ func TestAllElementsProof(t *testing.T) {
 
 	// Even with non-existent edge proofs, it should still work.
 	proof = database.NewMemoryDBManager()
-	first := common.MaxHash.Bytes()
+	first := common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000").Bytes()
 	last := common.MaxHash.Bytes()
 	if err := trie.Prove(first, 0, proof); err != nil {
 		t.Fatalf("Failed to prove the first node %v", err)
