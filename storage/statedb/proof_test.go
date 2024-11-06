@@ -183,8 +183,8 @@ func TestRangeProofWithNonExistentProof(t *testing.T) {
 	}
 	// Special case, two edge proofs for two edge key.
 	proof := database.NewMemoryDBManager()
-	first := common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000").Bytes()
-	last := common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").Bytes()
+	first := common.MaxHash.Bytes()
+	last := common.MaxHash.Bytes()
 	if err := trie.Prove(first, 0, proof); err != nil {
 		t.Fatalf("Failed to prove the first node %v", err)
 	}
@@ -384,8 +384,8 @@ func TestAllElementsProof(t *testing.T) {
 
 	// Even with non-existent edge proofs, it should still work.
 	proof = database.NewMemoryDBManager()
-	first := common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000").Bytes()
-	last := common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").Bytes()
+	first := common.MaxHash.Bytes()
+	last := common.MaxHash.Bytes()
 	if err := trie.Prove(first, 0, proof); err != nil {
 		t.Fatalf("Failed to prove the first node %v", err)
 	}
@@ -451,7 +451,7 @@ func TestReverseSingleSideRangeProof(t *testing.T) {
 			if err := trie.Prove(entries[pos].k, 0, proof); err != nil {
 				t.Fatalf("Failed to prove the first node %v", err)
 			}
-			last := common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+			last := common.MaxHash
 			if err := trie.Prove(last.Bytes(), 0, proof); err != nil {
 				t.Fatalf("Failed to prove the last node %v", err)
 			}
@@ -662,7 +662,7 @@ func TestHasRightElement(t *testing.T) {
 			}
 		}
 		if c.end == -1 {
-			lastKey, end = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").Bytes(), len(entries)
+			lastKey, end = common.MaxHash.Bytes(), len(entries)
 			if err := trie.Prove(lastKey, 0, proof); err != nil {
 				t.Fatalf("Failed to prove the first node %v", err)
 			}
