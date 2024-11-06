@@ -70,7 +70,6 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 			log.NewModuleLogger(log.CMDUtilsNodeCMD).Error("Unmarshal error", "error", err)
 		}
 	}
-
 	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err

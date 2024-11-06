@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
@@ -427,6 +428,7 @@ type StateDB interface {
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
 	GetKey(addr common.Address) accountkey.AccountKey
+	GetAccount(addr common.Address) account.Account
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {

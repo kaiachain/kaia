@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -73,9 +74,9 @@ func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
 	}
 
 	if ser.preserveExtHash {
-		if pa, ok := ser.account.(ProgramAccount); ok {
-			return pa.EncodeRLPExt(w)
-		}
+		pa, _ := ser.account.(ProgramAccount)
+		return pa.EncodeRLPExt(w)
+
 	}
 	return rlp.Encode(w, ser.account)
 }
@@ -159,8 +160,8 @@ func UnextendSerializedAccount(b []byte) (result []byte) {
 	}
 
 	pa := GetProgramAccount(acc)
-	if pa == nil {
-		return b // not a ProgramAccount
+	if pa == nil || common.EmptyExtHash(pa.GetStorageRoot()) {
+		return b // not contain ExtHash
 	}
 
 	enc := NewAccountSerializerWithAccount(pa)

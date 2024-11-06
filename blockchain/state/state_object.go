@@ -304,7 +304,7 @@ func (s *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
 // IsContractAccount returns true is the account has a non-empty codeHash.
 func (s *stateObject) IsContractAccount() bool {
 	acc := account.GetProgramAccount(s.account)
-	if acc != nil && !bytes.Equal(acc.GetCodeHash(), emptyCodeHash) {
+	if acc != nil && acc.Type() == account.SmartContractAccountType {
 		return true
 	}
 	return false

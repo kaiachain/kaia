@@ -126,11 +126,13 @@ func TestAccountSerializer(t *testing.T) {
 				"y": "0x3547f11ca8696646f2f3acb08e31016afac23e630c5d11f59f61fef57b0d2aa5",
 			},
 		}
-		roothash    = common.HexToHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
-		roothashExt = common.HexToExtHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01")
-		codehash    = common.HexToHash("aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd").Bytes()
-		codehashB64 = "qqqqqru7u7vMzMzM3d3d3aqqqqq7u7u7zMzMzN3d3d0="
-		codeinfo    = params.CodeInfo(0x10) // VmVersion=1 (Istanbul+), CodeFormat=0 (EVM)
+		roothash     = common.HexToHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+		roothashExt  = common.HexToExtHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01")
+		codehash     = common.HexToHash("aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd").Bytes()
+		codehashB64  = "qqqqqru7u7vMzMzM3d3d3aqqqqq7u7u7zMzMzN3d3d0="
+		codeinfo     = params.CodeInfo(0x10) // VmVersion=1 (Istanbul+), CodeFormat=0 (EVM)
+		roothashZero = common.HexToHash("0000000000000000000000000000000000000000000000000000000000000000")
+		codeinfoZero = params.CodeInfo(0)
 	)
 
 	testcases := []struct {
@@ -237,6 +239,107 @@ func TestAccountSerializer(t *testing.T) {
 			"0x02f854c92a84123456788001c0a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01a0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
 			map[string]interface{}{
 				"accType": 2,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothash.Hex(),
+					"codeHash":      codehashB64,
+					"codeFormat":    0,
+					"vmVersion":     1,
+				},
+			},
+		},
+		{
+			"Initialize new type of EOA",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothashZero.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
+			},
+			// 01 ["0x2a","0x12345678","","0x01",[]]
+			"0x01c92a84123456788001c0",
+			"0x01c92a84123456788001c0",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothashZero.Hex(),
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
+				},
+			},
+		},
+		{
+			"EOA with Code after the delegate is cleared ",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothash.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
+			},
+			// 01 [["0x2a","0x12345678","","0x01",[]], "0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", "0x"]
+			"0x01f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a47080",
+			"0x01f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a47080",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothash.Hex(),
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
+				},
+			},
+		},
+		{
+			"Set Code to EOA with Zero-extended StorageRoot",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothash.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
+			},
+			// 01 [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x"]
+			"0x01f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a47080",
+			"0x01f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a47080",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothash.Hex(),
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
+				},
+			},
+		},
+		{
+			"Set code to EOA with Nonzero-extended StorageRoot",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothashExt,
+				codeHash:      codehash,
+				codeInfo:      codeinfo,
+			},
+			// 01 [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]
+			"0x01f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			// 01 [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]
+			"0x01f854c92a84123456788001c0a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01a0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			map[string]interface{}{
+				"accType": 1,
 				"account": map[string]interface{}{
 					"nonce":         42,
 					"balance":       "0x12345678",
