@@ -48,7 +48,7 @@ func (s *SupplyModule) RewindTo(newBlock *types.Block) {
 }
 
 func (s *SupplyModule) RewindDelete(hash common.Hash, num uint64) {
-	if num%checkpointInterval != 0 {
+	if num%checkpointInterval == 0 {
 		DeleteAccReward(s.ChainKv, num)
 	}
 }
