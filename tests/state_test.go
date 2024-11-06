@@ -67,6 +67,9 @@ func TestState(t *testing.T) {
 
 // TestExecutionSpecState runs the test fixtures from execution-spec-tests.
 func TestExecutionSpecState(t *testing.T) {
+	// TODO: set false at the end of test?
+	common.RelaxPrecompileRangeForTest(true)
+
 	if !common.FileExist(executionSpecStateTestDir) {
 		t.Skipf("directory %s does not exist", executionSpecStateTestDir)
 	}
