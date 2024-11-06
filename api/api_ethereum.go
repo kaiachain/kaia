@@ -768,8 +768,8 @@ type ethTxJSON struct {
 	To                   *common.Address `json:"to"`
 
 	// Access list transaction fields:
-	ChainID           *hexutil.Big             `json:"chainId,omitempty"`
-	AccessList        *types.AccessList        `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+	AccessList *types.AccessList `json:"accessList,omitempty"`
 
 	// Authorization list transaction (SetCodeTx) fields:
 	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
