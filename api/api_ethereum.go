@@ -770,6 +770,8 @@ type ethTxJSON struct {
 	// Access list transaction fields:
 	ChainID           *hexutil.Big             `json:"chainId,omitempty"`
 	AccessList        *types.AccessList        `json:"accessList,omitempty"`
+
+	// Authorization list transaction (SetCodeTx) fields:
 	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
 
 	// Only used for encoding:
