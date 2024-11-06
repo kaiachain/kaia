@@ -99,7 +99,7 @@ type Backend interface {
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
 	StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, StateReleaseFunc, error)
-	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, StateReleaseFunc, error)
+	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, StateReleaseFunc, error)
 }
 
 // CommonAPI contains
@@ -434,7 +434,22 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				failed = err
 				break
 			}
-			_, _, _, statedb, release, err = api.backend.StateAtTransaction(localctx, next, 0, reexec)
+
+			// Prepare the statedb for tracing. Don't use the live database for
+			// tracing to avoid persisting state junks into the database. Switch
+			// over to `preferDisk` mode only if the memory usage exceeds the
+			// limit, the trie database will be reconstructed from scratch only
+			// if the relevant state is available in disk.
+			var preferDisk bool
+			if statedb != nil {
+				s1, s2, s3 := statedb.Database().TrieDB().Size()
+				preferDisk = s1+s2+s3 > defaultTracechainMemLimit
+			}
+			_, _, _, statedb, release, err = api.backend.StateAtTransaction(localctx, next, 0, reexec, statedb, false, preferDisk)
+			if err != nil {
+				failed = err
+				break
+			}
 
 			// Clean out any pending derefs. Note this step must be done after
 			// constructing tracing state, because the tracing state of block
@@ -613,7 +628,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 		reexec = *config.Reexec
 	}
 
-	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, block, 0, reexec)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, block, 0, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -715,7 +730,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
-	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, parent, 0, reexec)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, parent, 0, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -835,7 +850,7 @@ func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, co
 	if err != nil {
 		return nil, err
 	}
-	msg, blockCtx, txCtx, statedb, release, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec)
+	msg, blockCtx, txCtx, statedb, release, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}

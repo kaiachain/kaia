@@ -404,8 +404,8 @@ func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, ree
 	return b.cn.stateAtBlock(block, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
-	return b.cn.stateAtTransaction(block, txIndex, reexec)
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
+	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
