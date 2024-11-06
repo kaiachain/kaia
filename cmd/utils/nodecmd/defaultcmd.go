@@ -80,8 +80,6 @@ func MakeFullNode(ctx *cli.Context) *node.Node {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 func startNode(ctx *cli.Context, stack *node.Node) {
-	debug.Memsize.Add("node", stack)
-
 	// Ntp time check
 	if err := node.NtpCheckWithLocal(stack); err != nil {
 		log.Fatalf("System time should be synchronized: %v", err)
