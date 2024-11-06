@@ -405,7 +405,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			}
 			st.state.IncNonce(authority)
 			delegation := types.AddressToDelegation(auth.Address)
-			if auth.Address == common.ZeroAddress {
+			if common.EmptyAddress(auth.Address) {
 				// If the delegation is for the zero address, completely clear all
 				// delegations from the account.
 				delegation = []byte{}

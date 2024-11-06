@@ -36,8 +36,6 @@ var (
 	ErrTotalTimeLimitReached             = errors.New("reached the total execution time limit for txs in a block")
 	ErrOpcodeComputationCostLimitReached = errors.New("reached the opcode computation cost limit")
 	ErrFailedOnSetCode                   = errors.New("failed on setting code to an account")
-	ErrOutOfGas                          = errors.New("out of gas")
-	ErrGasUintOverflow                   = errors.New("gas uint64 overflow")
 
 	// EVM internal errors
 	ErrWriteProtection       = errors.New("evm: write protection")

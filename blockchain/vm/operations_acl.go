@@ -265,7 +265,7 @@ func makeCallVariantGasCallEIP7702(oldCalculator gasFunc) gasFunc {
 			// Charge the remaining difference here already, to correctly calculate available
 			// gas for call
 			if !contract.UseGas(coldCost) {
-				return 0, ErrOutOfGas
+				return 0, kerrors.ErrOutOfGas
 			}
 		}
 
@@ -279,7 +279,7 @@ func makeCallVariantGasCallEIP7702(oldCalculator gasFunc) gasFunc {
 				cost += params.ColdAccountAccessCostEIP2929
 			}
 			if !contract.UseGas(cost) {
-				return 0, ErrOutOfGas
+				return 0, kerrors.ErrOutOfGas
 			}
 			coldCost += cost
 		}
@@ -300,7 +300,7 @@ func makeCallVariantGasCallEIP7702(oldCalculator gasFunc) gasFunc {
 
 		var overflow bool
 		if gas, overflow = math.SafeAdd(gas, coldCost); overflow {
-			return 0, ErrGasUintOverflow
+			return 0, errGasUintOverflow
 		}
 		return gas, nil
 	}
@@ -332,12 +332,12 @@ func gasExtCodeCopyEIP7702(evm *EVM, contract *Contract, stack *Stack, mem *Memo
 		var overflow bool
 		if evm.StateDB.AddressInAccessList(addr) {
 			if gas, overflow = math.SafeAdd(gas, params.WarmStorageReadCostEIP2929); overflow {
-				return 0, ErrGasUintOverflow
+				return 0, errGasUintOverflow
 			}
 		} else {
 			evm.StateDB.AddAddressToAccessList(addr)
 			if gas, overflow = math.SafeAdd(gas, params.ColdAccountAccessCostEIP2929); overflow {
-				return 0, ErrGasUintOverflow
+				return 0, errGasUintOverflow
 			}
 		}
 	}
