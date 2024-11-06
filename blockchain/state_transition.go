@@ -410,7 +410,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 				// delegations from the account.
 				delegation = []byte{}
 			}
-			// TODO: Change to a method that adds code to EOA
+			// TODO-7702: Change to a method that adds code to EOA
 			// This is currently expected to be an error. This will be addressed in a PR that adds a code hash field to the EOA.
 			// https://github.com/kaiachain/kaia/blob/v1.0.3/blockchain/state/state_object.go#L542
 			st.state.SetCode(authority, delegation)
