@@ -1459,7 +1459,7 @@ func TestAccessListTx(t *testing.T) {
 			b.SetRewardbase(common.Address{1})
 
 			// One transaction to 0xAAAA
-			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, false, gspec.Config.Rules(block.Number()))
+			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
 			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, list), signer, senderKey)
 			b.AddTx(tx)
 		})

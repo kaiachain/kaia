@@ -306,8 +306,7 @@ func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
 }
 
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas, err := IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
-	return gas + uint64(len(t.AuthorizationList))*params.CallNewAccountGas, err
+	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
