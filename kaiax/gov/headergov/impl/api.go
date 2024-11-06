@@ -58,20 +58,27 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", ErrVotePermissionDenied
 	}
 
+	// try valset vote first. if it's not the valset vote key, the return string will be empty at all.
+	s, err := api.h.ValSet.Vote(blockNumber, voter, name, value)
+	if s != "not valSet vote" {
+		return s, err
+	}
+
+	// it's confirmed that it's not the valset vote key. so it's the header gov vote.
 	vote := headergov.NewVoteData(voter, name, value)
 	if vote == nil {
 		return "", ErrInvalidKeyValue
 	}
 
-	err := api.h.checkConsistency(blockNumber+1, vote)
+	err = api.h.checkConsistency(blockNumber+1, vote)
 	if err != nil {
 		return "", err
 	}
 
-	// TODO-kaiax: add removevalidator vote check
-
 	api.h.PushMyVotes(vote)
-	return "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
+	return "(kaiax) Your vote has been successfully put into the vote queue. \n" +
+		"Your node will proposer the block with this vote. \n" +
+		"The new governance parameter will be effective from the second upcoming epoch.", nil
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {

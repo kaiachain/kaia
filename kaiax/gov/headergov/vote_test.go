@@ -58,8 +58,8 @@ func TestNewVoteData(t *testing.T) {
 	}
 
 	t.Run("goodVote/validators", func(t *testing.T) {
-		assert.NotNil(t, NewVoteData(common.Address{}, "governance.addvalidator", common.Address{}))
-		assert.NotNil(t, NewVoteData(common.Address{}, "governance.removevalidator", common.Address{}))
+		assert.Nil(t, NewVoteData(common.Address{}, "governance.addvalidator", common.Address{}))
+		assert.Nil(t, NewVoteData(common.Address{}, "governance.removevalidator", common.Address{}))
 	})
 
 	badVotes := []struct {
@@ -227,7 +227,7 @@ func TestVoteSerialization(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase_block_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
 			var vb VoteBytes = hexutil.MustDecode(tc.serializedVoteData)
-			actual, err := vb.ToVoteData()
+			_, actual, err := vb.ToVoteData()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.voteData, actual, "ToVoteData() failed")
 

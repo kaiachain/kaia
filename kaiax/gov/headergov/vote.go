@@ -24,14 +24,6 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		if name == "governance.addvalidator" || name == "governance.removevalidator" {
-			return &voteData{
-				voter: voter,
-				name:  gov.ParamName(name),
-				value: []common.Address{},
-			}
-		}
-
 		return nil
 	}
 
@@ -99,7 +91,7 @@ func (vote *voteData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (vb VoteBytes) ToVoteData() (VoteData, error) {
+func (vb VoteBytes) ToVoteData() (string, VoteData, error) {
 	var v struct {
 		Validator common.Address
 		Key       string
@@ -108,15 +100,15 @@ func (vb VoteBytes) ToVoteData() (VoteData, error) {
 
 	err := rlp.DecodeBytes(vb, &v)
 	if err != nil {
-		return nil, ErrInvalidRlp
+		return "", nil, ErrInvalidRlp
 	}
 
 	vote := NewVoteData(v.Validator, v.Key, v.Value)
 	if vote == nil {
-		return nil, ErrInvalidVoteData
+		return v.Key, nil, ErrInvalidVoteData
 	}
 
-	return vote, nil
+	return v.Key, vote, nil
 }
 
 func (vb VoteBytes) String() string {

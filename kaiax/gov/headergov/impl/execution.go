@@ -4,13 +4,23 @@ import (
 	"bytes"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
 
 func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 	if len(b.Header().Vote) > 0 {
-		var vb headergov.VoteBytes = b.Header().Vote
-		vote, err := vb.ToVoteData()
+		var (
+			vb              headergov.VoteBytes = b.Header().Vote
+			name, vote, err                     = vb.ToVoteData()
+		)
+
+		// if vote.key is in ValSetVoteKeyMap, do nothing
+		if _, ok := gov.ValSetVoteKeyMap[name]; ok {
+			return nil
+		}
+
+		// otherwise, handle the votebyte
 		if err != nil {
 			logger.Error("ToVoteData error", "vote", vb, "err", err)
 			return err

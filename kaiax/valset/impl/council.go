@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -142,8 +141,8 @@ func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
 	return c, nil
 }
 
-func (c *council) getProposerFromProposers(proposers []common.Address, round uint64) (common.Address, int) {
-	proposer := proposers[int(c.blockNumber+round)%3600%len(proposers)]
+func (c *council) getProposerFromProposers(proposers []common.Address, round uint64, proposerUpdateInterval uint64) (common.Address, int) {
+	proposer := proposers[int(c.blockNumber+round)%int(proposerUpdateInterval)%len(proposers)]
 	proposerIdx := c.qualifiedValidators.getIdxByAddress(proposer)
 	return proposer, proposerIdx
 }
@@ -152,15 +151,16 @@ func (c *council) getProposerFromProposers(proposers []common.Address, round uin
 // It returns nil if the given committeeSize is bigger than validatorSize or proposer indexes are invalid.
 func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, proposers []common.Address) ([]common.Address, error) {
 	var (
-		validatorSize = len(c.qualifiedValidators)
-		validator     = c.qualifiedValidators
-		rules         = valCtx.rules
-		committeeSize = valCtx.prevBlockResult.pSet.CommitteeSize
-		prevHeader    = valCtx.prevBlockResult.header
+		validatorSize   = len(c.qualifiedValidators)
+		validator       = c.qualifiedValidators
+		rules           = valCtx.rules
+		committeeSize   = valCtx.prevBlockResult.pSet.CommitteeSize
+		prevHeader      = valCtx.prevBlockResult.header
+		pUpdateInterval = valCtx.prevBlockResult.pSet.ProposerUpdateInterval
 
 		// pick current round's proposer and next proposer which address is different from current proposer
-		proposer, proposerIdx                                 = c.getProposerFromProposers(proposers, round)
-		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+1)
+		proposer, proposerIdx                                 = c.getProposerFromProposers(proposers, round, pUpdateInterval)
+		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+1, pUpdateInterval)
 	)
 
 	// return early if the committee size is 1
@@ -169,11 +169,11 @@ func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, pro
 	}
 
 	// closest next proposer who has different address with the proposer
-	for i := uint64(2); i < params.ProposerUpdateInterval(); i++ {
+	for i := uint64(2); i < pUpdateInterval; i++ {
 		if proposer != closestDifferentProposer {
 			break
 		}
-		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+i)
+		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+i, pUpdateInterval)
 	}
 
 	// ensure validator indexes are valid

@@ -38,27 +38,6 @@ var (
 		return nil, ErrCanonicalizeToAddress
 	}
 
-	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
-		stringToAddressList := func(v string) ([]common.Address, error) {
-			ret := []common.Address{}
-			for _, address := range strings.Split(v, ",") {
-				if !common.IsHexAddress(address) {
-					return nil, ErrCanonicalizeStringToAddress
-				}
-				ret = append(ret, common.HexToAddress(address))
-			}
-			return ret, nil
-		}
-
-		switch v := v.(type) {
-		case []byte:
-			return stringToAddressList(string(v))
-		case string:
-			return stringToAddressList(v)
-		}
-		return nil, ErrCanonicalizeToAddressList
-	}
-
 	bigIntCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
@@ -370,6 +349,18 @@ var Params = map[ParamName]*Param{
 		VoteForbidden: true,
 	},
 }
+
+type ValSetVoteKey string
+
+var (
+	GovernanceAddValidator    ValSetVoteKey = "governance.addvalidator"
+	GovernanceRemoveValidator ValSetVoteKey = "governance.removevalidator"
+
+	ValSetVoteKeyMap = map[string]ValSetVoteKey{
+		"governance.addvalidator":    GovernanceAddValidator,
+		"governance.removevalidator": GovernanceRemoveValidator,
+	}
+)
 
 const (
 	// Proposer policy

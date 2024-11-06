@@ -10,6 +10,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
@@ -20,9 +21,10 @@ import (
 // genesis block must have the default governance params
 func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModule {
 	var (
-		chain = mocks.NewMockBlockChain(gomock.NewController(t))
-		dbm   = database.NewMemoryDBManager()
-		db    = dbm.GetMemDB()
+		chain  = mocks.NewMockBlockChain(gomock.NewController(t))
+		valSet = mock_valset.NewMockValsetModule(gomock.NewController(t))
+		dbm    = database.NewMemoryDBManager()
+		db     = dbm.GetMemDB()
 
 		m      = gov.GetDefaultGovernanceParamSet().ToMap()
 		gov, _ = headergov.NewGovData(m).ToGovBytes()
@@ -47,9 +49,12 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(genesisHeader)).AnyTimes()
 
+	// we will not handle valSet votes here.
+	valSet.EXPECT().Vote(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("not valSet vote", nil)
 	h := NewHeaderGovModule()
 	err := h.Init(&InitOpts{
 		Chain:       chain,
+		ValSet:      valSet,
 		ChainKv:     db,
 		ChainConfig: config,
 	})

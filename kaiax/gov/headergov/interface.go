@@ -17,8 +17,6 @@ type HeaderGovModule interface {
 	EffectiveParamSet(blockNum uint64) gov.ParamSet
 	EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet
 	NodeAddress() common.Address
-	GetMyVotes() []VoteData
-	PopMyVotes(idx int)
 }
 
 type GovData interface {

@@ -12,7 +12,6 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
-	headergov "github.com/kaiachain/kaia/kaiax/gov/headergov"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -95,20 +94,6 @@ func (mr *MockHeaderGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockHeaderGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
 }
 
-// GetMyVotes mocks base method.
-func (m *MockHeaderGovModule) GetMyVotes() []headergov.VoteData {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMyVotes")
-	ret0, _ := ret[0].([]headergov.VoteData)
-	return ret0
-}
-
-// GetMyVotes indicates an expected call of GetMyVotes.
-func (mr *MockHeaderGovModuleMockRecorder) GetMyVotes() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMyVotes", reflect.TypeOf((*MockHeaderGovModule)(nil).GetMyVotes))
-}
-
 // NodeAddress mocks base method.
 func (m *MockHeaderGovModule) NodeAddress() common.Address {
 	m.ctrl.T.Helper()
@@ -121,18 +106,6 @@ func (m *MockHeaderGovModule) NodeAddress() common.Address {
 func (mr *MockHeaderGovModuleMockRecorder) NodeAddress() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeAddress", reflect.TypeOf((*MockHeaderGovModule)(nil).NodeAddress))
-}
-
-// PopMyVotes mocks base method.
-func (m *MockHeaderGovModule) PopMyVotes(arg0 int) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PopMyVotes", arg0)
-}
-
-// PopMyVotes indicates an expected call of PopMyVotes.
-func (mr *MockHeaderGovModuleMockRecorder) PopMyVotes(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopMyVotes", reflect.TypeOf((*MockHeaderGovModule)(nil).PopMyVotes), arg0)
 }
 
 // PostInsertBlock mocks base method.

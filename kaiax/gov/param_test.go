@@ -46,31 +46,6 @@ func TestAddressCanonicalizer(t *testing.T) {
 	}
 }
 
-func TestAddressListCanonicalizer(t *testing.T) {
-	tcs := []struct {
-		desc          string
-		input         any
-		expected      []common.Address
-		expectedError error
-	}{
-		{desc: "Valid single address string", input: "0x1234567890123456789012345678901234567890", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890")}},
-		{desc: "Valid multiple address string", input: "0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890"), common.HexToAddress("0x0987654321098765432109876543210987654321")}},
-		{desc: "Invalid address string", input: "0xinvalid", expectedError: ErrCanonicalizeStringToAddress},
-		{desc: "Valid byte slice", input: []byte("0x1234567890123456789012345678901234567890"), expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890")}},
-		{desc: "Invalid type", input: 123, expectedError: ErrCanonicalizeToAddressList},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.desc, func(t *testing.T) {
-			result, err := addressListCanonicalizer(tc.input)
-			assert.Equal(t, tc.expectedError, err)
-			if tc.expectedError == nil {
-				assert.Equal(t, tc.expected, result.([]common.Address))
-			}
-		})
-	}
-}
-
 func TestBigIntCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		name          string

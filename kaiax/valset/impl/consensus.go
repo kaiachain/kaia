@@ -19,15 +19,59 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
 func (v *ValsetModule) VerifyHeader(header *types.Header) error {
-	logger.Info("NoopModule VerifyHeader", "blockNum", header.Number.Uint64())
+	blockNum := header.Number.Uint64()
+	if blockNum == 0 {
+		return nil
+	}
+
+	name, vote, err := newVoteDataFromBytes(header.Vote)
+
+	// if vote.key is in gov.Params, do nothing
+	if _, ok := gov.Params[gov.ParamName(name)]; ok {
+		return nil
+	}
+
+	// otherwise, verify the votebyte
+	if err != nil {
+		return err
+	}
+
+	var (
+		c      subsetCouncilSlice
+		author common.Address
+	)
+
+	c, err = v.GetCouncilAddressList(blockNum)
+	if err != nil {
+		return err
+	}
+	author, err = v.chain.Engine().Author(header)
+	if err != nil {
+		return err
+	}
+
+	// check the proposer is the voter
+	if author != vote.voter {
+		return errInvalidVoter
+	}
+	// check the voter is in valSet
+	idx := c.getIdxByAddress(vote.voter)
+	if idx == -1 {
+		return errInvalidVoter
+	}
+
 	return nil
 }
 
 func (v *ValsetModule) PrepareHeader(header *types.Header) error {
-	logger.Info("NoopModule PrepareHeader", "blockNum", header.Number.Uint64())
+	if len(v.myVotes) > 0 {
+		header.Vote, _ = v.myVotes[0].ToVoteBytes()
+	}
 	return nil
 }
 

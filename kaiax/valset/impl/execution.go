@@ -17,11 +17,11 @@
 package impl
 
 import (
-	"bytes"
+	"sort"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
@@ -32,16 +32,18 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 		return nil // nothing to do
 	}
 
-	var vb headergov.VoteBytes = block.Header().Vote
-	vote, err := vb.ToVoteData()
-	if err != nil {
-		return err
-	}
-	// other votes will be handled in headergov
-	if vote.Name() != "governance.addvalidator" && vote.Name() == "governance.removevalidator" {
+	name, vote, err := newVoteDataFromBytes(block.Header().Vote)
+
+	// if vote.key is in gov.Params, do nothing
+	_, ok := gov.Params[gov.ParamName(name)]
+	if !ok {
 		return nil
 	}
 
+	// otherwise, handle the votebyte
+	if err != nil {
+		return err
+	}
 	if err = v.HandleValidatorVote(block.Header(), vote); err != nil {
 		return err
 	}
@@ -50,7 +52,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 
 // HandleValidatorVote handles addvalidator or removevalidator votes and remove them from MyVotes.
 // If succeed, the voteBlk and councilAddressList db is updated.
-func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData headergov.VoteData) error {
+func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData *voteData) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -61,62 +63,61 @@ func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData header
 	var (
 		blockNumber = header.Number.Uint64()
 		valset      = subsetCouncilSlice(councilAddressList)
-		value       = voteData.Value()
 		name        = voteData.Name()
-		addresses   []common.Address
 	)
-	// parse the vote
-	if addr, ok := value.(common.Address); ok {
-		addresses = append(addresses, addr)
-	} else if addrs, ok := value.([]common.Address); ok {
-		addresses = addrs
-	} else {
-		logger.Warn("Invalid value Type", "number", blockNumber, "voter", voteData.Voter(), "key", name, "value", value)
-	}
 
-	// handle votes and remove it from myVotes
-	for _, address := range addresses {
-		if name == "governance.addvalidator" {
-			valset = append(valset, address)
-		} else if name == "governance.removevalidator" {
-			idx := valset.getIdxByAddress(address)
-			if idx != -1 {
-				valset = append(valset[:idx], valset[idx+1:]...)
-			}
-		}
-		if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, valset); err != nil {
-			return err
-		}
-	}
-
-	// store new vote block in the db
-	v.voteBlks = append(v.voteBlks, blockNumber)
-	if err = WriteValidatorVoteDataBlockNums(v.ChainKv, &v.voteBlks); err != nil {
+	if err = v.checkConsistency(blockNumber, voteData); err != nil {
 		return err
 	}
 
-	// pop my vote from voteData
 	author, err := v.chain.Engine().Author(header)
 	if err != nil {
 		return err
 	}
+	if voteData.voter != author {
+		return errInvalidVoter
+	}
+
+	// GovernanceAddValidator:    appends new validators only if it does not exist in current valSet
+	// GovernanceRemoveValidator: delete the existing validator only if it exists in current valSet
+	for _, address := range voteData.Value() {
+		if author == address {
+			return errInvalidVoteValue
+		}
+		idx := valset.getIdxByAddress(address)
+		switch gov.ValSetVoteKeyMap[name] {
+		case gov.GovernanceAddValidator:
+			if idx == -1 {
+				valset = append(valset, address)
+			} else {
+				return errInvalidVoteValue
+			}
+		case gov.GovernanceRemoveValidator:
+			if idx != -1 {
+				valset = append(valset[:idx], valset[idx+1:]...)
+			} else {
+				return errInvalidVoteValue
+			}
+		}
+	}
+
+	// update valSet db
+	sort.Sort(valset)
+	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, valset); err != nil {
+		return err
+	}
+
+	// remove it from myVotes only if the block is proposed by me
+
 	if author == v.nodeAddress {
-		for i, myvote := range v.headerGov.GetMyVotes() {
-			if bytes.Equal(myvote.Voter().Bytes(), voteData.Voter().Bytes()) &&
-				myvote.Name() == name &&
-				myvote.Value() == value {
-				v.headerGov.PopMyVotes(i)
+		for idx, myVote := range v.myVotes {
+			if voteData.Equal(myVote) {
+				v.myVotes = append(v.myVotes[:idx], v.myVotes[idx+1:]...)
 				break
 			}
 		}
 	}
 	return nil
-}
-
-// TODO-kaiax-valset: do we need to check this condition?
-func checkVote(address common.Address, isKeyAddValidator bool, valset subsetCouncilSlice) bool {
-	idx := valset.getIdxByAddress(address)
-	return (idx != -1 && !isKeyAddValidator) || (idx == -1 && isKeyAddValidator)
 }
 
 func (v *ValsetModule) RewindTo(block *types.Block) {

@@ -36,15 +36,26 @@ func ReadValidatorVoteDataBlockNums(db database.Database) []uint64 {
 	return *ret
 }
 
-func WriteValidatorVoteDataBlockNums(db database.Database, data *[]uint64) error {
+func UpdateValidatorVoteDataBlockNums(db database.Database, voteBlk uint64) error {
+	voteBlks := []uint64{0}
+	if voteBlk != 0 {
+		voteBlks = ReadValidatorVoteDataBlockNums(db)
+		if len(voteBlks) == 0 {
+			return errEmptyVoteBlock
+		}
+		if voteBlks[len(voteBlks)-1] > voteBlk {
+			return fmt.Errorf("invalid voteBlk %d, last voteBlk %d", voteBlk, voteBlks[len(voteBlks)-1])
+		}
+		voteBlks = append(voteBlks, voteBlk)
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 
-	b, err := json.Marshal(data)
+	b, err := json.Marshal(voteBlks)
 	if err != nil {
 		return err
 	}
-
 	if err = db.Put(valSetVoteBlockNumsKey, b); err != nil {
 		return err
 	}
@@ -54,21 +65,23 @@ func WriteValidatorVoteDataBlockNums(db database.Database, data *[]uint64) error
 // ReadCouncilAddressListFromDb gets voteBlk from valset DB
 // TODO-kaia-valset: try fetch council from cache or iterate to process the votes between snapshotBlock and num.
 func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Address, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
 	var (
 		voteBlocks = ReadValidatorVoteDataBlockNums(db)
 		voteBlock  = uint64(0)
 	)
+
 	if voteBlocks == nil {
 		return nil, errEmptyVoteBlock
 	}
 	for i := len(voteBlocks) - 1; i >= 0; i-- {
 		if voteBlocks[i] <= bn {
 			voteBlock = voteBlocks[i]
+			break
 		}
 	}
+
+	mu.Lock()
+	defer mu.Unlock()
 
 	b, err := db.Get(councilAddressKey(voteBlock))
 	if err != nil || len(b) == 0 {
@@ -83,6 +96,10 @@ func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Add
 }
 
 func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList []common.Address) error {
+	if err := UpdateValidatorVoteDataBlockNums(db, voteBlk); err != nil {
+		return err
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 

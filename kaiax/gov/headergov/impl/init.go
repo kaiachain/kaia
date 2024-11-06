@@ -26,10 +26,15 @@ type chain interface {
 	State() (*state.StateDB, error)
 }
 
+type validator interface {
+	Vote(blockNumber uint64, voter common.Address, name string, value any) (string, error)
+}
+
 type InitOpts struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ValSet      validator
 	NodeAddress common.Address
 }
 
@@ -38,6 +43,8 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ValSet      validator
+
 	nodeAddress common.Address
 	myVotes     []headergov.VoteData // queue
 
@@ -57,6 +64,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.ChainKv = opts.ChainKv
 	h.ChainConfig = opts.ChainConfig
 	h.Chain = opts.Chain
+	h.ValSet = opts.ValSet
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
 	if h.ChainKv == nil || h.ChainConfig == nil || h.ChainConfig.Istanbul == nil || h.Chain == nil {
@@ -207,7 +215,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.
 	if voteBlocks != nil {
 		for _, blockNum := range *voteBlocks {
 			header := chain.GetHeaderByNumber(blockNum)
-			parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+			_, parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
 			if err != nil {
 				panic(err)
 			}

@@ -16,5 +16,9 @@ var (
 	errUnknownBlock      = errors.New("unknown block")
 	errUnknownProposer   = errors.New("unknown proposer")
 
-	errEmptyVoteBlock = errors.New("failed to read vote blocks from db")
+	errEmptyVoteBlock            = errors.New("failed to read vote blocks from db")
+	errInvalidVoter              = errors.New("failed to verify voter")
+	errInvalidVoteKey            = errors.New("your vote failed due to the wrong key")
+	errInvalidVoteValue          = errors.New("your vote failed due to the wrong value")
+	errCanonicalizeToAddressList = errors.New("could not canonicalize value to address list")
 )

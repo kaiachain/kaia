@@ -10,12 +10,11 @@ var (
 	ErrCannotSet         = errors.New("invalid field or cannot set the value")
 	ErrUnknownBlock      = errors.New("unknown block")
 
-	ErrCanonicalizeUint64        = errors.New("could not canonicalize value to uint64")
-	ErrCanonicalizeString        = errors.New("could not canonicalize value to string")
-	ErrCanonicalizeToAddress     = errors.New("could not canonicalize value to address")
-	ErrCanonicalizeBigInt        = errors.New("could not canonicalize value to big.Int")
-	ErrCanonicalizeBool          = errors.New("could not canonicalize value to bool")
-	ErrCanonicalizeToAddressList = errors.New("could not canonicalize value to address list")
+	ErrCanonicalizeUint64    = errors.New("could not canonicalize value to uint64")
+	ErrCanonicalizeString    = errors.New("could not canonicalize value to string")
+	ErrCanonicalizeToAddress = errors.New("could not canonicalize value to address")
+	ErrCanonicalizeBigInt    = errors.New("could not canonicalize value to big.Int")
+	ErrCanonicalizeBool      = errors.New("could not canonicalize value to bool")
 
 	ErrCanonicalizeByteToAddress   = errors.New("could not canonicalize []byte to address")
 	ErrCanonicalizeByteToUint64    = errors.New("could not canonicalize []byte to uint64")

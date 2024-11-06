@@ -18,8 +18,17 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 
 	// 1. Verify Vote
 	if len(header.Vote) > 0 {
-		var vb headergov.VoteBytes = header.Vote
-		vote, err := vb.ToVoteData()
+		var (
+			vb              headergov.VoteBytes = header.Vote
+			name, vote, err                     = vb.ToVoteData()
+		)
+
+		// if vote.key is in ValSetVoteKeyMap, do nothing
+		if _, ok := gov.ValSetVoteKeyMap[name]; ok {
+			return nil
+		}
+
+		// otherwise, verify the votebyte
 		if err != nil {
 			logger.Error("ToVoteData error", "num", header.Number.Uint64(), "vote", vb, "err", err)
 			return err

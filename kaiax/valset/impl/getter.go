@@ -153,11 +153,12 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 	// before Randao, weightedrandom uses proposers to pick the proposer.
 	// the proposers have always been calculated before entering proposer
 	if !rules.IsRandao {
+		proposersUpdatePolicy := valCtx.prevBlockResult.pSet.ProposerUpdateInterval
 		proposers, err := v.getProposers(num)
 		if err != nil {
 			return common.Address{}, err
 		}
-		proposer, proposerIdx := c.getProposerFromProposers(proposers, round)
+		proposer, proposerIdx := c.getProposerFromProposers(proposers, round, proposersUpdatePolicy)
 		if proposerIdx == -1 {
 			return common.Address{}, errUnknownProposer
 		}

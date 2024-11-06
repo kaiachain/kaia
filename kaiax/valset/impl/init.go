@@ -24,7 +24,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
@@ -48,8 +47,6 @@ type chain interface {
 
 type headerGov interface {
 	EffectiveParamSet(blockNum uint64) gov.ParamSet
-	GetMyVotes() []headergov.VoteData
-	PopMyVotes(idx int)
 }
 
 type stakingInfo interface {
@@ -73,7 +70,7 @@ type ValsetModule struct {
 
 	// caches
 	proposers lru.Cache
-	voteBlks  []uint64
+	myVotes   []*voteData
 }
 
 func NewValsetModule() *ValsetModule {
@@ -89,6 +86,7 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 	v.headerGov = opts.HeaderGov
 	v.stakingInfo = opts.StakingInfo
 	v.nodeAddress = opts.NodeAddress
+	v.myVotes = make([]*voteData, 0)
 	return nil
 }
 
@@ -100,11 +98,6 @@ func (v *ValsetModule) Start() error {
 	}
 	if err == nil {
 		return nil
-	}
-	// the chain db just created. store initial vote blocks and council address list with voteBlk 0
-	initialVoteBlks := []uint64{0}
-	if err = WriteValidatorVoteDataBlockNums(v.ChainKv, &initialVoteBlks); err != nil {
-		return err
 	}
 	header := v.chain.GetHeaderByNumber(0)
 	if header != nil {
