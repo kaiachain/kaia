@@ -231,33 +231,37 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	}
 }
 
+// This test won't work because we removed the rewind logic from setHeadBeyondRoot.
+// But this file will be replaced by kaiax/supply anyway.
 // Tests go catchup -> insertBlock case, where the catchup follows the chain head event.
+/*
 func (s *SupplyTestSuite) TestCatchupRewind() {
-	t := s.T()
-	s.sm.Start() // start catchup
-	defer s.sm.Stop()
-	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
-	s.insertBlocks()                   // block is inserted after the catchup started
-	s.waitCatchup()                    // catchup to block 400
+		t := s.T()
+			s.sm.Start() // start catchup
+			defer s.sm.Stop()
+			time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+			s.insertBlocks()                   // block is inserted after the catchup started
+			s.waitCatchup()                    // catchup to block 400
 
-	// Rewind to 200; relevant data must have been deleted.
-	s.chain.SetHead(200)
-	assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
-	assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
-	assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
+			// Rewind to 200; relevant data must have been deleted.
+			s.chain.SetHead(200)
+			assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
+			assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
+			assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
 
-	// Re-insert blocks.
-	// The catchup thread should correctly handle ChainHeadEvents less than 400.
-	s.insertBlocks()
+			// Re-insert blocks.
+			// The catchup thread should correctly handle ChainHeadEvents less than 400.
+			s.insertBlocks()
 
-	testcases := s.testcases()
-	for _, tc := range testcases {
-		checkpoint, err := s.sm.GetCheckpoint(tc.number)
-		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
-	}
-}
+			testcases := s.testcases()
+			for _, tc := range testcases {
+				checkpoint, err := s.sm.GetCheckpoint(tc.number)
+				require.NoError(t, err)
+				bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+				bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
+			}
+		}
+*/
 
 // Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
