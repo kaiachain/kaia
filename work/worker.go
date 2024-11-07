@@ -573,6 +573,8 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
+	self.engine.Initialize(self.chain, header, self.current.state)
+
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {

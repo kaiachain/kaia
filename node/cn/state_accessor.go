@@ -198,7 +198,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 }
 
 // stateAtTransaction returns the execution environment of a certain transaction.
-func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
+func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
 	// Short circuit if it's genesis block.
 	if block.NumberU64() == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, errors.New("no transaction in genesis")
@@ -210,10 +210,13 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 	}
 	// Lookup the statedb of parent block from the live database,
 	// otherwise regenerate it on the flight.
-	statedb, release, err := cn.stateAtBlock(parent, reexec, nil, true, false)
+	statedb, release, err := cn.stateAtBlock(parent, reexec, base, readOnly, preferDisk)
 	if err != nil {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
+	// If prague hardfork, insert parent block hash in the state as per EIP-2935.
+	cn.engine.Initialize(cn.blockchain, block.Header(), statedb)
+
 	if txIndex == 0 && len(block.Transactions()) == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, release, nil
 	}

@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/kaiachain/kaia/common"
 )
 
 var TargetGasLimit = GenesisGasLimit // The artificial target
@@ -198,6 +200,8 @@ const (
 
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0
+
+	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
 )
 
 const (
@@ -219,6 +223,13 @@ var (
 	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+
+	// SystemAddress is where the system-transaction is sent from as per EIP-4788
+	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")
+
+	// EIP-2935 - Serve historical block hashes from state
+	HistoryStorageAddress = common.HexToAddress("0x0aae40965e6800cd9b1f4b05ff21581047e3f91e")
+	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe1460575767ffffffffffffffff5f3511605357600143035f3511604b575f35612000014311604b57611fff5f3516545f5260205ff35b5f5f5260205ff35b5f5ffd5b5f35611fff60014303165500")
 )
 
 // Parameters for execution time limit

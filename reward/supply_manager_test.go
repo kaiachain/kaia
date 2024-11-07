@@ -808,6 +808,9 @@ func (s *supplyTestEngine) Prepare(chain consensus.ChainReader, header *types.He
 	return nil
 }
 
+func (s *supplyTestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+}
+
 // Simplfied version of istanbul Finalize for testing native token distribution.
 func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	header.BlockScore = common.Big1

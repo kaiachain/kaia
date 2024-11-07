@@ -104,4 +104,6 @@ type StateDB interface {
 	GetTxHash() common.Hash
 
 	GetKey(address common.Address) accountkey.AccountKey
+
+	Finalise(bool, bool)
 }

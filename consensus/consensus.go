@@ -102,6 +102,9 @@ type Engine interface {
 	// rules of a particular engine. The changes are executed inline.
 	Prepare(chain ChainReader, header *types.Header) error
 
+	// Initialize runs any pre-transaction state modifications (e.g., EIP-2539)
+	Initialize(chain ChainReader, header *types.Header, state *state.StateDB)
+
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.
 	// Note: The block header and state database might be updated to reflect any
