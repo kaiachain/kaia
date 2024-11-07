@@ -35,7 +35,12 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		Governance: gov,
 	}
 	dbm.WriteHeader(genesisHeader)
-	chain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesisHeader)
+
+	// mock accumulateVotesInEpoch
+	chain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesisHeader).AnyTimes()
+	for i := uint64(1); i < config.Istanbul.Epoch; i++ {
+		chain.EXPECT().GetHeaderByNumber(i).Return(&types.Header{Number: big.NewInt(int64(i))})
+	}
 
 	cachingDb := state.NewDatabase(dbm)
 	statedb, _ := state.New(common.Hash{}, cachingDb, nil, nil)

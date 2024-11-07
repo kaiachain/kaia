@@ -49,7 +49,6 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	noop_impl "github.com/kaiachain/kaia/kaiax/noop/impl"
@@ -441,36 +440,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
-
-	// Scan votes for the current epoch. Gov module requires votes for current epoch.
-	// equivalent to `scanAllVotesInEpoch` in headerGovModule.
-	currentEpochStart := currBlock.NumberU64() / pset.Epoch() * pset.Epoch()
-	lowestVoteScannedBlockNumPtr := headergov_impl.ReadLowestVoteScannedBlockNum(cn.chainDB.GetMiscDB())
-	if lowestVoteScannedBlockNumPtr == nil {
-		votes := make(map[uint64]headergov.VoteData)
-		for blockNum := currentEpochStart; blockNum <= cn.blockchain.CurrentBlock().NumberU64(); blockNum++ {
-			header := cn.blockchain.GetHeaderByNumber(blockNum)
-			if len(header.Vote) == 0 {
-				continue
-			}
-
-			vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
-			if err != nil {
-				logger.Error("Error parsing vote", "err", err, "num", blockNum)
-				continue
-			}
-			// TODO-kaiax: consider writing addval/removeval votes to validator DB.
-			if vote != nil && vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
-				votes[blockNum] = vote
-			}
-		}
-
-		for blockNum := range votes {
-			headergov_impl.InsertVoteDataBlockNum(cn.chainDB.GetMiscDB(), blockNum)
-		}
-		headergov_impl.WriteLowestVoteScannedBlockNum(cn.chainDB.GetMiscDB(), currentEpochStart)
-		logger.Info("Initialized lowest vote scanned block", "num", currentEpochStart)
-	}
 
 	// Setup kaiax Modules
 	if err := cn.SetupKaiaxModules(); err != nil {
