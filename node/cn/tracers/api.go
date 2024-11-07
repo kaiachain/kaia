@@ -888,17 +888,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 		reexec = *config.Reexec
 	}
 
-	var (
-		statedb *state.StateDB
-		release StateReleaseFunc
-	)
-	// if next block does exist, use `StateAtTransaction` with transaction index zero. Otherwise, fallback to use `StateAtBlock` with the input block number
-	if next, err := api.blockByNumber(ctx, rpc.BlockNumber(block.NumberU64())); err != nil {
-		_, _, _, statedb, release, err = api.backend.StateAtTransaction(ctx, next, 0, reexec, nil, true, false)
-	} else {
-		statedb, release, err = api.backend.StateAtBlock(ctx, block, reexec, nil, true, false)
-	}
-
+	statedb, release, err := api.backend.StateAtBlock(ctx, block, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
