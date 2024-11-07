@@ -27,26 +27,31 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	for blockNumber, tc := range testVotes {
-		vData := &voteData{voter: tc.testVote.voter, name: tc.testVote.voteName, value: tc.testVote.validators}
+	for _, tc := range testVotes {
+		t.Run(tc.name, func(t *testing.T) {
+			err = WriteCouncilAddressListToDb(vModule.ChainKv, 0, tc.networkInfo.validators)
+			assert.NoError(t, err)
 
-		byteVote, err := vData.ToVoteBytes()
-		assert.NoError(t, err)
+			vData := &tc.voteData
 
-		header := &types.Header{
-			ParentHash: testPrevHash,
-			Number:     big.NewInt(int64(blockNumber)),
-			Vote:       byteVote,
-		}
-		mockEngine.EXPECT().Author(header).Return(tc.testVote.proposer, nil).AnyTimes()
-		err = vModule.HandleValidatorVote(header, vData)
-		assert.Equal(t, tc.expectHandleValidatorVote.expectError, err, "blockNumber: %d", blockNumber)
+			byteVote, err := vData.ToVoteBytes()
+			assert.NoError(t, err)
 
-		cList, err := ReadCouncilAddressListFromDb(vModule.ChainKv, uint64(blockNumber))
-		sort.Sort(tc.expectHandleValidatorVote.expectCList)
-		assert.NoError(t, err, "blockNumber: %d", blockNumber)
-		assert.Equal(t, tc.expectHandleValidatorVote.expectCList, subsetCouncilSlice(cList), "blockNumber: %d", blockNumber)
+			prevHeader := &types.Header{ParentHash: testPrevHash, Number: big.NewInt(0)}
+			header := &types.Header{
+				ParentHash: testPrevHash,
+				Number:     big.NewInt(1),
+				Vote:       byteVote,
+			}
+			mockEngine.EXPECT().Author(header).Return(tc.networkInfo.proposer, nil).AnyTimes()
+			mockChain.EXPECT().GetHeaderByNumber(prevHeader.Number.Uint64()).Return(prevHeader).AnyTimes()
+			err = vModule.HandleValidatorVote(header, vData)
+			assert.Equal(t, tc.expectHandleValidatorVote.expectError, err)
+
+			cList, err := ReadCouncilAddressListFromDb(vModule.ChainKv, uint64(1))
+			sort.Sort(tc.expectHandleValidatorVote.expectCList)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectHandleValidatorVote.expectCList, subsetCouncilSlice(cList))
+		})
 	}
-
-	assert.Equal(t, []uint64{0, 1, 2, 3}, ReadValidatorVoteDataBlockNums(vModule.ChainKv))
 }

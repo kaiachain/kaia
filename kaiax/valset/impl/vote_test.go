@@ -10,11 +10,9 @@ import (
 // voteTestData is the testdata for vote tests.
 // Not only votes, but also other functions such as VerifyHeader handles votes.
 // To minimize the maintenance effort to manage the testdata, manage the expected result in voteTestData
-type testVoteData struct {
-	voter      common.Address
-	proposer   common.Address
-	voteName   string
+type testNetworkInfo struct {
 	validators []common.Address
+	proposer   common.Address
 }
 
 type testHandleValidatorVoteExpectation struct {
@@ -22,81 +20,65 @@ type testHandleValidatorVoteExpectation struct {
 	expectError error
 }
 
-type testVerifyHeaderExpectation struct {
-	expectError error
-}
-
 var testVotes = []struct {
 	name                      string
-	testVote                  testVoteData
+	networkInfo               testNetworkInfo
+	voteData                  voteData
 	expectHandleValidatorVote testHandleValidatorVoteExpectation
-	expectVerifyHeader        testVerifyHeaderExpectation
 }{
 	{
 		name:                      "remove a validator",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.removevalidator", []common.Address{n2}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n3, n4}, nil},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.removevalidator", []common.Address{n2}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n3, n4}, nil},
 	},
 	{
 		name:                      "add a validator",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.addvalidator", []common.Address{n2}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n4}, nil},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.addvalidator", []common.Address{n5}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4, n5}, nil},
 	},
 	{
 		name:                      "remove multiple validators",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.removevalidator", []common.Address{n2, n3, n4}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode}, nil},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.removevalidator", []common.Address{n2, n3, n4}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn}, nil},
 	},
 	{
 		name:                      "add multiple validators",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.addvalidator", []common.Address{n2, n3, n5}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, nil},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2}, tgn},
+		voteData:                  voteData{tgn, "governance.addvalidator", []common.Address{n3, n4}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, nil},
 	},
 	{
 		name:                      "govnode cannot be removed",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.removevalidator", []common.Address{testGoverningNode}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoteValue},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.removevalidator", []common.Address{tgn}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, errInvalidVoteValue},
 	},
 	{
-		name:                      "proposer should be a gov node",
-		testVote:                  testVoteData{testGoverningNode, n2, "governance.addvalidator", []common.Address{n4}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoter},
-		expectVerifyHeader:        testVerifyHeaderExpectation{errInvalidVoter},
+		name:                      "proposer should be same with voter and it should be a gov node",
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, n2},
+		voteData:                  voteData{tgn, "governance.addvalidator", []common.Address{n4}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, errInvalidVoter},
 	},
 	{
-		name:                      "voter should be a gov node",
-		testVote:                  testVoteData{n2, testGoverningNode, "governance.removevalidator", []common.Address{n4}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoter},
-		expectVerifyHeader:        testVerifyHeaderExpectation{errInvalidVoter},
-	},
-	{
-		name:                      "proposer should be a gov node",
-		testVote:                  testVoteData{n2, n2, "governance.removevalidator", []common.Address{n4}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoter},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		name:                      "voter and proposer should be a gov node",
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, n2},
+		voteData:                  voteData{n2, "governance.removevalidator", []common.Address{n4}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, errInvalidVoter},
 	},
 	{
 		name:                      "cannot add existing validator",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.addvalidator", []common.Address{n2}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoteValue},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.addvalidator", []common.Address{n2}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, errInvalidVoteValue},
 	},
 	{
 		name:                      "cannot remove non-exist validator",
-		testVote:                  testVoteData{testGoverningNode, testGoverningNode, "governance.removevalidator", []common.Address{n4}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoteValue},
-		expectVerifyHeader:        testVerifyHeaderExpectation{},
-	},
-	{
-		name:                      "voter is not in council list",
-		testVote:                  testVoteData{n6, n6, "governance.removevalidator", []common.Address{n2}},
-		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{testGoverningNode, n2, n3, n5}, errInvalidVoter},
-		expectVerifyHeader:        testVerifyHeaderExpectation{errInvalidVoter},
+		networkInfo:               testNetworkInfo{[]common.Address{tgn, n2, n3, n4}, tgn},
+		voteData:                  voteData{tgn, "governance.removevalidator", []common.Address{n5}},
+		expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n2, n3, n4}, errInvalidVoteValue},
 	},
 }
 
@@ -106,7 +88,7 @@ func TestVoteData_ToVoteBytes(t *testing.T) {
 		voteBytes   string
 		expectError error
 	}{
-		{voteData{testGoverningNode, "governance.removevalidator", []common.Address{n2}}, "f846948ad8f547fa00f58a8c4fb3b671ee5f1a75ba028a9a676f7665726e616e63652e72656d6f766576616c696461746f72d594b2aada7943919e82143324296987f6091f3fdc9e", nil},
+		{voteData{tgn, "governance.removevalidator", []common.Address{n2}}, "f846948ad8f547fa00f58a8c4fb3b671ee5f1a75ba028a9a676f7665726e616e63652e72656d6f766576616c696461746f72d594b2aada7943919e82143324296987f6091f3fdc9e", nil},
 	} {
 		voteBytes, err := tc.voteData.ToVoteBytes()
 		assert.Equal(t, tc.expectError, err, "test case: %d", idx)

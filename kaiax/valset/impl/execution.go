@@ -17,8 +17,6 @@
 package impl
 
 import (
-	"sort"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -102,13 +100,11 @@ func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData *voteD
 	}
 
 	// update valSet db
-	sort.Sort(valset)
 	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, valset); err != nil {
 		return err
 	}
 
 	// remove it from myVotes only if the block is proposed by me
-
 	if author == v.nodeAddress {
 		for idx, myVote := range v.myVotes {
 			if voteData.Equal(myVote) {

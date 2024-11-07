@@ -29,6 +29,7 @@ func (v *ValsetModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
+	// TODO-kaiax-valset: put the verifySigner verification in here?
 	name, vote, err := newVoteDataFromBytes(header.Vote)
 
 	// if vote.key is in gov.Params, do nothing

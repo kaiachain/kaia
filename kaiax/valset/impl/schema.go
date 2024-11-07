@@ -3,6 +3,7 @@ package impl
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
@@ -95,7 +96,11 @@ func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Add
 	return set, nil
 }
 
-func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList []common.Address) error {
+func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList subsetCouncilSlice) error {
+	copiedList := make(subsetCouncilSlice, len(councilAddressList))
+	copy(copiedList, councilAddressList)
+
+	sort.Sort(copiedList)
 	if err := UpdateValidatorVoteDataBlockNums(db, voteBlk); err != nil {
 		return err
 	}
@@ -103,7 +108,7 @@ func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAd
 	mu.Lock()
 	defer mu.Unlock()
 
-	b, err := json.Marshal(councilAddressList)
+	b, err := json.Marshal(copiedList)
 	if err != nil {
 		return err
 	}

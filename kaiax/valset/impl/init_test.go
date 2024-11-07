@@ -19,13 +19,13 @@ import (
 )
 
 var (
-	n1                = common.HexToAddress("0x8aD8F547fa00f58A8c4fb3B671Ee5f1A75bA028a")
+	tgn               = common.HexToAddress("0x8aD8F547fa00f58A8c4fb3B671Ee5f1A75bA028a") // governing node used in valSet test
 	n2                = common.HexToAddress("0xB2AAda7943919e82143324296987f6091F3FDC9e")
 	n3                = common.HexToAddress("0xD95c70710f07A3DaF7ae11cFBa10c789da3564D0")
 	n4                = common.HexToAddress("0xC704765db1d21C2Ea6F7359dcB8FD5233DeD16b5")
 	n5                = common.HexToAddress("0xcb7f556a77a9f7ec8dc16c7d6cf0aeff7c3ee80a")
 	n6                = common.HexToAddress("0x0ce5cbdab931fa12821e2a71845fd284bee8914e")
-	testGenesisValSet = []common.Address{n1, n2, n3, n4} // if genesisValSet changed, the cExpectList of voteTestData must be changed
+	testGenesisValSet = []common.Address{tgn, n2, n3, n4, n5, n6} // if genesisValSet changed, the cExpectList of voteTestData must be changed
 
 	testPUpdateInterval = uint64(36)
 	testSUpdateInterval = uint64(72)
@@ -33,7 +33,6 @@ var (
 	testSubGroupSize    = uint64(3)
 	testProposerPolicy  = params.WeightedRandom
 	testGovernanceMode  = "single"
-	testGoverningNode   = n1
 
 	testIstanbulCompatibleNumber = big.NewInt(int64(testEpoch) + 10)
 	testKoreCompatibleBlock      = big.NewInt(int64(testEpoch) + 20)
@@ -74,7 +73,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1},
+			NodeIds:          []common.Address{tgn},
 			StakingContracts: []common.Address{s1},
 			RewardAddrs:      []common.Address{r1},
 			KEFAddr:          kef,
@@ -83,7 +82,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1, n2, n3, n4},
+			NodeIds:          []common.Address{tgn, n2, n3, n4},
 			StakingContracts: []common.Address{s1, s2, s3, s4},
 			RewardAddrs:      []common.Address{r1, r2, r3, r4},
 			KEFAddr:          kef,
@@ -92,7 +91,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1, n2, n4, n5, n6},
+			NodeIds:          []common.Address{tgn, n2, n4, n5, n6},
 			StakingContracts: []common.Address{s1, s2, s4, s5, s6},
 			RewardAddrs:      []common.Address{r1, r2, r4, r5, r6},
 			KEFAddr:          kef,
@@ -101,7 +100,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1, n2, n4, n5, n6},
+			NodeIds:          []common.Address{tgn, n2, n4, n5, n6},
 			StakingContracts: []common.Address{s1, s2, s4, s5, s6},
 			RewardAddrs:      []common.Address{r1, r2, r4, r5, r6},
 			KEFAddr:          kef,
@@ -110,7 +109,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1, n2, n4, n5, n6},
+			NodeIds:          []common.Address{tgn, n2, n4, n5, n6},
 			StakingContracts: []common.Address{s1, s2, s4, s5, s6},
 			RewardAddrs:      []common.Address{r1, r2, r4, r5, r6},
 			KEFAddr:          kef,
@@ -119,7 +118,7 @@ func getValSetStakingInfoTestData() []*staking.StakingInfo {
 		},
 		{
 			SourceBlockNum:   0,
-			NodeIds:          []common.Address{n1, n2, n4, n5, n6},
+			NodeIds:          []common.Address{tgn, n2, n4, n5, n6},
 			StakingContracts: []common.Address{s1, s2, s4, s5, s6},
 			RewardAddrs:      []common.Address{r1, r2, r4, r5, r6},
 			KEFAddr:          kef,
@@ -137,18 +136,21 @@ func getValSetParamSetTestData() []gov.ParamSet {
 		_ = govParam.Set(gov.RewardStakingUpdateInterval, testSUpdateInterval)
 		_ = govParam.Set(gov.IstanbulEpoch, testEpoch)
 		_ = govParam.Set(gov.GovernanceGovernanceMode, testGovernanceMode)
-		_ = govParam.Set(gov.GovernanceGoverningNode, testGoverningNode)
+		_ = govParam.Set(gov.GovernanceGoverningNode, tgn)
 		return *govParam
 	}
 
 	var paramSets []gov.ParamSet
 	for _, params := range []struct {
+		proposerPolicy int
 		subGroupSize   uint64
 		governingNode  common.Address
-		proposerPolicy int
 	}{
-		{testSubGroupSize, testGoverningNode, testProposerPolicy},
-		{testSubGroupSize + 2, testGoverningNode, testProposerPolicy},
+		{testProposerPolicy, 0, tgn},
+		{testProposerPolicy, 1, tgn},
+		{testProposerPolicy, testSubGroupSize, tgn},
+		{testProposerPolicy, testSubGroupSize + 1, tgn},
+		{testProposerPolicy, testSubGroupSize + 2, tgn},
 	} {
 		// initialize the parameters which can be votable later.
 		govParam := baseGovParam()
@@ -202,7 +204,7 @@ func newTestVModule(mockChain *chainmock.MockBlockChain, mockEngine *mocks.MockE
 		mockChain,
 		mockHeaderGov,
 		mockStaking,
-		n1,
+		n5,
 	}); err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -216,7 +218,7 @@ func newTestVModule(mockChain *chainmock.MockBlockChain, mockEngine *mocks.MockE
 	config := params.KairosChainConfig.Copy()
 	config.Governance.Reward.ProposerUpdateInterval = testPUpdateInterval
 	config.Governance.Reward.StakingUpdateInterval = testSUpdateInterval
-	config.Governance.GoverningNode = testGoverningNode
+	config.Governance.GoverningNode = tgn
 	config.Istanbul.Epoch = testEpoch
 	config.Istanbul.SubGroupSize = testSubGroupSize
 	config.Istanbul.ProposerPolicy = params.WeightedRandom
@@ -244,7 +246,7 @@ func TestValsetModule_Init(t *testing.T) {
 	vModule, testHeaders, testStakingInfos, testParamSets, err := newTestVModule(mockChain, mockEngine, mockHeaderGov, mockStaking)
 	assert.NoError(t, err)
 
-	mockEngine.EXPECT().Author(gomock.Any()).Return(testGoverningNode, nil).AnyTimes()
+	mockEngine.EXPECT().Author(gomock.Any()).Return(tgn, nil).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(testHeaders[0]).AnyTimes()
 	mockChain.EXPECT().GetHeaderByHash(testHeaders[0].Hash()).Return(testHeaders[0]).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(testHeaders[0])).AnyTimes()
@@ -261,7 +263,7 @@ func TestValsetModule_Init(t *testing.T) {
 
 	author, err := vModule.chain.Engine().Author(testHeaders[0])
 	assert.NoError(t, err)
-	assert.Equal(t, testGoverningNode, author)
+	assert.Equal(t, tgn, author)
 
 	header := vModule.chain.GetHeaderByNumber(0)
 	assert.Equal(t, testHeaders[0], header)
