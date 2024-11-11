@@ -157,13 +157,21 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
+	post := t.json.Post[subtest.Fork][subtest.Index]
+	if post.Alloc != nil {
+		config.Governance = &params.GovernanceConfig{
+			Reward: &params.RewardConfig{},
+			KIP71: &params.KIP71Config{
+				LowerBoundBaseFee: t.json.Tx.GasPrice.Uint64(),
+			},
+		}
+	}
 	vmconfig.ExtraEips = eips
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
 	statedb := MakePreState(memDBManager, t.json.Pre)
 
-	post := t.json.Post[subtest.Fork][subtest.Index]
 	msg, err := t.json.Tx.toMessage(post, config.Rules(block.Number()))
 	if err != nil {
 		return nil, err
@@ -190,14 +198,14 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	// And _now_ get the state root
 	root, _ := statedb.Commit(true)
 
-	if post.Alloc == nil && len(post.Alloc) == 0 {
+	if post.Alloc == nil {
 		if root != common.Hash(post.Root) {
 			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 		}
 	} else {
 		for addr, a := range post.Alloc {
-			// TODO: skip checking balance of coinbase and sender because of the difference of reward system and fee system
-			if addr.String() != t.json.Env.Coinbase.String() && addr.String() != msg.ValidatedSender().String() {
+			// TODO: skip checking balance of coinbase because of the difference of reward system
+			if addr.String() != t.json.Env.Coinbase.String() {
 				if balance := statedb.GetBalance(addr); balance.Cmp(a.Balance) != 0 {
 					return nil, fmt.Errorf("address %s balance mismatch: got %v, want %v", addr.String(), balance, a.Balance)
 				}
@@ -304,6 +312,11 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.M
 		return nil, err
 	}
 
+	intrinsicGas, err = simulateEthIntrinsicGas(intrinsicGas, data, r)
+	if err != nil {
+		return nil, err
+	}
+
 	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
 	return msg, nil
 }
@@ -313,4 +326,48 @@ func rlpHash(x interface{}) (h common.Hash) {
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
+}
+
+// simulate intrinsic gas amount for Ethereum
+func simulateEthIntrinsicGas(intrinsicGas uint64, data []byte, r params.Rules) (uint64, error) {
+	if r.IsIstanbul {
+		kaiaPayloadGas, err := types.IntrinsicGasPayload(0, data, false, r)
+		if err != nil {
+			return 0, err
+		}
+		ethPayloadGas, err := intrinsicGasPayloadIstanbul(0, data, r)
+		if err != nil {
+			return 0, err
+		}
+		return intrinsicGas - kaiaPayloadGas + ethPayloadGas, nil
+	}
+
+	return intrinsicGas, nil
+}
+
+func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint64, error) {
+	length := uint64(len(data))
+	if length > 0 {
+		// Zero and non-zero bytes are priced differently
+		var nz uint64
+		for _, byt := range data {
+			if byt != 0 {
+				nz++
+			}
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+			return 0, types.ErrGasUintOverflow
+		}
+		nonZeroGasEIP2028 := uint64(16)
+		gas += nz * nonZeroGasEIP2028
+
+		z := uint64(len(data)) - nz
+		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+			return 0, types.ErrGasUintOverflow
+		}
+		gas += z * params.TxDataZeroGas
+	}
+
+	return gas, nil
 }
