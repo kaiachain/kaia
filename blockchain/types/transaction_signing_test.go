@@ -37,86 +37,66 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPragueSigningWithoutChainID(t *testing.T) {
+func TestPragueSigning(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
 	authorizationList := AuthorizationList{{ChainID: big.NewInt(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
-	signer := NewPragueSigner(big.NewInt(10))
-	tx, err := SignTx(NewTx(&TxInternalDataEthereumSetCode{
-		AccountNonce:      1,
-		Amount:            big.NewInt(10),
-		GasFeeCap:         big.NewInt(10),
-		GasTipCap:         big.NewInt(10),
-		GasLimit:          100,
-		AccessList:        accessList,
-		AuthorizationList: authorizationList,
-		Recipient:         &addr,
-	}), signer, key)
-	if err != nil {
-		t.Fatal(err)
+	testData := []struct {
+		name    string
+		inputTx *Transaction
+	}{
+		{"WithoutChainID", NewTx(&TxInternalDataEthereumSetCode{
+			AccountNonce:      1,
+			Amount:            big.NewInt(10),
+			GasFeeCap:         big.NewInt(10),
+			GasTipCap:         big.NewInt(10),
+			GasLimit:          100,
+			AccessList:        accessList,
+			AuthorizationList: authorizationList,
+			Recipient:         &addr,
+		})},
+		{"WithChainID", NewTx(&TxInternalDataEthereumSetCode{
+			AccountNonce:      1,
+			Amount:            big.NewInt(10),
+			GasFeeCap:         big.NewInt(10),
+			GasTipCap:         big.NewInt(10),
+			GasLimit:          100,
+			AccessList:        accessList,
+			AuthorizationList: authorizationList,
+			Recipient:         &addr,
+			ChainID:           big.NewInt(10),
+		})},
+		{"WithNoBitChainID", NewTx(&TxInternalDataEthereumSetCode{
+			AccountNonce:      1,
+			Amount:            big.NewInt(10),
+			GasFeeCap:         big.NewInt(10),
+			GasTipCap:         big.NewInt(10),
+			GasLimit:          100,
+			AccessList:        accessList,
+			AuthorizationList: authorizationList,
+			Recipient:         &addr,
+			ChainID:           new(big.Int),
+		})},
 	}
-
-	from, err := Sender(signer, tx)
-	if from != addr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
-	}
-}
-
-func TestPragueSigningWithChainID(t *testing.T) {
-	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
-	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := AuthorizationList{{ChainID: big.NewInt(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
-
-	signer := NewPragueSigner(big.NewInt(10))
-	tx, err := SignTx(NewTx(&TxInternalDataEthereumSetCode{
-		AccountNonce:      1,
-		Amount:            big.NewInt(10),
-		GasFeeCap:         big.NewInt(10),
-		GasTipCap:         big.NewInt(10),
-		GasLimit:          100,
-		AccessList:        accessList,
-		AuthorizationList: authorizationList,
-		Recipient:         &addr,
-		ChainID:           big.NewInt(10),
-	}), signer, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	from, err := Sender(signer, tx)
-	if from != addr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
-	}
-}
-
-func TestPragueSigningWithNoBitChainID(t *testing.T) {
-	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
-	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := AuthorizationList{{ChainID: big.NewInt(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
 	signer := NewPragueSigner(big.NewInt(10))
-	tx, err := SignTx(NewTx(&TxInternalDataEthereumSetCode{
-		AccountNonce:      1,
-		Amount:            big.NewInt(10),
-		GasFeeCap:         big.NewInt(10),
-		GasTipCap:         big.NewInt(10),
-		GasLimit:          100,
-		AccessList:        accessList,
-		AuthorizationList: authorizationList,
-		Recipient:         &addr,
-		ChainID:           new(big.Int),
-	}), signer, key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, tc := range testData {
+		t.Run(tc.name, func(t *testing.T) {
+			tx, err := SignTx(tc.inputTx, signer, key)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	from, err := Sender(signer, tx)
-	if from != addr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+			from, err := Sender(signer, tx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if from != addr {
+				t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+			}
+		})
 	}
 }
 
