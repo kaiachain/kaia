@@ -764,7 +764,7 @@ func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:             from.GetNonce(),
-		types.TxValueKeyTo:                &toAddress,
+		types.TxValueKeyTo:                toAddress,
 		types.TxValueKeyAmount:            amount,
 		types.TxValueKeyData:              data,
 		types.TxValueKeyGasLimit:          gasLimit,

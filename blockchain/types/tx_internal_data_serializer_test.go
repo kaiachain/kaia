@@ -292,7 +292,7 @@ func genDynamicFeeTransaction() TxInternalData {
 func genSetCodeTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumSetCode, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:             nonce,
-		TxValueKeyTo:                &to,
+		TxValueKeyTo:                to,
 		TxValueKeyAmount:            amount,
 		TxValueKeyGasLimit:          gasLimit,
 		TxValueKeyGasFeeCap:         gasFeeCap,

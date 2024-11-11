@@ -55,7 +55,7 @@ func TestPragueSigning(t *testing.T) {
 			GasLimit:          100,
 			AccessList:        accessList,
 			AuthorizationList: authorizationList,
-			Recipient:         &addr,
+			Recipient:         addr,
 		})},
 		{"WithChainID", NewTx(&TxInternalDataEthereumSetCode{
 			AccountNonce:      1,
@@ -65,7 +65,7 @@ func TestPragueSigning(t *testing.T) {
 			GasLimit:          100,
 			AccessList:        accessList,
 			AuthorizationList: authorizationList,
-			Recipient:         &addr,
+			Recipient:         addr,
 			ChainID:           big.NewInt(10),
 		})},
 		{"WithNoBitChainID", NewTx(&TxInternalDataEthereumSetCode{
@@ -76,7 +76,7 @@ func TestPragueSigning(t *testing.T) {
 			GasLimit:          100,
 			AccessList:        accessList,
 			AuthorizationList: authorizationList,
-			Recipient:         &addr,
+			Recipient:         addr,
 			ChainID:           new(big.Int),
 		})},
 	}

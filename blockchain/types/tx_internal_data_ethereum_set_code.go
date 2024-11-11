@@ -61,7 +61,7 @@ type TxInternalDataEthereumSetCode struct {
 	GasTipCap         *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap         *big.Int // a.k.a. maxFeePerGas
 	GasLimit          uint64
-	Recipient         *common.Address
+	Recipient         common.Address
 	Amount            *big.Int
 	Payload           []byte
 	AccessList        AccessList
@@ -84,7 +84,7 @@ type TxInternalDataEthereumSetCodeJSON struct {
 	MaxPriorityFeePerGas *hexutil.Big      `json:"maxPriorityFeePerGas"`
 	MaxFeePerGas         *hexutil.Big      `json:"maxFeePerGas"`
 	GasLimit             hexutil.Uint64    `json:"gas"`
-	Recipient            *common.Address   `json:"to"`
+	Recipient            common.Address    `json:"to"`
 	Amount               *hexutil.Big      `json:"value"`
 	Payload              hexutil.Bytes     `json:"input"`
 	AccessList           AccessList        `json:"accessList"`
@@ -100,7 +100,7 @@ func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 		GasTipCap:         new(big.Int),
 		GasFeeCap:         new(big.Int),
 		GasLimit:          0,
-		Recipient:         nil,
+		Recipient:         common.Address{},
 		Amount:            new(big.Int),
 		Payload:           []byte{},
 		AccessList:        AccessList{},
@@ -128,11 +128,11 @@ func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface
 		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
 		d.Recipient = v
 		delete(values, TxValueKeyTo)
 	} else {
-		return nil, errValueKeyToMustAddressPointer
+		return nil, errValueKeyToMustAddress
 	}
 
 	if v, ok := values[TxValueKeyAmount].(*big.Int); ok {
@@ -210,7 +210,12 @@ func (t *TxInternalDataEthereumSetCode) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataEthereumSetCode) GetRecipient() *common.Address {
-	return t.Recipient
+	if t.Recipient == (common.Address{}) {
+		return nil
+	}
+
+	to := common.Address(t.Recipient)
+	return &to
 }
 
 func (t *TxInternalDataEthereumSetCode) GetAmount() *big.Int {
@@ -295,7 +300,7 @@ func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
 		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
 		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
 		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
+		t.Recipient == ta.Recipient &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
 		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
 		reflect.DeepEqual(t.AuthorizationList, ta.AuthorizationList) &&
@@ -305,7 +310,7 @@ func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
 }
 
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
@@ -361,10 +366,10 @@ func (t *TxInternalDataEthereumSetCode) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient == nil {
+	if t.Recipient == (common.Address{}) {
 		return kerrors.ErrEmptyRecipient
-	} else if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient) {
+	} else {
+		if common.IsPrecompiledContractAddress(t.Recipient) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
 	}
@@ -454,7 +459,7 @@ func (t *TxInternalDataEthereumSetCode) Execute(sender ContractRef, vm VM, state
 	//}()
 	///////////////////////////////////////////////////////
 	stateDB.IncNonce(sender.Address())
-	return vm.Call(sender, *t.Recipient, t.Payload, gas, value)
+	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }
 
 func (t *TxInternalDataEthereumSetCode) MakeRPCOutput() map[string]interface{} {

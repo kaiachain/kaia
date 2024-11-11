@@ -839,7 +839,7 @@ func TestTransactionCoding(t *testing.T) {
 			txData = &TxInternalDataEthereumSetCode{
 				ChainID:           big.NewInt(1),
 				AccountNonce:      i,
-				Recipient:         &recipient,
+				Recipient:         recipient,
 				GasLimit:          123457,
 				GasFeeCap:         big.NewInt(10),
 				GasTipCap:         big.NewInt(10),
