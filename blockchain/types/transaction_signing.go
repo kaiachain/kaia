@@ -58,8 +58,10 @@ type sigCachePubkey struct {
 func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	var signer Signer
 
-	if config.IsEthTxTypeForkEnabled(blockNumber) {
+	if config.IsPragueForkEnabled(blockNumber) {
 		signer = NewPragueSigner(config.ChainID)
+	} else if config.IsEthTxTypeForkEnabled(blockNumber) {
+		signer = NewLondonSigner(config.ChainID)
 	} else {
 		signer = NewEIP155Signer(config.ChainID)
 	}
@@ -75,10 +77,12 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // Use this in transaction-handling code where the current block number is unknown. If you
 // have the current block number available, use MakeSigner instead.
 func LatestSigner(config *params.ChainConfig) Signer {
-	// Be aware that it checks whether EthTxTypeCompatibleBlock is set,
+	// Be aware that it checks whether EthTxTypeCompatibleBlock or PragueCompatible is set,
 	// but doesn't check whether it is enabled on a specific block number.
-	if config.EthTxTypeCompatibleBlock != nil {
+	if config.PragueCompatibleBlock != nil {
 		return NewPragueSigner(config.ChainID)
+	} else if config.EthTxTypeCompatibleBlock != nil {
+		return NewLondonSigner(config.ChainID)
 	}
 
 	return NewEIP155Signer(config.ChainID)
