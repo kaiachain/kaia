@@ -23,7 +23,6 @@
 package tests
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -209,22 +208,12 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	root, _ := statedb.Commit(true)
 
 	if isTestExecutionSpecState {
-		for addr, a := range post.Alloc {
-			if balance := statedb.GetBalance(addr); balance.Cmp(a.Balance) != 0 {
-				return nil, fmt.Errorf("address %s balance mismatch: got %v, want %v", addr.String(), balance, a.Balance)
-			}
-			if nonce := statedb.GetNonce(addr); nonce != a.Nonce {
-				return nil, fmt.Errorf("address %s nonce mismatch: got %v, want %v", addr.String(), nonce, a.Nonce)
-			}
-			if code := statedb.GetCode(addr); bytes.Compare(code, a.Code) != 0 {
-				return nil, fmt.Errorf("address %s code mismatch: got %x, want %x", addr.String(), code, a.Code)
-			}
-			// TODO: should check root hash
-			for pointer, d := range a.Storage {
-				if data := statedb.GetState(addr, pointer); bytes.Compare(data.Bytes(), d.Bytes()) != 0 {
-					return nil, fmt.Errorf("address %s storage %x mismatch: got %x, want %x", addr.String(), pointer, data, d)
-				}
-			}
+		root, err := simulateEthStateRoot(statedb)
+		if err != nil {
+			return nil, err
+		}
+		if root != common.Hash(post.Root) {
+			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 		}
 	} else {
 		if root != common.Hash(post.Root) {
@@ -393,4 +382,27 @@ func simulateEthStakingReward(statedb *state.StateDB, evm *vm.EVM, msg blockchai
 	fee := new(big.Int).SetUint64(usedGas)
 	fee.Mul(fee, effectiveTip)
 	statedb.AddBalance(evm.Context.Coinbase, fee)
+}
+
+// simulate state root for Ethereum
+func simulateEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
+	memDb := database.NewMemoryDBManager()
+	db := state.NewDatabase(memDb)
+	newState, _ := state.New(common.Hash{}, db, nil, nil)
+
+	for addr, acc := range statedb.RawDump().Accounts {
+		b, ok := new(big.Int).SetString(acc.Balance, 10)
+		if !ok {
+			return common.Hash{}, fmt.Errorf("something wrong")
+		}
+		newState.SetLegacyAccountForTest(
+			common.HexToAddress(addr),
+			acc.Nonce,
+			b,
+			common.HexToHash(acc.Root),
+			common.HexToHash(acc.CodeHash).Bytes(),
+		)
+	}
+
+	return newState.IntermediateRoot(true), nil
 }
