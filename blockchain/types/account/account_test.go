@@ -185,6 +185,36 @@ func genSCAWithPublicKey() *SmartContractAccount {
 	})
 }
 
+func checkEncode(t *testing.T, account Account, expected string) {
+	enc := NewAccountSerializerWithAccount(account)
+	b, err := rlp.EncodeToBytes(enc)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, hexutil.Encode(b))
+}
+
+func checkEncodeExt(t *testing.T, account Account, expected string) {
+	enc := NewAccountSerializerExtWithAccount(account)
+	b, err := rlp.EncodeToBytes(enc)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, hexutil.Encode(b))
+}
+
+func checkDecode(t *testing.T, encoded string, expected Account) {
+	b := common.FromHex(encoded)
+	dec := NewAccountSerializer()
+	err := rlp.DecodeBytes(b, &dec)
+	assert.Nil(t, err)
+	assert.True(t, dec.GetAccount().Equal(expected))
+}
+
+func checkDecodeExt(t *testing.T, encoded string, expected Account) {
+	b := common.FromHex(encoded)
+	dec := NewAccountSerializerExt()
+	err := rlp.DecodeBytes(b, &dec)
+	assert.Nil(t, err)
+	assert.True(t, dec.GetAccount().Equal(expected))
+}
+
 // Tests RLP encoding against manually generated strings.
 func TestSmartContractAccountExt(t *testing.T) {
 	// To create testcases,
@@ -222,44 +252,17 @@ func TestSmartContractAccountExt(t *testing.T) {
 			codeInfo:      codeinfo,
 		}
 	)
-	checkEncode := func(account Account, encoded string) {
-		enc := NewAccountSerializerWithAccount(account)
-		b, err := rlp.EncodeToBytes(enc)
-		assert.Nil(t, err)
-		assert.Equal(t, encoded, hexutil.Encode(b))
-	}
-	checkEncodeExt := func(account Account, encoded string) {
-		enc := NewAccountSerializerExtWithAccount(account)
-		b, err := rlp.EncodeToBytes(enc)
-		assert.Nil(t, err)
-		assert.Equal(t, encoded, hexutil.Encode(b))
-	}
-	checkEncode(scaUnext, scaUnextRLP)
-	checkEncodeExt(scaUnext, scaUnextRLP) // zero extensions are always unextended
+	checkEncode(t, scaUnext, scaUnextRLP)
+	checkEncodeExt(t, scaUnext, scaUnextRLP) // zero extensions are always unextended
 
-	checkEncode(scaExt, scaUnextRLP)  // Regular encoding still results in hash32. Use it for merkle hash.
-	checkEncodeExt(scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
+	checkEncode(t, scaExt, scaUnextRLP)  // Regular encoding still results in hash32. Use it for merkle hash.
+	checkEncodeExt(t, scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
 
-	checkDecode := func(encoded string, account Account) {
-		b := common.FromHex(encoded)
-		dec := NewAccountSerializer()
-		err := rlp.DecodeBytes(b, &dec)
-		assert.Nil(t, err)
-		assert.True(t, dec.GetAccount().Equal(account))
-	}
-	checkDecodeExt := func(encoded string, account Account) {
-		b := common.FromHex(encoded)
-		dec := NewAccountSerializerExt()
-		err := rlp.DecodeBytes(b, &dec)
-		assert.Nil(t, err)
-		assert.True(t, dec.GetAccount().Equal(account))
-	}
+	checkDecode(t, scaUnextRLP, scaUnext)
+	checkDecodeExt(t, scaUnextRLP, scaUnext)
 
-	checkDecode(scaUnextRLP, scaUnext)
-	checkDecodeExt(scaUnextRLP, scaUnext)
-
-	checkDecode(scaExtRLP, scaExt)
-	checkDecodeExt(scaExtRLP, scaExt)
+	checkDecode(t, scaExtRLP, scaExt)
+	checkDecodeExt(t, scaExtRLP, scaExt)
 }
 
 func TestUnextendRLP(t *testing.T) {
