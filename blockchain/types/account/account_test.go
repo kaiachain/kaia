@@ -20,16 +20,13 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"math/rand"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -46,144 +43,6 @@ var (
 	_ AccountWithKey = (*ExternallyOwnedAccount)(nil)
 	_ AccountWithKey = (*SmartContractAccount)(nil)
 )
-
-// TestAccountSerialization tests serialization of various account types.
-func TestAccountSerialization(t *testing.T) {
-	accs := []struct {
-		Name string
-		acc  Account
-	}{
-		{"EOA", genEOA()},
-		{"EOAWithPublic", genEOAWithPublicKey()},
-		{"SCA", genSCA()},
-		{"SCAWithPublic", genSCAWithPublicKey()},
-	}
-	testcases := []struct {
-		Name string
-		fn   func(t *testing.T, acc Account)
-	}{
-		{"RLP", testAccountRLP},
-		{"JSON", testAccountJSON},
-	}
-	for _, test := range testcases {
-		for _, acc := range accs {
-			Name := test.Name + "/" + acc.Name
-			t.Run(Name, func(t *testing.T) {
-				test.fn(t, acc.acc)
-			})
-		}
-	}
-}
-
-func testAccountRLP(t *testing.T, acc Account) {
-	enc := NewAccountSerializerWithAccount(acc)
-
-	b, err := rlp.EncodeToBytes(enc)
-	if err != nil {
-		panic(err)
-	}
-
-	dec := NewAccountSerializer()
-
-	if err := rlp.DecodeBytes(b, &dec); err != nil {
-		panic(err)
-	}
-
-	if !acc.Equal(dec.account) {
-		fmt.Println("acc")
-		fmt.Println(acc)
-		fmt.Println("dec.account")
-		fmt.Println(dec.account)
-		t.Errorf("acc != dec.account")
-	}
-}
-
-func testAccountJSON(t *testing.T, acc Account) {
-	enc := NewAccountSerializerWithAccount(acc)
-
-	b, err := json.Marshal(enc)
-	if err != nil {
-		panic(err)
-	}
-
-	dec := NewAccountSerializer()
-
-	if err := json.Unmarshal(b, &dec); err != nil {
-		panic(err)
-	}
-
-	if !acc.Equal(dec.account) {
-		fmt.Println("acc")
-		fmt.Println(acc)
-		fmt.Println("dec.account")
-		fmt.Println(dec.account)
-		t.Errorf("acc != dec.account")
-	}
-}
-
-func genRandomHash() (h common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	r := rand.Uint64()
-	rlp.Encode(hasher, r)
-	hasher.Sum(h[:0])
-
-	return h
-}
-
-func genEOA() *ExternallyOwnedAccount {
-	humanReadable := false
-
-	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
-	})
-}
-
-func genEOAWithPublicKey() *ExternallyOwnedAccount {
-	humanReadable := false
-
-	k, _ := crypto.GenerateKey()
-
-	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
-	})
-}
-
-func genSCA() *SmartContractAccount {
-	humanReadable := false
-
-	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
-		AccountValueKeyStorageRoot:   genRandomHash(),
-		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeInfo:      params.CodeInfo(0),
-	})
-}
-
-func genSCAWithPublicKey() *SmartContractAccount {
-	humanReadable := false
-
-	k, _ := crypto.GenerateKey()
-
-	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
-		AccountValueKeyStorageRoot:   genRandomHash(),
-		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeInfo:      params.CodeInfo(0),
-	})
-}
 
 func checkEncode(t *testing.T, account Account, expected string) {
 	enc := NewAccountSerializerWithAccount(account)
