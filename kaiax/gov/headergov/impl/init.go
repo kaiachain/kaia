@@ -162,7 +162,7 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 	votes := make(map[uint64]headergov.VoteData)
 	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
 		header := h.Chain.GetHeaderByNumber(blockNum)
-		if len(header.Vote) == 0 {
+		if header == nil || len(header.Vote) == 0 {
 			continue
 		}
 
