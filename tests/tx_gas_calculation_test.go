@@ -111,6 +111,7 @@ func TestGasCalculation(t *testing.T) {
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	defer bcdata.Shutdown()
