@@ -32,7 +32,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -62,7 +61,7 @@ type TxInternalDataEthereumSetCode struct {
 	GasTipCap         *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap         *big.Int // a.k.a. maxFeePerGas
 	GasLimit          uint64
-	Recipient         *common.Address `rlp:"nil"` // nil means contract creation
+	Recipient         *common.Address
 	Amount            *big.Int
 	Payload           []byte
 	AccessList        AccessList
@@ -362,7 +361,9 @@ func (t *TxInternalDataEthereumSetCode) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
+	if t.Recipient == nil {
+		return kerrors.ErrEmptyRecipient
+	} else if t.Recipient != nil {
 		if common.IsPrecompiledContractAddress(*t.Recipient) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
@@ -452,14 +453,8 @@ func (t *TxInternalDataEthereumSetCode) Execute(sender ContractRef, vm VM, state
 	//	logger.Debug("[TxInternalDataLegacy] EVM execution done", "elapsed", elapsed)
 	//}()
 	///////////////////////////////////////////////////////
-	if t.Recipient == nil {
-		// Sender's nonce will be increased in '`vm.Create()`
-		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, params.CodeFormatEVM)
-	} else {
-		stateDB.IncNonce(sender.Address())
-		ret, usedGas, err = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
-	}
-	return ret, usedGas, err
+	stateDB.IncNonce(sender.Address())
+	return vm.Call(sender, *t.Recipient, t.Payload, gas, value)
 }
 
 func (t *TxInternalDataEthereumSetCode) MakeRPCOutput() map[string]interface{} {
