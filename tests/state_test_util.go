@@ -88,6 +88,7 @@ type stEnv struct {
 	GasLimit   uint64         `json:"currentGasLimit"   gencodec:"required"`
 	Number     uint64         `json:"currentNumber"     gencodec:"required"`
 	Timestamp  uint64         `json:"currentTimestamp"  gencodec:"required"`
+	BaseFee    *big.Int       `json:"currentBaseFee"    gencodec:"required"`
 }
 
 type stEnvMarshaling struct {
@@ -158,9 +159,12 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	if post.Alloc != nil {
+	isTestExecutionSpecState := post.Alloc != nil
+	if isTestExecutionSpecState {
 		config.Governance = &params.GovernanceConfig{
-			Reward: &params.RewardConfig{},
+			Reward: &params.RewardConfig{
+				DeferredTxFee: true,
+			},
 			KIP71: &params.KIP71Config{
 				LowerBoundBaseFee: t.json.Tx.GasPrice.Uint64(),
 			},
@@ -182,9 +186,15 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
 
 	snapshot := statedb.Snapshot()
-	if _, err = blockchain.ApplyMessage(evm, msg); err != nil {
+	result, err := blockchain.ApplyMessage(evm, msg)
+	if err != nil {
 		statedb.RevertToSnapshot(snapshot)
 	}
+
+	if isTestExecutionSpecState {
+		simulateEthStakingReward(statedb, evm, msg, t.json.Env.BaseFee, result.UsedGas)
+	}
+
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
 		return statedb, fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
 	}
@@ -198,17 +208,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	// And _now_ get the state root
 	root, _ := statedb.Commit(true)
 
-	if post.Alloc == nil {
-		if root != common.Hash(post.Root) {
-			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
-		}
-	} else {
+	if isTestExecutionSpecState {
 		for addr, a := range post.Alloc {
-			// TODO: skip checking balance of coinbase because of the difference of reward system
-			if addr.String() != t.json.Env.Coinbase.String() {
-				if balance := statedb.GetBalance(addr); balance.Cmp(a.Balance) != 0 {
-					return nil, fmt.Errorf("address %s balance mismatch: got %v, want %v", addr.String(), balance, a.Balance)
-				}
+			if balance := statedb.GetBalance(addr); balance.Cmp(a.Balance) != 0 {
+				return nil, fmt.Errorf("address %s balance mismatch: got %v, want %v", addr.String(), balance, a.Balance)
 			}
 			if nonce := statedb.GetNonce(addr); nonce != a.Nonce {
 				return nil, fmt.Errorf("address %s nonce mismatch: got %v, want %v", addr.String(), nonce, a.Nonce)
@@ -222,6 +225,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 					return nil, fmt.Errorf("address %s storage %x mismatch: got %x, want %x", addr.String(), pointer, data, d)
 				}
 			}
+		}
+	} else {
+		if root != common.Hash(post.Root) {
+			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 		}
 	}
 
@@ -370,4 +377,20 @@ func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint6
 	}
 
 	return gas, nil
+}
+
+// simulate staking reward for Ethereum
+func simulateEthStakingReward(statedb *state.StateDB, evm *vm.EVM, msg blockchain.Message, baseFee *big.Int, usedGas uint64) {
+	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
+	effectiveTip := msg.GasPrice()
+	if rules.IsLondon {
+		if baseFee == nil {
+			baseFee = big.NewInt(10) // https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
+		}
+		effectiveTip = math.BigMin(msg.GasTipCap(), new(big.Int).Sub(msg.GasFeeCap(), baseFee))
+	}
+
+	fee := new(big.Int).SetUint64(usedGas)
+	fee.Mul(fee, effectiveTip)
+	statedb.AddBalance(evm.Context.Coinbase, fee)
 }
