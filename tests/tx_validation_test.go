@@ -397,6 +397,7 @@ func TestValidationBlockTx(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1217,6 +1218,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
