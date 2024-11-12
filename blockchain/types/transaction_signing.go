@@ -315,7 +315,6 @@ func (s pragueSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 // SenderFeePayer returns the public key derived from tx signature and txhash.
 func (s pragueSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	// EIP-7702(Set code transaction) tx don't supported fee-delegation.
-	// EIP-1559(Dynamic fee transaction) tx don't supported fee-delegation.
 	return s.londonSigner.SenderFeePayer(tx)
 }
 
