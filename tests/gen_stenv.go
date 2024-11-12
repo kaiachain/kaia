@@ -21,7 +21,7 @@ func (s stEnv) MarshalJSON() ([]byte, error) {
 		GasLimit   math.HexOrDecimal64      `json:"currentGasLimit"   gencodec:"required"`
 		Number     math.HexOrDecimal64      `json:"currentNumber"     gencodec:"required"`
 		Timestamp  math.HexOrDecimal64      `json:"currentTimestamp"  gencodec:"required"`
-		BaseFee    *math.HexOrDecimal256    `json:"currentBaseFee"    gencodec:"required"`
+		BaseFee    *math.HexOrDecimal256    `json:"currentBaseFee"    gencodec:"optional"`
 	}
 	var enc stEnv
 	enc.Coinbase = common.UnprefixedAddress(s.Coinbase)
@@ -41,7 +41,7 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 		GasLimit   *math.HexOrDecimal64      `json:"currentGasLimit"   gencodec:"required"`
 		Number     *math.HexOrDecimal64      `json:"currentNumber"     gencodec:"required"`
 		Timestamp  *math.HexOrDecimal64      `json:"currentTimestamp"  gencodec:"required"`
-		BaseFee    *math.HexOrDecimal256     `json:"currentBaseFee"    gencodec:"required"`
+		BaseFee    *math.HexOrDecimal256     `json:"currentBaseFee"    gencodec:"optional"`
 	}
 	var dec stEnv
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -67,9 +67,8 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'currentTimestamp' for stEnv")
 	}
 	s.Timestamp = uint64(*dec.Timestamp)
-	if dec.BaseFee == nil {
-		return errors.New("missing required field 'currentBaseFee' for stEnv")
+	if dec.BaseFee != nil {
+		s.BaseFee = (*big.Int)(dec.BaseFee)
 	}
-	s.BaseFee = (*big.Int)(dec.BaseFee)
 	return nil
 }

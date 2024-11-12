@@ -76,7 +76,6 @@ type stPostState struct {
 		Gas   int `json:"gas"`
 		Value int `json:"value"`
 	}
-	Alloc blockchain.GenesisAlloc
 }
 
 //go:generate gencodec -type stEnv -field-override stEnvMarshaling -out gen_stenv.go
@@ -87,7 +86,7 @@ type stEnv struct {
 	GasLimit   uint64         `json:"currentGasLimit"   gencodec:"required"`
 	Number     uint64         `json:"currentNumber"     gencodec:"required"`
 	Timestamp  uint64         `json:"currentTimestamp"  gencodec:"required"`
-	BaseFee    *big.Int       `json:"currentBaseFee"    gencodec:"required"`
+	BaseFee    *big.Int       `json:"currentBaseFee"    gencodec:"optional"`
 }
 
 type stEnvMarshaling struct {
@@ -115,6 +114,12 @@ type stTransactionMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	GasLimit   []math.HexOrDecimal64
 	PrivateKey hexutil.Bytes
+}
+
+var isTestExecutionSpecState bool
+
+func enableTestExecutionSpecState() {
+	isTestExecutionSpecState = true
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
@@ -157,8 +162,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	if err != nil {
 		return nil, UnsupportedForkError{subtest.Fork}
 	}
-	post := t.json.Post[subtest.Fork][subtest.Index]
-	isTestExecutionSpecState := post.Alloc != nil
+
 	if isTestExecutionSpecState {
 		config.Governance = &params.GovernanceConfig{
 			Reward: &params.RewardConfig{
@@ -175,6 +179,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	memDBManager := database.NewMemoryDBManager()
 	statedb := MakePreState(memDBManager, t.json.Pre)
 
+	post := t.json.Post[subtest.Fork][subtest.Index]
 	msg, err := t.json.Tx.toMessage(post, config.Rules(block.Number()))
 	if err != nil {
 		return nil, err
@@ -190,7 +195,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 		statedb.RevertToSnapshot(snapshot)
 	}
 
-	if isTestExecutionSpecState {
+	if isTestExecutionSpecState && err == nil {
 		simulateEthStakingReward(statedb, evm, msg, t.json.Env.BaseFee, result.UsedGas)
 	}
 
