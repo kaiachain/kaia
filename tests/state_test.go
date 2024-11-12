@@ -96,6 +96,7 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string) 
 				"Berlin",
 				"London",
 				"Paris",
+				"Merge",
 				"Shanghai",
 				"Cancun",
 				"Prague",
