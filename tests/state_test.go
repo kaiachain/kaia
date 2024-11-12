@@ -75,6 +75,14 @@ func TestExecutionSpecState(t *testing.T) {
 	}
 	st := new(testMatcher)
 
+	st.skipLoad(`^frontier/`)
+	st.skipLoad(`^homestead/`)
+	st.skipLoad(`^byzantium/`)
+	st.skipLoad(`^istanbul/`)
+	st.skipLoad(`^berlin/`)
+	// st.skipLoad(`^shanghai/`)
+	st.skipLoad(`^cancun/`)
+
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name)
 	})
@@ -87,19 +95,19 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string) 
 		name := name + "/" + key
 		t.Run(key, func(t *testing.T) {
 			if slices.Contains([]string{
-				"Frontier",
-				"Homestead",
-				"Byzantium",
-				"Constantinople",
-				"ConstantinopleFix",
-				"Istanbul",
-				"Berlin",
-				"London",
-				"Paris",
-				"Merge",
-				"Shanghai",
-				"Cancun",
-				"Prague",
+				// "Frontier",
+				// "Homestead",
+				// "Byzantium",
+				// "Constantinople",
+				// "ConstantinopleFix",
+				// "Istanbul",
+				// "Berlin",
+				// "London",
+				// "Paris",
+				// "Merge",
+				// "Shanghai",
+				// "Cancun",
+				// "Prague",
 			}, subtest.Fork) {
 				t.Skipf("%s not supported yet", subtest.Fork)
 			}
