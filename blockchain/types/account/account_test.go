@@ -20,16 +20,13 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"math/rand"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -47,142 +44,240 @@ var (
 	_ AccountWithKey = (*SmartContractAccount)(nil)
 )
 
-// TestAccountSerialization tests serialization of various account types.
-func TestAccountSerialization(t *testing.T) {
-	accs := []struct {
-		Name string
-		acc  Account
-	}{
-		{"EOA", genEOA()},
-		{"EOAWithPublic", genEOAWithPublicKey()},
-		{"SCA", genSCA()},
-		{"SCAWithPublic", genSCAWithPublicKey()},
-	}
-	testcases := []struct {
-		Name string
-		fn   func(t *testing.T, acc Account)
-	}{
-		{"RLP", testAccountRLP},
-		{"JSON", testAccountJSON},
-	}
-	for _, test := range testcases {
-		for _, acc := range accs {
-			Name := test.Name + "/" + acc.Name
-			t.Run(Name, func(t *testing.T) {
-				test.fn(t, acc.acc)
-			})
-		}
-	}
-}
-
-func testAccountRLP(t *testing.T, acc Account) {
-	enc := NewAccountSerializerWithAccount(acc)
-
+func checkEncode(t *testing.T, account Account, expected string) {
+	enc := NewAccountSerializerWithAccount(account)
 	b, err := rlp.EncodeToBytes(enc)
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, expected, hexutil.Encode(b))
+}
+
+func checkEncodeExt(t *testing.T, account Account, expected string) {
+	enc := NewAccountSerializerExtWithAccount(account)
+	b, err := rlp.EncodeToBytes(enc)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, hexutil.Encode(b))
+}
+
+func checkDecode(t *testing.T, encoded string, expected Account) {
+	b := common.FromHex(encoded)
+	dec := NewAccountSerializer()
+	err := rlp.DecodeBytes(b, &dec)
+	assert.Nil(t, err)
+	assert.True(t, dec.GetAccount().Equal(expected))
+}
+
+func checkDecodeExt(t *testing.T, encoded string, expected Account) {
+	b := common.FromHex(encoded)
+	dec := NewAccountSerializerExt()
+	err := rlp.DecodeBytes(b, &dec)
+	assert.Nil(t, err)
+	assert.True(t, dec.GetAccount().Equal(expected))
+}
+
+func checkEncodeJSON(t *testing.T, account Account, expectedMap map[string]interface{}) {
+	enc := NewAccountSerializerWithAccount(account)
+	actual, err := json.Marshal(enc)
+	assert.Nil(t, err)
+
+	expected, err := json.Marshal(expectedMap)
+	assert.Nil(t, err)
+	assert.JSONEq(t, string(expected), string(actual))
+}
+
+func checkDecodeJSON(t *testing.T, j map[string]interface{}, expected Account) {
+	b, err := json.Marshal(j)
+	assert.Nil(t, err)
 
 	dec := NewAccountSerializer()
+	err = dec.UnmarshalJSON(b)
+	assert.Nil(t, err)
+	assert.True(t, dec.GetAccount().Equal(expected))
+}
 
-	if err := rlp.DecodeBytes(b, &dec); err != nil {
-		panic(err)
+func TestAccountSerializer(t *testing.T) {
+	var (
+		k, _         = crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+		commonFields = &AccountCommon{
+			nonce:         42,
+			balance:       big.NewInt(0x12345678),
+			humanReadable: false,
+			key:           accountkey.NewAccountKeyLegacy(),
+		}
+		commonFieldsEmpty = &AccountCommon{
+			nonce:         0,
+			balance:       big.NewInt(0),
+			humanReadable: false,
+			key:           accountkey.NewAccountKeyLegacy(),
+		}
+		commonFieldsUpdated = &AccountCommon{
+			nonce:         42,
+			balance:       big.NewInt(0x12345678),
+			humanReadable: false,
+			key:           accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
+		}
+		legacyKeyJson = map[string]interface{}{
+			"keyType": 1,
+			"key":     map[string]interface{}{},
+		}
+		pubKeyJson = map[string]interface{}{
+			"keyType": 2,
+			"key": map[string]interface{}{
+				"x": "0x8318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75",
+				"y": "0x3547f11ca8696646f2f3acb08e31016afac23e630c5d11f59f61fef57b0d2aa5",
+			},
+		}
+		roothash    = common.HexToHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+		roothashExt = common.HexToExtHash("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01")
+		codehash    = common.HexToHash("aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd").Bytes()
+		codehashB64 = "qqqqqru7u7vMzMzM3d3d3aqqqqq7u7u7zMzMzN3d3d0="
+		codeinfo    = params.CodeInfo(0x10) // VmVersion=1 (Istanbul+), CodeFormat=0 (EVM)
+	)
+
+	testcases := []struct {
+		desc string
+		acc  Account
+
+		// RLP: storageRoot must be unextended (32-bytes)
+		rlp string
+		// RLPExt: storageRoot (if exists) is unextended if originally zero-extended (32-bytes), kept extended if it was nonzero-extended (37-bytes)
+		rlpExt string
+		// JSON: storageRoot (if exists) must be unextended (32-bytes)
+		json map[string]interface{}
+	}{
+		{
+			"Empty EOA",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFieldsEmpty,
+			},
+			// 01 ["","","","01",[]]
+			"0x01c580808001c0",
+			"0x01c580808001c0",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         0,
+					"balance":       "0x0",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+				},
+			},
+		},
+		{
+			"Nonempty EOA",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFields,
+			},
+			// 01 ["0x2a","0x12345678","","0x01",[]]
+			"0x01c92a84123456788001c0",
+			"0x01c92a84123456788001c0",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+				},
+			},
+		},
+		{
+			"AccountUpdated EOA",
+			&ExternallyOwnedAccount{
+				AccountCommon: commonFieldsUpdated,
+			},
+			// 01 ["0x2a","0x12345678","","0x02","0x038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75"]
+			"0x01ea2a84123456788002a1038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75",
+			"0x01ea2a84123456788002a1038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75",
+			map[string]interface{}{
+				"accType": 1,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           pubKeyJson,
+				},
+			},
+		},
+		{
+			"SCA with Zero-extended StorageRoot",
+			&SmartContractAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothash.ExtendZero(),
+				codeHash:      codehash,
+				codeInfo:      codeinfo,
+			},
+			// 02 [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]
+			"0x02f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			"0x02f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			map[string]interface{}{
+				"accType": 2,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothash.Hex(),
+					"codeHash":      codehashB64,
+					"codeFormat":    0,
+					"vmVersion":     1,
+				},
+			},
+		},
+		{
+			"SCA with Nonzero-extended StorageRoot",
+			&SmartContractAccount{
+				AccountCommon: commonFields,
+				storageRoot:   roothashExt,
+				codeHash:      codehash,
+				codeInfo:      codeinfo,
+			},
+			// [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]
+			"0x02f84dc92a84123456788001c0a000112233445566778899aabbccddeeff00112233445566778899aabbccddeeffa0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			// [["0x2a","0x12345678","","0x01",[]],"0x00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01","0xaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd","0x10"]
+			"0x02f854c92a84123456788001c0a700112233445566778899aabbccddeeff00112233445566778899aabbccddeeffccccddddeeee01a0aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd10",
+			map[string]interface{}{
+				"accType": 2,
+				"account": map[string]interface{}{
+					"nonce":         42,
+					"balance":       "0x12345678",
+					"humanReadable": false,
+					"key":           legacyKeyJson,
+					"storageRoot":   roothash.Hex(),
+					"codeHash":      codehashB64,
+					"codeFormat":    0,
+					"vmVersion":     1,
+				},
+			},
+		},
 	}
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			// If original StorageRoot is nonzero-extended, skip the unextended RLP and JSON tests
+			// as those encodings lose the extension information.
+			hasNonzeroExtendedStorageRoot := false
+			if pa := GetProgramAccount(tc.acc); pa != nil {
+				hasNonzeroExtendedStorageRoot = !pa.GetStorageRoot().IsZeroExtended()
+			}
 
-	if !acc.Equal(dec.account) {
-		fmt.Println("acc")
-		fmt.Println(acc)
-		fmt.Println("dec.account")
-		fmt.Println(dec.account)
-		t.Errorf("acc != dec.account")
+			// obj -> rlp
+			checkEncode(t, tc.acc, tc.rlp)
+			checkEncodeExt(t, tc.acc, tc.rlpExt)
+
+			// rlp -> obj
+			if !hasNonzeroExtendedStorageRoot {
+				checkDecode(t, tc.rlp, tc.acc)
+			}
+			checkDecodeExt(t, tc.rlpExt, tc.acc)
+
+			// obj -> json
+			checkEncodeJSON(t, tc.acc, tc.json)
+
+			// json -> obj
+			if !hasNonzeroExtendedStorageRoot {
+				checkDecodeJSON(t, tc.json, tc.acc)
+			}
+		})
 	}
-}
-
-func testAccountJSON(t *testing.T, acc Account) {
-	enc := NewAccountSerializerWithAccount(acc)
-
-	b, err := json.Marshal(enc)
-	if err != nil {
-		panic(err)
-	}
-
-	dec := NewAccountSerializer()
-
-	if err := json.Unmarshal(b, &dec); err != nil {
-		panic(err)
-	}
-
-	if !acc.Equal(dec.account) {
-		fmt.Println("acc")
-		fmt.Println(acc)
-		fmt.Println("dec.account")
-		fmt.Println(dec.account)
-		t.Errorf("acc != dec.account")
-	}
-}
-
-func genRandomHash() (h common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	r := rand.Uint64()
-	rlp.Encode(hasher, r)
-	hasher.Sum(h[:0])
-
-	return h
-}
-
-func genEOA() *ExternallyOwnedAccount {
-	humanReadable := false
-
-	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
-	})
-}
-
-func genEOAWithPublicKey() *ExternallyOwnedAccount {
-	humanReadable := false
-
-	k, _ := crypto.GenerateKey()
-
-	return newExternallyOwnedAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
-	})
-}
-
-func genSCA() *SmartContractAccount {
-	humanReadable := false
-
-	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyLegacy(),
-		AccountValueKeyStorageRoot:   genRandomHash(),
-		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeInfo:      params.CodeInfo(0),
-	})
-}
-
-func genSCAWithPublicKey() *SmartContractAccount {
-	humanReadable := false
-
-	k, _ := crypto.GenerateKey()
-
-	return newSmartContractAccountWithMap(map[AccountValueKeyType]interface{}{
-		AccountValueKeyNonce:         rand.Uint64(),
-		AccountValueKeyBalance:       big.NewInt(rand.Int63n(10000)),
-		AccountValueKeyHumanReadable: humanReadable,
-		AccountValueKeyAccountKey:    accountkey.NewAccountKeyPublicWithValue(&k.PublicKey),
-		AccountValueKeyStorageRoot:   genRandomHash(),
-		AccountValueKeyCodeHash:      genRandomHash().Bytes(),
-		AccountValueKeyCodeInfo:      params.CodeInfo(0),
-	})
 }
 
 // Tests RLP encoding against manually generated strings.
@@ -222,44 +317,17 @@ func TestSmartContractAccountExt(t *testing.T) {
 			codeInfo:      codeinfo,
 		}
 	)
-	checkEncode := func(account Account, encoded string) {
-		enc := NewAccountSerializerWithAccount(account)
-		b, err := rlp.EncodeToBytes(enc)
-		assert.Nil(t, err)
-		assert.Equal(t, encoded, hexutil.Encode(b))
-	}
-	checkEncodeExt := func(account Account, encoded string) {
-		enc := NewAccountSerializerExtWithAccount(account)
-		b, err := rlp.EncodeToBytes(enc)
-		assert.Nil(t, err)
-		assert.Equal(t, encoded, hexutil.Encode(b))
-	}
-	checkEncode(scaUnext, scaUnextRLP)
-	checkEncodeExt(scaUnext, scaUnextRLP) // zero extensions are always unextended
+	checkEncode(t, scaUnext, scaUnextRLP)
+	checkEncodeExt(t, scaUnext, scaUnextRLP) // zero extensions are always unextended
 
-	checkEncode(scaExt, scaUnextRLP)  // Regular encoding still results in hash32. Use it for merkle hash.
-	checkEncodeExt(scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
+	checkEncode(t, scaExt, scaUnextRLP)  // Regular encoding still results in hash32. Use it for merkle hash.
+	checkEncodeExt(t, scaExt, scaExtRLP) // Must use SerializeExt to preserve exthash. Use it for disk storage.
 
-	checkDecode := func(encoded string, account Account) {
-		b := common.FromHex(encoded)
-		dec := NewAccountSerializer()
-		err := rlp.DecodeBytes(b, &dec)
-		assert.Nil(t, err)
-		assert.True(t, dec.GetAccount().Equal(account))
-	}
-	checkDecodeExt := func(encoded string, account Account) {
-		b := common.FromHex(encoded)
-		dec := NewAccountSerializerExt()
-		err := rlp.DecodeBytes(b, &dec)
-		assert.Nil(t, err)
-		assert.True(t, dec.GetAccount().Equal(account))
-	}
+	checkDecode(t, scaUnextRLP, scaUnext)
+	checkDecodeExt(t, scaUnextRLP, scaUnext)
 
-	checkDecode(scaUnextRLP, scaUnext)
-	checkDecodeExt(scaUnextRLP, scaUnext)
-
-	checkDecode(scaExtRLP, scaExt)
-	checkDecodeExt(scaExtRLP, scaExt)
+	checkDecode(t, scaExtRLP, scaExt)
+	checkDecodeExt(t, scaExtRLP, scaExt)
 }
 
 func TestUnextendRLP(t *testing.T) {
