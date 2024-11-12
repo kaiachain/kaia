@@ -100,13 +100,15 @@ type stEnvMarshaling struct {
 //go:generate gencodec -type stTransaction -field-override stTransactionMarshaling -out gen_sttransaction.go
 
 type stTransaction struct {
-	GasPrice   *big.Int `json:"gasPrice"`
-	Nonce      uint64   `json:"nonce"`
-	To         string   `json:"to"`
-	Data       []string `json:"data"`
-	GasLimit   []uint64 `json:"gasLimit"`
-	Value      []string `json:"value"`
-	PrivateKey []byte   `json:"secretKey"`
+	GasPrice             *big.Int `json:"gasPrice"`
+	MaxFeePerGas         *big.Int `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas *big.Int `json:"maxPriorityFeePerGas"`
+	Nonce                uint64   `json:"nonce"`
+	To                   string   `json:"to"`
+	Data                 []string `json:"data"`
+	GasLimit             []uint64 `json:"gasLimit"`
+	Value                []string `json:"value"`
+	PrivateKey           []byte   `json:"secretKey"`
 }
 
 type stTransactionMarshaling struct {
@@ -164,15 +166,12 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	}
 
 	if isTestExecutionSpecState {
-		config.Governance = &params.GovernanceConfig{
-			Reward: &params.RewardConfig{
-				DeferredTxFee: true,
-			},
-			KIP71: &params.KIP71Config{
-				LowerBoundBaseFee: t.json.Tx.GasPrice.Uint64(),
-			},
+		err = simulateEthGasPrice(config, &t.json)
+		if err != nil {
+			return nil, err
 		}
 	}
+
 	vmconfig.ExtraEips = eips
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
@@ -196,7 +195,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	}
 
 	if isTestExecutionSpecState && err == nil {
-		simulateEthStakingReward(statedb, evm, msg, t.json.Env.BaseFee, result.UsedGas)
+		simulateEthStakingReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
 	}
 
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -329,6 +328,38 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
+// simulate gas price for Ethereum
+func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
+	gasPrice := json.Tx.GasPrice
+	if json.Env.BaseFee != nil {
+		if json.Tx.MaxFeePerGas == nil {
+			json.Tx.MaxFeePerGas = gasPrice
+		}
+		if json.Tx.MaxFeePerGas == nil {
+			json.Tx.MaxFeePerGas = new(big.Int)
+		}
+		if json.Tx.MaxPriorityFeePerGas == nil {
+			json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
+		}
+		gasPrice = math.BigMin(new(big.Int).Add(json.Tx.MaxPriorityFeePerGas, json.Env.BaseFee), json.Tx.MaxFeePerGas)
+	}
+
+	if gasPrice == nil {
+		return fmt.Errorf("no gas price provided")
+	}
+
+	config.Governance = &params.GovernanceConfig{
+		Reward: &params.RewardConfig{
+			DeferredTxFee: true,
+		},
+		KIP71: &params.KIP71Config{
+			LowerBoundBaseFee: gasPrice.Uint64(),
+		},
+	}
+
+	return nil
+}
+
 // simulate intrinsic gas amount for Ethereum
 func simulateEthIntrinsicGas(intrinsicGas uint64, data []byte, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
@@ -374,14 +405,14 @@ func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint6
 }
 
 // simulate staking reward for Ethereum
-func simulateEthStakingReward(statedb *state.StateDB, evm *vm.EVM, msg blockchain.Message, baseFee *big.Int, usedGas uint64) {
+func simulateEthStakingReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
 	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
-	effectiveTip := msg.GasPrice()
+	effectiveTip := gasPrice
 	if rules.IsLondon {
 		if baseFee == nil {
 			baseFee = big.NewInt(10) // https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
 		}
-		effectiveTip = math.BigMin(msg.GasTipCap(), new(big.Int).Sub(msg.GasFeeCap(), baseFee))
+		effectiveTip = math.BigMin(tx.MaxPriorityFeePerGas, new(big.Int).Sub(tx.MaxFeePerGas, baseFee))
 	}
 
 	fee := new(big.Int).SetUint64(usedGas)
