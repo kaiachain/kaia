@@ -389,11 +389,10 @@ func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint6
 			}
 		}
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGasFrontier < nz {
 			return 0, types.ErrGasUintOverflow
 		}
-		nonZeroGasEIP2028 := uint64(16)
-		gas += nz * nonZeroGasEIP2028
+		gas += nz * params.TxDataNonZeroGasEIP2028
 
 		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
