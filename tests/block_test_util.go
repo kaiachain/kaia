@@ -58,7 +58,7 @@ type btJSON struct {
 	Pre       blockchain.GenesisAlloc `json:"pre"`
 	Post      blockchain.GenesisAlloc `json:"postState"`
 	BestBlock common.UnprefixedHash   `json:"lastblockhash"`
-	Network   string                  `json:"network"`
+	Network   string                  `json:"networks"`
 }
 
 type btBlock struct {
