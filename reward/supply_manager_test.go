@@ -84,10 +84,10 @@ type SupplyTestSuite struct {
 	suite.Suite
 
 	// Setup per-Suite
-	config            *params.ChainConfig
-	gov               governanceHelper
-	engine            consensus.Engine
-	oldStakingManager *StakingManager
+	config      *params.ChainConfig
+	stakingInfo *StakingInfo
+	gov         governanceHelper
+	engine      consensus.Engine
 
 	// Setup per-Test
 	db      database.DBManager
@@ -231,33 +231,37 @@ func (s *SupplyTestSuite) TestCatchupEventSubscription() {
 	}
 }
 
+// This test won't work because we removed the rewind logic from setHeadBeyondRoot.
+// But this file will be replaced by kaiax/supply anyway.
 // Tests go catchup -> insertBlock case, where the catchup follows the chain head event.
+/*
 func (s *SupplyTestSuite) TestCatchupRewind() {
-	t := s.T()
-	s.sm.Start() // start catchup
-	defer s.sm.Stop()
-	time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
-	s.insertBlocks()                   // block is inserted after the catchup started
-	s.waitCatchup()                    // catchup to block 400
+		t := s.T()
+			s.sm.Start() // start catchup
+			defer s.sm.Stop()
+			time.Sleep(100 * time.Millisecond) // yield to the catchup goroutine to start
+			s.insertBlocks()                   // block is inserted after the catchup started
+			s.waitCatchup()                    // catchup to block 400
 
-	// Rewind to 200; relevant data must have been deleted.
-	s.chain.SetHead(200)
-	assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
-	assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
-	assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
+			// Rewind to 200; relevant data must have been deleted.
+			s.chain.SetHead(200)
+			assert.Equal(t, uint64(128), s.db.ReadLastSupplyCheckpointNumber())
+			assert.NotNil(t, s.db.ReadSupplyCheckpoint(128))
+			assert.Nil(t, s.db.ReadSupplyCheckpoint(256))
 
-	// Re-insert blocks.
-	// The catchup thread should correctly handle ChainHeadEvents less than 400.
-	s.insertBlocks()
+			// Re-insert blocks.
+			// The catchup thread should correctly handle ChainHeadEvents less than 400.
+			s.insertBlocks()
 
-	testcases := s.testcases()
-	for _, tc := range testcases {
-		checkpoint, err := s.sm.GetCheckpoint(tc.number)
-		require.NoError(t, err)
-		bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
-		bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
-	}
-}
+			testcases := s.testcases()
+			for _, tc := range testcases {
+				checkpoint, err := s.sm.GetCheckpoint(tc.number)
+				require.NoError(t, err)
+				bigEqual(t, tc.expectTotalSupply.TotalMinted, checkpoint.Minted, tc.number)
+				bigEqual(t, tc.expectTotalSupply.BurntFee, checkpoint.BurntFee, tc.number)
+			}
+		}
+*/
 
 // Tests all supply components.
 func (s *SupplyTestSuite) TestTotalSupply() {
@@ -437,14 +441,12 @@ func (s *SupplyTestSuite) SetupSuite() {
 		Kip160ContractAddress: addrKip160,
 	}
 
-	s.gov = newSupplyTestGovernance(s.config)
-	s.engine = newSupplyTestEngine(s.T(), s.config, s.gov)
-
-	s.oldStakingManager = GetStakingManager()
-	SetTestStakingManagerWithStakingInfoCache(&StakingInfo{
+	s.stakingInfo = &StakingInfo{
 		KIFAddr: addrFund1,
 		KEFAddr: addrFund2,
-	})
+	}
+	s.gov = newSupplyTestGovernance(s.config)
+	s.engine = newSupplyTestEngine(s.T(), s.config, s.gov, s.stakingInfo)
 }
 
 func (s *SupplyTestSuite) SetupTest() {
@@ -701,7 +703,6 @@ func (s *SupplyTestSuite) TearDownTest() {
 }
 
 func (s *SupplyTestSuite) TearDownSuite() {
-	SetTestStakingManager(s.oldStakingManager)
 }
 
 // ----------------------------------------------------------------------------
@@ -762,16 +763,18 @@ func (g *supplyTestGovernance) EffectiveParams(num uint64) (*params.GovParamSet,
 
 // Minimally implements the consensus.Engine interface for testing reward distribution.
 type supplyTestEngine struct {
-	t      *testing.T
-	config *params.ChainConfig
-	gov    governanceHelper
+	t           *testing.T
+	config      *params.ChainConfig
+	gov         governanceHelper
+	stakingInfo *StakingInfo
 }
 
-func newSupplyTestEngine(t *testing.T, config *params.ChainConfig, gov governanceHelper) *supplyTestEngine {
+func newSupplyTestEngine(t *testing.T, config *params.ChainConfig, gov governanceHelper, stakingInfo *StakingInfo) *supplyTestEngine {
 	return &supplyTestEngine{
-		t:      t,
-		config: config,
-		gov:    gov,
+		t:           t,
+		config:      config,
+		gov:         gov,
+		stakingInfo: stakingInfo,
 	}
 }
 
@@ -809,6 +812,9 @@ func (s *supplyTestEngine) Prepare(chain consensus.ChainReader, header *types.He
 	return nil
 }
 
+func (s *supplyTestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+}
+
 // Simplfied version of istanbul Finalize for testing native token distribution.
 func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	header.BlockScore = common.Big1
@@ -816,7 +822,7 @@ func (s *supplyTestEngine) Finalize(chain consensus.ChainReader, header *types.H
 
 	rules := s.config.Rules(header.Number)
 	pset, _ := s.gov.EffectiveParams(header.Number.Uint64())
-	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset)
+	rewardSpec, err := CalcDeferredReward(header, txs, receipts, rules, pset, s.stakingInfo)
 	if err != nil {
 		return nil, err
 	}

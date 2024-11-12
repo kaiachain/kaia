@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
@@ -147,10 +148,11 @@ type worker struct {
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	backend Backend
-	chain   BlockChain
-	proc    blockchain.Validator
-	chainDB database.DBManager
+	backend          Backend
+	chain            BlockChain
+	proc             blockchain.Validator
+	chainDB          database.DBManager
+	executionModules []kaiax.ExecutionModule
 
 	extra []byte
 
@@ -440,6 +442,13 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
 			}
 
+			// Invoke ExecutionModules after executing a block.
+			for _, module := range self.executionModules {
+				if err := module.PostInsertBlock(block); err != nil {
+					logger.Error("Failed to call PostInsertBlock", "err", err)
+				}
+			}
+
 			// update governance CurrentSet if it is at an epoch block
 			if err := self.engine.CreateSnapshot(self.chain, block.NumberU64(), block.Hash(), nil); err != nil {
 				logger.Error("Failed to call snapshot", "err", err)
@@ -573,6 +582,8 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
+	self.engine.Initialize(self.chain, header, self.current.state)
+
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
@@ -642,6 +653,10 @@ func (self *worker) updateSnapshot() {
 		self.current.receipts,
 	)
 	self.snapshotState = self.current.state.Copy()
+}
+
+func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
+	self.executionModules = append(self.executionModules, modules...)
 }
 
 func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {

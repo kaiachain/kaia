@@ -32,6 +32,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -41,8 +42,11 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
@@ -300,8 +304,9 @@ func TestPrepare(t *testing.T) {
 func TestSealStopChannel(t *testing.T) {
 	chain, engine := newBlockChain(4)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	engine.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	stop := make(chan struct{}, 1)
@@ -332,8 +337,9 @@ func TestSealStopChannel(t *testing.T) {
 func TestSealCommitted(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	engine.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock, _ := engine.updateBlock(block)
@@ -413,8 +419,9 @@ func TestVerifyHeader(t *testing.T) {
 func TestVerifySeal(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	engine.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	genesis := chain.Genesis()
 
@@ -451,9 +458,9 @@ func TestVerifySeal(t *testing.T) {
 func TestVerifyHeaders(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
-
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	engine.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	genesis := chain.Genesis()
 
@@ -720,6 +727,18 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
+	defer engine.Stop()
+	mReward := reward_impl.NewRewardModule()
+	if err := mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   chain.Config(),
+		Chain:         chain,
+		GovModule:     reward_impl.FromLegacy(engine.governance),
+		StakingModule: staking_impl.NewStakingModule(), // Irrelevant in ProposerPolicy=0. Won't inject mock.
+	}); err != nil {
+		t.Fatalf("Failed to initialize reward module: %v", err)
+	}
+	engine.RegisterConsensusModule(mReward)
+
 	assert.Equal(t, uint64(testEpoch), engine.governance.CurrentParams().Epoch())
 	assert.Equal(t, mintAmount, engine.governance.CurrentParams().MintingAmountBig().Uint64())
 
@@ -759,24 +778,35 @@ func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []int
 	}
 }
 
+func makeMockStakingManager(t *testing.T, amounts []uint64, blockNum uint64) (*gomock.Controller, *mock.MockStakingModule) {
+	si := makeTestStakingInfo(amounts, blockNum)
+
+	mockCtrl := gomock.NewController(t)
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+	return mockCtrl, mStaking
+}
+
 // Set StakingInfo with given amount for nodeKeys. If amounts == nil, set to 0 amounts.
-// Returns the original (old) StakingManager. Call `reward.SetTestStakingManager(oldStakingManager)`
-func setTestStakingInfo(amounts []uint64) *reward.StakingManager {
+func setTestStakingInfo(t *testing.T, b *backend, amounts []uint64, blockNum uint64) *gomock.Controller {
 	if amounts == nil {
 		amounts = make([]uint64, len(nodeKeys))
 	}
+	si := makeTestStakingInfo(amounts, blockNum)
 
-	stakingInfo := stakingInfo(amounts, 0)
-
-	// Save old StakingManager, overwrite to the fake one.
-	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerWithStakingInfoCache(stakingInfo)
-	return oldStakingManager
+	mockCtrl := gomock.NewController(t)
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+	b.RegisterStakingModule(mStaking)
+	return mockCtrl
 }
 
-func stakingInfo(amounts []uint64, blockNum uint64) *reward.StakingInfo {
-	stakingInfo := &reward.StakingInfo{
-		BlockNum: blockNum,
+func makeTestStakingInfo(amounts []uint64, blockNum uint64) *staking.StakingInfo {
+	if amounts == nil {
+		amounts = make([]uint64, len(nodeKeys))
+	}
+	si := &staking.StakingInfo{
+		SourceBlockNum: blockNum,
 	}
 	for idx, key := range nodeKeys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -784,12 +814,12 @@ func stakingInfo(amounts []uint64, blockNum uint64) *reward.StakingInfo {
 		pk, _ := crypto.GenerateKey()
 		rewardAddr := crypto.PubkeyToAddress(pk.PublicKey)
 
-		stakingInfo.CouncilNodeAddrs = append(stakingInfo.CouncilNodeAddrs, addr)
-		stakingInfo.CouncilStakingAddrs = append(stakingInfo.CouncilStakingAddrs, addr)
-		stakingInfo.CouncilStakingAmounts = append(stakingInfo.CouncilStakingAmounts, amounts[idx])
-		stakingInfo.CouncilRewardAddrs = append(stakingInfo.CouncilRewardAddrs, rewardAddr)
+		si.NodeIds = append(si.NodeIds, addr)
+		si.StakingContracts = append(si.StakingContracts, addr)
+		si.RewardAddrs = append(si.RewardAddrs, rewardAddr)
+		si.StakingAmounts = append(si.StakingAmounts, amounts[idx])
 	}
-	return stakingInfo
+	return si
 }
 
 func toAddressList(validators []istanbul.Validator) []common.Address {
@@ -923,7 +953,8 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(4, configItems...)
-		oldStakingManager := setTestStakingInfo(tc.stakingAmounts)
+		mockCtrl, mStaking := makeMockStakingManager(t, tc.stakingAmounts, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -968,7 +999,7 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 			}
 		}
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1031,11 +1062,12 @@ func TestSnapshot_Validators_AfterKaia_BasedOnStaking(t *testing.T) {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
-		// Save old StakingManager, overwrite to the fake one.
-		oldStakingManager := reward.GetStakingManager()
-		reward.SetTestStakingManagerWithChain(chain, engine.governance, nil)
-		reward.AddTestStakingInfoToCache(stakingInfo(genesisStakingAmounts, 0))
-		reward.AddTestStakingInfoToCache(stakingInfo(tc.stakingAmounts, 1))
+
+		mockCtrl := gomock.NewController(t)
+		mStaking := mock.NewMockStakingModule(mockCtrl)
+		mStaking.EXPECT().GetStakingInfo(uint64(1)).Return(makeTestStakingInfo(genesisStakingAmounts, 0), nil).AnyTimes()
+		mStaking.EXPECT().GetStakingInfo(uint64(2)).Return(makeTestStakingInfo(tc.stakingAmounts, 1), nil).AnyTimes()
+		engine.RegisterStakingModule(mStaking)
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})
@@ -1053,7 +1085,7 @@ func TestSnapshot_Validators_AfterKaia_BasedOnStaking(t *testing.T) {
 		assert.Equal(t, expectedValidators, validators)
 		assert.Equal(t, expectedDemoted, demoted)
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1198,7 +1230,8 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 			configItems = append(configItems, governanceMode("single"))
 		}
 		chain, engine := newBlockChain(testNum, configItems...)
-		oldStakingManager := setTestStakingInfo(tc.stakingAmounts)
+		mockCtrl, mStaking := makeMockStakingManager(t, tc.stakingAmounts, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})
@@ -1216,7 +1249,7 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 		assert.Equal(t, expectedValidators, validators)
 		assert.Equal(t, expectedDemoted, demoted)
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1366,7 +1399,8 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		chain, engine := newBlockChain(4, configItems...)
-		oldStakingManager := setTestStakingInfo(stakes)
+		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		// Backup the globals. The globals `nodeKeys` and `addrs` will be
 		// modified according to validator change votes.
@@ -1431,7 +1465,7 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 			// t.Logf("snap at block #%d: size %d", i, snap.ValSet.Size())
 		}
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1444,8 +1478,9 @@ func TestSnapshot_Writable(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	engine.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	// add votes and insert voted blocks
 	var (
@@ -1703,7 +1738,8 @@ func TestGovernance_Votes(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(1, configItems...)
-		oldStakingManager := setTestStakingInfo(nil)
+		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		// test initial governance items
 		assert.Equal(t, uint64(3), engine.governance.CurrentParams().Epoch())
@@ -1747,7 +1783,7 @@ func TestGovernance_Votes(t *testing.T) {
 			assert.Equal(t, item.value, items[item.key])
 		}
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1795,7 +1831,8 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		chain, engine := newBlockChain(4, configItems...)
-		oldStakingManager := setTestStakingInfo(stakes)
+		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1836,7 +1873,7 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			assertMapSubset(t, tc.expected[num+1], items)
 		}
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }
@@ -1967,7 +2004,8 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(1, configItems...)
-		oldStakingManager := setTestStakingInfo(nil)
+		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+		engine.RegisterStakingModule(mStaking)
 
 		// test initial governance items
 		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
@@ -2012,7 +2050,7 @@ func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
 			assert.Error(t, nil)
 		}
 
-		reward.SetTestStakingManager(oldStakingManager)
+		mockCtrl.Finish()
 		engine.Stop()
 	}
 }

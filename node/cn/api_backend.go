@@ -101,8 +101,6 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
-	b.cn.supplyManager.Stop()
-	defer b.cn.supplyManager.Start()
 	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
 }
 
@@ -404,18 +402,10 @@ func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, ree
 	return b.cn.stateAtBlock(block, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
-	return b.cn.stateAtTransaction(block, txIndex, reexec)
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
+	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
-}
-
-func (b *CNAPIBackend) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
-	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
-	if err != nil {
-		return nil, err
-	}
-	return b.cn.supplyManager.GetTotalSupply(block.NumberU64())
 }

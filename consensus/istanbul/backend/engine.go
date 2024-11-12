@@ -31,9 +31,11 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -41,9 +43,10 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -234,7 +237,18 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errInvalidBlockScore
 	}
 
-	return sb.verifyCascadingFields(chain, header, parents)
+	// TODO-kaiax: further flatten the code inside; especially after most of the checks are moved to consensus modules
+	if err := sb.verifyCascadingFields(chain, header, parents); err != nil {
+		return err
+	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.VerifyHeader(header); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
@@ -484,7 +498,23 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.Time = big.NewInt(t.Unix())
 		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
 	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.PrepareHeader(header); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+	// [EIP-2935] stores the parent block hash in the history storage contract
+	if chain.Config().IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+	}
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)
@@ -506,16 +536,9 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 		return nil, consensus.ErrInvalidBaseFee
 	}
 
-	var rewardSpec *reward.RewardSpec
-
-	rules := chain.Config().Rules(header.Number)
-	pset, err := sb.governance.EffectiveParams(header.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
-
+	// TODO-kaiax: Simplify header.Rewardbase setting using kaiax/valset
 	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && !reward.IsRewardSimple(pset) {
+	if sb.chain != nil && sb.chain.Config().Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
 		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
 		if common.EmptyHash(header.Root) {
 			// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
@@ -536,17 +559,15 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			}
 			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
 		}
-
-		rewardSpec, err = reward.CalcDeferredReward(header, txs, receipts, rules, pset)
-	} else {
-		rewardSpec, err = reward.CalcDeferredRewardSimple(header, txs, receipts, rules, pset)
 	}
 
-	if err != nil {
-		return nil, err
+	// TODO-kaiax: Reward distribution must be before KIP160,103. When we moved KIP103,160,Randao,Credit to kaiax modules,
+	// this module.FinalizeHeader loop should be at the end of this function, like VerifyHeader and PrepareHeader does.
+	for _, module := range sb.consensusModules {
+		if err := module.FinalizeHeader(header, state, txs, receipts); err != nil {
+			return nil, err
+		}
 	}
-
-	reward.DistributeBlockReward(state, rewardSpec.Rewards)
 
 	// RebalanceTreasury can modify the global state (state),
 	// so the existing state db should be used to apply the rebalancing result.
@@ -692,6 +713,14 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 // SetChain sets chain of the Istanbul backend
 func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
+}
+
+func (sb *backend) RegisterStakingModule(module staking.StakingModule) {
+	sb.stakingModule = module
+}
+
+func (sb *backend) RegisterConsensusModule(modules ...kaiax.ConsensusModule) {
+	sb.consensusModules = append(sb.consensusModules, modules...)
 }
 
 // Start implements consensus.Istanbul.Start
@@ -964,7 +993,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	if err != nil {
 		return nil, err
 	}
-	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, writable)
+	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err
 	}

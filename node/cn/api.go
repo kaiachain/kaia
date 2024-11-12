@@ -433,7 +433,7 @@ func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common
 	if block == nil {
 		return StorageRangeResult{}, fmt.Errorf("block %#x not found", blockHash)
 	}
-	_, _, _, statedb, release, err := api.cn.stateAtTransaction(block, txIndex, 0)
+	_, _, _, statedb, release, err := api.cn.stateAtTransaction(block, txIndex, 0, nil, true, false)
 	if err != nil {
 		return StorageRangeResult{}, err
 	}

@@ -20,21 +20,18 @@ package governance
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
-	"runtime"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 )
 
 type GovernanceAPI struct {
-	governance Engine // Node interfaced by this API
+	governance    Engine // Node interfaced by this API
+	stakingModule staking.StakingModule
 }
 
 type returnTally struct {
@@ -43,17 +40,18 @@ type returnTally struct {
 	ApprovalPercentage float64
 }
 
-func NewGovernanceAPI(gov Engine) *GovernanceAPI {
-	return &GovernanceAPI{governance: gov}
+func NewGovernanceAPI(gov Engine, stakingModule staking.StakingModule) *GovernanceAPI {
+	return &GovernanceAPI{governance: gov, stakingModule: stakingModule}
 }
 
 type GovernanceKaiaAPI struct {
-	governance Engine
-	chain      blockChain
+	governance    Engine
+	chain         blockChain
+	stakingModule staking.StakingModule
 }
 
-func NewGovernanceKaiaAPI(gov Engine, chain blockChain) *GovernanceKaiaAPI {
-	return &GovernanceKaiaAPI{governance: gov, chain: chain}
+func NewGovernanceKaiaAPI(gov Engine, chain blockChain, stakingModule staking.StakingModule) *GovernanceKaiaAPI {
+	return &GovernanceKaiaAPI{governance: gov, chain: chain, stakingModule: stakingModule}
 }
 
 var (
@@ -71,178 +69,12 @@ func (api *GovernanceKaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.Chain
 	return getChainConfig(api.governance, num)
 }
 
-func (api *GovernanceKaiaAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
-}
-
 func (api *GovernanceKaiaAPI) GetParams(num *rpc.BlockNumber) (map[string]interface{}, error) {
 	return getParams(api.governance, num)
 }
 
 func (api *GovernanceKaiaAPI) NodeAddress() common.Address {
 	return api.governance.NodeAddress()
-}
-
-// GetRewards returns detailed information of the block reward at a given block number.
-func (api *GovernanceKaiaAPI) GetRewards(num *rpc.BlockNumber) (*reward.RewardSpec, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = api.chain.CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
-	// Check if the node has state to calculate the snapshot.
-	err := checkStateForStakingInfo(api.governance, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	header := api.chain.GetHeaderByNumber(blockNumber)
-	block := api.chain.GetBlock(header.Hash(), blockNumber)
-	if block == nil {
-		return nil, errors.New("not found block")
-	}
-	txs, receipts := block.Transactions(), api.chain.GetReceiptsByBlockHash(header.Hash())
-	if header == nil {
-		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
-	}
-
-	rules := api.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	pset, err := api.governance.EffectiveParams(blockNumber)
-	if err != nil {
-		return nil, err
-	}
-	rewardParamNum := reward.CalcRewardParamBlock(header.Number.Uint64(), pset.Epoch(), rules)
-	rewardParamSet, err := api.governance.EffectiveParams(rewardParamNum)
-	if err != nil {
-		return nil, err
-	}
-
-	return reward.GetBlockReward(header, txs, receipts, rules, rewardParamSet)
-}
-
-type AccumulatedRewards struct {
-	FirstBlockTime string   `json:"firstBlockTime"`
-	LastBlockTime  string   `json:"lastBlockTime"`
-	FirstBlock     *big.Int `json:"firstBlock"`
-	LastBlock      *big.Int `json:"lastBlock"`
-
-	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards
-	TotalMinted          *big.Int                    `json:"totalMinted"`
-	TotalTxFee           *big.Int                    `json:"totalTxFee"`
-	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
-	TotalProposerRewards *big.Int                    `json:"totalProposerRewards"`
-	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
-	TotalKIFRewards      *big.Int                    `json:"totalKIFRewards"`
-	TotalKEFRewards      *big.Int                    `json:"totalKEFRewards"`
-	Rewards              map[common.Address]*big.Int `json:"rewards"`
-}
-
-// GetRewardsAccumulated returns accumulated rewards data in the block range of [first, last].
-func (api *GovernanceAPI) GetRewardsAccumulated(first rpc.BlockNumber, last rpc.BlockNumber) (*AccumulatedRewards, error) {
-	blockchain := api.governance.BlockChain()
-	govKaiaAPI := NewGovernanceKaiaAPI(api.governance, blockchain)
-
-	currentBlock := blockchain.CurrentBlock().NumberU64()
-
-	firstBlock := currentBlock
-	if first >= rpc.EarliestBlockNumber {
-		firstBlock = uint64(first.Int64())
-	}
-
-	lastBlock := currentBlock
-	if last >= rpc.EarliestBlockNumber {
-		lastBlock = uint64(last.Int64())
-	}
-
-	if firstBlock > lastBlock {
-		return nil, errors.New("the last block number should be equal or larger the first block number")
-	}
-
-	if lastBlock > currentBlock {
-		return nil, errors.New("the last block number should be equal or less than the current block number")
-	}
-
-	blockCount := lastBlock - firstBlock + 1
-	if blockCount > 604800 { // 7 days. naive resource protection
-		return nil, errors.New("block range should be equal or less than 604800")
-	}
-
-	// initialize structures before request a job
-	accumRewards := &AccumulatedRewards{}
-	blockRewards := reward.NewRewardSpec()
-	mu := sync.Mutex{} // protect blockRewards
-
-	numWorkers := runtime.NumCPU()
-	reqCh := make(chan uint64, numWorkers)
-	errCh := make(chan error, 1)
-	wg := sync.WaitGroup{}
-
-	// introduce the worker pattern to prevent resource exhaustion
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			// the minimum digit of request is period to avoid current access to an accArray item
-			for num := range reqCh {
-				bn := rpc.BlockNumber(num)
-				blockReward, err := govKaiaAPI.GetRewards(&bn)
-				if err != nil {
-					errCh <- err
-					return
-				}
-
-				mu.Lock()
-				blockRewards.Add(blockReward)
-				mu.Unlock()
-			}
-		}()
-	}
-
-	// write the information of the first block
-	header := blockchain.GetHeaderByNumber(firstBlock)
-	if header == nil {
-		return nil, fmt.Errorf("the block does not exist (block number: %d)", firstBlock)
-	}
-	accumRewards.FirstBlock = header.Number
-	accumRewards.FirstBlockTime = time.Unix(header.Time.Int64(), 0).String()
-
-	// write the information of the last block
-	header = blockchain.GetHeaderByNumber(lastBlock)
-	if header == nil {
-		return nil, fmt.Errorf("the block does not exist (block number: %d)", lastBlock)
-	}
-	accumRewards.LastBlock = header.Number
-	accumRewards.LastBlockTime = time.Unix(header.Time.Int64(), 0).String()
-
-	go func() {
-		defer close(reqCh)
-		for num := firstBlock; num <= lastBlock; num++ {
-			reqCh <- num
-		}
-	}()
-
-	// generate a goroutine to return error early
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-
-	if err := <-errCh; err != nil {
-		return nil, err
-	}
-
-	// collect the accumulated rewards information
-	accumRewards.Rewards = blockRewards.Rewards
-	accumRewards.TotalMinted = blockRewards.Minted
-	accumRewards.TotalTxFee = blockRewards.TotalFee
-	accumRewards.TotalBurntTxFee = blockRewards.BurntFee
-	accumRewards.TotalProposerRewards = blockRewards.Proposer
-	accumRewards.TotalStakingRewards = blockRewards.Stakers
-	accumRewards.TotalKIFRewards = blockRewards.KIF
-	accumRewards.TotalKEFRewards = blockRewards.KEF
-
-	return accumRewards, nil
 }
 
 // Vote injects a new vote for governance targets such as unitprice and governingnode.
@@ -359,26 +191,6 @@ func getParams(governance Engine, num *rpc.BlockNumber) (map[string]interface{},
 	return sm, nil
 }
 
-func (api *GovernanceAPI) GetStakingInfo(num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	return getStakingInfo(api.governance, num)
-}
-
-func getStakingInfo(governance Engine, num *rpc.BlockNumber) (*reward.StakingInfo, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = governance.BlockChain().CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
-	// Check if the node has state to calculate the snapshot.
-	err := checkStateForStakingInfo(governance, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	return reward.GetStakingInfo(blockNumber), nil
-}
-
 // Checks the state of block for the given block number for staking info
 func checkStateForStakingInfo(governance Engine, blockNumber uint64) error {
 	if blockNumber == 0 {
@@ -490,6 +302,7 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
+	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
 
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)

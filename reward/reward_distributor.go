@@ -257,7 +257,7 @@ func GetTotalReward(header *types.Header, txs []*types.Transaction, receipts []*
 
 // GetBlockReward returns the actual reward amounts paid in this block
 // Used in kaia_getReward RPC API
-func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet, stakingInfo *StakingInfo) (*RewardSpec, error) {
 	var spec *RewardSpec
 	var err error
 
@@ -267,7 +267,7 @@ func GetBlockReward(header *types.Header, txs []*types.Transaction, receipts []*
 			return nil, err
 		}
 	} else {
-		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset)
+		spec, err = CalcDeferredReward(header, txs, receipts, rules, pset, stakingInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +366,7 @@ func CalcDeferredRewardSimple(header *types.Header, txs []*types.Transaction, re
 
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
-func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet) (*RewardSpec, error) {
+func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet, stakingInfo *StakingInfo) (*RewardSpec, error) {
 	defer func(start time.Time) {
 		CalcDeferredRewardTimer = time.Since(start)
 	}(time.Now())
@@ -376,11 +376,7 @@ func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts
 		return nil, err
 	}
 
-	var (
-		minted      = rc.mintingAmount
-		stakingInfo = GetStakingInfo(header.Number.Uint64())
-	)
-
+	minted := rc.mintingAmount
 	totalFee, rewardFee, burntFee := calcDeferredFee(rc)
 	proposer, stakers, kif, kef, splitRem := calcSplit(rc, minted, rewardFee)
 	shares, shareRem := calcShares(stakingInfo, stakers, rc.minimumStake.Uint64())

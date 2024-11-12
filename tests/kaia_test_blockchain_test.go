@@ -41,6 +41,8 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/governance"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
@@ -122,13 +124,26 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		Governance:     gov,
 		NodeType:       common.CONSENSUSNODE,
 	})
-
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
 	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine)
 	if err != nil {
 		return nil, err
 	}
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Setup Kaiax modules
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	if err := mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   genesis.Config,
+		Chain:         bc,
+		GovModule:     reward_impl.FromLegacy(gov),
+		StakingModule: mStaking, // Not used in "Simple" istanbul policy
+	}); err != nil {
+		return nil, err
+	}
+	engine.RegisterConsensusModule(mReward)
 
 	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 

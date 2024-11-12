@@ -192,6 +192,8 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)
 
+		engine.Initialize(blockchain, b.header, stateDB)
+
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)

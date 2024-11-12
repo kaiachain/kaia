@@ -15,8 +15,17 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.25;
+pragma solidity 0.8.19;
 
+// MultiCallContract has to be compiled with solc 0.8.19.
+//
+// MultiCallContract can be called at any block number including the Genesis block.
+// Note that MultiCallContract is never deployed on the network. Instead, it is
+// injected into a temporary state for the data query purpose. Similar to eth_call's state override.
+//
+// MultiCallContract must be compatible with any version of the EVM, any hardfork levels.
+// Starting from solc 0.8.20, the default EVM target is Shanghai or later, where PUSH0 opcode can be emitted.
+// Therefore we use solc 0.8.19, the newest compiler before 0.8.20.
 interface IAddressBook {
     function isActivated() external view returns (bool);
 

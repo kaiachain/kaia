@@ -55,15 +55,15 @@ func TestStateReexec(t *testing.T) {
 
 	ctx.WaitBlock(t, 6)
 
-	// Clear staking cache to force GetStakingInfo post-Kaia to utilize the state trie.
-	reward.PurgeStakingInfoCache()
+	// Restart node to clear staking cache. It forces GetStakingInfo() post-Kaia to lookup the state trie.
+	ctx.Restart()
 	// Delete state roots to force historical state regeneration
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	// Test state regeneration
 	testStateReexec_run(t, ctx.nodes[0], 3)
 
 	// Repeat for post-Kaia block
-	reward.PurgeStakingInfoCache()
+	ctx.Restart()
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	testStateReexec_run(t, ctx.nodes[0], 5) // post-kaia
 

@@ -8,9 +8,9 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	accounts "github.com/kaiachain/kaia/accounts"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	staking "github.com/kaiachain/kaia/kaiax/staking"
 	p2p "github.com/kaiachain/kaia/networks/p2p"
 )
 
@@ -105,6 +105,18 @@ func (mr *MockBackendProtocolManagerMockRecorder) ReBroadcastTxs(arg0 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBroadcastTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).ReBroadcastTxs), arg0)
 }
 
+// RegisterStakingModule mocks base method.
+func (m *MockBackendProtocolManager) RegisterStakingModule(arg0 staking.StakingModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterStakingModule", arg0)
+}
+
+// RegisterStakingModule indicates an expected call of RegisterStakingModule.
+func (mr *MockBackendProtocolManagerMockRecorder) RegisterStakingModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterStakingModule", reflect.TypeOf((*MockBackendProtocolManager)(nil).RegisterStakingModule), arg0)
+}
+
 // SetAcceptTxs mocks base method.
 func (m *MockBackendProtocolManager) SetAcceptTxs() {
 	m.ctrl.T.Helper()
@@ -117,38 +129,14 @@ func (mr *MockBackendProtocolManagerMockRecorder) SetAcceptTxs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAcceptTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetAcceptTxs))
 }
 
-// SetRewardbase mocks base method.
-func (m *MockBackendProtocolManager) SetRewardbase(arg0 common.Address) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetRewardbase", arg0)
-}
-
-// SetRewardbase indicates an expected call of SetRewardbase.
-func (mr *MockBackendProtocolManagerMockRecorder) SetRewardbase(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRewardbase", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetRewardbase), arg0)
-}
-
-// SetRewardbaseWallet mocks base method.
-func (m *MockBackendProtocolManager) SetRewardbaseWallet(arg0 accounts.Wallet) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetRewardbaseWallet", arg0)
-}
-
-// SetRewardbaseWallet indicates an expected call of SetRewardbaseWallet.
-func (mr *MockBackendProtocolManagerMockRecorder) SetRewardbaseWallet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRewardbaseWallet", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetRewardbaseWallet), arg0)
-}
-
-// SetTmpStop mocks base method.
+// SetSyncStop mocks base method.
 func (m *MockBackendProtocolManager) SetSyncStop(arg0 bool) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetSyncStop", arg0)
 }
 
-// SetTmpStop indicates an expected call of SetTmpStop.
-func (mr *MockBackendProtocolManagerMockRecorder) SetTmpStop(arg0 interface{}) *gomock.Call {
+// SetSyncStop indicates an expected call of SetSyncStop.
+func (mr *MockBackendProtocolManagerMockRecorder) SetSyncStop(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSyncStop", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetSyncStop), arg0)
 }

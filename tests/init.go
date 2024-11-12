@@ -92,7 +92,17 @@ var Forks = map[string]*params.ChainConfig{
 		CancunCompatibleBlock:    new(big.Int),
 	},
 	"Prague": {
-		ChainID: big.NewInt(1),
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		RandaoCompatibleBlock:    new(big.Int),
+		PragueCompatibleBlock:    new(big.Int),
 	},
 }
 

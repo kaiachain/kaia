@@ -10,33 +10,34 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 	work "github.com/kaiachain/kaia/work"
 )
 
-// MockMiner is a mock of Miner interface
+// MockMiner is a mock of Miner interface.
 type MockMiner struct {
 	ctrl     *gomock.Controller
 	recorder *MockMinerMockRecorder
 }
 
-// MockMinerMockRecorder is the mock recorder for MockMiner
+// MockMinerMockRecorder is the mock recorder for MockMiner.
 type MockMinerMockRecorder struct {
 	mock *MockMiner
 }
 
-// NewMockMiner creates a new mock instance
+// NewMockMiner creates a new mock instance.
 func NewMockMiner(ctrl *gomock.Controller) *MockMiner {
 	mock := &MockMiner{ctrl: ctrl}
 	mock.recorder = &MockMinerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMiner) EXPECT() *MockMinerMockRecorder {
 	return m.recorder
 }
 
-// HashRate mocks base method
+// HashRate mocks base method.
 func (m *MockMiner) HashRate() int64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HashRate")
@@ -44,13 +45,13 @@ func (m *MockMiner) HashRate() int64 {
 	return ret0
 }
 
-// HashRate indicates an expected call of HashRate
+// HashRate indicates an expected call of HashRate.
 func (mr *MockMinerMockRecorder) HashRate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HashRate", reflect.TypeOf((*MockMiner)(nil).HashRate))
 }
 
-// Mining mocks base method
+// Mining mocks base method.
 func (m *MockMiner) Mining() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Mining")
@@ -58,13 +59,13 @@ func (m *MockMiner) Mining() bool {
 	return ret0
 }
 
-// Mining indicates an expected call of Mining
+// Mining indicates an expected call of Mining.
 func (mr *MockMinerMockRecorder) Mining() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mining", reflect.TypeOf((*MockMiner)(nil).Mining))
 }
 
-// Pending mocks base method
+// Pending mocks base method.
 func (m *MockMiner) Pending() (*types.Block, *state.StateDB) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pending")
@@ -73,13 +74,13 @@ func (m *MockMiner) Pending() (*types.Block, *state.StateDB) {
 	return ret0, ret1
 }
 
-// Pending indicates an expected call of Pending
+// Pending indicates an expected call of Pending.
 func (mr *MockMinerMockRecorder) Pending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockMiner)(nil).Pending))
 }
 
-// PendingBlock mocks base method
+// PendingBlock mocks base method.
 func (m *MockMiner) PendingBlock() *types.Block {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PendingBlock")
@@ -87,25 +88,41 @@ func (m *MockMiner) PendingBlock() *types.Block {
 	return ret0
 }
 
-// PendingBlock indicates an expected call of PendingBlock
+// PendingBlock indicates an expected call of PendingBlock.
 func (mr *MockMinerMockRecorder) PendingBlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingBlock", reflect.TypeOf((*MockMiner)(nil).PendingBlock))
 }
 
-// Register mocks base method
+// Register mocks base method.
 func (m *MockMiner) Register(arg0 work.Agent) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Register", arg0)
 }
 
-// Register indicates an expected call of Register
+// Register indicates an expected call of Register.
 func (mr *MockMinerMockRecorder) Register(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockMiner)(nil).Register), arg0)
 }
 
-// SetExtra mocks base method
+// RegisterExecutionModule mocks base method.
+func (m *MockMiner) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterExecutionModule", varargs...)
+}
+
+// RegisterExecutionModule indicates an expected call of RegisterExecutionModule.
+func (mr *MockMinerMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockMiner)(nil).RegisterExecutionModule), arg0...)
+}
+
+// SetExtra mocks base method.
 func (m *MockMiner) SetExtra(arg0 []byte) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetExtra", arg0)
@@ -113,31 +130,31 @@ func (m *MockMiner) SetExtra(arg0 []byte) error {
 	return ret0
 }
 
-// SetExtra indicates an expected call of SetExtra
+// SetExtra indicates an expected call of SetExtra.
 func (mr *MockMinerMockRecorder) SetExtra(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExtra", reflect.TypeOf((*MockMiner)(nil).SetExtra), arg0)
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockMiner) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockMinerMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockMiner)(nil).Start))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockMiner) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockMinerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockMiner)(nil).Stop))

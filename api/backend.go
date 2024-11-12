@@ -38,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -62,7 +61,6 @@ type Backend interface {
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Engine() consensus.Engine
 	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
-	GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error)
 
 	// BlockChain API
 	SetHead(number uint64) error

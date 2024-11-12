@@ -823,7 +823,7 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsShanghai: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true})
 	if err != nil {
 		return nil, 0
 	}
