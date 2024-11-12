@@ -223,6 +223,11 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
+// RegisterExecutionModule registers kaiax.ExecutionModule to underlying worker.
+func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
+	self.worker.RegisterExecutionModule(modules...)
+}
+
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 //
 //go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
@@ -324,5 +329,6 @@ type BlockChain interface {
 	Snapshots() *snapshot.Tree
 
 	// kaiax module host
+	kaiax.ExecutionModuleHost
 	kaiax.RewindableModuleHost
 }

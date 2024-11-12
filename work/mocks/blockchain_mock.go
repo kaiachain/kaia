@@ -706,6 +706,22 @@ func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
+// RegisterExecutionModule mocks base method.
+func (m *MockBlockChain) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterExecutionModule", varargs...)
+}
+
+// RegisterExecutionModule indicates an expected call of RegisterExecutionModule.
+func (mr *MockBlockChainMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterExecutionModule), arg0...)
+}
+
 // RegisterRewindableModule mocks base method.
 func (m *MockBlockChain) RegisterRewindableModule(arg0 ...kaiax.RewindableModule) {
 	m.ctrl.T.Helper()

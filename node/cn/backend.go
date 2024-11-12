@@ -51,6 +51,7 @@ import (
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -86,6 +87,7 @@ type Miner interface {
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
+	kaiax.ExecutionModuleHost // Because miner executes blocks, inject ExecutionModule.
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -141,8 +143,7 @@ type CN struct {
 
 	components []interface{}
 
-	governance    governance.Engine
-	supplyManager reward.SupplyManager
+	governance governance.Engine
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -373,7 +374,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		// NewStakingManager is called with proper non-nil parameters
 		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
-	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB)
 
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
@@ -525,6 +525,7 @@ func (s *CN) SetupKaiaxModules() error {
 	var (
 		mStaking = staking_impl.NewStakingModule()
 		mReward  = reward_impl.NewRewardModule()
+		mSupply  = supply_impl.NewSupplyModule()
 	)
 
 	// Initialize modules
@@ -540,15 +541,24 @@ func (s *CN) SetupKaiaxModules() error {
 			GovModule:     reward_impl.FromLegacy(s.governance),
 			StakingModule: mStaking,
 		}),
+		mSupply.Init(&supply_impl.InitOpts{
+			ChainKv:      s.chainDB.GetMiscDB(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			RewardModule: mReward,
+		}),
 	)
 	if err != nil {
 		return err
 	}
 
 	// Register modules to respective components
-	s.RegisterBaseModules(mStaking)
-	s.RegisterJsonRpcModules(mStaking, mReward)
-	s.blockchain.RegisterRewindableModule(mStaking)
+	// TODO-kaiax: Organize below lines.
+	s.RegisterBaseModules(mStaking, mReward, mSupply)
+	s.RegisterJsonRpcModules(mStaking, mReward, mSupply)
+	s.miner.RegisterExecutionModule(mSupply)
+	s.blockchain.RegisterExecutionModule(mSupply)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
 		engine.RegisterConsensusModule(mReward)
@@ -556,7 +566,6 @@ func (s *CN) SetupKaiaxModules() error {
 	s.protocolManager.RegisterStakingModule(mStaking)
 
 	s.stakingModule = mStaking
-
 	return nil
 }
 
@@ -869,7 +878,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
 		reward.StakingManagerSubscribe()
 	}
-	s.supplyManager.Start()
 
 	return nil
 }
@@ -892,7 +900,6 @@ func (s *CN) Stop() error {
 	s.txPool.Stop()
 	s.miner.Stop()
 	reward.StakingManagerUnsubscribe()
-	s.supplyManager.Stop()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

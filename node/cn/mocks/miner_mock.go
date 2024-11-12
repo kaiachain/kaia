@@ -10,6 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 	work "github.com/kaiachain/kaia/work"
 )
 
@@ -103,6 +104,22 @@ func (m *MockMiner) Register(arg0 work.Agent) {
 func (mr *MockMinerMockRecorder) Register(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockMiner)(nil).Register), arg0)
+}
+
+// RegisterExecutionModule mocks base method.
+func (m *MockMiner) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterExecutionModule", varargs...)
+}
+
+// RegisterExecutionModule indicates an expected call of RegisterExecutionModule.
+func (mr *MockMinerMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockMiner)(nil).RegisterExecutionModule), arg0...)
 }
 
 // SetExtra mocks base method.

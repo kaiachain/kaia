@@ -11,7 +11,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia"
+	kaia "github.com/kaiachain/kaia"
 	accounts "github.com/kaiachain/kaia/accounts"
 	blockchain "github.com/kaiachain/kaia/blockchain"
 	state "github.com/kaiachain/kaia/blockchain/state"
@@ -22,7 +22,6 @@ import (
 	event "github.com/kaiachain/kaia/event"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 	params "github.com/kaiachain/kaia/params"
-	reward "github.com/kaiachain/kaia/reward"
 	database "github.com/kaiachain/kaia/storage/database"
 )
 
@@ -295,21 +294,6 @@ func (m *MockBackend) GetTd(arg0 common.Hash) *big.Int {
 func (mr *MockBackendMockRecorder) GetTd(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTd", reflect.TypeOf((*MockBackend)(nil).GetTd), arg0)
-}
-
-// GetTotalSupply mocks base method.
-func (m *MockBackend) GetTotalSupply(arg0 context.Context, arg1 rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTotalSupply", arg0, arg1)
-	ret0, _ := ret[0].(*reward.TotalSupply)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTotalSupply indicates an expected call of GetTotalSupply.
-func (mr *MockBackendMockRecorder) GetTotalSupply(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalSupply", reflect.TypeOf((*MockBackend)(nil).GetTotalSupply), arg0, arg1)
 }
 
 // GetTxAndLookupInfo mocks base method.
