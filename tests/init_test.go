@@ -235,7 +235,6 @@ func (tm *testMatcher) runTestFile(t *testing.T, path, name string, runTest inte
 	// Run all tests from the map. Don't wrap in a subtest if there is only one test in the file.
 	keys := sortedMapKeys(m)
 	if len(keys) == 1 {
-		name := name + "/" + keys[0]
 		runTestFunc(runTest, t, name, m, keys[0])
 	} else {
 		for _, key := range keys {
