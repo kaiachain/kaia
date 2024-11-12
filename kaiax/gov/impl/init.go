@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -62,11 +63,16 @@ func (m *GovModule) Init(opts *InitOpts) error {
 
 func (m *GovModule) Start() error {
 	logger.Info("GovModule started")
-	return nil
+	return errors.Join(
+		m.hgm.Start(),
+		m.cgm.Start(),
+	)
 }
 
 func (m *GovModule) Stop() {
 	logger.Info("GovModule stopped")
+	m.hgm.Stop()
+	m.cgm.Stop()
 }
 
 func (m *GovModule) isKoreHF(num uint64) bool {

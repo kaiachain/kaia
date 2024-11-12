@@ -64,19 +64,30 @@ func TestEffectiveParamsPartial(t *testing.T) {
 		epoch = uint64(1000)
 		h     = newHeaderGovModule(t, &params.ChainConfig{
 			KoreCompatibleBlock: big.NewInt(0),
-			Istanbul: &params.IstanbulConfig{
-				Epoch: epoch,
-			},
+			Istanbul:            &params.IstanbulConfig{Epoch: epoch},
 		})
 	)
 
-	for i := 0; i < 100; i++ {
-		val := uint64(i * 100)
-		h.cache.AddGov(uint64(i)*epoch, headergov.NewGovData(gov.PartialParamSet{
-			gov.GovernanceUnitPrice: val,
-		}))
-		gp := h.EffectiveParamsPartial(uint64(i) * epoch)
-		assert.Equal(t, val, gp[gov.GovernanceUnitPrice])
+	testCases := []struct {
+		blockNum      uint64
+		expectedPrice uint64
+	}{
+		{0, 0},
+		{1000, 0},
+		{2000, 1},
+		{3000, 2},
+		{4000, 3},
+	}
+
+	for i, govPrice := range []uint64{0, 1, 2, 3} {
+		h.cache.AddGov(uint64(i*1000), headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: govPrice}))
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Block %d", tc.blockNum), func(t *testing.T) {
+			gp := h.EffectiveParamsPartial(tc.blockNum)
+			assert.Equal(t, tc.expectedPrice, gp[gov.GovernanceUnitPrice])
+		})
 	}
 }
 
