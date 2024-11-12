@@ -60,7 +60,7 @@ func TestState(t *testing.T) {
 	st.skipLoad(`^stRandom2/randomStatetest642.json`)
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
-		execStateTest(t, st, test, name)
+		execStateTest(t, st, test, name, []string{"Constantinople"})
 	})
 }
 
@@ -84,31 +84,31 @@ func TestExecutionSpecState(t *testing.T) {
 	st.skipLoad(`^cancun/`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
-		execStateTest(t, st, test, name)
+		execStateTest(t, st, test, name, []string{
+			// "Frontier",
+			// "Homestead",
+			// "Byzantium",
+			// "Constantinople",
+			// "ConstantinopleFix",
+			// "Istanbul",
+			// "Berlin",
+			// "London",
+			// "Paris",
+			// "Merge",
+			// "Shanghai",
+			// "Cancun",
+			// "Prague",
+		})
 	})
 }
 
-func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string) {
+func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string) {
 	for _, subtest := range test.Subtests() {
 		subtest := subtest
 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
 		name := name + "/" + key
 		t.Run(key, func(t *testing.T) {
-			if slices.Contains([]string{
-				// "Frontier",
-				// "Homestead",
-				// "Byzantium",
-				// "Constantinople",
-				// "ConstantinopleFix",
-				// "Istanbul",
-				// "Berlin",
-				// "London",
-				// "Paris",
-				// "Merge",
-				// "Shanghai",
-				// "Cancun",
-				// "Prague",
-			}, subtest.Fork) {
+			if slices.Contains(skipForks, subtest.Fork) {
 				t.Skipf("%s not supported yet", subtest.Fork)
 			}
 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
