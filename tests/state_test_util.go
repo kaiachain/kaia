@@ -225,7 +225,6 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 		}
 	}
-
 	return statedb, nil
 }
 
@@ -313,9 +312,11 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.M
 		return nil, err
 	}
 
-	intrinsicGas, err = simulateEthIntrinsicGas(intrinsicGas, data, r)
-	if err != nil {
-		return nil, err
+	if isTestExecutionSpecState {
+		intrinsicGas, err = simulateEthIntrinsicGas(intrinsicGas, data, r)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
