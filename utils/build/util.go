@@ -329,7 +329,7 @@ func extractFile(arpath string, armode os.FileMode, data io.Reader, dest string)
 	}
 
 	// Recreate the destination directory
-	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return err
 	}
 

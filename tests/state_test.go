@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
-	"slices"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/vm"
