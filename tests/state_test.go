@@ -35,6 +35,9 @@ import (
 )
 
 func TestState(t *testing.T) {
+	common.RelaxPrecompileRangeForTest(false)
+	enableTestExecutionSpecState(false)
+
 	t.Parallel()
 
 	st := new(testMatcher)
@@ -66,9 +69,8 @@ func TestState(t *testing.T) {
 
 // TestExecutionSpecState runs the test fixtures from execution-spec-tests.
 func TestExecutionSpecState(t *testing.T) {
-	// TODO: set false at the end of test?
 	common.RelaxPrecompileRangeForTest(true)
-	enableTestExecutionSpecState()
+	enableTestExecutionSpecState(true)
 
 	if !common.FileExist(executionSpecStateTestDir) {
 		t.Skipf("directory %s does not exist", executionSpecStateTestDir)

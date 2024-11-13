@@ -120,8 +120,8 @@ type stTransactionMarshaling struct {
 
 var isTestExecutionSpecState bool
 
-func enableTestExecutionSpecState() {
-	isTestExecutionSpecState = true
+func enableTestExecutionSpecState(enable bool) {
+	isTestExecutionSpecState = enable
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
