@@ -28,10 +28,12 @@ abigen:
 	@echo "Run \"$(BIN)/abigen\" to launch abigen."
 
 test:
-	$(GORUN) build/ci.go test
+	$(GORUN) build/ci.go test -skip ^TestExecutionSpecState$$
+	$(GORUN) build/ci.go test -run ^TestExecutionSpecState$$
 
 test-seq:
-	$(GORUN) build/ci.go test -p 1
+	$(GORUN) build/ci.go test -p 1 -skip ^TestExecutionSpecState$$
+	$(GORUN) build/ci.go test -p 1 -run ^TestExecutionSpecState$$
 
 test-datasync:
 	$(GORUN) build/ci.go test -p 1 ./datasync/...
@@ -43,7 +45,8 @@ test-node:
 	$(GORUN) build/ci.go test -p 1 ./node/...
 
 test-tests:
-	$(GORUN) build/ci.go test -p 1 ./tests/...
+	$(GORUN) build/ci.go test -p 1 -skip ^TestExecutionSpecState$$ ./tests/...
+	$(GORUN) build/ci.go test -p 1 -run ^TestExecutionSpecState$$ ./tests/...
 
 test-others:
 	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,node,tests

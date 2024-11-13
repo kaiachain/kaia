@@ -268,6 +268,8 @@ func doTest(cmdline []string) {
 		parallel = flag.Int("p", 0, "The number of parallel test executions (default: the number of CPUs available)")
 		excludes = flag.String("exclude", "", "Comma-separated top-level directories to be excluded in test")
 		cachedir = flag.String("cachedir", "./build/cache", "directory for caching downloads")
+		run      = flag.String("run", "", "Tests to run")
+		skip     = flag.String("skip", "", "Tests to skip")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
@@ -285,6 +287,16 @@ func doTest(cmdline []string) {
 		packages = build.ExcludePackages(packages, strings.Split(*excludes, ","))
 	}
 
+	var runArgs []string
+	if len(*run) > 0 {
+		runArgs = append(runArgs, "-run", *run)
+	}
+
+	var skipArgs []string
+	if len(*skip) > 0 {
+		skipArgs = append(runArgs, "-skip", *skip)
+	}
+
 	// Run analysis tools before the tests.
 	build.MustRun(goTool("vet", packages...))
 
@@ -294,6 +306,8 @@ func doTest(cmdline []string) {
 		gotest.Args = append(gotest.Args, "-p", strconv.Itoa(*parallel))
 	}
 	gotest.Args = append(gotest.Args, "--timeout=30m")
+	gotest.Args = append(gotest.Args, runArgs...)
+	gotest.Args = append(gotest.Args, skipArgs...)
 	gotest.Args = append(gotest.Args, packages...)
 	build.MustRun(gotest)
 }
