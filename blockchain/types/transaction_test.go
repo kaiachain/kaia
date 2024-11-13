@@ -835,7 +835,7 @@ func TestTransactionCoding(t *testing.T) {
 				AccessList:   accesses,
 			}
 		case 8:
-			// Tx with non-zero authorization list.
+			// Tx with non-zero access list.
 			txData = &TxInternalDataEthereumSetCode{
 				ChainID:           big.NewInt(1),
 				AccountNonce:      i,
@@ -844,6 +844,17 @@ func TestTransactionCoding(t *testing.T) {
 				GasFeeCap:         big.NewInt(10),
 				GasTipCap:         big.NewInt(10),
 				AccessList:        accesses,
+				AuthorizationList: authorizations,
+			}
+		case 9:
+			// Tx with set code.
+			txData = &TxInternalDataEthereumSetCode{
+				ChainID:           big.NewInt(1),
+				AccountNonce:      i,
+				Recipient:         recipient,
+				GasLimit:          123457,
+				GasFeeCap:         big.NewInt(10),
+				GasTipCap:         big.NewInt(10),
 				AuthorizationList: authorizations,
 			}
 		}
