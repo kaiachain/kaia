@@ -395,7 +395,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	if isTestExecutionSpecState {
 		intrinsicGas, err = useEthIntrinsicGas(data, accessList, to == nil, r)
 	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
+		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
 	if err != nil {
 		return nil, err
@@ -457,7 +457,7 @@ func useEthIntrinsicGas(data []byte, accessList types.AccessList, contractCreati
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, accessList, contractCreation, r)
+	return types.IntrinsicGas(data, accessList, nil, contractCreation, r)
 }
 
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {

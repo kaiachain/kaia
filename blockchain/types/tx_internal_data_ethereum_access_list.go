@@ -294,7 +294,7 @@ func (t *TxInternalDataEthereumAccessList) RecoverPubkey(txhash common.Hash, hom
 }
 
 func (t *TxInternalDataEthereumAccessList) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataEthereumAccessList) setSignatureValues(chainID, v, r, s *big.Int) {

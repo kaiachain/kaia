@@ -284,7 +284,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		// Initialise a new contract and set the code that is to be used by the EVM.
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, to, value, gas)
-		contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+		contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 		ret, err = run(evm, contract, input)
 		gas = contract.Gas
 	}
@@ -346,7 +346,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -396,7 +396,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -449,7 +449,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, new(big.Int), gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -512,7 +512,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 
 	// Ensure there's no existing contract already at the designated address
-	contractHash := evm.StateDB.GetCodeHash(address)
+	contractHash := evm.StateDB.ResolveCodeHash(address)
 
 	// The early Kaia design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.

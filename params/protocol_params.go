@@ -189,6 +189,8 @@ const (
 	TxAccessListAddressGas    uint64 = 2400 // Per address specified in EIP 2930 access list
 	TxAccessListStorageKeyGas uint64 = 1900 // Per storage key specified in EIP 2930 access list
 
+	TxAuthTupleGas uint64 = 12500 // Per auth tuple code specified in EIP-7702
+
 	Bls12381G1AddGas          uint64 = 500   // Price for BLS12-381 elliptic curve G1 point addition
 	Bls12381G1MulGas          uint64 = 12000 // Price for BLS12-381 elliptic curve G1 point scalar multiplication
 	Bls12381G2AddGas          uint64 = 800   // Price for BLS12-381 elliptic curve G2 point addition

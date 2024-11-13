@@ -736,6 +736,34 @@ func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *
 	return values, intrinsic + gasPayload
 }
 
+func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic := getIntrinsicGas(txType)
+	amount := big.NewInt(100000)
+	data := []byte{0x11, 0x22}
+	gasPayload := uint64(len(data)) * params.TxDataGas
+	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	authorizationList := types.AuthorizationList{{ChainID: big.NewInt(1), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: 1, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	toAddress := to.GetAddr()
+
+	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
+	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
+	gasPayload += uint64(len(authorizationList)) * params.CallNewAccountGas
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:             from.GetNonce(),
+		types.TxValueKeyTo:                toAddress,
+		types.TxValueKeyAmount:            amount,
+		types.TxValueKeyData:              data,
+		types.TxValueKeyGasLimit:          gasLimit,
+		types.TxValueKeyGasFeeCap:         gasPrice,
+		types.TxValueKeyGasTipCap:         gasPrice,
+		types.TxValueKeyAccessList:        accessList,
+		types.TxValueKeyAuthorizationList: authorizationList,
+		types.TxValueKeyChainID:           big.NewInt(1),
+	}
+	return values, intrinsic + gasPayload
+}
+
 func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
 	intrinsic := getIntrinsicGas(txType)
 	amount := big.NewInt(100000)
@@ -1044,6 +1072,8 @@ func getIntrinsicGas(txType types.TxType) uint64 {
 	case types.TxTypeEthereumAccessList:
 		intrinsic = params.TxGas
 	case types.TxTypeEthereumDynamicFee:
+		intrinsic = params.TxGas
+	case types.TxTypeEthereumSetCode:
 		intrinsic = params.TxGas
 	case types.TxTypeValueTransfer:
 		intrinsic = params.TxGasValueTransfer

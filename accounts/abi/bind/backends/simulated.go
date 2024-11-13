@@ -500,7 +500,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, bl
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	intrinsicGas, _ := types.IntrinsicGas(call.Data, accessList, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, _ := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.config.Rules(block.Number()))
 	msg := types.NewMessage(call.From, call.To, nonce, call.Value, call.Gas, gasPrice, call.Data, true, intrinsicGas, accessList)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.config)

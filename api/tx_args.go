@@ -178,11 +178,11 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		args.Price = (*hexutil.Big)(price)
 	}
 
-	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
+	if *args.TypeInt == types.TxTypeEthereumDynamicFee || *args.TypeInt == types.TxTypeEthereumSetCode {
 		if args.MaxPriorityFeePerGas == nil {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
 		}
@@ -263,8 +263,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil {
 		return values
 	}
-	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee or TxTypeEthereumSetCode.
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		return values
 	}
 

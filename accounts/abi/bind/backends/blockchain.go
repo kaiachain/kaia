@@ -156,7 +156,7 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, call.To == nil, b.bc.Config().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}
