@@ -152,7 +152,7 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, nil, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}

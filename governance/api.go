@@ -490,6 +490,7 @@ func getChainConfig(governance Engine, num *rpc.BlockNumber) *params.ChainConfig
 	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
+	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
 
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)

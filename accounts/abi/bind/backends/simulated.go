@@ -496,7 +496,7 @@ func (b *SimulatedBackend) callContract(_ context.Context, call kaia.CallMsg, bl
 	from.SetBalance(math.MaxBig256)
 	// Execute the call.
 	nonce := from.Nonce()
-	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, call.To == nil, b.config.Rules(block.Number()))
+	intrinsicGas, _ := types.IntrinsicGas(call.Data, nil, nil, call.To == nil, b.config.Rules(block.Number()))
 
 	var accessList types.AccessList
 	if call.AccessList != nil {

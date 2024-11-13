@@ -329,6 +329,26 @@ func (s *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 
+// ResolveCode retrieves the code at addr, resolving any delegation designations
+// that may exist.
+func (s *StateDB) ResolveCode(addr common.Address) []byte {
+	stateObject := s.resolveStateObject(addr)
+	if stateObject != nil {
+		return stateObject.Code(s.db)
+	}
+	return nil
+}
+
+// ResolveCodeHash retrieves the code at addr, resolving any delegation
+// designations that may exist.
+func (s *StateDB) ResolveCodeHash(addr common.Address) common.Hash {
+	stateObject := s.resolveStateObject(addr)
+	if stateObject != nil {
+		return common.BytesToHash(stateObject.CodeHash())
+	}
+	return common.Hash{}
+}
+
 // GetState retrieves a value from the given account's storage trie.
 func (s *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := s.getStateObject(addr)
@@ -667,6 +687,21 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	s.setStateObject(obj)
 
 	return obj
+}
+
+// resolveStateObject follows delegation designations to resolve a state object
+// given by the address, returning nil if the object is not found or was deleted
+// in this execution context.
+func (s *StateDB) resolveStateObject(addr common.Address) *stateObject {
+	obj := s.getStateObject(addr)
+	if obj == nil {
+		return nil
+	}
+	addr, ok := types.ParseDelegation(obj.Code(s.db))
+	if !ok {
+		return obj
+	}
+	return s.getStateObject(addr)
 }
 
 func (s *StateDB) setStateObject(object *stateObject) {
@@ -1158,6 +1193,10 @@ func (s *StateDB) Prepare(rules params.Rules, sender, feepayer, coinbase common.
 		}
 		if dst != nil {
 			s.AddAddressToAccessList(*dst)
+			// If the dst has a delegation, also warm its target.
+			if addr, ok := types.ParseDelegation(s.GetCode(*dst)); ok {
+				s.AddAddressToAccessList(addr)
+			}
 			// If it's a create-tx, the destination will be added inside evm.create
 		}
 		for _, addr := range precompiles {

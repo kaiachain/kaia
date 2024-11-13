@@ -96,6 +96,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
 	}
 
+	if txType == types.TxTypeEthereumSetCode {
+		valueMap, gas = genMapForSetCodeTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
@@ -393,6 +397,7 @@ func TestValidationBlockTx(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -491,7 +496,7 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 // decreaseGasPrice changes gasPrice to 12345678
 func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrInvalidGasTipCap
@@ -507,7 +512,7 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 // decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
 func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrFeeCapBelowBaseFee
@@ -1213,6 +1218,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
