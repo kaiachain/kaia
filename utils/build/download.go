@@ -18,6 +18,7 @@ package build
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -81,7 +82,7 @@ func (db *ChecksumDB) DownloadFile(url, dstPath string) error {
 	fmt.Printf("%s is stale\n", dstPath)
 	fmt.Printf("downloading from %s\n", url)
 
-	req, err := http.NewRequestWithContext(nil, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil
 	}
