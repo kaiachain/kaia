@@ -38,14 +38,13 @@ import (
 )
 
 var (
-	baseDir                        = filepath.Join(".", "testdata")
-	blockTestDir                   = filepath.Join(baseDir, "BlockchainTests")
-	stateTestDir                   = filepath.Join(baseDir, "GeneralStateTests")
-	transactionTestDir             = filepath.Join(baseDir, "TransactionTests")
-	vmTestDir                      = filepath.Join(baseDir, "VMTests")
-	rlpTestDir                     = filepath.Join(baseDir, "RLPTests")
-	executionSpecBlockchainTestDir = filepath.Join(".", "spec-tests", "fixtures", "blockchain_tests")
-	executionSpecStateTestDir      = filepath.Join(".", "spec-tests", "fixtures", "state_tests")
+	baseDir                   = filepath.Join(".", "testdata")
+	blockTestDir              = filepath.Join(baseDir, "BlockchainTests")
+	stateTestDir              = filepath.Join(baseDir, "GeneralStateTests")
+	transactionTestDir        = filepath.Join(baseDir, "TransactionTests")
+	vmTestDir                 = filepath.Join(baseDir, "VMTests")
+	rlpTestDir                = filepath.Join(baseDir, "RLPTests")
+	executionSpecStateTestDir = filepath.Join(".", "spec-tests", "fixtures", "state_tests")
 )
 
 func readJSON(reader io.Reader, value interface{}) error {
