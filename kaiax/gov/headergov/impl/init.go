@@ -17,7 +17,7 @@ import (
 var (
 	_ headergov.HeaderGovModule = (*headerGovModule)(nil)
 
-	logger = log.NewModuleLogger(log.KaiaXGov)
+	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
 type chain interface {

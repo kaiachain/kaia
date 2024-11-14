@@ -17,7 +17,7 @@ import (
 var (
 	_ gov.GovModule = (*GovModule)(nil)
 
-	logger = log.NewModuleLogger(log.KaiaXGov)
+	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
 //go:generate mockgen -destination=kaiax/gov/impl/mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain

@@ -131,6 +131,7 @@ const (
 	KaiaxStaking
 	KaiaxReward
 	KaiaxSupply
+	KaiaxGov
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen

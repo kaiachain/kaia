@@ -5,7 +5,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 )
@@ -34,27 +33,6 @@ type GovAPI struct {
 
 type KaiaAPI struct {
 	g *GovModule
-}
-
-type VotesAPI struct {
-	BlockNum uint64
-	Key      string
-	Value    any
-}
-
-type MyVotesAPI struct {
-	BlockNum uint64
-	Key      string
-	Value    any
-	Casted   bool
-}
-
-type StatusAPI struct {
-	GroupedVotes map[uint64]headergov.VotesInEpoch `json:"groupedVotes"`
-	Governances  map[uint64]headergov.GovData      `json:"governances"`
-	GovHistory   headergov.History                 `json:"govHistory"`
-	NodeAddress  common.Address                    `json:"nodeAddress"`
-	MyVotes      []headergov.VoteData              `json:"myVotes"`
 }
 
 func NewGovAPI(g *GovModule) *GovAPI {

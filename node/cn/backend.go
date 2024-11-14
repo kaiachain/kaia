@@ -48,6 +48,9 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -134,7 +137,8 @@ type CN struct {
 	miner    Miner
 	gasPrice *big.Int
 
-	rewardbase common.Address
+	rewardbase  common.Address
+	nodeAddress common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -254,7 +258,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
-		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
+		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
+		governance.SetNodeAddress(cn.nodeAddress)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -523,9 +528,12 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking = staking_impl.NewStakingModule()
-		mReward  = reward_impl.NewRewardModule()
-		mSupply  = supply_impl.NewSupplyModule()
+		mStaking     = staking_impl.NewStakingModule()
+		mReward      = reward_impl.NewRewardModule()
+		mSupply      = supply_impl.NewSupplyModule()
+		mHeaderGov   = headergov_impl.NewHeaderGovModule()
+		mContractGov = contractgov_impl.NewContractGovModule()
+		mGov         = gov_impl.NewGovModule()
 	)
 
 	// Initialize modules
@@ -547,6 +555,22 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:        s.blockchain,
 			RewardModule: mReward,
 		}),
+		mHeaderGov.Init(&headergov_impl.InitOpts{
+			ChainKv:     s.chainDB.GetMiscDB(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			NodeAddress: s.nodeAddress,
+		}),
+		mContractGov.Init(&contractgov_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Hgm:         mHeaderGov,
+		}),
+		mGov.Init(&gov_impl.InitOpts{
+			Hgm:   mHeaderGov,
+			Cgm:   mContractGov,
+			Chain: s.blockchain,
+		}),
 	)
 	if err != nil {
 		return err
@@ -554,14 +578,14 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply)
-	s.RegisterJsonRpcModules(mStaking, mReward, mSupply)
-	s.miner.RegisterExecutionModule(mSupply)
-	s.blockchain.RegisterExecutionModule(mSupply)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
+	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
+	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.blockchain.RegisterExecutionModule(mSupply, mGov)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
-		engine.RegisterConsensusModule(mReward)
+		engine.RegisterConsensusModule(mReward, mGov)
 	}
 	s.protocolManager.RegisterStakingModule(mStaking)
 

@@ -14,7 +14,7 @@ import (
 var (
 	_ contractgov.ContractGovModule = (*contractGovModule)(nil)
 
-	logger = log.NewModuleLogger(log.KaiaXGov)
+	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
 type chain interface {
