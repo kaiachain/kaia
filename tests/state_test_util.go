@@ -214,17 +214,13 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	root = statedb.IntermediateRoot(true)
 
 	if isTestExecutionSpecState {
-		root, err := simulateEthStateRoot(statedb)
+		root, err = simulateEthStateRoot(statedb)
 		if err != nil {
 			return nil, err
 		}
-		if root != common.Hash(post.Root) {
-			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
-		}
-	} else {
-		if root != common.Hash(post.Root) {
-			return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
-		}
+	}
+	if root != common.Hash(post.Root) {
+		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
 	}
 	return statedb, nil
 }
