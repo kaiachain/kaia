@@ -69,7 +69,7 @@ type ValsetModule struct {
 	nodeAddress common.Address
 
 	// caches
-	proposers lru.Cache
+	proposers *lru.Cache
 }
 
 func NewValsetModule() *ValsetModule {
@@ -85,6 +85,11 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 	v.headerGov = opts.HeaderGov
 	v.stakingInfo = opts.StakingInfo
 	v.nodeAddress = opts.NodeAddress
+	cache, err := lru.New(128)
+	if err != nil {
+		return err
+	}
+	v.proposers = cache
 	return nil
 }
 

@@ -37,7 +37,7 @@ type valSetContext struct {
 
 func newValSetContext(v *ValsetModule, bn uint64) (*valSetContext, error) {
 	if bn == 0 {
-		return nil, errGenesisNotCalculable
+		bn = bn + 1
 	}
 	// 1. get previous block's results
 	sInfo, err := v.stakingInfo.GetStakingInfo(bn - 1) // stakingInfo after processing block N-1
@@ -87,7 +87,8 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 		if err != nil {
 			return nil, err
 		}
-		return councilAddressList, nil
+		committeeSize := v.headerGov.EffectiveParamSet(0).CommitteeSize
+		return councilAddressList[:committeeSize], nil
 	}
 
 	valCtx, err := newValSetContext(v, num)

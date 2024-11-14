@@ -149,8 +149,10 @@ func getValSetParamSetTestData() []gov.ParamSet {
 		{testProposerPolicy, 0, tgn},
 		{testProposerPolicy, 1, tgn},
 		{testProposerPolicy, testSubGroupSize, tgn},
-		{testProposerPolicy, testSubGroupSize + 1, tgn},
-		{testProposerPolicy, testSubGroupSize + 2, tgn},
+		{testProposerPolicy, testSubGroupSize + 3, tgn},
+		{testProposerPolicy, testSubGroupSize + 4, tgn},
+		{params.RoundRobin, testSubGroupSize, tgn},
+		{params.Sticky, testSubGroupSize, tgn},
 	} {
 		// initialize the parameters which can be votable later.
 		govParam := baseGovParam()
