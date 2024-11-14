@@ -96,6 +96,7 @@ type stEnvMarshaling struct {
 	GasLimit   math.HexOrDecimal64
 	Number     math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
+	BaseFee    *math.HexOrDecimal256
 }
 
 //go:generate gencodec -type stTransaction -field-override stTransactionMarshaling -out gen_sttransaction.go
@@ -113,10 +114,12 @@ type stTransaction struct {
 }
 
 type stTransactionMarshaling struct {
-	GasPrice   *math.HexOrDecimal256
-	Nonce      math.HexOrDecimal64
-	GasLimit   []math.HexOrDecimal64
-	PrivateKey hexutil.Bytes
+	GasPrice            *math.HexOrDecimal256
+	MaxFeePerGas        *math.HexOrDecimal256
+	MaxPriorityFeePerGa *math.HexOrDecimal256
+	Nonce               math.HexOrDecimal64
+	GasLimit            []math.HexOrDecimal64
+	PrivateKey          hexutil.Bytes
 }
 
 var isTestExecutionSpecState bool
