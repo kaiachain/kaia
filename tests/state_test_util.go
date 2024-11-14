@@ -361,12 +361,12 @@ func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 
 // simulate intrinsic gas amount for Ethereum
 func simulateEthIntrinsicGas(intrinsicGas uint64, data []byte, r params.Rules) (uint64, error) {
-	if r.IsIstanbul {
+	if r.IsIstanbul && !r.IsPrague {
 		kaiaPayloadGas, err := types.IntrinsicGasPayload(0, data, false, r)
 		if err != nil {
 			return 0, err
 		}
-		ethPayloadGas, err := intrinsicGasPayloadIstanbul(0, data, r)
+		ethPayloadGas, err := types.IntrinsicGasPayload(0, data, false, params.Rules{IsPrague: true})
 		if err != nil {
 			return 0, err
 		}
@@ -374,32 +374,6 @@ func simulateEthIntrinsicGas(intrinsicGas uint64, data []byte, r params.Rules) (
 	}
 
 	return intrinsicGas, nil
-}
-
-func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint64, error) {
-	length := uint64(len(data))
-	if length > 0 {
-		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGasFrontier < nz {
-			return 0, types.ErrGasUintOverflow
-		}
-		gas += nz * params.TxDataNonZeroGasEIP2028
-
-		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, types.ErrGasUintOverflow
-		}
-		gas += z * params.TxDataZeroGas
-	}
-
-	return gas, nil
 }
 
 // simulate mining reward for Ethereum
