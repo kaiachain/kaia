@@ -98,7 +98,6 @@ func TestExecutionSpecState(t *testing.T) {
 			// "Istanbul",
 			// "Berlin",
 			// "London",
-			// "Paris",
 			// "Merge",
 			// "Shanghai",
 			// "Cancun",
