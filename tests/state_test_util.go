@@ -25,6 +25,7 @@ package tests
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -347,7 +348,7 @@ func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 	}
 
 	if gasPrice == nil {
-		return fmt.Errorf("no gas price provided")
+		return errors.New("no gas price provided")
 	}
 
 	config.Governance = &params.GovernanceConfig{
@@ -430,7 +431,7 @@ func simulateEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
 	for addr, acc := range statedb.RawDump().Accounts {
 		b, ok := new(big.Int).SetString(acc.Balance, 10)
 		if !ok {
-			return common.Hash{}, fmt.Errorf("something wrong")
+			return common.Hash{}, errors.New("balance is not decimal")
 		}
 		newState.SetLegacyAccountForTest(
 			common.HexToAddress(addr),
