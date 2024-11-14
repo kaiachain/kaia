@@ -85,7 +85,7 @@ func TestExecutionSpecState(t *testing.T) {
 	st.skipLoad(`^cancun\/`)
 
 	// Tests to skip
-	// Need to keep EIP-1052 for backward compatibility.
+	// Because EIP-1052 must be retained for backward compatibility.
 	st.skipLoad(`^shanghai\/eip3651_warm_coinbase\/warm_coinbase\/warm_coinbase_gas_usage\.json\/tests\/shanghai\/eip3651_warm_coinbase\/test_warm_coinbase\.py::test_warm_coinbase_gas_usage\[fork_Cancun-state_test-EXTCODEHASH\]$`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {

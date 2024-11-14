@@ -805,6 +805,8 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 	}
 }
 
+// SetLegacyAccountForTest is setting an account as Legacy Account to StateDB.
+// SetLegacyAccountForTest should be used for only tests.
 func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, balance *big.Int, root common.Hash, codeHash []byte) {
 	acc := &account.LegacyAccount{
 		Nonce:    nonce,
