@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
@@ -49,20 +48,6 @@ func (m *MockValsetModule) APIs() []rpc.API {
 func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
-}
-
-// FinalizeHeader mocks base method.
-func (m *MockValsetModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockValsetModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockValsetModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
 }
 
 // GetCommitteeAddressList mocks base method.
@@ -110,18 +95,18 @@ func (mr *MockValsetModuleMockRecorder) GetProposer(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposer", reflect.TypeOf((*MockValsetModule)(nil).GetProposer), arg0, arg1)
 }
 
-// PrepareHeader mocks base method.
-func (m *MockValsetModule) PrepareHeader(arg0 *types.Header) error {
+// PostInsertBlock mocks base method.
+func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PrepareHeader indicates an expected call of PrepareHeader.
-func (mr *MockValsetModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockValsetModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockValsetModule)(nil).PrepareHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockValsetModule)(nil).PostInsertBlock), arg0)
 }
 
 // Start mocks base method.
@@ -148,33 +133,4 @@ func (m *MockValsetModule) Stop() {
 func (mr *MockValsetModuleMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockValsetModule)(nil).Stop))
-}
-
-// VerifyHeader mocks base method.
-func (m *MockValsetModule) VerifyHeader(arg0 *types.Header) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockValsetModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockValsetModule)(nil).VerifyHeader), arg0)
-}
-
-// Vote mocks base method.
-func (m *MockValsetModule) Vote(arg0 uint64, arg1 common.Address, arg2 string, arg3 interface{}) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Vote", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Vote indicates an expected call of Vote.
-func (mr *MockValsetModuleMockRecorder) Vote(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Vote", reflect.TypeOf((*MockValsetModule)(nil).Vote), arg0, arg1, arg2, arg3)
 }

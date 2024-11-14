@@ -21,22 +21,22 @@ type Param struct {
 
 var (
 	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
-		stringToAddressList := func(v string) ([]common.Address, error) {
-			ret := []common.Address{}
-			for _, address := range strings.Split(v, ",") {
-				if !common.IsHexAddress(address) {
-					return nil, ErrCanonicalizeStringToAddress
-				}
-				ret = append(ret, common.HexToAddress(address))
-			}
-			return ret, nil
-		}
-
 		switch v := v.(type) {
-		case []byte:
-			return stringToAddressList(string(v))
-		case string:
-			return stringToAddressList(v)
+		case []uint8:
+			return common.BytesToAddress(v), nil
+		case []interface{}:
+			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
+			if len(v) == 0 {
+				return nil, ErrCanonicalizeToAddressList
+			}
+			var nodeAddresses []common.Address
+			for _, item := range v {
+				if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
+					return nil, ErrCanonicalizeToAddressList
+				}
+				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
+			}
+			return nodeAddresses, nil
 		}
 		return nil, ErrCanonicalizeToAddressList
 	}
@@ -130,6 +130,11 @@ func noopFormatChecker(cv any) bool {
 }
 
 func valSetVoteFormatChecker(cv any) bool {
+	_, ok := cv.(common.Address)
+	if ok {
+		return true
+	}
+
 	v, ok := cv.([]common.Address)
 	if !ok || len(v) == 0 {
 		return false

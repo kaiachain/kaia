@@ -16,8 +16,8 @@ import (
 func TestVerifyHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
-		vote               = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
-		voteBytes, _       = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
+		vote               = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		voteBytes, _       = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
 		invalidGovBytes, _ = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
 		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
@@ -31,11 +31,11 @@ func TestVerifyHeader(t *testing.T) {
 		header        *types.Header
 		expectedError error
 	}{
-		{desc: "valid vote", header: &types.Header{Number: big.NewInt(1), Vote: voteBytes}, expectedError: nil},
-		{desc: "invalid vote rlp", header: &types.Header{Number: big.NewInt(1), Vote: []byte{1, 2, 3}}, expectedError: headergov.ErrInvalidRlp},
-		{desc: "invalid vote bytes", header: &types.Header{Number: big.NewInt(1), Vote: invalidVoteRlp}, expectedError: headergov.ErrInvalidRlp},
-		{desc: "valid gov", header: &types.Header{Number: big.NewInt(1000), Governance: govBytes}, expectedError: nil},
-		{desc: "invalid gov rlp", header: &types.Header{Number: big.NewInt(1000), Governance: []byte{1, 2, 3}}, expectedError: headergov.ErrInvalidRlp},
+		{desc: "valid vote", header: &types.Header{Number: big.NewInt(1), Vote: voteBytes, Extra: extra}, expectedError: nil},
+		{desc: "invalid vote rlp", header: &types.Header{Number: big.NewInt(1), Vote: []byte{1, 2, 3}, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
+		{desc: "invalid vote bytes", header: &types.Header{Number: big.NewInt(1), Vote: invalidVoteRlp, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
+		{desc: "valid gov", header: &types.Header{Number: big.NewInt(1000), Governance: govBytes, Extra: extra}, expectedError: nil},
+		{desc: "invalid gov rlp", header: &types.Header{Number: big.NewInt(1000), Governance: []byte{1, 2, 3}, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
 		{desc: "gov must not be nil", header: &types.Header{Number: big.NewInt(1000), Governance: nil}, expectedError: ErrGovVerification},
 		{desc: "gov mismatch", header: &types.Header{Number: big.NewInt(1000), Governance: invalidGovBytes}, expectedError: ErrGovVerification},
 		{desc: "gov not on epoch", header: &types.Header{Number: big.NewInt(1001), Governance: []byte{1, 2, 3}}, expectedError: ErrGovInNonEpochBlock},
@@ -45,6 +45,7 @@ func TestVerifyHeader(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
+			tc.header.Extra = extra
 			err := h.VerifyHeader(tc.header)
 			assert.Equal(t, tc.expectedError, err)
 		})
@@ -72,18 +73,20 @@ func TestVerifyVote(t *testing.T) {
 		vote          headergov.VoteData
 		expectedError error
 	}{
-		{desc: "valid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
-		{desc: "valid lower", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71LowerBoundBaseFee), uint64(1)), expectedError: nil},
-		{desc: "valid upper", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71UpperBoundBaseFee), uint64(1e18)), expectedError: nil},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), common.Address{}), expectedError: ErrGovParamNotAccount},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(common.Address{}, string(gov.GovernanceGovParamContract), eoa), expectedError: ErrGovParamNotContract},
-		{desc: "invalid lower", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71LowerBoundBaseFee), uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
-		{desc: "invalid upper", vote: headergov.NewVoteData(common.Address{}, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
+		{desc: "valid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
+		{desc: "valid lower", vote: headergov.NewVoteData(validVoter, string(gov.Kip71LowerBoundBaseFee), uint64(1)), expectedError: nil},
+		{desc: "valid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1e18)), expectedError: nil},
+		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), common.Address{}), expectedError: ErrGovParamNotAccount},
+		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), eoa), expectedError: ErrGovParamNotContract},
+		{desc: "invalid lower", vote: headergov.NewVoteData(validVoter, string(gov.Kip71LowerBoundBaseFee), uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
+		{desc: "invalid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
-			err := h.VerifyVote(1, tc.vote)
+			vb, err := tc.vote.ToVoteBytes()
+			assert.NoError(t, err)
+			err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}
