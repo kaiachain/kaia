@@ -76,13 +76,17 @@ func TestExecutionSpecState(t *testing.T) {
 	}
 	st := new(testMatcher)
 
-	st.skipLoad(`^frontier/`)
-	st.skipLoad(`^homestead/`)
-	st.skipLoad(`^byzantium/`)
-	st.skipLoad(`^istanbul/`)
-	st.skipLoad(`^berlin/`)
-	// st.skipLoad(`^shanghai/`)
-	st.skipLoad(`^cancun/`)
+	// TODO-Kaia: should support EIPs introduced at following forks
+	st.skipLoad(`^frontier\/`)
+	st.skipLoad(`^homestead\/`)
+	st.skipLoad(`^byzantium\/`)
+	st.skipLoad(`^istanbul\/`)
+	st.skipLoad(`^berlin\/`)
+	st.skipLoad(`^cancun\/`)
+
+	// Tests to skip
+	// Need to keep EIP-1052 for backward compatibility.
+	st.skipLoad(`^shanghai\/eip3651_warm_coinbase\/warm_coinbase\/warm_coinbase_gas_usage\.json\/tests\/shanghai\/eip3651_warm_coinbase\/test_warm_coinbase\.py::test_warm_coinbase_gas_usage\[fork_Cancun-state_test-EXTCODEHASH\]$`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
