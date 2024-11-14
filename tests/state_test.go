@@ -33,7 +33,8 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-func TestState(t *testing.T) {
+// TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
+func TestKaiaSpecState(t *testing.T) {
 	common.RelaxPrecompileRangeForTest(false)
 	enableTestExecutionSpecState(false)
 
