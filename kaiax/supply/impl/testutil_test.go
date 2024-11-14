@@ -279,6 +279,7 @@ func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockC
 	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
 	engine.EXPECT().CalcBlockScore(gomock.Any(), gomock.Any(), gomock.Any()).Return(common.Big0).AnyTimes()
 	engine.EXPECT().CanVerifyHeadersConcurrently().Return(false).AnyTimes()
+	engine.EXPECT().Initialize(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	engine.EXPECT().PreprocessHeaderVerification(gomock.Any()).DoAndReturn(
 		func(headers []*types.Header) (chan<- struct{}, <-chan error) {
