@@ -709,8 +709,6 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain, s.stakingModule)
-	governanceAPI := governance.NewGovernanceAPI(s.governance, s.stakingModule)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
@@ -720,7 +718,7 @@ func (s *CN) APIs() []rpc.API {
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
 		publicAccountAPI,
-		governanceAPI,
+		s.nodeAddress,
 	)
 
 	// Append all the local APIs and return
@@ -773,16 +771,6 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "net",
 			Version:   "1.0",
 			Service:   s.netRPCService,
-			Public:    true,
-		}, {
-			Namespace: "governance",
-			Version:   "1.0",
-			Service:   governanceAPI,
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   governanceKaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",

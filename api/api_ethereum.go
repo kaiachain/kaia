@@ -36,7 +36,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
@@ -69,7 +68,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
-	governanceAPI            *governance.GovernanceAPI
+	nodeAddress              common.Address
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -82,7 +81,7 @@ func NewEthereumAPI(
 	publicBlockChainAPI *PublicBlockChainAPI,
 	publicTransactionPoolAPI *PublicTransactionPoolAPI,
 	publicAccountAPI *PublicAccountAPI,
-	governanceAPI *governance.GovernanceAPI,
+	nodeAddress common.Address,
 ) *EthereumAPI {
 	return &EthereumAPI{
 		publicFilterAPI,
@@ -90,14 +89,14 @@ func NewEthereumAPI(
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
 		publicAccountAPI,
-		governanceAPI,
+		nodeAddress,
 	}
 }
 
 // Etherbase is the address of operating node.
 // Unlike Ethereum, it only returns the node address because Kaia does not have a POW mechanism.
 func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	return api.governanceAPI.NodeAddress(), nil
+	return api.nodeAddress, nil
 }
 
 // Coinbase is the address of operating node (alias for Etherbase).
