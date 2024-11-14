@@ -82,11 +82,11 @@ type stPostState struct {
 //go:generate gencodec -type stEnv -field-override stEnvMarshaling -out gen_stenv.go
 
 type stEnv struct {
-	Coinbase   common.Address `json:"currentCoinbase"   gencodec:"required"`
-	BlockScore *big.Int       `json:"currentDifficulty" gencodec:"required"`
-	GasLimit   uint64         `json:"currentGasLimit"   gencodec:"required"`
-	Number     uint64         `json:"currentNumber"     gencodec:"required"`
-	Timestamp  uint64         `json:"currentTimestamp"  gencodec:"required"`
+	Coinbase   common.Address `gencodec:"required" json:"currentCoinbase"`
+	BlockScore *big.Int       `gencodec:"required" json:"currentDifficulty"`
+	GasLimit   uint64         `gencodec:"required" json:"currentGasLimit"`
+	Number     uint64         `gencodec:"required" json:"currentNumber"`
+	Timestamp  uint64         `gencodec:"required" json:"currentTimestamp"`
 	BaseFee    *big.Int       `gencodec:"optional" json:"currentBaseFee"`
 }
 
