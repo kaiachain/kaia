@@ -22,7 +22,24 @@ type Param struct {
 var (
 	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
-		case []uint8:
+		case string:
+			addresses := strings.Split(v, ",")
+			if len(addresses) == 1 {
+				if common.IsHexAddress(addresses[0]) {
+					return common.HexToAddress(addresses[0]), nil
+				}
+				return nil, ErrCanonicalizeToAddressList
+			}
+
+			var res []common.Address
+			for _, address := range addresses {
+				if !common.IsHexAddress(address) {
+					return nil, ErrCanonicalizeToAddressList
+				}
+				res = append(res, common.HexToAddress(address))
+			}
+			return res, nil
+		case []byte:
 			return common.BytesToAddress(v), nil
 		case []interface{}:
 			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}

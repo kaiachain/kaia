@@ -49,7 +49,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 func (v *ValsetModule) HandleValidatorVote(header *types.Header, vote headergov.VoteData) error {
 	// if vote.key is in gov.Params, do nothing
 	_, ok := gov.Params[vote.Name()]
-	if !ok {
+	if ok {
 		return nil
 	}
 
@@ -62,11 +62,22 @@ func (v *ValsetModule) HandleValidatorVote(header *types.Header, vote headergov.
 		blockNumber = header.Number.Uint64()
 		c           = valset.AddressList(councilAddressList)
 		name        = vote.Name()
+		govNode     = v.headerGov.EffectiveParamSet(blockNumber).GoverningNode
 	)
 
 	// GovernanceAddValidator:    appends new validators only if it does not exist in current valSet
 	// GovernanceRemoveValidator: delete the existing validator only if it exists in current valSet
-	for _, address := range vote.Value().([]common.Address) {
+	var addresses []common.Address
+	_, ok = vote.Value().(common.Address)
+	if ok {
+		addresses = []common.Address{vote.Value().(common.Address)}
+	} else {
+		addresses = vote.Value().([]common.Address)
+	}
+	for _, address := range addresses {
+		if address == govNode {
+			return errInvalidVoteValue
+		}
 		idx := c.GetIdxByAddress(address)
 		switch name {
 		case gov.GovernanceAddValidator:
