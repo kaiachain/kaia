@@ -1,0 +1,156 @@
+name: Package and Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+env:
+  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  FRONTEND_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  rpm-linux-amd64:
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
+      credentials:
+        username: ${{ env.DOCKER_LOGIN }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set version
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: make all
+
+      - name: Build RPM packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-linux-amd64:
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      credentials:
+        username: ${{ env.DOCKER_LOGIN }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set version
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: make all
+
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh linux-amd64 $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b linux-amd64 $item
+          done
+
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-linux-arm64:
+    runs-on: ['self-hosted', 'ARM64']
+    container:
+      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04-arm
+      credentials:
+        username: ${{ env.DOCKER_LOGIN }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+  tar-darwin-arm64:
+    runs-on: macos-14
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          brew install awscli
+          curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
+          mkdir $HOME/go1.22.1
+          tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
+          echo 'export GOPATH=~/go' >> ~/.bashrc
+          echo 'export PATH=$HOME/go1.22.1/go/bin:$PATH' >> ~/.bashrc
+          source ~/.bashrc
+
+  deploy-rpm:
+    needs: [rpm-linux-amd64, rpm-linux-arm64, tar-linux-amd64, tar-linux-arm64, tar-darwin-arm64]
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
+      credentials:
+        username: ${{ env.DOCKER_LOGIN }}
+        password: ${{ env.DOCKER_PASSWORD }}
+
+    steps:
+      - name: Update RPM repository
+        run: |
+          aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
+          createrepo --update rhel/7/kaia
+          aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
+
+      - name: Notify Slack on success
+        if: success()
+        run: |
+          curl --data '{"text": "✅ Package deployment succeeded for ${{ github.ref_name }}. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' "$SLACK_WEBHOOK_URL"
+
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl --data '{"text": "❌ Package deployment failed for ${{ github.ref_name }}. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' "$SLACK_WEBHOOK_URL" 
