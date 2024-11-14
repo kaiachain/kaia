@@ -66,7 +66,7 @@ func TestState(t *testing.T) {
 	})
 }
 
-// TestExecutionSpecState runs the test fixtures from execution-spec-tests.
+// TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
 func TestExecutionSpecState(t *testing.T) {
 	common.RelaxPrecompileRangeForTest(true)
 	enableTestExecutionSpecState(true)
