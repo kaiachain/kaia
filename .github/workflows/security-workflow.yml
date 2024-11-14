@@ -1,0 +1,26 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 12 * * 1'  # Runs at 12:00 UTC every Monday
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Gosec
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+      - name: Run dependency review
+        uses: actions/dependency-review-action@v3
+        
+      - name: Run Snyk
+        uses: snyk/actions/golang@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }} 
