@@ -196,7 +196,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	}
 
 	if isTestExecutionSpecState && err == nil {
-		simulateEthStakingReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
+		simulateEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
 	}
 
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -402,8 +402,8 @@ func intrinsicGasPayloadIstanbul(gas uint64, data []byte, r params.Rules) (uint6
 	return gas, nil
 }
 
-// simulate staking reward for Ethereum
-func simulateEthStakingReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
+// simulate mining reward for Ethereum
+func simulateEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
 	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
 	effectiveTip := gasPrice
 	if rules.IsLondon {
