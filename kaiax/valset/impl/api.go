@@ -89,7 +89,7 @@ func (api *ValidatorAPI) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	if err != nil {
 		return nil, err
 	}
-	return c.qualifiedValidators.sortedAddressList(true), nil
+	return c.qualifiedValidators.SortedAddressList(true), nil
 }
 
 // GetValidatorsAtHash retrieves the list of qualified validators with the given block hash.
@@ -115,7 +115,7 @@ func (api *ValidatorAPI) GetDemotedValidators(number *rpc.BlockNumber) ([]common
 	if err != nil {
 		return nil, err
 	}
-	return c.demotedValidators.sortedAddressList(true), nil
+	return c.demotedValidators.SortedAddressList(true), nil
 }
 
 // GetDemotedValidatorsAtHash retrieves the list of demoted validators with the given block hash.

@@ -20,6 +20,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
@@ -30,18 +32,12 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 		return nil // nothing to do
 	}
 
-	name, vote, err := newVoteDataFromBytes(block.Header().Vote)
-
-	// if vote.key is in gov.Params, do nothing
-	_, ok := gov.Params[gov.ParamName(name)]
-	if !ok {
-		return nil
-	}
-
-	// otherwise, handle the votebyte
+	var vb headergov.VoteBytes = block.Header().Vote
+	vote, err := vb.ToVoteData()
 	if err != nil {
 		return err
 	}
+
 	if err = v.HandleValidatorVote(block.Header(), vote); err != nil {
 		return err
 	}
@@ -50,49 +46,38 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 
 // HandleValidatorVote handles addvalidator or removevalidator votes and remove them from MyVotes.
 // If succeed, the voteBlk and councilAddressList db is updated.
-func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData *voteData) error {
-	if header.Number == nil {
-		return errUnknownBlock
+func (v *ValsetModule) HandleValidatorVote(header *types.Header, vote headergov.VoteData) error {
+	// if vote.key is in gov.Params, do nothing
+	_, ok := gov.Params[vote.Name()]
+	if !ok {
+		return nil
 	}
+
 	councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, header.Number.Uint64()-1)
 	if err != nil {
 		return err
 	}
+
 	var (
 		blockNumber = header.Number.Uint64()
-		valset      = subsetCouncilSlice(councilAddressList)
-		name        = voteData.Name()
+		c           = valset.AddressList(councilAddressList)
+		name        = vote.Name()
 	)
-
-	if err = v.checkConsistency(blockNumber, voteData); err != nil {
-		return err
-	}
-
-	author, err := v.chain.Engine().Author(header)
-	if err != nil {
-		return err
-	}
-	if voteData.voter != author {
-		return errInvalidVoter
-	}
 
 	// GovernanceAddValidator:    appends new validators only if it does not exist in current valSet
 	// GovernanceRemoveValidator: delete the existing validator only if it exists in current valSet
-	for _, address := range voteData.Value() {
-		if author == address {
-			return errInvalidVoteValue
-		}
-		idx := valset.getIdxByAddress(address)
-		switch gov.ValSetVoteKeyMap[name] {
+	for _, address := range vote.Value().([]common.Address) {
+		idx := c.GetIdxByAddress(address)
+		switch name {
 		case gov.GovernanceAddValidator:
 			if idx == -1 {
-				valset = append(valset, address)
+				c = append(c, address)
 			} else {
 				return errInvalidVoteValue
 			}
 		case gov.GovernanceRemoveValidator:
 			if idx != -1 {
-				valset = append(valset[:idx], valset[idx+1:]...)
+				c = append(c[:idx], c[idx+1:]...)
 			} else {
 				return errInvalidVoteValue
 			}
@@ -100,18 +85,8 @@ func (v *ValsetModule) HandleValidatorVote(header *types.Header, voteData *voteD
 	}
 
 	// update valSet db
-	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, valset); err != nil {
+	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, c); err != nil {
 		return err
-	}
-
-	// remove it from myVotes only if the block is proposed by me
-	if author == v.nodeAddress {
-		for idx, myVote := range v.myVotes {
-			if voteData.Equal(myVote) {
-				v.myVotes = append(v.myVotes[:idx], v.myVotes[idx+1:]...)
-				break
-			}
-		}
 	}
 	return nil
 }

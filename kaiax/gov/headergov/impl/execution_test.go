@@ -60,14 +60,14 @@ func TestHandleVoteGov(t *testing.T) {
 	govBlock := uint64(10)
 
 	// test duplicate vote handling
-	for range 2 {
+	for i := 0; i < 2; i++ {
 		err := h.HandleVote(voteBlock, v)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(h.cache.GroupedVotes()))
 	}
 
 	// test duplicate gov handling
-	for range 2 {
+	for i := 0; i < 2; i++ {
 		err := h.HandleGov(govBlock, headergov.NewGovData(gov.PartialParamSet{
 			gov.GovernanceUnitPrice: uint64(100),
 		}))

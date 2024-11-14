@@ -70,7 +70,6 @@ type ValsetModule struct {
 
 	// caches
 	proposers lru.Cache
-	myVotes   []*voteData
 }
 
 func NewValsetModule() *ValsetModule {
@@ -86,7 +85,6 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 	v.headerGov = opts.HeaderGov
 	v.stakingInfo = opts.StakingInfo
 	v.nodeAddress = opts.NodeAddress
-	v.myVotes = make([]*voteData, 0)
 	return nil
 }
 

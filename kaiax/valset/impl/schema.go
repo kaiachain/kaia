@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -96,8 +97,8 @@ func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Add
 	return set, nil
 }
 
-func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList subsetCouncilSlice) error {
-	copiedList := make(subsetCouncilSlice, len(councilAddressList))
+func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList valset.AddressList) error {
+	copiedList := make(valset.AddressList, len(councilAddressList))
 	copy(copiedList, councilAddressList)
 
 	sort.Sort(copiedList)

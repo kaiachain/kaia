@@ -1,73 +1,15 @@
 package impl
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"sort"
-	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
-
-type subsetCouncilSlice []common.Address
-
-func (sc subsetCouncilSlice) Len() int {
-	return len(sc)
-}
-
-func (sc subsetCouncilSlice) Less(i, j int) bool {
-	return strings.Compare(sc[i].String(), sc[j].String()) < 0
-}
-
-func (sc subsetCouncilSlice) Swap(i, j int) {
-	sc[i], sc[j] = sc[j], sc[i]
-}
-
-func (sc subsetCouncilSlice) AddressStringList() []string {
-	stringAddrs := make([]string, len(sc))
-	for _, val := range sc {
-		stringAddrs = append(stringAddrs, val.String())
-	}
-	return stringAddrs
-}
-
-func (sc subsetCouncilSlice) getIdxByAddress(addr common.Address) int {
-	for i, val := range sc {
-		if addr == val {
-			return i
-		}
-	}
-	// TODO-Kaia-Istanbul: Enable this log when non-committee nodes don't call `core.startNewRound()`
-	// logger.Warn("failed to find an address in the validator list",
-	// 	"address", addr, "validatorAddrs", valSet.validators.AddressStringList())
-	return -1
-}
-
-// SortedAddressList retrieves the sorted address list of ValidatorSet in "ascending order".
-// if public is false, sort it using bytes.Compare. It's for public purpose.
-// - public-false usage: (getValidators/getDemotedValidators, defaultSet snap store, prepareExtra.validators)
-// if public is true, sort it using strings.Compare. It's used for internal consensus purpose, especially for the source of committee.
-// - public-true usage: (snap read/store/apply except defaultSet snap store, vrank log)
-// TODO-kaia-valset: unify sorting.
-func (sc subsetCouncilSlice) sortedAddressList(public bool) []common.Address {
-	copiedSlice := make(subsetCouncilSlice, len(sc))
-	copy(copiedSlice, sc)
-
-	if public {
-		// want reverse-sort: ascending order - bytes.Compare(ValidatorSet[i][:], ValidatorSet[j][:]) > 0
-		sort.Slice(copiedSlice, func(i, j int) bool {
-			return bytes.Compare(copiedSlice[i].Bytes(), copiedSlice[j].Bytes()) >= 0
-		})
-		sort.Sort(sort.Reverse(copiedSlice))
-	} else {
-		// want sort: descending order - strings.Compare(ValidatorSet[i].String(), ValidatorSet[j].String()) < 0
-		sort.Sort(copiedSlice)
-	}
-	return copiedSlice
-}
 
 // council for block N is created based on the previous block's council.
 // It is used to calculate committee or proposer. It's not display purpose.
@@ -75,10 +17,10 @@ func (sc subsetCouncilSlice) sortedAddressList(public bool) []common.Address {
 type council struct {
 	blockNumber uint64
 
-	qualifiedValidators subsetCouncilSlice // qualified is a subset of prev block's council list
-	demotedValidators   subsetCouncilSlice // demoted is a subset of prev block's council who are demoted as a member of committee
+	qualifiedValidators valset.AddressList // qualified is a subset of prev block's council list
+	demotedValidators   valset.AddressList // demoted is a subset of prev block's council who are demoted as a member of committee
 
-	councilAddressList subsetCouncilSlice // total council node address list. the order is reserved.
+	councilAddressList valset.AddressList // total council node address list. the order is reserved.
 }
 
 func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
@@ -102,14 +44,14 @@ func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
 	// create council struct for block N
 	c := &council{
 		blockNumber:        blockNumber,
-		councilAddressList: make(subsetCouncilSlice, len(councilAddressList)),
+		councilAddressList: make(valset.AddressList, len(councilAddressList)),
 	}
 	copy(c.councilAddressList, councilAddressList)
 
 	// either proposer-policy is not weighted random or before istanbul HF,
 	// do not filter out the demoted validators
 	if !proposerPolicy.IsWeightedRandom() || !rules.IsIstanbul {
-		c.qualifiedValidators = make(subsetCouncilSlice, len(councilAddressList))
+		c.qualifiedValidators = make(valset.AddressList, len(councilAddressList))
 		copy(c.qualifiedValidators, councilAddressList)
 		return c, nil
 	}
@@ -130,8 +72,8 @@ func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
 	//   case1. not a single mode && no qualified
 	//   case2. single mode && len(qualified) is 1 && govNode is not qualified
 	if len(c.qualifiedValidators) == 0 || (isSingleMode && len(c.qualifiedValidators) == 1 && stakingAmount[govNode] < minStaking) {
-		c.demotedValidators = subsetCouncilSlice{} // ensure demoted is empty
-		c.qualifiedValidators = make(subsetCouncilSlice, len(councilAddressList))
+		c.demotedValidators = valset.AddressList{} // ensure demoted is empty
+		c.qualifiedValidators = make(valset.AddressList, len(councilAddressList))
 		copy(c.qualifiedValidators, councilAddressList)
 	}
 
@@ -141,26 +83,23 @@ func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
 	return c, nil
 }
 
-func (c *council) getProposerFromProposers(proposers []common.Address, round uint64, proposerUpdateInterval uint64) (common.Address, int) {
-	proposer := proposers[int(c.blockNumber+round)%int(proposerUpdateInterval)%len(proposers)]
-	proposerIdx := c.qualifiedValidators.getIdxByAddress(proposer)
-	return proposer, proposerIdx
-}
-
 // selectRandomCommittee composes a committee selecting validators randomly based on the seed value.
 // It returns nil if the given committeeSize is bigger than validatorSize or proposer indexes are invalid.
 func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, proposers []common.Address) ([]common.Address, error) {
 	var (
 		validatorSize   = len(c.qualifiedValidators)
 		validator       = c.qualifiedValidators
+		num             = valCtx.blockNumber
 		rules           = valCtx.rules
 		committeeSize   = valCtx.prevBlockResult.pSet.CommitteeSize
 		prevHeader      = valCtx.prevBlockResult.header
 		pUpdateInterval = valCtx.prevBlockResult.pSet.ProposerUpdateInterval
+		pUpdateBlock    = calcProposerBlockNumber(num, pUpdateInterval)
+		author          = valCtx.prevBlockResult.author
 
 		// pick current round's proposer and next proposer which address is different from current proposer
-		proposer, proposerIdx                                 = c.getProposerFromProposers(proposers, round, pUpdateInterval)
-		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+1, pUpdateInterval)
+		proposer, proposerIdx                                 = pickWeightedRandomProposer(proposers, pUpdateBlock, num, round, c.qualifiedValidators, author)
+		closestDifferentProposer, closestDifferentProposerIdx = pickWeightedRandomProposer(proposers, pUpdateBlock, num, round+1, c.qualifiedValidators, author)
 	)
 
 	// return early if the committee size is 1
@@ -173,7 +112,7 @@ func (c *council) selectRandomCommittee(valCtx *valSetContext, round uint64, pro
 		if proposer != closestDifferentProposer {
 			break
 		}
-		closestDifferentProposer, closestDifferentProposerIdx = c.getProposerFromProposers(proposers, round+i, pUpdateInterval)
+		closestDifferentProposer, closestDifferentProposerIdx = pickWeightedRandomProposer(proposers, pUpdateBlock, num, round+i, c.qualifiedValidators, author)
 	}
 
 	// ensure validator indexes are valid
@@ -229,7 +168,7 @@ func (c *council) selectRandaoCommittee(prevBnRes *blockResult) ([]common.Addres
 		return nil, errNilMixHash
 	}
 
-	copied := make(subsetCouncilSlice, len(c.qualifiedValidators))
+	copied := make(valset.AddressList, len(c.qualifiedValidators))
 	copy(copied, c.qualifiedValidators)
 
 	seed := int64(binary.BigEndian.Uint64(prevBnRes.header.MixHash[:8]))

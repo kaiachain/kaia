@@ -27,7 +27,8 @@ type chain interface {
 }
 
 type validator interface {
-	Vote(blockNumber uint64, voter common.Address, name string, value any) (string, error)
+	GetCouncilAddressList(num uint64) ([]common.Address, error)
+	GetProposer(num uint64, round uint64) (common.Address, error)
 }
 
 type InitOpts struct {
@@ -215,7 +216,7 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.
 	if voteBlocks != nil {
 		for _, blockNum := range *voteBlocks {
 			header := chain.GetHeaderByNumber(blockNum)
-			_, parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+			parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
 			if err != nil {
 				panic(err)
 			}

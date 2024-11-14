@@ -71,6 +71,7 @@ func newValSetContext(v *ValsetModule, bn uint64) (*valSetContext, error) {
 // GetCouncilAddressList returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
 func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, error) {
+	// make sure that the num doesn't exceed current block
 	councilAddresses, err := ReadCouncilAddressListFromDb(v.ChainKv, num)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,8 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 		return c.qualifiedValidators, nil
 	}
 	if !proposerPolicy.IsWeightedRandom() || !rules.IsRandao {
-		proposers, err := v.getProposers(num)
+		pUpdateBlock := calcProposerBlockNumber(num, valCtx.prevBlockResult.pSet.ProposerUpdateInterval)
+		proposers, err := v.getProposers(pUpdateBlock)
 		if err != nil {
 			return nil, err
 		}
@@ -116,11 +118,19 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 	return c.selectRandaoCommittee(valCtx.prevBlockResult)
 }
 
-// GetProposer picks a proposer for the (N, Round) view. it is picked from different sources.
-// - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
-// - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
-// - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
+// GetProposer calculates a proposer for the (N, Round) view.
+// There's two way to derive the proposer:
+// - if the view (N, Round) is same as existing header, derive it from header.
+// - otherwise, calc it.
+//   - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
+//   - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
+//   - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
 func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, error) {
+	header := v.chain.GetHeaderByNumber(num)
+	if header.Number.Uint64() == num && uint64(header.Round()) == round {
+		return v.chain.Engine().Author(header)
+	}
+
 	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
 	if num == 0 {
 		councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
@@ -141,27 +151,22 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 
 	var (
 		proposerPolicy = valCtx.prevBlockResult.proposerPolicy
-		rules          = valCtx.rules
+		author         = valCtx.prevBlockResult.author
 	)
+
 	if proposerPolicy.IsDefaultSet() {
-		lastProposerIdx := c.councilAddressList.getIdxByAddress(valCtx.prevBlockResult.author)
-		seed := defaultSetNextProposerSeed(proposerPolicy, valCtx.prevBlockResult.author, lastProposerIdx, round)
-		idx := int(seed) % len(c.councilAddressList)
-		return c.councilAddressList[idx], nil
+		proposer, _ := pickRoundRobinProposer(c.councilAddressList, proposerPolicy, author, round)
+		return proposer, nil
 	}
 
 	// before Randao, weightedrandom uses proposers to pick the proposer.
-	// the proposers have always been calculated before entering proposer
-	if !rules.IsRandao {
-		proposersUpdatePolicy := valCtx.prevBlockResult.pSet.ProposerUpdateInterval
-		proposers, err := v.getProposers(num)
+	if !valCtx.rules.IsRandao {
+		pUpdateBlock := calcProposerBlockNumber(num, valCtx.prevBlockResult.pSet.ProposerUpdateInterval)
+		proposers, err := v.getProposers(pUpdateBlock)
 		if err != nil {
 			return common.Address{}, err
 		}
-		proposer, proposerIdx := c.getProposerFromProposers(proposers, round, proposersUpdatePolicy)
-		if proposerIdx == -1 {
-			return common.Address{}, errUnknownProposer
-		}
+		proposer, _ := pickWeightedRandomProposer(proposers, pUpdateBlock, num, round, c.qualifiedValidators, author)
 		return proposer, nil
 	}
 
@@ -170,30 +175,7 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 	if err != nil {
 		return common.Address{}, err
 	}
-
-	idx := int(round) % len(c.qualifiedValidators)
-	proposer, proposerIdx := committee[idx], idx
-
-	// for non-default, fall-back to roundrobin proposer
-	if proposerIdx == -1 {
-		logger.Warn("Failed to select a new proposer, thus fall back to roundRobinProposer")
-		idx = c.qualifiedValidators.getIdxByAddress(proposer)
-		seed := defaultSetNextProposerSeed(params.Sticky, valCtx.prevBlockResult.author, idx, round)
-		proposerIdx = int(seed) % len(c.qualifiedValidators)
-		proposer = c.qualifiedValidators[proposerIdx]
-	}
-	return proposer, nil
-}
-
-func defaultSetNextProposerSeed(policy ProposerPolicy, proposer common.Address, proposerIdx int, round uint64) uint64 {
-	seed := round
-	if proposerIdx > -1 {
-		seed += uint64(proposerIdx)
-	}
-	if policy == params.RoundRobin && !common.EmptyAddress(proposer) {
-		seed += 1
-	}
-	return seed
+	return committee[int(round)%len(c.qualifiedValidators)], nil
 }
 
 // convertHashToSeed takes the first 8 bytes (64 bits) and convert to int64

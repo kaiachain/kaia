@@ -227,7 +227,7 @@ func TestVoteSerialization(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase_block_%d", tc.blockNum), func(t *testing.T) {
 			// Test deserialization
 			var vb VoteBytes = hexutil.MustDecode(tc.serializedVoteData)
-			_, actual, err := vb.ToVoteData()
+			actual, err := vb.ToVoteData()
 			assert.NoError(t, err)
 			assert.Equal(t, tc.voteData, actual, "ToVoteData() failed")
 

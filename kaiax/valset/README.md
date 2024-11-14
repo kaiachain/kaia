@@ -215,10 +215,10 @@ The voting blocks and the council addressList is stored at miscDB.
 type council struct {
   blockNumber uint64  // id of Council
   
-  qualifiedValidators subsetCouncilSlice // qualified is a subset of prev block's council list
-  demotedValidators   subsetCouncilSlice // demoted is a subset of prev block's council who are demoted as a member of committee
+  qualifiedValidators []common.Address // qualified is a subset of prev block's council list
+  demotedValidators   []common.Address // demoted is a subset of prev block's council who are demoted as a member of committee
   
-  councilAddressList subsetCouncilSlice // total council node address list. the order is reserved.
+  councilAddressList []common.Address // total council node address list. the order is reserved.
 }
 ```
 - Validators: Sorting purpose
@@ -227,7 +227,12 @@ type subsetCouncilSlice []common.Address
 ```
 
 ### ValsetContext
-- blockResult: It's a result(state) of previous block N. the committee/proposer of next block
+- blockResult: It's a result(state) of the block. 
+  - valSet(N) = valSet(N-1).handleVote(Block(N-1).vote)
+  - pSet(N) = pSet(N-1).handleGov(Block(N-1).gov) (only if N is an epoch)
+  - stakingInfo(N) = Block(N-1).stake_change (only if N is a stakingUpdateInterval)
+  - header(N) = Block(N).header
+  - author(N) = Author(Block(N).header)
 ```go
 type blockResult struct {
   staking         *staking.StakingInfo

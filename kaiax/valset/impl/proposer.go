@@ -6,6 +6,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 type ProposerPolicy uint64
@@ -24,16 +25,15 @@ func (p ProposerPolicy) IsWeightedRandom() bool {
 	return p == WeightedRandom
 }
 
-func (v *ValsetModule) getProposers(num uint64) ([]common.Address, error) {
-	valCtx, err := newValSetContext(v, num)
-	proposersUpdateBlock := calcProposerBlockNumber(num, valCtx.prevBlockResult.pSet.ProposerUpdateInterval)
-	proposers, ok := v.proposers.Get(proposersUpdateBlock)
-	if ok {
-		return proposers.([]common.Address), nil
+func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, error) {
+	if cachedProposers, ok := v.proposers.Get(pUpdateBlock); ok {
+		if proposers, ok := cachedProposers.([]common.Address); ok {
+			return proposers, nil
+		}
+		return nil, errInvalidProposersType
 	}
 
-	// there's no stored proposers. calculate the proposers and store at cache
-	valCtx, err = newValSetContext(v, proposersUpdateBlock)
+	valCtx, err := newValSetContext(v, pUpdateBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -43,12 +43,42 @@ func (v *ValsetModule) getProposers(num uint64) ([]common.Address, error) {
 	}
 
 	proposersIndexes := calsSlotsInProposers(c.qualifiedValidators, valCtx)
-	proposers = shuffleProposers(c.qualifiedValidators, proposersIndexes, valCtx.prevBlockResult.header.Hash())
+	proposers := shuffleProposers(c.qualifiedValidators, proposersIndexes, valCtx.prevBlockResult.header.Hash())
 
 	// store the calculated proposers
-	v.proposers.Add(num, proposers)
+	v.proposers.Add(pUpdateBlock, proposers)
 
-	return proposers.([]common.Address), nil
+	// return the calculated proposers
+	return proposers, nil
+}
+
+func pickRoundRobinProposer(cList valset.AddressList, policy ProposerPolicy, prevAuthor common.Address, round uint64) (common.Address, int) {
+	var (
+		lastProposerIdx = cList.GetIdxByAddress(prevAuthor)
+		seed            = round
+	)
+
+	if lastProposerIdx > -1 {
+		seed += uint64(lastProposerIdx)
+	}
+	if policy == RoundRobin && !common.EmptyAddress(prevAuthor) {
+		seed += 1
+	}
+
+	idx := int(seed) % len(cList)
+	return cList[idx], idx
+}
+
+func pickWeightedRandomProposer(proposers []common.Address, pUpdateBlock, num, round uint64, qualified valset.AddressList, author common.Address) (common.Address, int) {
+	proposer := proposers[(int(num+round)-int(pUpdateBlock))%len(proposers)]
+	idx := qualified.GetIdxByAddress(proposer)
+	if idx != -1 {
+		return proposer, idx
+	}
+
+	// fall-back to roundrobin proposer if proposer cannot found at qualified validators
+	logger.Warn("Failed to select a new proposer, thus fall back to roundRobinProposer")
+	return pickRoundRobinProposer(qualified, Sticky, author, round)
 }
 
 // CalcProposerBlockNumber returns number of block where list of proposers is updated for block blockNum
@@ -64,7 +94,7 @@ func calcProposerBlockNumber(blockNum uint64, proposerUpdateInterval uint64) uin
 }
 
 // proposersIndexes updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func calsSlotsInProposers(qualified subsetCouncilSlice, valCtx *valSetContext) []int {
+func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) []int {
 	var (
 		sInfo                     = valCtx.prevBlockResult.staking
 		pSet                      = valCtx.prevBlockResult.pSet
@@ -122,7 +152,7 @@ func calsSlotsInProposers(qualified subsetCouncilSlice, valCtx *valSetContext) [
 	return candidateValsIdx
 }
 
-func shuffleProposers(qualifiedVals subsetCouncilSlice, candidateValsIdx []int, prevHash common.Hash) []common.Address {
+func shuffleProposers(qualifiedVals valset.AddressList, candidateValsIdx []int, prevHash common.Hash) []common.Address {
 	// shuffle it
 	proposers := make([]common.Address, len(candidateValsIdx))
 	seed, err := convertHashToSeed(prevHash)

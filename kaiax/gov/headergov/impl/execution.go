@@ -10,21 +10,13 @@ import (
 
 func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 	if len(b.Header().Vote) > 0 {
-		var (
-			vb              headergov.VoteBytes = b.Header().Vote
-			name, vote, err                     = vb.ToVoteData()
-		)
-
-		// if vote.key is in ValSetVoteKeyMap, do nothing
-		if _, ok := gov.ValSetVoteKeyMap[name]; ok {
-			return nil
-		}
-
-		// otherwise, handle the votebyte
+		var vb headergov.VoteBytes = b.Header().Vote
+		vote, err := vb.ToVoteData()
 		if err != nil {
 			logger.Error("ToVoteData error", "vote", vb, "err", err)
 			return err
 		}
+
 		err = h.HandleVote(b.NumberU64(), vote)
 		if err != nil {
 			logger.Error("HandleVote error", "vote", vb, "err", err)
@@ -50,10 +42,7 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 }
 
 func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
-	if vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
-		h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
-		InsertVoteDataBlockNum(h.ChainKv, blockNum)
-	}
+	h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
 
 	// if the vote was mine, remove it.
 	for i, myvote := range h.myVotes {
@@ -64,6 +53,12 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 			break
 		}
 	}
+
+	// if vote.key is in ValSetVoteKeyMap, do not store the voteBlock.
+	if _, ok := gov.ValSetVoteKeyMap[vote.Name()]; ok {
+		return nil
+	}
+	InsertVoteDataBlockNum(h.ChainKv, blockNum)
 
 	return nil
 }

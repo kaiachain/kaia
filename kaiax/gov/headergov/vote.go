@@ -1,8 +1,10 @@
 package headergov
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
+	"reflect"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -24,7 +26,10 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		return nil
+		param, ok = gov.ValSetVoteKeyMap[gov.ParamName(name)]
+		if !ok {
+			return nil
+		}
 	}
 
 	if param.VoteForbidden {
@@ -91,7 +96,7 @@ func (vote *voteData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (vb VoteBytes) ToVoteData() (string, VoteData, error) {
+func (vb VoteBytes) ToVoteData() (VoteData, error) {
 	var v struct {
 		Validator common.Address
 		Key       string
@@ -100,15 +105,24 @@ func (vb VoteBytes) ToVoteData() (string, VoteData, error) {
 
 	err := rlp.DecodeBytes(vb, &v)
 	if err != nil {
-		return "", nil, ErrInvalidRlp
+		return nil, ErrInvalidRlp
 	}
 
 	vote := NewVoteData(v.Validator, v.Key, v.Value)
 	if vote == nil {
-		return v.Key, nil, ErrInvalidVoteData
+		return nil, ErrInvalidVoteData
 	}
 
-	return v.Key, vote, nil
+	return vote, nil
+}
+
+func (v *voteData) Equal(v2 *voteData) bool {
+	var (
+		isVoterEqual = bytes.Equal(v.voter.Bytes(), v2.voter.Bytes())
+		isNameEqual  = v.name == v2.name
+		isValueEqual = reflect.DeepEqual(v.value, v2.value)
+	)
+	return isVoterEqual && isNameEqual && isValueEqual
 }
 
 func (vb VoteBytes) String() string {

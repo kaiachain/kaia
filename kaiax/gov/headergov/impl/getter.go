@@ -36,10 +36,6 @@ func (h *headerGovModule) NodeAddress() common.Address {
 	return h.nodeAddress
 }
 
-func (h *headerGovModule) GetMyVotes() []headergov.VoteData {
-	return h.myVotes
-}
-
 func (h *headerGovModule) GetGovernanceHistory() headergov.History {
 	return h.cache.History()
 }

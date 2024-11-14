@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +27,7 @@ func TestCalcSlotsInProposers(t *testing.T) {
 			pSet:           testParamSets[0],
 		},
 	}
-	qualified := subsetCouncilSlice{tgn, n2, n3, n4}
+	qualified := valset.AddressList{tgn, n2, n3, n4}
 	expectProposersIndexes := []int{0, 1, 2, 3}
 	assert.Equal(t, expectProposersIndexes, calsSlotsInProposers(qualified, valSet))
 }
