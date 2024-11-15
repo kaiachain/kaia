@@ -307,13 +307,14 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.M
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-	intrinsicGas, err := types.IntrinsicGas(data, nil, to == nil, r)
-	if err != nil {
-		return nil, err
-	}
-
+	var intrinsicGas uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = simulateEthIntrinsicGas(intrinsicGas, data, r)
+		intrinsicGas, err = simulateEthIntrinsicGas(data, to == nil, r)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
 		if err != nil {
 			return nil, err
 		}
@@ -363,20 +364,11 @@ func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 }
 
 // simulate intrinsic gas amount for Ethereum
-func simulateEthIntrinsicGas(intrinsicGas uint64, data []byte, r params.Rules) (uint64, error) {
-	if r.IsIstanbul && !r.IsPrague {
-		kaiaPayloadGas, err := types.IntrinsicGasPayload(0, data, false, r)
-		if err != nil {
-			return 0, err
-		}
-		ethPayloadGas, err := types.IntrinsicGasPayload(0, data, false, params.Rules{IsPrague: true})
-		if err != nil {
-			return 0, err
-		}
-		return intrinsicGas - kaiaPayloadGas + ethPayloadGas, nil
+func simulateEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
+	if r.IsIstanbul {
+		r.IsPrague = true
 	}
-
-	return intrinsicGas, nil
+	return types.IntrinsicGas(data, nil, contractCreation, r)
 }
 
 // simulate mining reward for Ethereum
