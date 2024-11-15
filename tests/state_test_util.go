@@ -114,12 +114,12 @@ type stTransaction struct {
 }
 
 type stTransactionMarshaling struct {
-	GasPrice            *math.HexOrDecimal256
-	MaxFeePerGas        *math.HexOrDecimal256
-	MaxPriorityFeePerGa *math.HexOrDecimal256
-	Nonce               math.HexOrDecimal64
-	GasLimit            []math.HexOrDecimal64
-	PrivateKey          hexutil.Bytes
+	GasPrice             *math.HexOrDecimal256
+	MaxFeePerGas         *math.HexOrDecimal256
+	MaxPriorityFeePerGas *math.HexOrDecimal256
+	Nonce                math.HexOrDecimal64
+	GasLimit             []math.HexOrDecimal64
+	PrivateKey           hexutil.Bytes
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
