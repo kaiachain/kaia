@@ -164,9 +164,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	}
 
 	if isTestExecutionSpecState {
-		err = useEthGasPrice(config, &t.json)
-		if err != nil {
-			return nil, err
+		config.Governance = &params.GovernanceConfig{
+			Reward: &params.RewardConfig{
+				DeferredTxFee: true,
+			},
 		}
 	}
 
@@ -182,6 +183,12 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 		return nil, err
 	}
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), config)
+	if isTestExecutionSpecState {
+		txContext.GasPrice, err = useEthGasPrice(config, &t.json)
+		if err != nil {
+			return nil, err
+		}
+	}
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
 	blockContext.GetHash = vmTestBlockHash
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
@@ -193,7 +200,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	}
 
 	if isTestExecutionSpecState && err == nil {
-		useEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
+		useEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
 	}
 
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -326,9 +333,21 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // simulate gas price for Ethereum
-func useEthGasPrice(config *params.ChainConfig, json *stJSON) error {
+func useEthGasPrice(config *params.ChainConfig, json *stJSON) (*big.Int, error) {
+	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
+	var baseFee *big.Int
+	if config.IsLondonForkEnabled(new(big.Int)) {
+		baseFee = json.Env.BaseFee
+		if baseFee == nil {
+			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
+			// parent - 2 : 0xa as the basefee for 'this' context.
+			baseFee = big.NewInt(0x0a)
+		}
+	}
+
+	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L402-L416
 	gasPrice := json.Tx.GasPrice
-	if json.Env.BaseFee != nil {
+	if baseFee != nil {
 		if json.Tx.MaxFeePerGas == nil {
 			json.Tx.MaxFeePerGas = gasPrice
 		}
@@ -338,23 +357,14 @@ func useEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 		if json.Tx.MaxPriorityFeePerGas == nil {
 			json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
 		}
-		gasPrice = math.BigMin(new(big.Int).Add(json.Tx.MaxPriorityFeePerGas, json.Env.BaseFee), json.Tx.MaxFeePerGas)
+		gasPrice = math.BigMin(new(big.Int).Add(json.Tx.MaxPriorityFeePerGas, baseFee), json.Tx.MaxFeePerGas)
 	}
 
 	if gasPrice == nil {
-		return errors.New("no gas price provided")
+		return nil, errors.New("no gas price provided")
 	}
 
-	config.Governance = &params.GovernanceConfig{
-		Reward: &params.RewardConfig{
-			DeferredTxFee: true,
-		},
-		KIP71: &params.KIP71Config{
-			LowerBoundBaseFee: gasPrice.Uint64(),
-		},
-	}
-
-	return nil
+	return gasPrice, nil
 }
 
 // simulate intrinsic gas amount for Ethereum
@@ -366,12 +376,18 @@ func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uin
 }
 
 // simulate mining reward for Ethereum
-func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
+func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
 	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
-	effectiveTip := gasPrice
+	effectiveTip := new(big.Int).Set(gasPrice)
+
+	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
+	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/core/state_transition.go#L462-L465
 	if rules.IsLondon {
+		baseFee := new(big.Int).Set(envBaseFee)
 		if baseFee == nil {
-			baseFee = big.NewInt(10) // https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
+			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
+			// parent - 2 : 0xa as the basefee for 'this' context.
+			baseFee = big.NewInt(0x0a)
 		}
 		effectiveTip = math.BigMin(tx.MaxPriorityFeePerGas, new(big.Int).Sub(tx.MaxFeePerGas, baseFee))
 	}
