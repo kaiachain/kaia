@@ -332,7 +332,6 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-// simulate gas price for Ethereum
 func useEthGasPrice(config *params.ChainConfig, json *stJSON) (*big.Int, error) {
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
 	var baseFee *big.Int
@@ -367,7 +366,6 @@ func useEthGasPrice(config *params.ChainConfig, json *stJSON) (*big.Int, error) 
 	return gasPrice, nil
 }
 
-// simulate intrinsic gas amount for Ethereum
 func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
@@ -375,7 +373,6 @@ func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uin
 	return types.IntrinsicGas(data, nil, contractCreation, r)
 }
 
-// simulate mining reward for Ethereum
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
 	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
 	effectiveTip := new(big.Int).Set(gasPrice)
@@ -397,7 +394,6 @@ func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, 
 	statedb.AddBalance(evm.Context.Coinbase, fee)
 }
 
-// simulate state root for Ethereum
 func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
 	memDb := database.NewMemoryDBManager()
 	db := state.NewDatabase(memDb)
