@@ -74,10 +74,19 @@ func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
 	}
 
 	if ser.preserveExtHash {
-		pa, _ := ser.account.(ProgramAccount)
-		return pa.EncodeRLPExt(w)
-
+		if ser.accType == SmartContractAccountType {
+			if pa, ok := ser.account.(ProgramAccount); ok {
+				return pa.EncodeRLPExt(w)
+			}
+		} else if ser.accType == ExternallyOwnedAccountType {
+			if eoa, ok := ser.account.(*ExternallyOwnedAccount); ok {
+				if eoa.isEOAWithCode() {
+					return eoa.EncodeRLPExt(w)
+				}
+			}
+		}
 	}
+
 	return rlp.Encode(w, ser.account)
 }
 
@@ -157,6 +166,12 @@ func UnextendSerializedAccount(b []byte) (result []byte) {
 	acc := safeDecodeRLP(b)
 	if acc == nil {
 		return b // not an account
+	}
+
+	if eoa, ok := acc.(*ExternallyOwnedAccount); ok {
+		if eoa.isEOAWithCode() {
+			return b // normal EOA, no need to unextend
+		}
 	}
 
 	pa := GetProgramAccount(acc)

@@ -74,7 +74,7 @@ type externallyOwnedAccountSerializableJSON struct {
 func newExternallyOwnedAccount() *ExternallyOwnedAccount {
 	return &ExternallyOwnedAccount{
 		newAccountCommon(),
-		common.ExtHash{},
+		emptyRoot.ExtendZero(),
 		emptyCodeHash,
 		params.CodeInfo(0),
 	}
@@ -84,7 +84,7 @@ func newExternallyOwnedAccount() *ExternallyOwnedAccount {
 func newExternallyOwnedAccountWithMap(values map[AccountValueKeyType]interface{}) *ExternallyOwnedAccount {
 	return &ExternallyOwnedAccount{
 		newAccountCommonWithMap(values),
-		common.ExtHash{},
+		emptyRoot.ExtendZero(),
 		emptyCodeHash,
 		params.CodeInfo(0),
 	}
@@ -178,14 +178,14 @@ func (e *ExternallyOwnedAccount) fromSerializableExt(o *externallyOwnedAccountSe
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLP(w io.Writer) error {
-	if isEOAWithCode(e) {
+	if e.isEOAWithCode() {
 		return rlp.Encode(w, e.toSerializable())
 	}
 	return rlp.Encode(w, e.AccountCommon.toSerializable())
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLPExt(w io.Writer) error {
-	if isEOAWithCode(e) {
+	if e.isEOAWithCode() {
 		if e.storageRoot.IsZeroExtended() {
 			return rlp.Encode(w, e.toSerializable()) // EOA without code. [n, b, hR, k, 0x0, eCH, 0x0]
 		}
@@ -194,51 +194,52 @@ func (e *ExternallyOwnedAccount) EncodeRLPExt(w io.Writer) error {
 	return rlp.Encode(w, e.AccountCommon.toSerializable()) // EOA without code. [n, b, hR, k]
 }
 
-func isEOAWithCode(e *ExternallyOwnedAccount) bool {
+func (e *ExternallyOwnedAccount) isEOAWithCode() bool {
 	zeroHash := common.ExtHash{}
-	if e.codeHash == nil { // EOA without code. [n, b, hR, k] (Backwards Compatibility)
+
+	if e.codeHash == nil {
 		return false
-	} else if e.storageRoot == zeroHash && e.storageRoot.IsZeroExtended() && e.codeInfo == params.CodeInfo(0) { // EOA without code. [n, b, hR, k, 0x0, eCH, 0x0]
+	} else if (e.storageRoot == emptyRoot.ExtendZero() || e.storageRoot == zeroHash) &&
+		bytes.Equal(e.codeHash, emptyCodeHash) &&
+		e.codeInfo == params.CodeInfo(0) {
 		return false
-	} else if e.storageRoot == zeroHash || bytes.Equal(e.storageRoot.Bytes(), emptyRoot.Bytes()) {
-		return true
-	} else if bytes.Equal(e.codeHash, emptyCodeHash) || e.codeHash != nil {
-		return true
-	} else if e.codeInfo == params.CodeInfo(0) {
-		return true
 	}
-	return false
+	return true
+}
+
+func (e *ExternallyOwnedAccount) setDefaultValues() {
+	e.SetStorageRoot(emptyRoot.ExtendZero())
+	e.SetCodeHash(emptyCodeHash)
+	e.SetCodeInfo(params.CodeInfo(0))
 }
 
 func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
-	// Save original stream data
 	savedStream, err := s.Raw()
 	if err != nil {
 		return err
 	}
 
-	// Reset and check the first list structure
 	s.Reset(bytes.NewReader(savedStream), 0)
 	if _, err := s.List(); err != nil {
 		return err
 	}
 
-	// Check the type of first element inside the list
 	kind, _, err := s.Kind()
 	if err != nil {
 		return err
 	}
 
-	// Reset stream for actual decoding
 	s.Reset(bytes.NewReader(savedStream), 0)
 
 	if kind == rlp.List {
-		// Case 2: First element is a list - use extended format decoding
 		serializedExt := &externallyOwnedAccountSerializableExt{
 			CommonSerializable: newAccountCommonSerializable(),
 		}
 		if err := s.Decode(serializedExt); err == nil {
 			e.fromSerializableExt(serializedExt)
+			if !e.isEOAWithCode() {
+				e.setDefaultValues()
+			}
 			return nil
 		}
 
@@ -250,27 +251,38 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 			e.fromSerializable(serialized)
 			return nil
 		}
-		return err
-	} else {
-		// Case 1: First element is not a list - use AccountCommon.DecodeRLP
-		return e.AccountCommon.DecodeRLP(s)
+
+		s.Reset(bytes.NewReader(savedStream), 0)
+		if err := e.AccountCommon.DecodeRLP(s); err != nil {
+			return err
+		}
+		e.setDefaultValues()
+		return nil
 	}
+
+	if err := e.AccountCommon.DecodeRLP(s); err != nil {
+		return err
+	}
+
+	e.setDefaultValues()
+	return nil
 }
 
 func (e *ExternallyOwnedAccount) MarshalJSON() ([]byte, error) {
-	if e.codeHash != nil {
-		return json.Marshal(&externallyOwnedAccountSerializableJSON{
-			Nonce:         e.nonce,
-			Balance:       (*hexutil.Big)(e.balance),
-			HumanReadable: e.humanReadable,
-			Key:           accountkey.NewAccountKeySerializerWithAccountKey(e.key),
-			StorageRoot:   e.storageRoot.Unextend(), // Unextend for API compatibility
-			CodeHash:      e.codeHash,
-			CodeFormat:    e.codeInfo.GetCodeFormat(),
-			VmVersion:     e.codeInfo.GetVmVersion(),
-		})
+	if !e.isEOAWithCode() {
+		e.setDefaultValues()
 	}
-	return e.AccountCommon.MarshalJSON()
+
+	return json.Marshal(&externallyOwnedAccountSerializableJSON{
+		Nonce:         e.nonce,
+		Balance:       (*hexutil.Big)(e.balance),
+		HumanReadable: e.humanReadable,
+		Key:           accountkey.NewAccountKeySerializerWithAccountKey(e.key),
+		StorageRoot:   e.storageRoot.Unextend(), // Unextend for API compatibility
+		CodeHash:      e.codeHash,
+		CodeFormat:    e.codeInfo.GetCodeFormat(),
+		VmVersion:     e.codeInfo.GetVmVersion(),
+	})
 }
 
 func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
@@ -284,9 +296,14 @@ func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
 	e.balance = (*big.Int)(serialized.Balance)
 	e.humanReadable = serialized.HumanReadable
 	e.key = serialized.Key.GetKey()
-	e.storageRoot = serialized.StorageRoot.ExtendZero() // API inputs should contain merkle hash
+
+	e.storageRoot = serialized.StorageRoot.ExtendZero()
 	e.codeHash = serialized.CodeHash
-	// e.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
+	e.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
+
+	if !e.isEOAWithCode() {
+		e.setDefaultValues()
+	}
 
 	return nil
 }

@@ -131,7 +131,6 @@ func TestAccountSerializer(t *testing.T) {
 		codehash     = common.HexToHash("aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd").Bytes()
 		codehashB64  = "qqqqqru7u7vMzMzM3d3d3aqqqqq7u7u7zMzMzN3d3d0="
 		codeinfo     = params.CodeInfo(0x10) // VmVersion=1 (Istanbul+), CodeFormat=0 (EVM)
-		roothashZero = common.HexToHash("0000000000000000000000000000000000000000000000000000000000000000")
 		codeinfoZero = params.CodeInfo(0)
 	)
 
@@ -161,6 +160,10 @@ func TestAccountSerializer(t *testing.T) {
 					"balance":       "0x0",
 					"humanReadable": false,
 					"key":           legacyKeyJson,
+					"storageRoot":   emptyRoot,
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
 				},
 			},
 		},
@@ -179,6 +182,10 @@ func TestAccountSerializer(t *testing.T) {
 					"balance":       "0x12345678",
 					"humanReadable": false,
 					"key":           legacyKeyJson,
+					"storageRoot":   emptyRoot,
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
 				},
 			},
 		},
@@ -197,6 +204,10 @@ func TestAccountSerializer(t *testing.T) {
 					"balance":       "0x12345678",
 					"humanReadable": false,
 					"key":           pubKeyJson,
+					"storageRoot":   emptyRoot,
+					"codeHash":      emptyCodeHash,
+					"codeFormat":    0,
+					"vmVersion":     0,
 				},
 			},
 		},
@@ -255,7 +266,7 @@ func TestAccountSerializer(t *testing.T) {
 			"Initialize new type of EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFields,
-				storageRoot:   roothashZero.ExtendZero(),
+				storageRoot:   emptyRoot.ExtendZero(),
 				codeHash:      emptyCodeHash,
 				codeInfo:      codeinfoZero,
 			},
@@ -269,7 +280,7 @@ func TestAccountSerializer(t *testing.T) {
 					"balance":       "0x12345678",
 					"humanReadable": false,
 					"key":           legacyKeyJson,
-					"storageRoot":   roothashZero.Hex(),
+					"storageRoot":   emptyRoot,
 					"codeHash":      emptyCodeHash,
 					"codeFormat":    0,
 					"vmVersion":     0,

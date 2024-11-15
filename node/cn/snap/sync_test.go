@@ -1646,12 +1646,14 @@ func TestSyncAccountPerformance(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems := makeAccountTrieNoStorage(100)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
 
 	mkSource := func(name string) *testPeer {
 		source := newTestPeer(name, t, term)
 		source.accountTrie = sourceAccountTrie
 		source.accountValues = elems
+		source.storageTries = storageTries
+		source.storageValues = storageElems
 		return source
 	}
 	src := mkSource("source")
