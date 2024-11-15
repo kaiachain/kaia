@@ -164,7 +164,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	}
 
 	if isTestExecutionSpecState {
-		err = simulateEthGasPrice(config, &t.json)
+		err = useEthGasPrice(config, &t.json)
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +193,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	}
 
 	if isTestExecutionSpecState && err == nil {
-		simulateEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
+		useEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, new(big.Int).SetUint64(config.Governance.KIP71.LowerBoundBaseFee))
 	}
 
 	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
@@ -211,7 +211,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	root = statedb.IntermediateRoot(true)
 
 	if isTestExecutionSpecState {
-		root, err = simulateEthStateRoot(statedb)
+		root, err = useEthStateRoot(statedb)
 		if err != nil {
 			return nil, err
 		}
@@ -303,7 +303,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = simulateEthIntrinsicGas(data, to == nil, r)
+		intrinsicGas, err = useEthIntrinsicGas(data, to == nil, r)
 		if err != nil {
 			return nil, err
 		}
@@ -326,7 +326,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 // simulate gas price for Ethereum
-func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
+func useEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 	gasPrice := json.Tx.GasPrice
 	if json.Env.BaseFee != nil {
 		if json.Tx.MaxFeePerGas == nil {
@@ -358,7 +358,7 @@ func simulateEthGasPrice(config *params.ChainConfig, json *stJSON) error {
 }
 
 // simulate intrinsic gas amount for Ethereum
-func simulateEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
@@ -366,7 +366,7 @@ func simulateEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules)
 }
 
 // simulate mining reward for Ethereum
-func simulateEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
+func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, baseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
 	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
 	effectiveTip := gasPrice
 	if rules.IsLondon {
@@ -382,7 +382,7 @@ func simulateEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransact
 }
 
 // simulate state root for Ethereum
-func simulateEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
+func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
 	memDb := database.NewMemoryDBManager()
 	db := state.NewDatabase(memDb)
 	newState, _ := state.New(common.Hash{}, db, nil, nil)
