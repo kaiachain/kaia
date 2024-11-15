@@ -122,12 +122,6 @@ type stTransactionMarshaling struct {
 	PrivateKey          hexutil.Bytes
 }
 
-var isTestExecutionSpecState bool
-
-func enableTestExecutionSpecState(enable bool) {
-	isTestExecutionSpecState = enable
-}
-
 // getVMConfig takes a fork definition and returns a chain config.
 // The fork definition can be
 // - a plain forkname, e.g. `Byzantium`,
@@ -163,7 +157,7 @@ func (t *StateTest) Subtests() []StateSubtest {
 }
 
 // Run executes a specific subtest.
-func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateDB, error) {
+func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutionSpecState bool) (*state.StateDB, error) {
 	config, eips, err := getVMConfig(subtest.Fork)
 	if err != nil {
 		return nil, UnsupportedForkError{subtest.Fork}
@@ -183,7 +177,7 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config) (*state.StateD
 	statedb := MakePreState(memDBManager, t.json.Pre)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	msg, err := t.json.Tx.toMessage(post, config.Rules(block.Number()))
+	msg, err := t.json.Tx.toMessage(post, config.Rules(block.Number()), isTestExecutionSpecState)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +255,7 @@ func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	}
 }
 
-func (tx *stTransaction) toMessage(ps stPostState, r params.Rules) (blockchain.Message, error) {
+func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecutionSpecState bool) (blockchain.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {

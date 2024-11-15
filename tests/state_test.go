@@ -36,7 +36,6 @@ import (
 // TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
 func TestKaiaSpecState(t *testing.T) {
 	common.RelaxPrecompileRangeForTest(false)
-	enableTestExecutionSpecState(false)
 
 	t.Parallel()
 
@@ -63,14 +62,13 @@ func TestKaiaSpecState(t *testing.T) {
 	st.skipLoad(`^stRandom2/randomStatetest642.json`)
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
-		execStateTest(t, st, test, name, []string{"Constantinople"})
+		execStateTest(t, st, test, name, []string{"Constantinople"}, false)
 	})
 }
 
 // TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
 func TestExecutionSpecState(t *testing.T) {
 	common.RelaxPrecompileRangeForTest(true)
-	enableTestExecutionSpecState(true)
 
 	if !common.FileExist(executionSpecStateTestDir) {
 		t.Skipf("directory %s does not exist", executionSpecStateTestDir)
@@ -103,11 +101,11 @@ func TestExecutionSpecState(t *testing.T) {
 			// "Shanghai",
 			// "Cancun",
 			// "Prague",
-		})
+		}, true)
 	})
 }
 
-func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string) {
+func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
 	for _, subtest := range test.Subtests() {
 		subtest := subtest
 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
@@ -119,7 +117,7 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, 
 				}
 			}
 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-				_, err := test.Run(subtest, vmconfig)
+				_, err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
 				return st.checkFailure(t, name, err)
 			})
 		})
