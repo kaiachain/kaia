@@ -58,12 +58,13 @@ func createSimulateBackend(t *testing.T) ([]*bind.TransactOpts, *backends.Simula
 
 func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr common.Address) *contractGovModule {
 	mockHGM := headergov_mock.NewMockHeaderGovModule(gomock.NewController(t))
-	cgm := &contractGovModule{}
-	cgm.Init(&InitOpts{
+	cgm := NewContractGovModule()
+	err := cgm.Init(&InitOpts{
 		Chain:       bc,
 		ChainConfig: &params.ChainConfig{KoreCompatibleBlock: big.NewInt(100)},
 		Hgm:         mockHGM,
 	})
+	require.Nil(t, err)
 	mockHGM.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{GovParamContract: addr}).AnyTimes()
 	return cgm
 }

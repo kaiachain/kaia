@@ -43,7 +43,7 @@ func NewContractGovModule() *contractGovModule {
 }
 
 func (c *contractGovModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.ChainConfig.Istanbul == nil || opts.Hgm == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.Hgm == nil {
 		return ErrInitNil
 	}
 

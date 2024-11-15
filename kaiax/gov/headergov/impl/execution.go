@@ -61,7 +61,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 func (h *headerGovModule) HandleGov(blockNum uint64, gov headergov.GovData) error {
 	h.cache.AddGov(blockNum, gov)
 
-	var data StoredUint64Array = h.cache.GovBlockNums()
-	WriteGovDataBlockNums(h.ChainKv, &data)
+	data := h.cache.GovBlockNums()
+	WriteGovDataBlockNums(h.ChainKv, data)
 	return nil
 }

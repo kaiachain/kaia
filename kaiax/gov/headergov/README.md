@@ -92,6 +92,16 @@ num  |  effective parameter set at num
   ```
   "governanceDataBlockNums" => JSON.Marshal([num1, num2, ...])
   ```
+  
+- `lowestVoteScannedBlockNumKey`: The lowest block number whose vote data is scanned. That is, only vote block numbers which are greater than or equal to this value are stored in `governanceVoteDataBlockNums`. Grows downwards by `epoch` blocks.
+  ```
+  "governanceLowestVoteScannedBlockNum" => Uint64BE(num)
+  ```
+
+- `legacyIdxHistoryKey`: legacy governance data block numbers.
+  ```
+  "governanceIdxHistory" => JSON.Marshal([num1, num2, ...])
+  ```
 
 ## In-memory Structures
 

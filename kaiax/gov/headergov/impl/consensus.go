@@ -36,11 +36,12 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 }
 
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
-	// if epoch block & vote exists in the last epoch, put Governance to header.
+	// if this node has a vote waiting to be casted, put Vote field.
 	if len(h.myVotes) > 0 {
 		header.Vote, _ = h.myVotes[0].ToVoteBytes()
 	}
 
+	// if epoch block & vote exists in the last epoch, put Governance field.
 	if header.Number.Uint64()%h.epoch == 0 {
 		gov := h.getExpectedGovernance(header.Number.Uint64())
 		if len(gov.Items()) > 0 {

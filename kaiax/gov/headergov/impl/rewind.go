@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"slices"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
@@ -10,13 +12,18 @@ func (h *headerGovModule) RewindTo(newBlock *types.Block) {
 }
 
 func (h *headerGovModule) RewindDelete(hash common.Hash, num uint64) {
+	votesOld := h.cache.VoteBlockNums()
+	govOld := h.cache.GovBlockNums()
+
 	h.cache.RemoveVotesAfter(num)
 	h.cache.RemoveGovAfter(num)
 
 	// Update stored block numbers for votes and governance
-	var voteBlockNums StoredUint64Array = h.cache.VoteBlockNums()
-	WriteVoteDataBlockNums(h.ChainKv, &voteBlockNums)
+	if votesNew := h.cache.VoteBlockNums(); !slices.Equal(votesOld, votesNew) {
+		WriteVoteDataBlockNums(h.ChainKv, votesNew)
+	}
 
-	var govBlockNums StoredUint64Array = h.cache.GovBlockNums()
-	WriteGovDataBlockNums(h.ChainKv, &govBlockNums)
+	if govNew := h.cache.GovBlockNums(); !slices.Equal(govOld, govNew) {
+		WriteGovDataBlockNums(h.ChainKv, govNew)
+	}
 }

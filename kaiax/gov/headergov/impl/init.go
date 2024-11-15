@@ -1,9 +1,7 @@
 package impl
 
 import (
-	"encoding/json"
 	"math/big"
-	"sort"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -67,30 +65,8 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 
 	// 1. Init gov. If Gov DB is empty, migrate from legacy governance DB.
 	if ReadGovDataBlockNums(h.ChainKv) == nil {
-		// equals to chainDB.ReadRecentGovernanceIdx(0)
-		readRecentGovIdx := func() ([]uint64, error) {
-			if history, err := h.ChainKv.Get([]byte("governanceIdxHistory")); err != nil {
-				return nil, err
-			} else {
-				idxHistory := make([]uint64, 0)
-				if e := json.Unmarshal(history, &idxHistory); e != nil {
-					return nil, e
-				}
-
-				// Make sure idxHistory should be in ascending order
-				sort.Slice(idxHistory, func(i, j int) bool {
-					return idxHistory[i] < idxHistory[j]
-				})
-
-				return idxHistory, nil
-			}
-		}
-		govIndices, err := readRecentGovIdx()
-		if err != nil {
-			panic("Failed to read recent governance idx")
-		}
-		govIndicesStoredArray := StoredUint64Array(govIndices)
-		WriteGovDataBlockNums(h.ChainKv, &govIndicesStoredArray)
+		legacyGovBlockNums := ReadLegacyIdxHistory(h.ChainKv)
+		WriteGovDataBlockNums(h.ChainKv, legacyGovBlockNums)
 	}
 
 	h.cache = headergov.NewHeaderGovCache()
@@ -201,16 +177,14 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {
 	voteBlocks := ReadVoteDataBlockNums(db)
 	votes := make(map[uint64]headergov.VoteData)
-	if voteBlocks != nil {
-		for _, blockNum := range *voteBlocks {
-			header := chain.GetHeaderByNumber(blockNum)
-			parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
-			if err != nil {
-				panic(err)
-			}
-
-			votes[blockNum] = parsedVote
+	for _, blockNum := range voteBlocks {
+		header := chain.GetHeaderByNumber(blockNum)
+		parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+		if err != nil {
+			panic(err)
 		}
+
+		votes[blockNum] = parsedVote
 	}
 
 	return votes
@@ -222,10 +196,10 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 
 	// TODO: in production, govBlocks must not be nil. Remove this after implementing kcn init and data migration.
 	if govBlocks == nil {
-		govBlocks = &StoredUint64Array{0}
+		govBlocks = StoredUint64Array{0}
 	}
 
-	for _, blockNum := range *govBlocks {
+	for _, blockNum := range govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
 
 		parsedGov, err := headergov.GovBytes(header.Governance).ToGovData()
