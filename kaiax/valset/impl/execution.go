@@ -90,8 +90,8 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 		addresses = vote.Value().([]common.Address)
 	}
 
-	// GovernanceAddValidator:    appends new validators only if it does not exist in current valSet
-	// GovernanceRemoveValidator: delete the existing validator only if it exists in current valSet
+	// AddValidator:    appends new validators only if it does not exist in current valSet
+	// RemoveValidator: delete the existing validator only if it exists in current valSet
 	for _, address := range addresses {
 		if address == govNode {
 			return nil, errInvalidVoteValue
@@ -100,13 +100,13 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 
 		//nolint:exhaustive
 		switch vote.Name() {
-		case gov.GovernanceAddValidator:
+		case gov.AddValidator:
 			if idx == -1 {
 				c = append(c, address)
 			} else {
 				return nil, errInvalidVoteValue
 			}
-		case gov.GovernanceRemoveValidator:
+		case gov.RemoveValidator:
 			if idx != -1 {
 				c = append(c[:idx], c[idx+1:]...)
 			} else {

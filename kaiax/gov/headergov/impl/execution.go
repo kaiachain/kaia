@@ -59,19 +59,30 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 		}
 	}
 
-	// if vote.key is in ValSetVoteKeyMap, do not store the voteBlock.
-	if _, ok := gov.ValSetVoteKeyMap[vote.Name()]; ok {
-		return nil
-	}
-	InsertVoteDataBlockNum(h.ChainKv, blockNum)
-
 	return nil
 }
 
 func (h *headerGovModule) HandleGov(blockNum uint64, gov headergov.GovData) error {
-	h.cache.AddGov(blockNum, gov)
+	h.AddGov(blockNum, gov)
 
-	var data StoredUint64Array = h.cache.GovBlockNums()
-	WriteGovDataBlockNums(h.ChainKv, &data)
+	WriteGovDataBlockNums(h.ChainKv, h.GovBlockNums())
 	return nil
+}
+
+func (h *headerGovModule) AddGov(blockNum uint64, gov headergov.GovData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.governances[blockNum] = gov
+	h.history = headergov.GovsToHistory(h.governances)
+}
+
+func (h *headerGovModule) AddVote(epochIdx, blockNum uint64, vote headergov.VoteData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if _, ok := h.groupedVotes[epochIdx]; !ok {
+		h.groupedVotes[epochIdx] = make(headergov.VotesInEpoch)
+	}
+	h.groupedVotes[epochIdx][blockNum] = vote
 }

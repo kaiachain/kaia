@@ -182,7 +182,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
 		}
-	case gov.GovernanceAddValidator, gov.GovernanceRemoveValidator:
+	case gov.AddValidator, gov.RemoveValidator:
 		params := h.EffectiveParamSet(blockNum)
 
 		if params.GovernanceMode != "single" {
@@ -222,7 +222,10 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 	if lowestVoteScannedBlockNum <= calcEpochStartBlock(epochIdx, h.epoch) {
 		logger.Info("scanning votes fastpath")
 		votes := make(map[uint64]headergov.VoteData)
-		for blockNum, vote := range h.cache.GroupedVotes()[epochIdx] {
+
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		for blockNum, vote := range h.groupedVotes[epochIdx] {
 			votes[blockNum] = vote
 		}
 		return votes

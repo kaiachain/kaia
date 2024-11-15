@@ -13,6 +13,8 @@ import (
 )
 
 type VoteBytes []byte
+type VotesInEpoch map[uint64]VoteData
+type GroupedVotesMap map[uint64]VotesInEpoch
 
 type voteData struct {
 	voter common.Address
@@ -26,7 +28,7 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		param, ok = gov.ValidatorParams[gov.ValidatorParamName(name)]
+		param, ok = gov.ValidatorParams[gov.ParamName(name)]
 		if !ok {
 			return nil
 		}

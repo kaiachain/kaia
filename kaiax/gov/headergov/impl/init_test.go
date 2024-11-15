@@ -36,8 +36,8 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		gov, _ = headergov.NewGovData(m).ToGovBytes()
 	)
 
-	WriteVoteDataBlockNums(db, &StoredUint64Array{})
-	WriteGovDataBlockNums(db, &StoredUint64Array{0})
+	WriteVoteDataBlockNums(db, StoredUint64Array{})
+	WriteGovDataBlockNums(db, StoredUint64Array{0})
 	genesisHeader := &types.Header{
 		Number:     big.NewInt(0),
 		Governance: gov,
@@ -91,7 +91,7 @@ func TestReadGovVoteBlockNumsFromDB(t *testing.T) {
 		chain.EXPECT().GetHeaderByNumber(num).Return(&types.Header{Vote: headerVoteData})
 		voteDataBlockNums = append(voteDataBlockNums, num)
 	}
-	WriteVoteDataBlockNums(db, &voteDataBlockNums)
+	WriteVoteDataBlockNums(db, voteDataBlockNums)
 
 	assert.Equal(t, votes, readVoteDataFromDB(chain, db))
 }
@@ -104,7 +104,7 @@ func TestReadGovDataFromDB(t *testing.T) {
 	ps1 := &gov.ParamSet{UnitPrice: uint64(100)}
 	ps2 := &gov.ParamSet{UnitPrice: uint64(200)}
 
-	WriteGovDataBlockNums(db, &StoredUint64Array{1, 2})
+	WriteGovDataBlockNums(db, StoredUint64Array{1, 2})
 
 	govs := map[uint64]headergov.GovData{
 		1: headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: ps1.UnitPrice}),

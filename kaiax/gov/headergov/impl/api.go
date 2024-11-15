@@ -78,7 +78,7 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {
-	return api.h.cache.GovBlockNums()
+	return api.h.GovBlockNums()
 }
 
 func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesResponse {
@@ -132,10 +132,13 @@ func (api *headerGovAPI) MyVotes() []MyVotesResponse {
 }
 
 func (api *headerGovAPI) Status() StatusResponse {
+	api.h.mu.RLock()
+	defer api.h.mu.RUnlock()
+
 	return StatusResponse{
-		GroupedVotes: api.h.cache.GroupedVotes(),
-		Governances:  api.h.cache.Govs(),
-		GovHistory:   api.h.cache.History(),
+		GroupedVotes: api.h.groupedVotes,
+		Governances:  api.h.governances,
+		GovHistory:   api.h.history,
 		NodeAddress:  api.h.nodeAddress,
 		MyVotes:      api.h.myVotes,
 	}
