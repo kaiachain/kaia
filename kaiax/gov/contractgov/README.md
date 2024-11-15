@@ -4,7 +4,7 @@ This module is responsible for providing the governance parameter set from **con
 
 ## Concepts
 
-Please read [gov module](../gov/README.md) and [header governance](../headergov/README.md) first.
+Please read [gov module](../README.md) and [header governance](../headergov/README.md) first.
 
 ### Key Concepts
 
@@ -84,7 +84,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- `EffectiveParamSet(num)`: Returns the effective parameter set at the block `num`.
+- `EffectiveParamSet(num)`: Returns the effective parameter set at the block `num`. Those not specified in the contract are filled with defaults (defined [here](../param.go)).
 
   ```
   EffectiveParamSet(num) -> ParamSet

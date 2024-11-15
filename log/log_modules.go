@@ -131,6 +131,8 @@ const (
 	KaiaxStaking
 	KaiaxReward
 	KaiaxSupply
+
+	// 61~70
 	KaiaxGov
 
 	// ModuleNameLen should be placed at the end of the list.
@@ -212,4 +214,7 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax/staking",
 	"kaiax/reward",
 	"kaiax/supply",
+
+	// 61~70
+	"kaiax/gov",
 }

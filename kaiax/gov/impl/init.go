@@ -31,9 +31,7 @@ type BlockChain interface {
 }
 
 type GovModule struct {
-	hgm   headergov.HeaderGovModule
-	cgm   contractgov.ContractGovModule
-	chain BlockChain
+	InitOpts
 }
 
 type InitOpts struct {
@@ -47,34 +45,28 @@ func NewGovModule() *GovModule {
 }
 
 func (m *GovModule) Init(opts *InitOpts) error {
-	if opts == nil {
+	if opts == nil || opts.Hgm == nil || opts.Cgm == nil || opts.Chain == nil || opts.Chain.Config() == nil {
 		return gov.ErrInitNil
 	}
 
-	m.hgm = opts.Hgm
-	m.cgm = opts.Cgm
-	m.chain = opts.Chain
-
-	if m.hgm == nil || m.cgm == nil || m.chain == nil || m.chain.Config() == nil {
-		return gov.ErrInitNil
-	}
+	m.InitOpts = *opts
 	return nil
 }
 
 func (m *GovModule) Start() error {
 	logger.Info("GovModule started")
 	return errors.Join(
-		m.hgm.Start(),
-		m.cgm.Start(),
+		m.Hgm.Start(),
+		m.Cgm.Start(),
 	)
 }
 
 func (m *GovModule) Stop() {
 	logger.Info("GovModule stopped")
-	m.hgm.Stop()
-	m.cgm.Stop()
+	m.Hgm.Stop()
+	m.Cgm.Stop()
 }
 
 func (m *GovModule) isKoreHF(num uint64) bool {
-	return m.chain.Config().IsKoreForkEnabled(new(big.Int).SetUint64(num))
+	return m.Chain.Config().IsKoreForkEnabled(new(big.Int).SetUint64(num))
 }

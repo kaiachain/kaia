@@ -85,7 +85,7 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 }
 
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
-	headerParams := c.hgm.EffectiveParamSet(blockNum)
+	headerParams := c.Hgm.EffectiveParamSet(blockNum)
 	return headerParams.GovParamContract, nil
 }
 

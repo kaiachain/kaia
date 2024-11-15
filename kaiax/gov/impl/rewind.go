@@ -6,9 +6,9 @@ import (
 )
 
 func (m *GovModule) RewindTo(newBlock *types.Block) {
-	m.hgm.RewindTo(newBlock)
+	m.Hgm.RewindTo(newBlock)
 }
 
 func (m *GovModule) RewindDelete(hash common.Hash, num uint64) {
-	m.hgm.RewindDelete(hash, num)
+	m.Hgm.RewindDelete(hash, num)
 }

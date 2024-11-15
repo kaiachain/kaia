@@ -35,9 +35,7 @@ type InitOpts struct {
 }
 
 type contractGovModule struct {
-	ChainConfig *params.ChainConfig
-	Chain       chain
-	hgm         headergov.HeaderGovModule
+	InitOpts
 }
 
 func NewContractGovModule() *contractGovModule {
@@ -45,17 +43,11 @@ func NewContractGovModule() *contractGovModule {
 }
 
 func (c *contractGovModule) Init(opts *InitOpts) error {
-	if opts == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.ChainConfig.Istanbul == nil || opts.Hgm == nil {
 		return ErrInitNil
 	}
 
-	c.ChainConfig = opts.ChainConfig
-	c.Chain = opts.Chain
-	c.hgm = opts.Hgm
-	if c.ChainConfig == nil || c.ChainConfig.Istanbul == nil || c.hgm == nil {
-		return ErrInitNil
-	}
-
+	c.InitOpts = *opts
 	return nil
 }
 

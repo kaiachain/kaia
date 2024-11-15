@@ -5,5 +5,5 @@ import (
 )
 
 func (g *GovModule) PostInsertBlock(b *types.Block) error {
-	return g.hgm.PostInsertBlock(b)
+	return g.Hgm.PostInsertBlock(b)
 }

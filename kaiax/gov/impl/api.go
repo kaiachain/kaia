@@ -10,7 +10,7 @@ import (
 )
 
 func (g *GovModule) APIs() []rpc.API {
-	ret := append(g.hgm.APIs(), g.cgm.APIs()...)
+	ret := append(g.Hgm.APIs(), g.Cgm.APIs()...)
 	return append(ret, []rpc.API{
 		{
 			Namespace: "governance",
@@ -44,7 +44,7 @@ func (api *GovAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 }
 
 func (api *GovAPI) NodeAddress() (common.Address, error) {
-	return api.g.hgm.NodeAddress(), nil
+	return api.g.Hgm.NodeAddress(), nil
 }
 
 func NewKaiaAPI(g *GovModule) *KaiaAPI {
@@ -62,13 +62,13 @@ func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error)
 func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = g.chain.CurrentBlock().NumberU64()
+		blocknum = g.Chain.CurrentBlock().NumberU64()
 	} else {
 		blocknum = num.Uint64()
 	}
 
 	pset := g.EffectiveParamSet(blocknum)
-	latestConfig := g.chain.Config()
+	latestConfig := g.Chain.Config()
 	config := pset.ToGovParamSet().ToChainConfig()
 	config.ChainID = latestConfig.ChainID
 	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
@@ -96,21 +96,21 @@ func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
 
 	// The staking info at blockNumber is calculated by the state of previous block
 	blockNumber--
-	if !g.chain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
+	if !g.Chain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
 		return nil
 	}
-	header := g.chain.GetHeaderByNumber(blockNumber)
+	header := g.Chain.GetHeaderByNumber(blockNumber)
 	if header == nil {
 		return gov.ErrUnknownBlock
 	}
-	_, err := g.chain.StateAt(header.Root)
+	_, err := g.Chain.StateAt(header.Root)
 	return err
 }
 
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = g.chain.CurrentBlock().NumberU64()
+		blockNumber = g.Chain.CurrentBlock().NumberU64()
 	} else {
 		blockNumber = uint64(num.Int64())
 	}
@@ -119,7 +119,7 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 	ret := gp.ToMap()
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
-	rule := g.chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
+	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
 	if rule.IsKore {
 		// Gini option deprecated since Kore, as All committee members have an equal chance
 		// of being elected block proposers.
@@ -145,5 +145,5 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 }
 
 func (api *KaiaAPI) NodeAddress() common.Address {
-	return api.g.hgm.NodeAddress()
+	return api.g.Hgm.NodeAddress()
 }

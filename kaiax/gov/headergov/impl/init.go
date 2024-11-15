@@ -50,7 +50,7 @@ func NewHeaderGovModule() *headerGovModule {
 }
 
 func (h *headerGovModule) Init(opts *InitOpts) error {
-	if opts == nil {
+	if opts == nil || opts.ChainKv == nil || opts.ChainConfig == nil || opts.ChainConfig.Istanbul == nil || opts.Chain == nil {
 		return ErrInitNil
 	}
 
@@ -59,9 +59,6 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.Chain = opts.Chain
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
-	if h.ChainKv == nil || h.ChainConfig == nil || h.ChainConfig.Istanbul == nil || h.Chain == nil {
-		return ErrInitNil
-	}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {

@@ -4,20 +4,20 @@ This module is responsible for providing the governance parameter set from **hea
 
 ## Concepts
 
-Please read [gov module](../gov/README.md) first.
+Please read [gov module](../README.md) first.
 
 ### Key Concepts
 
 - _vote_: a vote for a parameter change.
-- _ratification_: votes in an epoch are declared as ratified.
-- _epoch_: a fixed period for header governance ratification. In Mainnet and Kairos, epoch is 604800 blocks (1 week).
-- _epoch index_: the index of the epoch, starting from 0. Given a block number `N`, its epoch index is `N / epoch`. In other words, all blocks in `[k*epoch, (k+1)*epoch - 1]` belong to the `k`-th epoch.
+- _ratification_: votes in an epoch being declared as ratified (accepted).
+- _epoch_: a fixed period for header governance ratification. Defined in the genesis block. In Mainnet and Kairos, epoch is 604800 blocks (1 week).
+- _epoch index_: the index of the epoch, starting from 0. Given a block number `N`, its epoch index is `floor(N / epoch)`. In other words, all blocks in `[k*epoch, (k+1)*epoch - 1]` belong to the `k`-th epoch.
 - _effective parameter set at blockNum_: the governance parameter set that are effective when mining the given block.
 
 ### Header governance
 
 Header governance is the process of changing the governance parameters among members of the GC via block header.
-This module writes and interprets block header's `Vote` and `Governance` fields. Note that this module does not handle validator addition/removal in `header.Vote`.
+This module writes and interprets block header's `Vote` and `Governance` fields. Note that this module writes validator addition/removal votes to `header.Vote`, but does not read them from `header.Vote` which is left to the kaiax/valset module.
 
 ```
       vote         ratified    vote   vote   ratified
@@ -45,7 +45,7 @@ The ratification condition is determined by the `governance.governancemode` para
 - `none` mode: all members of the GC can vote. For each governance parameter, the last vote in the epoch will be ratified.
 - `single` mode: only one member of the GC, stipulated in the parameter `governance.governingnode`, can vote. The vote will be ratified if it is the only vote in the epoch.
 
-A ratification at `k*epoch` block takes place starting from `(k+1)*epoch` block.
+Parameter change ratified at `k*epoch` block takes effect starting from `(k+1)*epoch` block.
 It is worth noting that the effective time of the ratification is `(k+1)*epoch + 1` before Kore.
 
 ### Reading a parameter set
@@ -84,7 +84,14 @@ num  |  effective parameter set at num
 ## Persistent Schema
 
 - `governanceVoteDataBlockNums`: The block numbers whose header contains the vote data.
+  ```
+  "governanceVoteDataBlockNums" => JSON.Marshal([num1, num2, ...])
+  ```
+
 - `governanceDataBlockNums`: The block numbers whose header contains the governance data.
+  ```
+  "governanceDataBlockNums" => JSON.Marshal([num1, num2, ...])
+  ```
 
 ## In-memory Structures
 
@@ -129,7 +136,7 @@ See [impl/api.go](./impl/api.go).
 
 ### MyVotesResponse
 
-The response type for `governance_myVotes`. `MyVotes` indicates all votes that the node casted in this epoch and will cast when it becomes a proposer.
+The response type for `governance_myVotes`. `MyVotes` contains votes that the current node has casted in this epoch, and votes waiting to be casted when the node becomes a proposer.
 
 See [impl/api.go](./impl/api.go).
 
@@ -214,7 +221,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ### governance_idxCache
 
-Returns all vote block numbers from cache.
+Returns all vote block numbers from cache. The API name is retained for legacy compatibility.
 
 - Parameters: none
 - Returns
@@ -253,7 +260,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ### governance_myVotes
 
-Returns all votes that the node casted in this epoch and will cast when it becomes a proposer.
+Returns `MyVotes` which contains votes that the current node has casted in this epoch, and votes waiting to be casted when the node becomes a proposer.
 
 - Parameters: none
 - Returns

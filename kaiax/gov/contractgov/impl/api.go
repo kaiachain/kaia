@@ -32,7 +32,7 @@ func (api *contractGovAPI) GetContractParams(num rpc.BlockNumber, govParam *comm
 		govParamAddr = *govParam
 	} else {
 		// Use default GovParam address from headergov
-		govParamAddr = api.c.hgm.EffectiveParamSet(blockNum).GovParamContract
+		govParamAddr = api.c.Hgm.EffectiveParamSet(blockNum).GovParamContract
 	}
 
 	params, err := api.c.contractGetAllParamsAtFromAddr(blockNum, govParamAddr)
