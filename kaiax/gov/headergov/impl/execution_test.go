@@ -14,11 +14,7 @@ import (
 )
 
 func TestPostInsertBlock(t *testing.T) {
-	h := newHeaderGovModule(t, &params.ChainConfig{
-		Istanbul: &params.IstanbulConfig{
-			Epoch: 10,
-		},
-	})
+	h := newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 10}})
 	vote, _ := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 	gov, _ := headergov.NewGovData(gov.PartialParamSet{
 		gov.GovernanceUnitPrice: uint64(100),
@@ -33,16 +29,16 @@ func TestPostInsertBlock(t *testing.T) {
 		Governance: gov,
 	})
 
-	require.Equal(t, 0, len(h.cache.GroupedVotes()))
-	require.Equal(t, 1, len(h.cache.Govs())) // gov at genesis
+	require.Equal(t, 0, len(h.groupedVotes))
+	require.Equal(t, 1, len(h.governances)) // gov at genesis
 
 	err := h.PostInsertBlock(voteBlock)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(h.cache.GroupedVotes()))
+	assert.Equal(t, 1, len(h.groupedVotes))
 
 	err = h.PostInsertBlock(govBlock)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(h.cache.Govs()))
+	assert.Equal(t, 2, len(h.governances))
 }
 
 func TestHandleVoteGov(t *testing.T) {
@@ -54,8 +50,8 @@ func TestHandleVoteGov(t *testing.T) {
 
 	v := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
 	require.NotNil(t, v)
-	require.Equal(t, 0, len(h.cache.GroupedVotes()))
-	require.Equal(t, 1, len(h.cache.Govs())) // gov at genesis
+	require.Equal(t, 0, len(h.groupedVotes))
+	require.Equal(t, 1, len(h.governances)) // gov at genesis
 	voteBlock := uint64(5)
 	govBlock := uint64(10)
 
@@ -63,7 +59,7 @@ func TestHandleVoteGov(t *testing.T) {
 	for range 2 {
 		err := h.HandleVote(voteBlock, v)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, len(h.cache.GroupedVotes()))
+		assert.Equal(t, 1, len(h.groupedVotes))
 	}
 
 	// test duplicate gov handling
@@ -72,6 +68,37 @@ func TestHandleVoteGov(t *testing.T) {
 			gov.GovernanceUnitPrice: uint64(100),
 		}))
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(h.cache.Govs()))
+		assert.Equal(t, 2, len(h.governances))
 	}
+}
+
+func TestVote(t *testing.T) {
+	var (
+		v     = headergov.NewVoteData(common.HexToAddress("0x1"), string(gov.GovernanceUnitPrice), uint64(100))
+		epoch = 3
+		n     = 10
+		h     = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: uint64(epoch)}})
+	)
+
+	for i := 0; i < n; i++ {
+		h.AddVote(uint64(i%epoch), uint64(i), v)
+	}
+
+	assert.Equal(t, n, len(h.VoteBlockNums()))
+	assert.Equal(t, n/epoch, len(h.groupedVotes))
+}
+
+func TestGov(t *testing.T) {
+	var (
+		g = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)})
+		n = 10
+		h = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1}})
+	)
+
+	for i := 0; i < n; i++ {
+		h.AddGov(uint64(i), g)
+	}
+
+	assert.Equal(t, n, len(h.governances))
+	assert.Equal(t, n, len(h.GovBlockNums()))
 }

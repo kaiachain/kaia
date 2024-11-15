@@ -11,6 +11,8 @@ import (
 )
 
 type VoteBytes []byte
+type VotesInEpoch map[uint64]VoteData
+type GroupedVotesMap map[uint64]VotesInEpoch
 
 type voteData struct {
 	voter common.Address

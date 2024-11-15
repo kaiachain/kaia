@@ -10,6 +10,7 @@ import (
 )
 
 type GovBytes []byte
+type GovDataMap map[uint64]GovData
 
 type govData struct {
 	items gov.PartialParamSet

@@ -80,7 +80,7 @@ func TestEffectiveParamsPartial(t *testing.T) {
 	}
 
 	for i, govPrice := range []uint64{0, 1, 2, 3} {
-		h.cache.AddGov(uint64(i*1000), headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: govPrice}))
+		h.AddGov(uint64(i*1000), headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: govPrice}))
 	}
 
 	for _, tc := range testCases {

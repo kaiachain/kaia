@@ -2,6 +2,7 @@ package impl
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -36,11 +37,17 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
-	nodeAddress common.Address
-	myVotes     []headergov.VoteData // queue
+
+	groupedVotes headergov.GroupedVotesMap
+	governances  headergov.GovDataMap
+	history      headergov.History
+	mu           *sync.RWMutex
 
 	epoch uint64
-	cache *headergov.HeaderCache
+
+	// for APIs
+	nodeAddress common.Address
+	myVotes     []headergov.VoteData // queue
 }
 
 func NewHeaderGovModule() *headerGovModule {
@@ -57,6 +64,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.Chain = opts.Chain
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
+	h.mu = &sync.RWMutex{}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {
@@ -69,10 +77,12 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		WriteGovDataBlockNums(h.ChainKv, legacyGovBlockNums)
 	}
 
-	h.cache = headergov.NewHeaderGovCache()
+	h.groupedVotes = make(map[uint64]headergov.VotesInEpoch)
+	h.governances = make(map[uint64]headergov.GovData)
 	govs := readGovDataFromDB(h.Chain, h.ChainKv)
+	h.history = make(headergov.History)
 	for blockNum, gov := range govs {
-		h.cache.AddGov(blockNum, gov)
+		h.AddGov(blockNum, gov)
 	}
 
 	// 2. Init votes. If votes exist in the latest epoch, read from DB. Otherwise, accumulate.
@@ -81,7 +91,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		votes := readVoteDataFromDB(h.Chain, h.ChainKv)
 
 		for blockNum, vote := range votes {
-			h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+			h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
 		}
 	} else {
 		latestEpochIdx := calcEpochIdx(h.Chain.CurrentBlock().NumberU64(), h.epoch)
@@ -166,7 +176,7 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 
 	votes := h.scanAllVotesInEpoch(epochIdx)
 	for blockNum, vote := range votes {
-		h.cache.AddVote(epochIdx, blockNum, vote)
+		h.AddVote(epochIdx, blockNum, vote)
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
 
