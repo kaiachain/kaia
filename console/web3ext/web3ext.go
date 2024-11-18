@@ -349,10 +349,10 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'itemCacheFromDb',
-			call: 'governance_itemCacheFromDb',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+			name: 'getContractParams',
+			call: 'governance_getContractParams',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputAddressFormatter]
 		}),
 		new web3._extend.Method({
 			name: 'getStakingInfo',
@@ -367,6 +367,12 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
+			name: 'votes',
+			call: 'governance_votes',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getRewardsAccumulated',
 			call: 'governance_getRewardsAccumulated',
 			params: 2,
@@ -375,20 +381,8 @@ web3._extend({
 	],
 	properties: [
 		new web3._extend.Property({
-			name: 'showTally',
-			getter: 'governance_showTally',
-		}),
-		new web3._extend.Property({
-			name: 'totalVotingPower',
-			getter: 'governance_totalVotingPower',
-		}),
-		new web3._extend.Property({
 			name: 'myVotes',
 			getter: 'governance_myVotes',
-		}),
-		new web3._extend.Property({
-			name: 'myVotingPower',
-			getter: 'governance_myVotingPower',
 		}),
 		new web3._extend.Property({
 			name: 'nodeAddress',
@@ -407,8 +401,8 @@ web3._extend({
 			getter: 'governance_idxCache',
 		}),
 		new web3._extend.Property({
-			name: 'idxCacheFromDb',
-			getter: 'governance_idxCacheFromDb',
+			name: 'status',
+			getter: 'governance_status',
 		})
 	]
 });
