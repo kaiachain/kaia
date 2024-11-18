@@ -178,13 +178,14 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	statedb := MakePreState(memDBManager, t.json.Pre)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	msg, err := t.json.Tx.toMessage(post, config.Rules(block.Number()), isTestExecutionSpecState)
+	rules := config.Rules(block.Number())
+	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
 	if err != nil {
 		return nil, err
 	}
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), config)
 	if isTestExecutionSpecState {
-		txContext.GasPrice, err = useEthGasPrice(config, &t.json)
+		txContext.GasPrice, err = useEthGasPrice(rules, &t.json)
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +193,10 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
 	blockContext.GetHash = vmTestBlockHash
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
+
+	if isTestExecutionSpecState {
+		useEthOpCodeGas(rules, evm)
+	}
 
 	snapshot := statedb.Snapshot()
 	result, err := blockchain.ApplyMessage(evm, msg)
@@ -332,10 +337,10 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-func useEthGasPrice(config *params.ChainConfig, json *stJSON) (*big.Int, error) {
+func useEthGasPrice(r params.Rules, json *stJSON) (*big.Int, error) {
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
 	var baseFee *big.Int
-	if config.IsLondonForkEnabled(new(big.Int)) {
+	if r.IsLondon {
 		baseFee = json.Env.BaseFee
 		if baseFee == nil {
 			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -364,6 +369,13 @@ func useEthGasPrice(config *params.ChainConfig, json *stJSON) (*big.Int, error) 
 	}
 
 	return gasPrice, nil
+}
+
+func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
+	if r.IsCancun {
+		// EIP-1052 must be retained for backward compatibility.
+		vm.ChangeGasCostForTest(&evm.Config.JumpTable, vm.EXTCODEHASH, params.WarmStorageReadCostEIP2929)
+	}
 }
 
 func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
