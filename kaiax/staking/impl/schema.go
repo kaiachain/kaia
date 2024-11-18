@@ -61,3 +61,15 @@ func DeleteStakingInfo(db database.Database, num uint64) {
 		logger.Crit("Failed to delete StakingInfo", "num", num, "err", err)
 	}
 }
+
+// GetStakingInfoFromDB returns the staking info from the database.
+// Even if the staking info is already cached, it reads from the database to make sure it's only returning
+// what is stored in the database. This function is to sync the database state over p2p, not to provide
+// the staking info at arbitrary block number.
+func (s *StakingModule) GetStakingInfoFromDB(sourceNum uint64) *staking.StakingInfo {
+	return ReadStakingInfo(s.ChainKv, sourceNum)
+}
+
+func (s *StakingModule) PutStakingInfoToDB(sourceNum uint64, stakingInfo *staking.StakingInfo) {
+	WriteStakingInfo(s.ChainKv, sourceNum, stakingInfo)
+}
