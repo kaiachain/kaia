@@ -85,16 +85,16 @@ func TestExecutionSpecState(t *testing.T) {
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
-			// "Frontier",
-			// "Homestead",
-			// "Byzantium",
-			// "Constantinople",
-			// "ConstantinopleFix",
-			// "Istanbul",
-			// "Berlin",
-			// "London",
-			// "Merge",
-			// "Shanghai",
+			"Frontier",
+			"Homestead",
+			"Byzantium",
+			"Constantinople",
+			"ConstantinopleFix",
+			"Istanbul",
+			"Berlin",
+			"London",
+			"Merge",
+			"Shanghai",
 			// "Cancun",
 			// "Prague",
 		}, true)
