@@ -901,10 +901,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-
 	return nil
 }
 
@@ -925,7 +921,6 @@ func (s *CN) Stop() error {
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()
