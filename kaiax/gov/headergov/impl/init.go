@@ -8,6 +8,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -180,8 +181,12 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			continue
 		}
-		// TODO-kaiax: consider writing addval/removeval votes to validator DB.
-		if vote != nil && vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+
+		if vote == nil {
+			continue
+		}
+
+		if _, ok := gov.Params[vote.Name()]; ok {
 			votes[blockNum] = vote
 		}
 	}

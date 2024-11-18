@@ -42,7 +42,11 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 }
 
 func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
-	h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+	// if governance vote (i.e., not validator vote), add to vote
+	if _, ok := gov.Params[vote.Name()]; ok {
+		h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+		InsertVoteDataBlockNum(h.ChainKv, blockNum)
+	}
 
 	// if the vote was mine, remove it.
 	for i, myvote := range h.myVotes {
