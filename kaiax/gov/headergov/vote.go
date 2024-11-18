@@ -26,7 +26,7 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		param, ok = gov.ValSetVoteKeyMap[gov.ParamName(name)]
+		param, ok = gov.ValidatorParams[gov.ValidatorParamName(name)]
 		if !ok {
 			return nil
 		}
@@ -77,13 +77,13 @@ func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 
 	if cv, ok := vote.value.(*big.Int); ok {
 		v.Value = cv.String()
-	}
-	if cv, ok := vote.value.([]common.Address); ok {
-		var addresses []byte
-		for _, address := range cv {
-			addresses = append(addresses, address.Bytes()...)
+	} else if cv, ok := vote.value.([]common.Address); ok {
+		// concat all addresses into []byte
+		concatBytes := make([]byte, 0, len(cv)*common.AddressLength)
+		for _, addr := range cv {
+			concatBytes = append(concatBytes, addr.Bytes()...)
 		}
-		v.Value = addresses
+		v.Value = concatBytes
 	}
 	return rlp.EncodeToBytes(v)
 }

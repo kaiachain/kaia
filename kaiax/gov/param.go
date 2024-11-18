@@ -2,11 +2,13 @@ package gov
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 type canonicalizerT func(v any) (any, error)
@@ -20,35 +22,6 @@ type Param struct {
 }
 
 var (
-	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
-		switch v := v.(type) {
-		case []byte:
-			if len(v) == common.AddressLength {
-				return common.BytesToAddress(v), nil
-			}
-
-			var addresses []common.Address
-			for i := 0; i < len(v); i += common.AddressLength {
-				addresses = append(addresses, common.BytesToAddress(v[i:i+20]))
-			}
-			return addresses, nil
-		case string:
-			var res []common.Address
-			for _, address := range strings.Split(v, ",") {
-				if !common.IsHexAddress(address) {
-					return nil, ErrCanonicalizeToAddressList
-				}
-				res = append(res, common.HexToAddress(address))
-			}
-
-			if len(res) == 1 {
-				return res[0], nil
-			}
-			return res, nil
-		}
-		return nil, ErrCanonicalizeToAddressList
-	}
-
 	addressCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
 		case []byte:
@@ -65,6 +38,61 @@ var (
 			return v, nil
 		}
 		return nil, ErrCanonicalizeToAddress
+	}
+
+	validatorAddressCanonicalizer canonicalizerT = func(v any) (any, error) { // always canonicalizes to []address
+		stringToAddressList := func(v string) ([]common.Address, error) {
+			ret := []common.Address{}
+			for _, address := range strings.Split(v, ",") {
+				if !common.IsHexAddress(address) {
+					return nil, ErrCanonicalizeStringToAddress
+				}
+				ret = append(ret, common.HexToAddress(address))
+			}
+			return ret, nil
+		}
+
+		switch v := v.(type) {
+		case []byte: // input from header.Vote
+			// There are three types of header.Vote encoding for validator address(es).
+			// Type1. Single address, [20]byte. See Mainnet block 5505383.
+			// Type2. Multiple addresses, [20*n]byte.
+			// Type3. Single address, [42]byte (hex-encoded bytes). See Mainnet block 90915008.
+
+			// Type1
+			if len(v) == common.AddressLength {
+				return []common.Address{common.BytesToAddress(v)}, nil
+			}
+
+			// Type2
+			if len(v)%common.AddressLength == 0 {
+				addresses := make([]common.Address, len(v)/common.AddressLength)
+				for i := 0; i < len(v)/common.AddressLength; i++ {
+					addresses[i] = common.BytesToAddress(v[i*common.AddressLength : (i+1)*common.AddressLength])
+				}
+				return addresses, nil
+			}
+
+			// Type3
+			v, err := hexutil.Decode(string(v))
+			if err != nil {
+				return nil, errors.Join(ErrCanonicalizeByteToAddress, err)
+			}
+
+			if len(v) == common.AddressLength {
+				return []common.Address{common.BytesToAddress(v)}, nil
+			}
+
+			return nil, ErrCanonicalizeToAddressList
+		case string: // input from API
+			return stringToAddressList(v)
+		case common.Address:
+			return []common.Address{v}, nil
+		case []common.Address:
+			return v, nil
+		}
+
+		return nil, ErrCanonicalizeToAddressList
 	}
 
 	bigIntCanonicalizer canonicalizerT = func(v any) (any, error) {
@@ -159,6 +187,7 @@ func valSetVoteFormatChecker(cv any) bool {
 }
 
 type ParamName string
+type ValidatorParamName string
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
 const (
@@ -183,6 +212,11 @@ const (
 	RewardRatio                    ParamName = "reward.ratio"
 	RewardStakingUpdateInterval    ParamName = "reward.stakingupdateinterval"
 	RewardUseGiniCoeff             ParamName = "reward.useginicoeff"
+)
+
+const (
+	AddValidator    ValidatorParamName = "governance.addvalidator"
+	RemoveValidator ValidatorParamName = "governance.removevalidator"
 )
 
 var Params = map[ParamName]*Param{
@@ -400,23 +434,20 @@ var Params = map[ParamName]*Param{
 	},
 }
 
-var (
-	GovernanceAddValidator    ParamName = "governance.addvalidator"
-	GovernanceRemoveValidator ParamName = "governance.removevalidator"
-
-	ValSetVoteKeyMap = map[ParamName]*Param{
-		GovernanceAddValidator: {
-			Canonicalizer: addressListCanonicalizer,
-			FormatChecker: valSetVoteFormatChecker,
-			VoteForbidden: false,
-		},
-		GovernanceRemoveValidator: {
-			Canonicalizer: addressListCanonicalizer,
-			FormatChecker: valSetVoteFormatChecker,
-			VoteForbidden: false,
-		},
-	}
-)
+var ValidatorParams = map[ValidatorParamName]*Param{
+	AddValidator: {
+		Canonicalizer: validatorAddressCanonicalizer,
+		FormatChecker: valSetVoteFormatChecker,
+		DefaultValue:  []common.Address{},
+		VoteForbidden: false,
+	},
+	RemoveValidator: {
+		Canonicalizer: validatorAddressCanonicalizer,
+		FormatChecker: valSetVoteFormatChecker,
+		DefaultValue:  []common.Address{},
+		VoteForbidden: false,
+	},
+}
 
 const (
 	// Proposer policy
