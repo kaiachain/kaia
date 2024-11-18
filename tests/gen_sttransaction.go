@@ -24,6 +24,7 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           hexutil.Bytes         `json:"secretKey"`
+		AuthorizationList    []*stAuthorization    `json:"authorizationList"`
 	}
 	var enc stTransaction
 	enc.GasPrice = (*math.HexOrDecimal256)(s.GasPrice)
@@ -40,6 +41,7 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 	}
 	enc.Value = s.Value
 	enc.PrivateKey = s.PrivateKey
+	enc.AuthorizationList = s.AuthorizationList
 	return json.Marshal(&enc)
 }
 
@@ -55,6 +57,7 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           *hexutil.Bytes        `json:"secretKey"`
+		AuthorizationList    []*stAuthorization    `json:"authorizationList"`
 	}
 	var dec stTransaction
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -89,6 +92,9 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 	}
 	if dec.PrivateKey != nil {
 		s.PrivateKey = *dec.PrivateKey
+	}
+	if dec.AuthorizationList != nil {
+		s.AuthorizationList = dec.AuthorizationList
 	}
 	return nil
 }

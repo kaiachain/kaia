@@ -1461,7 +1461,7 @@ func TestAccessListTx(t *testing.T) {
 
 			// One transaction to 0xAAAA
 			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
-			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, list), signer, senderKey)
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, list, nil), signer, senderKey)
 			b.AddTx(tx)
 		})
 		if n, err := chain.InsertChain(blocks); err != nil {

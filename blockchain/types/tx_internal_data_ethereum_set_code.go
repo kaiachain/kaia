@@ -111,6 +111,44 @@ func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 	}
 }
 
+func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, authList AuthorizationList, chainID *big.Int) *TxInternalDataEthereumSetCode {
+	d := newTxInternalDataEthereumSetCode()
+
+	d.AccountNonce = nonce
+	d.Recipient = to
+	d.GasLimit = gasLimit
+
+	if chainID != nil {
+		d.ChainID.Set(chainID)
+	}
+
+	if gasTipCap != nil {
+		d.GasTipCap.Set(gasTipCap)
+	}
+
+	if gasFeeCap != nil {
+		d.GasFeeCap.Set(gasFeeCap)
+	}
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+
+	if len(data) > 0 {
+		d.Payload = common.CopyBytes(data)
+	}
+
+	if accessList != nil {
+		d.AccessList = append(d.AccessList, accessList...)
+	}
+
+	if authList != nil {
+		d.AuthorizationList = authList
+	}
+
+	return d
+}
+
 func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataEthereumSetCode, error) {
 	d := newTxInternalDataEthereumSetCode()
 
