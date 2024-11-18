@@ -410,10 +410,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 				// delegations from the account.
 				delegation = []byte{}
 			}
-			// TODO-7702: Change to a method that adds code to EOA
-			// This is currently expected to be an error. This will be addressed in a PR that adds a code hash field to the EOA.
-			// https://github.com/kaiachain/kaia/blob/v1.0.3/blockchain/state/state_object.go#L542
-			st.state.SetCode(authority, delegation)
+
+			// We treat EOA and SCA as separate objects and therefore need to use
+			// distinct methods.
+			st.state.SetCodeToEOA(authority, delegation)
 
 			// Usually the transaction destination and delegation target are added to
 			// the access list in statedb.Prepare(..), however if the delegation is in
