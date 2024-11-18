@@ -90,6 +90,18 @@ func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *
 	}
 }
 
+func ToKaiax(si *StakingInfo) *staking.StakingInfo {
+	return &staking.StakingInfo{
+		SourceBlockNum:   si.BlockNum,
+		NodeIds:          si.CouncilNodeAddrs,
+		StakingContracts: si.CouncilStakingAddrs,
+		RewardAddrs:      si.CouncilRewardAddrs,
+		KEFAddr:          si.KEFAddr,
+		KIFAddr:          si.KIFAddr,
+		StakingAmounts:   si.CouncilStakingAmounts,
+	}
+}
+
 // MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
 // TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC, KCF/KFF is not needed
 func (st StakingInfo) MarshalJSON() ([]byte, error) {

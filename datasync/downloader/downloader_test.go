@@ -23,7 +23,6 @@
 package downloader
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -41,12 +41,16 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/stretchr/testify/assert"
 )
 
 // Reduce some of the parameters to make the tester faster.
@@ -153,7 +157,7 @@ func newTester() *downloadTester {
 	tester.stateDb = localdb
 	tester.stateDb.WriteTrieNode(genesis.Root().ExtendZero(), []byte{0x00})
 
-	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
+	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
 	return tester
 }
@@ -1918,6 +1922,16 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	tester := newTester()
 	defer tester.terminate()
 
+	mockCtrl := gomock.NewController(t)
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfoFromDB(gomock.Any()).DoAndReturn(func(blockNum uint64) *staking.StakingInfo {
+		return staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), blockNum)
+	}).AnyTimes()
+	mStaking.EXPECT().PutStakingInfoToDB(gomock.Any(), gomock.Any()).Do(func(blockNum uint64, stakingInfo *staking.StakingInfo) {
+		staking_impl.WriteStakingInfo(tester.stateDb.GetMiscDB(), blockNum, stakingInfo)
+	}).AnyTimes()
+	tester.downloader.stakingModule = mStaking
+
 	// Create a small enough block chain to download
 	targetBlocks := blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
@@ -1945,13 +1959,11 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	time.Sleep(3 * time.Second)
 
 	for _, stakingInfo := range stakingInfos {
-		expected, _ := json.Marshal(stakingInfo)
+		expected, _ := json.Marshal(reward.ToKaiax(stakingInfo))
 		actual, err := tester.stateDb.ReadStakingInfo(stakingInfo.BlockNum)
 		if err != nil {
 			t.Errorf("failed to read stakingInfo: %v", err)
 		}
-		if bytes.Compare(expected, actual) != 0 {
-			t.Errorf("staking infos are different (expected: %v, actual: %v)", string(expected), string(actual))
-		}
+		assert.JSONEq(t, string(expected), string(actual))
 	}
 }

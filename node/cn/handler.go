@@ -313,7 +313,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		if config.Istanbul != nil {
 			proposerPolicy = config.Istanbul.ProposerPolicy
 		}
-		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer, proposerPolicy)
+		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.stakingModule, manager.removePeer, proposerPolicy)
 	}
 
 	// Create and set fetcher
