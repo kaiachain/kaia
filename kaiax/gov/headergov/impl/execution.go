@@ -2,6 +2,7 @@ package impl
 
 import (
 	"bytes"
+	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -51,7 +52,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 	for i, myvote := range h.myVotes {
 		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
 			myvote.Name() == vote.Name() &&
-			myvote.Value() == vote.Value() {
+			reflect.DeepEqual(myvote.Value(), vote.Value()) {
 			h.PopMyVotes(i)
 			break
 		}
