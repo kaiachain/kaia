@@ -165,8 +165,10 @@ func noopFormatChecker(cv any) bool {
 	return true
 }
 
-type ParamName string
-type ValidatorParamName string
+type (
+	ParamName          string
+	ValidatorParamName string
+)
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
 const (
