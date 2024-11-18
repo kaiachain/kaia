@@ -40,7 +40,7 @@ var (
 		return nil, ErrCanonicalizeToAddress
 	}
 
-	validatorAddressCanonicalizer canonicalizerT = func(v any) (any, error) { // always canonicalizes to []address
+	validatorAddressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		stringToAddressList := func(v string) ([]common.Address, error) {
 			ret := []common.Address{}
 			for _, address := range strings.Split(v, ",") {
@@ -417,13 +417,13 @@ var Params = map[ParamName]*Param{
 
 var ValidatorParams = map[ValidatorParamName]*Param{
 	AddValidator: {
-		Canonicalizer: validatorAddressCanonicalizer,
+		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,
 		DefaultValue:  []common.Address{},
 		VoteForbidden: false,
 	},
 	RemoveValidator: {
-		Canonicalizer: validatorAddressCanonicalizer,
+		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,
 		DefaultValue:  []common.Address{},
 		VoteForbidden: false,

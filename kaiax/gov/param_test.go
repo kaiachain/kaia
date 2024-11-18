@@ -65,7 +65,7 @@ func TestValidatorAddressCanonicalizer(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
-			result, err := validatorAddressCanonicalizer(tc.input)
+			result, err := validatorAddressListCanonicalizer(tc.input)
 			assert.Equal(t, tc.expectedError, err)
 			if tc.expectedError == nil {
 				assert.Equal(t, tc.expected, result.([]common.Address))
