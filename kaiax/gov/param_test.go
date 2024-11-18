@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,23 +47,25 @@ func TestAddressCanonicalizer(t *testing.T) {
 	}
 }
 
-func TestAddressListCanonicalizer(t *testing.T) {
+func TestValidatorAddressCanonicalizer(t *testing.T) {
 	tcs := []struct {
 		desc          string
 		input         any
 		expected      []common.Address
 		expectedError error
 	}{
-		{desc: "Valid single address string", input: "0x1234567890123456789012345678901234567890", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890")}},
-		{desc: "Valid multiple address string", input: "0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890"), common.HexToAddress("0x0987654321098765432109876543210987654321")}},
-		{desc: "Invalid address string", input: "0xinvalid", expectedError: ErrCanonicalizeStringToAddress},
-		{desc: "Valid byte slice", input: []byte("0x1234567890123456789012345678901234567890"), expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890")}},
+		{desc: "Valid string, single address", input: "0x1234567890123456789012345678901234567890", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890")}},
+		{desc: "Valid string, multiple addresses", input: "0x1234567890123456789012345678901234567890,0x0987654321098765432109876543210987654321", expected: []common.Address{common.HexToAddress("0x1234567890123456789012345678901234567890"), common.HexToAddress("0x0987654321098765432109876543210987654321")}},
+		{desc: "Invalid string", input: "0xinvalid", expectedError: ErrCanonicalizeStringToAddress},
+		{desc: "Valid bytes, one address", input: hexutil.MustDecode("0x1212121212121212121212121212121212121212"), expected: []common.Address{common.HexToAddress("0x1212121212121212121212121212121212121212")}},
+		{desc: "Valid bytes, hex-encoded one address", input: hexutil.MustDecode("0x307831366331393235383561306162323462353532373833623462663764386463396636383535633335"), expected: []common.Address{common.HexToAddress("0x16c192585a0ab24b552783b4bf7d8dc9f6855c35")}},
+		{desc: "Valid bytes, two addresses", input: hexutil.MustDecode("0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc90f79bf6eb2c4f870365e785982e1f101e93b906"), expected: []common.Address{common.HexToAddress("0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"), common.HexToAddress("0x90f79bf6eb2c4f870365e785982e1f101e93b906")}},
 		{desc: "Invalid type", input: 123, expectedError: ErrCanonicalizeToAddressList},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
-			result, err := addressListCanonicalizer(tc.input)
+			result, err := validatorAddressCanonicalizer(tc.input)
 			assert.Equal(t, tc.expectedError, err)
 			if tc.expectedError == nil {
 				assert.Equal(t, tc.expected, result.([]common.Address))
