@@ -68,7 +68,6 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	governance         governance.Engine
-	rewardDistributor  *reward.RewardDistributor
 }
 
 var (
@@ -148,12 +147,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
-	rewardDistributor := reward.NewRewardDistributor(gov)
 
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+		validatorPrivKeys, engine, genesis, gov,
 	}, nil
 }
 

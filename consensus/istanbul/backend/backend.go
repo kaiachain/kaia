@@ -44,7 +44,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -88,7 +87,6 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		governance:        opts.Governance,
 		blsPubkeyProvider: opts.BlsPubkeyProvider,
 		nodetype:          opts.NodeType,
-		rewardDistributor: reward.NewRewardDistributor(opts.Governance),
 	}
 	if backend.blsPubkeyProvider == nil {
 		backend.blsPubkeyProvider = newChainBlsPubkeyProvider()
@@ -144,8 +142,6 @@ type backend struct {
 
 	// Reference to BlsPubkeyProvider
 	blsPubkeyProvider BlsPubkeyProvider
-
-	rewardDistributor *reward.RewardDistributor
 
 	// Node type
 	nodetype common.ConnType

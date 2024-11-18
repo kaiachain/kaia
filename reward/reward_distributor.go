@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -32,8 +31,6 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
-
-var CalcDeferredRewardTimer time.Duration
 
 var (
 	errInvalidFormat = errors.New("invalid ratio format")
@@ -357,10 +354,6 @@ func CalcDeferredRewardSimple(header *types.Header, txs []*types.Transaction, re
 // CalcDeferredReward calculates the deferred rewards,
 // which are determined at the end of block processing.
 func CalcDeferredReward(header *types.Header, txs []*types.Transaction, receipts []*types.Receipt, rules params.Rules, pset *params.GovParamSet, stakingInfo *StakingInfo) (*RewardSpec, error) {
-	defer func(start time.Time) {
-		CalcDeferredRewardTimer = time.Since(start)
-	}(time.Now())
-
 	rc, err := NewRewardConfig(header, txs, receipts, rules, pset)
 	if err != nil {
 		return nil, err
