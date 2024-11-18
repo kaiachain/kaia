@@ -29,14 +29,11 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
 var CalcDeferredRewardTimer time.Duration
-
-var logger = log.NewModuleLogger(log.Reward)
 
 var (
 	errInvalidFormat = errors.New("invalid ratio format")
@@ -45,13 +42,6 @@ var (
 
 type BalanceAdder interface {
 	AddBalance(addr common.Address, v *big.Int)
-}
-
-// Cannot use governance.Engine because of cyclic dependency.
-// Instead declare only the methods used by this package.
-type governanceHelper interface {
-	CurrentParams() *params.GovParamSet
-	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
 type rewardConfig struct {

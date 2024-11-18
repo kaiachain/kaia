@@ -33,14 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func (governance *testGovernance) CurrentParams() *params.GovParamSet {
-	return governance.p
-}
-
-func (governance *testGovernance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	return governance.p, nil
-}
-
 func assertEqualRewardSpecs(t *testing.T, expected, actual *RewardSpec, msgAndArgs ...interface{}) {
 	expectedJson, err := json.MarshalIndent(expected, "", "  ")
 	require.Nil(t, err)
