@@ -17,8 +17,6 @@
 package impl
 
 import (
-	"strings"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -94,26 +92,113 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 }
 
 func (v *ValsetModule) Start() error {
-	// TODO-kaiax-valset: move below logic to setupGenesisBlock(or other init process?)
-	_, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
-	if strings.Contains(err.Error(), "failed to read council addresses from db") == false {
-		return err
+	var (
+		currentBlockNum  = v.chain.CurrentBlock().NumberU64()
+		intervalBlockNum = currentBlockNum - currentBlockNum%params.CheckpointInterval
+	)
+
+	// valSet initialization at genesis block
+	voteBlks := ReadValidatorVoteDataBlockNums(v.ChainKv)
+	if voteBlks == nil {
+		header := v.chain.GetHeaderByNumber(0)
+		if header != nil {
+			return errNilHeader
+		}
+		istanbulExtra, err := types.ExtractIstanbulExtra(header)
+		if err != nil {
+			return errExtractIstanbulExtra
+		}
+		if err = WriteCouncilAddressListToDb(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
+			return err
+		}
+		if currentBlockNum == 0 {
+			if err = writeLowestScannedCheckpointIntervalNum(v.ChainKv, intervalBlockNum); err != nil {
+				return err
+			}
+		}
 	}
-	if err == nil {
+
+	// generate valset db between [lastIntervalBlock, currentBlock)
+	lowestSciNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
+	if err != nil {
+		if err = writeLowestScannedCheckpointIntervalNum(v.ChainKv, intervalBlockNum); err != nil {
+			return err
+		}
+		_, err = v.replayValSetVotes(lowestSciNum, currentBlockNum, true)
+		if err != nil {
+			return err
+		}
+
+		// update lowestScannedNum to figure out if migration is needed or not
+		lowestSciNum = intervalBlockNum
+	}
+
+	if lowestSciNum == 0 {
 		return nil
 	}
-	header := v.chain.GetHeaderByNumber(0)
-	if header != nil {
-		return errNilHeader
-	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
-		return errExtractIstanbulExtra
-	}
-	if err = WriteCouncilAddressListToDb(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
-		return err
-	}
+
+	go v.migrate()
+
 	return nil
+}
+
+func (v *ValsetModule) migrate() {
+	lowestSciNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	for lowestSciNum >= 0 {
+		_, err = v.replayValSetVotes(lowestSciNum, lowestSciNum+params.CheckpointInterval, true)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		lowestSciNum = lowestSciNum - 1024
+	}
+}
+
+// replayValSetVotes replays the valset module handleVote.
+// lowestSciNum: the lowest istanbul snapshot checkpoint interval. replay the valSet votes from there.
+// targetBlockNum: the target block number where replay ends. it should not exceed current block number.
+// writeValSetDb: if it is set, it writes the valSet db
+func (v *ValsetModule) replayValSetVotes(intervalBlockNum uint64, targetBlockNum uint64, writeValSetDb bool) ([]common.Address, error) {
+	intervalHeader := v.chain.GetHeaderByNumber(intervalBlockNum)
+	if intervalHeader == nil {
+		return nil, errNilHeader
+	}
+
+	c, err := readCouncilAddressListFromIstanbulSnapshot(v.ChainKv, intervalHeader.Hash())
+	if err != nil {
+		return nil, err
+	}
+
+	// replay the header votes until next checkpoint interval
+	for num := intervalBlockNum + 1; num <= targetBlockNum; num++ {
+		header := v.chain.GetHeaderByNumber(num)
+		if header == nil {
+			return nil, errNilHeader
+		}
+
+		// apply addvalidator/removevalidator vote to council
+		govNode := v.headerGov.EffectiveParamSet(num).GoverningNode
+		cList, err := applyValSetVote(header.Vote, c, govNode)
+		if err != nil {
+			return nil, err
+		}
+		if cList == nil {
+			continue // nothing to do
+		}
+
+		c = cList
+
+		if writeValSetDb == false {
+			continue
+		}
+		// update to valSet db (council list, voteBlk)
+		if err = WriteCouncilAddressListToDb(v.ChainKv, num, c); err != nil {
+			return nil, err
+		}
+	}
+	return c, nil
 }
 
 func (v *ValsetModule) Stop() {

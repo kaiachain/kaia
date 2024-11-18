@@ -85,7 +85,14 @@ func (api *ValidatorAPI) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 	if err != nil {
 		return nil, err
 	}
-	c, err := newCouncil(api.v.ChainKv, valCtx)
+
+	// read council list of block N-1
+	councilAddressList, err := api.v.GetCouncilAddressList(header.Number.Uint64() - 1)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := newCouncil(valCtx, councilAddressList)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +118,13 @@ func (api *ValidatorAPI) GetDemotedValidators(number *rpc.BlockNumber) ([]common
 	if err != nil {
 		return nil, err
 	}
-	c, err := newCouncil(api.v.ChainKv, valCtx)
+
+	// read council list of block N-1
+	councilAddressList, err := api.v.GetCouncilAddressList(header.Number.Uint64() - 1)
+	if err != nil {
+		return nil, err
+	}
+	c, err := newCouncil(valCtx, councilAddressList)
 	if err != nil {
 		return nil, err
 	}

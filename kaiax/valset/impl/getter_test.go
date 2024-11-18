@@ -43,7 +43,7 @@ func TestGetCouncilAddressList(t *testing.T) {
 		{n6, tgn, n2, n4, n3, n5},
 		{n6, tgn, n2, n4, n3, n5},
 	} {
-		cList, err := ReadCouncilAddressListFromDb(vModule.ChainKv, uint64(blockNumber))
+		cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(blockNumber))
 		assert.NoError(t, err, "tc(blockNumber):%d", blockNumber)
 		assert.Equal(t, expectCList, cList)
 	}

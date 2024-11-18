@@ -214,4 +214,7 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax",
 	"kaiax/gov",
 	"kaiax/staking",
+
+	// 61~70
+	"kaiax/valset",
 }

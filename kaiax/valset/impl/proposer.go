@@ -26,7 +26,6 @@ func (p ProposerPolicy) IsWeightedRandom() bool {
 }
 
 func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, error) {
-	// genesisblock에 대한 Proposers 를 어떻게 구하지?
 	if cachedProposers, ok := v.proposers.Get(pUpdateBlock); ok {
 		if proposers, ok := cachedProposers.([]common.Address); ok {
 			return proposers, nil
@@ -38,7 +37,11 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 	if err != nil {
 		return nil, err
 	}
-	c, err := newCouncil(v.ChainKv, valCtx)
+	councilAddressList, err := v.GetCouncilAddressList(pUpdateBlock - 1)
+	if err != nil {
+		return nil, err
+	}
+	c, err := newCouncil(valCtx, councilAddressList)
 	if err != nil {
 		return nil, err
 	}

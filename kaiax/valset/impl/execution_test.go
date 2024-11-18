@@ -119,10 +119,10 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 			}
 			mockEngine.EXPECT().Author(header).Return(tc.networkInfo.proposer, nil).AnyTimes()
 			mockChain.EXPECT().GetHeaderByNumber(prevHeader.Number.Uint64()).Return(prevHeader).AnyTimes()
-			err = vModule.HandleValidatorVote(header, tc.voteData)
+			err = vModule.HandleValidatorVote(1, header.Vote, tc.networkInfo.validators)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectError, err)
 
-			cList, err := ReadCouncilAddressListFromDb(vModule.ChainKv, uint64(1))
+			cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(1))
 			sort.Sort(tc.expectHandleValidatorVote.expectCList)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectCList, valset.AddressList(cList))

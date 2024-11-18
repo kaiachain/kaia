@@ -71,23 +71,33 @@ func newValSetContext(v *ValsetModule, bn uint64) (*valSetContext, error) {
 // GetCouncilAddressList returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
 func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, error) {
-	// make sure that the num doesn't exceed current block
-	councilAddresses, err := ReadCouncilAddressListFromDb(v.ChainKv, num)
+	scannedNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
 	if err != nil {
 		return nil, err
 	}
-	return councilAddresses, nil
+
+	// if valSet council db is not prepared (target block number is less than lowest scanned number)
+	// read the council address list from Istanbul snapshot
+	// then, regenerate the target block's council address list by iterating the votes in header within snapshot interval
+	if num < scannedNum {
+		return v.replayValSetVotes(num-num%params.CheckpointInterval, num, false)
+	}
+
+	// make sure that the num doesn't exceed current block
+	// valSet council db is prepared. let's read council address list directly from the db
+	return readCouncilAddressListFromValSetCouncilDB(v.ChainKv, num)
 }
 
 // GetCommitteeAddressList returns the current round or block's committee.
 func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]common.Address, error) {
+	councilAddressList, err := v.GetCouncilAddressList(num)
+	if err != nil {
+		return nil, err
+	}
+
 	// if the block number is genesis, directly return councilAddressList as committee.
 	if num == 0 {
-		councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
-		if err != nil {
-			return nil, err
-		}
-		committeeSize := v.headerGov.EffectiveParamSet(0).CommitteeSize
+		committeeSize := v.headerGov.EffectiveParamSet(num).CommitteeSize
 		return councilAddressList[:committeeSize], nil
 	}
 
@@ -96,7 +106,12 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 		return nil, err
 	}
 
-	c, err := newCouncil(v.ChainKv, valCtx)
+	// read council list of block N-1
+	prevCouncilAddressList, err := v.GetCouncilAddressList(num - 1)
+	if err != nil {
+		return nil, err
+	}
+	c, err := newCouncil(valCtx, prevCouncilAddressList)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +149,7 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 
 	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
 	if num == 0 {
-		councilAddressList, err := ReadCouncilAddressListFromDb(v.ChainKv, 0)
+		councilAddressList, err := v.GetCouncilAddressList(num)
 		if err != nil {
 			return common.Address{}, err
 		}
@@ -145,7 +160,14 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 	if err != nil {
 		return common.Address{}, err
 	}
-	c, err := newCouncil(v.ChainKv, valCtx)
+
+	// read council list of block N-1
+	councilAddressList, err := v.GetCouncilAddressList(num - 1)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	c, err := newCouncil(valCtx, councilAddressList)
 	if err != nil {
 		return common.Address{}, err
 	}

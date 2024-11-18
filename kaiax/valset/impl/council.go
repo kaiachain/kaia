@@ -8,7 +8,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 // council for block N is created based on the previous block's council.
@@ -23,7 +22,7 @@ type council struct {
 	councilAddressList valset.AddressList // total council node address list. the order is reserved.
 }
 
-func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
+func newCouncil(valCtx *valSetContext, councilAddressList []common.Address) (*council, error) {
 	var (
 		blockNumber    = valCtx.blockNumber
 		rules          = valCtx.rules
@@ -34,12 +33,6 @@ func newCouncil(db database.Database, valCtx *valSetContext) (*council, error) {
 		govNode      = valCtx.prevBlockResult.pSet.GoverningNode
 		minStaking   = valCtx.prevBlockResult.pSet.MinimumStake.Uint64()
 	)
-
-	// read council list of block N-1
-	councilAddressList, err := ReadCouncilAddressListFromDb(db, blockNumber-1)
-	if err != nil {
-		return nil, err
-	}
 
 	// create council struct for block N
 	c := &council{

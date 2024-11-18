@@ -6,19 +6,28 @@ import (
 	"sort"
 	"sync"
 
+	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
-	valSetVoteBlockNumsKey = []byte("valSetVoteBlockNums")
-	councilAddressPrefix   = []byte("councilAddress")
-	mu                     = &sync.RWMutex{}
+	valSetVoteBlockNumsKey             = []byte("valSetVoteBlockNums")
+	lowestScannedCheckpointIntervalKey = []byte("lowestScannedCheckpointIntervalKey")
+	councilAddressPrefix               = []byte("councilAddress")
+	istanbulSnapshotKeyPrefix          = []byte("snapshot") // snapshotKeyPrefix is a governance snapshot prefix
+
+	mu = &sync.RWMutex{}
 )
 
 func councilAddressKey(num uint64) []byte {
 	return append(councilAddressPrefix, common.Int64ToByteLittleEndian(num)...)
+}
+
+func istanbulSnapshotKey(hash common.Hash) []byte {
+	return append(istanbulSnapshotKeyPrefix, hash[:]...)
 }
 
 func ReadValidatorVoteDataBlockNums(db database.Database) []uint64 {
@@ -36,6 +45,29 @@ func ReadValidatorVoteDataBlockNums(db database.Database) []uint64 {
 		return nil
 	}
 	return *ret
+}
+
+func writeLowestScannedCheckpointIntervalNum(db database.Database, scanned uint64) error {
+	b, err := json.Marshal(scanned)
+	if err != nil {
+		return err
+	}
+	if err = db.Put(lowestScannedCheckpointIntervalKey, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func readLowestScannedCheckpointIntervalNum(db database.Database) (uint64, error) {
+	b, err := db.Get(lowestScannedCheckpointIntervalKey)
+	if err != nil || len(b) == 0 {
+		return 0, fmt.Errorf("failed to read lowest scanned blocknumber from db. error=%v, b=%v", err, string(b))
+	}
+	var lowestScannedNum uint64
+	if err = json.Unmarshal(b, &lowestScannedNum); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal encoded lowestScannedNum. err=%v", err)
+	}
+	return lowestScannedNum, nil
 }
 
 func UpdateValidatorVoteDataBlockNums(db database.Database, voteBlk uint64) error {
@@ -64,9 +96,29 @@ func UpdateValidatorVoteDataBlockNums(db database.Database, voteBlk uint64) erro
 	return nil
 }
 
-// ReadCouncilAddressListFromDb gets voteBlk from valset DB
-// TODO-kaia-valset: try fetch council from cache or iterate to process the votes between snapshotBlock and num.
-func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Address, error) {
+func readCouncilAddressListFromIstanbulSnapshot(db database.Database, blockHash common.Hash) ([]common.Address, error) {
+	startBlockHash := blockHash
+
+	b, err := db.Get(istanbulSnapshotKey(startBlockHash))
+	if err != nil || len(b) == 0 {
+		return nil, fmt.Errorf("failed to read istanbul snapshot from db. hash:%s, err:%v, b:%v", startBlockHash.String(), err, string(b))
+	}
+
+	snap := new(istanbulBackend.Snapshot)
+	if err := json.Unmarshal(b, snap); err != nil {
+		return nil, err
+	}
+
+	c := make(valset.AddressList, len(snap.ValSet.List())+len(snap.ValSet.DemotedList()))
+	for _, val := range append(snap.ValSet.List(), snap.ValSet.DemotedList()...) {
+		c = append(c, val.Address())
+	}
+
+	sort.Sort(c)
+	return c, nil
+}
+
+func readCouncilAddressListFromValSetCouncilDB(db database.Database, num uint64) ([]common.Address, error) {
 	var (
 		voteBlocks = ReadValidatorVoteDataBlockNums(db)
 		voteBlock  = uint64(0)
@@ -76,7 +128,7 @@ func ReadCouncilAddressListFromDb(db database.Database, bn uint64) ([]common.Add
 		return nil, errEmptyVoteBlock
 	}
 	for i := len(voteBlocks) - 1; i >= 0; i-- {
-		if voteBlocks[i] <= bn {
+		if voteBlocks[i] <= num {
 			voteBlock = voteBlocks[i]
 			break
 		}
