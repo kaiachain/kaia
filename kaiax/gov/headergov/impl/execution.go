@@ -2,8 +2,10 @@ package impl
 
 import (
 	"bytes"
+	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
 
@@ -40,7 +42,8 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 }
 
 func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
-	if vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+	// if governance vote (i.e., not validator vote), add to vote
+	if _, ok := gov.Params[vote.Name()]; ok {
 		h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
@@ -49,7 +52,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 	for i, myvote := range h.myVotes {
 		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
 			myvote.Name() == vote.Name() &&
-			myvote.Value() == vote.Value() {
+			reflect.DeepEqual(myvote.Value(), vote.Value()) {
 			h.PopMyVotes(i)
 			break
 		}

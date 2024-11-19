@@ -49,6 +49,14 @@ func TestNewVoteData(t *testing.T) {
 		{name: gov.RewardRatio, value: "100/0/0"},
 		{name: gov.RewardRatio, value: "30/40/30"},
 		{name: gov.RewardRatio, value: "50/25/25"},
+		{name: gov.ParamName(gov.AddValidator), value: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"},
+		{name: gov.ParamName(gov.AddValidator), value: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,0x70997970C51812dc3A010C7d01b50e0d17dc79C8"},
+		{name: gov.ParamName(gov.AddValidator), value: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")},
+		{name: gov.ParamName(gov.AddValidator), value: []common.Address{common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"), common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")}},
+		{name: gov.ParamName(gov.RemoveValidator), value: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"},
+		{name: gov.ParamName(gov.RemoveValidator), value: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,0x70997970C51812dc3A010C7d01b50e0d17dc79C8"},
+		{name: gov.ParamName(gov.RemoveValidator), value: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")},
+		{name: gov.ParamName(gov.RemoveValidator), value: []common.Address{common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"), common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")}},
 	}
 
 	for _, tc := range goodVotes {
@@ -56,11 +64,6 @@ func TestNewVoteData(t *testing.T) {
 			assert.NotNil(t, NewVoteData(common.Address{}, string(tc.name), tc.value))
 		})
 	}
-
-	t.Run("goodVote/validators", func(t *testing.T) {
-		assert.NotNil(t, NewVoteData(common.Address{}, "governance.addvalidator", common.Address{}))
-		assert.NotNil(t, NewVoteData(common.Address{}, "governance.removevalidator", common.Address{}))
-	})
 
 	badVotes := []struct {
 		name  gov.ParamName
@@ -174,6 +177,12 @@ func TestNewVoteData(t *testing.T) {
 		{name: gov.RewardUseGiniCoeff, value: 1},
 		{name: gov.RewardUseGiniCoeff, value: false},
 		{name: gov.RewardUseGiniCoeff, value: true},
+		{name: gov.ParamName(gov.AddValidator), value: "0x"},
+		{name: gov.ParamName(gov.AddValidator), value: "0x1"},
+		{name: gov.ParamName(gov.AddValidator), value: "0x1,0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"},
+		{name: gov.ParamName(gov.RemoveValidator), value: "0x"},
+		{name: gov.ParamName(gov.RemoveValidator), value: "0x1"},
+		{name: gov.ParamName(gov.RemoveValidator), value: "0x1,0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"},
 	}
 
 	for _, tc := range badVotes {
@@ -197,6 +206,7 @@ func TestVoteSerialization(t *testing.T) {
 		serializedVoteData string
 		blockNum           uint64
 		voteData           VoteData
+		noSerialize        bool
 	}{
 		///// all vote datas.
 		{serializedVoteData: "0xf8439452d41ca72af615a1ac3301b0a93efa222ecc754198676f7665726e616e63652e676f7665726e696e676e6f64659452d41ca72af615a1ac3301b0a93efa222ecc7541", blockNum: 1, voteData: NewVoteData(v1, "governance.governingnode", v1)},
@@ -221,6 +231,15 @@ func TestVoteSerialization(t *testing.T) {
 		{serializedVoteData: "0xed94c0cbe1c770fbce1eb7786bfba1ac2115d5c0a45696697374616e62756c2e636f6d6d697474656573697a6532", blockNum: 161809335, voteData: NewVoteData(v2, "istanbul.committeesize", uint64(50))},
 		{serializedVoteData: "0xf83e94c0cbe1c770fbce1eb7786bfba1ac2115d5c0a456947265776172642e6d696e74696e67616d6f756e749339363030303030303030303030303030303030", blockNum: 161809370, voteData: NewVoteData(v2, "reward.mintingamount", new(big.Int).SetUint64(9.6e18))},
 		{serializedVoteData: "0xeb94c0cbe1c770fbce1eb7786bfba1ac2115d5c0a4568c7265776172642e726174696f8835302f32352f3235", blockNum: 161809416, voteData: NewVoteData(v2, "reward.ratio", "50/25/25")},
+
+		// Real mainnet validator vote data.
+		{serializedVoteData: "0xf8459452d41ca72af615a1ac3301b0a93efa222ecc75419a676f7665726e616e63652e72656d6f766576616c696461746f7294a2ba8f7798649a778a1fd66d3035904949fec555", blockNum: 5505383, voteData: NewVoteData(v1, "governance.removevalidator", "0xa2ba8f7798649a778a1fd66d3035904949fec555")},
+
+		// Dummy validator vote data (multiple addresses).
+		{serializedVoteData: "0xf85994f39fd6e51aad88f6f4ce6ab8827279cfffb922669a676f7665726e616e63652e72656d6f766576616c696461746f72a83c44cdddb6a900fa2b585dd299e03d12fa4293bc90f79bf6eb2c4f870365e785982e1f101e93b906", blockNum: 123123, voteData: NewVoteData(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), "governance.removevalidator", "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc,0x90f79bf6eb2c4f870365e785982e1f101e93b906")},
+
+		// Real mainnet validator vote data with hex-encoded address (for backward compatibility). Deserialize test only.
+		{serializedVoteData: "0xf85b9452d41ca72af615a1ac3301b0a93efa222ecc75419a676f7665726e616e63652e72656d6f766576616c696461746f72aa307831366331393235383561306162323462353532373833623462663764386463396636383535633335", blockNum: 90915008, voteData: NewVoteData(v1, "governance.removevalidator", "0x16c192585a0ab24b552783b4bf7d8dc9f6855c35"), noSerialize: true},
 	}
 
 	for _, tc := range tcs {
@@ -231,10 +250,12 @@ func TestVoteSerialization(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.voteData, actual, "ToVoteData() failed")
 
-			// Test serialization
-			serialized, err := tc.voteData.ToVoteBytes()
-			assert.NoError(t, err)
-			assert.Equal(t, tc.serializedVoteData, hexutil.Encode(serialized), "voteData.Serialize() failed")
+			if !tc.noSerialize {
+				// Test serialization
+				serialized, err := tc.voteData.ToVoteBytes()
+				assert.NoError(t, err)
+				assert.Equal(t, tc.serializedVoteData, hexutil.Encode(serialized), "voteData.Serialize() failed")
+			}
 		})
 	}
 }

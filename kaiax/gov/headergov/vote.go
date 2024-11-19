@@ -28,15 +28,10 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		if name == "governance.addvalidator" || name == "governance.removevalidator" {
-			return &voteData{
-				voter: voter,
-				name:  gov.ParamName(name),
-				value: []common.Address{},
-			}
+		param, ok = gov.ValidatorParams[gov.ValidatorParamName(name)]
+		if !ok {
+			return nil
 		}
-
-		return nil
 	}
 
 	if param.VoteForbidden {
@@ -84,6 +79,13 @@ func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 
 	if cv, ok := vote.value.(*big.Int); ok {
 		v.Value = cv.String()
+	} else if cv, ok := vote.value.([]common.Address); ok {
+		// concat all addresses into []byte
+		concatBytes := make([]byte, 0, len(cv)*common.AddressLength)
+		for _, addr := range cv {
+			concatBytes = append(concatBytes, addr.Bytes()...)
+		}
+		v.Value = concatBytes
 	}
 
 	return rlp.EncodeToBytes(v)
