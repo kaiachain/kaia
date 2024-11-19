@@ -578,6 +578,38 @@ type Authorization struct {
 	S       *big.Int       `json:"s"`
 }
 
+// SignAuth signs the provided authorization.
+func SignAuth(auth *Authorization, prv *ecdsa.PrivateKey) (*Authorization, error) {
+	h := prefixedRlpHash(
+		0x05,
+		[]interface{}{
+			auth.ChainID,
+			auth.Address,
+			auth.Nonce,
+		})
+
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	return auth.WithSignature(sig), nil
+}
+
+// WithSignature updates the signature of an Authorization to be equal the
+// decoded signature provided in sig.
+func (a *Authorization) WithSignature(sig []byte) *Authorization {
+	r, s, _ := decodeSignature(sig)
+	cpy := Authorization{
+		ChainID: a.ChainID,
+		Address: a.Address,
+		Nonce:   a.Nonce,
+		V:       big.NewInt(int64(sig[crypto.RecoveryIDOffset])),
+		R:       r,
+		S:       s,
+	}
+	return &cpy
+}
+
 func (a Authorization) Authority() (common.Address, error) {
 	sighash := prefixedRlpHash(
 		0x05,
