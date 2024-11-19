@@ -28,8 +28,7 @@ abigen:
 	@echo "Run \"$(BIN)/abigen\" to launch abigen."
 
 test:
-	$(GORUN) build/ci.go test -skip ^TestExecutionSpecState$$
-	$(GORUN) build/ci.go test -run ^TestExecutionSpecState$$
+	$(GORUN) build/ci.go test
 
 test-seq:
 	$(GORUN) build/ci.go test -p 1 -skip ^TestExecutionSpecState$$

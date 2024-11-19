@@ -31,12 +31,11 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/suite"
 )
 
 // TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
 func TestKaiaSpecState(t *testing.T) {
-	common.RelaxPrecompileRangeForTest(false)
-
 	t.Parallel()
 
 	st := new(testMatcher)
@@ -67,8 +66,21 @@ func TestKaiaSpecState(t *testing.T) {
 }
 
 // TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
-func TestExecutionSpecState(t *testing.T) {
+
+type ExecutionSpecStateTestSuite struct {
+	suite.Suite
+}
+
+func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
 	common.RelaxPrecompileRangeForTest(true)
+}
+
+func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
+	common.RelaxPrecompileRangeForTest(false)
+}
+
+func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
+	t := suite.T()
 
 	if !common.FileExist(executionSpecStateTestDir) {
 		t.Skipf("directory %s does not exist", executionSpecStateTestDir)
@@ -99,6 +111,10 @@ func TestExecutionSpecState(t *testing.T) {
 			// "Prague",
 		}, true)
 	})
+}
+
+func TestExecutionSpecStateTestSuite(t *testing.T) {
+	suite.Run(t, new(ExecutionSpecStateTestSuite))
 }
 
 func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
