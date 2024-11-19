@@ -368,11 +368,16 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
+	// SetCode sender nonce increment should be done before set code process.
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		st.state.IncNonce(msg.ValidatedSender())
+	}
+
 	// Check authorizations list validity.
 	if msg.AuthorizationList() != nil {
 		for _, auth := range msg.AuthorizationList() {
 			// Verify chain ID is 0 or equal to current chain ID.
-			if auth.ChainID != big.NewInt(0) && st.evm.ChainConfig().ChainID != auth.ChainID {
+			if auth.ChainID.Cmp(big.NewInt(0)) != 0 && st.evm.ChainConfig().ChainID.Cmp(auth.ChainID) != 0 {
 				continue
 			}
 			// Limit nonce to 2^64-1 per EIP-2681.
