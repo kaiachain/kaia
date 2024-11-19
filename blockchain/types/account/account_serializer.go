@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -74,19 +73,10 @@ func (ser *AccountSerializer) EncodeRLP(w io.Writer) error {
 	}
 
 	if ser.preserveExtHash {
-		if ser.accType == SmartContractAccountType {
-			if pa, ok := ser.account.(ProgramAccount); ok {
-				return pa.EncodeRLPExt(w)
-			}
-		} else if ser.accType == ExternallyOwnedAccountType {
-			if eoa, ok := ser.account.(*ExternallyOwnedAccount); ok {
-				if eoa.isEOAWithCode() {
-					return eoa.EncodeRLPExt(w)
-				}
-			}
+		if pa, ok := ser.account.(ProgramAccount); ok {
+			return pa.EncodeRLPExt(w)
 		}
 	}
-
 	return rlp.Encode(w, ser.account)
 }
 
@@ -168,15 +158,9 @@ func UnextendSerializedAccount(b []byte) (result []byte) {
 		return b // not an account
 	}
 
-	if eoa, ok := acc.(*ExternallyOwnedAccount); ok {
-		if eoa.isEOAWithCode() {
-			return b // normal EOA, no need to unextend
-		}
-	}
-
 	pa := GetProgramAccount(acc)
-	if pa == nil || common.EmptyExtHash(pa.GetStorageRoot()) {
-		return b // not contain ExtHash
+	if pa == nil {
+		return b // not a ProgramAccount
 	}
 
 	enc := NewAccountSerializerWithAccount(pa)
