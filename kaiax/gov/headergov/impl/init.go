@@ -186,6 +186,7 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 			continue
 		}
 
+		// Only governance params are collected. Validator params are ignored.
 		if _, ok := gov.Params[vote.Name()]; ok {
 			votes[blockNum] = vote
 		}
