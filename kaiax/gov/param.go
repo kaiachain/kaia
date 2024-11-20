@@ -22,38 +22,29 @@ type Param struct {
 var (
 	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		switch v := v.(type) {
-		case string:
-			addresses := strings.Split(v, ",")
-			if len(addresses) == 1 {
-				if common.IsHexAddress(addresses[0]) {
-					return common.HexToAddress(addresses[0]), nil
-				}
-				return nil, ErrCanonicalizeToAddressList
+		case []byte:
+			if len(v) == common.AddressLength {
+				return common.BytesToAddress(v), nil
 			}
 
+			var addresses []common.Address
+			for i := 0; i < len(v); i += common.AddressLength {
+				addresses = append(addresses, common.BytesToAddress(v[i:i+20]))
+			}
+			return addresses, nil
+		case string:
 			var res []common.Address
-			for _, address := range addresses {
+			for _, address := range strings.Split(v, ",") {
 				if !common.IsHexAddress(address) {
 					return nil, ErrCanonicalizeToAddressList
 				}
 				res = append(res, common.HexToAddress(address))
 			}
+
+			if len(res) == 1 {
+				return res[0], nil
+			}
 			return res, nil
-		case []byte:
-			return common.BytesToAddress(v), nil
-		case []interface{}:
-			// if value contains multiple addresses, gVote.Value type should be [][]uint8{}
-			if len(v) == 0 {
-				return nil, ErrCanonicalizeToAddressList
-			}
-			var nodeAddresses []common.Address
-			for _, item := range v {
-				if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
-					return nil, ErrCanonicalizeToAddressList
-				}
-				nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
-			}
-			return nodeAddresses, nil
 		}
 		return nil, ErrCanonicalizeToAddressList
 	}

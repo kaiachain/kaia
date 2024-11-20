@@ -53,7 +53,7 @@ func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteByte []byte, 
 	}
 
 	// update valSet db (council list, voteBlk)
-	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, c); err != nil {
+	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, cList); err != nil {
 		return err
 	}
 	return nil

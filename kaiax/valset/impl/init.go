@@ -101,7 +101,7 @@ func (v *ValsetModule) Start() error {
 	voteBlks := ReadValidatorVoteDataBlockNums(v.ChainKv)
 	if voteBlks == nil {
 		header := v.chain.GetHeaderByNumber(0)
-		if header != nil {
+		if header == nil {
 			return errNilHeader
 		}
 		istanbulExtra, err := types.ExtractIstanbulExtra(header)

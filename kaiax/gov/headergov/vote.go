@@ -78,7 +78,13 @@ func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 	if cv, ok := vote.value.(*big.Int); ok {
 		v.Value = cv.String()
 	}
-
+	if cv, ok := vote.value.([]common.Address); ok {
+		var addresses []byte
+		for _, address := range cv {
+			addresses = append(addresses, address.Bytes()...)
+		}
+		v.Value = addresses
+	}
 	return rlp.EncodeToBytes(v)
 }
 
