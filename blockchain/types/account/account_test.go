@@ -263,7 +263,7 @@ func TestAccountSerializer(t *testing.T) {
 			},
 		},
 		{
-			"Initialize new type of EOA",
+			"Create new EOA via constructor",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFields,
 				storageRoot:   emptyRoot.ExtendZero(),

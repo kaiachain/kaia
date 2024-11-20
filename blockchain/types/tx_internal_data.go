@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -37,6 +38,8 @@ import (
 const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
+
+var emptyCodeHash = crypto.Keccak256(nil)
 
 type TxType uint16
 
@@ -673,4 +676,63 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	c := writeCounter(0)
 	rlp.Encode(&c, data)
 	return common.StorageSize(c)
+}
+
+func ValidateAccountState(stateDB StateDB, xType TxType, addr common.Address) bool {
+	switch xType {
+	// Group 1: Recipient must be EOA without code
+	case TxTypeValueTransfer,
+		TxTypeFeeDelegatedValueTransfer,
+		TxTypeFeeDelegatedValueTransferWithRatio,
+		TxTypeValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		acc := stateDB.GetAccount(addr)
+		if acc == nil {
+			return true
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok {
+			return false
+		}
+
+		if acc.Type() == account.SmartContractAccountType || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 2: From must be EOA without code
+	case TxTypeAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdateWithRatio:
+		acc := stateDB.GetAccount(addr)
+		if acc == nil {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok {
+			return false
+		}
+
+		if acc.Type() == account.SmartContractAccountType || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 3: Recipient must be EOA with code or SCA
+	case TxTypeSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		acc := stateDB.GetAccount(addr)
+		if (acc != nil && acc.Type() == account.SmartContractAccountType) || !bytes.Equal(acc.(*account.ExternallyOwnedAccount).GetCodeHash(), emptyCodeHash) {
+			return true
+		}
+
+		return false
+
+	default:
+		return false
+	}
 }

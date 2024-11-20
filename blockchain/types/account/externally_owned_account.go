@@ -178,32 +178,38 @@ func (e *ExternallyOwnedAccount) fromSerializableExt(o *externallyOwnedAccountSe
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLP(w io.Writer) error {
-	if e.isEOAWithCode() {
+	if e.shouldUseCompactEncoding() {
 		return rlp.Encode(w, e.toSerializable())
 	}
 	return rlp.Encode(w, e.AccountCommon.toSerializable())
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLPExt(w io.Writer) error {
-	if e.isEOAWithCode() {
-		if e.storageRoot.IsZeroExtended() {
-			return rlp.Encode(w, e.toSerializable()) // EOA without code. [n, b, hR, k, 0x0, eCH, 0x0]
-		}
-		return rlp.Encode(w, e.toSerializableExt()) // EOA with code, has ExtHash [n, b, hR, k, sRExt, cH, cI]
+	var serializable interface{}
+
+	switch {
+	case e.shouldUseCompactEncoding() && e.storageRoot.IsZeroExtended():
+		serializable = e.toSerializable() // Full encoding. [n, b, hR, k, sR, cH, cI]
+	case e.shouldUseCompactEncoding():
+		serializable = e.toSerializableExt() // Full encoding, has ExtHash [n, b, hR, k, sRExt, cH, cI]
+	default:
+		serializable = e.AccountCommon.toSerializable() // Compact encoding. [n, b, hR, k]
 	}
-	return rlp.Encode(w, e.AccountCommon.toSerializable()) // EOA without code. [n, b, hR, k]
+
+	return rlp.Encode(w, serializable)
 }
 
-func (e *ExternallyOwnedAccount) isEOAWithCode() bool {
+func (e *ExternallyOwnedAccount) shouldUseCompactEncoding() bool {
 	zeroHash := common.ExtHash{}
 
-	if e.codeHash == nil {
-		return false
-	} else if (e.storageRoot == emptyRoot.ExtendZero() || e.storageRoot == zeroHash) &&
-		bytes.Equal(e.codeHash, emptyCodeHash) &&
-		e.codeInfo == params.CodeInfo(0) {
+	isEmptyStorageRoot := e.storageRoot == emptyRoot.ExtendZero() || e.storageRoot == zeroHash
+	hasEmptyCodeHash := e.codeHash == nil || bytes.Equal(e.codeHash, emptyCodeHash)
+	hasDefaultCodeInfo := e.codeInfo == params.CodeInfo(0)
+
+	if isEmptyStorageRoot && hasEmptyCodeHash && hasDefaultCodeInfo {
 		return false
 	}
+
 	return true
 }
 
@@ -231,13 +237,14 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 
 	s.Reset(bytes.NewReader(savedStream), 0)
 
+	// full EOA encoding (the first element is a list)
 	if kind == rlp.List {
 		serializedExt := &externallyOwnedAccountSerializableExt{
 			CommonSerializable: newAccountCommonSerializable(),
 		}
 		if err := s.Decode(serializedExt); err == nil {
 			e.fromSerializableExt(serializedExt)
-			if !e.isEOAWithCode() {
+			if !e.shouldUseCompactEncoding() {
 				e.setDefaultValues()
 			}
 			return nil
@@ -260,6 +267,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 		return nil
 	}
 
+	// compact EOA encoding
 	if err := e.AccountCommon.DecodeRLP(s); err != nil {
 		return err
 	}
@@ -269,7 +277,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (e *ExternallyOwnedAccount) MarshalJSON() ([]byte, error) {
-	if !e.isEOAWithCode() {
+	if !e.shouldUseCompactEncoding() {
 		e.setDefaultValues()
 	}
 
@@ -301,7 +309,7 @@ func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
 	e.codeHash = serialized.CodeHash
 	e.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
 
-	if !e.isEOAWithCode() {
+	if !e.shouldUseCompactEncoding() {
 		e.setDefaultValues()
 	}
 

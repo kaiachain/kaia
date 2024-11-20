@@ -312,6 +312,9 @@ func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, current
 }
 
 func (t *TxInternalDataSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	if !ValidateAccountState(stateDB, t.Type(), t.Recipient) {
+		return kerrors.ErrNotProgramAccount
+	}
 	// Fail if the target address is not a program account.
 	if !stateDB.IsContractAvailable(t.Recipient) {
 		return kerrors.ErrNotProgramAccount

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -324,11 +323,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, curr
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	acc := stateDB.GetAccount(t.Recipient)
-	if acc == nil {
-		return nil
-	}
-	if acc.Type() == account.SmartContractAccountType {
+	if !ValidateAccountState(stateDB, t.Type(), t.Recipient) {
 		return kerrors.ErrNotForProgramAccount
 	}
 	return nil

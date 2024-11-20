@@ -1053,16 +1053,14 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
 		case isDirty:
-			if stateObject.IsProgramAccount() {
-				// Write any contract code associated with the state object.
-				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
-					stateObject.dirtyCode = false
-				}
-				// Write any storage changes in the state object to its storage trie.
-				if err := stateObject.CommitStorageTrie(s.db); err != nil {
-					return common.Hash{}, err
-				}
+			// Write any contract code associated with the state object.
+			if stateObject.code != nil && stateObject.dirtyCode {
+				s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+				stateObject.dirtyCode = false
+			}
+			// Write any storage changes in the state object to its storage trie.
+			if err := stateObject.CommitStorageTrie(s.db); err != nil {
+				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
 			stateObjectsToUpdate = append(stateObjectsToUpdate, stateObject)
