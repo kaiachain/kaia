@@ -70,7 +70,6 @@ var (
 type govSetter struct {
 	numTesting          uint32
 	origStakingInterval uint64
-	origStakingManager  *reward.StakingManager
 }
 
 // setTestGovernance sets staking manager with memory db and staking update interval to 4.
@@ -81,10 +80,8 @@ func setTestGovernance(db database.DBManager) {
 		setter = &govSetter{
 			numTesting:          0,
 			origStakingInterval: params.StakingUpdateInterval(),
-			origStakingManager:  reward.GetStakingManager(),
 		}
 
-		reward.SetTestStakingManagerWithDB(db)
 		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
@@ -96,7 +93,6 @@ func rollbackOrigGovernance() {
 	defer lock.Unlock()
 	setter.numTesting -= 1
 	if setter.numTesting == 0 {
-		reward.SetTestStakingManager(setter.origStakingManager)
 		params.SetStakingUpdateInterval(setter.origStakingInterval)
 
 		setter = nil

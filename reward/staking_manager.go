@@ -390,35 +390,3 @@ func isKaiaForkEnabled(blockNum uint64) bool {
 func PurgeStakingInfoCache() {
 	stakingManager.stakingInfoCache.Purge()
 }
-
-// TODO-Kaia-Reward the following methods are used for testing purpose, it needs to be moved into test files.
-// Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
-// This way you can avoid irreversible side effects during tests.
-
-// SetTestStakingManagerWithDB sets the staking manager with the given database.
-// Note that this method is used only for testing purpose.
-func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
-	SetTestStakingManager(&StakingManager{
-		blockchain:    &blockchain.BlockChain{},
-		stakingInfoDB: testDB,
-		preloadedInfo: common.NewRefCountingMap(),
-	})
-}
-
-// SetTestStakingManagerWithStakingInfoCache sets the staking manager with the given test staking information.
-// Note that this method is used only for testing purpose.
-func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
-	cache, _ := lru.NewARC(128)
-	cache.Add(testInfo.BlockNum, testInfo)
-	SetTestStakingManager(&StakingManager{
-		blockchain:       &blockchain.BlockChain{},
-		stakingInfoCache: cache,
-		preloadedInfo:    common.NewRefCountingMap(),
-	})
-}
-
-// SetTestStakingManager sets the staking manager for testing purpose.
-// Note that this method is used only for testing purpose.
-func SetTestStakingManager(sm *StakingManager) {
-	stakingManager = sm
-}
