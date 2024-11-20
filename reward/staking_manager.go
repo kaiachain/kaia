@@ -37,6 +37,7 @@ import (
 	contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/consensus"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -53,7 +54,11 @@ const (
 	addressTypeKIRAddr // TODO-Kaia: KIR should be changed to KEF after changing AddressBook contract
 )
 
-var addressBookContractAddress = system.AddressBookAddr
+var (
+	addressBookContractAddress = system.AddressBookAddr
+
+	logger = log.NewModuleLogger(log.Reward)
+)
 
 // blockChain is an interface for blockchain.Blockchain used in reward package.
 type blockChain interface {
@@ -72,6 +77,13 @@ type blockChain interface {
 	Processor() blockchain.Processor
 
 	blockchain.ChainContext
+}
+
+// Cannot use governance.Engine because of cyclic dependency.
+// Instead declare only the methods used by this package.
+type governanceHelper interface {
+	CurrentParams() *params.GovParamSet
+	EffectiveParams(num uint64) (*params.GovParamSet, error)
 }
 
 type StakingManager struct {

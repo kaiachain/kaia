@@ -44,7 +44,6 @@ import (
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
@@ -68,7 +67,6 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	governance         governance.Engine
-	rewardDistributor  *reward.RewardDistributor
 }
 
 var (
@@ -148,12 +146,11 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
-	rewardDistributor := reward.NewRewardDistributor(gov)
 
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+		validatorPrivKeys, engine, genesis, gov,
 	}, nil
 }
 
@@ -339,18 +336,25 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	config := bcdata.bc.Config()
-	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
-	pset, err := params.NewGovParamSetChainConfig(config)
-	if err != nil {
+	gov := generateGovernaceDataForTest()
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	if err := mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   bcdata.bc.Config(),
+		Chain:         bcdata.bc,
+		GovModule:     reward_impl.FromLegacy(gov),
+		StakingModule: mStaking, // Not used in "Simple" istanbul policy
+	}); err != nil {
 		return err
 	}
-	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(header, b.Transactions(), receipts, rules, pset)
-	if err != nil {
+	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
+	if spec, err := mReward.GetDeferredReward(header, b.Transactions(), receipts); err != nil {
 		return err
+	} else {
+		for addr, reward := range spec.Rewards {
+			accountMap.AddBalance(addr, reward)
+		}
 	}
-	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
@@ -412,18 +416,25 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	config := bcdata.bc.Config()
-	rules := config.Rules(bcdata.bc.CurrentHeader().Number)
-	pset, err := params.NewGovParamSetChainConfig(config)
-	if err != nil {
+	gov := generateGovernaceDataForTest()
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	if err := mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   bcdata.bc.Config(),
+		Chain:         bcdata.bc,
+		GovModule:     reward_impl.FromLegacy(gov),
+		StakingModule: mStaking, // Not used in "Simple" istanbul policy
+	}); err != nil {
 		return err
 	}
-	start = time.Now()
-	spec, err := reward.CalcDeferredRewardSimple(bcdata.bc.CurrentHeader(), txs, receipts, rules, pset)
-	if err != nil {
+	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
+	if spec, err := mReward.GetDeferredReward(b.Header(), b.Transactions(), receipts); err != nil {
 		return err
+	} else {
+		for addr, reward := range spec.Rewards {
+			accountMap.AddBalance(addr, reward)
+		}
 	}
-	reward.DistributeBlockReward(accountMap, spec.Rewards)
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
 	// Verification with accountMap
