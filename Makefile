@@ -31,8 +31,7 @@ test:
 	$(GORUN) build/ci.go test
 
 test-seq:
-	$(GORUN) build/ci.go test -p 1 -skip ^TestExecutionSpecState$$
-	$(GORUN) build/ci.go test -p 1 -run ^TestExecutionSpecState$$
+	$(GORUN) build/ci.go test -p 1
 
 test-datasync:
 	$(GORUN) build/ci.go test -p 1 ./datasync/...
@@ -44,8 +43,7 @@ test-node:
 	$(GORUN) build/ci.go test -p 1 ./node/...
 
 test-tests:
-	$(GORUN) build/ci.go test -p 1 -skip ^TestExecutionSpecState$$ ./tests/...
-	$(GORUN) build/ci.go test -p 1 -run ^TestExecutionSpecState$$ ./tests/...
+	$(GORUN) build/ci.go test -p 1 ./tests/...
 
 test-others:
 	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,node,tests
