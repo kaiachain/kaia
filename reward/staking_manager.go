@@ -92,7 +92,6 @@ type StakingManager struct {
 	governanceHelper governanceHelper
 	blockchain       blockChain
 	chainHeadChan    chan blockchain.ChainHeadEvent
-	chainHeadSub     event.Subscription
 
 	// Preloaded stakingInfos are fetched before the GetStakingInfo request.
 	// This is used when the state is available when preloaded, but not available
@@ -156,107 +155,6 @@ func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *St
 
 func GetStakingManager() *StakingManager {
 	return stakingManager
-}
-
-// GetStakingInfo returns a stakingInfo on the staking block of the given block number.
-// Note that staking block is the block on which the associated staking information is stored and used during an interval.
-// - Before kaia fork: staking block is calculated by params.CalcStakingBlockNumber(blockNum)
-// - After kaia fork: staking block is the previous block of the given block number.
-func GetStakingInfo(blockNum uint64) *StakingInfo {
-	stakingBlockNumber := blockNum
-	var stakingInfo *StakingInfo
-	if isKaiaForkEnabled(blockNum) {
-		if blockNum > 0 {
-			stakingBlockNumber--
-		}
-		stakingInfo = GetStakingInfoForKaiaBlock(stakingBlockNumber)
-	} else {
-		stakingBlockNumber = params.CalcStakingBlockNumber(blockNum)
-		stakingInfo = GetStakingInfoOnStakingBlock(stakingBlockNumber)
-	}
-
-	logger.Debug("Staking information is requested", "blockNum", blockNum, "staking block number", stakingBlockNumber)
-	return stakingInfo
-}
-
-// GetStakingInfoForKaiaBlock returns a corresponding kaia StakingInfo for a given block number.
-// Note that the given block number is a kaia staking info for the next block.
-func GetStakingInfoForKaiaBlock(blockNum uint64) *StakingInfo {
-	if stakingManager == nil {
-		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
-		return nil
-	}
-
-	// Check if the next block is a kaia block.
-	if !isKaiaForkEnabled(blockNum + 1) {
-		logger.Error("invalid block number for kaia staking info", "block number", blockNum)
-		return nil
-	}
-
-	// Get staking info from cache
-	if cachedStakingInfo := getStakingInfoFromCache(blockNum); cachedStakingInfo != nil {
-		return cachedStakingInfo
-	}
-
-	stakingInfo, err := updateKaiaStakingInfo(blockNum)
-	if err != nil {
-		logger.Error("failed to update kaia stakingInfo", "block number", blockNum, "err", err)
-		return nil
-	}
-
-	logger.Debug("Get stakingInfo from header.", "block number", blockNum, "stakingInfo", stakingInfo)
-	return stakingInfo
-}
-
-// GetStakingInfoOnStakingBlock returns a corresponding StakingInfo for a staking block number.
-// If the given number is not on the staking block, it returns nil.
-//
-// Fixup for Gini coefficients:
-// Kaia core stores Gini: -1 in its database.
-// We ensure GetStakingInfoOnStakingBlock() to always return meaningful Gini.
-// - If cache hit                               -> fillMissingGini -> modifies cached in-memory object
-// - If db hit                                  -> fillMissingGini -> write to cache
-// - If read contract -> write to db (gini: -1) -> fillMissingGini -> write to cache
-func GetStakingInfoOnStakingBlock(stakingBlockNumber uint64) *StakingInfo {
-	if stakingManager == nil {
-		logger.ErrorWithStack("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
-		return nil
-	}
-
-	// Return staking info of a previous block if kaia fork is enabled.
-	if isKaiaForkEnabled(stakingBlockNumber) {
-		logger.Error("unable to use GetStakingInfoOnStakingBlock to get staking info for kaia fork", "staking block number", stakingBlockNumber)
-		return nil
-	}
-
-	// shortcut if given block is not on staking update interval
-	if !params.IsStakingUpdateInterval(stakingBlockNumber) {
-		return nil
-	}
-
-	// Get staking info from cache
-	if cachedStakingInfo := getStakingInfoFromCache(stakingBlockNumber); cachedStakingInfo != nil {
-		return cachedStakingInfo
-	}
-
-	// Get staking info from DB
-	if storedStakingInfo, err := getStakingInfoFromDB(stakingBlockNumber); storedStakingInfo != nil && err == nil {
-		logger.Debug("StakingInfoDB hit.", "staking block number", stakingBlockNumber, "stakingInfo", storedStakingInfo)
-		addStakingInfoToCache(storedStakingInfo)
-		return storedStakingInfo
-	} else {
-		logger.Debug("failed to get stakingInfo from DB", "err", err, "staking block number", stakingBlockNumber)
-	}
-
-	// Calculate staking info from block header and updates it to cache and db
-	calcStakingInfo, err := updateStakingInfo(stakingBlockNumber)
-	if calcStakingInfo == nil {
-		logger.Error("failed to update stakingInfo", "staking block number", stakingBlockNumber, "err", err)
-		return nil
-	}
-
-	logger.Debug("Get stakingInfo from header.", "staking block number", stakingBlockNumber, "stakingInfo", calcStakingInfo)
-	return calcStakingInfo
 }
 
 // PreloadStakingInfo preloads staking info for the given headers.
@@ -350,34 +248,6 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 	return preloadRef, nil
 }
 
-// PreloadStakingInfoWithState fetches the stakingInfo based on the given state trie
-// and then stores it in the preloaded map. Because preloaded map does not have eviction policy,
-// it should be removed manually after use. Note that preloaded info is for the next block of the given header.
-func PreloadStakingInfoWithState(header *types.Header, statedb *state.StateDB) error {
-	if stakingManager == nil {
-		return ErrStakingManagerNotSet
-	}
-
-	if !isKaiaForkEnabled(header.Number.Uint64() + 1) {
-		return nil // no need to preload staking info before kaia fork because we have it in the database.
-	}
-
-	if header.Root != statedb.IntermediateRoot(false) { // Sanity check
-		return errors.New("must supply the statedb for the given header") // this should not happen
-	}
-
-	num := header.Number.Uint64()
-	info, err := getStakingInfoFromMultiCallAtState(num, statedb, header)
-	if err != nil {
-		return fmt.Errorf("staking info preload failed. root err: %v", err)
-	}
-	if info != nil {
-		stakingManager.preloadedInfo.Add(num, info)
-	}
-	logger.Trace("preloaded staking info", "staking block number", num)
-	return nil
-}
-
 // UnloadStakingInfo removes a stakingInfo from the preloaded map.
 // Must be executed after PreloadStakingInfoWithState(Header{num}, state).
 func UnloadStakingInfo(num uint64) {
@@ -387,26 +257,6 @@ func UnloadStakingInfo(num uint64) {
 	}
 
 	stakingManager.preloadedInfo.Remove(num)
-}
-
-// updateKaiaStakingInfo updates kaia staking info in cache created from given block number.
-// From Kaia fork, not only the staking block number but also the calculation of staking amounts is changed,
-// so we need separate update function for kaia staking info.
-func updateKaiaStakingInfo(blockNum uint64) (*StakingInfo, error) {
-	if stakingManager == nil {
-		return nil, ErrStakingManagerNotSet
-	}
-
-	stakingInfo, err := getStakingInfoFromMultiCall(blockNum)
-	if err != nil {
-		return nil, err
-	}
-
-	addStakingInfoToCache(stakingInfo)
-	logger.Debug("Add a new stakingInfo to stakingInfoCache", "blockNum", blockNum)
-
-	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
-	return stakingInfo, nil
 }
 
 // updateStakingInfo updates staking info in cache and db created from given block number.
@@ -431,64 +281,6 @@ func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
 
 	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
 	return stakingInfo, nil
-}
-
-// NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
-// getStakingInfoFromMultiCall returns stakingInfo fetched from MultiCall contract.
-// The MultiCall contract gets types and staking addresses from AddressBook contract, and balances of staking addresses.
-func getStakingInfoFromMultiCall(blockNum uint64) (*StakingInfo, error) {
-	header := stakingManager.blockchain.GetHeaderByNumber(blockNum)
-	if header == nil {
-		return nil, fmt.Errorf("failed to get header by number %d", blockNum)
-	}
-
-	statedb, err := stakingManager.blockchain.StateAt(header.Root)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get state at number %d. root err: %s", blockNum, err)
-	}
-
-	return getStakingInfoFromMultiCallAtState(blockNum, statedb, header)
-}
-
-func getStakingInfoFromMultiCallAtState(blockNum uint64, statedb *state.StateDB, header *types.Header) (*StakingInfo, error) {
-	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
-	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
-	}
-	if code == nil {
-		// This is an expected behavior when the addressBook contract is not installed.
-		logger.Info("The addressBook is not installed. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	// Get staking info from multicall contract
-	contract, err := system.NewMultiCallContractCaller(statedb, stakingManager.blockchain, header)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create multicall contract caller. root err: %s", err)
-	}
-
-	res, err := contract.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
-	if err != nil {
-		return nil, fmt.Errorf("failed to call MultiCall contract. root err: %s", err)
-	}
-
-	types := res.TypeList
-	addrs := res.AddressList
-	stakingAmounts := res.StakingAmounts
-
-	if len(types) == 0 && len(addrs) == 0 {
-		// This is an expected behavior when the addressBook contract is not activated yet.
-		// Note that multicall contract calls address book internally.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	if len(types) != len(addrs) {
-		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
-	}
-
-	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, types, addrs, stakingAmounts...)
 }
 
 // NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
@@ -537,29 +329,6 @@ func addStakingInfoToCache(stakingInfo *StakingInfo) {
 		logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingInfo.BlockNum, "err", err)
 	}
 	stakingManager.stakingInfoCache.Add(stakingInfo.BlockNum, stakingInfo)
-}
-
-func getStakingInfoFromCache(blockNum uint64) *StakingInfo {
-	if cachedStakingInfo, ok := stakingManager.stakingInfoCache.Get(blockNum); ok {
-		logger.Debug("StakingInfoCache hit.", "staking block number", blockNum, "stakingInfo", cachedStakingInfo)
-		// Fill in Gini coeff if not set. Modifies the cached object.
-		if err := fillMissingGiniCoefficient(cachedStakingInfo.(*StakingInfo), blockNum); err != nil {
-			logger.Warn("Cannot fill in gini coefficient", "staking block number", blockNum, "err", err)
-		}
-		return cachedStakingInfo.(*StakingInfo)
-	}
-
-	if info, ok := stakingManager.preloadedInfo.Get(blockNum); ok {
-		info := info.(*StakingInfo)
-		logger.Debug("preloadedInfo hit.", "staking block number", blockNum, "stakingInfo", info)
-		// Fill in Gini coeff if not set. Modifies the cached object.
-		if err := fillMissingGiniCoefficient(info, blockNum); err != nil {
-			logger.Warn("Cannot fill in gini coefficient", "staking block number", blockNum, "err", err)
-		}
-		return info
-	}
-
-	return nil
 }
 
 // checkStakingInfoStored makes sure the given staking info is stored in cache and DB
@@ -626,20 +395,6 @@ func PurgeStakingInfoCache() {
 // Unlike NewStakingManager(), SetTestStakingManager*() do not trigger once.Do().
 // This way you can avoid irreversible side effects during tests.
 
-// SetTestStakingManagerWithChain sets a full-featured staking manager with blockchain, database and cache.
-// Note that this method is used only for testing purpose.
-func SetTestStakingManagerWithChain(bc blockChain, gh governanceHelper, db stakingInfoDB) {
-	cache, _ := lru.NewARC(128)
-	SetTestStakingManager(&StakingManager{
-		stakingInfoCache: cache,
-		stakingInfoDB:    db,
-		governanceHelper: gh,
-		blockchain:       bc,
-		chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		preloadedInfo:    common.NewRefCountingMap(),
-	})
-}
-
 // SetTestStakingManagerWithDB sets the staking manager with the given database.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManagerWithDB(testDB stakingInfoDB) {
@@ -662,30 +417,8 @@ func SetTestStakingManagerWithStakingInfoCache(testInfo *StakingInfo) {
 	})
 }
 
-// AddTestStakingInfoToCache adds the given test staking information to the cache.
-// Note that it won't overwrite the existing cache.
-func AddTestStakingInfoToCache(testInfo *StakingInfo) {
-	if stakingManager == nil {
-		return
-	}
-	stakingManager.stakingInfoCache.Add(testInfo.BlockNum, testInfo)
-}
-
 // SetTestStakingManager sets the staking manager for testing purpose.
 // Note that this method is used only for testing purpose.
 func SetTestStakingManager(sm *StakingManager) {
 	stakingManager = sm
-}
-
-// SetTestAddressBookAddress is only for testing purpose.
-func SetTestAddressBookAddress(addr common.Address) {
-	addressBookContractAddress = common.HexToAddress(addr.Hex())
-}
-
-func TestGetStakingCacheSize() int {
-	return GetStakingManager().stakingInfoCache.Len()
-}
-
-func TestGetStakingPreloadSize() int {
-	return GetStakingManager().preloadedInfo.Len()
 }
