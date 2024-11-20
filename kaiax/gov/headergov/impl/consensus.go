@@ -9,7 +9,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 func (h *headerGovModule) VerifyHeader(header *types.Header) error {
@@ -68,24 +67,25 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 		return err
 	}
 
+	// TODO-kaiax-valset: uncomment it after activating valset module
 	// check if the voter is in council
-	c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
-	if err != nil {
-		return err
-	}
-	idx := valset.AddressList(c).GetIdxByAddress(vote.Voter())
-	if idx == -1 {
-		return ErrInvalidVoter
-	}
+	//c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
+	//if err != nil {
+	//	return err
+	//}
+	//idx := valset.AddressList(c).GetIdxByAddress(vote.Voter())
+	//if idx == -1 {
+	//	return ErrInvalidVoter
+	//}
 
 	// check if Voter is the block proposer.
-	author, err := h.ValSet.GetProposer(blockNum, uint64(header.Round()))
-	if err != nil {
-		return err
-	}
-	if author != vote.Voter() {
-		return ErrInvalidVoter
-	}
+	//author, err := h.ValSet.GetProposer(blockNum, uint64(header.Round()))
+	//if err != nil {
+	//	return err
+	//}
+	//if author != vote.Voter() {
+	//	return ErrInvalidVoter
+	//}
 	return h.checkConsistency(blockNum, vote)
 }
 
@@ -147,15 +147,16 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
 		// it's definite that the valSet vote is not included in this block
 		// so the council(blockNum - 1) and council(blockNum) should be same
-		c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
-		if err != nil {
-			return err
-		}
-
-		idx := valset.AddressList(c).GetIdxByAddress(params.GoverningNode)
-		if idx == -1 {
-			return ErrGovNodeNotInValSetList
-		}
+		// TODO-kaiax-valset: uncomment it after enabling valset
+		//c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//idx := valset.AddressList(c).GetIdxByAddress(params.GoverningNode)
+		//if idx == -1 {
+		//	return ErrGovNodeNotInValSetList
+		//}
 	case gov.GovernanceGovParamContract:
 		state, err := h.Chain.State()
 		if err != nil {

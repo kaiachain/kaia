@@ -14,12 +14,12 @@ func TestCalcSlotsInProposers(t *testing.T) {
 	testHeaders, testStakingInfos, testParamSets := getValSetChainHeadersTestData(), getValSetStakingInfoTestData(), getValSetParamSetTestData()
 
 	valSet := &valSetContext{
-		uint64(1),
-		params.Rules{
-			big.NewInt(0),
-			true, true, true, true, true, true, true, true, true,
+		blockNumber: uint64(1),
+		rules: params.Rules{
+			ChainID:    big.NewInt(0),
+			IsIstanbul: true, IsLondon: true, IsEthTxType: true, IsMagma: true, IsKore: true, IsShanghai: true, IsCancun: true, IsKaia: true, IsRandao: true,
 		},
-		&blockResult{
+		prevBlockResult: &blockResult{
 			proposerPolicy: WeightedRandom,
 			staking:        testStakingInfos[0],
 			header:         testHeaders[0],

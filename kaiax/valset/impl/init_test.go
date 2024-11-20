@@ -141,7 +141,7 @@ func getValSetParamSetTestData() []gov.ParamSet {
 		return *govParam
 	}
 
-	var paramSets []gov.ParamSet
+	paramSets := make([]gov.ParamSet, 0)
 	for _, params := range []struct {
 		proposerPolicy int
 		subGroupSize   uint64

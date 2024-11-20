@@ -99,6 +99,8 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 			return nil, errInvalidVoteValue
 		}
 		idx := c.GetIdxByAddress(address)
+
+		//nolint:exhaustive
 		switch vote.Name() {
 		case gov.GovernanceAddValidator:
 			if idx == -1 {
@@ -112,6 +114,8 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 			} else {
 				return nil, errInvalidVoteValue
 			}
+		default:
+			return nil, errInvalidVoteKey
 		}
 	}
 

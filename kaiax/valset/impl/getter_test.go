@@ -4,10 +4,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-
-	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	hgmmock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
 	stakingmock "github.com/kaiachain/kaia/kaiax/staking/mock"

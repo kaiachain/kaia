@@ -5,15 +5,14 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/kaiax/valset"
-
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/mocks"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	hgmmock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
 	stakingmock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	chainmock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )

@@ -6,9 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
-
 	"github.com/kaiachain/kaia/common"
+	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
