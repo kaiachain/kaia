@@ -316,14 +316,11 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
 		intrinsicGas, err = useEthIntrinsicGas(data, to == nil, r)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
-		if err != nil {
-			return nil, err
-		}
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
