@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip32"
@@ -274,11 +273,6 @@ func (ctx *blockchainTestContext) Stop() error {
 		return err
 	}
 
-	// TODO: make StakingManager not singleton OR recreate new in cn.New()
-	// StakingManager is a global singleton and it never gets recreated.
-	// Manually clear StakingManager-related global states so that
-	// other tests can use StakingManager as if it's fresh.
-	reward.PurgeStakingInfoCache()
 	blockchain.ClearMigrationPrerequisites()
 	return nil
 }

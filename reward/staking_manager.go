@@ -19,44 +19,20 @@
 package reward
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"math/big"
-	"sync"
 
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/consensus"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
 
-const (
-	chainHeadChanSize = 100
-)
-
-// addressType defined in AddressBook
-const (
-	addressTypeNodeID = iota
-	addressTypeStakingAddr
-	addressTypeRewardAddr
-	addressTypePoCAddr // TODO-Kaia: PoC should be changed to KIF after changing AddressBook contract
-	addressTypeKIRAddr // TODO-Kaia: KIR should be changed to KEF after changing AddressBook contract
-)
-
 var (
-	addressBookContractAddress = system.AddressBookAddr
-
 	logger = log.NewModuleLogger(log.Reward)
 )
 
@@ -79,103 +55,20 @@ type blockChain interface {
 	blockchain.ChainContext
 }
 
-// Cannot use governance.Engine because of cyclic dependency.
-// Instead declare only the methods used by this package.
-type governanceHelper interface {
-	CurrentParams() *params.GovParamSet
-	EffectiveParams(num uint64) (*params.GovParamSet, error)
-}
-
-type StakingManager struct {
-	stakingInfoCache *lru.ARCCache
-	stakingInfoDB    stakingInfoDB
-	governanceHelper governanceHelper
-	blockchain       blockChain
-	chainHeadChan    chan blockchain.ChainHeadEvent
-
-	// Preloaded stakingInfos are fetched before the GetStakingInfo request.
-	// This is used when the state is available when preloaded, but not available
-	// when GetStakingInfo is called. e.g. reexec loop in stateAtBlock.
-	// Therefore preloaded staking infos must not be evicted,
-	// and it should be only used temporarily, hence a separate mapping.
-	preloadedInfo *common.RefCountingMap
-}
-
-var (
-	// variables for sole StakingManager
-	once           sync.Once
-	stakingManager *StakingManager
-
-	// errors for staking manager
-	ErrStakingManagerNotSet = errors.New("staking manager is not set")
-	ErrChainHeadChanNotSet  = errors.New("chain head channel is not set")
-)
-
-// NewStakingManager creates and returns StakingManager.
-//
-// On the first call, a StakingManager is created with given parameters.
-// From next calls, the existing StakingManager is returned. (Parameters
-// from the next calls will not affect.)
-func NewStakingManager(bc blockChain, gh governanceHelper, db stakingInfoDB) *StakingManager {
-	if bc != nil && gh != nil {
-		// this is only called once
-		once.Do(func() {
-			cache, _ := lru.NewARC(128)
-			stakingManager = &StakingManager{
-				stakingInfoCache: cache,
-				stakingInfoDB:    db,
-				governanceHelper: gh,
-				blockchain:       bc,
-				chainHeadChan:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-				preloadedInfo:    common.NewRefCountingMap(),
-			}
-
-			// Before migration, staking information of current and before should be stored in DB.
-			//
-			// Staking information from block of StakingUpdateInterval ahead is needed to create a block.
-			// If there is no staking info in either cache, db or state trie, the node cannot make a block.
-			// The information in state trie is deleted after state trie migration.
-			blockchain.RegisterMigrationPrerequisites(func(blockNum uint64) error {
-				// Don't need to check if staking info is stored after kaia fork.
-				if isKaiaForkEnabled(blockNum) {
-					return nil
-				}
-				if err := checkStakingInfoStored(blockNum); err != nil {
-					return err
-				}
-				return checkStakingInfoStored(blockNum + params.StakingUpdateInterval())
-			})
-		})
-	} else {
-		logger.Error("unable to set StakingManager", "blockchain", bc, "governanceHelper", gh)
-	}
-
-	return stakingManager
-}
-
-func GetStakingManager() *StakingManager {
-	return stakingManager
-}
-
 // PreloadStakingInfo preloads staking info for the given headers.
 // It first finds the first block that does not have state, and then
 // it regenerates the state from the nearest block that has state to the target block to preload staking info.
 // Note that the state is saved every 128 blocks to disk in full node.
-func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingModule) (uint64, error) {
+func PreloadStakingInfo(bc blockChain, headers []*types.Header, stakingModule staking.StakingModule) (uint64, error) {
 	// If no headers to preload, do nothing
 	if len(headers) == 0 {
 		return 0, nil
-	}
-
-	if stakingManager == nil {
-		return 0, ErrStakingManagerNotSet
 	}
 
 	var (
 		current  *types.Block
 		database state.Database
 		target   = headers[len(headers)-1].Number.Uint64()
-		bc       = stakingManager.blockchain
 	)
 
 	database = state.NewDatabaseWithExistingCache(bc.StateCache().TrieDB().DiskDB(), bc.StateCache().TrieDB().TrieNodeCache())
@@ -246,147 +139,4 @@ func PreloadStakingInfo(headers []*types.Header, stakingModule staking.StakingMo
 	}
 
 	return preloadRef, nil
-}
-
-// UnloadStakingInfo removes a stakingInfo from the preloaded map.
-// Must be executed after PreloadStakingInfoWithState(Header{num}, state).
-func UnloadStakingInfo(num uint64) {
-	if stakingManager == nil {
-		logger.Error("unable to GetStakingInfo", "err", ErrStakingManagerNotSet)
-		return
-	}
-
-	stakingManager.preloadedInfo.Remove(num)
-}
-
-// updateStakingInfo updates staking info in cache and db created from given block number.
-func updateStakingInfo(blockNum uint64) (*StakingInfo, error) {
-	if stakingManager == nil {
-		return nil, ErrStakingManagerNotSet
-	}
-
-	stakingInfo, err := getStakingInfoFromAddressBook(blockNum)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add to DB before setting Gini; DB will contain {Gini: -1}
-	if err := AddStakingInfoToDB(stakingInfo); err != nil {
-		logger.Debug("failed to write staking info to db", "err", err, "stakingInfo", stakingInfo)
-		return stakingInfo, err
-	}
-
-	addStakingInfoToCache(stakingInfo)
-	logger.Info("Add a new stakingInfo to stakingInfoCache and stakingInfoDB", "blockNum", blockNum)
-
-	logger.Debug("Added stakingInfo", "stakingInfo", stakingInfo)
-	return stakingInfo, nil
-}
-
-// NOTE: Even if the AddressBook contract code is erroneous and it returns unexpected result, this function should not return error in order not to stop block proposal.
-// getStakingInfoFromAddressBook returns stakingInfo fetched from AddressBook contract
-// 1. If calling AddressBook contract fails, it returns error
-// 2. If AddressBook is not activated, emptyStakingInfo is returned without error
-// 3. If AddressBook is activated, it returns fetched stakingInfo
-func getStakingInfoFromAddressBook(blockNum uint64) (*StakingInfo, error) {
-	caller := backends.NewBlockchainContractBackend(stakingManager.blockchain, nil, nil)
-	code, err := caller.CodeAt(context.Background(), addressBookContractAddress, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve code of AddressBook contract. root err: %s", err)
-	}
-	if code == nil {
-		// This is an expected behavior when the addressBook contract is not installed.
-		logger.Info("The addressBook is not installed. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	contract, err := contract.NewAddressBookCaller(addressBookContractAddress, caller)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
-	}
-
-	types, addrs, err := contract.GetAllAddress(&bind.CallOpts{BlockNumber: new(big.Int).SetUint64(blockNum)})
-	if err != nil {
-		return nil, fmt.Errorf("failed to call AddressBook contract. root err: %s", err)
-	}
-
-	if len(types) == 0 && len(addrs) == 0 {
-		// This is an expected behavior when the addressBook contract is not activated yet.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	if len(types) != len(addrs) {
-		return nil, fmt.Errorf("length of type list and address list differ. len(type)=%d, len(addrs)=%d", len(types), len(addrs))
-	}
-
-	return newStakingInfo(stakingManager.blockchain, stakingManager.governanceHelper, blockNum, types, addrs)
-}
-
-func addStakingInfoToCache(stakingInfo *StakingInfo) {
-	// Fill in Gini coeff before adding to cache
-	if err := fillMissingGiniCoefficient(stakingInfo, stakingInfo.BlockNum); err != nil {
-		logger.Warn("Cannot fill in gini coefficient", "staking block number", stakingInfo.BlockNum, "err", err)
-	}
-	stakingManager.stakingInfoCache.Add(stakingInfo.BlockNum, stakingInfo)
-}
-
-// checkStakingInfoStored makes sure the given staking info is stored in cache and DB
-func checkStakingInfoStored(blockNum uint64) error {
-	if stakingManager == nil {
-		return ErrStakingManagerNotSet
-	}
-
-	stakingBlockNumber := params.CalcStakingBlockNumber(blockNum)
-
-	// skip checking if staking info is stored in DB
-	if _, err := getStakingInfoFromDB(stakingBlockNumber); err == nil {
-		return nil
-	}
-
-	// update staking info in DB and cache from address book
-	_, err := updateStakingInfo(stakingBlockNumber)
-	return err
-}
-
-// Fill in StakingInfo.Gini value if not set.
-func fillMissingGiniCoefficient(stakingInfo *StakingInfo, number uint64) error {
-	if !stakingInfo.UseGini {
-		return nil
-	}
-	if stakingInfo.Gini >= 0 {
-		return nil
-	}
-
-	// We reach here if UseGini == true && Gini == -1. There are two such cases.
-	// - Gini was never been calculated, so it is DefaultGiniCoefficient.
-	// - Gini was calculated but there was no eligible node, so Gini = -1.
-	// For the second case, in theory we won't have to recalculate Gini,
-	// but there is no way to distinguish both. So we just recalculate.
-	pset, err := stakingManager.governanceHelper.EffectiveParams(number)
-	if err != nil {
-		return err
-	}
-	minStaking := pset.MinimumStakeBig().Uint64()
-
-	c := stakingInfo.GetConsolidatedStakingInfo()
-	if c == nil {
-		return errors.New("Cannot create ConsolidatedStakingInfo")
-	}
-
-	stakingInfo.Gini = c.CalcGiniCoefficientMinStake(minStaking)
-	logger.Debug("Calculated missing Gini for stored StakingInfo", "number", number, "gini", stakingInfo.Gini)
-	return nil
-}
-
-// isKaiaForkEnabled returns true if the kaia fork is enabled at the given block number.
-func isKaiaForkEnabled(blockNum uint64) bool {
-	if stakingManager == nil {
-		return false
-	}
-	return stakingManager.blockchain.Config() != nil && stakingManager.blockchain.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(blockNum))
-}
-
-func PurgeStakingInfoCache() {
-	stakingManager.stakingInfoCache.Purge()
 }
