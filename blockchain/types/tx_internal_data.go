@@ -691,12 +691,11 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		if acc == nil {
 			return true
 		}
-		eoa, ok := acc.(*account.ExternallyOwnedAccount)
-		if !ok {
+		if acc.Type() == account.SmartContractAccountType {
 			return false
 		}
-
-		if acc.Type() == account.SmartContractAccountType || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
 			return false
 		}
 
@@ -710,12 +709,11 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		if acc == nil {
 			return false
 		}
-		eoa, ok := acc.(*account.ExternallyOwnedAccount)
-		if !ok {
+		if acc.Type() == account.SmartContractAccountType {
 			return false
 		}
-
-		if acc.Type() == account.SmartContractAccountType || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
 			return false
 		}
 
@@ -726,11 +724,18 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		TxTypeFeeDelegatedSmartContractExecution,
 		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
 		acc := stateDB.GetAccount(to)
-		if (acc != nil && acc.Type() == account.SmartContractAccountType) || !bytes.Equal(acc.(*account.ExternallyOwnedAccount).GetCodeHash(), emptyCodeHash) {
-			return true
+		if acc == nil {
+			return false
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
 		}
 
-		return false
+		return true
 
 	default:
 		return false
