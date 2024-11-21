@@ -318,9 +318,6 @@ func (t *TxInternalDataValueTransferMemo) ValidateMutableValue(stateDB StateDB, 
 	if !ValidateAccountState(stateDB, t.Type(), t.Recipient) {
 		return kerrors.ErrNotForProgramAccount
 	}
-	if common.IsPrecompiledContractAddress(t.Recipient) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
 	return nil
 }
 
