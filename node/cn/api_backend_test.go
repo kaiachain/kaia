@@ -546,17 +546,6 @@ func TestCNAPIBackend_GetLogs(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCNAPIBackend_GetTd(t *testing.T) {
-	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
-	defer mockCtrl.Finish()
-
-	td := big.NewInt(123)
-	hash := hashes[0]
-	mockBlockChain.EXPECT().GetTdByHash(hash).Return(td).Times(1)
-
-	assert.Equal(t, td, api.GetTd(hash))
-}
-
 func TestCNAPIBackend_SubscribeEvents(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
