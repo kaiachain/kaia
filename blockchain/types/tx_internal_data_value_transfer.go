@@ -291,7 +291,7 @@ func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumb
 }
 
 func (t *TxInternalDataValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if !ValidateAccountState(stateDB, t.Type(), t.Recipient) {
+	if !validate7702(stateDB, t.Type(), t.From, t.Recipient) {
 		return kerrors.ErrNotForProgramAccount
 	}
 	return nil

@@ -371,7 +371,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) Validate(sta
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if !ValidateAccountState(stateDB, t.Type(), t.Recipient) {
+	if !validate7702(stateDB, t.Type(), t.From, t.Recipient) {
 		return kerrors.ErrNotProgramAccount
 	}
 	// Fail if the target address is not a program account.

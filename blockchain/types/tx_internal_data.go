@@ -678,8 +678,8 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	return common.StorageSize(c)
 }
 
-func ValidateAccountState(stateDB StateDB, xType TxType, addr common.Address) bool {
-	switch xType {
+func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool {
+	switch txType {
 	// Group 1: Recipient must be EOA without code
 	case TxTypeValueTransfer,
 		TxTypeFeeDelegatedValueTransfer,
@@ -687,7 +687,7 @@ func ValidateAccountState(stateDB StateDB, xType TxType, addr common.Address) bo
 		TxTypeValueTransferMemo,
 		TxTypeFeeDelegatedValueTransferMemo,
 		TxTypeFeeDelegatedValueTransferMemoWithRatio:
-		acc := stateDB.GetAccount(addr)
+		acc := stateDB.GetAccount(to)
 		if acc == nil {
 			return true
 		}
@@ -706,7 +706,7 @@ func ValidateAccountState(stateDB StateDB, xType TxType, addr common.Address) bo
 	case TxTypeAccountUpdate,
 		TxTypeFeeDelegatedAccountUpdate,
 		TxTypeFeeDelegatedAccountUpdateWithRatio:
-		acc := stateDB.GetAccount(addr)
+		acc := stateDB.GetAccount(from)
 		if acc == nil {
 			return false
 		}
@@ -725,7 +725,7 @@ func ValidateAccountState(stateDB StateDB, xType TxType, addr common.Address) bo
 	case TxTypeSmartContractExecution,
 		TxTypeFeeDelegatedSmartContractExecution,
 		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
-		acc := stateDB.GetAccount(addr)
+		acc := stateDB.GetAccount(to)
 		if (acc != nil && acc.Type() == account.SmartContractAccountType) || !bytes.Equal(acc.(*account.ExternallyOwnedAccount).GetCodeHash(), emptyCodeHash) {
 			return true
 		}

@@ -178,7 +178,7 @@ func (e *ExternallyOwnedAccount) fromSerializableExt(o *externallyOwnedAccountSe
 }
 
 func (e *ExternallyOwnedAccount) EncodeRLP(w io.Writer) error {
-	if e.shouldUseCompactEncoding() {
+	if !e.shouldUseCompactEncoding() {
 		return rlp.Encode(w, e.toSerializable())
 	}
 	return rlp.Encode(w, e.AccountCommon.toSerializable())
@@ -188,9 +188,9 @@ func (e *ExternallyOwnedAccount) EncodeRLPExt(w io.Writer) error {
 	var serializable interface{}
 
 	switch {
-	case e.shouldUseCompactEncoding() && e.storageRoot.IsZeroExtended():
+	case !e.shouldUseCompactEncoding() && e.storageRoot.IsZeroExtended():
 		serializable = e.toSerializable() // Full encoding. [n, b, hR, k, sR, cH, cI]
-	case e.shouldUseCompactEncoding():
+	case !e.shouldUseCompactEncoding():
 		serializable = e.toSerializableExt() // Full encoding, has ExtHash [n, b, hR, k, sRExt, cH, cI]
 	default:
 		serializable = e.AccountCommon.toSerializable() // Compact encoding. [n, b, hR, k]
@@ -207,10 +207,10 @@ func (e *ExternallyOwnedAccount) shouldUseCompactEncoding() bool {
 	hasDefaultCodeInfo := e.codeInfo == params.CodeInfo(0)
 
 	if isEmptyStorageRoot && hasEmptyCodeHash && hasDefaultCodeInfo {
-		return false
+		return true
 	}
 
-	return true
+	return false
 }
 
 func (e *ExternallyOwnedAccount) setDefaultValues() {
@@ -244,7 +244,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 		}
 		if err := s.Decode(serializedExt); err == nil {
 			e.fromSerializableExt(serializedExt)
-			if !e.shouldUseCompactEncoding() {
+			if e.shouldUseCompactEncoding() {
 				e.setDefaultValues()
 			}
 			return nil
@@ -277,7 +277,7 @@ func (e *ExternallyOwnedAccount) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (e *ExternallyOwnedAccount) MarshalJSON() ([]byte, error) {
-	if !e.shouldUseCompactEncoding() {
+	if e.shouldUseCompactEncoding() {
 		e.setDefaultValues()
 	}
 
@@ -309,7 +309,7 @@ func (e *ExternallyOwnedAccount) UnmarshalJSON(b []byte) error {
 	e.codeHash = serialized.CodeHash
 	e.codeInfo = params.NewCodeInfo(serialized.CodeFormat, serialized.VmVersion)
 
-	if !e.shouldUseCompactEncoding() {
+	if e.shouldUseCompactEncoding() {
 		e.setDefaultValues()
 	}
 

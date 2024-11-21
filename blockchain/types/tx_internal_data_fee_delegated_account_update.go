@@ -424,7 +424,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, curr
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if !ValidateAccountState(stateDB, t.Type(), t.From) {
+	if !validate7702(stateDB, t.Type(), t.From, common.Address{}) {
 		return kerrors.ErrNotForProgramAccount
 	}
 	oldKey := stateDB.GetKey(t.From)
