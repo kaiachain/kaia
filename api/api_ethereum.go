@@ -1290,17 +1290,16 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 		}
 	}
 	result := map[string]interface{}{
-		"number":          (*hexutil.Big)(head.Number),
-		"hash":            head.Hash(),
-		"parentHash":      head.ParentHash,
-		"nonce":           BlockNonce{},  // There is no block nonce concept in Kaia, so it must be empty.
-		"mixHash":         common.Hash{}, // Kaia does not use mixHash, so it must be empty.
-		"sha3Uncles":      common.HexToHash(EmptySha3Uncles),
-		"logsBloom":       head.Bloom,
-		"stateRoot":       head.Root,
-		"miner":           proposer,
-		"difficulty":      (*hexutil.Big)(head.BlockScore),
-		"totalDifficulty": (*hexutil.Big)(b.GetTd(head.Hash())),
+		"number":     (*hexutil.Big)(head.Number),
+		"hash":       head.Hash(),
+		"parentHash": head.ParentHash,
+		"nonce":      BlockNonce{},  // There is no block nonce concept in Kaia, so it must be empty.
+		"mixHash":    common.Hash{}, // Kaia does not use mixHash, so it must be empty.
+		"sha3Uncles": common.HexToHash(EmptySha3Uncles),
+		"logsBloom":  head.Bloom,
+		"stateRoot":  head.Root,
+		"miner":      proposer,
+		"difficulty": (*hexutil.Big)(head.BlockScore),
 		// extraData always return empty Bytes because actual value of extraData in Kaia header cannot be used as meaningful way because
 		// we cannot provide original header of Kaia and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Kaia.
 		"extraData": hexutil.Bytes{},
