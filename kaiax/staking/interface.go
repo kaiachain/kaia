@@ -26,6 +26,7 @@ import (
 type StakingModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
+	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
 	// GetStakingInfo returns the staking info to be used for the given block number.

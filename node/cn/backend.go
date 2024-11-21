@@ -587,7 +587,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {

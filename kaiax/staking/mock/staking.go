@@ -107,6 +107,20 @@ func (mr *MockStakingModuleMockRecorder) GetStakingInfoFromDB(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfoFromDB", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfoFromDB), arg0)
 }
 
+// PostInsertBlock mocks base method.
+func (m *MockStakingModule) PostInsertBlock(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockStakingModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockStakingModule)(nil).PostInsertBlock), arg0)
+}
+
 // PreloadFromState mocks base method.
 func (m *MockStakingModule) PreloadFromState(arg0 uint64, arg1 *types.Header, arg2 *state.StateDB) error {
 	m.ctrl.T.Helper()
