@@ -33,6 +33,7 @@ type StakingModule interface {
 	GetStakingInfo(num uint64) (*StakingInfo, error)
 
 	// Directly access the database.
+	// Note that db access is only effective before Kaia hardfork.
 	// The given number indicates the number that the staking info is measured from, not when the staking info is used.
 	// This is useful when syncing the staking info database over p2p.
 	GetStakingInfoFromDB(sourceNum uint64) *StakingInfo
