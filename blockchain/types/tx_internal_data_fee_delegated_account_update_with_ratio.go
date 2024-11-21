@@ -453,12 +453,12 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB Stat
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if !validate7702(stateDB, t.Type(), t.From, common.Address{}) {
-		return kerrors.ErrNotEOAWithoutCode
-	}
 	oldKey := stateDB.GetKey(t.From)
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
+	}
+	if !validate7702(stateDB, t.Type(), t.From, common.Address{}) {
+		return kerrors.ErrNotEOAWithoutCode
 	}
 	return nil
 }
