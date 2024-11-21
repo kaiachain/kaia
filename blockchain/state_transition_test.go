@@ -113,7 +113,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -134,7 +134,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -157,7 +157,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: zeroAddress,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -178,7 +178,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAuthorityTx,
@@ -192,6 +192,31 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 				m.EXPECT().AddAddressToAccessList(aa)
 			},
 		},
+		{
+			name: "success (don't ecrecover authority)",
+			makeAuthList: func() types.AuthorizationList {
+				auth, err := types.SignAuth(&types.Authorization{
+					ChainID: params.TestChainConfig.ChainID,
+					Address: aa,
+					Nonce:   uint64(1),
+				}, authorityKey)
+				assert.NoError(t, err)
+
+				// The msg is tampered with so a different pubkey is ecrecovered.
+				auth.Address = bb
+				return types.AuthorizationList{*auth}
+			},
+			msg: toAddrTx,
+			expectedMockCalls: func(m *mock_vm.MockStateDB) {
+				notAuthority := gomock.Not(authority)
+				m.EXPECT().AddAddressToAccessList(notAuthority)
+				m.EXPECT().GetCode(notAuthority).Return(nil)
+				m.EXPECT().GetNonce(notAuthority).Return(uint64(1))
+				m.EXPECT().Exist(notAuthority).Return(false)
+				m.EXPECT().IncNonce(notAuthority)
+				m.EXPECT().SetCodeToEOA(notAuthority, types.AddressToDelegation(bb))
+			},
+		},
 		// Cases: fail to set code
 		{
 			name: "invalid chainId",
@@ -201,7 +226,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -217,7 +242,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(18446744073709551615),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -226,15 +251,15 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			},
 		},
 		{
-			name: "error in auth.Authority",
+			name: "error in Authority",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
 					ChainID: params.TestChainConfig.ChainID,
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
-				auth.Address = bb
+				assert.NoError(t, err)
+				auth.V = big.NewInt(10)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAuthorityTx,
@@ -250,7 +275,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -267,7 +292,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(10),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
@@ -285,7 +310,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAddrTx,
