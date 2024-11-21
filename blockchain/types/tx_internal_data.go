@@ -707,13 +707,13 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		TxTypeFeeDelegatedAccountUpdateWithRatio:
 		acc := stateDB.GetAccount(from)
 		if acc == nil {
-			return false
+			return true
 		}
 		if acc.Type() == account.SmartContractAccountType {
 			return false
 		}
 		eoa, ok := acc.(*account.ExternallyOwnedAccount)
-		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+		if !ok || bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
 			return false
 		}
 
@@ -728,10 +728,10 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 			return false
 		}
 		if acc.Type() == account.SmartContractAccountType {
-			return false
+			return true
 		}
 		eoa, ok := acc.(*account.ExternallyOwnedAccount)
-		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+		if !ok || bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
 			return false
 		}
 
