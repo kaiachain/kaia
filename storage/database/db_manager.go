@@ -300,13 +300,6 @@ type DBManager interface {
 	HasStakingInfo(blockNum uint64) (bool, error)
 	DeleteStakingInfo(blockNum uint64)
 
-	// TotalSupply checkpoint functions
-	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
-	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
-	DeleteSupplyCheckpoint(blockNum uint64)
-	ReadLastSupplyCheckpointNumber() uint64
-	WriteLastSupplyCheckpointNumber(blockNum uint64)
-
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
