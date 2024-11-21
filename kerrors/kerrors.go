@@ -31,7 +31,7 @@ var (
 	ErrMaxKeysExceedInValidation  = errors.New("the number of keys exceeds the limit in the validation check")
 	ErrMaxFeeRatioExceeded        = errors.New("fee ratio exceeded the maximum")
 	ErrEmptySlice                 = errors.New("slice is empty")
-	ErrNotForProgramAccount       = errors.New("this type transaction cannot be sent to contract addresses")
+	ErrNotEOAWithoutCode          = errors.New("this type transaction must have a to or from EOA without a code.")
 	ErrNotProgramAccount          = errors.New("not a program account (e.g., an account having code and storage)")
 	ErrPrecompiledContractAddress = errors.New("the address is reserved for pre-compiled contracts")
 	ErrInvalidCodeFormat          = errors.New("smart contract code format is invalid")

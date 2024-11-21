@@ -388,7 +388,7 @@ func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumb
 
 func (t *TxInternalDataAccountUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if !validate7702(stateDB, t.Type(), t.From, common.Address{}) {
-		return kerrors.ErrNotForProgramAccount
+		return kerrors.ErrNotEOAWithoutCode
 	}
 	oldKey := stateDB.GetKey(t.From)
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
