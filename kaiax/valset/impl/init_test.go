@@ -87,9 +87,13 @@ func (tm *testMocks) prepareMockExpectHeader(num uint64, mixHash, vote []byte, a
 		MixHash:    mixHash,
 		Vote:       vote,
 	}
+	if common.EmptyAddress(author) {
+		header = nil // simulate the unmined header
+	} else {
+		tm.mockChain.EXPECT().GetHeaderByHash(header.Hash()).Return(header).AnyTimes()
+		tm.mockEngine.EXPECT().Author(header).Return(author, nil).AnyTimes()
+	}
 	tm.mockChain.EXPECT().GetHeaderByNumber(num).Return(header).AnyTimes()
-	tm.mockChain.EXPECT().GetHeaderByHash(header.Hash()).Return(header).AnyTimes()
-	tm.mockEngine.EXPECT().Author(header).Return(author, nil).AnyTimes()
 }
 
 func (tm *testMocks) prepareMockExpectGovParam(num uint64, policy uint64, subSize uint64, gNode common.Address) {
@@ -181,7 +185,7 @@ func newTestVModule(ctrl *gomock.Controller) (*ValsetModule, *testMocks, error) 
 		return nil, nil, err
 	}
 	// set initial db
-	if err := WriteCouncilAddressListToDb(vModule.ChainKv, 0, n); err != nil {
+	if err := WriteCouncilAddressListToDb(vModule.ChainKv, 0, n[:4]); err != nil {
 		return nil, nil, err
 	}
 

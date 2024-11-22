@@ -102,7 +102,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 	var (
 		sInfo                     = valCtx.prevBlockResult.staking
 		pSet                      = valCtx.prevBlockResult.pSet
-		consolidatedStakingAmount = valCtx.prevBlockResult.consolidatedStakingAmount()
+		consolidatedStakingAmount = valCtx.prevBlockResult.consolidatedStakingAmount(qualified)
 		rules                     = valCtx.rules
 	)
 

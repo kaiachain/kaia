@@ -60,18 +60,18 @@ func TestGetCommitteeAddressList(t *testing.T) {
 		// per committeeSize
 		{"committeesize is zero", defaultBN, defaultRound, testProposerPolicy, 0, tgn, nil, errInvalidCommitteeSize},
 		{"committeesize is one", defaultBN, defaultRound, testProposerPolicy, 1, tgn, []common.Address{n[0]}, nil},
-		{"committeesize is three", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[0], n[1], n[5]}, nil},
-		{"committeesize is six", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 3, tgn, []common.Address{n[5], tgn, n[1], n[3], n[2], n[4]}, nil},
-		{"committeesize is seven", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 4, tgn, []common.Address{n[5], tgn, n[1], n[3], n[2], n[4]}, nil},
+		{"committeesize is three", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[0], n[1], n[2]}, nil},
+		{"committeesize is six", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 3, tgn, []common.Address{tgn, n[1], n[3], n[2]}, nil},
+		{"committeesize is seven", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 4, tgn, []common.Address{tgn, n[1], n[3], n[2]}, nil},
 		// per proposerPolicy
-		{"proposerPolicy roundrobin", defaultBN, defaultRound, params.RoundRobin, testSubGroupSize, tgn, []common.Address{n[3], n[2], n[1]}, nil},
-		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{n[3], n[2], n[1]}, nil},
+		{"proposerPolicy roundrobin", defaultBN, defaultRound, params.RoundRobin, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
+		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
 		// per HF
-		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[5], tgn, n[1]}, nil},
-		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[3], n[2], tgn}, nil},
-		{"istanbul hf activated", testIstanbulCompatibleNumber.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[5], tgn, n[1]}, nil},
-		{"kore hf activated", testKoreCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], n[4], n[5]}, nil},
-		{"randao hf activated", testRandaoCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[5]}, nil},
+		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[3]}, nil},
+		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], tgn, n[1]}, nil},
+		{"istanbul hf activated", testIstanbulCompatibleNumber.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[1], n[2], n[3]}, nil},
+		{"kore hf activated", testKoreCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
+		{"randao hf activated", testRandaoCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2]}, nil},
 		// TODO-kaia-valset: add mainnet,testnet testcases
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -105,5 +105,38 @@ func TestGetCommitteeAddressList(t *testing.T) {
 			assert.Equal(t, tc.expectError, err, "testcase: %d", idx)
 			assert.Equal(t, tc.expectCommitteeList, committee, "testcase: %d", idx)
 		})
+	}
+}
+
+func TestGetProposer(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	for _, tc := range []struct {
+		name        string
+		blockNumber uint64
+		round       uint64
+
+		govParamPolicy  uint64
+		prevBlockAuthor common.Address
+
+		expectProposer common.Address
+		expectError    error
+	}{
+		{"sticky round 0", 3, 0, uint64(Sticky), n[0], n[0], nil},
+		{"sticky round 1", 3, 1, uint64(Sticky), n[0], n[1], nil},
+	} {
+		vModule, tm, err := newTestVModule(ctrl)
+		assert.NoError(t, err)
+
+		tm.prepareMockExpectHeader(tc.blockNumber-1, nil, nil, n[0])
+		tm.prepareMockExpectStakingInfo(tc.blockNumber-1, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, aM, aM, aM, aM})
+		tm.prepareMockExpectGovParam(tc.blockNumber-1, tc.govParamPolicy, testSubGroupSize, tgn)
+
+		tm.prepareMockExpectHeader(tc.blockNumber, nil, nil, common.Address{})
+
+		proposer, err := vModule.GetProposer(tc.blockNumber, tc.round)
+		assert.NoError(t, err)
+		assert.Equal(t, tc.expectProposer, proposer)
 	}
 }

@@ -18,7 +18,7 @@ func TestNewCouncil(t *testing.T) {
 	blockNum := testIstanbulCompatibleNumber.Uint64()
 	tm.prepareMockExpectHeader(blockNum-1, nil, nil, n[1])
 	tm.prepareMockExpectGovParam(blockNum-1, uint64(WeightedRandom), testSubGroupSize, tgn)
-	tm.prepareMockExpectStakingInfo(blockNum-1, []uint64{0, 1, 2, 3}, []uint64{aM, aM, aL, aL})
+	tm.prepareMockExpectStakingInfo(blockNum-1, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, 0, 0, aL, aL})
 
 	valCtx, err := newValSetContext(vModule, blockNum)
 	assert.NoError(t, err)
@@ -30,5 +30,5 @@ func TestNewCouncil(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, valset.AddressList{n[0], n[1]}, c.qualifiedValidators)
-	assert.Equal(t, valset.AddressList{n[5], n[3], n[2], n[4]}, c.demotedValidators)
+	assert.Equal(t, valset.AddressList{n[3], n[2]}, c.demotedValidators)
 }

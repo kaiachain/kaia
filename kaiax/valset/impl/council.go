@@ -27,7 +27,7 @@ func newCouncil(valCtx *valSetContext, councilAddressList []common.Address) (*co
 		blockNumber    = valCtx.blockNumber
 		rules          = valCtx.rules
 		proposerPolicy = valCtx.prevBlockResult.proposerPolicy
-		stakingAmount  = valCtx.prevBlockResult.consolidatedStakingAmount()
+		stakingAmount  = valCtx.prevBlockResult.consolidatedStakingAmount(councilAddressList)
 
 		isSingleMode = valCtx.prevBlockResult.pSet.GovernanceMode == "single"
 		govNode      = valCtx.prevBlockResult.pSet.GoverningNode

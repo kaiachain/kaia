@@ -21,12 +21,21 @@ type blockResult struct {
 }
 
 // consolidatedStakingAmounts get total staking amounts per staking contracts by nodeIds
-func (br *blockResult) consolidatedStakingAmount() map[common.Address]uint64 {
-	consolidatedStakingAmounts := make(map[common.Address]uint64, len(br.staking.NodeIds))
-	for idx, nAddr := range br.staking.NodeIds {
-		consolidatedStakingAmounts[nAddr] = br.staking.ConsolidatedNodes()[idx].StakingAmount
+func (br *blockResult) consolidatedStakingAmount(nodeIds []common.Address) map[common.Address]uint64 {
+	stakingAmounts := make(map[common.Address]uint64, len(nodeIds))
+	for _, node := range nodeIds {
+		stakingAmounts[node] = uint64(0)
 	}
-	return consolidatedStakingAmounts
+
+	for _, consolidated := range br.staking.ConsolidatedNodes() {
+		for _, nAddr := range consolidated.NodeIds {
+			if _, ok := stakingAmounts[nAddr]; ok {
+				stakingAmounts[nAddr] = consolidated.StakingAmount
+			}
+		}
+	}
+
+	return stakingAmounts
 }
 
 type valSetContext struct {
@@ -143,7 +152,7 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 //   - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
 func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, error) {
 	header := v.chain.GetHeaderByNumber(num)
-	if header.Number.Uint64() == num && uint64(header.Round()) == round {
+	if header != nil && header.Number.Uint64() == num && uint64(header.Round()) == round {
 		return v.chain.Engine().Author(header)
 	}
 
