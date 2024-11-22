@@ -53,11 +53,12 @@ func newCouncil(valCtx *valSetContext, councilAddressList []common.Address) (*co
 	// Qualified is a subset of the council who are qualified to be a committee member.
 	// (1) If governance mode is single, always include the governing node.
 	// (2) If no council members has enough KAIA, all members become qualified.
-	for addr, val := range stakingAmount {
-		if val >= minStaking || (isSingleMode && addr == govNode) {
+	for _, addr := range councilAddressList {
+		staking, ok := stakingAmount[addr]
+		if ok && (staking >= minStaking || (isSingleMode && addr == govNode)) {
 			c.qualifiedValidators = append(c.qualifiedValidators, addr)
 		} else {
-			c.demotedValidators = append(c.qualifiedValidators, addr)
+			c.demotedValidators = append(c.demotedValidators, addr)
 		}
 	}
 

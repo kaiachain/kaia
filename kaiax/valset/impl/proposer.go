@@ -116,7 +116,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 	// calc again for totalStaking amount among qualified subset of the council.
 	totalStaking := float64(0)
 	for _, st := range consolidatedStakingAmount {
-		if st > pSet.MinimumStake.Uint64() {
+		if st >= pSet.MinimumStake.Uint64() {
 			stake := float64(st)
 			if pSet.UseGiniCoeff {
 				stake = math.Round(math.Pow(float64(st), 1.0/(1+gini)))
@@ -131,7 +131,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 		weights          = make([]uint64, len(qualified))
 	)
 	// weight is meaningful at next case. calculate the weight.
-	if !rules.IsKore || totalStaking != 0 {
+	if totalStaking != 0 && !rules.IsKore {
 		for idx, addr := range qualified {
 			weight := uint64(math.Round(float64(consolidatedStakingAmount[addr]) * 100 / totalStaking))
 			if weight <= 0 {

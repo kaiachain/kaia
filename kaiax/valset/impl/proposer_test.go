@@ -1,41 +1,35 @@
 package impl
 
 import (
-	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCalcSlotsInProposers(t *testing.T) {
-	testHeaders, testStakingInfos, testParamSets := getValSetChainHeadersTestData(), getValSetStakingInfoTestData(), getValSetParamSetTestData()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	valSet := &valSetContext{
-		blockNumber: uint64(1),
-		rules: params.Rules{
-			ChainID:    big.NewInt(0),
-			IsIstanbul: true, IsLondon: true, IsEthTxType: true, IsMagma: true, IsKore: true, IsShanghai: true, IsCancun: true, IsKaia: true, IsRandao: true,
-		},
-		prevBlockResult: &blockResult{
-			proposerPolicy: WeightedRandom,
-			staking:        testStakingInfos[0],
-			header:         testHeaders[0],
-			author:         tgn,
-			pSet:           testParamSets[0],
-		},
-	}
-	qualified := valset.AddressList{tgn, n2, n3, n4}
+	vModule, tm, _ := newTestVModule(ctrl)
+	tm.prepareMockExpectGovParam(0, testProposerPolicy, testSubGroupSize, tgn)
+	tm.prepareMockExpectStakingInfo(0, []uint64{0, 1, 2, 3}, []uint64{aL, aL, aL, aL})
+	tm.prepareMockExpectHeader(0, nil, nil, tgn)
+
+	valCtx, err := newValSetContext(vModule, 1)
+	assert.NoError(t, err)
+
+	qualified := valset.AddressList{tgn, n[1], n[2], n[3]}
 	expectProposersIndexes := []int{0, 1, 2, 3}
-	assert.Equal(t, expectProposersIndexes, calsSlotsInProposers(qualified, valSet))
+	assert.Equal(t, expectProposersIndexes, calsSlotsInProposers(qualified, valCtx))
 }
 
 func TestShuffleProposers(t *testing.T) {
-	qualified := []common.Address{tgn, n2, n3, n4}
+	qualified := []common.Address{tgn, n[1], n[2], n[3]}
 	proposersIndexes := []int{0, 1, 2, 3}
-	expectProposers := []common.Address{tgn, n4, n2, n3}
+	expectProposers := []common.Address{tgn, n[3], n[1], n[2]}
 	assert.Equal(t, expectProposers, shuffleProposers(qualified, proposersIndexes, testPrevHash))
 }
 
