@@ -69,6 +69,10 @@ type ConsensusModule interface {
 // Any component or module that accomodate consensus modules.
 type ConsensusModuleHost interface {
 	RegisterConsensusModule(modules ...ConsensusModule)
+
+	// Temporal method to unregister consensus module.
+	// See node/cn/backend.go#createSnapshot() for details.
+	UnregisterConsensusModule(module ConsensusModule)
 }
 
 // ExecutionModule deals with execution of confirmed blocks.
