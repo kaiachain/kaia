@@ -25,6 +25,7 @@ vendor
 
 # used by the Makefile
 /build/_workspace/
+/build/cache/
 /build/bin/
 /klay*.zip
 
@@ -55,3 +56,5 @@ tests/testdata
 
 # generated files but not want to include
 contracts/cypress/credit.go
+
+tests/spec-tests/
