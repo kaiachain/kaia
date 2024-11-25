@@ -234,10 +234,6 @@ func (b *CNAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*type
 	return b.cn.blockchain.GetLogsByHash(hash), nil
 }
 
-func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
-	return b.cn.blockchain.GetTdByHash(blockHash)
-}
-
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
 	vmError := func() error { return nil }
 
