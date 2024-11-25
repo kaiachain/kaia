@@ -379,7 +379,7 @@ func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uin
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, nil, contractCreation, r)
+	return types.IntrinsicGas(data, nil, nil, contractCreation, r)
 }
 
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
