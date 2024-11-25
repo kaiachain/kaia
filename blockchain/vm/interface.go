@@ -26,6 +26,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
@@ -107,6 +108,8 @@ type StateDB interface {
 	GetTxHash() common.Hash
 
 	GetKey(address common.Address) accountkey.AccountKey
+
+	GetAccount(address common.Address) account.Account
 
 	Finalise(bool, bool)
 }

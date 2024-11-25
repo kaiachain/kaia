@@ -546,7 +546,7 @@ func valueTransferToContract(txType types.TxType, values txValueMap, contract co
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
 		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrNotForProgramAccount
+		return values, kerrors.ErrNotEOAWithoutCode
 	}
 
 	return values, nil

@@ -25,8 +25,10 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -36,6 +38,8 @@ import (
 const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
+
+var emptyCodeHash = crypto.Keccak256(nil)
 
 type TxType uint16
 
@@ -436,6 +440,7 @@ type StateDB interface {
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
 	GetKey(addr common.Address) accountkey.AccountKey
+	GetAccount(addr common.Address) account.Account
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {
@@ -717,4 +722,68 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	c := writeCounter(0)
 	rlp.Encode(&c, data)
 	return common.StorageSize(c)
+}
+
+func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool {
+	switch txType {
+	// Group 1: Recipient must be EOA without code
+	case TxTypeValueTransfer,
+		TxTypeFeeDelegatedValueTransfer,
+		TxTypeFeeDelegatedValueTransferWithRatio,
+		TxTypeValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return true
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 2: From must be EOA without code
+	case TxTypeAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdateWithRatio:
+		acc := stateDB.GetAccount(from)
+		if acc == nil {
+			return false
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 3: Recipient must be EOA with code or SCA
+	case TxTypeSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return false
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return true
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return true
+		}
+
+		return true
+
+	default:
+		return false
+	}
 }

@@ -133,8 +133,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return ErrGovParamNotAccount
 		}
 
-		pa := account.GetProgramAccount(acc)
-		if pa == nil || pa.Empty() {
+		if acc.Type() != account.SmartContractAccountType || acc.Empty() {
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:
