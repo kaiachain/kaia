@@ -28,6 +28,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -100,6 +102,9 @@ type Engine interface {
 	// rules of a particular engine. The changes are executed inline.
 	Prepare(chain ChainReader, header *types.Header) error
 
+	// Initialize runs any pre-transaction state modifications (e.g., EIP-2539)
+	Initialize(chain ChainReader, header *types.Header, state *state.StateDB)
+
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// and assembles the final block.
 	// Note: The block header and state database might be updated to reflect any
@@ -171,6 +176,9 @@ type Istanbul interface {
 
 	// UpdateParam updates the governance parameter
 	UpdateParam(num uint64) error
+
+	kaiax.ConsensusModuleHost
+	staking.StakingModuleHost
 }
 
 type ConsensusInfo struct {

@@ -590,6 +590,14 @@ func (args *EthTransactionArgs) data() []byte {
 	return nil
 }
 
+func (args *EthTransactionArgs) GetAccessList() types.AccessList {
+	if args.AccessList != nil {
+		return *args.AccessList
+	} else {
+		return nil
+	}
+}
+
 func (args *EthTransactionArgs) setGas(gas *hexutil.Uint64) {
 	args.Gas = gas
 }

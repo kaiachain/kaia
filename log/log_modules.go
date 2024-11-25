@@ -128,6 +128,12 @@ const (
 	KAS
 	FORK
 	NodeCnGasPrice
+	KaiaxStaking
+	KaiaxReward
+	KaiaxSupply
+
+	// 61~70
+	KaiaxGov
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -205,4 +211,10 @@ var moduleNames = [ModuleNameLen]string{
 	"kas",
 	"fork",
 	"node/cn/gasprice",
+	"kaiax/staking",
+	"kaiax/reward",
+	"kaiax/supply",
+
+	// 61~70
+	"kaiax/gov",
 }

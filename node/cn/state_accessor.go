@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/node/cn/tracers"
-	"github.com/kaiachain/kaia/reward"
 	statedb2 "github.com/kaiachain/kaia/storage/statedb"
 )
 
@@ -144,14 +143,10 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		start  = time.Now()
 		logged time.Time
 		parent common.Hash
-
-		preloadedStakingBlockNums = make([]uint64, 0, origin-current.NumberU64())
 	)
-	defer func() {
-		for _, num := range preloadedStakingBlockNums {
-			reward.UnloadStakingInfo(num)
-		}
-	}()
+	preloadRef := cn.stakingModule.AllocPreloadRef()
+	defer cn.stakingModule.FreePreloadRef(preloadRef)
+
 	for current.NumberU64() < origin {
 		// Print progress logs if long enough time elapsed
 		if report && time.Since(logged) > 8*time.Second {
@@ -162,11 +157,8 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if cn.config.DisableUnsafeDebug && time.Since(start) > cn.config.StateRegenerationTimeLimit {
 			return nil, nil, fmt.Errorf("this request has queried old states too long since it exceeds the state regeneration time limit(%s)", cn.config.StateRegenerationTimeLimit.String())
 		}
-		// Preload StakingInfo from the current block and state. Needed for next block's engine.Finalize() post-Kaia.
-		preloadedStakingBlockNums = append(preloadedStakingBlockNums, current.NumberU64())
-		if err := reward.PreloadStakingInfoWithState(current.Header(), statedb); err != nil {
-			return nil, nil, fmt.Errorf("preloading staking info from block %d failed: %v", current.NumberU64(), err)
-		}
+		// Make StakingModule remember the current block state. Needed for next block's engine.Finalize() post-Kaia.
+		cn.stakingModule.PreloadFromState(preloadRef, current.Header(), statedb)
 		// Retrieve the next block to regenerate and process it
 		next := current.NumberU64() + 1
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
@@ -206,7 +198,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 }
 
 // stateAtTransaction returns the execution environment of a certain transaction.
-func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
+func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
 	// Short circuit if it's genesis block.
 	if block.NumberU64() == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, errors.New("no transaction in genesis")
@@ -218,10 +210,13 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64)
 	}
 	// Lookup the statedb of parent block from the live database,
 	// otherwise regenerate it on the flight.
-	statedb, release, err := cn.stateAtBlock(parent, reexec, nil, true, false)
+	statedb, release, err := cn.stateAtBlock(parent, reexec, base, readOnly, preferDisk)
 	if err != nil {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
+	// If prague hardfork, insert parent block hash in the state as per EIP-2935.
+	cn.engine.Initialize(cn.blockchain, block.Header(), statedb)
+
 	if txIndex == 0 && len(block.Transactions()) == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, release, nil
 	}

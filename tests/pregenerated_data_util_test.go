@@ -42,7 +42,6 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work"
@@ -408,12 +407,10 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		return nil, err
 	}
 
-	rewardDistributor := reward.NewRewardDistributor(gov)
-
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+		validatorPrivKeys, engine, genesis, gov,
 	}, nil
 }
 

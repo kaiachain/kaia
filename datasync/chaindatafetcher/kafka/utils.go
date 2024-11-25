@@ -68,8 +68,7 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 	head := block.Header() // copies the header once
 	hash := head.Hash()
 
-	td := blockchain.GetTd(hash, block.NumberU64())
-	r, _ := kaiaApi.RpcOutputBlock(block, td, false, false, blockchain.Config())
+	r, _ := kaiaApi.RpcOutputBlock(block, false, false, blockchain.Config())
 
 	// make transactions
 	transactions := block.Transactions()

@@ -29,10 +29,13 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestState(t *testing.T) {
+// TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
+func TestKaiaSpecState(t *testing.T) {
 	t.Parallel()
 
 	st := new(testMatcher)
@@ -58,21 +61,79 @@ func TestState(t *testing.T) {
 	st.skipLoad(`^stRandom2/randomStatetest642.json`)
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
-		for _, subtest := range test.Subtests() {
-			subtest := subtest
-			key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
-			name := name + "/" + key
-			t.Run(key, func(t *testing.T) {
-				if subtest.Fork == "Constantinople" {
-					t.Skip("constantinople not supported yet")
-				}
-				withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-					_, err := test.Run(subtest, vmconfig)
-					return st.checkFailure(t, name, err)
-				})
-			})
-		}
+		execStateTest(t, st, test, name, []string{"Constantinople"}, false)
 	})
+}
+
+// TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
+
+type ExecutionSpecStateTestSuite struct {
+	suite.Suite
+}
+
+func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
+	common.RelaxPrecompileRangeForTest(true)
+}
+
+func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
+	common.RelaxPrecompileRangeForTest(false)
+}
+
+func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
+	t := suite.T()
+
+	if !common.FileExist(executionSpecStateTestDir) {
+		t.Skipf("directory %s does not exist", executionSpecStateTestDir)
+	}
+	st := new(testMatcher)
+
+	// TODO-Kaia: should support EIPs introduced at following forks
+	st.skipLoad(`^frontier\/`)
+	st.skipLoad(`^homestead\/`)
+	st.skipLoad(`^byzantium\/`)
+	st.skipLoad(`^istanbul\/`)
+	st.skipLoad(`^berlin\/`)
+	st.skipLoad(`^cancun\/`)
+
+	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
+		execStateTest(t, st, test, name, []string{
+			"Frontier",
+			"Homestead",
+			"Byzantium",
+			"Constantinople",
+			"ConstantinopleFix",
+			"Istanbul",
+			"Berlin",
+			"London",
+			"Merge",
+			"Shanghai",
+			// "Cancun",
+			// "Prague",
+		}, true)
+	})
+}
+
+func TestExecutionSpecStateTestSuite(t *testing.T) {
+	suite.Run(t, new(ExecutionSpecStateTestSuite))
+}
+
+func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
+	for _, subtest := range test.Subtests() {
+		subtest := subtest
+		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+		name := name + "/" + key
+		t.Run(key, func(t *testing.T) {
+			for _, skip := range skipForks {
+				if skip == subtest.Fork {
+					t.Skipf("%s not supported yet", subtest.Fork)
+				}
+			}
+			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
+				_, err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
+				return st.checkFailure(t, name, err)
+			})
+		})
+	}
 }
 
 // Transactions with gasLimit above this value will not get a VM trace on failure.

@@ -91,7 +91,7 @@ func testNodeAddress(t *testing.T, testAPIName string) {
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
 	gov.SetNodeAddress(nodeAddress)
 
-	api := EthereumAPI{governanceAPI: governance.NewGovernanceAPI(gov)}
+	api := EthereumAPI{nodeAddress: nodeAddress}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
 	result, ok := results[0].Interface().(common.Address)
 	assert.True(t, ok)
@@ -289,7 +289,6 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"size": "0x244",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
-		"totalDifficulty": "0x5",
 		"transactionsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
 	}`), &expected))
 
@@ -391,7 +390,6 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "size": "0xe44",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
-        "totalDifficulty": "0x5",
         "transactions": [
             {
               "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
@@ -793,7 +791,6 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "size": "0xe44",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
-        "totalDifficulty": "0x5",
         "transactions": [
             "0x6231f24f79d28bb5b8425ce577b3b77cd9c1ab766fcfc5233358a2b1c2f4ff70",
             "0xf146858415c060eae65a389cbeea8aeadc79461038fbee331ffd97b41279dd63",

@@ -20,7 +20,6 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0
 	github.com/ethereum/c-kzg-4844 v0.4.0
 	github.com/fatih/color v1.9.0
-	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-stack/stack v1.8.0

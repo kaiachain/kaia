@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/kaiachain/kaia/common"
 )
 
 var TargetGasLimit = GenesisGasLimit // The artificial target
@@ -75,7 +77,9 @@ const (
 	SelfdestructRefundGas uint64 = 24000 // Refunded following a selfdestruct operation.                                  // R_selfdestruct
 	MemoryGas             uint64 = 3     // Times the address of the (highest referenced byte in memory + 1). NOTE: referencing happens on read, write and in instructions such as RETURN and CALL. // G_memory
 	LogTopicGas           uint64 = 375   // Multiplied by the * of the LOG*, per LOG transaction. e.g. LOG0 incurs 0 * c_txLogTopicGas, LOG4 incurs 4 * c_txLogTopicGas.   // G_logtopic
-	TxDataNonZeroGas      uint64 = 68    // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions. // G_txdatanonzero
+
+	TxDataNonZeroGasFrontier uint64 = 68 // Per byte of data attached to a transaction that is not equal to zero. NOTE: Not payable on data of calls between transactions.
+	TxDataNonZeroGasEIP2028  uint64 = 16 // Per byte of non zero data attached to a transaction after EIP 2028 (part in Istanbul in Geth, part in Prague in Kaia)
 
 	CallGas         uint64 = 700  // Static portion of gas for CALL-derivates after EIP 150 (Tangerine)
 	ExtcodeSizeGas  uint64 = 700  // Cost of EXTCODESIZE after EIP 150 (Tangerine)
@@ -185,16 +189,31 @@ const (
 	TxAccessListAddressGas    uint64 = 2400 // Per address specified in EIP 2930 access list
 	TxAccessListStorageKeyGas uint64 = 1900 // Per storage key specified in EIP 2930 access list
 
+<<<<<<< HEAD
 	TxAuthTupleGas uint64 = 12500 // Per auth tuple code specified in EIP-7702
+=======
+	Bls12381G1AddGas          uint64 = 500   // Price for BLS12-381 elliptic curve G1 point addition
+	Bls12381G1MulGas          uint64 = 12000 // Price for BLS12-381 elliptic curve G1 point scalar multiplication
+	Bls12381G2AddGas          uint64 = 800   // Price for BLS12-381 elliptic curve G2 point addition
+	Bls12381G2MulGas          uint64 = 45000 // Price for BLS12-381 elliptic curve G2 point scalar multiplication
+	Bls12381PairingBaseGas    uint64 = 65000 // Base gas price for BLS12-381 elliptic curve pairing check
+	Bls12381PairingPerPairGas uint64 = 43000 // Per-point pair gas price for BLS12-381 elliptic curve pairing check
+	Bls12381MapG1Gas          uint64 = 5500  // Gas price for BLS12-381 mapping field element to G1 operation
+	Bls12381MapG2Gas          uint64 = 75000 // Gas price for BLS12-381 mapping field element to G2 operation
+>>>>>>> dev
 
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0
+
+	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
 )
 
 const (
 	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
 	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
 )
+
+var Bls12381MultiExpDiscountTable = [128]uint64{1200, 888, 764, 641, 594, 547, 500, 453, 438, 423, 408, 394, 379, 364, 349, 334, 330, 326, 322, 318, 314, 310, 306, 302, 298, 294, 289, 285, 281, 277, 273, 269, 268, 266, 265, 263, 262, 260, 259, 257, 256, 254, 253, 251, 250, 248, 247, 245, 244, 242, 241, 239, 238, 236, 235, 233, 232, 231, 229, 228, 226, 225, 223, 222, 221, 220, 219, 219, 218, 217, 216, 216, 215, 214, 213, 213, 212, 211, 211, 210, 209, 208, 208, 207, 206, 205, 205, 204, 203, 202, 202, 201, 200, 199, 199, 198, 197, 196, 196, 195, 194, 193, 193, 192, 191, 191, 190, 189, 188, 188, 187, 186, 185, 185, 184, 183, 182, 182, 181, 180, 179, 179, 178, 177, 176, 176, 175, 174}
 
 var (
 	// Dummy Randao fields to be used in a Randao-enabled Genesis block.
@@ -208,6 +227,13 @@ var (
 	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+
+	// SystemAddress is where the system-transaction is sent from as per EIP-4788
+	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")
+
+	// EIP-2935 - Serve historical block hashes from state
+	HistoryStorageAddress = common.HexToAddress("0x0aae40965e6800cd9b1f4b05ff21581047e3f91e")
+	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe1460575767ffffffffffffffff5f3511605357600143035f3511604b575f35612000014311604b57611fff5f3516545f5260205ff35b5f5f5260205ff35b5f5ffd5b5f35611fff60014303165500")
 )
 
 // Parameters for execution time limit
