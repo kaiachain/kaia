@@ -313,16 +313,12 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
-<<<<<<< HEAD
-	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, to == nil, r)
-=======
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
 		intrinsicGas, err = useEthIntrinsicGas(data, to == nil, r)
 	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
+		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
->>>>>>> dev
 	if err != nil {
 		return nil, err
 	}

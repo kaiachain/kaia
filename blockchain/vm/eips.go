@@ -381,7 +381,10 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
 }
 
-<<<<<<< HEAD
+func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
+	jt[opCode].constantGas = constantGas
+}
+
 // enable7702 the EIP-7702 changes to support delegation designators.
 func enable7702(jt *JumpTable) {
 	jt[EXTCODECOPY].constantGas = params.WarmStorageReadCostEIP2929
@@ -404,8 +407,4 @@ func enable7702(jt *JumpTable) {
 
 	jt[DELEGATECALL].constantGas = params.WarmStorageReadCostEIP2929
 	jt[DELEGATECALL].dynamicGas = gasDelegateCallEIP7702
-=======
-func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
-	jt[opCode].constantGas = constantGas
->>>>>>> dev
 }

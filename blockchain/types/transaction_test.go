@@ -635,19 +635,11 @@ func TestIntrinsicGas(t *testing.T) {
 		assert.Equal(t, tc.expectGas2, gas)
 		assert.Equal(t, nil, err)
 
-<<<<<<< HEAD
+		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+		assert.Equal(t, tc.expectGas3, gas)
+		assert.Equal(t, nil, err)
+
 		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: false})
-		assert.Equal(t, tc.expectGas3, gas)
-		assert.Equal(t, nil, err)
-
-		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true})
-=======
-		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
-		assert.Equal(t, tc.expectGas3, gas)
-		assert.Equal(t, nil, err)
-
-		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: false})
->>>>>>> dev
 		assert.Equal(t, tc.expectGas4, gas)
 		assert.Equal(t, nil, err)
 

@@ -1413,11 +1413,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-<<<<<<< HEAD
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, b.ChainConfig().Rules(header.Number))
-=======
-	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.To == nil, b.ChainConfig().Rules(header.Number))
->>>>>>> dev
+	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
