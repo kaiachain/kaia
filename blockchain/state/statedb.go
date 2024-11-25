@@ -493,6 +493,15 @@ func (s *StateDB) SetCode(addr common.Address, code []byte) error {
 	return nil
 }
 
+func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte) error {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
+	}
+
+	return nil
+}
+
 func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	stateObject := s.GetOrNewSmartContract(addr)
 	if stateObject != nil {
@@ -1079,16 +1088,14 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
 		case isDirty:
-			if stateObject.IsProgramAccount() {
-				// Write any contract code associated with the state object.
-				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
-					stateObject.dirtyCode = false
-				}
-				// Write any storage changes in the state object to its storage trie.
-				if err := stateObject.CommitStorageTrie(s.db); err != nil {
-					return common.Hash{}, err
-				}
+			// Write any contract code associated with the state object.
+			if stateObject.code != nil && stateObject.dirtyCode {
+				s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+				stateObject.dirtyCode = false
+			}
+			// Write any storage changes in the state object to its storage trie.
+			if err := stateObject.CommitStorageTrie(s.db); err != nil {
+				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
 			stateObjectsToUpdate = append(stateObjectsToUpdate, stateObject)
@@ -1130,6 +1137,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
 				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)
 			}
+
 			// Keep 128 diff layers in the memory, persistent layer is 129th.
 			// - head layer is paired with HEAD state
 			// - head-1 layer is paired with HEAD-1 state
@@ -1140,7 +1148,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
-
 	return root, err
 }
 

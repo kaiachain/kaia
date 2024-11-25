@@ -457,6 +457,9 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) ValidateMutableValue(
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err
 	}
+	if !validate7702(stateDB, t.Type(), t.From, common.Address{}) {
+		return kerrors.ErrNotEOAWithoutCode
+	}
 	return nil
 }
 
