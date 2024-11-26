@@ -507,14 +507,13 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 			if from, _ := tx.From(); from == eoaWithCode.Addr {
 				err = tx.SignWithKeys(signer, eoaWithCode.Keys)
-				assert.Equal(t, nil, err)
 			} else {
 				err = tx.SignWithKeys(signer, reservoir.Keys)
-				assert.Equal(t, nil, err)
 			}
+			assert.Equal(t, nil, err)
 
 			if txType.IsFeeDelegatedTransaction() {
-				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 				assert.Equal(t, nil, err)
 			}
 
