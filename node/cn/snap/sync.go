@@ -34,10 +34,10 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/msgrate"
@@ -48,14 +48,6 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.SnapshotSync)
-
-var (
-	// emptyRoot is the known root hash of an empty trie.
-	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-
-	// emptyCode is the known hash of the empty EVM bytecode.
-	emptyCode = crypto.Keccak256Hash(nil)
-)
 
 const (
 	// minRequestSize is the minimum number of bytes to request from a remote peer.
@@ -1785,7 +1777,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 	for i, acc := range res.accounts {
 		pacc := account.GetProgramAccount(acc)
 		// Check if the account is a contract with an unknown code
-		if pacc != nil && !bytes.Equal(pacc.GetCodeHash(), emptyCode[:]) {
+		if pacc != nil && !bytes.Equal(pacc.GetCodeHash(), types.EmptyCodeHash.Bytes()) {
 			if !s.db.HasCodeWithPrefix(common.BytesToHash(pacc.GetCodeHash())) {
 				res.task.codeTasks[common.BytesToHash(pacc.GetCodeHash())] = struct{}{}
 				res.task.needCode[i] = true
@@ -1793,7 +1785,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 			}
 		}
 		// Check if the account is a contract with an unknown storage trie
-		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != types.EmptyRootHashOriginal {
 			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot()); err != nil || !ok {
 				// If there was a previous large state retrieval in progress,
 				// don't restart it from scratch. This happens if a sync cycle

@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -1357,7 +1358,7 @@ func getCodeHash(i uint64) []byte {
 
 // getCodeByHash convenience function to lookup the code from the code hash
 func getCodeByHash(hash common.Hash) []byte {
-	if hash == emptyCode {
+	if hash == types.EmptyCodeHash {
 		return nil
 	}
 	for i, h := range codehashes {
@@ -1416,7 +1417,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill boundary accounts
 	for i := 0; i < len(boundaries); i++ {
-		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot, getCodeHash(uint64(i)))
+		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), types.EmptyRootHashOriginal, getCodeHash(uint64(i)))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{boundaries[i].Bytes(), value}
@@ -1425,7 +1426,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill other accounts if required
 	for i := uint64(1); i <= uint64(n); i++ {
-		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot, getCodeHash(i))
+		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), types.EmptyRootHashOriginal, getCodeHash(i))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{key32(i), value}
@@ -1450,7 +1451,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 	// Create n accounts in the trie
 	for i := uint64(1); i <= uint64(accounts); i++ {
 		key := key32(i)
-		codehash := emptyCode[:]
+		codehash := types.EmptyCodeHash.Bytes()
 		if code {
 			codehash = getCodeHash(i)
 		}
@@ -1498,7 +1499,7 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 	// Create n accounts in the trie
 	for i := uint64(1); i <= uint64(accounts); i++ {
 		key := key32(i)
-		codehash := emptyCode[:]
+		codehash := types.EmptyCodeHash.Bytes()
 		if code {
 			codehash = getCodeHash(i)
 		}
@@ -1609,7 +1610,7 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 		acc := serializer.GetAccount()
 		pacc := account.GetProgramAccount(acc)
 		accounts++
-		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != types.EmptyRootHashOriginal {
 			storeTrie, err := statedb.NewSecureStorageTrie(pacc.GetStorageRoot(), triedb, nil)
 			if err != nil {
 				t.Fatal(err)

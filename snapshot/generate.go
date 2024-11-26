@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -668,7 +669,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		}
 
 		rootHash := contractAcc.GetStorageRoot().Unextend()
-		if rootHash == emptyRoot {
+		if rootHash == types.EmptyRootHashOriginal {
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength
 			if err := wipeKeyRange(dl.diskdb, "storage", prefix, nil, nil, keyLen, snapWipedStorageMeter, false); err != nil {

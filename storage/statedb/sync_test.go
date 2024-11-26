@@ -28,6 +28,7 @@ import (
 
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/storage/database"
@@ -102,7 +103,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	dbA := NewDatabase(memDBManagerA)
 	dbB := NewDatabase(memDBManagerB)
 	emptyA, _ := NewTrie(common.Hash{}, dbA, nil)
-	emptyB, _ := NewTrie(emptyRoot, dbB, nil)
+	emptyB, _ := NewTrie(types.EmptyRootHashOriginal, dbB, nil)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
 		sync := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil, NewSyncBloom(1, database.NewMemDB()), nil)

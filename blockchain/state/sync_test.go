@@ -27,6 +27,7 @@ import (
 
 	"github.com/alecthomas/units"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -178,12 +179,10 @@ func checkStateConsistency(db database.DBManager, root common.Hash) error {
 
 // Tests that an empty state is not scheduled for syncing.
 func TestEmptyStateSync(t *testing.T) {
-	empty := common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-
 	// only bloom
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil, nil)
+		sync := NewStateSync(types.EmptyRootHashOriginal, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -193,7 +192,7 @@ func TestEmptyStateSync(t *testing.T) {
 	{
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache, nil)
+		sync := NewStateSync(types.EmptyRootHashOriginal, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -202,7 +201,7 @@ func TestEmptyStateSync(t *testing.T) {
 	// no bloom lru
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, nil, nil, nil)
+		sync := NewStateSync(types.EmptyRootHashOriginal, db, nil, nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -213,7 +212,7 @@ func TestEmptyStateSync(t *testing.T) {
 		bloom := statedb.NewSyncBloom(1, database.NewMemDB())
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(empty, db, bloom, lruCache, nil)
+		sync := NewStateSync(types.EmptyRootHashOriginal, db, bloom, lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}

@@ -230,9 +230,9 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	header := types.CopyHeader(&types.Header{
 		ParentHash:  common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"),
 		Rewardbase:  common.Address{},
-		TxHash:      common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		TxHash:      types.EmptyCodeHash,
 		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
-		ReceiptHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		ReceiptHash: types.EmptyCodeHash,
 		Bloom:       types.Bloom{},
 		BlockScore:  new(big.Int).SetUint64(1),
 		Number:      new(big.Int).SetUint64(4),
@@ -335,9 +335,9 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
-		ParentHash: common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"), Rewardbase: common.Address{}, TxHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		ParentHash: common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"), Rewardbase: common.Address{}, TxHash: types.EmptyCodeHash,
 		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
-		ReceiptHash: common.HexToHash("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+		ReceiptHash: types.EmptyCodeHash,
 		Bloom:       types.Bloom{},
 		BlockScore:  new(big.Int).SetUint64(1),
 		Number:      new(big.Int).SetUint64(4),

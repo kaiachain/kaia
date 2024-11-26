@@ -26,6 +26,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 )
 
 type DerivableList interface {
@@ -40,9 +41,20 @@ const (
 )
 
 var (
+	commonEmptyRootHash = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+
 	// EmptyRootHashOriginal is the empty root hash of a state trie,
 	// which is equal to EmptyRootHash with ImplDeriveShaOriginal.
-	EmptyRootHashOriginal = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+	EmptyRootHashOriginal = commonEmptyRootHash
+
+	// EmptyTxsHash is the known hash of the empty transaction set.
+	EmptyTxsHash = commonEmptyRootHash
+
+	// EmptyReceiptsHash is the known hash of the empty receipt set.
+	EmptyReceiptsHash = commonEmptyRootHash
+
+	// EmptyCodeHash is the known hash of the empty EVM bytecode.
+	EmptyCodeHash = crypto.Keccak256Hash(nil) // c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
 
 	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
 	// DeriveSha is used to calculate TransactionsRoot and ReceiptsRoot.

@@ -27,6 +27,7 @@ import (
 	"container/heap"
 	"errors"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -149,7 +150,7 @@ func (e seekError) Error() string {
 }
 
 func newNodeIterator(trie *Trie, start []byte) NodeIterator {
-	if trie.Hash() == emptyState {
+	if trie.Hash() == types.EmptyCodeHash {
 		return new(nodeIterator)
 	}
 	it := &nodeIterator{trie: trie}
@@ -281,7 +282,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 		// Initialize the iterator if we've just started.
 		root := it.trie.Hash()
 		state := &nodeIteratorState{node: it.trie.root, index: -1}
-		if root != emptyRoot {
+		if root != types.EmptyRootHashOriginal {
 			state.hash = root
 		}
 		err := state.resolve(it, nil)
