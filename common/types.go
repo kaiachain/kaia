@@ -49,6 +49,9 @@ var (
 	hashT    = reflect.TypeOf(Hash{})
 	extHashT = reflect.TypeOf(ExtHash{})
 	addressT = reflect.TypeOf(Address{})
+
+	// MaxHash represents the maximum possible hash value.
+	MaxHash = HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 )
 
 var (
@@ -350,12 +353,22 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 // If s is larger than len(h), s will be cropped from the left.
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
+var relaxPrecompileRangeForTest bool
+
 // IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
 func IsPrecompiledContractAddress(addr Address) bool {
+	if relaxPrecompileRangeForTest {
+		return false
+	}
 	if bytes.Compare(addr.Bytes(), lastPrecompiledContractAddressHex) > 0 || addr == (Address{}) {
 		return false
 	}
 	return true
+}
+
+// Only for testing. Make sure to reset (false) after test.
+func RelaxPrecompileRangeForTest(enable bool) {
+	relaxPrecompileRangeForTest = enable
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded

@@ -51,7 +51,7 @@ func TestHashRanges(t *testing.T) {
 				common.HexToHash("0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 				common.HexToHash("0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 				common.HexToHash("0xbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-				common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+				common.MaxHash,
 			},
 		},
 		// Split a divisible part of the hash range up into 2 chunks
@@ -64,7 +64,7 @@ func TestHashRanges(t *testing.T) {
 			},
 			ends: []common.Hash{
 				common.HexToHash("0x8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-				common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+				common.MaxHash,
 			},
 		},
 		// Split the entire hash range into a non divisible 3 chunks
@@ -79,7 +79,7 @@ func TestHashRanges(t *testing.T) {
 			ends: []common.Hash{
 				common.HexToHash("0x5555555555555555555555555555555555555555555555555555555555555555"),
 				common.HexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"),
-				common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+				common.MaxHash,
 			},
 		},
 		// Split a part of hash range into a non divisible 3 chunks
@@ -94,7 +94,7 @@ func TestHashRanges(t *testing.T) {
 			ends: []common.Hash{
 				common.HexToHash("0x6aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
 				common.HexToHash("0xb555555555555555555555555555555555555555555555555555555555555555"),
-				common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+				common.MaxHash,
 			},
 		},
 		// Split a part of hash range into a non divisible 3 chunks, but with a
@@ -114,7 +114,7 @@ func TestHashRanges(t *testing.T) {
 			ends: []common.Hash{
 				common.HexToHash("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5"),
 				common.HexToHash("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb"),
-				common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+				common.MaxHash,
 			},
 		},
 	}

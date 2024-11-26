@@ -120,6 +120,7 @@ type Peer struct {
 	wg       sync.WaitGroup
 	protoErr chan error
 	closed   chan struct{}
+	pingRecv chan *conn
 	disc     chan DiscReason
 
 	// events receives message send / receive events if set
@@ -225,6 +226,7 @@ func newPeer(conns []*conn, protocols []Protocol, tc RWTimerConfig) (*Peer, erro
 		disc:     make(chan DiscReason),
 		protoErr: make(chan error, len(protomap)+len(conns)), // protocols + pingLoop
 		closed:   make(chan struct{}),
+		pingRecv: make(chan *conn, 16),
 		logger:   logger.NewWith("id", conns[ConnDefault].id, "conn", conns[ConnDefault].flags),
 	}
 	return p, nil
@@ -383,6 +385,7 @@ func (p *Peer) pingLoop(rw *conn) {
 	ping := time.NewTimer(pingInterval)
 	defer p.wg.Done()
 	defer ping.Stop()
+
 	for {
 		select {
 		case <-ping.C:
@@ -392,6 +395,8 @@ func (p *Peer) pingLoop(rw *conn) {
 				return
 			}
 			ping.Reset(pingInterval)
+		case prw := <-p.pingRecv:
+			SendItems(prw, pongMsg)
 		case <-p.closed:
 			logger.Debug(fmt.Sprintf("pingLoop stopped, peer: %v", p.ID()))
 			return
@@ -421,7 +426,10 @@ func (p *Peer) handle(connectionOrder int, rw *conn, msg Msg) error {
 	switch {
 	case msg.Code == pingMsg:
 		msg.Discard()
-		go SendItems(rw, pongMsg)
+		select {
+		case p.pingRecv <- rw: // send a corresponding connection
+		case <-p.closed:
+		}
 	case msg.Code == discMsg:
 		// This is the last message. We don't need to discard or
 		// check errors because, the connection will be closed after it.

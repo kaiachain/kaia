@@ -309,11 +309,7 @@ func (api *APIExtension) makeRPCBlockOutput(b *types.Block,
 	head := b.Header() // copies the header once
 	hash := head.Hash()
 
-	td := big.NewInt(0)
-	if bc, ok := api.chain.(*blockchain.BlockChain); ok {
-		td = bc.GetTd(hash, b.NumberU64())
-	}
-	r, err := kaiaApi.RpcOutputBlock(b, td, false, false, api.chain.Config())
+	r, err := kaiaApi.RpcOutputBlock(b, false, false, api.chain.Config())
 	if err != nil {
 		logger.Error("failed to RpcOutputBlock", "err", err)
 		return nil

@@ -24,6 +24,7 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -2204,4 +2205,57 @@ func TestTransientStorageReset(t *testing.T) {
 	if slot != (common.Hash{}) {
 		t.Fatalf("Unexpected dirty storage slot")
 	}
+}
+
+func TestProcessParentBlockHash(t *testing.T) {
+	var (
+		chainConfig = &params.ChainConfig{
+			ShanghaiCompatibleBlock: common.Big0, // Shanghai fork is necesasry because `params.HistoryStorageCode` contains `PUSH0(0x5f)` instruction
+		}
+		hashA    = common.Hash{0x01}
+		hashB    = common.Hash{0x02}
+		header   = &types.Header{ParentHash: hashA, Number: big.NewInt(2), Time: common.Big0, BlockScore: common.Big0}
+		parent   = &types.Header{ParentHash: hashB, Number: big.NewInt(1), Time: common.Big0, BlockScore: common.Big0}
+		coinbase = common.Address{}
+		rules    = params.Rules{}
+		db       = state.NewDatabase(database.NewMemoryDBManager())
+	)
+	test := func(statedb *state.StateDB) {
+		if err := statedb.SetCode(params.HistoryStorageAddress, params.HistoryStorageCode); err != nil {
+			t.Error(err)
+		}
+		statedb.SetNonce(params.HistoryStorageAddress, 1)
+		statedb.IntermediateRoot(true)
+
+		vmContext := NewEVMBlockContext(header, nil, &coinbase)
+		evm := vm.NewEVM(vmContext, vm.TxContext{}, statedb, chainConfig, &vm.Config{})
+		if err := ProcessParentBlockHash(header, evm, statedb, rules); err != nil {
+			t.Error(err)
+		}
+
+		vmContext = NewEVMBlockContext(parent, nil, &coinbase)
+		evm = vm.NewEVM(vmContext, vm.TxContext{}, statedb, chainConfig, &vm.Config{})
+		if err := ProcessParentBlockHash(parent, evm, statedb, rules); err != nil {
+			t.Error(err)
+		}
+
+		// make sure that the state is correct
+		if have := getParentBlockHash(statedb, 1); have != hashA {
+			t.Errorf("want parent hash %v, have %v", hashA, have)
+		}
+		if have := getParentBlockHash(statedb, 0); have != hashB {
+			t.Errorf("want parent hash %v, have %v", hashB, have)
+		}
+	}
+	t.Run("MPT", func(t *testing.T) {
+		statedb, _ := state.New(types.EmptyRootHashOriginal, db, nil, nil)
+		test(statedb)
+	})
+}
+
+func getParentBlockHash(statedb *state.StateDB, number uint64) common.Hash {
+	ringIndex := number % params.HistoryServeWindow
+	var key common.Hash
+	binary.BigEndian.PutUint64(key[24:], ringIndex)
+	return statedb.GetState(params.HistoryStorageAddress, key)
 }

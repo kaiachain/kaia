@@ -158,7 +158,7 @@ type Peer interface {
 	// an already RLP encoded format, requested by fetcher.
 	SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) error
 
-	// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
+	// SendNodeData sends a batch of arbitrary internal data, corresponding to the
 	// hashes requested.
 	SendNodeData(data [][]byte) error
 
@@ -548,7 +548,7 @@ func (p *basePeer) SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) error {
 	return p2p.Send(p.rw, BlockBodiesFetchResponseMsg, bodies)
 }
 
-// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
+// SendNodeData sends a batch of arbitrary internal data, corresponding to the
 // hashes requested.
 func (p *basePeer) SendNodeData(data [][]byte) error {
 	return p2p.Send(p.rw, NodeDataMsg, data)
@@ -905,7 +905,7 @@ func (p *multiChannelPeer) SendFetchedBlockBodiesRLP(bodies []rlp.RawValue) erro
 	return p.msgSender(BlockBodiesFetchResponseMsg, bodies)
 }
 
-// SendNodeDataRLP sends a batch of arbitrary internal data, corresponding to the
+// SendNodeData sends a batch of arbitrary internal data, corresponding to the
 // hashes requested.
 func (p *multiChannelPeer) SendNodeData(data [][]byte) error {
 	return p.msgSender(NodeDataMsg, data)

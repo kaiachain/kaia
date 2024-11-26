@@ -61,7 +61,6 @@ func TestGasCalculation(t *testing.T) {
 		{"LegacyTransaction", genLegacyTransaction},
 		{"AccessListTransaction", genAccessListTransaction},
 		{"DynamicFeeTransaction", genDynamicFeeTransaction},
-		{"SetCodeTransaction", genSetCodeTransaction},
 
 		{"ValueTransfer", genValueTransfer},
 		{"ValueTransferWithMemo", genValueTransferWithMemo},
@@ -111,7 +110,6 @@ func TestGasCalculation(t *testing.T) {
 	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
 	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	defer bcdata.Shutdown()
@@ -247,7 +245,7 @@ func TestGasCalculation(t *testing.T) {
 			senderRole := accountkey.RoleTransaction
 
 			// LegacyTransaction can be used only by the KaiaAccount with AccountKeyLegacy.
-			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic") || strings.Contains(f.Name, "SetCode")) {
+			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
 				continue
 			}
 
@@ -318,17 +316,6 @@ func genAccessListTransaction(t *testing.T, signer types.Signer, from TestAccoun
 func genDynamicFeeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
 	values, intrinsic := genMapForDynamicFeeTransaction(from, to, gasPrice, types.TxTypeEthereumDynamicFee)
 	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, values)
-	assert.Equal(t, nil, err)
-
-	err = tx.SignWithKeys(signer, from.GetTxKeys())
-	assert.Equal(t, nil, err)
-
-	return tx, intrinsic
-}
-
-func genSetCodeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	values, intrinsic := genMapForSetCodeTransaction(from, to, gasPrice, types.TxTypeEthereumSetCode)
-	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
 	assert.Equal(t, nil, err)
 
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
@@ -864,7 +851,7 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas := getIntrinsicGas(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsShanghai: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true})
 	if err != nil {
 		return nil, 0
 	}
