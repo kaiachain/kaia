@@ -2326,13 +2326,13 @@ func TestEIP7702(t *testing.T) {
 
 	// Sign authorization tuples.
 	auth1, _ := types.SignAuth(&types.Authorization{
-		ChainID: gspec.Config.ChainID,
+		ChainID: gspec.Config.ChainID.Uint64(),
 		Address: aa,
 		Nonce:   1,
 	}, key1)
 
 	auth2, _ := types.SignAuth(&types.Authorization{
-		ChainID: big.NewInt(0),
+		ChainID: uint64(0),
 		Address: bb,
 		Nonce:   0,
 	}, key2)

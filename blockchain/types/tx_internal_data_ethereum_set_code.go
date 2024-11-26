@@ -570,10 +570,10 @@ func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big
 type AuthorizationList []Authorization
 
 type Authorization struct {
-	ChainID *big.Int       `json:"chainId"`
+	ChainID uint64         `json:"chainId"`
 	Address common.Address `json:"address"`
 	Nonce   uint64         `json:"nonce"`
-	V       *big.Int       `json:"v"`
+	V       uint8          `json:"v"`
 	R       *big.Int       `json:"r"`
 	S       *big.Int       `json:"s"`
 }
@@ -603,7 +603,7 @@ func (a *Authorization) WithSignature(sig []byte) *Authorization {
 		ChainID: a.ChainID,
 		Address: a.Address,
 		Nonce:   a.Nonce,
-		V:       big.NewInt(int64(sig[crypto.RecoveryIDOffset])),
+		V:       sig[crypto.RecoveryIDOffset],
 		R:       r,
 		S:       s,
 	}
@@ -619,8 +619,7 @@ func (a Authorization) Authority() (common.Address, error) {
 			a.Nonce,
 		})
 
-	v := byte(a.V.Uint64())
-	if !crypto.ValidateSignatureValues(v, a.R, a.S, true) {
+	if !crypto.ValidateSignatureValues(a.V, a.R, a.S, true) {
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format
@@ -628,7 +627,7 @@ func (a Authorization) Authority() (common.Address, error) {
 	sig := make([]byte, crypto.SignatureLength)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = v
+	sig[64] = a.V
 	// recover the public key from the signature
 	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {

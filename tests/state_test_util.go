@@ -128,19 +128,19 @@ type stTransactionMarshaling struct {
 // Authorization is an authorization from an account to deploy code at it's
 // address.
 type stAuthorization struct {
-	ChainID *big.Int
+	ChainID uint64
 	Address common.Address `gencodec:"required" json:"address"`
 	Nonce   uint64         `gencodec:"required" json:"nonce"`
-	V       *big.Int       `gencodec:"required" json:"v"`
+	V       uint8          `gencodec:"required" json:"v"`
 	R       *big.Int       `gencodec:"required" json:"r"`
 	S       *big.Int       `gencodec:"required" json:"s"`
 }
 
 // field type overrides for gencodec
 type stAuthorizationMarshaling struct {
-	ChainID *math.HexOrDecimal256
+	ChainID math.HexOrDecimal64
 	Nonce   math.HexOrDecimal64
-	V       *math.HexOrDecimal256
+	V       math.HexOrDecimal64
 	R       *math.HexOrDecimal256
 	S       *math.HexOrDecimal256
 }

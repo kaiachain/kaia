@@ -527,7 +527,7 @@ func (st *StateTransition) gasUsed() uint64 {
 func (st *StateTransition) checkAuthorizationList(authList types.AuthorizationList, to common.Address) {
 	for _, auth := range authList {
 		// Verify chain ID is 0 or equal to current chain ID.
-		if auth.ChainID.Cmp(big.NewInt(0)) != 0 && st.evm.ChainConfig().ChainID.Cmp(auth.ChainID) != 0 {
+		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
 			continue
 		}
 		// Limit nonce to 2^64-1 per EIP-2681.

@@ -109,7 +109,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "success (minimum)",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
@@ -130,7 +130,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "success (case of refund)",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
@@ -153,7 +153,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "success (address 0x0000000000000000000000000000000000000000)",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: zeroAddress,
 					Nonce:   uint64(1),
 				}, authorityKey)
@@ -174,7 +174,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "success (to == authority)",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
@@ -196,7 +196,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "success (don't ecrecover authority)",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
@@ -222,7 +222,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "invalid chainId",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: big.NewInt(10),
+					ChainID: uint64(10),
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
@@ -238,7 +238,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "nonce is uint64 max value",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(18446744073709551615),
 				}, authorityKey)
@@ -254,12 +254,12 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "error in Authority",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				auth.V = big.NewInt(10)
+				auth.V = uint8(10)
 				return types.AuthorizationList{*auth}
 			},
 			msg: toAuthorityTx,
@@ -271,7 +271,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "exist some code",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
@@ -288,7 +288,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "invalid nonce",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(10),
 				}, authorityKey)
@@ -306,7 +306,7 @@ func TestStateTransition_checkAuthorizationList(t *testing.T) {
 			name: "signer's key was updated",
 			makeAuthList: func() types.AuthorizationList {
 				auth, err := types.SignAuth(&types.Authorization{
-					ChainID: params.TestChainConfig.ChainID,
+					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
