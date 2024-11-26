@@ -737,8 +737,8 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 
 	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
 	target := crypto.Keccak256Hash(req.Target[:])
-	retriveSize := findnodeRetriveSize(req.TargetType)
-	closest := t.RetrieveNodes(target, req.TargetType, retriveSize)
+	retrieveSize := findnodeRetrieveSize(req.TargetType)
+	closest := t.RetrieveNodes(target, req.TargetType, retrieveSize)
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.
@@ -774,7 +774,7 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
-func findnodeRetriveSize(nType NodeType) int {
+func findnodeRetrieveSize(nType NodeType) int {
 	// Return at most 2 PNs.
 	// 1. Under current CN-PN-EN 3-tier operating practices, findnode(type=PN) packet originates only from EN.
 	//    CNs only connect to other CNs via CNBN. PNs are connected to PNs and CNs via static-nodes.json.
