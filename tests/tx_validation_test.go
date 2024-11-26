@@ -361,6 +361,172 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	}
 }
 
+func TestValidationPoolInsertPrague(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	testTxTypes := []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKaiaLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
+	}
+
+	invalidCases := []struct {
+		Name string
+		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+	}{
+		{"invalidTo", valueTransferToEOAWithCode},
+		{"invalidFrom", keyUpdateFromEOAWithCode},
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().CancunCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().KaiaCompatibleBlock = big.NewInt(0)
+	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// eoa with code
+	eoaWithCode := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
+
+	var txs types.Transactions
+	// deploy a contract for contract execution tx type
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
+
+		reservoir.AddNonce()
+	}
+
+	// set code for contract execution tx type
+	{
+		auth, err := types.SignAuth(&types.Authorization{
+			ChainID: bcdata.bc.Config().ChainID,
+			Address: contract.Addr,
+			Nonce:   uint64(0),
+		}, eoaWithCode.Keys[0])
+		assert.Equal(t, nil, err)
+
+		authorizationList := types.AuthorizationList{*auth}
+
+		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), nil, authorizationList)
+		tx.ChainId().Set(bcdata.bc.Config().ChainID)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		reservoir.AddNonce()
+		eoaWithCode.AddNonce()
+		accountMap.IncNonce(eoaWithCode.Addr)
+	}
+
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+
+	// test for all tx types
+	for _, testTxType := range testTxTypes {
+		txType := testTxType.txType
+
+		// generate invalid txs and check the return error
+		for _, invalidCase := range invalidCases {
+			to := reservoir
+			if toBasicType(testTxType.txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+
+			// generate a new tx and mutate it
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, eoaWithCode.Addr)
+
+			tx, err := types.NewTransactionWithMap(txType, invalidMap)
+			assert.Equal(t, nil, err)
+
+			if from, _ := tx.From(); from == eoaWithCode.Addr {
+				err = tx.SignWithKeys(signer, eoaWithCode.Keys)
+				assert.Equal(t, nil, err)
+			} else {
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, expectedErr, err, txType, to, contract.Addr)
+			if expectedErr == nil {
+				reservoir.Nonce += 1
+			}
+		}
+	}
+}
+
 // TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
 func TestValidationBlockTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
@@ -522,6 +688,26 @@ func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract comm
 	}
 
 	return values, err
+}
+
+func valueTransferToEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
+		values[types.TxValueKeyTo] = contract
+		return values, kerrors.ErrNotEOAWithoutCode
+	}
+
+	return values, nil
+}
+
+func keyUpdateFromEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeAccountUpdate {
+		values[types.TxValueKeyFrom] = contract
+		return values, kerrors.ErrNotEOAWithoutCode
+	}
+
+	return values, nil
 }
 
 // exceedSizeLimit assigns tx data bigger than MaxTxDataSize.
