@@ -32,14 +32,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -938,8 +939,9 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	backend := newTestBackend()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+	backend.RegisterStakingModule(mStaking)
+	defer mockCtrl.Finish()
 
 	commitCh := make(chan *types.Block)
 	// Case: it's a proposer, so the backend.commit will receive channel result from backend.Commit function
@@ -954,6 +956,7 @@ func TestCommit(t *testing.T) {
 			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-1)...)},
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
+				engine.RegisterStakingModule(mStaking)
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -967,6 +970,7 @@ func TestCommit(t *testing.T) {
 			nil,
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
+				engine.RegisterStakingModule(mStaking)
 				defer engine.Stop()
 
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -1010,8 +1014,13 @@ func TestCommit(t *testing.T) {
 func TestGetProposer(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
-	oldStakingManager := setTestStakingInfo(nil)
-	defer reward.SetTestStakingManager(oldStakingManager)
+
+	si := makeTestStakingInfo(nil, 0)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+	engine.RegisterStakingModule(mStaking)
 
 	block := makeBlock(chain, engine, chain.Genesis())
 	_, err := chain.InsertChain(types.Blocks{block})

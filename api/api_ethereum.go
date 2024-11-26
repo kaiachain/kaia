@@ -36,7 +36,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
@@ -69,7 +68,7 @@ type EthereumAPI struct {
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
 	publicAccountAPI         *PublicAccountAPI
-	governanceAPI            *governance.GovernanceAPI
+	nodeAddress              common.Address
 }
 
 // NewEthereumAPI creates a new ethereum API.
@@ -82,7 +81,7 @@ func NewEthereumAPI(
 	publicBlockChainAPI *PublicBlockChainAPI,
 	publicTransactionPoolAPI *PublicTransactionPoolAPI,
 	publicAccountAPI *PublicAccountAPI,
-	governanceAPI *governance.GovernanceAPI,
+	nodeAddress common.Address,
 ) *EthereumAPI {
 	return &EthereumAPI{
 		publicFilterAPI,
@@ -90,14 +89,14 @@ func NewEthereumAPI(
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
 		publicAccountAPI,
-		governanceAPI,
+		nodeAddress,
 	}
 }
 
 // Etherbase is the address of operating node.
 // Unlike Ethereum, it only returns the node address because Kaia does not have a POW mechanism.
 func (api *EthereumAPI) Etherbase() (common.Address, error) {
-	return api.governanceAPI.NodeAddress(), nil
+	return api.nodeAddress, nil
 }
 
 // Coinbase is the address of operating node (alias for Etherbase).
@@ -1290,17 +1289,16 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 		}
 	}
 	result := map[string]interface{}{
-		"number":          (*hexutil.Big)(head.Number),
-		"hash":            head.Hash(),
-		"parentHash":      head.ParentHash,
-		"nonce":           BlockNonce{},  // There is no block nonce concept in Kaia, so it must be empty.
-		"mixHash":         common.Hash{}, // Kaia does not use mixHash, so it must be empty.
-		"sha3Uncles":      common.HexToHash(EmptySha3Uncles),
-		"logsBloom":       head.Bloom,
-		"stateRoot":       head.Root,
-		"miner":           proposer,
-		"difficulty":      (*hexutil.Big)(head.BlockScore),
-		"totalDifficulty": (*hexutil.Big)(b.GetTd(head.Hash())),
+		"number":     (*hexutil.Big)(head.Number),
+		"hash":       head.Hash(),
+		"parentHash": head.ParentHash,
+		"nonce":      BlockNonce{},  // There is no block nonce concept in Kaia, so it must be empty.
+		"mixHash":    common.Hash{}, // Kaia does not use mixHash, so it must be empty.
+		"sha3Uncles": common.HexToHash(EmptySha3Uncles),
+		"logsBloom":  head.Bloom,
+		"stateRoot":  head.Root,
+		"miner":      proposer,
+		"difficulty": (*hexutil.Big)(head.BlockScore),
 		// extraData always return empty Bytes because actual value of extraData in Kaia header cannot be used as meaningful way because
 		// we cannot provide original header of Kaia and this field is used as consensus info which is encoded value of validators addresses, validators signatures, and proposer signature in Kaia.
 		"extraData": hexutil.Bytes{},
@@ -1389,7 +1387,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}

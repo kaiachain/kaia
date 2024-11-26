@@ -145,7 +145,6 @@ func (h *HandlerT) StartPProf(ptrAddr *string, ptrPort *int) error {
 		// Hook go-metrics into expvar on any /debug/metrics request, load all vars
 		// from the registry into expvar, and execute regular expvar handler.
 		exp.Exp(metrics.DefaultRegistry)
-		http.Handle("/memsize/", http.StripPrefix("/memsize", &Memsize))
 		h.handlerInited = true
 	}
 

@@ -476,7 +476,7 @@ func requestUpstream(ctx context.Context, msg *jsonrpcMessage, args []reflect.Va
 	}
 
 	rpcErrorResponsesCounter.Inc(1)
-	return msg.errorResponse(err)
+	return msg.errorResponse(fmt.Errorf("from upstream rpc endpoint: %w", err))
 }
 
 // unsubscribe is the callback function for all *_unsubscribe calls.

@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -140,7 +141,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader, writable bool) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader, stakingModule staking.StakingModule, writable bool) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -208,7 +209,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			govNode := pset.GoverningNode()
 			minStaking := pset.MinimumStakeBig().Uint64()
 
-			if err := snap.ValSet.RefreshValSet(number+1, chain.Config(), isSingle, govNode, minStaking); err != nil {
+			if err := snap.ValSet.RefreshValSet(number+1, chain.Config(), isSingle, govNode, minStaking, stakingModule); err != nil {
 				logger.Trace("Skip refreshing validators while creating snapshot", "snap.Number", snap.Number, "err", err)
 			}
 

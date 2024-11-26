@@ -378,3 +378,7 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG3].computationCost = params.Log3ComputationCostCancun
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
 }
+
+func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
+	jt[opCode].constantGas = constantGas
+}

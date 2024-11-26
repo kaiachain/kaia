@@ -805,6 +805,21 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 	}
 }
 
+// SetLegacyAccountForTest is setting an account as Legacy Account to StateDB.
+// SetLegacyAccountForTest should be used for only tests.
+func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, balance *big.Int, root common.Hash, codeHash []byte) {
+	acc := &account.LegacyAccount{
+		Nonce:    nonce,
+		Balance:  balance,
+		Root:     root,
+		CodeHash: codeHash,
+	}
+	newobj := newObject(s, addr, acc)
+	s.journal.append(createObjectChange{account: &addr})
+	newobj.created = true
+	s.setStateObject(newobj)
+}
+
 func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
 	so := s.getStateObject(addr)
 	if so == nil {
@@ -832,15 +847,16 @@ func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.
 func (s *StateDB) Copy() *StateDB {
 	// Copy all the basic fields, initialize the memory ones
 	state := &StateDB{
-		db:                s.db,
-		trie:              s.db.CopyTrie(s.trie),
-		stateObjects:      make(map[common.Address]*stateObject, len(s.journal.dirties)),
-		stateObjectsDirty: make(map[common.Address]struct{}, len(s.journal.dirties)),
-		refund:            s.refund,
-		logs:              make(map[common.Hash][]*types.Log, len(s.logs)),
-		logSize:           s.logSize,
-		preimages:         make(map[common.Hash][]byte),
-		journal:           newJournal(),
+		db:                       s.db,
+		trie:                     s.db.CopyTrie(s.trie),
+		stateObjects:             make(map[common.Address]*stateObject, len(s.journal.dirties)),
+		stateObjectsDirty:        make(map[common.Address]struct{}, len(s.journal.dirties)),
+		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
+		refund:                   s.refund,
+		logs:                     make(map[common.Hash][]*types.Log, len(s.logs)),
+		logSize:                  s.logSize,
+		preimages:                make(map[common.Hash][]byte),
+		journal:                  newJournal(),
 	}
 	// Copy the dirty states, logs, and preimages
 	for addr := range s.journal.dirties {

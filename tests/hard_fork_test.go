@@ -38,6 +38,8 @@ import (
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -92,6 +94,8 @@ func TestHardForkBlock(t *testing.T) {
 
 	gov := generateGovernaceDataForTest()
 	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false, false)
+	require.Nil(t, err)
+
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
@@ -102,6 +106,18 @@ func TestHardForkBlock(t *testing.T) {
 		NodeType:       common.CONSENSUSNODE,
 	})
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
+	require.Nil(t, err)
+
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	err = mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   chainConfig,
+		Chain:         chain,
+		GovModule:     reward_impl.FromLegacy(gov),
+		StakingModule: mStaking, // Not used in "Simple" istanbul policy
+	})
+	require.Nil(t, err)
+	engine.RegisterConsensusModule(mReward)
 
 	r1, err := hexutil.Decode(string(rawb1))
 	require.Equal(t, nil, err)

@@ -35,10 +35,28 @@ var Forks = map[string]*params.ChainConfig{
 	"Frontier": {
 		ChainID: big.NewInt(1),
 	},
+	"Homestead": {
+		ChainID: big.NewInt(1),
+	},
 	"Byzantium": {
 		ChainID: big.NewInt(1),
 	},
 	"Constantinople": {
+		ChainID: big.NewInt(1),
+	},
+	"ConstantinopleFix": {
+		ChainID: big.NewInt(1),
+	},
+	"Istanbul": {
+		ChainID: big.NewInt(1),
+	},
+	"Berlin": {
+		ChainID: big.NewInt(1),
+	},
+	"London": {
+		ChainID: big.NewInt(1),
+	},
+	"Merge": {
 		ChainID: big.NewInt(1),
 	},
 	"Shanghai": {
@@ -49,6 +67,35 @@ var Forks = map[string]*params.ChainConfig{
 		MagmaCompatibleBlock:     new(big.Int),
 		KoreCompatibleBlock:      new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
+	},
+	"Cancun": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		Kip103CompatibleBlock:    new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		RandaoCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		Kip160CompatibleBlock:    new(big.Int),
+	},
+	"Prague": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		Kip103CompatibleBlock:    new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		RandaoCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		Kip160CompatibleBlock:    new(big.Int),
+		PragueCompatibleBlock:    new(big.Int),
 	},
 }
 

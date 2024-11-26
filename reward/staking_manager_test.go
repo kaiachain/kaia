@@ -57,6 +57,14 @@ func newDefaultTestGovernance() *testGovernance {
 	})
 }
 
+func (governance *testGovernance) CurrentParams() *params.GovParamSet {
+	return governance.p
+}
+
+func (governance *testGovernance) EffectiveParams(num uint64) (*params.GovParamSet, error) {
+	return governance.p, nil
+}
+
 type stakingManagerTestCase struct {
 	blockNum    uint64       // Requested num in GetStakingInfo(num)
 	stakingNum  uint64       // Corresponding staking info block number
