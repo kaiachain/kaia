@@ -46,17 +46,19 @@ var logger = log.NewModuleLogger(log.NodeCN)
 // GetDefaultConfig returns default settings for use on the Kaia main net.
 func GetDefaultConfig() *Config {
 	return &Config{
-		SyncMode:             downloader.FullSync,
-		NetworkId:            params.MainnetNetworkId,
-		LevelDBCacheSize:     768,
-		PebbleDBCacheSize:    768,
-		TrieCacheSize:        512,
-		TrieTimeout:          5 * time.Minute,
-		TrieBlockInterval:    blockchain.DefaultBlockInterval,
-		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
-		TriesInMemory:        blockchain.DefaultTriesInMemory,
-		LivePruningRetention: blockchain.DefaultLivePruningRetention,
-		GasPrice:             big.NewInt(18 * params.Gkei),
+		SyncMode:                downloader.FullSync,
+		NetworkId:               params.MainnetNetworkId,
+		LevelDBCacheSize:        768,
+		PebbleDBCacheSize:       768,
+		TrieCacheSize:           512,
+		TrieTimeout:             5 * time.Minute,
+		TrieBlockInterval:       blockchain.DefaultBlockInterval,
+		TrieNodeCacheConfig:     *statedb.GetEmptyTrieNodeCacheConfig(),
+		TriesInMemory:           blockchain.DefaultTriesInMemory,
+		LivePruningRetention:    blockchain.DefaultPruningRetention,
+		TxPruningRetention:      blockchain.DefaultPruningRetention,
+		ReceiptPruningRetention: blockchain.DefaultPruningRetention,
+		GasPrice:                big.NewInt(18 * params.Gkei),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -112,28 +114,32 @@ type Config struct {
 	StartBlockNumber uint64
 
 	// Database options
-	DBType               database.DBType
-	SkipBcVersionCheck   bool `toml:"-"`
-	SingleDB             bool
-	NumStateTrieShards   uint
-	EnableDBPerfMetrics  bool
-	LevelDBCompression   database.LevelDBCompressionType
-	LevelDBBufferPool    bool
-	LevelDBCacheSize     int
-	PebbleDBCacheSize    int
-	DynamoDBConfig       database.DynamoDBConfig
-	RocksDBConfig        database.RocksDBConfig
-	TrieCacheSize        int
-	TrieTimeout          time.Duration
-	TrieBlockInterval    uint
-	TriesInMemory        uint64
-	LivePruning          bool
-	LivePruningRetention uint64
-	SenderTxHashIndexing bool
-	ParallelDBWrite      bool
-	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
-	SnapshotCacheSize    int
-	SnapshotAsyncGen     bool
+	DBType                  database.DBType
+	SkipBcVersionCheck      bool `toml:"-"`
+	SingleDB                bool
+	NumStateTrieShards      uint
+	EnableDBPerfMetrics     bool
+	LevelDBCompression      database.LevelDBCompressionType
+	LevelDBBufferPool       bool
+	LevelDBCacheSize        int
+	PebbleDBCacheSize       int
+	DynamoDBConfig          database.DynamoDBConfig
+	RocksDBConfig           database.RocksDBConfig
+	TrieCacheSize           int
+	TrieTimeout             time.Duration
+	TrieBlockInterval       uint
+	TriesInMemory           uint64
+	LivePruning             bool
+	LivePruningRetention    uint64
+	TxPruning               bool
+	TxPruningRetention      uint64
+	ReceiptPruning          bool
+	ReceiptPruningRetention uint64
+	SenderTxHashIndexing    bool
+	ParallelDBWrite         bool
+	TrieNodeCacheConfig     statedb.TrieNodeCacheConfig
+	SnapshotCacheSize       int
+	SnapshotAsyncGen        bool
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
