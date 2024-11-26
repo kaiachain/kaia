@@ -734,13 +734,16 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		// (which is a much bigger packet than findnode) to the victim.
 		return errUnknownNode
 	}
-	target := crypto.Keccak256Hash(req.Target[:])
-	closest := t.RetrieveNodes(target, req.TargetType, bucketSize) // TODO-Kaia-Node if NodeType is CN or PN, bucketSize is not a prefer variable.
 
-	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix()), TargetType: req.TargetType}
-	var sent bool
+	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
+	target := crypto.Keccak256Hash(req.Target[:])
+	retriveSize := findnodeRetriveSize(req.TargetType)
+	closest := t.RetrieveNodes(target, req.TargetType, retriveSize)
+
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.
+	p := neighbors{Expiration: uint64(time.Now().Add(expiration).Unix()), TargetType: req.TargetType}
+	var sent bool
 	for _, n := range closest {
 		if netutil.CheckRelayIP(from.IP, n.IP) == nil {
 			p.Nodes = append(p.Nodes, nodeToRPC(n))
@@ -770,6 +773,22 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 }
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
+
+func findnodeRetriveSize(nType NodeType) int {
+	// Return at most 2 PNs.
+	// 1. Under current CN-PN-EN 3-tier operating practices, findnode(type=PN) packet originates only from EN.
+	//    CNs only connect to other CNs via CNBN. PNs are connected to PNs and CNs via static-nodes.json.
+	// 2. Giving 16 PNs to ENs will lead to uneven PN connection distribution.
+	//    ENs will choose 2 PNs from 16 PNs based on the ping-pong latency. Given that PNs and ENs are geographically
+	//    unevenly distributed, the EN's PN choice should be concentrated to a small number of PNs, even if the 16 is random.
+	// Returning up to 2 PNs will force EN to connect to random PNs that may not necessarily be the geographically closest ones.
+	// ENs may suffer some latency if it connected to faraway PN, but distributing the p2p workload across PNs is more important
+	// for the network stability.
+	if nType == NodeTypePN {
+		return 2
+	}
+	return bucketSize
+}
 
 func expired(ts uint64) bool {
 	return time.Unix(int64(ts), 0).Before(time.Now())
