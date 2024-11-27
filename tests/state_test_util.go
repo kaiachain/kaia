@@ -114,6 +114,7 @@ type stTransaction struct {
 	GasLimit             []uint64            `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           []byte              `json:"secretKey"`
+	AuthorizationList    []*stAuthorization  `json:"authorizationList"`
 }
 
 type stTransactionMarshaling struct {
@@ -123,6 +124,28 @@ type stTransactionMarshaling struct {
 	Nonce                math.HexOrDecimal64
 	GasLimit             []math.HexOrDecimal64
 	PrivateKey           hexutil.Bytes
+}
+
+//go:generate gencodec -type stAuthorization -field-override stAuthorizationMarshaling -out gen_stauthorization.go
+
+// Authorization is an authorization from an account to deploy code at it's
+// address.
+type stAuthorization struct {
+	ChainID uint64
+	Address common.Address `gencodec:"required" json:"address"`
+	Nonce   uint64         `gencodec:"required" json:"nonce"`
+	V       uint8          `gencodec:"required" json:"v"`
+	R       *big.Int       `gencodec:"required" json:"r"`
+	S       *big.Int       `gencodec:"required" json:"s"`
+}
+
+// field type overrides for gencodec
+type stAuthorizationMarshaling struct {
+	ChainID math.HexOrDecimal64
+	Nonce   math.HexOrDecimal64
+	V       math.HexOrDecimal64
+	R       *math.HexOrDecimal256
+	S       *math.HexOrDecimal256
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
@@ -397,11 +420,26 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	} else {
 		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
+	var authorizationList types.AuthorizationList
+	if tx.AuthorizationList != nil {
+		authorizationList = make(types.AuthorizationList, 0)
+		for _, auth := range tx.AuthorizationList {
+			authorizationList = append(authorizationList, types.Authorization{
+				ChainID: auth.ChainID,
+				Address: auth.Address,
+				Nonce:   auth.Nonce,
+				V:       auth.V,
+				R:       auth.R,
+				S:       auth.S,
+			})
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, accessList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, authorizationList)
 	return msg, nil
 }
 

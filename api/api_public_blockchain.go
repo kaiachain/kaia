@@ -737,5 +737,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.InputData(), false, intrinsicGas, accessList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil), nil
 }
