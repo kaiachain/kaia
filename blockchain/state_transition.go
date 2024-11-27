@@ -368,11 +368,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
-	// Check authorization list validity.
+	// Check authorization list validity and set code.
 	if msg.AuthorizationList() != nil {
 		// SetCode sender nonce increment should be done before set code process.
 		st.state.IncNonce(msg.ValidatedSender())
-		st.checkAuthorizationList(msg.AuthorizationList(), *msg.To())
+		st.processAuthorizationList(msg.AuthorizationList(), *msg.To())
 	}
 
 	// Check whether the init code size has been exceeded.
@@ -524,7 +524,7 @@ func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
 
-func (st *StateTransition) checkAuthorizationList(authList types.AuthorizationList, to common.Address) {
+func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address) {
 	for _, auth := range authList {
 		// Verify chain ID is 0 or equal to current chain ID.
 		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
