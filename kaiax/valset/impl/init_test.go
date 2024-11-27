@@ -81,12 +81,7 @@ type testMocks struct {
 }
 
 func (tm *testMocks) prepareMockExpectHeader(num uint64, mixHash, vote []byte, author common.Address) {
-	header := &types.Header{
-		ParentHash: testPrevHash,
-		Number:     big.NewInt(int64(num)),
-		MixHash:    mixHash,
-		Vote:       vote,
-	}
+	header := prepareTestHeader(num, mixHash, vote)
 	if common.EmptyAddress(author) {
 		header = nil // simulate the unmined header
 	} else {
@@ -97,6 +92,25 @@ func (tm *testMocks) prepareMockExpectHeader(num uint64, mixHash, vote []byte, a
 }
 
 func (tm *testMocks) prepareMockExpectGovParam(num uint64, policy uint64, subSize uint64, gNode common.Address) {
+	pSet := prepareTestGovParam(policy, subSize, gNode)
+	tm.mockHeaderGov.EXPECT().EffectiveParamSet(num).Return(pSet).AnyTimes()
+}
+
+func (tm *testMocks) prepareMockExpectStakingInfo(num uint64, stakingNodeIds, stakingAmount []uint64) {
+	sInfo := prepareTestStakingInfo(num, stakingNodeIds, stakingAmount)
+	tm.mockStaking.EXPECT().GetStakingInfo(num).Return(sInfo, nil).AnyTimes()
+}
+
+func prepareTestHeader(num uint64, mixHash, vote []byte) *types.Header {
+	return &types.Header{
+		ParentHash: testPrevHash,
+		Number:     big.NewInt(int64(num)),
+		MixHash:    mixHash,
+		Vote:       vote,
+	}
+}
+
+func prepareTestGovParam(policy uint64, subSize uint64, gNode common.Address) gov.ParamSet {
 	govParam := gov.GetDefaultGovernanceParamSet()
 	// initialize the parameters which cannot votable later.
 	_ = govParam.Set(gov.RewardProposerUpdateInterval, testPUpdateInterval)
@@ -108,10 +122,11 @@ func (tm *testMocks) prepareMockExpectGovParam(num uint64, policy uint64, subSiz
 	_ = govParam.Set(gov.IstanbulCommitteeSize, subSize)
 	_ = govParam.Set(gov.GovernanceGoverningNode, gNode)
 	_ = govParam.Set(gov.IstanbulPolicy, policy)
-	tm.mockHeaderGov.EXPECT().EffectiveParamSet(num).Return(*govParam).AnyTimes()
+
+	return *govParam
 }
 
-func (tm *testMocks) prepareMockExpectStakingInfo(num uint64, stakingNodeIds, stakingAmount []uint64) {
+func prepareTestStakingInfo(num uint64, stakingNodeIds, stakingAmount []uint64) *staking.StakingInfo {
 	sInfo := &staking.StakingInfo{}
 	if len(stakingNodeIds) != 0 {
 		var (
@@ -134,7 +149,7 @@ func (tm *testMocks) prepareMockExpectStakingInfo(num uint64, stakingNodeIds, st
 			StakingAmounts:   stakingAmount,
 		}
 	}
-	tm.mockStaking.EXPECT().GetStakingInfo(num).Return(sInfo, nil).AnyTimes()
+	return sInfo
 }
 
 func newTestVModule(ctrl *gomock.Controller) (*ValsetModule, *testMocks, error) {

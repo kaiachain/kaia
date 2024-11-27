@@ -39,11 +39,6 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	vModule, tm, err := newTestVModule(ctrl)
-	assert.NoError(t, err)
-
-	tm.prepareMockExpectGovParam(1, testProposerPolicy, testSubGroupSize, tgn)
-
 	for _, tc := range []struct {
 		name                      string
 		networkInfo               testNetworkInfo
@@ -94,16 +89,21 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err = WriteCouncilAddressListToDb(vModule.ChainKv, 0, tc.networkInfo.validators)
+			vModule, tm, err := newTestVModule(ctrl)
+			assert.NoError(t, err)
+
+			tm.prepareMockExpectGovParam(2, testProposerPolicy, testSubGroupSize, tgn)
+
+			err = WriteCouncilAddressListToDb(vModule.ChainKv, 1, tc.networkInfo.validators)
 			assert.NoError(t, err)
 
 			byteVote, err := tc.voteData.ToVoteBytes()
 			assert.NoError(t, err)
 
-			err = vModule.HandleValidatorVote(1, byteVote, tc.networkInfo.validators)
+			err = vModule.HandleValidatorVote(2, byteVote)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectError, err)
 
-			cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(1))
+			cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(2))
 			sort.Sort(tc.expectHandleValidatorVote.expectCList)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectCList, valset.AddressList(cList))

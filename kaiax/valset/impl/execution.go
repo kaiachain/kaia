@@ -30,21 +30,19 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 		return errNilHeader
 	}
 
-	// read prevBlock's council address list
-	councilAddressList, err := v.GetCouncilAddressList(header.Number.Uint64() - 1)
-	if err != nil {
-		return err
-	}
-
-	if err = v.HandleValidatorVote(header.Number.Uint64(), header.Vote, councilAddressList); err != nil {
+	if err := v.HandleValidatorVote(header.Number.Uint64(), header.Vote); err != nil {
 		return err
 	}
 	return nil
 }
 
-// HandleValidatorVote handles addvalidator or removevalidator votes and remove them from MyVotes.
-// If succeed, the voteBlk and councilAddressList db is updated.
-func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteByte []byte, c valset.AddressList) error {
+// HandleValidatorVote handles addvalidator or removevalidator votes.
+// If succeeded, the voteBlk and councilAddressList db is updated.
+func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteByte []byte) error {
+	c, err := v.GetCouncilAddressList(blockNumber)
+	if err != nil {
+		return err
+	}
 	govNode := v.headerGov.EffectiveParamSet(blockNumber).GoverningNode
 	cList, err := applyValSetVote(voteByte, c, govNode)
 	if cList == nil {

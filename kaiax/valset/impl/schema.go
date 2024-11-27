@@ -145,14 +145,16 @@ func readCouncilAddressListFromValSetCouncilDB(db database.Database, num uint64)
 	if err = json.Unmarshal(b, &set); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoded council addresses at voteBlk %d. err=%v", voteBlock, err)
 	}
+	if num > 0 && voteBlock == 0 {
+		sort.Sort(valset.AddressList(set))
+	}
 	return set, nil
 }
 
-func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList valset.AddressList) error {
-	copiedList := make(valset.AddressList, len(councilAddressList))
+func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAddressList []common.Address) error {
+	copiedList := make([]common.Address, len(councilAddressList))
 	copy(copiedList, councilAddressList)
 
-	sort.Sort(copiedList)
 	if err := UpdateValidatorVoteDataBlockNums(db, voteBlk); err != nil {
 		return err
 	}
@@ -160,6 +162,9 @@ func WriteCouncilAddressListToDb(db database.Database, voteBlk uint64, councilAd
 	mu.Lock()
 	defer mu.Unlock()
 
+	if voteBlk > 0 {
+		sort.Sort(valset.AddressList(copiedList))
+	}
 	b, err := json.Marshal(copiedList)
 	if err != nil {
 		return err

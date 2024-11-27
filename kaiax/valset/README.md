@@ -3,20 +3,20 @@
 This module is responsible for getting council and calculating committee or proposer.
 
 ## Concepts
-| Components                  | [Block 0]                          | [Block N]  <br/>"Add Validator i" ,"Remove Validator j"                                    |
-|-----------------------------|------------------------------------|--------------------------------------------------------------------------------------------|
-| demoted validators(Block)   | None                               | Council(N-1).demotedByQualification(*state(N-1))                                           | 
-| qualified validators(Block) | GenesisCouncil                     | Council(N-1) - demoted(N)                                                                  |
-| └ Committee(Block,Round)    | GenesisCouncil                     | qualified(N).sublist(Round')                                                               |
-| └└ proposer(Block,Round)    | GenesisCouncil's<br/>first element | *Committee(N,Round').proposer(Round')                                                      |
-| Council(Block)              | GenesisCouncil                     | Council(N-1) <br/>+ validator(i), i is not in Council <br/>- validator(j), j is in Council |
+| Components                | [Block 0]                          | [Block N]                                                                                                                         |
+|---------------------------|------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Council(N)                | GenesisCouncil                     | Council(N-1).applyVote(header(N-1)) <br/>+ "Add Validator(i)", i is not in Council <br/>- "Remove Validator (j)", j is in Council |
+| └ demoted validators(N)   | None                               | Council(N).demotedByQualification()                                                                                               | 
+| └ qualified validators(N) | GenesisCouncil                     | Council(N) - demoted(N)                                                                                                           |
+| └└ Committee(N,Round)     | GenesisCouncil                     | qualified(N).sublist(Round')                                                                                                      |
+| └└└ proposer(N,Round)     | GenesisCouncil's<br/>first element | *Committee(N,Round').proposer(Round')                                                                                             |
 *Committee(N,Round').proposer(Round'): A Proposer is calculated first than the committee unless the Randao hardfork is activated. 
 Nevertheless, proposer is ensured to be a committee member, so it is represented that the proposer is a member of committee.<br/>
-*state(N-1): It's a result of processing block N-1 including state transition. The results are govParamSet, stakingInfo, and author.
+*Council(N): a validator list for mining block N. Finalized at block N-1.
 
 ### council: a set of registered CN
-A `Council(N)` refers to the council determined after the block `N` is executed, based on `header(N).Vote` and `gov.EffectiveParamsAt(N)`.
-In other words, to reach consensus on block N, `Council(N-1)` is used as a superset of Committee(N) or proposer(N).
+A `Council(N)` refers to the council determined after the block `N-1` is executed, based on `header(N-1).Vote` and `gov.EffectiveParamsAt(N)`.
+In other words, to reach consensus on block N, `Council(N)` is used as a superset of Committee(N) or proposer(N).
 Additionally, the genesis council is directly restored from the extraData of the genesis block(block 0).
 
 ### qualified validators: a subset of council members who are qualified to be a committee

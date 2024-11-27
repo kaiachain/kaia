@@ -5,8 +5,10 @@ import (
 	"math/rand"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 )
 
 type ProposerPolicy uint64
@@ -33,21 +35,28 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 		return nil, errInvalidProposersType
 	}
 
-	valCtx, err := newValSetContext(v, pUpdateBlock)
-	if err != nil {
-		return nil, err
-	}
-	councilAddressList, err := v.GetCouncilAddressList(pUpdateBlock - 1)
-	if err != nil {
-		return nil, err
-	}
-	c, err := newCouncil(valCtx, councilAddressList)
+	c, err := newCouncil(v, pUpdateBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	proposersIndexes := calsSlotsInProposers(c.qualifiedValidators, valCtx)
-	proposers := shuffleProposers(c.qualifiedValidators, proposersIndexes, valCtx.prevBlockResult.header.Hash())
+	pSet, _, err := v.getPSetWithProposerPolicy(pUpdateBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	sInfo, stakingAmounts, err := v.getStakingInfoWithStakingAmounts(pUpdateBlock, c.qualifiedValidators)
+	if err != nil {
+		return nil, err
+	}
+
+	prevHeader := v.chain.GetHeaderByNumber(pUpdateBlock - 1)
+	if prevHeader == nil {
+		return nil, errNilHeader
+	}
+
+	proposersIndexes := calsSlotsInProposers(c.qualifiedValidators, c.rules, pSet, sInfo, stakingAmounts)
+	proposers := shuffleProposers(c.qualifiedValidators, proposersIndexes, prevHeader.Hash())
 
 	// store the calculated proposers
 	v.proposers.Add(pUpdateBlock, proposers)
@@ -98,14 +107,7 @@ func calcProposerBlockNumber(blockNum uint64, proposerUpdateInterval uint64) uin
 }
 
 // proposersIndexes updates each validator's weight based on the ratio of its staking amount vs. the total staking amount.
-func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) []int {
-	var (
-		sInfo                     = valCtx.prevBlockResult.staking
-		pSet                      = valCtx.prevBlockResult.pSet
-		consolidatedStakingAmount = valCtx.prevBlockResult.consolidatedStakingAmount(qualified)
-		rules                     = valCtx.rules
-	)
-
+func calsSlotsInProposers(qualified valset.AddressList, rules params.Rules, pSet gov.ParamSet, sInfo *staking.StakingInfo, stakingAmounts map[common.Address]uint64) []int {
 	// is calculated among all CNs (i.e. AddressBook.cnStakingContracts)
 	// stakingInfo.Gini calculates the gini among the qualified subset of the council (i.e. validators)
 	gini := staking.EmptyGini
@@ -115,7 +117,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 
 	// calc again for totalStaking amount among qualified subset of the council.
 	totalStaking := float64(0)
-	for _, st := range consolidatedStakingAmount {
+	for _, st := range stakingAmounts {
 		if st >= pSet.MinimumStake.Uint64() {
 			stake := float64(st)
 			if pSet.UseGiniCoeff {
@@ -124,7 +126,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 			totalStaking += stake
 		}
 	}
-	logger.Debug("calculate totalStaking", "UseGini", pSet.UseGiniCoeff, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", consolidatedStakingAmount)
+	logger.Debug("calculate totalStaking", "UseGini", pSet.UseGiniCoeff, "Gini", gini, "totalStaking", totalStaking, "stakingAmounts", stakingAmounts)
 
 	var (
 		candidateValsIdx []int
@@ -133,7 +135,7 @@ func calsSlotsInProposers(qualified valset.AddressList, valCtx *valSetContext) [
 	// weight is meaningful at next case. calculate the weight.
 	if totalStaking != 0 && !rules.IsKore {
 		for idx, addr := range qualified {
-			weight := uint64(math.Round(float64(consolidatedStakingAmount[addr]) * 100 / totalStaking))
+			weight := uint64(math.Round(float64(stakingAmounts[addr]) * 100 / totalStaking))
 			if weight <= 0 {
 				// A validator, who holds zero or small stake, has minimum weight, 1.
 				weight = 1

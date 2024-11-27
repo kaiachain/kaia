@@ -1,29 +1,45 @@
 package impl
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
+func calcStakingAmounts(sInfo *staking.StakingInfo, cList []common.Address) map[common.Address]uint64 {
+	stakingAmounts := make(map[common.Address]uint64, len(cList))
+	for _, node := range cList {
+		stakingAmounts[node] = uint64(0)
+	}
+	for _, consolidated := range sInfo.ConsolidatedNodes() {
+		for _, nAddr := range consolidated.NodeIds {
+			if _, ok := stakingAmounts[nAddr]; ok {
+				stakingAmounts[nAddr] = consolidated.StakingAmount
+			}
+		}
+	}
+	return stakingAmounts
+}
 func TestCalcSlotsInProposers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	vModule, tm, _ := newTestVModule(ctrl)
-	tm.prepareMockExpectGovParam(0, testProposerPolicy, testSubGroupSize, tgn)
-	tm.prepareMockExpectStakingInfo(0, []uint64{0, 1, 2, 3}, []uint64{aL, aL, aL, aL})
-	tm.prepareMockExpectHeader(0, nil, nil, tgn)
-
-	valCtx, err := newValSetContext(vModule, 1)
-	assert.NoError(t, err)
-
+	// test data
 	qualified := valset.AddressList{tgn, n[1], n[2], n[3]}
+	rules := params.Rules{ChainID: big.NewInt(1), IsIstanbul: true}
+	pSet := prepareTestGovParam(testProposerPolicy, testSubGroupSize, tgn)
+	sInfo := prepareTestStakingInfo(0, []uint64{0, 1, 2, 3}, []uint64{aL, aL, aL, aL})
+	stakingAmounts := calcStakingAmounts(sInfo, qualified)
+
+	// expect data
 	expectProposersIndexes := []int{0, 1, 2, 3}
-	assert.Equal(t, expectProposersIndexes, calsSlotsInProposers(qualified, valCtx))
+	assert.Equal(t, expectProposersIndexes, calsSlotsInProposers(qualified, rules, pSet, sInfo, stakingAmounts))
 }
 
 func TestShuffleProposers(t *testing.T) {

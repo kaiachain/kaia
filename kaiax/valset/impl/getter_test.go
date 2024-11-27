@@ -26,7 +26,7 @@ func TestGetCouncilAddressList(t *testing.T) {
 
 	// check council
 	for blockNumber, expectCList := range [][]common.Address{
-		{tgn, n[1], n[3], n[2]},
+		{tgn, n[1], n[2], n[3]}, // genesis council or committee shouldn't be modified
 		{tgn, n[1], n[3], n[2]},
 		{tgn, n[1], n[3], n[2], n[4]},
 		{tgn, n[1], n[3], n[2], n[4]},
@@ -35,7 +35,7 @@ func TestGetCouncilAddressList(t *testing.T) {
 	} {
 		cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(blockNumber))
 		assert.NoError(t, err, "tc(blockNumber):%d", blockNumber)
-		assert.Equal(t, expectCList, cList)
+		assert.Equal(t, expectCList, cList, "tc(blockNumber):%d", blockNumber)
 	}
 }
 
@@ -67,8 +67,8 @@ func TestGetCommitteeAddressList(t *testing.T) {
 		{"proposerPolicy roundrobin", defaultBN, defaultRound, params.RoundRobin, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
 		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
 		// per HF
-		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[3]}, nil},
-		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], tgn, n[1]}, nil},
+		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2], n[3]}, nil},
+		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], n[1], tgn}, nil},
 		{"istanbul hf activated", testIstanbulCompatibleNumber.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[1], n[2], n[3]}, nil},
 		{"kore hf activated", testKoreCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
 		{"randao hf activated", testRandaoCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2]}, nil},
@@ -83,23 +83,17 @@ func TestGetCommitteeAddressList(t *testing.T) {
 				mixHash = nil
 			}
 
-			prevBlockNum := uint64(0)
-			if tc.blockNumber > 1 {
-				prevBlockNum = tc.blockNumber - 1
-			}
-			tm.prepareMockExpectHeader(prevBlockNum, mixHash, nil, tgn)
-			tm.prepareMockExpectStakingInfo(prevBlockNum, nil, nil)
-			tm.prepareMockExpectGovParam(prevBlockNum, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
+			if tc.blockNumber > 0 {
+				tm.prepareMockExpectHeader(tc.blockNumber-1, mixHash, nil, tgn)
+				tm.prepareMockExpectStakingInfo(tc.blockNumber, nil, nil)
+				tm.prepareMockExpectGovParam(tc.blockNumber, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
 
-			pSet := vModule.headerGov.EffectiveParamSet(prevBlockNum)
-			proposersBlock := calcProposerBlockNumber(tc.blockNumber, pSet.ProposerUpdateInterval)
-			prevProposersBlockNum := uint64(0)
-			if proposersBlock > 1 {
-				prevProposersBlockNum = proposersBlock - 1
+				proposersPSet := vModule.headerGov.EffectiveParamSet(tc.blockNumber)
+				proposersBlock := calcProposerBlockNumber(tc.blockNumber, proposersPSet.ProposerUpdateInterval)
+				tm.prepareMockExpectHeader(proposersBlock-1, mixHash, nil, tgn)
+				tm.prepareMockExpectStakingInfo(proposersBlock, nil, nil)
+				tm.prepareMockExpectGovParam(proposersBlock, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
 			}
-			tm.prepareMockExpectHeader(prevProposersBlockNum, mixHash, nil, tgn)
-			tm.prepareMockExpectStakingInfo(prevProposersBlockNum, nil, nil)
-			tm.prepareMockExpectGovParam(prevProposersBlockNum, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
 
 			committee, err := vModule.GetCommitteeAddressList(tc.blockNumber, tc.round)
 			assert.Equal(t, tc.expectError, err, "testcase: %d", idx)
@@ -130,8 +124,8 @@ func TestGetProposer(t *testing.T) {
 		assert.NoError(t, err)
 
 		tm.prepareMockExpectHeader(tc.blockNumber-1, nil, nil, n[0])
-		tm.prepareMockExpectStakingInfo(tc.blockNumber-1, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, aM, aM, aM, aM})
-		tm.prepareMockExpectGovParam(tc.blockNumber-1, tc.govParamPolicy, testSubGroupSize, tgn)
+		tm.prepareMockExpectStakingInfo(tc.blockNumber, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, aM, aM, aM, aM})
+		tm.prepareMockExpectGovParam(tc.blockNumber, tc.govParamPolicy, testSubGroupSize, tgn)
 
 		tm.prepareMockExpectHeader(tc.blockNumber, nil, nil, common.Address{})
 

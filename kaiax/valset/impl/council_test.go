@@ -16,17 +16,10 @@ func TestNewCouncil(t *testing.T) {
 	assert.NoError(t, err)
 
 	blockNum := testIstanbulCompatibleNumber.Uint64()
-	tm.prepareMockExpectHeader(blockNum-1, nil, nil, n[1])
-	tm.prepareMockExpectGovParam(blockNum-1, uint64(WeightedRandom), testSubGroupSize, tgn)
-	tm.prepareMockExpectStakingInfo(blockNum-1, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, 0, 0, aL, aL})
+	tm.prepareMockExpectGovParam(blockNum, uint64(WeightedRandom), testSubGroupSize, tgn)
+	tm.prepareMockExpectStakingInfo(blockNum, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, 0, 0, aL, aL})
 
-	valCtx, err := newValSetContext(vModule, blockNum)
-	assert.NoError(t, err)
-
-	cList, err := vModule.GetCouncilAddressList(blockNum - 1)
-	assert.NoError(t, err)
-
-	c, err := newCouncil(valCtx, cList)
+	c, err := newCouncil(vModule, blockNum)
 	assert.NoError(t, err)
 
 	assert.Equal(t, valset.AddressList{n[0], n[1]}, c.qualifiedValidators)
