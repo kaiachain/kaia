@@ -113,7 +113,7 @@ This module does not have any consensus-related block processing logic.
 
 ### Execution
 
-This module does not have any execution-related block processing logic.
+This module makes sure that the corresponding StakingInfo is persisted, if applicable.
 
 ### Rewind
 

@@ -43,7 +43,6 @@ import (
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
 )
@@ -88,9 +87,6 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, g
 	}
 	// Initialize snapshot cache, staking info cache, and governance cache
 	cn.InitSnapshot()
-	if reward.GetStakingManager() != nil {
-		reward.PurgeStakingInfoCache()
-	}
 	gov.InitGovCache()
 	gov.InitLastGovStateBlkNum()
 	gpo.PurgeCache()

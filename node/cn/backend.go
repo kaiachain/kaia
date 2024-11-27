@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -374,12 +373,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 
-	// Setup reward related components
-	if pset.Policy() == uint64(istanbul.WeightedRandom) {
-		// NewStakingManager is called with proper non-nil parameters
-		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-	}
-
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
@@ -494,7 +487,7 @@ func (s *CN) createSnapshot() {
 	if headers, err = s.Engine().GetKaiaHeadersForSnapshotApply(s.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
+		preloadRef, err := reward.PreloadStakingInfo(s.blockchain, headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
@@ -594,7 +587,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
@@ -901,10 +894,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-
 	return nil
 }
 
@@ -925,7 +914,6 @@ func (s *CN) Stop() error {
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()
