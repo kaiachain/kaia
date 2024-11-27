@@ -111,6 +111,44 @@ func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 	}
 }
 
+func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, authList AuthorizationList, chainID *big.Int) *TxInternalDataEthereumSetCode {
+	d := newTxInternalDataEthereumSetCode()
+
+	d.AccountNonce = nonce
+	d.Recipient = to
+	d.GasLimit = gasLimit
+
+	if chainID != nil {
+		d.ChainID.Set(chainID)
+	}
+
+	if gasTipCap != nil {
+		d.GasTipCap.Set(gasTipCap)
+	}
+
+	if gasFeeCap != nil {
+		d.GasFeeCap.Set(gasFeeCap)
+	}
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+
+	if len(data) > 0 {
+		d.Payload = common.CopyBytes(data)
+	}
+
+	if accessList != nil {
+		d.AccessList = append(d.AccessList, accessList...)
+	}
+
+	if authList != nil {
+		d.AuthorizationList = authList
+	}
+
+	return d
+}
+
 func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface{}) (*TxInternalDataEthereumSetCode, error) {
 	d := newTxInternalDataEthereumSetCode()
 
@@ -458,7 +496,8 @@ func (t *TxInternalDataEthereumSetCode) Execute(sender ContractRef, vm VM, state
 	//	logger.Debug("[TxInternalDataLegacy] EVM execution done", "elapsed", elapsed)
 	//}()
 	///////////////////////////////////////////////////////
-	stateDB.IncNonce(sender.Address())
+
+	// SetCode sender nonce increment is done in TransitionDb to comply with the spec.
 	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }
 
@@ -531,12 +570,44 @@ func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big
 type AuthorizationList []Authorization
 
 type Authorization struct {
-	ChainID *big.Int       `json:"chainId"`
+	ChainID uint64         `json:"chainId"`
 	Address common.Address `json:"address"`
 	Nonce   uint64         `json:"nonce"`
-	V       *big.Int       `json:"v"`
+	V       uint8          `json:"v"`
 	R       *big.Int       `json:"r"`
 	S       *big.Int       `json:"s"`
+}
+
+// SignAuth signs the provided authorization.
+func SignAuth(auth *Authorization, prv *ecdsa.PrivateKey) (*Authorization, error) {
+	h := prefixedRlpHash(
+		0x05,
+		[]interface{}{
+			auth.ChainID,
+			auth.Address,
+			auth.Nonce,
+		})
+
+	sig, err := crypto.Sign(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+	return auth.WithSignature(sig), nil
+}
+
+// WithSignature updates the signature of an Authorization to be equal the
+// decoded signature provided in sig.
+func (a *Authorization) WithSignature(sig []byte) *Authorization {
+	r, s, _ := decodeSignature(sig)
+	cpy := Authorization{
+		ChainID: a.ChainID,
+		Address: a.Address,
+		Nonce:   a.Nonce,
+		V:       sig[crypto.RecoveryIDOffset],
+		R:       r,
+		S:       s,
+	}
+	return &cpy
 }
 
 func (a Authorization) Authority() (common.Address, error) {
@@ -548,8 +619,7 @@ func (a Authorization) Authority() (common.Address, error) {
 			a.Nonce,
 		})
 
-	v := byte(a.V.Uint64())
-	if !crypto.ValidateSignatureValues(v, a.R, a.S, true) {
+	if !crypto.ValidateSignatureValues(a.V, a.R, a.S, true) {
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format
@@ -557,7 +627,7 @@ func (a Authorization) Authority() (common.Address, error) {
 	sig := make([]byte, crypto.SignatureLength)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = v
+	sig[64] = a.V
 	// recover the public key from the signature
 	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {

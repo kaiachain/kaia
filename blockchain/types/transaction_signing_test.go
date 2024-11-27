@@ -41,7 +41,7 @@ func TestPragueSigning(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := AuthorizationList{{ChainID: big.NewInt(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: big.NewInt(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := AuthorizationList{{ChainID: uint64(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
 	testData := []struct {
 		name    string

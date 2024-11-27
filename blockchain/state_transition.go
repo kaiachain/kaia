@@ -368,60 +368,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
-	// Check authorizations list validity.
+	// Check authorization list validity and set code.
 	if msg.AuthorizationList() != nil {
-		for _, auth := range msg.AuthorizationList() {
-			// Verify chain ID is 0 or equal to current chain ID.
-			if auth.ChainID != big.NewInt(0) && st.evm.ChainConfig().ChainID != auth.ChainID {
-				continue
-			}
-			// Limit nonce to 2^64-1 per EIP-2681.
-			if auth.Nonce+1 < auth.Nonce {
-				continue
-			}
-			// Validate signature values and recover authority.
-			authority, err := auth.Authority()
-			if err != nil {
-				continue
-			}
-			// Check the authority account 1) doesn't have code or has exisiting
-			// delegation 2) matches the auth's nonce
-			st.state.AddAddressToAccessList(authority)
-			code := st.state.GetCode(authority)
-			if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
-				continue
-			}
-			if have := st.state.GetNonce(authority); have != auth.Nonce {
-				continue
-			}
-			// If the account already exists in state, refund the new account cost
-			// charged in the initrinsic calculation.
-			if exists := st.state.Exist(authority); exists {
-				// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
-				if !st.state.GetKey(authority).Type().IsLegacyAccountKey() {
-					continue
-				}
-				st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
-			}
-			st.state.IncNonce(authority)
-			delegation := types.AddressToDelegation(auth.Address)
-			if common.EmptyAddress(auth.Address) {
-				// If the delegation is for the zero address, completely clear all
-				// delegations from the account.
-				delegation = []byte{}
-			}
-			// TODO-7702: Change to a method that adds code to EOA
-			// This is currently expected to be an error. This will be addressed in a PR that adds a code hash field to the EOA.
-			// https://github.com/kaiachain/kaia/blob/v1.0.3/blockchain/state/state_object.go#L542
-			st.state.SetCode(authority, delegation)
-
-			// Usually the transaction destination and delegation target are added to
-			// the access list in statedb.Prepare(..), however if the delegation is in
-			// the same transaction we need add here as Prepare already happened.
-			if *msg.To() == authority {
-				st.state.AddAddressToAccessList(auth.Address)
-			}
-		}
+		// SetCode sender nonce increment should be done before set code process.
+		st.state.IncNonce(msg.ValidatedSender())
+		st.processAuthorizationList(msg.AuthorizationList(), *msg.To())
 	}
 
 	// Check whether the init code size has been exceeded.
@@ -571,4 +522,59 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address) {
+	for _, auth := range authList {
+		// Verify chain ID is 0 or equal to current chain ID.
+		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
+			continue
+		}
+		// Limit nonce to 2^64-1 per EIP-2681.
+		if auth.Nonce+1 < auth.Nonce {
+			continue
+		}
+		// Validate signature values and recover authority.
+		authority, err := auth.Authority()
+		if err != nil {
+			continue
+		}
+		// Check the authority account 1) doesn't have code or has exisiting
+		// delegation 2) matches the auth's nonce
+		st.state.AddAddressToAccessList(authority)
+		code := st.state.GetCode(authority)
+		if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
+			continue
+		}
+		if have := st.state.GetNonce(authority); have != auth.Nonce {
+			continue
+		}
+		// If the account already exists in state, refund the new account cost
+		// charged in the initrinsic calculation.
+		if exists := st.state.Exist(authority); exists {
+			// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
+			if !st.state.GetKey(authority).Type().IsLegacyAccountKey() {
+				continue
+			}
+			st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
+		}
+		st.state.IncNonce(authority)
+		delegation := types.AddressToDelegation(auth.Address)
+		if common.EmptyAddress(auth.Address) {
+			// If the delegation is for the zero address, completely clear all
+			// delegations from the account.
+			delegation = []byte{}
+		}
+
+		// We treat EOA and SCA as separate objects and therefore need to use
+		// distinct methods.
+		st.state.SetCodeToEOA(authority, delegation)
+
+		// Usually the transaction destination and delegation target are added to
+		// the access list in statedb.Prepare(..), however if the delegation is in
+		// the same transaction we need add here as Prepare already happened.
+		if to == authority {
+			st.state.AddAddressToAccessList(auth.Address)
+		}
+	}
 }
