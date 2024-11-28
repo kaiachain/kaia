@@ -192,6 +192,9 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	}
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
 	blockContext.GetHash = vmTestBlockHash
+	if isTestExecutionSpecState {
+		blockContext.GasLimit = t.json.Env.GasLimit
+	}
 	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
 
 	if isTestExecutionSpecState {

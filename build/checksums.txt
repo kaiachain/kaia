@@ -1,6 +1,6 @@
 # This file contains sha256 checksums of optional build dependencies.
 
-# version:spec-tests 2.1.0
+# version:spec-tests 3.0.0
 # https://github.com/ethereum/execution-spec-tests/releases
-# https://github.com/ethereum/execution-spec-tests/releases/download/v2.1.0/
-ca89c76851b0900bfcc3cbb9a26cbece1f3d7c64a3bed38723e914713290df6c  fixtures_develop.tar.gz
+# https://github.com/ethereum/execution-spec-tests/releases/download/v3.0.0/
+4a750a0554158b4a47def19aa1409f5f75ccbebad223d41a2148790b06399528  fixtures_develop.tar.gz
