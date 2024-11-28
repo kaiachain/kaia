@@ -551,7 +551,7 @@ func FormatLogs(timeout time.Duration, logs []vm.StructLog) ([]StructLogRes, err
 
 // For kaia_getBlockByNumber, kaia_getBlockByHash, kaia_getBlockWithconsensusInfoByNumber, kaia_getBlockWithconsensusInfoByHash APIs
 // and Kafka chaindatafetcher.
-func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, config *params.ChainConfig) (map[string]interface{}, error) {
+func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.ChainConfig) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
 		"number":           (*hexutil.Big)(head.Number),
@@ -561,7 +561,6 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, confi
 		"stateRoot":        head.Root,
 		"reward":           head.Rewardbase,
 		"blockScore":       (*hexutil.Big)(head.BlockScore),
-		"totalBlockScore":  (*hexutil.Big)(td),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"governanceData":   hexutil.Bytes(head.Governance),
 		"voteData":         hexutil.Bytes(head.Vote),
@@ -615,7 +614,7 @@ func RpcOutputBlock(b *types.Block, td *big.Int, inclTx bool, fullTx bool, confi
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
-	return RpcOutputBlock(b, s.b.GetTd(b.Hash()), inclTx, fullTx, s.b.ChainConfig())
+	return RpcOutputBlock(b, inclTx, fullTx, s.b.ChainConfig())
 }
 
 func getFrom(tx *types.Transaction) common.Address {

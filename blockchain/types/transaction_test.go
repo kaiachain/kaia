@@ -756,96 +756,103 @@ func TestTransactionCoding(t *testing.T) {
 		t.Fatalf("could not generate key: %v", err)
 	}
 	var (
-		signer    = LatestSignerForChainID(common.Big1)
-		addr      = common.HexToAddress("0x0000000000000000000000000000000000000001")
-		recipient = common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
-		accesses  = AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}}
-	)
-	for i := uint64(0); i < 500; i++ {
-		var txData TxInternalData
-		switch i % 5 {
-		case 0:
-			// Legacy tx.
-			txData = &TxInternalDataLegacy{
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     1,
-				Price:        big.NewInt(2),
-				Payload:      []byte("abcdef"),
-			}
-		case 1:
-			// Legacy tx contract creation.
-			txData = &TxInternalDataLegacy{
-				AccountNonce: i,
-				GasLimit:     1,
-				Price:        big.NewInt(2),
-				Payload:      []byte("abcdef"),
-			}
-		case 2:
-			// Tx with non-zero access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				AccessList:   accesses,
-				Payload:      []byte("abcdef"),
-			}
-		case 3:
-			// Tx with empty access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				Payload:      []byte("abcdef"),
-			}
-		case 4:
-			// Contract creation with access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				AccessList:   accesses,
-			}
-		case 5:
-			// Tx with non-zero access list.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				AccessList:   accesses,
-				Payload:      []byte("abcdef"),
-			}
-		case 6:
-			// Tx with dynamic fee.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				Payload:      []byte("abcdef"),
-			}
-		case 7:
-			// Contract creation with dynamic fee tx.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				AccessList:   accesses,
-			}
+		signer     = LatestSignerForChainID(common.Big1)
+		addr       = common.HexToAddress("0x0000000000000000000000000000000000000001")
+		recipient  = common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
+		accesses   = AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}}
+		txDataList = []func(uint64) TxInternalData{
+			func(i uint64) TxInternalData {
+				// Legacy tx.
+				return &TxInternalDataLegacy{
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     1,
+					Price:        big.NewInt(2),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Legacy tx contract creation.
+				return &TxInternalDataLegacy{
+					AccountNonce: i,
+					GasLimit:     1,
+					Price:        big.NewInt(2),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with non-zero access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					AccessList:   accesses,
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with empty access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Contract creation with access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					AccessList:   accesses,
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with non-zero access list.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					AccessList:   accesses,
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with dynamic fee.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Contract creation with dynamic fee tx.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					AccessList:   accesses,
+				}
+			},
 		}
-
+	)
+	for i := 0; i < 500; i++ {
+		txData := txDataList[i%len(txDataList)](uint64(i))
 		transaction := Transaction{data: txData}
 		tx, err := SignTx(&transaction, signer, key)
 		if err != nil {

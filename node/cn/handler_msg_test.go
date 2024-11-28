@@ -512,8 +512,8 @@ func TestHandleStakingInfoRequestMsg(t *testing.T) {
 			RewardAddrs:      []common.Address{{0x3}, {0x3}},
 			StakingAmounts:   []uint64{2, 5, 6},
 		}
-		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(4))).Return(si, nil).Times(1)
-		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(5))).Return(nil, nil).Times(1)
+		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(4))).Return(si).Times(1)
+		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(5))).Return(nil).Times(1)
 		pm.stakingModule = mStaking
 
 		testChainConfig.KaiaCompatibleBlock = nil
@@ -562,7 +562,7 @@ func TestHandleStakingInfoRequestMsgAfterKaia(t *testing.T) {
 			RewardAddrs:      []common.Address{{0x3}, {0x3}},
 			StakingAmounts:   []uint64{2, 5, 6},
 		}
-		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(4))).Return(siBeforeKaia, nil).Times(1)
+		mStaking.EXPECT().GetStakingInfoFromDB(gomock.Eq(uint64(4))).Return(siBeforeKaia).Times(1)
 		mStaking.EXPECT().GetStakingInfo(gomock.Eq(uint64(6))).Return(siAfterKaia, nil).Times(1)
 		pm.stakingModule = mStaking
 

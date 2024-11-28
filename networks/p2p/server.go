@@ -243,7 +243,7 @@ type Server interface {
 	// RemovePeer disconnects from the given node.
 	RemovePeer(node *discover.Node)
 
-	// SubscribePeers subscribes the given channel to peer events.
+	// SubscribeEvents subscribes the given channel to peer events.
 	SubscribeEvents(ch chan *PeerEvent) event.Subscription
 
 	// PeersInfo returns an array of metadata objects describing connected peers.
@@ -1107,7 +1107,7 @@ func (srv *BaseServer) RemovePeer(node *discover.Node) {
 	}
 }
 
-// SubscribePeers subscribes the given channel to peer events.
+// SubscribeEvents subscribes the given channel to peer events.
 func (srv *BaseServer) SubscribeEvents(ch chan *PeerEvent) event.Subscription {
 	return srv.peerFeed.Subscribe(ch)
 }

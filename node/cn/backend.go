@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -374,47 +373,13 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 
-	// Setup reward related components
-	if pset.Policy() == uint64(istanbul.WeightedRandom) {
-		// NewStakingManager is called with proper non-nil parameters
-		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-	}
-
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
 	// Particularly, the gov.changeSet is also restored here.
 	// Temporarily set chain since snapshot needs state since kaia hardfork
 	logger.Info("Start creating istanbul snapshot")
-	var (
-		currBlock = cn.blockchain.CurrentBlock()
-		headers   []*types.Header
-	)
-	// Temporarily supply blockchain for `Finalize`, staking module for `snapshot`.
-	cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
-	mStaking := staking_impl.NewStakingModule()
-	mStaking.Init(&staking_impl.InitOpts{
-		ChainKv:     cn.chainDB.GetMiscDB(),
-		ChainConfig: cn.chainConfig,
-		Chain:       cn.blockchain,
-	})
-	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
-	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
-		logger.Error("Failed to get headers to apply", "err", err)
-	} else {
-		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
-		if err != nil {
-			logger.Error("Preload staking info failed", "err", err)
-		}
-		defer func() {
-			mStaking.FreePreloadRef(preloadRef)
-		}()
-	}
-	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
-		logger.Error("CreateSnapshot failed", "err", err)
-	}
-	cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
-	cn.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(nil)
+	cn.createSnapshot()
 	logger.Info("Finished creating istanbul snapshot")
 
 	// set worker
@@ -494,6 +459,48 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	return cn, nil
+}
+
+func (s *CN) createSnapshot() {
+	var (
+		currBlock = s.blockchain.CurrentBlock()
+		headers   []*types.Header
+		err       error
+	)
+	// Temporarily supply blockchain for `Finalize`, staking module for `snapshot` and reward module for `processor`.
+	s.blockchain.Engine().(consensus.Istanbul).SetChain(s.blockchain)
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	mStaking.Init(&staking_impl.InitOpts{
+		ChainKv:     s.chainDB.GetMiscDB(),
+		ChainConfig: s.chainConfig,
+		Chain:       s.blockchain,
+	})
+	mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   s.chainConfig,
+		Chain:         s.blockchain,
+		GovModule:     reward_impl.FromLegacy(s.governance),
+		StakingModule: mStaking,
+	})
+	s.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
+	s.blockchain.Engine().(consensus.Istanbul).RegisterConsensusModule(mReward)
+	if headers, err = s.Engine().GetKaiaHeadersForSnapshotApply(s.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
+		logger.Error("Failed to get headers to apply", "err", err)
+	} else {
+		preloadRef, err := reward.PreloadStakingInfo(s.blockchain, headers, mStaking)
+		if err != nil {
+			logger.Error("Preload staking info failed", "err", err)
+		}
+		defer func() {
+			mStaking.FreePreloadRef(preloadRef)
+		}()
+	}
+	if err := s.Engine().CreateSnapshot(s.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
+		logger.Error("CreateSnapshot failed", "err", err)
+	}
+	s.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
+	s.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(nil)
+	s.blockchain.Engine().(consensus.Istanbul).UnregisterConsensusModule(mReward)
 }
 
 // setAcceptTxs sets AcceptTxs flag in 1CN case to receive tx propagation.
@@ -580,7 +587,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
@@ -887,10 +894,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-
 	return nil
 }
 
@@ -911,7 +914,6 @@ func (s *CN) Stop() error {
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

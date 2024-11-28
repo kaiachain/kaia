@@ -723,6 +723,15 @@ func (sb *backend) RegisterConsensusModule(modules ...kaiax.ConsensusModule) {
 	sb.consensusModules = append(sb.consensusModules, modules...)
 }
 
+func (sb *backend) UnregisterConsensusModule(module kaiax.ConsensusModule) {
+	for i, m := range sb.consensusModules {
+		if m == module {
+			sb.consensusModules = append(sb.consensusModules[:i], sb.consensusModules[i+1:]...)
+			break
+		}
+	}
+}
+
 // Start implements consensus.Istanbul.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()

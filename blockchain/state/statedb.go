@@ -805,6 +805,21 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 	}
 }
 
+// SetLegacyAccountForTest is setting an account as Legacy Account to StateDB.
+// SetLegacyAccountForTest should be used for only tests.
+func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, balance *big.Int, root common.Hash, codeHash []byte) {
+	acc := &account.LegacyAccount{
+		Nonce:    nonce,
+		Balance:  balance,
+		Root:     root,
+		CodeHash: codeHash,
+	}
+	newobj := newObject(s, addr, acc)
+	s.journal.append(createObjectChange{account: &addr})
+	newobj.created = true
+	s.setStateObject(newobj)
+}
+
 func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
 	so := s.getStateObject(addr)
 	if so == nil {

@@ -21,6 +21,18 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+func (s *StakingModule) PostInsertBlock(block *types.Block) error {
+	isKaia := s.ChainConfig.IsKaiaForkEnabled(block.Number())
+	if !isKaia {
+		// Make sure the staking info for the new block is persisted.
+		// The StakingInfo(sourceNum) will be persisted here, even if GetStakingInfo is never called elsewhere.
+		if _, err := s.GetStakingInfo(block.NumberU64()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *StakingModule) RewindTo(newBlock *types.Block) {
 	// Nothing to do
 }
