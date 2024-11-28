@@ -477,9 +477,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 			)
 
 			if residualBlkCnt != 0 && !noWait {
-				// time.Sleep(time.Second * time.Duration(database.CompressMigrationThreshold-residualBlkCnt))
-				// continue
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * time.Duration(database.CompressMigrationThreshold-residualBlkCnt))
+				continue
 			}
 			from, to := uint64(0), uint64(0)
 			for {
@@ -494,6 +493,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 				}
 				from = subsequentBlkNumber
 			}
+
 		}
 	}()
 	return cn, nil
