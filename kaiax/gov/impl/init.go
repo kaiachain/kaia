@@ -39,8 +39,8 @@ type BlockChain interface {
 
 type GovModule struct {
 	Fallback    gov.PartialParamSet
-	Chain       BlockChain
 	ChainConfig *params.ChainConfig
+	Chain       BlockChain
 	Hgm         headergov.HeaderGovModule
 	Cgm         contractgov.ContractGovModule
 }
@@ -84,7 +84,14 @@ func (m *GovModule) Init(opts *InitOpts) error {
 		return err
 	}
 
-	m.Fallback = opts.Fallback
+	m.Fallback = make(gov.PartialParamSet)
+	for k, v := range opts.Fallback {
+		err := m.Fallback.Add(string(k), v)
+		if err != nil {
+			return err
+		}
+	}
+
 	m.Chain = opts.Chain
 	m.ChainConfig = opts.ChainConfig
 	m.Hgm = hgm

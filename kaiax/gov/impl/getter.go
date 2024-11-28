@@ -1,6 +1,8 @@
 package impl
 
-import "github.com/kaiachain/kaia/kaiax/gov"
+import (
+	"github.com/kaiachain/kaia/kaiax/gov"
+)
 
 func (m *GovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	ret := gov.GetDefaultGovernanceParamSet()
