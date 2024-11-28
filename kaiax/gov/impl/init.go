@@ -4,14 +4,18 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/contractgov"
+	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
@@ -20,24 +24,31 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
-//go:generate mockgen -destination=kaiax/gov/impl/mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
+//go:generate mockgen -destination=mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
 type BlockChain interface {
+	blockchain.ChainContext
+
 	CurrentBlock() *types.Block
 	Config() *params.ChainConfig
 	GetHeaderByNumber(val uint64) *types.Header
+	State() (*state.StateDB, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
 type GovModule struct {
-	InitOpts
+	Chain       BlockChain
+	ChainConfig *params.ChainConfig
+	Hgm         headergov.HeaderGovModule
+	Cgm         contractgov.ContractGovModule
 }
 
 type InitOpts struct {
-	Hgm   headergov.HeaderGovModule
-	Cgm   contractgov.ContractGovModule
-	Chain BlockChain
+	ChainConfig *params.ChainConfig
+	ChainKv     database.Database
+	Chain       BlockChain
+	NodeAddress common.Address
 }
 
 func NewGovModule() *GovModule {
@@ -45,11 +56,36 @@ func NewGovModule() *GovModule {
 }
 
 func (m *GovModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Hgm == nil || opts.Cgm == nil || opts.Chain == nil || opts.Chain.Config() == nil {
+	if opts == nil {
 		return gov.ErrInitNil
 	}
 
-	m.InitOpts = *opts
+	var (
+		hgm = headergov_impl.NewHeaderGovModule()
+		cgm = contractgov_impl.NewContractGovModule()
+	)
+
+	err := errors.Join(
+		hgm.Init(&headergov_impl.InitOpts{
+			ChainKv:     opts.ChainKv,
+			ChainConfig: opts.ChainConfig,
+			Chain:       opts.Chain,
+			NodeAddress: opts.NodeAddress,
+		}),
+		cgm.Init(&contractgov_impl.InitOpts{
+			ChainConfig: opts.ChainConfig,
+			Chain:       opts.Chain,
+			Hgm:         hgm,
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	m.Chain = opts.Chain
+	m.ChainConfig = opts.ChainConfig
+	m.Hgm = hgm
+	m.Cgm = cgm
 	return nil
 }
 
