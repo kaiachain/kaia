@@ -36,8 +36,8 @@ func ReadStakingInfo(db database.Database, num uint64) *staking.StakingInfo {
 		return nil
 	}
 
-	var sl *staking.StakingInfoLegacy
-	if err := json.Unmarshal(b, sl); err != nil {
+	var sl staking.StakingInfoLegacy
+	if err := json.Unmarshal(b, &sl); err != nil {
 		logger.Error("Malformed staking info", "num", num, "err", err)
 		return nil
 	}
