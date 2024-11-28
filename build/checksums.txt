@@ -4,3 +4,4 @@
 # https://github.com/ethereum/execution-spec-tests/releases
 # https://github.com/ethereum/execution-spec-tests/releases/download/v3.0.0/
 4a750a0554158b4a47def19aa1409f5f75ccbebad223d41a2148790b06399528  fixtures_develop.tar.gz
+9d12f331d21cdc580f658a9891133ac26da703351d2585077935e6abde72851d  fixtures_pectra-devnet-4.tar.gz
