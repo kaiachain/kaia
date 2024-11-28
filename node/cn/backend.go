@@ -47,8 +47,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
-	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -535,12 +533,10 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking     = staking_impl.NewStakingModule()
-		mReward      = reward_impl.NewRewardModule()
-		mSupply      = supply_impl.NewSupplyModule()
-		mHeaderGov   = headergov_impl.NewHeaderGovModule()
-		mContractGov = contractgov_impl.NewContractGovModule()
-		mGov         = gov_impl.NewGovModule()
+		mStaking = staking_impl.NewStakingModule()
+		mReward  = reward_impl.NewRewardModule()
+		mSupply  = supply_impl.NewSupplyModule()
+		mGov     = gov_impl.NewGovModule()
 	)
 
 	// Initialize modules
@@ -562,21 +558,11 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:        s.blockchain,
 			RewardModule: mReward,
 		}),
-		mHeaderGov.Init(&headergov_impl.InitOpts{
-			ChainKv:     s.chainDB.GetMiscDB(),
+		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: s.chainConfig,
+			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
 			NodeAddress: s.nodeAddress,
-		}),
-		mContractGov.Init(&contractgov_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Hgm:         mHeaderGov,
-		}),
-		mGov.Init(&gov_impl.InitOpts{
-			Hgm:   mHeaderGov,
-			Cgm:   mContractGov,
-			Chain: s.blockchain,
 		}),
 	)
 	if err != nil {
