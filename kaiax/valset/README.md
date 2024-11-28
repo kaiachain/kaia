@@ -158,9 +158,9 @@ block  | round | proposer
 11     |   0   |    0        << round change
 11     |   1   |    1        << round change
 11     |   2   |    2
-12     |   0   |    0
-13     |   0   |    0
-14     |   0   |    0
+12     |   0   |    2
+13     |   0   |    2
+14     |   0   |    2
 ```
 </details>
 <details>

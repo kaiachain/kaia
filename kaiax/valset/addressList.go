@@ -43,11 +43,11 @@ func (sc AddressList) GetIdxByAddress(addr common.Address) int {
 }
 
 // SortedAddressList retrieves the sorted address list of ValidatorSet in "ascending order".
-// if public is false, sort it using bytes.Compare. It's for public purpose.
+// if public is true, sort it using bytes.Compare. It's for public purpose.
 // - public-false usage: (getValidators/getDemotedValidators, defaultSet snap store, prepareExtra.validators)
-// if public is true, sort it using strings.Compare. It's used for internal consensus purpose, especially for the source of committee.
+// if public is false, sort it using strings.Compare. It's used for internal consensus purpose, especially for the source of committee.
 // - public-true usage: (snap read/store/apply except defaultSet snap store, vrank log)
-// TODO-kaia-valset: unify sorting.
+// TODO-kaia-valset: unify sorting. do this task with istanbul.Validator rpc refactoring
 func (sc AddressList) SortedAddressList(public bool) []common.Address {
 	copiedSlice := make(AddressList, len(sc))
 	copy(copiedSlice, sc)
