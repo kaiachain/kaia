@@ -70,9 +70,11 @@ type stJSON struct {
 }
 
 type stPostState struct {
-	Root    common.UnprefixedHash `json:"hash"`
-	Logs    common.UnprefixedHash `json:"logs"`
-	Indexes struct {
+	Root            common.UnprefixedHash `json:"hash"`
+	Logs            common.UnprefixedHash `json:"logs"`
+	TxBytes         hexutil.Bytes         `json:"txbytes"`
+	ExpectException string                `json:"expectException"`
+	Indexes         struct {
 		Data  int `json:"data"`
 		Gas   int `json:"gas"`
 		Value int `json:"value"`
@@ -156,11 +158,64 @@ func (t *StateTest) Subtests() []StateSubtest {
 	return sub
 }
 
-// Run executes a specific subtest.
-func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutionSpecState bool) (*state.StateDB, error) {
+// checkError checks if the error returned by the state transition matches any expected error.
+// A failing expectation returns a wrapped version of the original error, if any,
+// or a new error detailing the failing expectation.
+// This function does not return or modify the original error, it only evaluates and returns expectations for the error.
+func (t *StateTest) checkError(subtest StateSubtest, err error) error {
+	expectedError := t.json.Post[subtest.Fork][subtest.Index].ExpectException
+	if err == nil && expectedError == "" {
+		return nil
+	}
+	if err == nil && expectedError != "" {
+		return fmt.Errorf("expected error %q, got no error", expectedError)
+	}
+	if err != nil && expectedError == "" {
+		return fmt.Errorf("unexpected error: %w", err)
+	}
+	if err != nil && expectedError != "" {
+		// Ignore expected errors (TODO MariusVanDerWijden check error string)
+		return nil
+	}
+	return nil
+}
+
+func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutionSpecState bool) (result error) {
+	st, root, err := t.RunNoVerify(subtest, vmconfig, isTestExecutionSpecState)
+
+	// kaia-core-tests doesn't support ExpectException
+	if isTestExecutionSpecState {
+		checkedErr := t.checkError(subtest, err)
+		if checkedErr != nil {
+			return checkedErr
+		}
+	}
+
+	// The error has been checked; if it was unexpected, it's already returned.
+	if err != nil {
+		// Here, an error exists but it was expected.
+		// We do not check the post state or logs.
+		return nil
+	}
+	post := t.json.Post[subtest.Fork][subtest.Index]
+	// N.B: We need to do this in a two-step process, because the first Commit takes care
+	// of self-destructs, and we need to touch the coinbase _after_ it has potentially self-destructed.
+	if root != common.Hash(post.Root) {
+		return fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
+	}
+	if logs := rlpHash(st.Logs()); logs != common.Hash(post.Logs) {
+		return fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
+	}
+	st, _ = state.New(root, st.Database(), nil, nil)
+	return nil
+}
+
+// RunNoVerify runs a specific subtest and returns the statedb and post-state root.
+// Remember to call state.Close after verifying the test result!
+func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTestExecutionSpecState bool) (st *state.StateDB, root common.Hash, err error) {
 	config, eips, err := getVMConfig(subtest.Fork)
 	if err != nil {
-		return nil, UnsupportedForkError{subtest.Fork}
+		return st, common.Hash{}, UnsupportedForkError{subtest.Fork}
 	}
 
 	if isTestExecutionSpecState {
@@ -175,19 +230,36 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
-	statedb := MakePreState(memDBManager, t.json.Pre)
+	st = MakePreState(memDBManager, t.json.Pre)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
 	rules := config.Rules(block.Number())
 	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
 	if err != nil {
-		return nil, err
+		return st, common.Hash{}, err
 	}
+
+	// Try to recover tx with current signer
+	if len(post.TxBytes) != 0 {
+		var ttx types.Transaction
+		txBytes := post.TxBytes
+		if post.TxBytes[0] <= 4 {
+			txBytes = append([]byte{byte(types.EthereumTxTypeEnvelope)}, txBytes...)
+		}
+		err = ttx.UnmarshalBinary(txBytes)
+		if err != nil {
+			return st, common.Hash{}, err
+		}
+		if _, err := types.Sender(types.LatestSigner(config), &ttx); err != nil {
+			return st, common.Hash{}, err
+		}
+	}
+
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), config)
 	if isTestExecutionSpecState {
 		txContext.GasPrice, err = useEthGasPrice(rules, &t.json)
 		if err != nil {
-			return nil, err
+			return st, common.Hash{}, err
 		}
 	}
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
@@ -195,46 +267,39 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 	if isTestExecutionSpecState {
 		blockContext.GasLimit = t.json.Env.GasLimit
 	}
-	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vmconfig)
+	evm := vm.NewEVM(blockContext, txContext, st, config, &vmconfig)
 
 	if isTestExecutionSpecState {
 		useEthOpCodeGas(rules, evm)
 	}
 
-	snapshot := statedb.Snapshot()
+	snapshot := st.Snapshot()
 	result, err := blockchain.ApplyMessage(evm, msg)
 	if err != nil {
-		statedb.RevertToSnapshot(snapshot)
+		st.RevertToSnapshot(snapshot)
 	}
 
 	if isTestExecutionSpecState && err == nil {
-		useEthMiningReward(statedb, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
+		useEthMiningReward(st, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
 	}
 
-	if logs := rlpHash(statedb.Logs()); logs != common.Hash(post.Logs) {
-		return statedb, fmt.Errorf("post state logs hash mismatch: got %x, want %x", logs, post.Logs)
-	}
-
-	root, _ := statedb.Commit(true)
+	root, _ = st.Commit(true)
 	// Add 0-value mining reward. This only makes a difference in the cases
 	// where
 	// - the coinbase self-destructed, or
 	// - there are only 'bad' transactions, which aren't executed. In those cases,
 	//   the coinbase gets no txfee, so isn't created, and thus needs to be touched
-	statedb.AddBalance(block.Rewardbase(), new(big.Int))
+	st.AddBalance(block.Rewardbase(), new(big.Int))
 	// And _now_ get the state root
-	root = statedb.IntermediateRoot(true)
+	root = st.IntermediateRoot(true)
 
-	if isTestExecutionSpecState {
-		root, err = useEthStateRoot(statedb)
+	if err == nil && isTestExecutionSpecState {
+		root, err = useEthStateRoot(st)
 		if err != nil {
-			return nil, err
+			return st, common.Hash{}, err
 		}
 	}
-	if root != common.Hash(post.Root) {
-		return statedb, fmt.Errorf("post state root mismatch: got %x, want %x", root, post.Root)
-	}
-	return statedb, nil
+	return st, root, err
 }
 
 func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {

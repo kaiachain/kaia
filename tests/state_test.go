@@ -133,7 +133,7 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, 
 				}
 			}
 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-				_, err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
+				err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
 				return st.checkFailure(t, name, err)
 			})
 		})
