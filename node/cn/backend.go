@@ -465,6 +465,37 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
 	}
 
+	go func() {
+		// TODO-hyunsooda: I'd like to place compression calls in `PostInsertBlock`, but there seems no appropriate place
+		for {
+			var (
+				curBlkNum             = cn.blockchain.CurrentBlock().NumberU64()
+				residualBlkCnt        = curBlkNum % database.CompressMigrationThreshold
+				nextCompressionBlkNum = cn.chainDB.ReadSubsequentBlkNumber()
+				// Do not wait if next compression block number is far awway. Start migration right now
+				noWait = curBlkNum > nextCompressionBlkNum && curBlkNum-nextCompressionBlkNum > database.CompressMigrationThreshold
+			)
+
+			if residualBlkCnt != 0 && !noWait {
+				// time.Sleep(time.Second * time.Duration(database.CompressMigrationThreshold-residualBlkCnt))
+				// continue
+				time.Sleep(time.Second * 5)
+			}
+			from, to := uint64(0), uint64(0)
+			for {
+				subsequentBlkNumber, err := cn.chainDB.CompressReceipts(from, to, true)
+				if err != nil {
+					logger.Warn("[Compression] failed to compress receipts", "err", err)
+					break
+				}
+				if subsequentBlkNumber > curBlkNum {
+					logger.Info("[Compression] compression is completed")
+					break
+				}
+				from = subsequentBlkNumber
+			}
+		}
+	}()
 	return cn, nil
 }
 

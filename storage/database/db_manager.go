@@ -41,6 +41,11 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+const (
+	// TODO-hyunsooda: Make me configurable through CLI, not API
+	CompressMigrationThreshold = 10000
+)
+
 var (
 	logger = log.NewModuleLogger(log.StorageDatabase)
 
@@ -118,6 +123,12 @@ type DBManager interface {
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
 	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
 	DeleteReceipts(hash common.Hash, number uint64)
+	CompressReceipts(from, to uint64, migrationMode bool) (uint64, error)
+	FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error)
+
+	// TODO-hyunsooda: Remove `WriteSubsequentBlkNumber`
+	WriteSubsequentBlkNumber(number uint64)
+	ReadSubsequentBlkNumber() uint64
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
 	ReadBlockByHash(hash common.Hash) *types.Block
@@ -332,6 +343,7 @@ const (
 	TxLookUpEntryDB
 	bridgeServiceDB
 	SnapshotDB
+	CompressReceiptsDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -373,6 +385,7 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 	"txlookup",
 	"bridgeservice",
 	"snapshot",
+	"compress_receipts",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -381,12 +394,13 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	2,  // MiscDB
 	5,  // headerDB
 	5,  // BodyDB
-	5,  // ReceiptsDB
+	3,  // ReceiptsDB
 	40, // StateTrieDB
 	37, // StateTrieMigrationDB
 	2,  // TXLookUpEntryDB
 	1,  // bridgeServiceDB
 	3,  // SnapshotDB
+	2,  // CompressReceiptsDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1374,6 +1388,32 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 	dbm.cm.deleteBodyCache(hash)
 }
 
+func (dbm *databaseManager) ReadSubsequentBlkNumber() uint64 {
+	db := dbm.getDatabase(MiscDB)
+	data, _ := db.Get(nextCompressionNumberPrefix)
+	if len(data) == 0 {
+		return 0
+	}
+	var nextCompressionNumber uint64
+	if err := rlp.Decode(bytes.NewReader(data), &nextCompressionNumber); err != nil {
+		logger.Error("Invalid subsequent block number RLP", "err", err)
+		return 0
+	}
+
+	return nextCompressionNumber
+}
+
+func (dbm *databaseManager) WriteSubsequentBlkNumber(number uint64) {
+	db := dbm.getDatabase(MiscDB)
+	data, err := rlp.EncodeToBytes(&number)
+	if err != nil {
+		logger.Crit("Failed to RLP encode block number of subsequent compression", "err", err)
+	}
+	if err := db.Put(nextCompressionNumberPrefix, data); err != nil {
+		logger.Crit("Failed to store block number of subsequent compression number", "err", err)
+	}
+}
+
 // TotalDifficulty operations.
 // ReadTd retrieves a block's total blockscore corresponding to the hash.
 func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
@@ -1443,8 +1483,14 @@ func (dbm *databaseManager) ReadReceipts(blockHash common.Hash, number uint64) t
 	// Retrieve the flattened receipt slice
 	data, _ := db.Get(blockReceiptsKey(number, blockHash))
 	if len(data) == 0 {
-		return nil
+		// Fallback: if receipt is not found from `receipts` directory, detour to compression directory
+		receipts, err := dbm.FindReceiptsFromChunkWithBlkHash(number, blockHash)
+		if err != nil {
+			return nil
+		}
+		return receipts
 	}
+
 	// Convert the revceipts from their database form to their internal representation
 	storageReceipts := []*types.ReceiptForStorage{}
 	if err := rlp.DecodeBytes(data, &storageReceipts); err != nil {
@@ -1477,6 +1523,143 @@ func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, recei
 	db := dbm.getDatabase(ReceiptsDB)
 	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
 	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
+}
+
+func (dbm *databaseManager) CompressReceipts(from, to uint64, migrationMode bool) (uint64, error) {
+	if from == 0 {
+		from = dbm.ReadSubsequentBlkNumber()
+	}
+	if to == 0 {
+		to = from + uint64(CompressMigrationThreshold)
+	}
+	// input validation
+	if from > to {
+		return 0, fmt.Errorf("[Receipt Compression] from(%d) must be greater than to(%d)", from, to)
+	}
+
+	itIdx := 0
+	receiptCompressions := make([]*ReceiptCompression, to-from)
+	// migration loop
+	for i := from; i < to; i++ {
+		blkHash := dbm.ReadCanonicalHash(i)
+		if common.EmptyHash(blkHash) {
+			return 0, fmt.Errorf("[Receipt Compression] Block does not exist (hash=%s)", blkHash.String())
+		}
+		receipts := dbm.ReadReceipts(blkHash, i)
+		if receipts == nil || len(receipts) == 0 {
+			continue
+		}
+
+		storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
+		for i, receipt := range receipts {
+			storageReceipts[i] = (*types.ReceiptForStorage)(receipt)
+		}
+		receiptCompressions[itIdx] = &ReceiptCompression{
+			number:          i,
+			blkHash:         blkHash,
+			storageReceipts: storageReceipts,
+		}
+		itIdx++
+	}
+	if itIdx == 0 {
+		return to, nil
+	}
+	bytes, err := rlp.EncodeToBytes(receiptCompressions[:itIdx])
+	if err != nil {
+		return 0, err
+	}
+
+	// Store compressed receipts (range `from` to `to`)
+	db := dbm.getDatabase(CompressReceiptsDB)
+	compressed := Compress(bytes)
+	if err := db.Put(receiptCompressKey(from, to), compressed); err != nil {
+		logger.Crit("Failed to store compressed receipts")
+	}
+
+	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
+	// API1: Return all pair of comprression range for each type(header, tx, receipt)
+	// API2: Return a next compression target number for each type(header, tx, receipt)
+	if migrationMode {
+		dbm.WriteSubsequentBlkNumber(to)
+	}
+
+	dbm.removeReceiptsAfterCompress(receiptCompressions)
+	return to, nil
+}
+
+func (dbm *databaseManager) uncompressReceipts(from, to uint64) ([]*ReceiptCompression, error) {
+	db := dbm.getDatabase(CompressReceiptsDB)
+	data, _ := db.Get(receiptCompressKey(from, to))
+	decompressed, err := Decompress(data)
+	if err != nil {
+		return nil, err
+	}
+	var receiptCompressions []*ReceiptCompression
+	if err := rlp.DecodeBytes(decompressed, &receiptCompressions); err != nil {
+		return nil, err
+	}
+	return receiptCompressions, nil
+}
+
+func (dbm *databaseManager) removeReceiptsAfterCompress(receiptCompressions []*ReceiptCompression) {
+	for _, rc := range receiptCompressions {
+		if rc != nil {
+			dbm.DeleteReceipts(rc.blkHash, rc.number)
+		}
+	}
+}
+
+func (dbm *databaseManager) FindReceiptFromChunk(number uint64, blkOrTxHash common.Hash, ifErr error) (types.Receipts, error) {
+	// Badger DB does not support `NewIterator()`
+	if dbm.GetDBConfig().DBType == BadgerDB {
+		return nil, nil
+	}
+
+	// 1. Find a chunk through range search
+	it := dbm.getDatabase(CompressReceiptsDB).NewIterator(compressReceiptPrefix, nil)
+	defer it.Release()
+	for it.Next() {
+		from, to := parseReceiptCompressKey(it.Key())
+		if from <= number && number <= to {
+			// 2. Find a chunk and decompress
+			receiptCompressions, err := dbm.uncompressReceipts(from, to)
+			if err != nil {
+				return nil, err
+			}
+			// 3. Make a `types.Receipt` struct and returns it`
+			for _, rc := range receiptCompressions {
+				if rc.blkHash == blkOrTxHash {
+					receipts := make(types.Receipts, len(rc.storageReceipts))
+					for idx, receipt := range rc.storageReceipts {
+						receipts[idx] = (*types.Receipt)(receipt)
+					}
+					return receipts, nil
+				}
+				if rc.number == number {
+					for _, receipt := range rc.storageReceipts {
+						if receipt.TxHash == blkOrTxHash {
+							return types.Receipts{(*types.Receipt)(receipt)}, nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil, ifErr
+}
+
+func (dbm *databaseManager) FindReceiptsFromChunkWithBlkHash(number uint64, blkHash common.Hash) (types.Receipts, error) {
+	ifErr := fmt.Errorf("[Receipt Compression] Failed to find receipts (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	return dbm.FindReceiptFromChunk(number, blkHash, ifErr)
+}
+
+func (dbm *databaseManager) FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error) {
+	ifErr := fmt.Errorf("[Receipt Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
+	receipts, err := dbm.FindReceiptFromChunk(number, txHash, ifErr)
+	if err != nil {
+		return nil, err
+	}
+	return receipts[0], nil
 }
 
 func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {

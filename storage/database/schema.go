@@ -88,6 +88,9 @@ var (
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
 
+	nextCompressionNumberPrefix = []byte("NextCompression-")
+	compressReceiptPrefix       = []byte("CompressReceipt-")
+
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
 	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
@@ -298,6 +301,20 @@ func parsePruningMarkKey(key []byte) PruningMark {
 		Number: binary.BigEndian.Uint64(bNumber),
 		Hash:   common.BytesToExtHash(bHash),
 	}
+}
+
+func receiptCompressKey(from, to uint64) []byte {
+	bFrom, bTo := make([]byte, 8), make([]byte, 8)
+	binary.BigEndian.PutUint64(bFrom, from)
+	binary.BigEndian.PutUint64(bTo, to)
+	return append(append(compressReceiptPrefix, bFrom...), bTo...)
+}
+
+func parseReceiptCompressKey(key []byte) (uint64, uint64) {
+	prefixLen := len(compressReceiptPrefix)
+	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
+	to := binary.BigEndian.Uint64(key[prefixLen+8:])
+	return from, to
 }
 
 type SupplyCheckpoint struct {
