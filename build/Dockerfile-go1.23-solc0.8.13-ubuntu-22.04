@@ -7,7 +7,7 @@ RUN apt install -yq tzdata && \
     dpkg-reconfigure -f noninteractive tzdata
 RUN apt install -y git lsb-core sudo libboost-all-dev build-essential cmake z3
 RUN git clone --depth 1 --recursive -b v0.8.13 https://github.com/ethereum/solidity
-RUN cd /solidity && cmake -DCMAKE_BUILD_TYPE=Release -DTESTS=0 -DSTATIC_LINKING=1
+RUN cd /solidity && cmake -DCMAKE_BUILD_TYPE=Release -DTESTS=0 -DSTATIC_LINKING=1 -DCMAKE_CXX_FLAGS="-w"
 RUN cd /solidity && touch prerelease.txt
 RUN cd /solidity && make solc
 RUN cd /solidity && install -s solc/solc /usr/bin

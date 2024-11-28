@@ -23,7 +23,7 @@ executors:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
-      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -31,7 +31,7 @@ executors:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: arm.medium
     docker:
-      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04-arm
+      - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -60,7 +60,7 @@ executors:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
-      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -68,7 +68,7 @@ executors:
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
-      - image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
