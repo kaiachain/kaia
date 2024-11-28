@@ -63,3 +63,45 @@ func TestProposersBlockNum(t *testing.T) {
 		assert.Equal(t, tc.expectProposerBlock, calcProposerBlockNumber(tc.blockNumber, testPUpdateInterval), "tc name:%s", tc.name)
 	}
 }
+
+func TestPickRoundRobinProposer(t *testing.T) {
+	cList := valset.AddressList{
+		tgn, n[1], n[2], n[3],
+	}
+
+	tests := []struct {
+		name           string
+		policy         ProposerPolicy
+		block          uint64
+		round          uint64
+		prevAuthor     common.Address
+		expectProposer common.Address
+		expectIdx      int
+	}{
+		// RoundRobin Policy Cases
+		{"RoundRobin: block 1, round 0", RoundRobin, 1, 0, tgn, n[1], 1},
+		{"RoundRobin: block 2, round 0", RoundRobin, 2, 0, n[1], n[2], 2},
+		{"RoundRobin: block 3, round 0", RoundRobin, 3, 0, n[2], n[3], 3},
+		{"RoundRobin: block 4, round 0", RoundRobin, 4, 0, n[3], tgn, 0},
+		{"RoundRobin: block 11, round 0", RoundRobin, 11, 0, n[1], n[2], 2},
+		{"RoundRobin: block 11, round 1", RoundRobin, 11, 1, n[1], n[3], 3},
+		{"RoundRobin: block 11, round 2", RoundRobin, 11, 2, n[1], tgn, 0},
+
+		// Sticky Policy Cases
+		{"Sticky: block 1, round 0", Sticky, 1, 0, tgn, tgn, 0},
+		{"Sticky: block 2, round 0", Sticky, 2, 0, tgn, tgn, 0},
+		{"Sticky: block 11, round 0", Sticky, 11, 0, tgn, tgn, 0},
+		{"Sticky: block 11, round 1", Sticky, 11, 1, tgn, n[1], 1},
+		{"Sticky: block 11, round 2", Sticky, 11, 2, tgn, n[2], 2},
+		{"Sticky: block 12, round 0", Sticky, 12, 0, n[2], n[2], 2},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			proposer, idx := pickRoundRobinProposer(cList, tc.policy, tc.prevAuthor, tc.round)
+
+			assert.Equal(t, tc.expectProposer, proposer, "unexpected proposer for %s", tc.name)
+			assert.Equal(t, tc.expectIdx, idx, "unexpected index for %s", tc.name)
+		})
+	}
+}

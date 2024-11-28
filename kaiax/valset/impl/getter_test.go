@@ -95,7 +95,7 @@ func TestGetCommitteeAddressList(t *testing.T) {
 				tm.prepareMockExpectGovParam(proposersBlock, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
 			}
 
-			committee, err := vModule.GetCommitteeAddressList(tc.blockNumber, tc.round)
+			committee, err := vModule.GetCommittee(tc.blockNumber, tc.round)
 			assert.Equal(t, tc.expectError, err, "testcase: %d", idx)
 			assert.Equal(t, tc.expectCommitteeList, committee, "testcase: %d", idx)
 		})

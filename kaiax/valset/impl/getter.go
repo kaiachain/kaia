@@ -50,8 +50,8 @@ func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, erro
 	return readCouncilAddressListFromValSetCouncilDB(v.ChainKv, finalizedBlockNum)
 }
 
-// GetCommitteeAddressList returns the current round or block's committee.
-func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]common.Address, error) {
+// GetCommittee returns the current block's committee.
+func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address, error) {
 	c, err := newCouncil(v, num)
 	if err != nil {
 		return nil, err
@@ -91,13 +91,11 @@ func (v *ValsetModule) GetCommitteeAddressList(num uint64, round uint64) ([]comm
 	return c.selectRandaoCommittee(prevHeader, pSet)
 }
 
-// GetProposer calculates a proposer for the (N, Round) view.
-// There's two way to derive the proposer:
-// - if the view (N, Round) is same as existing header, derive it from header.
-// - otherwise, calc it.
-//   - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
-//   - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
-//   - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
+// GetProposer calculates a proposer for the round of the given block.
+// Note that, to skip the calculation, derive the author from header if the block exists
+// - if the policy defaultSet, the proposer is picked from the council. it's defaultSet, so there's no demoted.
+// - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
+// - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
 func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, error) {
 	header := v.chain.GetHeaderByNumber(num)
 	if header != nil && header.Number.Uint64() == num && uint64(header.Round()) == round {

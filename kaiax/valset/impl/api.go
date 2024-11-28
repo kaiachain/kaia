@@ -65,7 +65,7 @@ func (api *ValidatorAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address
 	if err != nil {
 		return nil, err
 	}
-	return api.v.GetCommitteeAddressList(header.Number.Uint64(), uint64(header.Round()))
+	return api.v.GetCommittee(header.Number.Uint64(), uint64(header.Round()))
 }
 
 func (api *ValidatorAPI) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {

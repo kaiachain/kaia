@@ -118,18 +118,18 @@ func (v *ValsetModule) Start() error {
 		}
 	}
 
-	// generate valset db between [lastIntervalBlock, currentBlock)
+	// lowestScannedNum to figure out if migration is needed or not
 	lowestSciNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
 	if err != nil {
 		if err = writeLowestScannedCheckpointIntervalNum(v.ChainKv, intervalBlockNum); err != nil {
 			return err
 		}
+		// generate valset db between [lastIntervalBlock, currentBlock)
 		_, err = v.replayValSetVotes(lowestSciNum, currentBlockNum, true)
 		if err != nil {
 			return err
 		}
 
-		// update lowestScannedNum to figure out if migration is needed or not
 		lowestSciNum = intervalBlockNum
 	}
 

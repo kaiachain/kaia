@@ -50,19 +50,19 @@ func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
 }
 
-// GetCommitteeAddressList mocks base method.
-func (m *MockValsetModule) GetCommitteeAddressList(arg0, arg1 uint64) ([]common.Address, error) {
+// GetCommittee mocks base method.
+func (m *MockValsetModule) GetCommittee(arg0, arg1 uint64) ([]common.Address, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCommitteeAddressList", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetCommittee", arg0, arg1)
 	ret0, _ := ret[0].([]common.Address)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCommitteeAddressList indicates an expected call of GetCommitteeAddressList.
-func (mr *MockValsetModuleMockRecorder) GetCommitteeAddressList(arg0, arg1 interface{}) *gomock.Call {
+// GetCommittee indicates an expected call of GetCommittee.
+func (mr *MockValsetModuleMockRecorder) GetCommittee(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitteeAddressList", reflect.TypeOf((*MockValsetModule)(nil).GetCommitteeAddressList), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittee", reflect.TypeOf((*MockValsetModule)(nil).GetCommittee), arg0, arg1)
 }
 
 // GetCouncilAddressList mocks base method.
