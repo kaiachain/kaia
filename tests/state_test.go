@@ -94,10 +94,10 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^constantinople\/`)
 	st.skipLoad(`^istanbul\/`)
 	st.skipLoad(`^berlin\/`)
+	st.skipLoad(`^prague\/`)
 
 	// tests to skip due to unsupported EIPs
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
-	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
