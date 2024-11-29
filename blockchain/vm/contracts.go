@@ -208,12 +208,13 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	if rules.IsIstanbul {
-		return append(precompiledContractAddrs,
-			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-	} else {
-		return precompiledContractAddrs
-	}
+	// if rules.IsIstanbul {
+	// 	return append(precompiledContractAddrs,
+	// 		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
+	// } else {
+	// 	return precompiledContractAddrs
+	// }
+	return precompiledContractAddrs
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.

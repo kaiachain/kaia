@@ -311,6 +311,7 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *stat
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
+			statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
 			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
