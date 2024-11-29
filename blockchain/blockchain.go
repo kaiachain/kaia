@@ -638,9 +638,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		if params.IsCheckpointInterval(num) {
 			bc.db.DeleteIstanbulSnapshot(hash)
 		}
-		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && !bc.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(num)) && params.IsStakingUpdateInterval(num) {
-			bc.db.DeleteStakingInfo(num)
-		}
 
 		for _, module := range bc.rewindableModules {
 			module.RewindDelete(hash, num)

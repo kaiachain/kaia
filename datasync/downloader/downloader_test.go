@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -206,9 +205,9 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 		blockNum := block.Number().Uint64()
 		if blockNum%testStakingUpdateInterval == 0 {
-			si, siBytes := dl.makeStakingInfoData(blockNum)
+			si, _ := dl.makeStakingInfoData(blockNum)
 			stakingUpdatedBlocks[blockNum] = si
-			dl.peerDb.WriteStakingInfo(blockNum, siBytes)
+			staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), blockNum, reward.ToKaiax(si))
 		}
 	})
 	// Convert the block-chain into a hash-chain and header/block maps
@@ -226,9 +225,9 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 	stakingInfom := make(map[common.Hash]*reward.StakingInfo)
 	if parent.NumberU64()%testStakingUpdateInterval == 0 {
-		si, siBytes := dl.makeStakingInfoData(parent.NumberU64())
+		si, _ := dl.makeStakingInfoData(parent.NumberU64())
 		stakingInfom[parent.Hash()] = si
-		dl.peerDb.WriteStakingInfo(parent.NumberU64(), siBytes)
+		staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), parent.NumberU64(), reward.ToKaiax(si))
 	}
 
 	for i, b := range blocks {
@@ -477,11 +476,9 @@ func (dl *downloadTester) InsertReceiptChain(blocks types.Blocks, receipts []typ
 		dl.ownBlocks[blocks[i].Hash()] = blocks[i]
 		dl.ownReceipts[blocks[i].Hash()] = receipts[i]
 
-		siBytes, _ := dl.peerDb.ReadStakingInfo(blocks[i].NumberU64())
-		if siBytes != nil {
-			stakingInfo := new(reward.StakingInfo)
-			json.Unmarshal(siBytes, stakingInfo)
-			dl.ownStakingInfo[blocks[i].Hash()] = stakingInfo
+		si := staking_impl.ReadStakingInfo(dl.peerDb.GetMiscDB(), blocks[i].NumberU64())
+		if si != nil {
+			dl.ownStakingInfo[blocks[i].Hash()] = reward.FromKaiax(si)
 		}
 	}
 	return len(blocks), nil
@@ -1941,8 +1938,8 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 
 	// check staking information is not stored in database
 	for _, block := range stakedBlocks {
-		si, err := tester.stateDb.ReadStakingInfo(block)
-		if len(si) != 0 && !strings.Contains(err.Error(), "data is not found with the given key") {
+		si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), block)
+		if si != nil {
 			t.Errorf("already staking info exists")
 		}
 	}
@@ -1955,10 +1952,11 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 
 	for _, stakingInfo := range stakingInfos {
 		expected, _ := json.Marshal(reward.ToKaiax(stakingInfo))
-		actual, err := tester.stateDb.ReadStakingInfo(stakingInfo.BlockNum)
-		if err != nil {
-			t.Errorf("failed to read stakingInfo: %v", err)
+		si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), stakingInfo.BlockNum)
+		if si == nil {
+			t.Errorf("failed to read stakingInfo")
 		}
+		actual, _ := json.Marshal(si)
 		assert.JSONEq(t, string(expected), string(actual))
 	}
 }
