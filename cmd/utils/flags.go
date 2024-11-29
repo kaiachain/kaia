@@ -488,6 +488,43 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS", "KAIA_DB_NO_PERF_METRICS"},
 		Category: "DATABASE",
 	}
+	SenderTxHashIndexingFlag = &cli.BoolFlag{
+		Name:     "sendertxhashindexing",
+		Usage:    "Enables storing mapping information of senderTxHash to txHash",
+		Aliases:  []string{"common.sender-tx-hash-indexing"},
+		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
+		Category: "DATABASE",
+	}
+	TxPruningFlag = &cli.BoolFlag{
+		Name:     "db.tx-pruning",
+		Usage:    "Enables tx pruning",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING", "KAIA_DB_TX_PRUNING"},
+		Category: "DATABASE",
+	}
+	TxPruningRetentionFlag = &cli.Uint64Flag{
+		Name:     "db.tx-pruning-retention",
+		Usage:    "Number of blocks from the latest block whose transaction data should not be pruned",
+		Value:    blockchain.DefaultPruningRetention,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING_RETENTION", "KAIA_DB_TX_PRUNING_RETENTION"},
+		Category: "DATABASE",
+	}
+	ReceiptPruningFlag = &cli.BoolFlag{
+		Name:     "db.receipt-pruning",
+		Usage:    "Enables receipt pruning",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING", "KAIA_DB_RECEIPT_PRUNING"},
+		Category: "DATABASE",
+	}
+	ReceiptPruningRetentionFlag = &cli.Uint64Flag{
+		Name:     "db.receipt-pruning-retention",
+		Usage:    "Number of blocks from the latest block whose receipt data should not be pruned",
+		Value:    blockchain.DefaultPruningRetention,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING_RETENTION", "KAIA_DB_RECEIPT_PRUNING_RETENTION"},
+		Category: "DATABASE",
+	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",
@@ -544,8 +581,8 @@ var (
 	}
 	LivePruningRetentionFlag = &cli.Uint64Flag{
 		Name:     "state.live-pruning-retention",
-		Usage:    "Number of blocks from the latest block that are not to be pruned",
-		Value:    blockchain.DefaultLivePruningRetention,
+		Usage:    "Number of blocks from the latest block whose state data should not be pruned",
+		Value:    blockchain.DefaultPruningRetention,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
@@ -648,13 +685,6 @@ var (
 		Category: "CACHE",
 	}
 
-	SenderTxHashIndexingFlag = &cli.BoolFlag{
-		Name:     "sendertxhashindexing",
-		Usage:    "Enables storing mapping information of senderTxHash to txHash",
-		Aliases:  []string{"common.sender-tx-hash-indexing"},
-		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
-		Category: "DATABASE",
-	}
 	ChildChainIndexingFlag = &cli.BoolFlag{
 		Name:     "childchainindexing",
 		Usage:    "Enables storing transaction hash of child chain transaction for fast access to child chain data",
