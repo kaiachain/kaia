@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -43,7 +42,6 @@ func TestMainnetGenesisGovernance(t *testing.T) {
 	// Get params from GovModule
 	govModule := gov_impl.NewGovModule()
 	err = govModule.Init(&gov_impl.InitOpts{
-		Fallback:    map[gov.ParamName]interface{}{gov.GovernanceDeriveShaImpl: uint64(types.ImplDeriveShaConcat)},
 		Chain:       chain,
 		ChainConfig: config,
 		ChainKv:     dbm.GetMemDB(),

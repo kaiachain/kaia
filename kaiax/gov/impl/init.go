@@ -3,6 +3,7 @@ package impl
 import (
 	"errors"
 	"math/big"
+	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -46,7 +47,6 @@ type GovModule struct {
 }
 
 type InitOpts struct {
-	Fallback    gov.PartialParamSet
 	ChainConfig *params.ChainConfig
 	ChainKv     database.Database
 	Chain       BlockChain
@@ -84,19 +84,29 @@ func (m *GovModule) Init(opts *InitOpts) error {
 		return err
 	}
 
-	m.Fallback = make(gov.PartialParamSet)
-	for k, v := range opts.Fallback {
-		err := m.Fallback.Add(string(k), v)
-		if err != nil {
-			return err
-		}
-	}
-
+	m.Fallback = ChainConfigFallback(opts.ChainConfig)
 	m.Chain = opts.Chain
 	m.ChainConfig = opts.ChainConfig
 	m.Hgm = hgm
 	m.Cgm = cgm
 	return nil
+}
+
+// ChainConfigFallback returns the set of parameters that have different values between ChainConfig and default values.
+func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
+	fallback := make(gov.PartialParamSet)
+
+	if chainConfig == nil {
+		return fallback
+	}
+
+	for name, param := range gov.Params {
+		value, err := param.ChainConfigValue(chainConfig)
+		if err == nil && !reflect.DeepEqual(value, param.DefaultValue) {
+			fallback.Add(string(name), value)
+		}
+	}
+	return fallback
 }
 
 func (m *GovModule) Start() error {
