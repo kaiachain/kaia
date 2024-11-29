@@ -273,6 +273,9 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 			}
 			pendingQueries--
 		} else {
+			if targetNT != NodeTypeBN { // filter before capping by `max`
+				seeds.entries = removeBn(seeds.entries)
+			}
 			for i := 0; i < pendingQueries; i++ {
 				for _, n := range <-reply {
 					if n != nil && !seen[n.ID] {
