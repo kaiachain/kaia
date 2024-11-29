@@ -163,12 +163,12 @@ func prefixedRlpHash(prefix byte, x interface{}) (h common.Hash) {
 // EmptyBody returns true if there is no additional 'body' to complete the header
 // that is: no transactions.
 func (h *Header) EmptyBody() bool {
-	return h.TxHash == EmptyRootHash(h.Number)
+	return h.TxHash == GetEmptyRootHash(h.Number)
 }
 
 // EmptyReceipts returns true if there are no receipts for this header/block.
 func (h *Header) EmptyReceipts() bool {
-	return h.ReceiptHash == EmptyRootHash(h.Number)
+	return h.ReceiptHash == GetEmptyRootHash(h.Number)
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
@@ -217,7 +217,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 
 	// TODO: panic if len(txs) != len(receipts)
 	if len(txs) == 0 {
-		b.header.TxHash = EmptyRootHash(header.Number)
+		b.header.TxHash = GetEmptyRootHash(header.Number)
 	} else {
 		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
 		b.transactions = make(Transactions, len(txs))
@@ -225,7 +225,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	}
 
 	if len(receipts) == 0 {
-		b.header.ReceiptHash = EmptyRootHash(header.Number)
+		b.header.ReceiptHash = GetEmptyRootHash(header.Number)
 	} else {
 		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)

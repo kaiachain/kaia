@@ -76,7 +76,7 @@ func (self *StateDB) RawDump() Dump {
 			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 			acc.Code = common.Bytes2Hex(obj.Code(self.db))
 		} else {
-			acc.Root = common.Bytes2Hex(types.EmptyRootHashOriginal.Bytes())
+			acc.Root = common.Bytes2Hex(types.EmptyRootHash.Bytes())
 			acc.CodeHash = common.Bytes2Hex(emptyCodeHash)
 		}
 		storageTrie := obj.getStorageTrie(self.db)

@@ -447,7 +447,7 @@ func (st *StackTrie) hash() {
 			panic(err)
 		}
 	case emptyNode:
-		st.val = types.EmptyRootHashOriginal.Bytes()
+		st.val = types.EmptyRootHash.Bytes()
 		st.key = st.key[:0]
 		st.nodeType = hashedNode
 		return

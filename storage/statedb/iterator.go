@@ -282,7 +282,7 @@ func (it *nodeIterator) peek(descend bool) (*nodeIteratorState, *int, []byte, er
 		// Initialize the iterator if we've just started.
 		root := it.trie.Hash()
 		state := &nodeIteratorState{node: it.trie.root, index: -1}
-		if root != types.EmptyRootHashOriginal {
+		if root != types.EmptyRootHash {
 			state.hash = root
 		}
 		err := state.resolve(it, nil)

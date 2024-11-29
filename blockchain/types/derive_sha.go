@@ -43,24 +43,30 @@ const (
 var (
 	commonEmptyRootHash = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
-	// EmptyRootHashOriginal is the empty root hash of a state trie,
-	// which is equal to EmptyRootHash with ImplDeriveShaOriginal.
-	EmptyRootHashOriginal = commonEmptyRootHash
+	// Root hash of an empty trie.
+	// Used to represent a block's empty StateRoot or an account's StorageRoot.
+	EmptyRootHash = commonEmptyRootHash
 
-	// EmptyTxsHash is the known hash of the empty transaction set.
-	EmptyTxsHash = commonEmptyRootHash
-
-	// EmptyReceiptsHash is the known hash of the empty receipt set.
-	EmptyReceiptsHash = commonEmptyRootHash
-
-	// EmptyCodeHash is the known hash of the empty EVM bytecode.
+	// Hash of an empty byte array.
+	// Used to represent an account's empty contract code.
 	EmptyCodeHash = crypto.Keccak256Hash(nil) // c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+
+	// Empty TransactionRoot and ReceiptsRoot for the Original algorithm.
+	EmptyTxRootOriginal = EmptyRootHash
+
+	// Empty TransactionRoot and ReceiptsRoot for the Simple algorithm.
+	EmptyTxRootSimple = EmptyCodeHash
+
+	// Empty TransactionRoot and ReceiptsRoot for the Concat algorithm.
+	EmptyTxRootConcat = EmptyCodeHash
+
+	////////////////////////////////
 
 	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
 	// DeriveSha is used to calculate TransactionsRoot and ReceiptsRoot.
 	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
-	DeriveSha     func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
-	EmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
+	DeriveSha        func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
+	GetEmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
 )
 
 func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {

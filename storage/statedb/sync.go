@@ -172,7 +172,7 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 // AddSubTrie registers a new trie to the sync code, rooted at the designated parent.
 func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent common.Hash, callback LeafCallback) {
 	// Short circuit if the trie is empty or already known
-	if root == types.EmptyRootHashOriginal {
+	if root == types.EmptyRootHash {
 		return
 	}
 	if s.membatch.hasNode(root) {

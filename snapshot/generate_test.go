@@ -414,11 +414,11 @@ func TestGenerateExistentStateWithWrongAccounts(t *testing.T) {
 
 	// Extra accounts, only in the snap
 	{
-		acc0, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyRootHashOriginal.Bytes())
+		acc0, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyRootHash.Bytes())
 		helper.addSnapAccount("acc-0", acc0) // before the beginning
-		acc5, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHashOriginal, common.Hex2Bytes("0x1234"))
+		acc5, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHash, common.Hex2Bytes("0x1234"))
 		helper.addSnapAccount("acc-5", acc5) // Middle
-		acc7, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHashOriginal, types.EmptyRootHashOriginal.Bytes())
+		acc7, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHash, types.EmptyRootHash.Bytes())
 		helper.addSnapAccount("acc-7", acc7) // after the end
 	}
 

@@ -57,16 +57,13 @@ func (e *testGov) EffectiveParams(num uint64) (*params.GovParamSet, error) {
 func TestEmptyRoot(t *testing.T) {
 	assert.Equal(t,
 		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
-		types.EmptyRootHashOriginal.Hex())
-	assert.Equal(t,
-		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
-		types.EmptyTxsHash.Hex())
+		types.EmptyTxRootOriginal.Hex())
 	assert.Equal(t,
 		DeriveShaSimple{}.DeriveSha(types.Transactions{}).Hex(),
-		types.EmptyCodeHash.Hex())
+		types.EmptyTxRootSimple.Hex())
 	assert.Equal(t,
 		DeriveShaConcat{}.DeriveSha(types.Transactions{}).Hex(),
-		types.EmptyCodeHash.Hex())
+		types.EmptyTxRootConcat.Hex())
 }
 
 func TestMuxChainConfig(t *testing.T) {

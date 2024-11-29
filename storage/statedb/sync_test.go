@@ -103,7 +103,7 @@ func TestEmptyTrieSync(t *testing.T) {
 	dbA := NewDatabase(memDBManagerA)
 	dbB := NewDatabase(memDBManagerB)
 	emptyA, _ := NewTrie(common.Hash{}, dbA, nil)
-	emptyB, _ := NewTrie(types.EmptyRootHashOriginal, dbB, nil)
+	emptyB, _ := NewTrie(types.EmptyRootHash, dbB, nil)
 
 	for i, trie := range []*Trie{emptyA, emptyB} {
 		sync := NewTrieSync(trie.Hash(), database.NewMemoryDBManager(), nil, NewSyncBloom(1, database.NewMemDB()), nil)

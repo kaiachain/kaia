@@ -182,7 +182,7 @@ func TestEmptyStateSync(t *testing.T) {
 	// only bloom
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(types.EmptyRootHashOriginal, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil, nil)
+		sync := NewStateSync(types.EmptyRootHash, db, statedb.NewSyncBloom(1, db.GetMemDB()), nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -192,7 +192,7 @@ func TestEmptyStateSync(t *testing.T) {
 	{
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(types.EmptyRootHashOriginal, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache, nil)
+		sync := NewStateSync(types.EmptyRootHash, db, statedb.NewSyncBloom(1, db.GetMemDB()), lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -201,7 +201,7 @@ func TestEmptyStateSync(t *testing.T) {
 	// no bloom lru
 	{
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(types.EmptyRootHashOriginal, db, nil, nil, nil)
+		sync := NewStateSync(types.EmptyRootHash, db, nil, nil, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}
@@ -212,7 +212,7 @@ func TestEmptyStateSync(t *testing.T) {
 		bloom := statedb.NewSyncBloom(1, database.NewMemDB())
 		lruCache, _ := lru.New(int(1 * units.MB / common.HashLength))
 		db := database.NewMemoryDBManager()
-		sync := NewStateSync(types.EmptyRootHashOriginal, db, bloom, lruCache, nil)
+		sync := NewStateSync(types.EmptyRootHash, db, bloom, lruCache, nil)
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("content requested for empty state: %v", sync)
 		}

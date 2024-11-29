@@ -120,7 +120,7 @@ func newTrie(root common.ExtHash, db *Database, opts *TrieOpts, storage bool) (*
 	if !trie.pruning && trie.PruningBlockNumber != 0 {
 		return nil, ErrPruningDisabled
 	}
-	if !common.EmptyExtHash(root) && root.Unextend() != types.EmptyRootHashOriginal {
+	if !common.EmptyExtHash(root) && root.Unextend() != types.EmptyRootHash {
 		rootnode, err := trie.resolveHash(root[:], nil)
 		if err != nil {
 			return nil, err
@@ -582,7 +582,7 @@ func (t *Trie) CommitExt(onleaf LeafCallback) (root common.ExtHash, err error) {
 
 func (t *Trie) hashRoot(db *Database, onleaf LeafCallback) (common.ExtHash, node) {
 	if t.root == nil {
-		return types.EmptyRootHashOriginal.ExtendZero(), nil
+		return types.EmptyRootHash.ExtendZero(), nil
 	}
 	h := newHasher(&hasherOpts{
 		onleaf:      onleaf,

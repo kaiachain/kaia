@@ -669,7 +669,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		}
 
 		rootHash := contractAcc.GetStorageRoot().Unextend()
-		if rootHash == types.EmptyRootHashOriginal {
+		if rootHash == types.EmptyRootHash {
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength
 			if err := wipeKeyRange(dl.diskdb, "storage", prefix, nil, nil, keyLen, snapWipedStorageMeter, false); err != nil {
