@@ -5,6 +5,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
 func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
@@ -44,14 +45,7 @@ func (h *headerGovModule) VoteBlockNums() []uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	// TODO: replace with maps.Keys(h.groupedVotes)
-	blockNums := make([]uint64, 0)
-	for _, group := range h.groupedVotes {
-		for num := range group {
-			blockNums = append(blockNums, num)
-		}
-	}
-
+	blockNums := maps.Keys(h.groupedVotes)
 	slices.Sort(blockNums)
 	return blockNums
 }
@@ -60,12 +54,7 @@ func (h *headerGovModule) GovBlockNums() []uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	// TODO: replace with maps.Keys(h.Govs())
-	blockNums := make([]uint64, 0)
-	for num := range h.governances {
-		blockNums = append(blockNums, num)
-	}
-
+	blockNums := maps.Keys(h.governances)
 	slices.Sort(blockNums)
 	return blockNums
 }

@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"reflect"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -100,7 +102,22 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 		return fallback
 	}
 
-	for name, param := range gov.Params {
+	// on private net, fallback candidates are all params.
+	candidates := maps.Keys(gov.Params)
+
+	// on Mainnet/Kairos, fallback candidates are only the initial params specified in `params.{Mainnet,Kairos}ChainConfig`.
+	if chainConfig.ChainID.Cmp(params.MainnetChainConfig.ChainID) == 0 ||
+		chainConfig.ChainID.Cmp(params.KairosChainConfig.ChainID) == 0 {
+		candidates = []gov.ParamName{
+			gov.GovernanceDeriveShaImpl, gov.GovernanceGoverningNode, gov.GovernanceGovernanceMode, gov.RewardMintingAmount,
+			gov.RewardRatio, gov.RewardUseGiniCoeff, gov.RewardDeferredTxFee, gov.RewardStakingUpdateInterval,
+			gov.RewardProposerUpdateInterval, gov.RewardMinimumStake, gov.IstanbulEpoch, gov.IstanbulPolicy,
+			gov.IstanbulCommitteeSize, gov.GovernanceUnitPrice,
+		}
+	}
+
+	for _, name := range candidates {
+		param := gov.Params[name]
 		value, err := param.ChainConfigValue(chainConfig)
 		if err == nil && !reflect.DeepEqual(value, param.DefaultValue) {
 			fallback.Add(string(name), value)
