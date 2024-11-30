@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"reflect"
 
-	"golang.org/x/exp/maps" // TODO: use "maps"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -19,6 +17,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
 var (
