@@ -647,11 +647,13 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 		return nil, errors.New("still initializing")
 	}
 	// Start bonding if we haven't seen this node for a while or if it failed findnode too often.
+	// db.node: nil if never bonded or program exited before writing (via copyBondedNodes) to db.
+	// db.findFails: 0 if never tried or never failed.
+	// db.bondTime: 0 if never bonded, in which case age becomes very big.
 	node, fails := tab.db.node(id), tab.db.findFails(id)
 	age := time.Since(tab.db.bondTime(id))
 	var result error
-	// A Bootnode always add node(cn, pn, en) to table.
-	if fails > 0 || age > nodeDBNodeExpiration || (node == nil && tab.self.NType == NodeTypeBN) {
+	if node == nil || fails > 0 || age > nodeDBNodeExpiration {
 		tab.localLogger.Trace("Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
 		tab.bondmu.Lock()
