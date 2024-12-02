@@ -357,22 +357,10 @@ var relaxPrecompileRangeForTest bool
 
 // IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
 func IsPrecompiledContractAddress(addr Address) bool {
-	if relaxPrecompileRangeForTest {
-		// TODO-kaia: should use precompile address list to check it for before_fork tests
-		UnderFF := bytes.Compare(addr.Bytes(), hexutil.MustDecode("0x00000000000000000000000000000000000000ff")) <= 0
-		above03f0 := bytes.Compare(addr.Bytes(), hexutil.MustDecode("0x00000000000000000000000000000000000003f0")) >= 0
-		Under03ff := bytes.Compare(addr.Bytes(), hexutil.MustDecode("0x00000000000000000000000000000000000003ff")) <= 0
-		return UnderFF || (above03f0 && Under03ff) // (addr in [0, 0xff]) or (addr in [0x3f0, 0x3ff])
-	}
 	if bytes.Compare(addr.Bytes(), lastPrecompiledContractAddressHex) > 0 || addr == (Address{}) {
 		return false
 	}
 	return true
-}
-
-// Only for testing. Make sure to reset (false) after test.
-func RelaxPrecompileRangeForTest(enable bool) {
-	relaxPrecompileRangeForTest = enable
 }
 
 // IsHexAddress verifies whether a string can represent a valid hex-encoded

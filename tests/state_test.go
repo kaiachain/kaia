@@ -72,11 +72,11 @@ type ExecutionSpecStateTestSuite struct {
 }
 
 func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
-	common.RelaxPrecompileRangeForTest(true)
+	vm.RelaxPrecompileRangeForTest(true)
 }
 
 func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
-	common.RelaxPrecompileRangeForTest(false)
+	vm.RelaxPrecompileRangeForTest(false)
 }
 
 func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
@@ -98,6 +98,8 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// tests to skip due to unsupported EIPs
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
+	// Kaia set access list in preparation of tx execution ActivePrecompiles
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{

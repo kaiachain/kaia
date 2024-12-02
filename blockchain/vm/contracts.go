@@ -23,6 +23,7 @@
 package vm
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
@@ -208,13 +209,34 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	// if rules.IsIstanbul {
-	// 	return append(precompiledContractAddrs,
-	// 		[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-	// } else {
-	// 	return precompiledContractAddrs
-	// }
-	return precompiledContractAddrs
+	if rules.IsIstanbul {
+		return append(precompiledContractAddrs,
+			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
+	} else {
+		return precompiledContractAddrs
+	}
+}
+
+// IsPrecompiledContractAddress returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
+func IsPrecompiledContractAddress(addr common.Address, rules params.Rules) bool {
+	if relaxPrecompileRangeForTest {
+		rules.IsIstanbul = false
+		activePrecompiles := ActivePrecompiles(rules)
+		for _, pre := range activePrecompiles {
+			if bytes.Compare(pre.Bytes(), addr.Bytes()) == 0 {
+				return true
+			}
+		}
+		return false
+	}
+	return common.IsPrecompiledContractAddress(addr)
+}
+
+var relaxPrecompileRangeForTest bool
+
+// Only for testing. Make sure to reset (false) after test.
+func RelaxPrecompileRangeForTest(enable bool) {
+	relaxPrecompileRangeForTest = enable
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
