@@ -105,8 +105,9 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 	candidates := maps.Keys(gov.Params)
 
 	// on Mainnet/Kairos, fallback candidates are only the initial params specified in `params.{Mainnet,Kairos}ChainConfig`.
-	if chainConfig.ChainID.Cmp(params.MainnetChainConfig.ChainID) == 0 ||
-		chainConfig.ChainID.Cmp(params.KairosChainConfig.ChainID) == 0 {
+	if chainId := chainConfig.ChainID; chainId != nil &&
+		(chainId.Cmp(params.MainnetChainConfig.ChainID) == 0 ||
+			chainId.Cmp(params.KairosChainConfig.ChainID) == 0) {
 		candidates = []gov.ParamName{
 			gov.GovernanceDeriveShaImpl, gov.GovernanceGoverningNode, gov.GovernanceGovernanceMode, gov.RewardMintingAmount,
 			gov.RewardRatio, gov.RewardUseGiniCoeff, gov.RewardDeferredTxFee, gov.RewardStakingUpdateInterval,

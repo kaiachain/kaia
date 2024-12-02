@@ -45,7 +45,11 @@ func (h *headerGovModule) VoteBlockNums() []uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	blockNums := maps.Keys(h.groupedVotes)
+	blockNums := []uint64{}
+	for _, votes := range h.groupedVotes {
+		blockNums = append(blockNums, maps.Keys(votes)...)
+	}
+
 	slices.Sort(blockNums)
 	return blockNums
 }
