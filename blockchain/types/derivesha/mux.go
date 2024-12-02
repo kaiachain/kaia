@@ -27,6 +27,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -35,13 +36,13 @@ type IDeriveSha interface {
 	DeriveSha(list types.DerivableList) common.Hash
 }
 
-type GovernanceEngine interface {
-	EffectiveParams(num uint64) (*params.GovParamSet, error)
+type GovModule interface {
+	EffectiveParamSet(num uint64) gov.ParamSet
 }
 
 var (
 	config     *params.ChainConfig
-	gov        GovernanceEngine
+	govModule  GovModule
 	impls      map[int]IDeriveSha
 	emptyRoots map[int]common.Hash
 
@@ -61,12 +62,12 @@ func init() {
 	}
 }
 
-func InitDeriveSha(chainConfig *params.ChainConfig, govEngine GovernanceEngine) {
+func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	config = chainConfig
-	gov = govEngine
+	govModule = g
 	types.DeriveSha = DeriveShaMux
 	types.EmptyRootHash = EmptyRootHashMux
-	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", gov != nil)
+	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
@@ -80,15 +81,12 @@ func EmptyRootHashMux(num *big.Int) common.Hash {
 func getType(num *big.Int) int {
 	implType := config.DeriveShaImpl
 
-	// gov == nil if blockchain.InitDeriveSha() is used, in genesis block manipulation
-	// and unit tests. gov != nil if blockchain.InitDeriveShaWithGov is used,
+	// govModule == nil if blockchain.InitDeriveSha() is used, in genesis block manipulation
+	// and unit tests. govModule != nil if blockchain.InitDeriveShaWithGov is used,
 	// in ordinary blockchain processing.
-	if gov != nil {
-		if pset, err := gov.EffectiveParams(num.Uint64()); err != nil {
-			logger.Crit("Cannot determine DeriveShaImpl", "num", num.Uint64(), "err", err)
-		} else {
-			implType = pset.DeriveShaImpl()
-		}
+	if govModule != nil {
+		pset := govModule.EffectiveParamSet(num.Uint64())
+		implType = int(pset.DeriveShaImpl)
 	}
 
 	if _, ok := impls[implType]; ok {
