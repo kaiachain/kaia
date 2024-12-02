@@ -95,10 +95,11 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^istanbul\/`)
 	st.skipLoad(`^berlin\/`)
 
-	// tests to skip due to unsupported EIPs
+	// tests to skip
+	// unsupported EIPs
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
-	// Kaia set access list in preparation of tx execution ActivePrecompiles
+	// calculate the different consumed gas because 0x0a and 0x0b contract is set to access list by ActivePrecompiles in Cancun
 	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
