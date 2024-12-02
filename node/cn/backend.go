@@ -312,7 +312,19 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
-	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
+
+	mGov := gov_impl.NewGovModule()
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainKv:     chainDB.GetMiscDB(),
+		ChainConfig: cn.chainConfig,
+		Chain:       cn.blockchain,
+		NodeAddress: cn.nodeAddress,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
 
 	// Synchronize proposerpolicy & useGiniCoeff
 	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
@@ -339,17 +351,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainDB.WriteChainConfig(genesisHash, cn.chainConfig)
 	}
 	cn.bloomIndexer.Start(cn.blockchain)
-
-	mGov := gov_impl.NewGovModule()
-	err = mGov.Init(&gov_impl.InitOpts{
-		ChainKv:     chainDB.GetMiscDB(),
-		ChainConfig: cn.chainConfig,
-		Chain:       cn.blockchain,
-		NodeAddress: cn.nodeAddress,
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
@@ -416,7 +417,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, cn.governance)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, mGov)
 	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
