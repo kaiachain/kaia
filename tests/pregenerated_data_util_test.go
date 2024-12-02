@@ -357,7 +357,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
-	gov := generateGovernaceDataForTest()
+	governance := generateGovernaceDataForTest()
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Prepare sender addresses and private keys
@@ -383,7 +383,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDB,
-		Governance:     gov,
+		Governance:     governance,
 		NodeType:       common.CONSENSUSNODE,
 	})
 
@@ -418,7 +418,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, gov,
+		validatorPrivKeys, engine, genesis, mGov, governance,
 	}, nil
 }
 

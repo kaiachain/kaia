@@ -59,6 +59,7 @@ var (
 	code2Bytes    = common.FromHex(reverterDeployedBin)
 )
 
+// Because we can't directly use GovModule mock due to import cycle.
 type dummyGovModule struct {
 	chainConfig *params.ChainConfig
 }
