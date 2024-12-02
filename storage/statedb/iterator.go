@@ -29,6 +29,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -137,7 +138,10 @@ type nodeIterator struct {
 }
 
 // iteratorEnd is stored in nodeIterator.err when iteration is done.
-var iteratorEnd = errors.New("end of iteration")
+var (
+	iteratorEnd    = errors.New("end of iteration")
+	emptyTrieEntry = crypto.Keccak256Hash(nil)
+)
 
 // seekError is stored in nodeIterator.err if the initial seek has failed.
 type seekError struct {
@@ -150,7 +154,7 @@ func (e seekError) Error() string {
 }
 
 func newNodeIterator(trie *Trie, start []byte) NodeIterator {
-	if trie.Hash() == types.EmptyCodeHash {
+	if trie.Hash() == emptyTrieEntry {
 		return new(nodeIterator)
 	}
 	it := &nodeIterator{trie: trie}

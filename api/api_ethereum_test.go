@@ -230,9 +230,9 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	header := types.CopyHeader(&types.Header{
 		ParentHash:  common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"),
 		Rewardbase:  common.Address{},
-		TxHash:      types.EmptyCodeHash,
+		TxHash:      types.EmptyTxRootOriginal,
 		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
-		ReceiptHash: types.EmptyCodeHash,
+		ReceiptHash: types.EmptyTxRootSimple,
 		Bloom:       types.Bloom{},
 		BlockScore:  new(big.Int).SetUint64(1),
 		Number:      new(big.Int).SetUint64(4),
@@ -277,7 +277,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"extraData": "0x",
 		"gasLimit": "0xe8d4a50fff",
 		"gasUsed": "0x2710",
-		"hash": "0xd6d5d8295f612bc824762f1945f4271c73aee9306bcf91e151d269369526ba60",
+		"hash": "0xee48e10f9ff994e623eccdda727c58b7f61febb7425a9897bbe57393eb519c98",
 		"logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 		"miner": "0x9712f943b296758aaae79944ec975884188d3a96",
 		"mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -289,7 +289,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"size": "0x244",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
-		"transactionsRoot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+		"transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
 	}`), &expected))
 
 	if config.IsEthTxTypeForkEnabled(common.Big0) {
@@ -298,7 +298,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	if config.IsRandaoForkEnabled(common.Big0) {
 		expected["randomReveal"] = "0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7"
 		expected["mixHash"] = "0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883"
-		expected["hash"] = "0x4179dd7e323cde164e287045857cbc930892f92479d8c375d5d622ddde59f912"
+		expected["hash"] = "0x342ec7073b98e664cfafd8e1d130e1f7e48846ec4130a52a928624351c26e9de"
 		expected["size"] = "0x2c4"
 	}
 	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
