@@ -27,13 +27,14 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node"
-	"github.com/stretchr/testify/assert"
 )
 
 // testNewSubBridge returns a test SubBridge.
@@ -79,7 +80,7 @@ func TestSubBridge_basic(t *testing.T) {
 
 	// New components of MainBridge which will update old components
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -112,7 +113,7 @@ func TestSubBridge_removePeer(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -222,7 +223,7 @@ func TestSubBridge_handle(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)

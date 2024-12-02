@@ -41,6 +41,8 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/params"
@@ -66,6 +68,7 @@ type BCData struct {
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
+	govModule          gov.GovModule
 	governance         governance.Engine
 }
 
@@ -90,13 +93,13 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
+	// Create a governance
+	governance := generateGovernaceDataForTest()
+	governance.SetNodeAddress(nodeAddr)
+	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
 	chainDb := NewDatabase(dir, database.LevelDB)
 
-	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	gov := generateGovernaceDataForTest()
-	gov.SetNodeAddress(nodeAddr)
 	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
 	addrs, privKeys, err := createAccounts(maxAccounts)
@@ -119,7 +122,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDb,
-		Governance:     gov,
+		Governance:     governance,
 		NodeType:       common.CONSENSUSNODE,
 	})
 	////////////////////////////////////////////////////////////////////////////////
@@ -132,25 +135,32 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup Kaiax modules
 	mStaking := staking_impl.NewStakingModule()
+	mGov := gov_impl.NewGovModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   genesis.Config,
-		Chain:         bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: genesis.Config,
+			Chain:       bc,
+			ChainKv:     chainDb.GetMiscDB(),
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   genesis.Config,
+			Chain:         bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
+	if err != nil {
 		return nil, err
 	}
 	engine.RegisterConsensusModule(mReward)
 
 	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 
-	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
-
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov,
+		validatorPrivKeys, engine, genesis, mGov, governance,
 	}, nil
 }
 

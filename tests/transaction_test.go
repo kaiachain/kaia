@@ -28,12 +28,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestTransaction(t *testing.T) {
@@ -84,7 +85,7 @@ func TestAccountCreationDisable(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	{
 		// generate an accountCreation tx
@@ -154,7 +155,7 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	for _, txType := range testTxTypes {
 		// generate an invalid contract deploy tx with humanReadable flag as true

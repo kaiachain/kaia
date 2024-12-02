@@ -32,6 +32,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb/opt"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -40,12 +42,12 @@ import (
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 const (
@@ -403,6 +405,12 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}
 
+	mGov := gov_impl.NewGovModule()
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainConfig: genesis.Config,
+		Chain:       bc,
+		ChainKv:     chainDB.GetMiscDB(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +418,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov,
+		validatorPrivKeys, engine, genesis, mGov, gov,
 	}, nil
 }
 

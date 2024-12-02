@@ -30,6 +30,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common/profile"
@@ -38,8 +41,6 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var txPerBlock int
@@ -757,5 +758,5 @@ func makeTxPool(bcdata *BCData, txPoolSize int) *blockchain.TxPool {
 	txpoolconfig.NonExecSlotsAccount = uint64(txPoolSize)
 	txpoolconfig.ExecSlotsAll = 2 * uint64(txPoolSize)
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(txPoolSize)
-	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 }
