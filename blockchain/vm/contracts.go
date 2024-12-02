@@ -220,9 +220,12 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 // IsPrecompiledContractAddress returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
 func IsPrecompiledContractAddress(addr common.Address, rules params.Rules) bool {
 	if relaxPrecompileRangeForTest {
-		rules.IsIstanbul = false
 		activePrecompiles := ActivePrecompiles(rules)
 		for _, pre := range activePrecompiles {
+			// skip 0x0a and 0x0b if before Prague
+			if !rules.IsPrague && (bytes.Compare(pre.Bytes(), []byte{10}) == 0 || bytes.Compare(pre.Bytes(), []byte{11}) == 0) {
+				continue
+			}
 			if bytes.Compare(pre.Bytes(), addr.Bytes()) == 0 {
 				return true
 			}
