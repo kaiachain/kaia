@@ -277,9 +277,10 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	result, err := blockchain.ApplyMessage(evm, msg)
 	if err != nil {
 		st.RevertToSnapshot(snapshot)
+		return st, common.Hash{}, err
 	}
 
-	if isTestExecutionSpecState && err == nil {
+	if isTestExecutionSpecState {
 		useEthMiningReward(st, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
 	}
 
@@ -293,7 +294,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	// And _now_ get the state root
 	root = st.IntermediateRoot(true)
 
-	if err == nil && isTestExecutionSpecState {
+	if isTestExecutionSpecState {
 		root, err = useEthStateRoot(st)
 		if err != nil {
 			return st, common.Hash{}, err
