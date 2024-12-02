@@ -12,9 +12,11 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type VoteBytes []byte
-type VotesInEpoch map[uint64]VoteData
-type GroupedVotesMap map[uint64]VotesInEpoch
+type (
+	VoteBytes       []byte
+	VotesInEpoch    map[uint64]VoteData
+	GroupedVotesMap map[uint64]VotesInEpoch
+)
 
 type voteData struct {
 	voter common.Address

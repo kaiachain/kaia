@@ -26,6 +26,7 @@ func calcStakingAmounts(sInfo *staking.StakingInfo, cList []common.Address) map[
 	}
 	return stakingAmounts
 }
+
 func TestCalcSlotsInProposers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
