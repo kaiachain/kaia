@@ -340,12 +340,23 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	cn.bloomIndexer.Start(cn.blockchain)
 
+	mGov := gov_impl.NewGovModule()
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainKv:     chainDB.GetMiscDB(),
+		ChainConfig: cn.chainConfig,
+		Chain:       cn.blockchain,
+		NodeAddress: cn.nodeAddress,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 	governance.SetTxPool(cn.txPool)
 
 	// Permit the downloader to use the trie cache allowance during fast sync

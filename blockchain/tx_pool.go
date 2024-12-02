@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/rcrowley/go-metrics"
@@ -218,13 +219,17 @@ type TxPool struct {
 	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
 	rules params.Rules // Fork indicator
+
+	govModule gov.GovModule
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule gov.GovModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
+
+	pset := govModule.EffectiveParamSet(chain.CurrentBlock().NumberU64() + 1)
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
@@ -238,9 +243,10 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:          newTxLookup(),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		gasPrice:     new(big.Int).SetUint64(pset.UnitPrice),
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 		txFeedCh:     make(chan types.Transactions, txFeedChSize),
+		govModule:    govModule,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -492,7 +498,15 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// It needs to update gas price of tx pool since magma hardfork
 	if pool.rules.IsMagma {
-		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pool.chainconfig.Governance.KIP71)
+		pset := pool.govModule.EffectiveParamSet(newHead.Number.Uint64() + 1)
+		kip71config := &params.KIP71Config{
+			LowerBoundBaseFee:         pset.LowerBoundBaseFee,
+			UpperBoundBaseFee:         pset.UpperBoundBaseFee,
+			GasTarget:                 pset.GasTarget,
+			MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
+			BaseFeeDenominator:        pset.BaseFeeDenominator,
+		}
+		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, kip71config)
 	}
 }
 

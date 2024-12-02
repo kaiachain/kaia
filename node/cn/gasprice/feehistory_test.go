@@ -91,16 +91,16 @@ func TestFeeHistory(t *testing.T) {
 		}
 		oracle = NewOracle(backend, config, nil, gov)
 
-		atMagmaGovParams, _    = oracle.gov.EffectiveParams(uint64(magmaBlock))
-		afterMagmaGovParams, _ = oracle.gov.EffectiveParams(uint64(magmaBlock + 1))
+		atMagmaPset    = oracle.govModule.EffectiveParamSet(uint64(magmaBlock))
+		afterMagmaPset = oracle.govModule.EffectiveParamSet(uint64(magmaBlock + 1))
 
 		beforeMagmaExpectedBaseFee = big.NewInt(0)
-		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaGovParams.LowerBoundBaseFee()))
-		afterMagmaExpectedBaseFee  = big.NewInt(int64(afterMagmaGovParams.LowerBoundBaseFee()))
+		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaPset.LowerBoundBaseFee))
+		afterMagmaExpectedBaseFee  = big.NewInt(int64(afterMagmaPset.LowerBoundBaseFee))
 
 		beforeMagmaExpectedGasUsedRatio = float64(21000) / float64(params.UpperGasLimit)
-		atMagmaExpectedGasUsedRatio     = float64(21000) / float64(atMagmaGovParams.MaxBlockGasUsedForBaseFee())
-		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(afterMagmaGovParams.MaxBlockGasUsedForBaseFee())
+		atMagmaExpectedGasUsedRatio     = float64(21000) / float64(atMagmaPset.MaxBlockGasUsedForBaseFee)
+		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(afterMagmaPset.MaxBlockGasUsedForBaseFee)
 	)
 
 	first, _, baseFee, ratio, err := oracle.FeeHistory(context.Background(), 32, rpc.LatestBlockNumber, nil)
