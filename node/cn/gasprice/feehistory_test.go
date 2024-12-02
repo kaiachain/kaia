@@ -26,12 +26,14 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFeeHistory(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	cases := []struct {
 		maxHeader, maxBlock int
 		count               int
@@ -54,7 +56,9 @@ func TestFeeHistory(t *testing.T) {
 		{1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 1, nil},
 	}
 	magmaBlock, kaiaBlock := int64(16), int64(20)
-	backend, gov := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock))
+	backend, govModule := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock))
+	// govModule.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: backend.ChainConfig().UnitPrice}).AnyTimes()
+
 	defer backend.teardown()
 	for i, c := range cases {
 		config := Config{
@@ -62,7 +66,7 @@ func TestFeeHistory(t *testing.T) {
 			MaxBlockHistory:  c.maxBlock,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		oracle := NewOracle(backend, config, nil, gov)
+		oracle := NewOracle(backend, config, nil, govModule)
 
 		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
 
@@ -89,7 +93,7 @@ func TestFeeHistory(t *testing.T) {
 			MaxBlockHistory:  1000,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		oracle = NewOracle(backend, config, nil, gov)
+		oracle = NewOracle(backend, config, nil, govModule)
 
 		atMagmaPset    = oracle.govModule.EffectiveParamSet(uint64(magmaBlock))
 		afterMagmaPset = oracle.govModule.EffectiveParamSet(uint64(magmaBlock + 1))
