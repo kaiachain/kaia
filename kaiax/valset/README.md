@@ -3,7 +3,7 @@
 This module is responsible for getting council and calculating committee or proposer.
 
 ## Concepts
-*Council(N): a validator list which is finalized at block N-1, and is used for mining block N. <br/>
+*Council(N): a validator list which is composed of qualified and demoted for committee, and is used for mining block N.<br/>
 *Committee(N, R): a subset of qualified validators for mining block N. <br/>
 *Proposer(N, R): a proposer is ensured to be a committee member in all the times regardless of hardfork or policy. <br/>
 
@@ -22,60 +22,51 @@ Several dependencies are required to calculate the committee or proposer of bloc
 - EffectiveParamSet(N) // governance parameter value
 
 ## council: a set of registered CN
-A `Council(N)` refers to the council determined after the block `N-1` is executed.
+A `Council(N)` refers to the council determined after the block `N-1` is executed. 
 
 ```
-  Council(N) = Council(N-1).applyVote(header[N-1].Vote)
+  Council(N) = apply vote in header[N-1].Vote at Council(N-1)
 ```
-* To reach consensus on block N, `Council(N)` is used as a superset of Committee(N) or proposer(N).
-* Genesis Council: restored from the extraData of the genesis block(block 0).
+* GenesisCouncil: restored from the extraData of the genesis block(block 0).
+* Add, Remove votes: "istanbul.addvalidator" or "istanbul.removevalidator" vote on block.Header
+  * For more information about header votes, see [kaiax/gov](../gov/headergov/README.md)
 
 ## qualified, demoted: divided by qualifications
-council members can be divided into two groups by qualifications: qualified and demoted
+Council members can be divided into two groups by qualifications: Qualified and demoted.
+To reach consensus on block N, `Qualified(N)` is used as a superset of Committee(N).
 ```
-  demoted(N) = Council(N).demotedByQualification(minimumstake)
-  qualified(N) = Council(N) - demoted(N) // remaining after excluding the demoted validators
+  Demoted(N) = filter out by qualifications of Council(N)
+  Qualified(N) = remaining after excluding the demoted(N) from Council(N)
 ```
 the qualifications vary depending on the proposer policy:
-* round-robin: all council members are qualified
-* sticky: all council members are qualified
+* round-robin: all council members are qualified.
+* sticky: all council members are qualified.
 * weighted-random: Validators who staked more than `EffectiveParamSet(N).minimumstake` are qualified.
   * If no nodes meet this requirement, all nodes are considered qualified. 
   * In single mode, governingnode is qualified without any conditions.
 
 ## committee: a subset of qualified validators
-A `Committee(N, R)` is randomly selected as a subset of `Council(N).qualified` for mining the block `N`.
+A `Committee(N, R)` is randomly selected as a subset of `Qualified(N)` for mining the block `N`.
+The subset size of committee size is determined by `EffectiveParamSet(N).committeesize`.
 ```
-  Committee(N, R) = Council(N).Qualified().sublist(round, committeesize)
+  Committee(N, R) = a subset of Qualified(N)
 ```
-* The maximum size of committee size is determined by `EffectiveParamSet(N).committeesize`
-* Genesis Committee: copied from the genesis council since the genesis block doesn't have previous block
 
-#### Committee selection logic
-This is the pueudo-code of the committee selection logic.
-```python
-def GetCommittee(N, round): # N is a block number
-  if N is 0: # 0 is the genesis block
-    return GenesisCouncil
-  
-  qualfied = Council(N).Qualified()
-  committeesize = EffectiveParamSet(N).committeesize
-  
-  if committeesize >= len(qualfied):
-    return qualified 
-  
-  if policy is weighted-random and randao hardfork is activated:
-      return qualfied.selectRandaoCommittee(prevMixHash, committeesize)
-  
-  # policy is round-robin or sticky or policy is weighted-random but randao is not activated
-  return qualfied.selectRandomCommittee(round, prevHash, prevAuthor, committeesize)
-```
-- `SimpleRandomCommittee` and `RandaoRandomCommittee` do the shuffling of the qualified validators and slices it.
-  - Calculate the shuffling seed by using previous block's hash or mixHash
-  - Shuffle the qualified validators with the calculated seed
-  - After shuffling, the council is "sliced" up to EffectiveParamSet(N).committeesize.
+### Committee selection logic
+- If Genesis block(N is 0), all GenesisCouncil are committee.
+- If Qualified size <= committee size, all qualified are committee.
+- If policy is weighted-random and randao hardfork is activated, derive SelectRandaoCommittee.
+- If policy is round-robin, or policy is sticky, or policy is weighted-robin but randao is not activated, derive SelectRandomCommittee.
 
-Next describes the specific committee selection logics by steps
+Selecting Committee logic do the shuffling at Qualified(N) and slices it:
+- Calculate the shuffling seed by using previous block's hash or mixHash.
+- Shuffle the qualified validators with the calculated seed.
+- After shuffling, the council is "sliced" up to `EffectiveParamSet(N).committeesize`.
+
+### SelectRandomCommittee
+SelectRandomCommittee is a function that selects a committee by shuffling the Qualified using a seed derived from prevHash.
+
+Next describes the SelectRandomCommittee logics by steps:
 ```
 Condition: proposerIdx = 3, nextProposerIdx = 7, committeesize = 6, qualified validators = [0,1,2,3,4,5,6,7,8,9]
 
@@ -85,6 +76,14 @@ SimpleRandomCommittee:
 - Step3. shuffle the council: proposers = [3,7], council = [4,5,6,8,9,0,1,2]
 - Step4. merge. council = [3,7,4,5,6,8,9,0,1,2]
 - Step5. slice by committeesize: committee = [3,7,4,5,6,8]
+```
+
+### SelectRandaoCommittee
+SelectRandaoCommittee is a function that selects a committee by shuffling the Qualified using a seed derived from prevMixHash. 
+
+Next describes the SelectRandaoCommittee logic by steps:
+```
+Condition: proposerIdx = 3, nextProposerIdx = 7, committeesize = 6, qualified validators = [0,1,2,3,4,5,6,7,8,9]
 
 RandaoCommittee:
 - Step1. calculate the shuffling seed by prevMixHash: seed = int64(binary.BigEndian.Uint64(prevMixHash[:8]))
@@ -109,6 +108,14 @@ A proposer is picked from different sources depending on the proposer policy and
 * RoundRobin or Sticky: a proposer is picked from Council(N)
 * weighted-random and randao is activated: a proposer is picked from Committee(N)
 * weighted-random and randao is not activated: a proposer is picked from proposers(pUpdateBlock)
+
+### Proposer selection logic
+- If Genesis Block(N is 0), a proposer is the first element of the GenesisCouncil.
+- If policy is round-robin, proposer is selected as the next validator in the council list, based on the index (prevAuthorIdx + round).
+- If policy is sticky, proposer remains the same as long as the round changes. If round changes, proposer is selected as the next validator in the council list.
+- If policy is weighted-random and randao hardfork is not activated, proposer is selected from the Proposers(proposerUpdateBlock), based on the index ((N + round - proposerUpdateBlock) % len(proposers)).
+  - proposerUpdateBlock = blockNum - (blockNum % `EffectiveParamSet(N).proposerUpdateInterval`)
+- If policy is weighted-random and randao hardfork is activated, proposer is selected as the Round'th validator in the RandaoCommittee.
 
 Next are the examples of the proposer selection logic per policies:
 <details>
@@ -216,63 +223,31 @@ block  | round | proposer
 ```
 </details>
 
-### Proposer selection logic
-This is the peuedo-code of the proposer selection logic.
-```python
-def GetProposer(N, round): # N is a block number
-  if N is 0: # 0 is the genesis block
-    return GenesisCouncil[0]
-  
-  qualfied = Council(N).Qualified()
-
-  if policy is weighted-random and randao hardfork is activated:
-    committee = qualified.selectRandaoCommittee(prevMixHash)
-    return committee[round%len(qualfied)]
-  
-  if policy is weighted-random and randao hardfork is not activated:
-    pUpdateBlock = blockNum - (blockNum % EffectiveParamSet(N).proposerUpdateInterval)
-    proposers = Proposers(pUpdateBlock)
-    return proposers[(int(N+round)-int(pUpdateBlock))%len(proposers)]
-
-  committee = qualfied
-  prevAuthorIdx = qualfied.getIdxByAddress(prevAuthor)
-  if policy is round-robin:
-    committee[(prevAuthorIdx+1+round)%len(qualfied)]
-  if policy is sticky:
-    committee[(prevAuthorIdx)+round%len(qualfied)]
-```
-
 ## Persistent Schema
-The voting blocks, council addressList, and the valset snapshot is stored at miscDB.
-### CouncilAddressList
-```python
-def readCouncilAddressListFromValSetCouncilDB(N):
-  voteBlocks = ReadValidatorVoteDataBlockNums()
-  V = 0
-  for block in reversed(voteBlocks):
-    if block <= N:
-        V = block
-    break
-  return miscdb.Get(councilAddressKey(V))
-```
-- miscdb.Get(councilAddressKey(v)): Reads the council(v). If v does not have valSet vote, it fails.
-- ReadValidatorVoteDataBlockNums: Reads the list of block numbers whose header contain the addvalidator/removevalidator vote.
-### Istanbul Snapshot
-```python
-def readCouncilAddressListFromIstanbulSnapshot(N):
-    snap[N]=miscdb.Get(istanbulSnapshotKey(N))
-    Council(N) = snap[N].demoted + snap[N].qualified
-    sort.Sort(Council(N))
-    return Council(N)
-```
-- StoreValSetSnapshot - deprecated.
-> 
+### CouncilAddressList(num)
+- Retrieve the record from miscdb with the key, "councilAddress" + uint64(v) 
+- v is the latest block number from `num` which contains the addvalidator/removevalidator vote.
+- Returns the sorted []common.Address
+
+### ValidatorVoteDataBlockNums
+- Retrieve the record with the key, "valSetVoteBlockNums"
+- Returns []uint64
+
+### IstanbulSnapshot(blockhash)
 >**Note:** Since the voting block concept is added later, the migration of the valSetVoteBlockNums is required.
 > Thus, until migration finished, the **voting blocks** may not be available for the past blocks.
-> To support this, we can still generate the council list for the target block by iterating over the vote data from the nearest ValSetSnapshot.
+> It would temporarily generate the council list for the target block by iterating over the vote data from the nearest istanbul snapshot.
+- Retrieve the record with the key, "snapshot" + blockhash.
+- Only available at intervals defined by istanbulCheckpoint.
+- Returns a sorted []common.Address, which is a unified list of snap[blockhash].demoted + snap[blockhash].qualified.
+
+### lowestScannedCheckpointIntervalKey
+- Retrieve the record with the key, "lowestScannedCheckpointIntervalKey".
+- Returns uint64.
+- Identifies the voteBlock migration completion point; blocks below this number still requires migration.
 
 ## In-memory Structures
-###  Council
+### Council
 - Council structure of block N: It categorizes the council(N) into qualified and demoted for block N. It's not for display purpose, but it's for calculating committee or proposer of block N.
 ```go
 type council struct {
@@ -285,10 +260,13 @@ type council struct {
   councilAddressList []common.Address // total council node address list. the order is reserved.
 }
 ```
-- Validators: Sorting purpose
+### AddressList
+Sorting purpose
 ```go
 type AddressList []common.Address
 ```
+### CommitteeContext: TBD
+
 ## Module lifecycle
 
 ### Init
@@ -338,21 +316,6 @@ This module does not have any consensus-related block processing logic.
   - when migration still in progress, it retrieves from istanbul snapshot DB.
      - however, snapshot is stored every checkpointinterval(=1024)
      - so, to get snap[N-1], need to iterate over the non-snapshot interval blocks
-```python
-def GetCouncilAddressList(N):
-    finalizedBlockNum = N - 1
-
-    scannedNum = readLowestScannedCheckpointIntervalNum()
-    if finalizedBlockNum >= scannedNum:
-      # migration finished at finalizedBlockNum
-      # Council(N) = miscDB.get(councilAddressListKey(N-1))
-      return readCouncilAddressListFromValSetCouncilDB(finalizedBlockNum)
-   
-    # migration still in progress at finalizedBlockNum
-    # Council(N) = snap[N-1].demoted + snap[N-1].qualified
-    Council(S) = readCouncilAddressListFromIstanbulSnapshot(N % checkpointinterval)
-    return Council(S).applyValSetVotes(header[S+1], ..., header[N])
-```
 - GetCommittee(N, round): it calculates the list of committee at (block N, round R)
 - GetProposer(N, round): it calculates the proposer at (block N, round R)
 
