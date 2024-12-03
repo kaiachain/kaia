@@ -2337,11 +2337,12 @@ func TestEIP7702(t *testing.T) {
 		Nonce:   0,
 	}, key2)
 
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+
 	testdb := database.NewMemoryDBManager()
 	genesis := gspec.MustCommit(testdb)
 	blocks, _ := GenerateChain(gspec.Config, genesis, engine, testdb, 1, func(i int, b *BlockGen) {
 		b.SetRewardbase(common.Address{1})
-		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 
 		authorizationList := []types.Authorization{*auth1, *auth2}
 		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
@@ -2384,4 +2385,64 @@ func TestEIP7702(t *testing.T) {
 	if !bytes.Equal(actual[:], fortyTwo[:]) {
 		t.Fatalf("addr2 storage wrong: expected %d, got %d", fortyTwo, actual)
 	}
+
+	// Check if EOA with code can be called with kaia's execution type
+	execTxTypes := []types.TxType{
+		types.TxTypeSmartContractExecution,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+	}
+	for _, execTxType := range execTxTypes {
+		tx, err := genTxForExecutionType(execTxType, addr1, addr1, state.GetNonce(addr1))
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{key1})
+		assert.Equal(t, nil, err)
+
+		if execTxType.IsFeeDelegatedTransaction() {
+			err = tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{key1})
+			assert.Equal(t, nil, err)
+		}
+
+		// It only checks whether the transaction is successful.
+		err = applyTransaction(chain, state, tx, addr1)
+		assert.Equal(t, nil, err)
+	}
+}
+
+func genTxForExecutionType(txType types.TxType, from, to common.Address, nonce uint64) (*types.Transaction, error) {
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    nonce,
+		types.TxValueKeyFrom:     from,
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(0),
+		types.TxValueKeyGasLimit: uint64(500000),
+		types.TxValueKeyGasPrice: big.NewInt(25 * params.Gkei),
+		types.TxValueKeyData:     []byte{},
+	}
+
+	if txType.IsFeeDelegatedTransaction() {
+		values[types.TxValueKeyFeePayer] = from
+	}
+
+	if txType.IsFeeDelegatedWithRatioTransaction() {
+		values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
+	}
+
+	return types.NewTransactionWithMap(txType, values)
+}
+
+func applyTransaction(chain *BlockChain, state *state.StateDB, tx *types.Transaction, author common.Address) error {
+	parent := chain.CurrentBlock()
+	num := parent.Number()
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num.Add(num, common.Big1),
+		Extra:      parent.Extra(),
+		Time:       new(big.Int).Add(parent.Time(), common.Big1),
+		BlockScore: big.NewInt(0),
+	}
+	usedGas := uint64(0)
+	_, _, err := chain.ApplyTransaction(chain.Config(), &author, state, header, tx, &usedGas, &vm.Config{})
+	return err
 }
