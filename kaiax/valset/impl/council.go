@@ -101,34 +101,16 @@ func newCouncil(v *ValsetModule, num uint64) (*council, error) {
 
 // selectRandomCommittee composes a committee selecting validators randomly based on the seed value.
 // It returns nil if the given committeeSize is bigger than validatorSize or proposer indexes are invalid.
-func (c *council) selectRandomCommittee(round uint64, pSet gov.ParamSet, proposers []common.Address, prevHeader *types.Header, prevAuthor common.Address) ([]common.Address, error) {
-	var (
-		pUpdateBlock = calcProposerBlockNumber(c.blockNumber, pSet.ProposerUpdateInterval)
-
-		// pick current round's proposer and next proposer which address is different from current proposer
-		proposer, proposerIdx                                 = pickWeightedRandomProposer(proposers, pUpdateBlock, c.blockNumber, round, c.qualifiedValidators, prevAuthor)
-		closestDifferentProposer, closestDifferentProposerIdx = pickWeightedRandomProposer(proposers, pUpdateBlock, c.blockNumber, round+1, c.qualifiedValidators, prevAuthor)
-	)
-
-	// return early if the committee size is 1
-	if pSet.CommitteeSize == 1 {
-		return []common.Address{proposer}, nil
-	}
-
-	// closest next proposer who has different address with the proposer
-	for i := uint64(2); i < pSet.ProposerUpdateInterval; i++ {
-		if proposer != closestDifferentProposer {
-			break
-		}
-		closestDifferentProposer, closestDifferentProposerIdx = pickWeightedRandomProposer(proposers, pUpdateBlock, c.blockNumber, round+i, c.qualifiedValidators, prevAuthor)
-	}
+func (c *council) selectRandomCommittee(round uint64, pSet gov.ParamSet, proposer, nextDistinctProposer common.Address, prevHeader *types.Header, prevAuthor common.Address) ([]common.Address, error) {
+	proposerIdx := c.qualifiedValidators.GetIdxByAddress(proposer)
+	nextDistinctProposerIdx := c.qualifiedValidators.GetIdxByAddress(nextDistinctProposer)
 
 	// ensure validator indexes are valid
 	validatorSize := len(c.qualifiedValidators)
-	if proposerIdx < 0 || closestDifferentProposerIdx < 0 || proposerIdx == closestDifferentProposerIdx ||
-		validatorSize <= proposerIdx || validatorSize <= closestDifferentProposerIdx {
-		return nil, fmt.Errorf("invalid indexes of validators. validatorSize: %d, proposerIdx:%d, nextProposerIdx:%d",
-			validatorSize, proposerIdx, closestDifferentProposerIdx)
+	if proposerIdx < 0 || nextDistinctProposerIdx < 0 || proposerIdx == nextDistinctProposerIdx ||
+		validatorSize <= proposerIdx || validatorSize <= nextDistinctProposerIdx {
+		return nil, fmt.Errorf("invalid indexes of validators. validatorSize: %d, proposerIdx:%d, nextDistinctProposerIdx:%d",
+			validatorSize, proposerIdx, nextDistinctProposerIdx)
 	}
 
 	seed, err := convertHashToSeed(prevHeader.Hash())
@@ -145,7 +127,7 @@ func (c *council) selectRandomCommittee(round uint64, pSet gov.ParamSet, propose
 	indexs := make([]int, pickSize)
 	idx := 0
 	for i := 0; i < validatorSize; i++ {
-		if i != proposerIdx && i != closestDifferentProposerIdx {
+		if i != proposerIdx && i != nextDistinctProposerIdx {
 			indexs[idx] = i
 			idx++
 		}
@@ -156,7 +138,7 @@ func (c *council) selectRandomCommittee(round uint64, pSet gov.ParamSet, propose
 	}
 
 	// first committee is the proposer and the second committee is the next proposer
-	committee[0], committee[1] = proposer, closestDifferentProposer
+	committee[0], committee[1] = proposer, nextDistinctProposer
 	for i := uint64(0); i < pSet.CommitteeSize-2; i++ {
 		committee[i+2] = c.qualifiedValidators[indexs[i]]
 	}

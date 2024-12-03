@@ -73,22 +73,41 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 		return c.qualifiedValidators, nil
 	}
 
+	proposer, err := v.GetProposer(num, round)
+	if err != nil {
+		return nil, err
+	}
+
+	// return early if the committee size is 1
+	if pSet.CommitteeSize == 1 {
+		return []common.Address{proposer}, nil
+	}
+
 	prevHeader := v.chain.GetHeaderByNumber(num - 1)
 	if prevHeader == nil {
 		return nil, errNilHeader
 	}
 
 	if !proposerPolicy.IsWeightedRandom() || !c.rules.IsRandao {
+		// closest next proposer who has different address with the proposer
+		// pick current round's proposer and next proposer which address is different from current proposer
+		var nextDistinctProposer common.Address
+		for i := uint64(1); i < pSet.ProposerUpdateInterval; i++ {
+			nextDistinctProposer, err = v.GetProposer(num, round+i)
+			if err != nil {
+				return nil, err
+			}
+			if proposer != nextDistinctProposer {
+				break
+			}
+		}
+
 		prevAuthor, err := v.chain.Engine().Author(prevHeader) // author of block N-1
 		if err != nil {
 			return nil, err
 		}
-		pUpdateBlock := calcProposerBlockNumber(num, pSet.ProposerUpdateInterval)
-		proposers, err := v.getProposers(pUpdateBlock)
-		if err != nil {
-			return nil, err
-		}
-		return c.selectRandomCommittee(round, pSet, proposers, prevHeader, prevAuthor)
+
+		return c.selectRandomCommittee(round, pSet, proposer, nextDistinctProposer, prevHeader, prevAuthor)
 	}
 	return c.selectRandaoCommittee(prevHeader, pSet)
 }

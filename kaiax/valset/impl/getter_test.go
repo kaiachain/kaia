@@ -39,7 +39,7 @@ func TestGetCouncilAddressList(t *testing.T) {
 	}
 }
 
-func TestGetCommitteeAddressList(t *testing.T) {
+func TestGetCommittee(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -59,13 +59,13 @@ func TestGetCommitteeAddressList(t *testing.T) {
 	}{
 		// per committeeSize
 		{"committeesize is zero", defaultBN, defaultRound, testProposerPolicy, 0, tgn, nil, errInvalidCommitteeSize},
-		{"committeesize is one", defaultBN, defaultRound, testProposerPolicy, 1, tgn, []common.Address{n[0]}, nil},
+		{"committeesize is one", defaultBN, defaultRound, testProposerPolicy, 1, tgn, []common.Address{tgn}, nil},
 		{"committeesize is three", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[0], n[1], n[2]}, nil},
 		{"committeesize is six", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 3, tgn, []common.Address{tgn, n[1], n[3], n[2]}, nil},
 		{"committeesize is seven", defaultBN, defaultRound, testProposerPolicy, testSubGroupSize + 4, tgn, []common.Address{tgn, n[1], n[3], n[2]}, nil},
 		// per proposerPolicy
-		{"proposerPolicy roundrobin", defaultBN, defaultRound, params.RoundRobin, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
-		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
+		{"proposerPolicy roundrobin", defaultBN, defaultRound, params.RoundRobin, testSubGroupSize, tgn, []common.Address{n[1], n[3], tgn}, nil},
+		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[3]}, nil},
 		// per HF
 		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2], n[3]}, nil},
 		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], n[1], tgn}, nil},
@@ -84,6 +84,7 @@ func TestGetCommitteeAddressList(t *testing.T) {
 			}
 
 			if tc.blockNumber > 0 {
+				tm.mockChain.EXPECT().GetHeaderByNumber(tc.blockNumber).Return(nil).AnyTimes()
 				tm.prepareMockExpectHeader(tc.blockNumber-1, mixHash, nil, tgn)
 				tm.prepareMockExpectStakingInfo(tc.blockNumber, nil, nil)
 				tm.prepareMockExpectGovParam(tc.blockNumber, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
