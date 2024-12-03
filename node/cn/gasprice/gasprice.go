@@ -57,10 +57,6 @@ type OracleBackend interface {
 	CurrentBlock() *types.Block
 }
 
-type Governance interface {
-	EffectiveParams(bn uint64) (*params.GovParamSet, error)
-}
-
 type TxPool interface {
 	GasPrice() *big.Int
 }
