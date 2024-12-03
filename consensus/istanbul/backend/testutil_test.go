@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -163,6 +164,8 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		Epoch:          config.Istanbul.Epoch,
 		SubGroupSize:   config.Istanbul.SubGroupSize,
 	}
+
+	mGov := gov_impl.NewGovModule()
 	engine := New(&BackendOpts{
 		IstanbulConfig:    istanbulConfig,
 		Rewardbase:        common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
@@ -170,6 +173,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		BlsSecretKey:      nodeBlsKeys[0],
 		DB:                dbm,
 		Governance:        gov,
+		GovModule:         mGov,
 		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
 		NodeType:          common.CONSENSUSNODE,
 	}).(*backend)
@@ -188,6 +192,11 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		panic(err)
 	}
 	gov.SetBlockchain(chain)
+	mGov.Init(&gov_impl.InitOpts{
+		Chain:       chain,
+		ChainKv:     dbm.GetMiscDB(),
+		ChainConfig: config,
+	})
 
 	// Start the engine
 	if err := engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {

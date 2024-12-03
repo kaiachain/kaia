@@ -117,12 +117,14 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
+	mGov := gov_impl.NewGovModule()
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDb,
 		Governance:     governance,
+		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
 	})
 	////////////////////////////////////////////////////////////////////////////////
@@ -135,7 +137,6 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup Kaiax modules
 	mStaking := staking_impl.NewStakingModule()
-	mGov := gov_impl.NewGovModule()
 	mReward := reward_impl.NewRewardModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{

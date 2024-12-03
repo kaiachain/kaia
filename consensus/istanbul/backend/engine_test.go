@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -199,6 +200,14 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		panic(err)
 	}
 	b.governance.SetBlockchain(bc)
+	mGov := gov_impl.NewGovModule()
+	mGov.Init(&gov_impl.InitOpts{
+		Chain:       bc,
+		ChainKv:     bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
+		ChainConfig: genesis.Config,
+		NodeAddress: b.address,
+	})
+	b.govModule = mGov
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock) != nil {
 		panic(err)

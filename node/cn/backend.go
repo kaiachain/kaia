@@ -47,6 +47,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -237,13 +238,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
+	mGov := gov_impl.NewGovModule()
 	cn := &CN{
 		config:            config,
 		chainDB:           chainDB,
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
+		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
 		gasPrice:          config.GasPrice,
 		rewardbase:        config.Rewardbase,
@@ -313,7 +315,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, err
 	}
 
-	mGov := gov_impl.NewGovModule()
 	err = mGov.Init(&gov_impl.InitOpts{
 		ChainKv:     chainDB.GetMiscDB(),
 		ChainConfig: cn.chainConfig,
@@ -638,7 +639,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, g governance.Engine, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
@@ -649,7 +650,8 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		PrivateKey:     ctx.NodeKey(),
 		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
-		Governance:     gov,
+		Governance:     g,
+		GovModule:      govModule,
 		NodeType:       nodetype,
 	})
 }

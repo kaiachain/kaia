@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
 	"github.com/kaiachain/kaia/governance"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -180,6 +181,8 @@ func testGovModule(chain gov_impl.BlockChain) *gov_impl.GovModule {
 	config := params.TestChainConfig.Copy()
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
+	// chain can be a mock, this prevents reading all headers in an epoch.
+	headergov_impl.WriteLowestVoteScannedBlockNum(db.GetMiscDB(), 0)
 	govModule := gov_impl.NewGovModule()
 	govModule.Init(&gov_impl.InitOpts{
 		ChainConfig: config,
@@ -192,6 +195,9 @@ func testGovModule(chain gov_impl.BlockChain) *gov_impl.GovModule {
 func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
+
+	// headergov.Init reads genesis block
+	mockBlockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{}).Times(1)
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	mockDownloader.EXPECT().Cancel().Times(1)
