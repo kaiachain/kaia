@@ -16,20 +16,19 @@ func (h *headerGovModule) RewindDelete(hash common.Hash, num uint64) {
 }
 
 func (h *headerGovModule) RemoveVotesAfter(blockNum uint64) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	dirty := false
 	for epochIdxIter, votes := range h.groupedVotes {
 		for blockNumIter := range votes {
 			if blockNumIter > blockNum {
 				dirty = true
+				h.mu.Lock()
 				delete(h.groupedVotes[epochIdxIter], blockNumIter)
 
 				// If all votes for this epoch have been removed, delete the epoch entry
 				if len(h.groupedVotes[epochIdxIter]) == 0 {
 					delete(h.groupedVotes, epochIdxIter)
 				}
+				h.mu.Unlock()
 			}
 		}
 	}
@@ -40,19 +39,21 @@ func (h *headerGovModule) RemoveVotesAfter(blockNum uint64) {
 }
 
 func (h *headerGovModule) RemoveGovAfter(blockNum uint64) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
 
 	dirty := false
 	for blockNumIter := range h.governances {
 		if blockNumIter > blockNum {
 			dirty = true
+			h.mu.Lock()
 			delete(h.governances, blockNumIter)
+			h.mu.Unlock()
 		}
 	}
 
 	if dirty {
 		WriteGovDataBlockNums(h.ChainKv, h.GovBlockNums())
+		h.mu.Lock()
 		h.history = headergov.GovsToHistory(h.governances)
+		h.mu.Unlock()
 	}
 }

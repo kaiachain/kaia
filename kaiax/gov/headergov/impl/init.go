@@ -33,7 +33,7 @@ type InitOpts struct {
 	NodeAddress common.Address
 }
 
-//go:generate mockgen -destination=kaiax/headergov/mocks/headergov_mock.go github.com/kaiachain/kaia/kaiax/headergov HeaderGovModule
+//go:generate mockgen -destination=mocks/headergov_mock.go github.com/kaiachain/kaia/kaiax/headergov HeaderGovModule
 type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
