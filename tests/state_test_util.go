@@ -189,14 +189,15 @@ func (t *StateTest) Run(subtest StateSubtest, vmconfig vm.Config, isTestExecutio
 		if checkedErr != nil {
 			return checkedErr
 		}
+
+		// The error has been checked; if it was unexpected, it's already returned.
+		if err != nil {
+			// Here, an error exists but it was expected.
+			// We do not check the post state or logs.
+			return nil
+		}
 	}
 
-	// The error has been checked; if it was unexpected, it's already returned.
-	if err != nil {
-		// Here, an error exists but it was expected.
-		// We do not check the post state or logs.
-		return nil
-	}
 	post := t.json.Post[subtest.Fork][subtest.Index]
 	// N.B: We need to do this in a two-step process, because the first Commit takes care
 	// of self-destructs, and we need to touch the coinbase _after_ it has potentially self-destructed.
@@ -230,7 +231,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
-	st = MakePreState(memDBManager, t.json.Pre)
+	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
 	rules := config.Rules(block.Number())
@@ -277,10 +278,9 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	result, err := blockchain.ApplyMessage(evm, msg)
 	if err != nil {
 		st.RevertToSnapshot(snapshot)
-		return st, common.Hash{}, err
 	}
 
-	if isTestExecutionSpecState {
+	if err == nil && isTestExecutionSpecState {
 		useEthMiningReward(st, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
 	}
 
@@ -294,7 +294,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	// And _now_ get the state root
 	root = st.IntermediateRoot(true)
 
-	if isTestExecutionSpecState {
+	if err == nil && isTestExecutionSpecState {
 		root, err = useEthStateRoot(st)
 		if err != nil {
 			return st, common.Hash{}, err
@@ -307,12 +307,14 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc) *state.StateDB {
+func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+			if isTestExecutionSpecState {
+				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+			}
 			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
