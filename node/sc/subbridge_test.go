@@ -27,14 +27,13 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node"
+	"github.com/stretchr/testify/assert"
 )
 
 // testNewSubBridge returns a test SubBridge.

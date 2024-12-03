@@ -24,9 +24,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -47,6 +44,8 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/context"
 )
 
 func newCNAPIBackend(t *testing.T) (*gomock.Controller, *mocks.MockBlockChain, *mocks2.MockMiner, *CNAPIBackend) {

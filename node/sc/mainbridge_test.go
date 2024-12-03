@@ -27,8 +27,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
@@ -48,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 const testNetVersion = uint64(8888)

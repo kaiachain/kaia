@@ -31,8 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
-
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -42,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (

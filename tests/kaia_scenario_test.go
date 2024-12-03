@@ -29,8 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -45,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

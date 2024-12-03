@@ -32,8 +32,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb/opt"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -48,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 const (

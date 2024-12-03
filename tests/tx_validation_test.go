@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -39,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 type txValueMap map[types.TxValueKeyType]interface{}

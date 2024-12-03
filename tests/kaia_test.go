@@ -30,9 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common/profile"
@@ -41,6 +38,8 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var txPerBlock int

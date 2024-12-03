@@ -28,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -41,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
 )
 
 // createDefaultAccount creates a default account with a specific account key type.

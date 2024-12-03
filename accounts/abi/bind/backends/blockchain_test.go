@@ -29,8 +29,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
@@ -46,6 +44,7 @@ import (
 	mock_filter "github.com/kaiachain/kaia/node/cn/filters/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

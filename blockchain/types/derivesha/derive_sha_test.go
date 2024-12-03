@@ -22,13 +22,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
 )
 
 var dummyList = types.Transactions([]*types.Transaction{
