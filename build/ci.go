@@ -276,7 +276,6 @@ func doTest(cmdline []string) {
 	csdb := build.MustLoadChecksums("build/checksums.txt")
 	downloadSpecTestFixtures(csdb, *cachedir)
 	downloadPragueSpecTestFixtures(csdb, *cachedir)
-	return
 
 	packages := []string{"./..."}
 	if len(flag.CommandLine.Args()) > 0 {
