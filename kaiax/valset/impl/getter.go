@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -127,6 +129,14 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 	}
 
 	if proposerPolicy.IsDefaultSet() {
+		// if the policy is round-robin or sticky, all the council members are qualified.
+		// be cautious that the proposer may not be included in the committee list.
+		copied := make(valset.AddressList, len(c.councilAddressList))
+		copy(copied, c.councilAddressList)
+
+		// sorting on council address list
+		sort.Sort(copied)
+
 		proposer, _ := pickRoundRobinProposer(c.councilAddressList, proposerPolicy, prevAuthor, round)
 		return proposer, nil
 	}
