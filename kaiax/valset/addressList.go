@@ -42,25 +42,23 @@ func (sc AddressList) GetIdxByAddress(addr common.Address) int {
 	return -1
 }
 
-// SortedAddressList retrieves the sorted address list of ValidatorSet in "ascending order".
-// if public is true, sort it using bytes.Compare. It's for public purpose.
-// - public-false usage: (getValidators/getDemotedValidators, defaultSet snap store, prepareExtra.validators)
-// if public is false, sort it using strings.Compare. It's used for internal consensus purpose, especially for the source of committee.
-// - public-true usage: (snap read/store/apply except defaultSet snap store, vrank log)
-// TODO-kaia-valset: unify sorting. do this task with istanbul.Validator rpc refactoring
-func (sc AddressList) SortedAddressList(public bool) []common.Address {
+// BytesCmpSortedList retrieves the sorted address list of ValidatorSet in "ascending order" unlike the sort.Sort() is "descending order".
+// sort.Sort(AddressList): descending order - strings.Compare(ValidatorSet[i].String(), ValidatorSet[j].String()) < 0)
+// - sort it using strings.Compare. It's used for internal consensus purpose, especially for the source of committee.
+// - e.g. snap read/store/apply except defaultSet snap store, vrank log
+// AddressList.BytesCmpSortedList(): ascending order - bytes.Compare(ValidatorSet[i][:], ValidatorSet[j][:]) > 0
+// - sort it using bytes.Compare. It's for public purpose.
+// - e.g. getValidators/getDemotedValidators, defaultSet snap store, prepareExtra.validators
+// TODO-kaia: unify sorting. do this task with istanbul.Validator rpc refactoring
+func (sc AddressList) BytesCmpSortedList() []common.Address {
 	copiedSlice := make(AddressList, len(sc))
 	copy(copiedSlice, sc)
 
-	if public {
-		// want reverse-sort: ascending order - bytes.Compare(ValidatorSet[i][:], ValidatorSet[j][:]) > 0
-		sort.Slice(copiedSlice, func(i, j int) bool {
-			return bytes.Compare(copiedSlice[i].Bytes(), copiedSlice[j].Bytes()) >= 0
-		})
-		sort.Sort(sort.Reverse(copiedSlice))
-	} else {
-		// want sort: descending order - strings.Compare(ValidatorSet[i].String(), ValidatorSet[j].String()) < 0
-		sort.Sort(copiedSlice)
-	}
+	// want reverse-sort: ascending order - bytes.Compare(ValidatorSet[i][:], ValidatorSet[j][:]) > 0
+	sort.Slice(copiedSlice, func(i, j int) bool {
+		return bytes.Compare(copiedSlice[i].Bytes(), copiedSlice[j].Bytes()) >= 0
+	})
+	sort.Sort(sort.Reverse(copiedSlice))
+
 	return copiedSlice
 }
