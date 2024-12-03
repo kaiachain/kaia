@@ -66,6 +66,10 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 }
 
 func pickRoundRobinProposer(cList valset.AddressList, policy ProposerPolicy, prevAuthor common.Address, round uint64) (common.Address, int) {
+	if common.EmptyAddress(prevAuthor) {
+		// if prevAuthor is empty, return -1 as an error
+		return common.Address{}, -1
+	}
 	var (
 		lastProposerIdx = cList.GetIdxByAddress(prevAuthor)
 		seed            = round
@@ -74,7 +78,7 @@ func pickRoundRobinProposer(cList valset.AddressList, policy ProposerPolicy, pre
 	if lastProposerIdx > -1 {
 		seed += uint64(lastProposerIdx)
 	}
-	if policy == RoundRobin && !common.EmptyAddress(prevAuthor) {
+	if policy == RoundRobin {
 		seed += 1
 	}
 
