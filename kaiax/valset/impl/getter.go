@@ -18,7 +18,7 @@ import (
 // GetCouncil returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
 func (v *ValsetModule) GetCouncil(num uint64) (valset.AddressList, error) {
-	scannedNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
+	scannedNum, err := readLowestScannedCheckpointInterval(v.ChainKv)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (v *ValsetModule) GetCouncil(num uint64) (valset.AddressList, error) {
 
 	// make sure that the num doesn't exceed current block
 	// valSet council db is prepared. let's read council address list directly from the db
-	return readCouncilAddressListFromValSetCouncilDB(v.ChainKv, finalizedBlockNum)
+	return readCouncil(v.ChainKv, finalizedBlockNum)
 }
 
 // GetCommittee returns the current block's committee.
@@ -200,13 +200,13 @@ func (v *ValsetModule) getPSetWithProposerPolicy(num uint64) (gov.ParamSet, Prop
 }
 
 // getStakingInfoWithStakingAmounts returns the stakingInfo & parsed staking amounts after processing block num - 1
-func (v *ValsetModule) getStakingInfoWithStakingAmounts(num uint64, cList []common.Address) (*staking.StakingInfo, map[common.Address]uint64, error) {
+func (v *ValsetModule) getStakingInfoWithStakingAmounts(num uint64, list []common.Address) (*staking.StakingInfo, map[common.Address]uint64, error) {
 	sInfo, err := v.stakingInfo.GetStakingInfo(num)
 	if err != nil {
 		return nil, nil, err
 	}
-	stakingAmounts := make(map[common.Address]uint64, len(cList))
-	for _, node := range cList {
+	stakingAmounts := make(map[common.Address]uint64, len(list))
+	for _, node := range list {
 		stakingAmounts[node] = uint64(0)
 	}
 	for _, consolidated := range sInfo.ConsolidatedNodes() {

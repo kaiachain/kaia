@@ -37,21 +37,21 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 }
 
 // HandleValidatorVote handles addvalidator or removevalidator votes.
-// If succeeded, the voteBlk and councilAddressList db is updated.
+// If succeeded, the voteBlk and council db is updated.
 func (v *ValsetModule) HandleValidatorVote(blockNumber uint64, voteByte []byte) error {
 	council, err := v.GetCouncil(blockNumber)
 	if err != nil {
 		return err
 	}
 	govNode := v.governance.EffectiveParamSet(blockNumber).GoverningNode
-	cList, err := applyValSetVote(voteByte, council, govNode)
-	if cList == nil {
+	council, err = applyValSetVote(voteByte, council, govNode)
+	if council == nil {
 		// if err is nil, it means there's no valSet vote to handle. otherwise, there's issue during handling
 		return err
 	}
 
-	// update valSet db (council list, voteBlk)
-	if err = WriteCouncilAddressListToDb(v.ChainKv, blockNumber, cList); err != nil {
+	// write new record at council db and update the valSet vote block db
+	if err = writeCouncil(v.ChainKv, blockNumber, council); err != nil {
 		return err
 	}
 	return nil
@@ -118,7 +118,4 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 	}
 
 	return c, nil
-}
-
-func (v *ValsetModule) simulateValSetVotes() {
 }

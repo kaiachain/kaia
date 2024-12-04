@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"sort"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -98,7 +100,7 @@ func (v *ValsetModule) Start() error {
 	)
 
 	// valSet initialization at genesis block
-	voteBlks := ReadValidatorVoteDataBlockNums(v.ChainKv)
+	voteBlks := readValsetVoteBlockNums(v.ChainKv)
 	if voteBlks == nil {
 		header := v.chain.GetHeaderByNumber(0)
 		if header == nil {
@@ -108,20 +110,20 @@ func (v *ValsetModule) Start() error {
 		if err != nil {
 			return errExtractIstanbulExtra
 		}
-		if err = WriteCouncilAddressListToDb(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
+		if err = writeCouncil(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
 			return err
 		}
 		if currentBlockNum == 0 {
-			if err = writeLowestScannedCheckpointIntervalNum(v.ChainKv, intervalBlockNum); err != nil {
+			if err = writeLowestScannedCheckpointInterval(v.ChainKv, intervalBlockNum); err != nil {
 				return err
 			}
 		}
 	}
 
 	// lowestScannedNum to figure out if migration is needed or not
-	lowestSciNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
+	lowestSciNum, err := readLowestScannedCheckpointInterval(v.ChainKv)
 	if err != nil {
-		if err = writeLowestScannedCheckpointIntervalNum(v.ChainKv, intervalBlockNum); err != nil {
+		if err = writeLowestScannedCheckpointInterval(v.ChainKv, intervalBlockNum); err != nil {
 			return err
 		}
 		// generate valset db between [lastIntervalBlock, currentBlock)
@@ -143,7 +145,7 @@ func (v *ValsetModule) Start() error {
 }
 
 func (v *ValsetModule) migrate() {
-	lowestSciNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
+	lowestSciNum, err := readLowestScannedCheckpointInterval(v.ChainKv)
 	if err != nil {
 		logger.Error(err.Error())
 	}
@@ -166,10 +168,16 @@ func (v *ValsetModule) replayValSetVotes(intervalBlockNum uint64, targetBlockNum
 		return nil, errNilHeader
 	}
 
-	c, err := readCouncilAddressListFromIstanbulSnapshot(v.ChainKv, intervalHeader.Hash())
+	snap, err := readIstanbulSnapshot(v.ChainKv, intervalHeader.Hash())
 	if err != nil {
 		return nil, err
 	}
+
+	council := make(valset.AddressList, 0)
+	for _, val := range append(snap.ValSet.List(), snap.ValSet.DemotedList()...) {
+		council = append(council, val.Address())
+	}
+	sort.Sort(council)
 
 	// replay the header votes until next checkpoint interval
 	for num := intervalBlockNum + 1; num <= targetBlockNum; num++ {
@@ -180,7 +188,7 @@ func (v *ValsetModule) replayValSetVotes(intervalBlockNum uint64, targetBlockNum
 
 		// apply addvalidator/removevalidator vote to council
 		govNode := v.governance.EffectiveParamSet(num).GoverningNode
-		cList, err := applyValSetVote(header.Vote, c, govNode)
+		cList, err := applyValSetVote(header.Vote, council, govNode)
 		if err != nil {
 			return nil, err
 		}
@@ -188,17 +196,17 @@ func (v *ValsetModule) replayValSetVotes(intervalBlockNum uint64, targetBlockNum
 			continue // nothing to do
 		}
 
-		c = cList
+		council = cList
 
 		if writeValSetDb == false {
 			continue
 		}
 		// update to valSet db (council list, voteBlk)
-		if err = WriteCouncilAddressListToDb(v.ChainKv, num, c); err != nil {
+		if err = writeCouncil(v.ChainKv, num, council); err != nil {
 			return nil, err
 		}
 	}
-	return c, nil
+	return council, nil
 }
 
 func (v *ValsetModule) Stop() {

@@ -41,9 +41,9 @@ func TestGetCouncil(t *testing.T) {
 	copy(genesisValSet, n)
 
 	// prepare vote db
-	assert.NoError(t, WriteCouncilAddressListToDb(vModule.ChainKv, 0, genesisValSet[:4]))
-	assert.NoError(t, WriteCouncilAddressListToDb(vModule.ChainKv, 2, genesisValSet[:5]))
-	assert.NoError(t, WriteCouncilAddressListToDb(vModule.ChainKv, 4, genesisValSet[:6]))
+	assert.NoError(t, writeCouncil(vModule.ChainKv, 0, genesisValSet[:4]))
+	assert.NoError(t, writeCouncil(vModule.ChainKv, 2, genesisValSet[:5]))
+	assert.NoError(t, writeCouncil(vModule.ChainKv, 4, genesisValSet[:6]))
 
 	// check council
 	for blockNumber, expectCList := range [][]common.Address{
@@ -54,7 +54,7 @@ func TestGetCouncil(t *testing.T) {
 		{n[5], tgn, n[1], n[3], n[2], n[4]},
 		{n[5], tgn, n[1], n[3], n[2], n[4]},
 	} {
-		cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(blockNumber))
+		cList, err := readCouncil(vModule.ChainKv, uint64(blockNumber))
 		assert.NoError(t, err, "tc(blockNumber):%d", blockNumber)
 		assert.Equal(t, expectCList, cList, "tc(blockNumber):%d", blockNumber)
 	}

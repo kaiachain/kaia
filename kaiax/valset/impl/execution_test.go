@@ -94,7 +94,7 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 
 			tm.prepareMockExpectGovParam(2, testProposerPolicy, testSubGroupSize, tgn)
 
-			err = WriteCouncilAddressListToDb(vModule.ChainKv, 1, tc.networkInfo.validators)
+			err = writeCouncil(vModule.ChainKv, 1, tc.networkInfo.validators)
 			assert.NoError(t, err)
 
 			byteVote, err := tc.voteData.ToVoteBytes()
@@ -103,7 +103,7 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 			err = vModule.HandleValidatorVote(2, byteVote)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectError, err)
 
-			cList, err := readCouncilAddressListFromValSetCouncilDB(vModule.ChainKv, uint64(2))
+			cList, err := readCouncil(vModule.ChainKv, uint64(2))
 			sort.Sort(tc.expectHandleValidatorVote.expectCList)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectHandleValidatorVote.expectCList, valset.AddressList(cList))

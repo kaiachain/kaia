@@ -200,7 +200,7 @@ func newTestVModule(ctrl *gomock.Controller) (*ValsetModule, *testMocks, error) 
 		return nil, nil, err
 	}
 	// set initial db
-	if err := WriteCouncilAddressListToDb(vModule.ChainKv, 0, n[:4]); err != nil {
+	if err := writeCouncil(vModule.ChainKv, 0, n[:4]); err != nil {
 		return nil, nil, err
 	}
 

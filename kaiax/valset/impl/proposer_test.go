@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func calcStakingAmounts(sInfo *staking.StakingInfo, cList []common.Address) map[common.Address]uint64 {
-	stakingAmounts := make(map[common.Address]uint64, len(cList))
-	for _, node := range cList {
+func calcStakingAmounts(sInfo *staking.StakingInfo, list []common.Address) map[common.Address]uint64 {
+	stakingAmounts := make(map[common.Address]uint64, len(list))
+	for _, node := range list {
 		stakingAmounts[node] = uint64(0)
 	}
 	for _, consolidated := range sInfo.ConsolidatedNodes() {

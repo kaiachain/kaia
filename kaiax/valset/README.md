@@ -224,12 +224,12 @@ block  | round | proposer
 </details>
 
 ## Persistent Schema
-### CouncilAddressList(num)
-- Retrieve the record from miscdb with the key, "councilAddress" + uint64(v) 
+### Council(num)
+- Retrieve the record from miscdb with the key, "council" + uint64(v) 
 - v is the latest block number from `num` which contains the addvalidator/removevalidator vote.
 - Returns the sorted []common.Address
 
-### ValidatorVoteDataBlockNums
+### ValsetVoteBlockNums
 - Retrieve the record with the key, "valSetVoteBlockNums"
 - Returns []uint64
 
@@ -239,9 +239,8 @@ block  | round | proposer
 > It would temporarily generate the council list for the target block by iterating over the vote data from the nearest istanbul snapshot.
 - Retrieve the record with the key, "snapshot" + blockhash.
 - Only available at intervals defined by istanbulCheckpoint.
-- Returns a sorted []common.Address, which is a unified list of snap[blockhash].demoted + snap[blockhash].qualified.
 
-### lowestScannedCheckpointIntervalKey
+### lowestScannedCheckpointInterval
 - Retrieve the record with the key, "lowestScannedCheckpointIntervalKey".
 - Returns uint64.
 - Identifies the voteBlock migration completion point; blocks below this number still requires migration.
@@ -280,7 +279,7 @@ type committeeContext struct {
 
 ### Init
 - Dependencies:
-  - ChainKv: Read/Write Voting blks and Council address lists. The keys of council address list is the voting blks.
+  - ChainKv: Read/Write Voting blks and Council at valset voting blocks.
   - Chain: Get Header and config information from headerChain.
   - HeaderGov: Get govParam from headerGov.
   - StakingInfo: Get block's staking info from stakingInfo.
@@ -288,7 +287,7 @@ type committeeContext struct {
 ### Start and stop
 When starting the valSet module, the following checks and actions are performed:
 * valSet initialization at genesis block
-  * if the validator vote data (voteBlks) is missing, it stores []uint64{0} at voteBlks and genesis council to councilAddressListDB
+  * if the validator vote data (voteBlks) is missing, it stores []uint64{0} at voteBlks and genesisCouncil to council DB
   * if the current block number is genesis block, the lowest scanned interval(lowestScannedNum) is initialized as 0.
 * lowestScannedNum to figure out if migration from istanbul snapshot to valSet DB is needed or not
   * if no lowestScannedNum exists, it replays the votes between [lastScannedNum, currentBlock)
@@ -303,7 +302,7 @@ This module does not have stop logic.
 This module does not have any consensus-related block processing logic.
 
 ### Execution
-- PostInsertBlock: the addvalidator/removevalidator votes are handled. If success, the voteBlk and councilAddressListDB will be updated.
+- PostInsertBlock: the addvalidator/removevalidator votes are handled. If success, the voteBlk and council DB will be updated.
 
 ### Rewind
 
@@ -320,10 +319,10 @@ This module does not have any consensus-related block processing logic.
 - GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error)
 
 ## Getters
-- GetCouncil(N): Council(N) is either retrieved from councilAddressListDB or istanbul snapshot DB.
-  - when migration is finished at N-1, finalized block, it retrieves from councilAddressListDB.
+- GetCouncil(N): Council(N) is either retrieved from council DB or istanbul snapshot DB.
+  - when migration is finished at N-1, finalized block, it retrieves council[N-1] from council DB.
   - when migration still in progress, it retrieves from istanbul snapshot DB.
-     - however, snapshot is stored every checkpointinterval(=1024)
+     - however, istanbul snapshot is stored in DB every checkpointinterval(mostly 1024)
      - so, to get snap[N-1], need to iterate over the non-snapshot interval blocks
 - GetCommittee(N, round): it calculates the list of committee at (block N, round R)
 - GetProposer(N, round): it calculates the proposer at (block N, round R)
