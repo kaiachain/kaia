@@ -17,7 +17,7 @@ import (
 
 // GetCouncil returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
-func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
+func (v *ValsetModule) GetCouncil(num uint64) (valset.AddressList, error) {
 	scannedNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
 	if err != nil {
 		return nil, err
@@ -55,8 +55,8 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 }
 
 // GetCommittee returns the current block's committee.
-func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address, error) {
-	// if the block number is genesis, directly return councilAddressList as committee.
+func (v *ValsetModule) GetCommittee(num uint64, round uint64) (valset.AddressList, error) {
+	// if the block number is genesis, directly return genesisCouncil as committee.
 	if num == 0 {
 		genesisCouncil, err := v.GetCouncil(0)
 		if err != nil {
@@ -85,7 +85,7 @@ func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, er
 		return v.chain.Engine().Author(header)
 	}
 
-	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
+	// if the block number is genesis, directly return proposer as the first element of genesisCouncil.
 	if num == 0 {
 		genesisCouncil, err := v.GetCouncil(0)
 		if err != nil {

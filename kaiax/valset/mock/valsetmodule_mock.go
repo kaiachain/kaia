@@ -10,6 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -51,10 +52,10 @@ func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 }
 
 // GetCommittee mocks base method.
-func (m *MockValsetModule) GetCommittee(arg0, arg1 uint64) ([]common.Address, error) {
+func (m *MockValsetModule) GetCommittee(arg0, arg1 uint64) (valset.AddressList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCommittee", arg0, arg1)
-	ret0, _ := ret[0].([]common.Address)
+	ret0, _ := ret[0].(valset.AddressList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -66,10 +67,10 @@ func (mr *MockValsetModuleMockRecorder) GetCommittee(arg0, arg1 interface{}) *go
 }
 
 // GetCouncil mocks base method.
-func (m *MockValsetModule) GetCouncil(arg0 uint64) ([]common.Address, error) {
+func (m *MockValsetModule) GetCouncil(arg0 uint64) (valset.AddressList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCouncil", arg0)
-	ret0, _ := ret[0].([]common.Address)
+	ret0, _ := ret[0].(valset.AddressList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

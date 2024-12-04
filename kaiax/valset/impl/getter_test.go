@@ -30,7 +30,7 @@ func TestGetDemotedAndQualified(t *testing.T) {
 	assert.Equal(t, valset.AddressList{n[0], n[1]}, qualified)
 }
 
-func TestGetCouncilAddressList(t *testing.T) {
+func TestGetCouncil(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -75,7 +75,7 @@ func TestGetCommittee(t *testing.T) {
 		govParamSubSize uint64
 		govParamGovNode common.Address
 
-		expectCommitteeList []common.Address
+		expectCommitteeList valset.AddressList
 		expectError         error
 	}{
 		// per committeeSize

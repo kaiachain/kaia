@@ -11,7 +11,7 @@ type ValsetModule interface {
 	kaiax.JsonRpcModule
 	kaiax.ExecutionModule
 
-	GetCouncil(num uint64) ([]common.Address, error)
-	GetCommittee(num uint64, round uint64) ([]common.Address, error)
+	GetCouncil(num uint64) (AddressList, error)
+	GetCommittee(num uint64, round uint64) (AddressList, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
 }

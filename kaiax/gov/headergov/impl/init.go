@@ -11,6 +11,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -28,8 +29,8 @@ type chain interface {
 	State() (*state.StateDB, error)
 }
 
-type validator interface {
-	GetCouncil(num uint64) ([]common.Address, error)
+type ValsetModule interface {
+	GetCouncil(num uint64) (valset.AddressList, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
 }
 
@@ -37,7 +38,7 @@ type InitOpts struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
-	ValSet      validator
+	ValSet      ValsetModule
 	NodeAddress common.Address
 }
 
@@ -46,7 +47,7 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
-	ValSet      validator
+	ValSet      ValsetModule
 
 	groupedVotes headergov.GroupedVotesMap
 	governances  headergov.GovDataMap

@@ -4,13 +4,14 @@ import (
 	"math/big"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -55,7 +56,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(genesisHeader)).AnyTimes()
 
-	valSet.EXPECT().GetCouncil(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
+	valSet.EXPECT().GetCouncil(uint64(1)).Return(valset.AddressList{validVoter}, nil).AnyTimes()
 	valSet.EXPECT().GetProposer(uint64(1), uint64(0)).Return(validVoter, nil).AnyTimes()
 
 	h := NewHeaderGovModule()

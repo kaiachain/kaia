@@ -69,11 +69,11 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 
 	// TODO-kaiax-valset: uncomment it after activating valset module
 	// check if the voter is in council
-	//c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
+	//council, err := h.ValSet.GetCouncil(blockNum)
 	//if err != nil {
 	//	return err
 	//}
-	//idx := valset.AddressList(c).GetIdxByAddress(vote.Voter())
+	//idx := council.GetIdxByAddress(vote.Voter())
 	//if idx == -1 {
 	//	return ErrInvalidVoter
 	//}
@@ -148,12 +148,12 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		// it's definite that the valSet vote is not included in this block
 		// so the council(blockNum - 1) and council(blockNum) should be same
 		// TODO-kaiax-valset: uncomment it after enabling valset
-		//c, err := h.ValSet.GetCouncilAddressList(blockNum - 1)
+		// council, err := h.ValSet.GetCouncil(blockNum)
 		//if err != nil {
 		//	return err
 		//}
 		//
-		//idx := valset.AddressList(c).GetIdxByAddress(params.GoverningNode)
+		//idx := council.GetIdxByAddress(params.GoverningNode)
 		//if idx == -1 {
 		//	return ErrGovNodeNotInValSetList
 		//}
