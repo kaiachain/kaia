@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 )
@@ -21,6 +22,7 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 		Nonce                math.HexOrDecimal64   `json:"nonce"`
 		To                   string                `json:"to"`
 		Data                 []string              `json:"data"`
+		AccessLists          []*types.AccessList   `json:"accessLists,omitempty"`
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           hexutil.Bytes         `json:"secretKey"`
@@ -32,6 +34,7 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 	enc.Nonce = math.HexOrDecimal64(s.Nonce)
 	enc.To = s.To
 	enc.Data = s.Data
+	enc.AccessLists = s.AccessLists
 	if s.GasLimit != nil {
 		enc.GasLimit = make([]math.HexOrDecimal64, len(s.GasLimit))
 		for k, v := range s.GasLimit {
@@ -52,6 +55,7 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 		Nonce                *math.HexOrDecimal64  `json:"nonce"`
 		To                   *string               `json:"to"`
 		Data                 []string              `json:"data"`
+		AccessLists          []*types.AccessList   `json:"accessLists,omitempty"`
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           *hexutil.Bytes        `json:"secretKey"`
@@ -77,6 +81,9 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 	}
 	if dec.Data != nil {
 		s.Data = dec.Data
+	}
+	if dec.AccessLists != nil {
+		s.AccessLists = dec.AccessLists
 	}
 	if dec.GasLimit != nil {
 		s.GasLimit = make([]uint64, len(dec.GasLimit))
