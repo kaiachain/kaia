@@ -43,7 +43,7 @@ type chain interface {
 	Engine() consensus.Engine
 }
 
-type headerGov interface {
+type governance interface {
 	EffectiveParamSet(blockNum uint64) gov.ParamSet
 }
 
@@ -54,7 +54,7 @@ type stakingInfo interface {
 type InitOpts struct {
 	ChainKv     database.Database
 	Chain       chain
-	HeaderGov   headerGov
+	Governance  governance
 	StakingInfo stakingInfo
 	NodeAddress common.Address
 }
@@ -62,7 +62,7 @@ type InitOpts struct {
 type ValsetModule struct {
 	ChainKv     database.Database
 	chain       chain
-	headerGov   headerGov
+	governance  governance
 	stakingInfo stakingInfo
 	nodeAddress common.Address
 
@@ -80,7 +80,7 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 	}
 	v.ChainKv = opts.ChainKv
 	v.chain = opts.Chain
-	v.headerGov = opts.HeaderGov
+	v.governance = opts.Governance
 	v.stakingInfo = opts.StakingInfo
 	v.nodeAddress = opts.NodeAddress
 	cache, err := lru.New(128)
@@ -179,7 +179,7 @@ func (v *ValsetModule) replayValSetVotes(intervalBlockNum uint64, targetBlockNum
 		}
 
 		// apply addvalidator/removevalidator vote to council
-		govNode := v.headerGov.EffectiveParamSet(num).GoverningNode
+		govNode := v.governance.EffectiveParamSet(num).GoverningNode
 		cList, err := applyValSetVote(header.Vote, c, govNode)
 		if err != nil {
 			return nil, err

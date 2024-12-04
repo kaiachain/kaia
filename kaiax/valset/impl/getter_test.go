@@ -110,7 +110,7 @@ func TestGetCommittee(t *testing.T) {
 				tm.prepareMockExpectStakingInfo(tc.blockNumber, nil, nil)
 				tm.prepareMockExpectGovParam(tc.blockNumber, tc.govParamPolicy, tc.govParamSubSize, tc.govParamGovNode)
 
-				proposersPSet := vModule.headerGov.EffectiveParamSet(tc.blockNumber)
+				proposersPSet := vModule.governance.EffectiveParamSet(tc.blockNumber)
 				proposersBlock := calcProposerBlockNumber(tc.blockNumber, proposersPSet.ProposerUpdateInterval)
 				tm.prepareMockExpectHeader(proposersBlock-1, mixHash, nil, tgn)
 				tm.prepareMockExpectStakingInfo(proposersBlock, nil, nil)

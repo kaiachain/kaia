@@ -231,7 +231,7 @@ func TestValsetModule_Init(t *testing.T) {
 	assert.Equal(t, []common.Address{n[0], n[1], n[2], n[3]}, sInfo.NodeIds)
 	assert.Equal(t, []uint64{aM, aM, aM, a1}, sInfo.StakingAmounts)
 
-	pSet := vModule.headerGov.EffectiveParamSet(0)
+	pSet := vModule.governance.EffectiveParamSet(0)
 	assert.Equal(t, testProposerPolicy, pSet.ProposerPolicy)
 	assert.Equal(t, testSubGroupSize, pSet.CommitteeSize)
 	assert.Equal(t, tgn, pSet.GoverningNode)

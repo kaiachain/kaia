@@ -187,7 +187,7 @@ func (v *ValsetModule) getDemotedValidators(num uint64) (valset.AddressList, err
 
 // getPSetWithProposerPolicy returns the govParam & proposer policy after processing block num - 1
 func (v *ValsetModule) getPSetWithProposerPolicy(num uint64) (gov.ParamSet, ProposerPolicy, error) {
-	pSet := v.headerGov.EffectiveParamSet(num)
+	pSet := v.governance.EffectiveParamSet(num)
 	if pSet.CommitteeSize == 0 {
 		return gov.ParamSet{}, 0, errInvalidCommitteeSize // it cannot happen. just to make sure
 	}
