@@ -81,7 +81,7 @@ func TestEIP3541(t *testing.T) {
 			var (
 				// Sample creation code
 				inputBytes, _ = hex.DecodeString("610017600081600b8239f3ef01000000000000000000000000000000000000001000")
-				// Expected code hash if deployed
+				// Expected runtime bytecode if deployed
 				expectedCode, _ = hex.DecodeString("ef01000000000000000000000000000000000000001000")
 				optsOwner       = bind.NewKeyedTransactor(validator.Keys[0])
 				transactor      = backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
