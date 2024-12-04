@@ -86,7 +86,7 @@ type vmExecMarshaling struct {
 
 func (t *VMTest) Run(vmconfig vm.Config) error {
 	memDBManager := database.NewMemoryDBManager()
-	statedb := MakePreState(memDBManager, t.json.Pre)
+	statedb := MakePreState(memDBManager, t.json.Pre, false)
 	ret, gasRemaining, err := t.exec(statedb, vmconfig)
 
 	if t.json.GasRemaining == nil {

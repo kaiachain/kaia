@@ -72,11 +72,11 @@ type ExecutionSpecStateTestSuite struct {
 }
 
 func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
-	common.RelaxPrecompileRangeForTest(true)
+	vm.RelaxPrecompileRangeForTest(true)
 }
 
 func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
-	common.RelaxPrecompileRangeForTest(false)
+	vm.RelaxPrecompileRangeForTest(false)
 }
 
 func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
@@ -91,9 +91,17 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^frontier\/`)
 	st.skipLoad(`^homestead\/`)
 	st.skipLoad(`^byzantium\/`)
+	st.skipLoad(`^constantinople\/`)
 	st.skipLoad(`^istanbul\/`)
 	st.skipLoad(`^berlin\/`)
-	st.skipLoad(`^cancun\/`)
+
+	// tests to skip
+	// unsupported EIPs
+	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
+	st.skipLoad(`^cancun\/eip4844_blobs\/`)
+	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
+	// calculate the different consumed gas because 0x0a and 0x0b contract is set to access list by ActivePrecompiles in Cancun
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
@@ -106,6 +114,7 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 			"Berlin",
 			"London",
 			"Merge",
+			"Paris",
 			"Shanghai",
 			// "Cancun",
 			// "Prague",
@@ -129,7 +138,7 @@ func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, 
 				}
 			}
 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-				_, err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
+				err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
 				return st.checkFailure(t, name, err)
 			})
 		})

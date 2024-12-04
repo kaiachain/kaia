@@ -256,7 +256,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
-	if common.IsPrecompiledContractAddress(addr) {
+	if IsPrecompiledContractAddress(addr, evm.chainRules) {
 		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
@@ -527,7 +527,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 
-	if common.IsPrecompiledContractAddress(address) {
+	if IsPrecompiledContractAddress(address, evm.chainRules) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
 
