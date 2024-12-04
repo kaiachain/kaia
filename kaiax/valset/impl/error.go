@@ -21,7 +21,6 @@ var (
 
 	// voting related errors
 	errEmptyVoteBlock   = errors.New("failed to read vote blocks from db")
-	errInvalidVoter     = errors.New("failed to verify voter")
 	errInvalidVoteKey   = errors.New("your vote failed due to the wrong key")
 	errInvalidVoteValue = errors.New("your vote failed due to the wrong value")
 )

@@ -43,13 +43,12 @@ func newValidatorAPI(v *ValsetModule) *ValidatorAPI {
 	return &ValidatorAPI{v}
 }
 
-// TODO-kaiax-valset: currently, this API returns the council list which is the result of block N-1. Is it correct?
 func (api *ValidatorAPI) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
 	header, err := headerByRpcNumber(api.v.chain, number)
 	if err != nil {
 		return nil, err
 	}
-	return api.v.GetCouncilAddressList(header.Number.Uint64() - 1)
+	return api.v.GetCouncil(header.Number.Uint64())
 }
 
 func (api *ValidatorAPI) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
@@ -82,11 +81,11 @@ func (api *ValidatorAPI) GetValidators(number *rpc.BlockNumber) ([]common.Addres
 		return nil, err
 	}
 
-	c, err := newCouncil(api.v, header.Number.Uint64())
+	qualified, err := api.v.getQualifiedValidators(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
-	return c.qualifiedValidators.BytesCmpSortedList(), nil
+	return qualified.BytesCmpSortedList(), nil
 }
 
 // GetValidatorsAtHash retrieves the list of qualified validators with the given block hash.
@@ -105,11 +104,11 @@ func (api *ValidatorAPI) GetDemotedValidators(number *rpc.BlockNumber) ([]common
 		return nil, err
 	}
 
-	c, err := newCouncil(api.v, header.Number.Uint64())
+	demoted, err := api.v.getDemotedValidators(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
-	return c.demotedValidators.BytesCmpSortedList(), nil
+	return demoted.BytesCmpSortedList(), nil
 }
 
 // GetDemotedValidatorsAtHash retrieves the list of demoted validators with the given block hash.

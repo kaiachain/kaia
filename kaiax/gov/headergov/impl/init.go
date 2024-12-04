@@ -29,7 +29,7 @@ type chain interface {
 }
 
 type validator interface {
-	GetCouncilAddressList(num uint64) ([]common.Address, error)
+	GetCouncil(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
 }
 

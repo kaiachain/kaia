@@ -5,9 +5,30 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestGetDemotedAndQualified(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	vModule, tm, err := newTestVModule(ctrl)
+	assert.NoError(t, err)
+
+	blockNum := testIstanbulCompatibleNumber.Uint64()
+	tm.prepareMockExpectGovParam(blockNum, uint64(WeightedRandom), testSubGroupSize, tgn)
+	tm.prepareMockExpectStakingInfo(blockNum, []uint64{0, 1, 2, 3, 4, 5}, []uint64{aM, aM, 0, 0, aL, aL})
+
+	demoted, err := vModule.getDemotedValidators(blockNum)
+	assert.NoError(t, err)
+	assert.Equal(t, valset.AddressList{n[3], n[2]}, demoted)
+
+	qualified, err := vModule.getQualifiedValidators(blockNum)
+	assert.NoError(t, err)
+	assert.Equal(t, valset.AddressList{n[0], n[1]}, qualified)
+}
 
 func TestGetCouncilAddressList(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -68,7 +89,7 @@ func TestGetCommittee(t *testing.T) {
 		{"proposerPolicy sticky", defaultBN, defaultRound, params.Sticky, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[3]}, nil},
 		// per HF
 		{"genesis block", 0, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2], n[3]}, nil},
-		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[2], n[1], tgn}, nil},
+		{"block 1", 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[3], n[1], tgn}, nil},
 		{"istanbul hf activated", testIstanbulCompatibleNumber.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[1], n[2], n[3]}, nil},
 		{"kore hf activated", testKoreCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{n[3], tgn, n[1]}, nil},
 		{"randao hf activated", testRandaoCompatibleBlock.Uint64() + 1, defaultRound, testProposerPolicy, testSubGroupSize, tgn, []common.Address{tgn, n[1], n[2]}, nil},

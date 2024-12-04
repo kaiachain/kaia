@@ -55,7 +55,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(genesisHeader)).AnyTimes()
 
-	valSet.EXPECT().GetCouncilAddressList(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
+	valSet.EXPECT().GetCouncil(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
 	valSet.EXPECT().GetProposer(uint64(1), uint64(0)).Return(validVoter, nil).AnyTimes()
 
 	h := NewHeaderGovModule()

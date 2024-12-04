@@ -2,6 +2,7 @@ package impl
 
 import (
 	"math"
+	"math/big"
 	"math/rand"
 
 	"github.com/kaiachain/kaia/common"
@@ -35,7 +36,7 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 		return nil, errInvalidProposersType
 	}
 
-	c, err := newCouncil(v, pUpdateBlock)
+	qualified, err := v.getQualifiedValidators(pUpdateBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 		return nil, err
 	}
 
-	sInfo, stakingAmounts, err := v.getStakingInfoWithStakingAmounts(pUpdateBlock, c.qualifiedValidators)
+	sInfo, stakingAmounts, err := v.getStakingInfoWithStakingAmounts(pUpdateBlock, qualified)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +56,9 @@ func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, erro
 		return nil, errNilHeader
 	}
 
-	proposersIndexes := calsSlotsInProposers(c.qualifiedValidators, c.rules, pSet, sInfo, stakingAmounts)
-	proposers := shuffleProposers(c.qualifiedValidators, proposersIndexes, prevHeader.Hash())
+	rules := v.chain.Config().Rules(big.NewInt(int64(pUpdateBlock)))
+	proposersIndexes := calsSlotsInProposers(qualified, rules, pSet, sInfo, stakingAmounts)
+	proposers := shuffleProposers(qualified, proposersIndexes, prevHeader.Hash())
 
 	// store the calculated proposers
 	v.proposers.Add(pUpdateBlock, proposers)

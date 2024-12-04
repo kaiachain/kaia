@@ -17,7 +17,7 @@ This module is responsible for getting council and calculating committee or prop
 
 Several dependencies are required to calculate the committee or proposer of block N:
 - Header(N-1) // e.g. mixHash, blockHash
-- Council(N)
+- Council(N) // retrieved from councilAddress DB or istanbul snapshot DB
 - StakingInfo(N) // will read StateAt(num-1)
 - EffectiveParamSet(N) // governance parameter value
 
@@ -247,25 +247,34 @@ block  | round | proposer
 - Identifies the voteBlock migration completion point; blocks below this number still requires migration.
 
 ## In-memory Structures
-### Council
-- Council structure of block N: It categorizes the council(N) into qualified and demoted for block N. It's not for display purpose, but it's for calculating committee or proposer of block N.
-```go
-type council struct {
-  blockNumber uint64  // id of Council
-  rules       params.Rules // rules of this council
-  
-  qualifiedValidators []common.Address
-  demotedValidators   []common.Address
-  
-  councilAddressList []common.Address // total council node address list. the order is reserved.
-}
-```
 ### AddressList
 Sorting purpose
 ```go
 type AddressList []common.Address
 ```
-### CommitteeContext: TBD
+### CommitteeContext
+A committeeContext is a context for calculating the committee or proposer of block N. The pUpdateBlock and proposers is no longer used since Randao Hardfork. It provides `getCommittee` and `getProposer` methods.
+
+```go
+type committeeContext struct {
+	qualified valset.AddressList
+	num       uint64
+	rules     params.Rules
+
+	// pSet
+	committeeSize          uint64
+	proposerPolicy         ProposerPolicy
+	proposerUpdateInterval uint64
+
+	// num-1
+	prevHeader *types.Header
+	prevAuthor common.Address
+
+	// num - (num % proposerUpdateInterval)
+	pUpdateBlock uint64
+	proposers    []common.Address
+}
+```
 
 ## Module lifecycle
 
@@ -311,7 +320,7 @@ This module does not have any consensus-related block processing logic.
 - GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error)
 
 ## Getters
-- GetCouncilAddressList(N): Council(N) is either retrieved from councilAddressListDB or istanbul snapshot DB.
+- GetCouncil(N): Council(N) is either retrieved from councilAddressListDB or istanbul snapshot DB.
   - when migration is finished at N-1, finalized block, it retrieves from councilAddressListDB.
   - when migration still in progress, it retrieves from istanbul snapshot DB.
      - however, snapshot is stored every checkpointinterval(=1024)

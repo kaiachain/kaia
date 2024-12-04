@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,9 +15,9 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-// GetCouncilAddressList returns the whole validator list of block N.
+// GetCouncil returns the whole validator list of block N.
 // If this network haven't voted since genesis, return genesis council which is stored at Block 0.
-func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, error) {
+func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	scannedNum, err := readLowestScannedCheckpointIntervalNum(v.ChainKv)
 	if err != nil {
 		return nil, err
@@ -54,62 +56,21 @@ func (v *ValsetModule) GetCouncilAddressList(num uint64) ([]common.Address, erro
 
 // GetCommittee returns the current block's committee.
 func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address, error) {
-	c, err := newCouncil(v, num)
-	if err != nil {
-		return nil, err
-	}
-
 	// if the block number is genesis, directly return councilAddressList as committee.
 	if num == 0 {
-		return c.councilAddressList, nil
-	}
-
-	pSet, proposerPolicy, err := v.getPSetWithProposerPolicy(num)
-	if err != nil {
-		return nil, err
-	}
-
-	if pSet.CommitteeSize >= uint64(len(c.qualifiedValidators)) {
-		return c.qualifiedValidators, nil
-	}
-
-	proposer, err := v.GetProposer(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	// return early if the committee size is 1
-	if pSet.CommitteeSize == 1 {
-		return []common.Address{proposer}, nil
-	}
-
-	prevHeader := v.chain.GetHeaderByNumber(num - 1)
-	if prevHeader == nil {
-		return nil, errNilHeader
-	}
-
-	if !proposerPolicy.IsWeightedRandom() || !c.rules.IsRandao {
-		// closest next proposer who has different address with the proposer
-		// pick current round's proposer and next proposer which address is different from current proposer
-		var nextDistinctProposer common.Address
-		for i := uint64(1); i < pSet.ProposerUpdateInterval; i++ {
-			nextDistinctProposer, err = v.GetProposer(num, round+i)
-			if err != nil {
-				return nil, err
-			}
-			if proposer != nextDistinctProposer {
-				break
-			}
-		}
-
-		prevAuthor, err := v.chain.Engine().Author(prevHeader) // author of block N-1
+		genesisCouncil, err := v.GetCouncil(0)
 		if err != nil {
 			return nil, err
 		}
-
-		return c.selectRandomCommittee(round, pSet, proposer, nextDistinctProposer, prevHeader, prevAuthor)
+		return genesisCouncil, nil
 	}
-	return c.selectRandaoCommittee(prevHeader, pSet)
+
+	committeeCtx, err := newCommitteeContext(v, num)
+	if err != nil {
+		return nil, err
+	}
+
+	return committeeCtx.getCommittee(round)
 }
 
 // GetProposer calculates a proposer for the round of the given block.
@@ -118,65 +79,110 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 // - if the policy is weightedrandom and before Randao hf, the proposer is picked from the proposers
 // - if the pilicy is weightedrandom and after Randao hf, the proposer is picked from the committee
 func (v *ValsetModule) GetProposer(num uint64, round uint64) (common.Address, error) {
+	// if the block exists, derive the author from header
 	header := v.chain.GetHeaderByNumber(num)
 	if header != nil && header.Number.Uint64() == num && uint64(header.Round()) == round {
 		return v.chain.Engine().Author(header)
 	}
 
-	c, err := newCouncil(v, num)
+	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
+	if num == 0 {
+		genesisCouncil, err := v.GetCouncil(0)
+		if err != nil {
+			return common.Address{}, err
+		}
+		return genesisCouncil[0], nil
+	}
+
+	committeeCtx, err := newCommitteeContext(v, num)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	// if the block number is genesis, directly return proposer as the first element of councilAddressList.
+	return committeeCtx.getProposer(round)
+}
+
+// getQualifiedValidators returns a list of validators who are qualified to be a member of the committee or proposer
+func (v *ValsetModule) getQualifiedValidators(num uint64) (valset.AddressList, error) {
+	council, err := v.GetCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+
+	demoted, err := v.getDemotedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+
+	qualified := make(valset.AddressList, 0)
+	for _, v := range council {
+		if demoted.GetIdxByAddress(v) == -1 { // if cannot find in demoted,
+			qualified = append(qualified, v) // add it to qualified
+		}
+	}
+
+	sort.Sort(qualified)
+	return qualified, nil
+}
+
+// getDemotedValidators are subtract of qualified from council(N)
+func (v *ValsetModule) getDemotedValidators(num uint64) (valset.AddressList, error) {
 	if num == 0 {
-		return c.councilAddressList[0], nil
+		return valset.AddressList{}, nil
 	}
 
 	pSet, proposerPolicy, err := v.getPSetWithProposerPolicy(num)
 	if err != nil {
-		return common.Address{}, err
+		return nil, err
 	}
 
-	prevHeader := v.chain.GetHeaderByNumber(num - 1)
-	if prevHeader == nil {
-		return common.Address{}, errNilHeader
+	var (
+		isSingleMode = pSet.GovernanceMode == "single"
+		govNode      = pSet.GoverningNode
+		minStaking   = pSet.MinimumStake.Uint64()
+		rules        = v.chain.Config().Rules(big.NewInt(int64(num)))
+	)
+
+	// either proposer-policy is not weighted random or before istanbul HF,
+	// do not filter out the demoted validators
+	if !proposerPolicy.IsWeightedRandom() || !rules.IsIstanbul {
+		return valset.AddressList{}, nil
 	}
-	prevAuthor, err := v.chain.Engine().Author(prevHeader) // author of block N-1
+
+	council, err := v.GetCouncil(num)
 	if err != nil {
-		return common.Address{}, err
+		return nil, err
 	}
 
-	if proposerPolicy.IsDefaultSet() {
-		// if the policy is round-robin or sticky, all the council members are qualified.
-		// be cautious that the proposer may not be included in the committee list.
-		copied := make(valset.AddressList, len(c.councilAddressList))
-		copy(copied, c.councilAddressList)
-
-		// sorting on council address list
-		sort.Sort(copied)
-
-		proposer, _ := pickRoundRobinProposer(c.councilAddressList, proposerPolicy, prevAuthor, round)
-		return proposer, nil
+	// Split the council(N) into qualified and demoted.
+	// Qualified is a subset of the council who are qualified to be a committee member.
+	// (1) If governance mode is single, always include the governing node.
+	// (2) If no council members has enough KAIA, all members become qualified.
+	_, stakingAmounts, err := v.getStakingInfoWithStakingAmounts(num, council)
+	if err != nil {
+		return nil, err
 	}
 
-	// before Randao, weightedrandom uses proposers to pick the proposer.
-	if !c.rules.IsRandao {
-		pUpdateBlock := calcProposerBlockNumber(num, pSet.ProposerUpdateInterval)
-		proposers, err := v.getProposers(pUpdateBlock)
-		if err != nil {
-			return common.Address{}, err
+	demoted := make(valset.AddressList, 0)
+	for _, addr := range council {
+		staking, ok := stakingAmounts[addr]
+		if !ok {
+			return nil, fmt.Errorf("cannot find staking amount for %s", addr)
 		}
-		proposer, _ := pickWeightedRandomProposer(proposers, pUpdateBlock, num, round, c.qualifiedValidators, prevAuthor)
-		return proposer, nil
+		if staking < minStaking && !(isSingleMode && addr == govNode) {
+			demoted = append(demoted, addr)
+		}
 	}
 
-	// after Randao, pick proposer from randao committee
-	committee, err := c.selectRandaoCommittee(prevHeader, pSet)
-	if err != nil {
-		return common.Address{}, err
+	// include all council members if case1 or case2
+	//   case1. not a single mode && no qualified
+	//   case2. single mode && len(qualified) is 1 && govNode is not qualified
+	if len(demoted) == len(council) || (isSingleMode && len(demoted) == len(council)-1 && stakingAmounts[govNode] < minStaking) {
+		return valset.AddressList{}, nil
 	}
-	return committee[int(round)%len(c.qualifiedValidators)], nil
+
+	sort.Sort(demoted)
+	return demoted, nil
 }
 
 // getPSetWithProposerPolicy returns the govParam & proposer policy after processing block num - 1
