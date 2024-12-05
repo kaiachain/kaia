@@ -65,7 +65,7 @@ func newCommitteeContext(v *ValsetModule, num uint64) (*committeeContext, error)
 
 	if proposerPolicy.IsWeightedRandom() && !rules.IsRandao {
 		pUpdateBlock = calcProposerBlockNumber(num, pSet.ProposerUpdateInterval)
-		proposers, err = v.getProposers(pUpdateBlock)
+		proposers, err = v.getLegacyProposersList(pUpdateBlock)
 		if err != nil {
 			return nil, err
 		}

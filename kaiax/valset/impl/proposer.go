@@ -28,7 +28,7 @@ func (p ProposerPolicy) IsWeightedRandom() bool {
 	return p == WeightedRandom
 }
 
-func (v *ValsetModule) getProposers(pUpdateBlock uint64) ([]common.Address, error) {
+func (v *ValsetModule) getLegacyProposersList(pUpdateBlock uint64) ([]common.Address, error) {
 	if cachedProposers, ok := v.proposers.Get(pUpdateBlock); ok {
 		if proposers, ok := cachedProposers.([]common.Address); ok {
 			return proposers, nil
