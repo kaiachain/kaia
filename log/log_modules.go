@@ -218,4 +218,5 @@ var moduleNames = [ModuleNameLen]string{
 
 	// 61~70
 	"kaiax/gov",
+	"kaiax/compress",
 }
