@@ -127,7 +127,6 @@ func (v *ValsetModule) Start() error {
 		if err = writeLowestScannedCheckpointInterval(v.ChainKv, intervalBlockNum); err != nil {
 			return err
 		}
-		// generate valset db between [lastIntervalBlock, currentBlock)
 		_, err = v.replayValSetVotes(lowestSciNum, currentBlockNum, true)
 		if err != nil {
 			return err
@@ -165,7 +164,7 @@ func (v *ValsetModule) migrate() {
 	}
 }
 
-// replayValSetVotes replays the valset module handleVote.
+// replayValSetVotes replays the valset header votes in [intervalBlockNum+1, targetBlockNum].
 // lowestSciNum: the lowest istanbul snapshot checkpoint interval. replay the valSet votes from there.
 // targetBlockNum: the target block number where replay ends. it should not exceed current block number.
 // writeValSetDb: if it is set, it writes the valSet db
