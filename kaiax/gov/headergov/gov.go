@@ -9,7 +9,10 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type GovBytes []byte
+type (
+	GovBytes   []byte
+	GovDataMap map[uint64]GovData
+)
 
 type govData struct {
 	items gov.PartialParamSet

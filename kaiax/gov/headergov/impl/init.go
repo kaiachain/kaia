@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"math/big"
 	"sort"
+	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -26,10 +29,16 @@ type chain interface {
 	State() (*state.StateDB, error)
 }
 
+type ValsetModule interface {
+	GetCouncil(num uint64) (valset.AddressList, error)
+	GetProposer(num uint64, round uint64) (common.Address, error)
+}
+
 type InitOpts struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ValSet      ValsetModule
 	NodeAddress common.Address
 }
 
@@ -38,11 +47,18 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
-	nodeAddress common.Address
-	myVotes     []headergov.VoteData // queue
+	ValSet      ValsetModule
+
+	groupedVotes headergov.GroupedVotesMap
+	governances  headergov.GovDataMap
+	history      headergov.History
+	mu           *sync.RWMutex
 
 	epoch uint64
-	cache *headergov.HeaderCache
+
+	// for APIs
+	nodeAddress common.Address
+	myVotes     []headergov.VoteData // queue
 }
 
 func NewHeaderGovModule() *headerGovModule {
@@ -50,18 +66,17 @@ func NewHeaderGovModule() *headerGovModule {
 }
 
 func (h *headerGovModule) Init(opts *InitOpts) error {
-	if opts == nil {
+	if opts == nil || opts.ChainKv == nil || opts.ChainConfig == nil || opts.ChainConfig.Istanbul == nil || opts.Chain == nil {
 		return ErrInitNil
 	}
 
 	h.ChainKv = opts.ChainKv
 	h.ChainConfig = opts.ChainConfig
 	h.Chain = opts.Chain
+	h.ValSet = opts.ValSet
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
-	if h.ChainKv == nil || h.ChainConfig == nil || h.ChainConfig.Istanbul == nil || h.Chain == nil {
-		return ErrInitNil
-	}
+	h.mu = &sync.RWMutex{}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {
@@ -92,14 +107,15 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		if err != nil {
 			panic("Failed to read recent governance idx")
 		}
-		govIndicesStoredArray := StoredUint64Array(govIndices)
-		WriteGovDataBlockNums(h.ChainKv, &govIndicesStoredArray)
+		WriteGovDataBlockNums(h.ChainKv, govIndices)
 	}
 
-	h.cache = headergov.NewHeaderGovCache()
+	h.groupedVotes = make(map[uint64]headergov.VotesInEpoch)
+	h.governances = make(map[uint64]headergov.GovData)
 	govs := readGovDataFromDB(h.Chain, h.ChainKv)
+	h.history = make(headergov.History)
 	for blockNum, gov := range govs {
-		h.cache.AddGov(blockNum, gov)
+		h.AddGov(blockNum, gov)
 	}
 
 	// 2. Init votes. If votes exist in the latest epoch, read from DB. Otherwise, accumulate.
@@ -108,7 +124,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		votes := readVoteDataFromDB(h.Chain, h.ChainKv)
 
 		for blockNum, vote := range votes {
-			h.cache.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+			h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
 		}
 	} else {
 		latestEpochIdx := calcEpochIdx(h.Chain.CurrentBlock().NumberU64(), h.epoch)
@@ -171,8 +187,13 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 			logger.Error("Failed to parse vote", "num", blockNum, "err", err)
 			continue
 		}
-		// TODO-kaiax: consider writing addval/removeval votes to validator DB.
-		if vote != nil && vote.Name() != "governance.addvalidator" && vote.Name() != "governance.removevalidator" {
+
+		if vote == nil {
+			continue
+		}
+
+		// Only governance params are collected. Validator params are ignored.
+		if _, ok := gov.Params[vote.Name()]; ok {
 			votes[blockNum] = vote
 		}
 	}
@@ -193,7 +214,7 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 
 	votes := h.scanAllVotesInEpoch(epochIdx)
 	for blockNum, vote := range votes {
-		h.cache.AddVote(epochIdx, blockNum, vote)
+		h.AddVote(epochIdx, blockNum, vote)
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
 

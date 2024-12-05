@@ -1,8 +1,10 @@
 package headergov
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
+	"reflect"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -10,7 +12,11 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type VoteBytes []byte
+type (
+	VoteBytes       []byte
+	VotesInEpoch    map[uint64]VoteData
+	GroupedVotesMap map[uint64]VotesInEpoch
+)
 
 type voteData struct {
 	voter common.Address
@@ -24,15 +30,10 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		if name == "governance.addvalidator" || name == "governance.removevalidator" {
-			return &voteData{
-				voter: voter,
-				name:  gov.ParamName(name),
-				value: []common.Address{},
-			}
+		param, ok = gov.ValidatorParams[gov.ParamName(name)]
+		if !ok {
+			return nil
 		}
-
-		return nil
 	}
 
 	if param.VoteForbidden {
@@ -80,8 +81,14 @@ func (vote *voteData) ToVoteBytes() (VoteBytes, error) {
 
 	if cv, ok := vote.value.(*big.Int); ok {
 		v.Value = cv.String()
+	} else if cv, ok := vote.value.([]common.Address); ok {
+		// concat all addresses into []byte
+		concatBytes := make([]byte, 0, len(cv)*common.AddressLength)
+		for _, addr := range cv {
+			concatBytes = append(concatBytes, addr.Bytes()...)
+		}
+		v.Value = concatBytes
 	}
-
 	return rlp.EncodeToBytes(v)
 }
 
@@ -117,6 +124,15 @@ func (vb VoteBytes) ToVoteData() (VoteData, error) {
 	}
 
 	return vote, nil
+}
+
+func (v *voteData) Equal(v2 *voteData) bool {
+	var (
+		isVoterEqual = bytes.Equal(v.voter.Bytes(), v2.voter.Bytes())
+		isNameEqual  = v.name == v2.name
+		isValueEqual = reflect.DeepEqual(v.value, v2.value)
+	)
+	return isVoterEqual && isNameEqual && isValueEqual
 }
 
 func (vb VoteBytes) String() string {

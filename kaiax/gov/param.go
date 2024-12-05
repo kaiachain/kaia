@@ -2,11 +2,13 @@ package gov
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 type canonicalizerT func(v any) (any, error)
@@ -38,7 +40,7 @@ var (
 		return nil, ErrCanonicalizeToAddress
 	}
 
-	addressListCanonicalizer canonicalizerT = func(v any) (any, error) {
+	validatorAddressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		stringToAddressList := func(v string) ([]common.Address, error) {
 			ret := []common.Address{}
 			for _, address := range strings.Split(v, ",") {
@@ -51,11 +53,45 @@ var (
 		}
 
 		switch v := v.(type) {
-		case []byte:
-			return stringToAddressList(string(v))
-		case string:
+		case []byte: // input from header.Vote
+			// There are three types of header.Vote encoding for validator address(es).
+			// Type1. Single address, [20]byte. See Mainnet block 5505383.
+			// Type2. Multiple addresses, [20*n]byte.
+			// Type3. Single address, [42]byte (hex-encoded bytes). See Mainnet block 90915008.
+
+			// Type1
+			if len(v) == common.AddressLength {
+				return []common.Address{common.BytesToAddress(v)}, nil
+			}
+
+			// Type2
+			if len(v)%common.AddressLength == 0 {
+				addresses := make([]common.Address, len(v)/common.AddressLength)
+				for i := 0; i < len(v)/common.AddressLength; i++ {
+					addresses[i] = common.BytesToAddress(v[i*common.AddressLength : (i+1)*common.AddressLength])
+				}
+				return addresses, nil
+			}
+
+			// Type3
+			v, err := hexutil.Decode(string(v))
+			if err != nil {
+				return nil, errors.Join(ErrCanonicalizeByteToAddress, err)
+			}
+
+			if len(v) == common.AddressLength {
+				return []common.Address{common.BytesToAddress(v)}, nil
+			}
+
+			return nil, ErrCanonicalizeToAddressList
+		case string: // input from API
 			return stringToAddressList(v)
+		case common.Address:
+			return []common.Address{v}, nil
+		case []common.Address:
+			return v, nil
 		}
+
 		return nil, ErrCanonicalizeToAddressList
 	}
 
@@ -129,6 +165,27 @@ func noopFormatChecker(cv any) bool {
 	return true
 }
 
+func valSetVoteFormatChecker(cv any) bool {
+	_, ok := cv.(common.Address)
+	if ok {
+		return true
+	}
+
+	v, ok := cv.([]common.Address)
+	if !ok || len(v) == 0 {
+		return false
+	}
+
+	// do not allow duplicated addresses
+	var duplicateCheckMap map[common.Address]bool
+	for _, address := range v {
+		if ok, _ := duplicateCheckMap[address]; ok {
+			return false
+		}
+	}
+	return true
+}
+
 type ParamName string
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
@@ -154,6 +211,11 @@ const (
 	RewardRatio                    ParamName = "reward.ratio"
 	RewardStakingUpdateInterval    ParamName = "reward.stakingupdateinterval"
 	RewardUseGiniCoeff             ParamName = "reward.useginicoeff"
+)
+
+const (
+	AddValidator    ParamName = "governance.addvalidator"
+	RemoveValidator ParamName = "governance.removevalidator"
 )
 
 var Params = map[ParamName]*Param{
@@ -368,6 +430,21 @@ var Params = map[ParamName]*Param{
 		FormatChecker: noopFormatChecker,
 		DefaultValue:  false,
 		VoteForbidden: true,
+	},
+}
+
+var ValidatorParams = map[ParamName]*Param{
+	AddValidator: {
+		Canonicalizer: validatorAddressListCanonicalizer,
+		FormatChecker: valSetVoteFormatChecker,
+		DefaultValue:  []common.Address{},
+		VoteForbidden: false,
+	},
+	RemoveValidator: {
+		Canonicalizer: validatorAddressListCanonicalizer,
+		FormatChecker: valSetVoteFormatChecker,
+		DefaultValue:  []common.Address{},
+		VoteForbidden: false,
 	},
 }
 

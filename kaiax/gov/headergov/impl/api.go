@@ -69,13 +69,15 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	}
 
 	// TODO-kaiax: add removevalidator vote check
-
 	api.h.PushMyVotes(vote)
-	return "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
+
+	return "(kaiax) Your vote has been put into the vote queue and you will proposer the block with this vote.\n" +
+		"addvalidator,removevalidator votes will take effect from the next block following the proposed block. \n" +
+		"Otherwise, the new governance parameter will be effective from the second upcoming epoch.", nil
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {
-	return api.h.cache.GovBlockNums()
+	return api.h.GovBlockNums()
 }
 
 func (api *headerGovAPI) Votes(num *rpc.BlockNumber) []VotesResponse {
@@ -129,10 +131,13 @@ func (api *headerGovAPI) MyVotes() []MyVotesResponse {
 }
 
 func (api *headerGovAPI) Status() StatusResponse {
+	api.h.mu.RLock()
+	defer api.h.mu.RUnlock()
+
 	return StatusResponse{
-		GroupedVotes: api.h.cache.GroupedVotes(),
-		Governances:  api.h.cache.Govs(),
-		GovHistory:   api.h.cache.History(),
+		GroupedVotes: api.h.groupedVotes,
+		Governances:  api.h.governances,
+		GovHistory:   api.h.history,
 		NodeAddress:  api.h.nodeAddress,
 		MyVotes:      api.h.myVotes,
 	}
