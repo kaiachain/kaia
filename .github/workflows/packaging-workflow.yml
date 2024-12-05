@@ -66,7 +66,7 @@ jobs:
   tar-linux-amd64:
     runs-on: ubuntu-latest
     container:
-      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04
+      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
       credentials:
         username: ${{ env.DOCKER_LOGIN }}
         password: ${{ env.DOCKER_PASSWORD }}
@@ -105,7 +105,7 @@ jobs:
   tar-linux-arm64:
     runs-on: ['self-hosted', 'ARM64']
     container:
-      image: kaiachain/build_base:1.12-go.1.22.1-solc0.8.13-ubuntu-20.04-arm
+      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
       credentials:
         username: ${{ env.DOCKER_LOGIN }}
         password: ${{ env.DOCKER_PASSWORD }}
