@@ -280,7 +280,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 	}
 	if args.TypeInt.IsContractDeploy() || (args.TypeInt.IsEthereumTransaction() && *args.TypeInt != types.TxTypeEthereumSetCode) {
-		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
+		// contract deploy type and ethereum tx types except set code type allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
