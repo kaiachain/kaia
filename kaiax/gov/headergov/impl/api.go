@@ -63,8 +63,6 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", ErrInvalidKeyValue
 	}
 
-	// TODO-kaiax-gov: we don't know exactly when this vote will included. do we need to check the consistency here?
-	// original logic(ValidateVote in default.go) doesn't check the consistency here. remove checkConsistency from here.
 	err := api.h.checkConsistency(blockNumber+1, vote)
 	if err != nil {
 		return "", err
