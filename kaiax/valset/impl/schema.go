@@ -30,9 +30,6 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 }
 
 func readValsetVoteBlockNums(db database.Database) []uint64 {
-	mu.Lock()
-	defer mu.Unlock()
-
 	b, err := db.Get(valSetVoteBlockNumsKey)
 	if err != nil || len(b) == 0 {
 		return nil
@@ -59,9 +56,6 @@ func writeValsetVoteBlockNums(db database.Database, voteBlk uint64) error {
 		voteBlks = append(voteBlks, voteBlk)
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
 	b, err := json.Marshal(voteBlks)
 	if err != nil {
 		return err
@@ -73,6 +67,9 @@ func writeValsetVoteBlockNums(db database.Database, voteBlk uint64) error {
 }
 
 func readCouncil(db database.Database, num uint64) ([]common.Address, error) {
+	mu.RLock()
+	defer mu.RUnlock()
+
 	var (
 		voteBlocks = readValsetVoteBlockNums(db)
 		voteBlock  = uint64(0)
@@ -87,9 +84,6 @@ func readCouncil(db database.Database, num uint64) ([]common.Address, error) {
 			break
 		}
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	b, err := db.Get(councilKey(voteBlock))
 	if err != nil || len(b) == 0 {
@@ -107,15 +101,15 @@ func readCouncil(db database.Database, num uint64) ([]common.Address, error) {
 }
 
 func writeCouncil(db database.Database, voteBlk uint64, council []common.Address) error {
+	mu.Lock()
+	defer mu.Unlock()
+
 	copiedList := make([]common.Address, len(council))
 	copy(copiedList, council)
 
 	if err := writeValsetVoteBlockNums(db, voteBlk); err != nil {
 		return err
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	if voteBlk > 0 {
 		sort.Sort(valset.AddressList(copiedList))

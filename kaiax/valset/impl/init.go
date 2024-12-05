@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"sort"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -100,15 +101,15 @@ func (v *ValsetModule) Start() error {
 	)
 
 	// valSet initialization at genesis block
-	voteBlks := readValsetVoteBlockNums(v.ChainKv)
-	if voteBlks == nil {
+	_, err := readCouncil(v.ChainKv, 0)
+	if errors.Is(err, errEmptyVoteBlock) {
 		header := v.chain.GetHeaderByNumber(0)
 		if header == nil {
 			return errNilHeader
 		}
 		istanbulExtra, err := types.ExtractIstanbulExtra(header)
 		if err != nil {
-			return errExtractIstanbulExtra
+			return err
 		}
 		if err = writeCouncil(v.ChainKv, 0, istanbulExtra.Validators); err != nil {
 			return err
