@@ -109,4 +109,37 @@ func (r *BodyCompression) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// TODO-hyunsooda: Implement header compress RLP
+type HeaderCompression struct {
+	BlkNumber uint64
+	BlkHash   common.Hash
+	Header    *types.Header
+}
+
+type HeaderCompressionRLP struct {
+	BlkNumber uint64
+	BlkHash   common.Hash
+	Header    *types.Header
+}
+
+func (h *HeaderCompression) GetBlkNumber() uint64 {
+	return h.BlkNumber
+}
+
+func (h *HeaderCompression) GetBlkHash() common.Hash {
+	return h.BlkHash
+}
+
+func (h *HeaderCompression) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, &HeaderCompressionRLP{BlkNumber: h.BlkNumber, BlkHash: h.BlkHash, Header: h.Header})
+}
+
+func (h *HeaderCompression) DecodeRLP(s *rlp.Stream) error {
+	var dec HeaderCompressionRLP
+	if err := s.Decode(&dec); err != nil {
+		return err
+	}
+	h.BlkNumber = dec.BlkNumber
+	h.BlkHash = dec.BlkHash
+	h.Header = dec.Header
+	return nil
+}

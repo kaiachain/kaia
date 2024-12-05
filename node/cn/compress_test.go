@@ -14,6 +14,7 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/compress"
 	compress_bc "github.com/kaiachain/kaia/kaiax/compress/body"
+	compress_hc "github.com/kaiachain/kaia/kaiax/compress/header"
 	compress_interface "github.com/kaiachain/kaia/kaiax/compress/interface"
 	compress_rc "github.com/kaiachain/kaia/kaiax/compress/receipts"
 	"github.com/stretchr/testify/assert"
@@ -83,20 +84,23 @@ func setup(t *testing.T) (*blockchain.BlockChain, database.DBManager, error) {
 
 func TestCompress(t *testing.T) {
 	var (
-		copyTempDirRC         = "copy_receipts"
+		copyTempDirHC         = "copy_header"
 		copyTempDirBC         = "copy_body"
+		copyTempDirRC         = "copy_receipts"
 		bc, chainDB, setupErr = setup(t)
 		initOpts              = &compress.InitOpts{
 			Chain: bc,
 			Dbm:   chainDB,
 		}
-		mCompressRC = compress_rc.NewReceiptCompression()
+		mCompressHC = compress_hc.NewHeaderCompression()
 		mCompressBC = compress_bc.NewBodyCompression()
-		rcInitErr   = mCompressRC.Init(initOpts)
+		mCompressRC = compress_rc.NewReceiptCompression()
+		hcInitErr   = mCompressHC.Init(initOpts)
 		bcInitErr   = mCompressBC.Init(initOpts)
+		rcInitErr   = mCompressRC.Init(initOpts)
 	)
 
-	if err := errors.Join(setupErr, rcInitErr, bcInitErr); err != nil {
+	if err := errors.Join(setupErr, hcInitErr, bcInitErr, rcInitErr); err != nil {
 		// If no environment varaible set, do not execute compression test
 		// TODO-hyunsooda: Change this test to functional test and remove temp storage directory
 		if errors.Is(err, ERR_ENV_NOSET_DIR) || errors.Is(err, ERR_ENV_NOSET_NETWORK) {
@@ -108,6 +112,7 @@ func TestCompress(t *testing.T) {
 
 	from, to := uint64(0), uint64(3300)
 	// receipt compression test
-	assert.Nil(t, compress_interface.TestCompress(mCompressRC, database.ReceiptCompressType, chainDB.CompressReceipts, from, to, &from, copyTempDirRC))
+	assert.Nil(t, compress_interface.TestCompress(mCompressHC, database.HeaderCompressType, chainDB.CompressHeader, from, to, &from, copyTempDirHC))
 	assert.Nil(t, compress_interface.TestCompress(mCompressBC, database.BodyCompressType, chainDB.CompressBody, from, to, &from, copyTempDirBC))
+	assert.Nil(t, compress_interface.TestCompress(mCompressRC, database.ReceiptCompressType, chainDB.CompressReceipts, from, to, &from, copyTempDirRC))
 }

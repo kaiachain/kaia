@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	compress_common "github.com/kaiachain/kaia/kaiax/compress"
 	compress_bc "github.com/kaiachain/kaia/kaiax/compress/body"
+	compress_hc "github.com/kaiachain/kaia/kaiax/compress/header"
 	compress_rc "github.com/kaiachain/kaia/kaiax/compress/receipts"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
@@ -550,8 +551,9 @@ func (s *CN) SetupKaiaxModules() error {
 		mHeaderGov       = headergov_impl.NewHeaderGovModule()
 		mContractGov     = contractgov_impl.NewContractGovModule()
 		mGov             = gov_impl.NewGovModule()
-		mCompressRC      = compress_rc.NewReceiptCompression()
+		mCompressHC      = compress_hc.NewHeaderCompression()
 		mCompressBC      = compress_bc.NewBodyCompression()
+		mCompressRC      = compress_rc.NewReceiptCompression()
 		compressInitOpts = &compress_common.InitOpts{
 			Chain: s.blockchain,
 			Dbm:   s.chainDB,
@@ -593,8 +595,9 @@ func (s *CN) SetupKaiaxModules() error {
 			Cgm:   mContractGov,
 			Chain: s.blockchain,
 		}),
-		mCompressRC.Init(compressInitOpts),
+		mCompressHC.Init(compressInitOpts),
 		mCompressBC.Init(compressInitOpts),
+		mCompressRC.Init(compressInitOpts),
 	)
 	if err != nil {
 		return err
@@ -602,11 +605,11 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompressRC, mCompressBC)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompressHC, mCompressBC, mCompressRC)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompressRC, mCompressBC)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompressHC, mCompressBC, mCompressRC)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
 		engine.RegisterConsensusModule(mReward, mGov)

@@ -100,6 +100,7 @@ type DBManager interface {
 	ReadHeader(hash common.Hash, number uint64) *types.Header
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
 	WriteHeader(header *types.Header)
+	PutHeaderToBatch(batch Batch, hash common.Hash, number uint64, header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
 	ReadHeaderNumber(hash common.Hash) *uint64
 
@@ -316,18 +317,23 @@ type DBManager interface {
 	StartDBMigration(DBManager) error
 
 	// Compression (common)
-	CompressReceipts(from, to, headNumber uint64, migrationMode bool) (uint64, error)
-	CompressBody(from, to, headNumber uint64, migrationMode bool) (uint64, error)
 	WriteSubsequentCompressionBlkNumber(compressTyp CompressionType, number uint64)
 	ReadSubsequentCompressionBlkNumber(compressTyp CompressionType) uint64
 
-	// Compression (Receipts)
-	FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error)
-	DeleteReceiptsFromChunk(number uint64, blkHash common.Hash) error
+	// Compression (header)
+	CompressHeader(from, to, headNumber uint64, migrationMode bool) (uint64, error)
+	FindHeaderFromChunkWithBlkHash(number uint64, blkHash common.Hash) (*types.Header, error)
+	DeleteHeaderFromChunk(number uint64, blkHash common.Hash) error
 
 	// Compression (body)
+	CompressBody(from, to, headNumber uint64, migrationMode bool) (uint64, error)
 	FindTxFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Transaction, error)
 	DeleteBodyFromChunk(number uint64, blkHash common.Hash) error
+
+	// Compression (Receipts)
+	CompressReceipts(from, to, headNumber uint64, migrationMode bool) (uint64, error)
+	FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error)
+	DeleteReceiptsFromChunk(number uint64, blkHash common.Hash) error
 
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64)
@@ -353,6 +359,7 @@ const (
 	SnapshotDB
 	CompressReceiptsDB
 	CompressBodyDB
+	CompressHeaderDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -396,13 +403,14 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 	"snapshot",
 	"compress_receipts",
 	"compress_body",
+	"compress_header",
 }
 
 // Sum of dbConfigRatio should be 100.
 // Otherwise, logger.Crit will be called at checkDBEntryConfigRatio.
 var dbConfigRatio = [databaseEntryTypeSize]int{
 	2,  // MiscDB
-	5,  // headerDB
+	3,  // headerDB
 	3,  // BodyDB
 	3,  // ReceiptsDB
 	40, // StateTrieDB
@@ -412,6 +420,7 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	3,  // SnapshotDB
 	2,  // CompressReceiptsDB
 	2,  // CompressBodyDB
+	2,  // CompressHeaderDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1181,7 +1190,12 @@ func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.H
 
 	data := dbm.ReadHeaderRLP(hash, number)
 	if len(data) == 0 {
-		return nil
+		// Fallback: if header is not found from `header` directory, detour to compression directory
+		header, err := dbm.FindHeaderFromChunkWithBlkHash(number, hash)
+		if err != nil {
+			return nil
+		}
+		return header
 	}
 	header := new(types.Header)
 	if err := rlp.Decode(bytes.NewReader(data), header); err != nil {
@@ -1228,6 +1242,16 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	// Write to cache at the end of successful write.
 	dbm.cm.writeHeaderCache(hash, header)
 	dbm.cm.writeBlockNumberCache(hash, number)
+}
+
+func (dbm *databaseManager) PutHeaderToBatch(batch Batch, hash common.Hash, number uint64, header *types.Header) {
+	data, err := rlp.EncodeToBytes(header)
+	if err != nil {
+		logger.Crit("Failed to RLP encode header", "err", err)
+	}
+	if err := batch.Put(headerKey(number, hash), data); err != nil {
+		logger.Crit("Failed to store block header", "err", err)
+	}
 }
 
 // DeleteHeader removes all block header data associated with a hash.
@@ -1282,7 +1306,12 @@ func (dbm *databaseManager) ReadBody(hash common.Hash, number uint64) *types.Bod
 
 	data := dbm.ReadBodyRLP(hash, number)
 	if len(data) == 0 {
-		return nil
+		// Fallback: if body is not found from `body` directory, detour to compression directory
+		body, err := dbm.FindBodyFromChunkWithBlkHash(number, hash)
+		if err != nil {
+			return nil
+		}
+		return body
 	}
 	body := new(types.Body)
 	if err := rlp.Decode(bytes.NewReader(data), body); err != nil {
@@ -3229,23 +3258,15 @@ func (dbm *databaseManager) sanitizeRange(compressTyp CompressionType, from, to,
 	return from, to, err
 }
 
-func (dbm *databaseManager) removeOriginAfterCompress(compressTyp CompressionType, compressions []any) {
-	switch compressTyp {
-	case HeaderCompressType:
-		panic("TODO-hyunsooda: Implement me")
-	case BodyCompressType:
-		for _, c := range compressions {
-			bc := c.(*BodyCompression)
-			if bc != nil {
-				dbm.DeleteBody(bc.BlkHash, bc.BlkNumber)
-			}
-		}
-	case ReceiptCompressType:
-		for _, c := range compressions {
-			rc := c.(*ReceiptCompression)
-			if rc != nil {
-				dbm.DeleteReceipts(rc.BlkHash, rc.BlkNumber)
-			}
+func (dbm *databaseManager) removeOriginAfterCompress(compressions []any) {
+	for _, compressed := range compressions {
+		switch c := compressed.(type) {
+		case *HeaderCompression:
+			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
+		case *BodyCompression:
+			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
+		case *ReceiptCompression:
+			dbm.DeleteReceipts(c.BlkHash, c.BlkNumber)
 		}
 	}
 }
@@ -3291,7 +3312,11 @@ func (dbm *databaseManager) decompress(compressTyp CompressionType, from, to uin
 	}
 	switch compressTyp {
 	case HeaderCompressType:
-		panic("TODO-hyunsooda: Implement me")
+		var headerCompressions []*HeaderCompression
+		if err := rlp.DecodeBytes(decompressed, &headerCompressions); err != nil {
+			return nil, err
+		}
+		return headerCompressions, nil
 	case BodyCompressType:
 		var bodyCompressions []*BodyCompression
 		if err := rlp.DecodeBytes(decompressed, &bodyCompressions); err != nil {
@@ -3327,7 +3352,11 @@ func (dbm *databaseManager) compress(compressTyp CompressionType, readData func(
 		if data != nil {
 			switch compressTyp {
 			case HeaderCompressType:
-				panic("TODO-hyunsooda: Implement me")
+				compressions[itIdx] = &HeaderCompression{
+					BlkNumber: i,
+					BlkHash:   blkHash,
+					Header:    data.(*types.Header),
+				}
 			case BodyCompressType:
 				compressions[itIdx] = &BodyCompression{
 					BlkNumber: i,
@@ -3361,7 +3390,7 @@ func (dbm *databaseManager) compress(compressTyp CompressionType, readData func(
 	}
 
 	// TODO-hyunsooda: Recover me
-	// dbm.removeOriginAfterCompress(compressTyp, compressions[:itIdx])
+	// dbm.removeOriginAfterCompress( compressions[:itIdx])
 	return to, nil
 }
 
@@ -3547,6 +3576,9 @@ func (dbm *databaseManager) FindReceiptFromChunkWithTxHash(number uint64, txHash
 	if err != nil {
 		return nil, err
 	}
+	if decompressed == nil {
+		return nil, errors.New("[Receipt Compression] receipt not found")
+	}
 	return decompressed.(types.Receipts)[0], nil
 }
 
@@ -3555,6 +3587,9 @@ func (dbm *databaseManager) FindBodyFromChunkWithBlkHash(number uint64, blkHash 
 	decompressed, err := dbm.findDataFromChunk(BodyCompressType, dbm.compressedBodyFinder, number, blkHash, notFoundErr)
 	if err != nil {
 		return nil, err
+	}
+	if decompressed == nil {
+		return nil, errors.New("[Body Compression] body not found")
 	}
 	return decompressed.(*types.Body), nil
 }
@@ -3565,7 +3600,57 @@ func (dbm *databaseManager) FindTxFromChunkWithTxHash(number uint64, txHash comm
 	if err != nil {
 		return nil, err
 	}
+	if decompressed == nil {
+		return nil, errors.New("[Body Compression] body not found")
+	}
 	return decompressed.(types.Body).Transactions[0], nil
+}
+
+// TODO-hyunsooda: Implement me
+func (dbm *databaseManager) CompressHeader(from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+	readData := func(blkHash common.Hash, blkNumber uint64) any {
+		return dbm.ReadHeader(blkHash, blkNumber)
+	}
+	return dbm.compress(HeaderCompressType, readData, from, to, headNumber, migrationMode)
+}
+
+func (dbm *databaseManager) decompressHeader(from, to uint64) ([]*HeaderCompression, error) {
+	decompressed, err := dbm.decompress(HeaderCompressType, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.([]*HeaderCompression), nil
+}
+
+func (dbm *databaseManager) compressedHeaderFinder(from, to, number uint64, blkHash common.Hash) (any, error) {
+	// Find a chunk and decompress
+	headerCompressions, err := dbm.decompressHeader(from, to)
+	if err != nil {
+		return nil, err
+	}
+	// Make a `types.Receipt` struct and returns it`
+	for _, hc := range headerCompressions {
+		if hc.BlkHash == blkHash {
+			return hc.Header, nil
+		}
+	}
+	return nil, nil
+}
+
+func (dbm *databaseManager) FindHeaderFromChunkWithBlkHash(number uint64, blkHash common.Hash) (*types.Header, error) {
+	notFoundErr := fmt.Errorf("[Header Compression] Failed to find a header (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	decompressed, err := dbm.findDataFromChunk(HeaderCompressType, dbm.compressedHeaderFinder, number, blkHash, notFoundErr)
+	if err != nil {
+		return nil, err
+	}
+	if decompressed == nil {
+		return nil, errors.New("[Header Compression] header not found")
+	}
+	return decompressed.(*types.Header), nil
+}
+
+func (dbm *databaseManager) DeleteHeaderFromChunk(number uint64, blkHash common.Hash) error {
+	return dbm.deleteDataFromChunk(HeaderCompressType, dbm.decompressCommon, number, blkHash)
 }
 
 func TestCreateNewDB(dbConfig *DBConfig, dir string) (Batch, error) {

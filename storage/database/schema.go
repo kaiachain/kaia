@@ -371,6 +371,13 @@ func parseReceiptsCompressKey(key []byte) (uint64, uint64) {
 	return from, to
 }
 
+func getHeaderCompressKey(from, to uint64) []byte {
+	bFrom, bTo := make([]byte, 8), make([]byte, 8)
+	binary.BigEndian.PutUint64(bFrom, from)
+	binary.BigEndian.PutUint64(bTo, to)
+	return append(append(compressHeaderPrefix, bFrom...), bTo...)
+}
+
 func getCompressKey(from, to uint64, typ CompressionType) []byte {
 	bFrom, bTo := make([]byte, 8), make([]byte, 8)
 	binary.BigEndian.PutUint64(bFrom, from)
@@ -407,7 +414,7 @@ func parseCompressKey(typ CompressionType, key []byte) (uint64, uint64) {
 func getDBType(compressTyp CompressionType) DBEntryType {
 	switch compressTyp {
 	case HeaderCompressType:
-		panic("TODO-hyunsooda: Implement me")
+		return CompressHeaderDB
 	case BodyCompressType:
 		return CompressBodyDB
 	case ReceiptCompressType:
@@ -421,7 +428,7 @@ func getDBType(compressTyp CompressionType) DBEntryType {
 func getDBTypeWithCompressKey(compressTyp CompressionType, from, to uint64) (DBEntryType, []byte) {
 	switch compressTyp {
 	case HeaderCompressType:
-		panic("TODO-hyunsooda: Implement me")
+		return CompressHeaderDB, getHeaderCompressKey(from, to)
 	case BodyCompressType:
 		return CompressBodyDB, getBodyCompressKey(from, to)
 	case ReceiptCompressType:
@@ -434,7 +441,7 @@ func getDBTypeWithCompressKey(compressTyp CompressionType, from, to uint64) (DBE
 func getCompressPrefix(compressTyp CompressionType) []byte {
 	switch compressTyp {
 	case HeaderCompressType:
-		panic("TODO-hyunsooda: Implement me")
+		return compressHeaderPrefix
 	case BodyCompressType:
 		return compressBodyPrefix
 	case ReceiptCompressType:
