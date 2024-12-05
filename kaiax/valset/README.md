@@ -281,7 +281,7 @@ type committeeContext struct {
 - Dependencies:
   - ChainKv: Read/Write Voting blks and Council at valset voting blocks.
   - Chain: Get Header and config information from headerChain.
-  - HeaderGov: Get govParam from headerGov.
+  - Gov: Get govParam from gov module.
   - StakingInfo: Get block's staking info from stakingInfo.
 
 ### Start and stop
