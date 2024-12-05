@@ -134,6 +134,7 @@ const (
 
 	// 61~70
 	KaiaxGov
+	KaiaxCompress
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen

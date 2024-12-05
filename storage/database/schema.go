@@ -32,6 +32,26 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+type CompressionType uint8
+
+func (typ CompressionType) String() string {
+	switch typ {
+	case HeaderCompressType:
+		return "Header Compression"
+	case BodyCompressType:
+		return "Body Compression"
+	case ReceiptCompressType:
+		return "Receipts Compression"
+	}
+	return ""
+}
+
+const (
+	HeaderCompressType = iota
+	BodyCompressType
+	ReceiptCompressType
+)
+
 // The fields below define the low level database schema prefixing.
 var (
 	// databaseVerisionKey tracks the current database version.
@@ -88,8 +108,12 @@ var (
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
 
-	nextCompressionNumberPrefix = []byte("NextCompression-")
-	compressReceiptPrefix       = []byte("CompressReceipt-")
+	nextCompressionNumberPrefix         = []byte("NextCompression-")
+	nextReceiptsCompressionNumberPrefix = []byte("NextCompression-Receipts-")
+	nextBodyCompressionNumberPrefix     = []byte("NextCompression-Body-")
+	compressHeaderPrefix                = []byte("CompressHeader-")
+	compressReceiptPrefix               = []byte("CompressReceipt-")
+	compressBodyPrefix                  = []byte("CompressBody-")
 
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
@@ -303,20 +327,6 @@ func parsePruningMarkKey(key []byte) PruningMark {
 	}
 }
 
-func receiptCompressKey(from, to uint64) []byte {
-	bFrom, bTo := make([]byte, 8), make([]byte, 8)
-	binary.BigEndian.PutUint64(bFrom, from)
-	binary.BigEndian.PutUint64(bTo, to)
-	return append(append(compressReceiptPrefix, bFrom...), bTo...)
-}
-
-func parseReceiptCompressKey(key []byte) (uint64, uint64) {
-	prefixLen := len(compressReceiptPrefix)
-	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
-	to := binary.BigEndian.Uint64(key[prefixLen+8:])
-	return from, to
-}
-
 type SupplyCheckpoint struct {
 	Minted   *big.Int
 	BurntFee *big.Int
@@ -331,4 +341,105 @@ func (c *SupplyCheckpoint) Copy() *SupplyCheckpoint {
 
 func supplyCheckpointKey(blockNumber uint64) []byte {
 	return append(supplyCheckpointPrefix, common.Int64ToByteBigEndian(blockNumber)...)
+}
+
+func getBodyCompressKey(from, to uint64) []byte {
+	bFrom, bTo := make([]byte, 8), make([]byte, 8)
+	binary.BigEndian.PutUint64(bFrom, from)
+	binary.BigEndian.PutUint64(bTo, to)
+	return append(append(compressBodyPrefix, bFrom...), bTo...)
+}
+
+func parseBodyCompressKey(key []byte) (uint64, uint64) {
+	prefixLen := len(compressBodyPrefix)
+	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
+	to := binary.BigEndian.Uint64(key[prefixLen+8:])
+	return from, to
+}
+
+func getReceiptsCompressKey(from, to uint64) []byte {
+	bFrom, bTo := make([]byte, 8), make([]byte, 8)
+	binary.BigEndian.PutUint64(bFrom, from)
+	binary.BigEndian.PutUint64(bTo, to)
+	return append(append(compressReceiptPrefix, bFrom...), bTo...)
+}
+
+func parseReceiptsCompressKey(key []byte) (uint64, uint64) {
+	prefixLen := len(compressReceiptPrefix)
+	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
+	to := binary.BigEndian.Uint64(key[prefixLen+8:])
+	return from, to
+}
+
+func getCompressKey(from, to uint64, typ CompressionType) []byte {
+	bFrom, bTo := make([]byte, 8), make([]byte, 8)
+	binary.BigEndian.PutUint64(bFrom, from)
+	binary.BigEndian.PutUint64(bTo, to)
+
+	var prefix []byte
+	switch typ {
+	case HeaderCompressType:
+		prefix = compressHeaderPrefix
+	case BodyCompressType:
+		prefix = compressBodyPrefix
+	case ReceiptCompressType:
+		prefix = compressReceiptPrefix
+	}
+	return append(append(prefix, bFrom...), bTo...)
+}
+
+func parseCompressKey(typ CompressionType, key []byte) (uint64, uint64) {
+	var prefixLen int
+	switch typ {
+	case HeaderCompressType:
+		prefixLen = len(compressHeaderPrefix)
+	case BodyCompressType:
+		prefixLen = len(compressBodyPrefix)
+	case ReceiptCompressType:
+		prefixLen = len(compressReceiptPrefix)
+	}
+
+	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
+	to := binary.BigEndian.Uint64(key[prefixLen+8:])
+	return from, to
+}
+
+func getDBType(compressTyp CompressionType) DBEntryType {
+	switch compressTyp {
+	case HeaderCompressType:
+		panic("TODO-hyunsooda: Implement me")
+	case BodyCompressType:
+		return CompressBodyDB
+	case ReceiptCompressType:
+		return CompressReceiptsDB
+	default:
+		panic("unreachable")
+	}
+}
+
+// getDBType returns db type,  and compress key
+func getDBTypeWithCompressKey(compressTyp CompressionType, from, to uint64) (DBEntryType, []byte) {
+	switch compressTyp {
+	case HeaderCompressType:
+		panic("TODO-hyunsooda: Implement me")
+	case BodyCompressType:
+		return CompressBodyDB, getBodyCompressKey(from, to)
+	case ReceiptCompressType:
+		return CompressReceiptsDB, getReceiptsCompressKey(from, to)
+	default:
+		panic("unreachable")
+	}
+}
+
+func getCompressPrefix(compressTyp CompressionType) []byte {
+	switch compressTyp {
+	case HeaderCompressType:
+		panic("TODO-hyunsooda: Implement me")
+	case BodyCompressType:
+		return compressBodyPrefix
+	case ReceiptCompressType:
+		return compressReceiptPrefix
+	default:
+		panic("unreachable")
+	}
 }

@@ -48,6 +48,9 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	compress_common "github.com/kaiachain/kaia/kaiax/compress"
+	compress_bc "github.com/kaiachain/kaia/kaiax/compress/body"
+	compress_rc "github.com/kaiachain/kaia/kaiax/compress/receipts"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -464,38 +467,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if config.DBType == database.RocksDB && config.RocksDBConfig.Secondary {
 		go cn.blockchain.CurrentBlockUpdateLoop(cn.txPool.(*blockchain.TxPool))
 	}
-
-	go func() {
-		// TODO-hyunsooda: I'd like to place compression calls in `PostInsertBlock`, but there seems no appropriate place
-		for {
-			var (
-				curBlkNum             = cn.blockchain.CurrentBlock().NumberU64()
-				residualBlkCnt        = curBlkNum % database.CompressMigrationThreshold
-				nextCompressionBlkNum = cn.chainDB.ReadSubsequentBlkNumber()
-				// Do not wait if next compression block number is far awway. Start migration right now
-				noWait = curBlkNum > nextCompressionBlkNum && curBlkNum-nextCompressionBlkNum > database.CompressMigrationThreshold
-			)
-
-			if residualBlkCnt != 0 && !noWait {
-				time.Sleep(time.Second * time.Duration(database.CompressMigrationThreshold-residualBlkCnt))
-				continue
-			}
-			from, to := uint64(0), uint64(0)
-			for {
-				subsequentBlkNumber, err := cn.chainDB.CompressReceipts(from, to, true)
-				if err != nil {
-					logger.Warn("[Compression] failed to compress receipts", "err", err)
-					break
-				}
-				if subsequentBlkNumber > curBlkNum {
-					logger.Info("[Compression] compression is completed")
-					break
-				}
-				from = subsequentBlkNumber
-			}
-
-		}
-	}()
 	return cn, nil
 }
 
@@ -573,12 +544,18 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking     = staking_impl.NewStakingModule()
-		mReward      = reward_impl.NewRewardModule()
-		mSupply      = supply_impl.NewSupplyModule()
-		mHeaderGov   = headergov_impl.NewHeaderGovModule()
-		mContractGov = contractgov_impl.NewContractGovModule()
-		mGov         = gov_impl.NewGovModule()
+		mStaking         = staking_impl.NewStakingModule()
+		mReward          = reward_impl.NewRewardModule()
+		mSupply          = supply_impl.NewSupplyModule()
+		mHeaderGov       = headergov_impl.NewHeaderGovModule()
+		mContractGov     = contractgov_impl.NewContractGovModule()
+		mGov             = gov_impl.NewGovModule()
+		mCompressRC      = compress_rc.NewReceiptCompression()
+		mCompressBC      = compress_bc.NewBodyCompression()
+		compressInitOpts = &compress_common.InitOpts{
+			Chain: s.blockchain,
+			Dbm:   s.chainDB,
+		}
 	)
 
 	// Initialize modules
@@ -616,6 +593,8 @@ func (s *CN) SetupKaiaxModules() error {
 			Cgm:   mContractGov,
 			Chain: s.blockchain,
 		}),
+		mCompressRC.Init(compressInitOpts),
+		mCompressBC.Init(compressInitOpts),
 	)
 	if err != nil {
 		return err
@@ -623,11 +602,11 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompressRC, mCompressBC)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompressRC, mCompressBC)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
 		engine.RegisterConsensusModule(mReward, mGov)

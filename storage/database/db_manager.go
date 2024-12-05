@@ -123,12 +123,6 @@ type DBManager interface {
 	WriteReceipts(hash common.Hash, number uint64, receipts types.Receipts)
 	PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts)
 	DeleteReceipts(hash common.Hash, number uint64)
-	CompressReceipts(from, to uint64, migrationMode bool) (uint64, error)
-	FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error)
-
-	// TODO-hyunsooda: Remove `WriteSubsequentBlkNumber`
-	WriteSubsequentBlkNumber(number uint64)
-	ReadSubsequentBlkNumber() uint64
 
 	ReadBlock(hash common.Hash, number uint64) *types.Block
 	ReadBlockByHash(hash common.Hash) *types.Block
@@ -321,6 +315,20 @@ type DBManager interface {
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
+	// Compression (common)
+	CompressReceipts(from, to, headNumber uint64, migrationMode bool) (uint64, error)
+	CompressBody(from, to, headNumber uint64, migrationMode bool) (uint64, error)
+	WriteSubsequentCompressionBlkNumber(compressTyp CompressionType, number uint64)
+	ReadSubsequentCompressionBlkNumber(compressTyp CompressionType) uint64
+
+	// Compression (Receipts)
+	FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error)
+	DeleteReceiptsFromChunk(number uint64, blkHash common.Hash) error
+
+	// Compression (body)
+	FindTxFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Transaction, error)
+	DeleteBodyFromChunk(number uint64, blkHash common.Hash) error
+
 	// ChainDataFetcher checkpoint function
 	WriteChainDataFetcherCheckpoint(checkpoint uint64)
 	ReadChainDataFetcherCheckpoint() (uint64, error)
@@ -344,6 +352,7 @@ const (
 	bridgeServiceDB
 	SnapshotDB
 	CompressReceiptsDB
+	CompressBodyDB
 	// databaseEntryTypeSize should be the last item in this list!!
 	databaseEntryTypeSize
 )
@@ -386,6 +395,7 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 	"bridgeservice",
 	"snapshot",
 	"compress_receipts",
+	"compress_body",
 }
 
 // Sum of dbConfigRatio should be 100.
@@ -393,7 +403,7 @@ var dbBaseDirs = [databaseEntryTypeSize]string{
 var dbConfigRatio = [databaseEntryTypeSize]int{
 	2,  // MiscDB
 	5,  // headerDB
-	5,  // BodyDB
+	3,  // BodyDB
 	3,  // ReceiptsDB
 	40, // StateTrieDB
 	37, // StateTrieMigrationDB
@@ -401,6 +411,7 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 	1,  // bridgeServiceDB
 	3,  // SnapshotDB
 	2,  // CompressReceiptsDB
+	2,  // CompressBodyDB
 }
 
 // checkDBEntryConfigRatio checks if sum of dbConfigRatio is 100.
@@ -1388,32 +1399,6 @@ func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 	dbm.cm.deleteBodyCache(hash)
 }
 
-func (dbm *databaseManager) ReadSubsequentBlkNumber() uint64 {
-	db := dbm.getDatabase(MiscDB)
-	data, _ := db.Get(nextCompressionNumberPrefix)
-	if len(data) == 0 {
-		return 0
-	}
-	var nextCompressionNumber uint64
-	if err := rlp.Decode(bytes.NewReader(data), &nextCompressionNumber); err != nil {
-		logger.Error("Invalid subsequent block number RLP", "err", err)
-		return 0
-	}
-
-	return nextCompressionNumber
-}
-
-func (dbm *databaseManager) WriteSubsequentBlkNumber(number uint64) {
-	db := dbm.getDatabase(MiscDB)
-	data, err := rlp.EncodeToBytes(&number)
-	if err != nil {
-		logger.Crit("Failed to RLP encode block number of subsequent compression", "err", err)
-	}
-	if err := db.Put(nextCompressionNumberPrefix, data); err != nil {
-		logger.Crit("Failed to store block number of subsequent compression number", "err", err)
-	}
-}
-
 // TotalDifficulty operations.
 // ReadTd retrieves a block's total blockscore corresponding to the hash.
 func (dbm *databaseManager) ReadTd(hash common.Hash, number uint64) *big.Int {
@@ -1523,143 +1508,6 @@ func (dbm *databaseManager) WriteReceipts(hash common.Hash, number uint64, recei
 	db := dbm.getDatabase(ReceiptsDB)
 	// When putReceiptsToPutter is called from WriteReceipts, txReceipt is cached.
 	dbm.putReceiptsToPutter(db, hash, number, receipts, true)
-}
-
-func (dbm *databaseManager) CompressReceipts(from, to uint64, migrationMode bool) (uint64, error) {
-	if from == 0 {
-		from = dbm.ReadSubsequentBlkNumber()
-	}
-	if to == 0 {
-		to = from + uint64(CompressMigrationThreshold)
-	}
-	// input validation
-	if from > to {
-		return 0, fmt.Errorf("[Receipt Compression] from(%d) must be greater than to(%d)", from, to)
-	}
-
-	itIdx := 0
-	receiptCompressions := make([]*ReceiptCompression, to-from)
-	// migration loop
-	for i := from; i < to; i++ {
-		blkHash := dbm.ReadCanonicalHash(i)
-		if common.EmptyHash(blkHash) {
-			return 0, fmt.Errorf("[Receipt Compression] Block does not exist (hash=%s)", blkHash.String())
-		}
-		receipts := dbm.ReadReceipts(blkHash, i)
-		if receipts == nil || len(receipts) == 0 {
-			continue
-		}
-
-		storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
-		for i, receipt := range receipts {
-			storageReceipts[i] = (*types.ReceiptForStorage)(receipt)
-		}
-		receiptCompressions[itIdx] = &ReceiptCompression{
-			number:          i,
-			blkHash:         blkHash,
-			storageReceipts: storageReceipts,
-		}
-		itIdx++
-	}
-	if itIdx == 0 {
-		return to, nil
-	}
-	bytes, err := rlp.EncodeToBytes(receiptCompressions[:itIdx])
-	if err != nil {
-		return 0, err
-	}
-
-	// Store compressed receipts (range `from` to `to`)
-	db := dbm.getDatabase(CompressReceiptsDB)
-	compressed := Compress(bytes)
-	if err := db.Put(receiptCompressKey(from, to), compressed); err != nil {
-		logger.Crit("Failed to store compressed receipts")
-	}
-
-	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
-	// API1: Return all pair of comprression range for each type(header, tx, receipt)
-	// API2: Return a next compression target number for each type(header, tx, receipt)
-	if migrationMode {
-		dbm.WriteSubsequentBlkNumber(to)
-	}
-
-	dbm.removeReceiptsAfterCompress(receiptCompressions)
-	return to, nil
-}
-
-func (dbm *databaseManager) uncompressReceipts(from, to uint64) ([]*ReceiptCompression, error) {
-	db := dbm.getDatabase(CompressReceiptsDB)
-	data, _ := db.Get(receiptCompressKey(from, to))
-	decompressed, err := Decompress(data)
-	if err != nil {
-		return nil, err
-	}
-	var receiptCompressions []*ReceiptCompression
-	if err := rlp.DecodeBytes(decompressed, &receiptCompressions); err != nil {
-		return nil, err
-	}
-	return receiptCompressions, nil
-}
-
-func (dbm *databaseManager) removeReceiptsAfterCompress(receiptCompressions []*ReceiptCompression) {
-	for _, rc := range receiptCompressions {
-		if rc != nil {
-			dbm.DeleteReceipts(rc.blkHash, rc.number)
-		}
-	}
-}
-
-func (dbm *databaseManager) FindReceiptFromChunk(number uint64, blkOrTxHash common.Hash, ifErr error) (types.Receipts, error) {
-	// Badger DB does not support `NewIterator()`
-	if dbm.GetDBConfig().DBType == BadgerDB {
-		return nil, nil
-	}
-
-	// 1. Find a chunk through range search
-	it := dbm.getDatabase(CompressReceiptsDB).NewIterator(compressReceiptPrefix, nil)
-	defer it.Release()
-	for it.Next() {
-		from, to := parseReceiptCompressKey(it.Key())
-		if from <= number && number <= to {
-			// 2. Find a chunk and decompress
-			receiptCompressions, err := dbm.uncompressReceipts(from, to)
-			if err != nil {
-				return nil, err
-			}
-			// 3. Make a `types.Receipt` struct and returns it`
-			for _, rc := range receiptCompressions {
-				if rc.blkHash == blkOrTxHash {
-					receipts := make(types.Receipts, len(rc.storageReceipts))
-					for idx, receipt := range rc.storageReceipts {
-						receipts[idx] = (*types.Receipt)(receipt)
-					}
-					return receipts, nil
-				}
-				if rc.number == number {
-					for _, receipt := range rc.storageReceipts {
-						if receipt.TxHash == blkOrTxHash {
-							return types.Receipts{(*types.Receipt)(receipt)}, nil
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil, ifErr
-}
-
-func (dbm *databaseManager) FindReceiptsFromChunkWithBlkHash(number uint64, blkHash common.Hash) (types.Receipts, error) {
-	ifErr := fmt.Errorf("[Receipt Compression] Failed to find receipts (blkNumber= %d, blkHash=%s)", number, blkHash.String())
-	return dbm.FindReceiptFromChunk(number, blkHash, ifErr)
-}
-
-func (dbm *databaseManager) FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error) {
-	ifErr := fmt.Errorf("[Receipt Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
-	receipts, err := dbm.FindReceiptFromChunk(number, txHash, ifErr)
-	if err != nil {
-		return nil, err
-	}
-	return receipts[0], nil
 }
 
 func (dbm *databaseManager) PutReceiptsToBatch(batch Batch, hash common.Hash, number uint64, receipts types.Receipts) {
@@ -3329,4 +3177,404 @@ func deleteSnapshotRecoveryNumber(db KeyValueWriter) {
 	if err := db.Delete(snapshotRecoveryKey); err != nil {
 		logger.Crit("Failed to remove snapshot recovery number", "err", err)
 	}
+}
+
+// ///////////// Compresssion ///////////////
+func (dbm *databaseManager) ReadSubsequentCompressionBlkNumber(compressTyp CompressionType) uint64 {
+	var (
+		prefix  = getCompressPrefix(compressTyp)
+		db      = dbm.getDatabase(MiscDB)
+		data, _ = db.Get(prefix)
+	)
+	if len(data) == 0 {
+		return 0
+	}
+	var nextCompressionNumber uint64
+	if err := rlp.Decode(bytes.NewReader(data), &nextCompressionNumber); err != nil {
+		logger.Error("Invalid subsequent block number RLP", "err", err)
+		return 0
+	}
+	return nextCompressionNumber
+}
+
+func (dbm *databaseManager) WriteSubsequentCompressionBlkNumber(compressTyp CompressionType, number uint64) {
+	prefix := getCompressPrefix(compressTyp)
+	data, err := rlp.EncodeToBytes(&number)
+	if err != nil {
+		logger.Crit("Failed to RLP encode block number of subsequent compression", "err", err)
+	}
+	db := dbm.getDatabase(MiscDB)
+	if err := db.Put(prefix, data); err != nil {
+		logger.Crit("Failed to store block number of subsequent compression number", "err", err)
+	}
+}
+
+func (dbm *databaseManager) sanitizeRange(compressTyp CompressionType, from, to, headNumber uint64) (uint64, uint64, error) {
+	var err error
+	if from == 0 {
+		from = dbm.ReadSubsequentCompressionBlkNumber(compressTyp)
+	}
+	if to == 0 {
+		nextRange := from + uint64(CompressMigrationThreshold)
+		if headNumber < nextRange {
+			to = headNumber
+		} else {
+			to = nextRange
+		}
+	}
+	// input validation
+	if from > to {
+		err = fmt.Errorf("[%s] from(%d) must be greater than to(%d)", compressTyp.String(), from, to)
+	}
+	return from, to, err
+}
+
+func (dbm *databaseManager) removeOriginAfterCompress(compressTyp CompressionType, compressions []any) {
+	switch compressTyp {
+	case HeaderCompressType:
+		panic("TODO-hyunsooda: Implement me")
+	case BodyCompressType:
+		for _, c := range compressions {
+			bc := c.(*BodyCompression)
+			if bc != nil {
+				dbm.DeleteBody(bc.BlkHash, bc.BlkNumber)
+			}
+		}
+	case ReceiptCompressType:
+		for _, c := range compressions {
+			rc := c.(*ReceiptCompression)
+			if rc != nil {
+				dbm.DeleteReceipts(rc.BlkHash, rc.BlkNumber)
+			}
+		}
+	}
+}
+
+func (dbm *databaseManager) findDataFromChunk(compressTyp CompressionType, finder Finder, number uint64, blkOrTxHash common.Hash, notFoundErr error) (any, error) {
+	// Badger DB does not support `NewIterator()`
+	if dbm.GetDBConfig().DBType == BadgerDB {
+		return nil, nil
+	}
+	var (
+		dbType       = getDBType(compressTyp)
+		prefix       = getCompressPrefix(compressTyp)
+		it           = dbm.getDatabase(dbType).NewIterator(prefix, nil)
+		decompressed any
+		err          error
+	)
+	// 1. Find a chunk through range search
+	defer it.Release()
+	for it.Next() {
+		from, to := parseCompressKey(compressTyp, it.Key())
+		if from <= number && number <= to {
+			decompressed, err = finder(from, to, number, blkOrTxHash)
+			if err != nil {
+				return nil, err
+			}
+			if decompressed != nil {
+				return decompressed, nil
+			}
+		}
+	}
+	return nil, notFoundErr
+}
+
+func (dbm *databaseManager) decompress(compressTyp CompressionType, from, to uint64) (any, error) {
+	var (
+		dbType, compressKey = getDBTypeWithCompressKey(compressTyp, from, to)
+		db                  = dbm.getDatabase(dbType)
+		data, _             = db.Get(compressKey)
+	)
+	decompressed, err := Decompress(data)
+	if err != nil {
+		return nil, err
+	}
+	switch compressTyp {
+	case HeaderCompressType:
+		panic("TODO-hyunsooda: Implement me")
+	case BodyCompressType:
+		var bodyCompressions []*BodyCompression
+		if err := rlp.DecodeBytes(decompressed, &bodyCompressions); err != nil {
+			return nil, err
+		}
+		return bodyCompressions, nil
+	case ReceiptCompressType:
+		var receiptCompressions []*ReceiptCompression
+		if err := rlp.DecodeBytes(decompressed, &receiptCompressions); err != nil {
+			return nil, err
+		}
+		return receiptCompressions, nil
+	default:
+		panic("unreachable in decompression")
+	}
+}
+
+func (dbm *databaseManager) compress(compressTyp CompressionType, readData func(common.Hash, uint64) any, from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+	from, to, err := dbm.sanitizeRange(compressTyp, from, to, headNumber)
+	if err != nil {
+		return 0, err
+	}
+
+	itIdx := 0
+	compressions := make([]any, to-from)
+	// migration loop
+	for i := from; i < to; i++ {
+		blkHash := dbm.ReadCanonicalHash(i)
+		if common.EmptyHash(blkHash) {
+			return 0, fmt.Errorf("[Receipt Compression] Block does not exist (number=%d)", i)
+		}
+		data := readData(blkHash, i)
+		if data != nil {
+			switch compressTyp {
+			case HeaderCompressType:
+				panic("TODO-hyunsooda: Implement me")
+			case BodyCompressType:
+				compressions[itIdx] = &BodyCompression{
+					BlkNumber: i,
+					BlkHash:   blkHash,
+					Body:      data.(*types.Body),
+				}
+			case ReceiptCompressType:
+				compressions[itIdx] = &ReceiptCompression{
+					BlkNumber:       i,
+					BlkHash:         blkHash,
+					StorageReceipts: data.([]*types.ReceiptForStorage),
+				}
+			}
+			itIdx++
+		}
+	}
+	if itIdx == 0 {
+		return to, nil
+	}
+	bytes, err := rlp.EncodeToBytes(compressions[:itIdx])
+	if err != nil {
+		return 0, err
+	}
+
+	dbm.writeCompression(compressTyp, bytes, from, to)
+	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
+	// API1: Return all pair of comprression range for each type(header, tx, receipt)
+	// API2: Return a next compression target number for each type(header, tx, receipt)
+	if migrationMode {
+		dbm.WriteSubsequentCompressionBlkNumber(compressTyp, to)
+	}
+
+	// TODO-hyunsooda: Recover me
+	// dbm.removeOriginAfterCompress(compressTyp, compressions[:itIdx])
+	return to, nil
+}
+
+func (dbm *databaseManager) writeCompression(compressTyp CompressionType, compressedBytes []byte, from, to uint64) int {
+	dbType, compressKey := getDBTypeWithCompressKey(compressTyp, from, to)
+
+	// Store compressed receipts (range `from` to `to`)
+	db := dbm.getDatabase(dbType)
+	compressed := Compress(compressedBytes)
+	if err := db.Put(compressKey, compressed); err != nil {
+		logger.Crit("Failed to store compressed receipts")
+	}
+	return len(compressed)
+}
+
+func (dbm *databaseManager) CompressBody(from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+	readData := func(blkHash common.Hash, blkNumber uint64) any {
+		body := dbm.ReadBody(blkHash, blkNumber)
+		if body == nil || len(body.Transactions) == 0 {
+			return nil
+		}
+		return body
+	}
+	return dbm.compress(BodyCompressType, readData, from, to, headNumber, migrationMode)
+}
+
+func (dbm *databaseManager) CompressReceipts(from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+	readData := func(blkHash common.Hash, blkNumber uint64) any {
+		receipts := dbm.ReadReceipts(blkHash, blkNumber)
+		if receipts == nil || len(receipts) == 0 {
+			return nil
+		}
+		storageReceipts := make([]*types.ReceiptForStorage, len(receipts))
+		for number, receipt := range receipts {
+			storageReceipts[number] = (*types.ReceiptForStorage)(receipt)
+		}
+		return storageReceipts
+	}
+	return dbm.compress(ReceiptCompressType, readData, from, to, headNumber, migrationMode)
+}
+
+func (dbm *databaseManager) decompressCommon(compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error) {
+	decompressed, err := dbm.decompress(compressTyp, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.([]CompressStructTyp), nil
+}
+
+func (dbm *databaseManager) decompressBody(from, to uint64) ([]*BodyCompression, error) {
+	decompressed, err := dbm.decompress(BodyCompressType, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.([]*BodyCompression), nil
+}
+
+func (dbm *databaseManager) decompressReceipts(from, to uint64) ([]*ReceiptCompression, error) {
+	decompressed, err := dbm.decompress(ReceiptCompressType, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.([]*ReceiptCompression), nil
+}
+
+func (dbm *databaseManager) recompress(compressions []CompressStructTyp, compressTyp CompressionType, from, to uint64, blkHash common.Hash) error {
+	for idx, rc := range compressions {
+		if rc.GetBlkHash() == blkHash {
+			newCompressions := append(compressions[:idx], compressions[idx+1:]...)
+			bytes, err := rlp.EncodeToBytes(newCompressions)
+			if err != nil {
+				return err
+			}
+			// Write to the same key (overwrite)
+			dbm.writeCompression(compressTyp, bytes, from, to)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (dbm *databaseManager) deleteDataFromChunk(compressTyp CompressionType, decompressFn DecompressFn, number uint64, blkHash common.Hash) error {
+	// Badger DB does not support `NewIterator()`
+	if dbm.GetDBConfig().DBType == BadgerDB {
+		return nil
+	}
+
+	var (
+		dbType = getDBType(compressTyp)
+		prefix = getCompressPrefix(compressTyp)
+	)
+	// 1. Find a chunk through range search
+	it := dbm.getDatabase(dbType).NewIterator(prefix, nil)
+	defer it.Release()
+	for it.Next() {
+		from, to := parseCompressKey(compressTyp, it.Key())
+		if from <= number && number <= to {
+			// 2. Once a find chunk, decompress it
+			compressions, err := decompressFn(compressTyp, from, to)
+			if err != nil {
+				return err
+			}
+			// 3. Recompress except for the target data to be deleted
+			if err := dbm.recompress(compressions, compressTyp, from, to, blkHash); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (dbm *databaseManager) DeleteBodyFromChunk(number uint64, blkHash common.Hash) error {
+	return dbm.deleteDataFromChunk(BodyCompressType, dbm.decompressCommon, number, blkHash)
+}
+
+func (dbm *databaseManager) DeleteReceiptsFromChunk(number uint64, blkHash common.Hash) error {
+	return dbm.deleteDataFromChunk(ReceiptCompressType, dbm.decompressCommon, number, blkHash)
+}
+
+func (dbm *databaseManager) compressedBodyFinder(from, to, number uint64, blkOrTxHash common.Hash) (any, error) {
+	// Find a chunk and decompress
+	bodyCompressions, err := dbm.decompressBody(from, to)
+	if err != nil {
+		return nil, err
+	}
+	// Make a `types.Receipt` struct and returns it`
+	for _, bc := range bodyCompressions {
+		if bc.BlkHash == blkOrTxHash {
+			return bc.Body, nil
+		}
+		if bc.BlkNumber == number {
+			for _, tx := range bc.Body.Transactions {
+				if tx.Hash() == blkOrTxHash {
+					return types.Body{Transactions: []*types.Transaction{tx}}, nil
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (dbm *databaseManager) compressedReceiptFinder(from, to, number uint64, blkOrTxHash common.Hash) (any, error) {
+	// Find a chunk and decompress
+	receiptCompressions, err := dbm.decompressReceipts(from, to)
+	if err != nil {
+		return nil, err
+	}
+	// Make a `types.Receipt` struct and returns it`
+	for _, rc := range receiptCompressions {
+		if rc.BlkHash == blkOrTxHash {
+			receipts := make(types.Receipts, len(rc.StorageReceipts))
+			for idx, receipt := range rc.StorageReceipts {
+				receipts[idx] = (*types.Receipt)(receipt)
+			}
+			return receipts, nil
+		}
+		if rc.BlkNumber == number {
+			for _, receipt := range rc.StorageReceipts {
+				if receipt.TxHash == blkOrTxHash {
+					return types.Receipts{(*types.Receipt)(receipt)}, nil
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (dbm *databaseManager) FindReceiptsFromChunkWithBlkHash(number uint64, blkHash common.Hash) (types.Receipts, error) {
+	notFoundErr := fmt.Errorf("[Receipt Compression] Failed to find receipts (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	decompressed, err := dbm.findDataFromChunk(ReceiptCompressType, dbm.compressedReceiptFinder, number, blkHash, notFoundErr)
+	if err != nil {
+		return nil, err
+	}
+	if decompressed == nil {
+		return nil, errors.New("[Receipt Compression] receipt not found")
+	}
+	return decompressed.(types.Receipts), nil
+}
+
+func (dbm *databaseManager) FindReceiptFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Receipt, error) {
+	notFoundErr := fmt.Errorf("[Receipt Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
+	decompressed, err := dbm.findDataFromChunk(ReceiptCompressType, dbm.compressedReceiptFinder, number, txHash, notFoundErr)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.(types.Receipts)[0], nil
+}
+
+func (dbm *databaseManager) FindBodyFromChunkWithBlkHash(number uint64, blkHash common.Hash) (*types.Body, error) {
+	notFoundErr := fmt.Errorf("[Body Compression] Failed to find transactions (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	decompressed, err := dbm.findDataFromChunk(BodyCompressType, dbm.compressedBodyFinder, number, blkHash, notFoundErr)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.(*types.Body), nil
+}
+
+func (dbm *databaseManager) FindTxFromChunkWithTxHash(number uint64, txHash common.Hash) (*types.Transaction, error) {
+	notFoundErr := fmt.Errorf("[Body Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
+	decompressed, err := dbm.findDataFromChunk(BodyCompressType, dbm.compressedBodyFinder, number, txHash, notFoundErr)
+	if err != nil {
+		return nil, err
+	}
+	return decompressed.(types.Body).Transactions[0], nil
+}
+
+func TestCreateNewDB(dbConfig *DBConfig, dir string) (Batch, error) {
+	entryType := databaseEntryTypeSize + 1
+	newDBC := *dbConfig
+	newDBC.Dir = dir
+	db, err := newDatabase(&newDBC, entryType)
+	if err != nil {
+		return nil, err
+	}
+	return db.NewBatch(), nil
 }
