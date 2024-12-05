@@ -109,11 +109,11 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 		switch vote.Name() {
 		case gov.AddValidator:
 			if idx == -1 {
-				c = append(c, address)
+				c.Push(address)
 			}
 		case gov.RemoveValidator:
 			if idx != -1 {
-				c = append(c[:idx], c[idx+1:]...)
+				c.Pop(idx)
 			}
 		default:
 			return nil, nil

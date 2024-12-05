@@ -22,6 +22,14 @@ func (sc AddressList) Swap(i, j int) {
 	sc[i], sc[j] = sc[j], sc[i]
 }
 
+func (sc *AddressList) Push(address common.Address) {
+	*sc = append(*sc, address)
+}
+
+func (sc *AddressList) Pop(idx int) {
+	*sc = append((*sc)[:idx], (*sc)[idx+1:]...)
+}
+
 func (sc AddressList) AddressStringList() []string {
 	stringAddrs := make([]string, len(sc))
 	for _, val := range sc {
