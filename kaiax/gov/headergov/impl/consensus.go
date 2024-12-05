@@ -7,6 +7,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 )
@@ -39,6 +40,7 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if this node has a vote waiting to be casted, put Vote field.
 	if len(h.myVotes) > 0 {
 		header.Vote, _ = h.myVotes[0].ToVoteBytes()
+		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
 	}
 
 	// if epoch block & vote exists in the last epoch, put Governance field.
@@ -46,6 +48,7 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 		gov := h.getExpectedGovernance(header.Number.Uint64())
 		if len(gov.Items()) > 0 {
 			header.Governance, _ = gov.ToGovBytes()
+			logger.Debug("Prepare header with governance", "num", header.Number.Uint64(), "governance", hexutil.Encode(header.Governance))
 		}
 	}
 

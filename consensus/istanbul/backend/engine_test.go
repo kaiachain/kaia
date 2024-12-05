@@ -25,6 +25,7 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"reflect"
 	"sort"
@@ -42,6 +43,8 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -50,6 +53,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // These variables are the global variables of the test blockchain.
@@ -736,20 +740,22 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
+	chain.RegisterExecutionModule(engine.govModule)
+	engine.RegisterConsensusModule(engine.govModule)
 	defer engine.Stop()
 	mReward := reward_impl.NewRewardModule()
 	if err := mReward.Init(&reward_impl.InitOpts{
 		ChainConfig:   chain.Config(),
 		Chain:         chain,
-		GovModule:     reward_impl.FromLegacy(engine.governance),
+		GovModule:     engine.govModule,
 		StakingModule: staking_impl.NewStakingModule(), // Irrelevant in ProposerPolicy=0. Won't inject mock.
 	}); err != nil {
 		t.Fatalf("Failed to initialize reward module: %v", err)
 	}
 	engine.RegisterConsensusModule(mReward)
 
-	assert.Equal(t, uint64(testEpoch), engine.governance.CurrentParams().Epoch())
-	assert.Equal(t, mintAmount, engine.governance.CurrentParams().MintingAmountBig().Uint64())
+	assert.Equal(t, uint64(testEpoch), engine.govModule.EffectiveParamSet(0).Epoch)
+	assert.Equal(t, mintAmount, engine.govModule.EffectiveParamSet(0).MintingAmount.Uint64())
 
 	var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -866,6 +872,14 @@ func assertMapSubset(t *testing.T, subset, set map[string]interface{}) {
 }
 
 func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
+	// temporaily enable forbidden votes
+	gov.Params[gov.RewardMinimumStake].VoteForbidden = false
+	gov.Params[gov.GovernanceGovernanceMode].VoteForbidden = false
+	defer func() {
+		gov.Params[gov.RewardMinimumStake].VoteForbidden = true
+		gov.Params[gov.GovernanceGovernanceMode].VoteForbidden = true
+	}()
+
 	type vote struct {
 		key   string
 		value interface{}
@@ -963,7 +977,9 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(4, configItems...)
 		mockCtrl, mStaking := makeMockStakingManager(t, tc.stakingAmounts, 0)
+		chain.RegisterExecutionModule(engine.govModule)
 		engine.RegisterStakingModule(mStaking)
+		engine.RegisterConsensusModule(engine.govModule)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -974,6 +990,10 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 				v.value = addrs[idx].String()
 			}
 			engine.governance.AddVote(v.key, v.value)
+
+			vote := headergov.NewVoteData(engine.address, v.key, v.value)
+			require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
+			engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
 
 			for i := 0; i < testEpoch; i++ {
 				previousBlock = currentBlock
@@ -1410,6 +1430,8 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 		chain, engine := newBlockChain(4, configItems...)
 		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
 		engine.RegisterStakingModule(mStaking)
+		// Don't register gov module here because old gov and govModule cannot coexist for this test,
+		// because header.Vote format of address list is different.
 
 		// Backup the globals. The globals `nodeKeys` and `addrs` will be
 		// modified according to validator change votes.
@@ -1798,7 +1820,7 @@ func TestGovernance_Votes(t *testing.T) {
 }
 
 func TestGovernance_ReaderEngine(t *testing.T) {
-	// Test that ReaderEngine (CurrentParams(), EffectiveParams(), UpdateParams()) works.
+	// Test that ReaderEngine (CurrentParams(), EffectiveParamSet(), UpdateParams()) works.
 	type vote = map[string]interface{}
 	type expected = map[string]interface{} // expected (subset of) governance items
 	type testcase struct {
@@ -1841,7 +1863,9 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		// Create test blockchain
 		chain, engine := newBlockChain(4, configItems...)
 		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
+		chain.RegisterExecutionModule(engine.govModule)
 		engine.RegisterStakingModule(mStaking)
+		engine.RegisterConsensusModule(engine.govModule)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1870,12 +1894,11 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		// Validate historic parameters with EffectiveParams() and ReadGovernance().
+		// Validate historic parameters with EffectiveParamSet() and ReadGovernance().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			pset, err := engine.governance.EffectiveParams(uint64(num))
-			assert.NoError(t, err)
-			assertMapSubset(t, tc.expected[num], pset.StrMap())
+			pset := engine.govModule.EffectiveParamSet(uint64(num))
+			assertMapSubset(t, tc.expected[num], pset.ToGovParamSet().StrMap())
 
 			_, items, err := engine.governance.ReadGovernance(uint64(num))
 			assert.NoError(t, err)

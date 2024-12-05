@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -54,19 +55,11 @@ type Snapshot struct {
 	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
-func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset, err := gov.EffectiveParams(number)
-	if err != nil {
-		// TODO-Kaia-Kore: remove err condition
-		logger.Error("Couldn't get governance value. Resorting to defaults", "err", err)
-		epoch = params.DefaultEpoch
-		policy = params.DefaultProposerPolicy
-		committeeSize = params.DefaultSubGroupSize
-	} else {
-		epoch = pset.Epoch()
-		policy = pset.Policy()
-		committeeSize = pset.CommitteeSize()
-	}
+func effectiveParams(g gov.GovModule, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
+	pset := g.EffectiveParamSet(number)
+	epoch = pset.Epoch
+	policy = pset.ProposerPolicy
+	committeeSize = pset.CommitteeSize
 
 	return
 }
@@ -74,8 +67,8 @@ func effectiveParams(gov governance.Engine, number uint64) (epoch uint64, policy
 // newSnapshot create a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent validators, so only ever use if for
 // the genesis block.
-func newSnapshot(gov governance.Engine, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
-	epoch, policy, committeeSize := effectiveParams(gov, number+1)
+func newSnapshot(g gov.GovModule, number uint64, hash common.Hash, valSet istanbul.ValidatorSet, chainConfig *params.ChainConfig) *Snapshot {
+	epoch, policy, committeeSize := effectiveParams(g, number+1)
 
 	snap := &Snapshot{
 		Epoch:         epoch,
@@ -141,7 +134,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr common.Address, policy uint64, chain consensus.ChainReader, stakingModule staking.StakingModule, writable bool) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModule gov.GovModule, addr common.Address, policy uint64, chain consensus.ChainReader, stakingModule staking.StakingModule, writable bool) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -160,7 +153,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 	snap := s.copy()
 
 	// Copy values which might be changed by governance vote
-	snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, snap.Number+1)
+	snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(govModule, snap.Number+1)
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -188,7 +181,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 		}
 
 		// Reload governance values
-		snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(gov, number+1)
+		snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(govModule, number+1)
 
 		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr, writable)
 		if policy == uint64(params.WeightedRandom) {
@@ -200,14 +193,11 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, addr co
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 
 			// because snapshot(num)'s ValSet = validators for num+1
-			pset, err := gov.EffectiveParams(number + 1)
-			if err != nil {
-				return nil, err
-			}
+			pset := govModule.EffectiveParamSet(number + 1)
 
-			isSingle := (pset.GovernanceModeInt() == params.GovernanceMode_Single)
-			govNode := pset.GoverningNode()
-			minStaking := pset.MinimumStakeBig().Uint64()
+			isSingle := (pset.GovernanceMode == "single")
+			govNode := pset.GoverningNode
+			minStaking := pset.MinimumStake.Uint64()
 
 			if err := snap.ValSet.RefreshValSet(number+1, chain.Config(), isSingle, govNode, minStaking, stakingModule); err != nil {
 				logger.Trace("Skip refreshing validators while creating snapshot", "snap.Number", snap.Number, "err", err)

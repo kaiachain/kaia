@@ -793,7 +793,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		istanbul.ProposerPolicy(pset.ProposerPolicy),
 		pset.CommitteeSize, chain)
 	valSet.SetMixHash(genesis.MixHash)
-	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
+	snap := newSnapshot(sb.govModule, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -992,7 +992,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	}
 
 	pset := sb.govModule.EffectiveParamSet(snap.Number)
-	snap, err = snap.apply(headers, sb.governance, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
+	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err
 	}

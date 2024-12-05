@@ -347,17 +347,26 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	gov := generateGovernaceDataForTest()
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   bcdata.bc.Config(),
-		Chain:         bcdata.bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
+	mGov := gov_impl.NewGovModule()
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: bcdata.bc.Config(),
+			ChainKv:     bcdata.db.GetMiscDB(),
+			Chain:       bcdata.bc,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   bcdata.bc.Config(),
+			Chain:         bcdata.bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
+	if err != nil {
 		return err
 	}
+
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
 	if spec, err := mReward.GetDeferredReward(header, b.Transactions(), receipts); err != nil {
 		return err
@@ -427,17 +436,22 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	gov := generateGovernaceDataForTest()
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   bcdata.bc.Config(),
-		Chain:         bcdata.bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
-		return err
-	}
+	mGov := gov_impl.NewGovModule()
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: bcdata.bc.Config(),
+			ChainKv:     bcdata.db.GetMiscDB(),
+			Chain:       bcdata.bc,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   bcdata.bc.Config(),
+			Chain:         bcdata.bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
 	if spec, err := mReward.GetDeferredReward(b.Header(), b.Transactions(), receipts); err != nil {
 		return err

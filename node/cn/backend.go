@@ -146,6 +146,7 @@ type CN struct {
 	components []interface{}
 
 	governance governance.Engine
+	govModule  gov.GovModule
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -253,6 +254,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		closeBloomHandler: make(chan struct{}),
 		governance:        governance,
+		govModule:         mGov,
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
@@ -328,15 +330,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
 
 	// Synchronize proposerpolicy & useGiniCoeff
-	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
-	if err != nil {
-		return nil, err
-	}
+	pset := mGov.EffectiveParamSet(bc.CurrentBlock().NumberU64() + 1)
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.ProposerPolicy
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff
 	}
 
 	if config.SenderTxHashIndexing {
@@ -490,7 +489,7 @@ func (s *CN) createSnapshot() {
 	mReward.Init(&reward_impl.InitOpts{
 		ChainConfig:   s.chainConfig,
 		Chain:         s.blockchain,
-		GovModule:     reward_impl.FromLegacy(s.governance),
+		GovModule:     s.govModule,
 		StakingModule: mStaking,
 	})
 	s.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
@@ -562,7 +561,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			Chain:         s.blockchain,
-			GovModule:     reward_impl.FromLegacy(s.governance),
+			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
 		mSupply.Init(&supply_impl.InitOpts{
@@ -856,6 +855,7 @@ func (s *CN) ProtocolVersion() int                    { return s.protocolManager
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() kaia.SyncProgress             { return s.protocolManager.Downloader().Progress() }
 func (s *CN) Governance() governance.Engine           { return s.governance }
+func (s *CN) GovModule() gov.GovModule                { return s.govModule }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)

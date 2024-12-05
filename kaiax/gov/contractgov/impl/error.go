@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrNotReady      = errors.New("ContractEngine is not ready")
-	ErrHeaderGovFail = errors.New("headerGov EffectiveParams() failed")
+	ErrHeaderGovFail = errors.New("headerGov EffectiveParamSet() failed")
 )
 
 func errInitNil(msg string) error {

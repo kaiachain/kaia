@@ -319,27 +319,21 @@ func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.EffectiveParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.EffectiveParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 
