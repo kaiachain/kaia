@@ -66,6 +66,10 @@ func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {
 	logger.Info("NoopModule RewindDelete", "num", num)
 }
 
+// applyValSetVote returns the valSet vote applied council
+// (nil, nil): nothing to handle or not effective to handle (council == council')
+// (nil, error): invalid vote
+// (council', nil): vote handled (council != council')
 func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode common.Address) ([]common.Address, error) {
 	if len(vb) == 0 {
 		return nil, nil // nothing to do
@@ -82,6 +86,9 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 		return nil, nil
 	}
 
+	appliedCouncil := make(valset.AddressList, len(c))
+	copy(appliedCouncil, c)
+
 	var addresses []common.Address
 	_, ok = vote.Value().(common.Address)
 	if ok {
@@ -94,7 +101,7 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 	// RemoveValidator: delete the existing validator only if it exists in current valSet
 	for _, address := range addresses {
 		if address == govNode {
-			return nil, errInvalidVoteValue
+			continue
 		}
 		idx := c.GetIdxByAddress(address)
 
@@ -103,19 +110,20 @@ func applyValSetVote(vb headergov.VoteBytes, c valset.AddressList, govNode commo
 		case gov.AddValidator:
 			if idx == -1 {
 				c = append(c, address)
-			} else {
-				return nil, errInvalidVoteValue
 			}
 		case gov.RemoveValidator:
 			if idx != -1 {
 				c = append(c[:idx], c[idx+1:]...)
-			} else {
-				return nil, errInvalidVoteValue
 			}
 		default:
-			return nil, errInvalidVoteKey
+			return nil, nil
 		}
 	}
 
-	return c, nil
+	if len(c) != len(appliedCouncil) {
+		return c, nil
+	}
+
+	// vote was there, but it was not effective
+	return nil, nil
 }
