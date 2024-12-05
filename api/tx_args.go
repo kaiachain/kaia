@@ -133,8 +133,9 @@ type SendTxArgs struct {
 
 	Key *hexutil.Bytes `json:"key"`
 
-	AccessList *types.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+	AccessList        *types.AccessList        `json:"accessList,omitempty"`
+	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
+	ChainID           *hexutil.Big             `json:"chainId,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -278,8 +279,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.Price != nil {
 		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 	}
-	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
-		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
+	if args.TypeInt.IsContractDeploy() || (args.TypeInt.IsEthereumTransaction() && *args.TypeInt != types.TxTypeEthereumSetCode) {
+		// contract deploy type and ethereum tx types except set code type allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
@@ -323,6 +324,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.AccessList != nil {
 		values[types.TxValueKeyAccessList] = *args.AccessList
+	}
+	if args.AuthorizationList != nil {
+		values[types.TxValueKeyAuthorizationList] = *args.AuthorizationList
 	}
 	if args.MaxPriorityFeePerGas != nil {
 		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
