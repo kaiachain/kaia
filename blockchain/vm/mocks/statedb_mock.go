@@ -567,17 +567,17 @@ func (mr *MockStateDBMockRecorder) SetCode(arg0, arg1 interface{}) *gomock.Call 
 }
 
 // SetCodeToEOA mocks base method.
-func (m *MockStateDB) SetCodeToEOA(arg0 common.Address, arg1 []byte) error {
+func (m *MockStateDB) SetCodeToEOA(arg0 common.Address, arg1 []byte, arg2 params.Rules) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetCodeToEOA", arg0, arg1)
+	ret := m.ctrl.Call(m, "SetCodeToEOA", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetCodeToEOA indicates an expected call of SetCodeToEOA.
-func (mr *MockStateDBMockRecorder) SetCodeToEOA(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockStateDBMockRecorder) SetCodeToEOA(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCodeToEOA", reflect.TypeOf((*MockStateDB)(nil).SetCodeToEOA), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCodeToEOA", reflect.TypeOf((*MockStateDB)(nil).SetCodeToEOA), arg0, arg1, arg2)
 }
 
 // SetNonce mocks base method.

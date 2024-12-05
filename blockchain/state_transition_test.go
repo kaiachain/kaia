@@ -123,7 +123,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 				m.EXPECT().GetNonce(authority).Return(uint64(1))
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa))
+				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
 			},
 		},
 		{
@@ -146,7 +146,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 				m.EXPECT().GetKey(authority).Return(accountkey.NewAccountKeyLegacy())
 				m.EXPECT().AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa))
+				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 				m.EXPECT().GetNonce(authority).Return(uint64(1))
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, []byte{})
+				m.EXPECT().SetCodeToEOA(authority, []byte{}, params.TestRules)
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 				m.EXPECT().GetNonce(authority).Return(uint64(1))
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa))
+				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
 				m.EXPECT().AddAddressToAccessList(aa)
 			},
 		},
@@ -214,7 +214,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 				m.EXPECT().GetNonce(notAuthority).Return(uint64(1))
 				m.EXPECT().Exist(notAuthority).Return(false)
 				m.EXPECT().IncNonce(notAuthority)
-				m.EXPECT().SetCodeToEOA(notAuthority, types.AddressToDelegation(bb))
+				m.EXPECT().SetCodeToEOA(notAuthority, types.AddressToDelegation(bb), params.TestRules)
 			},
 		},
 		// Cases: fail to set code
@@ -340,7 +340,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 			evm := vm.NewEVM(blockContext, txContext, mockStateDB, params.TestChainConfig, &vm.Config{Debug: true})
 
 			// Verify that the expected mockStateDB's calls are being made.
-			NewStateTransition(evm, tt.msg).processAuthorizationList(authList, *tt.msg.To())
+			NewStateTransition(evm, tt.msg).processAuthorizationList(authList, *tt.msg.To(), params.TestRules)
 		})
 	}
 }

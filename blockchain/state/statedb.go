@@ -23,6 +23,7 @@
 package state
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"sort"
@@ -397,12 +398,12 @@ func (s *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
-// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) fails and the account is EOA without code.
 func (s *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
-		if pa != nil {
+		if pa != nil && !(bytes.Equal(pa.GetCodeHash(), emptyCodeHash) && pa.Type() == account.ExternallyOwnedAccountType) {
 			return pa.GetVmVersion(), true
 		}
 		return params.VmVersion0, false
@@ -493,9 +494,20 @@ func (s *StateDB) SetCode(addr common.Address, code []byte) error {
 	return nil
 }
 
-func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte) error {
+func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte, r params.Rules) error {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa == nil {
+			return nil
+		}
+		if bytes.Equal(code, []byte{}) {
+			pa.SetCodeInfo(params.CodeInfo(0))
+		} else {
+			pa.SetCodeInfo(params.NewCodeInfoWithRules(params.CodeFormatEVM, r))
+		}
+		// If it is not a program account, SetCode will return an error,
+		// but that is handled above so there is no need to roll back SetCodeInfo.
 		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
 
