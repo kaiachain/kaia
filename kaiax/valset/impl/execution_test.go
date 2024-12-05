@@ -11,17 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func addressListToString(v []common.Address) string {
-	res := ""
-	for _, item := range v {
-		res = res + item.String() + ","
-	}
-	if len(res) > 0 {
-		res = res[:len(res)-1]
-	}
-	return res
-}
-
 // voteTestData is the testdata for vote tests.
 // Not only votes, but also other functions such as VerifyHeader handles votes.
 // To minimize the maintenance effort to manage the testdata, manage the expected result in voteTestData
@@ -48,43 +37,43 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 		{
 			name:                      "remove a validator",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", addressListToString([]common.Address{n[1]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[1]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[2], n[3]}, nil},
 		},
 		{
 			name:                      "add a validator",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", addressListToString([]common.Address{n[4]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[4]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3], n[4]}, nil},
 		},
 		{
 			name:                      "remove multiple validators",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", addressListToString([]common.Address{n[1], n[2], n[3]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[1], n[2], n[3]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn}, nil},
 		},
 		{
 			name:                      "add multiple validators",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", addressListToString([]common.Address{n[2], n[3]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[2], n[3]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
 		},
 		{
 			name:                      "govnode cannot be removed",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", addressListToString([]common.Address{tgn})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{tgn}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
 		},
 		{
 			name:                      "cannot add existing validator",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", addressListToString([]common.Address{n[1]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[1]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
 		},
 		{
 			name:                      "cannot remove non-exist validator",
 			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", addressListToString([]common.Address{n[4]})),
+			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[4]}).ToString()),
 			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
 		},
 	} {

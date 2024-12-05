@@ -38,6 +38,17 @@ func (sc AddressList) AddressStringList() []string {
 	return stringAddrs
 }
 
+func (sc AddressList) ToString() string {
+	res := ""
+	for _, item := range sc {
+		res = res + item.String() + ","
+	}
+	if len(res) > 0 {
+		res = res[:len(res)-1]
+	}
+	return res
+}
+
 func (sc AddressList) GetIdxByAddress(addr common.Address) int {
 	for i, val := range sc {
 		if addr == val {
