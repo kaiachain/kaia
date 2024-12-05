@@ -70,6 +70,7 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", err
 	}
 
+	// TODO-kaiax: add removevalidator vote check
 	api.h.PushMyVotes(vote)
 
 	return "(kaiax) Your vote has been put into the vote queue and you will proposer the block with this vote.\n" +
