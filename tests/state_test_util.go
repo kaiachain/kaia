@@ -104,15 +104,16 @@ type stEnvMarshaling struct {
 //go:generate gencodec -type stTransaction -field-override stTransactionMarshaling -out gen_sttransaction.go
 
 type stTransaction struct {
-	GasPrice             *big.Int `json:"gasPrice"`
-	MaxFeePerGas         *big.Int `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *big.Int `json:"maxPriorityFeePerGas"`
-	Nonce                uint64   `json:"nonce"`
-	To                   string   `json:"to"`
-	Data                 []string `json:"data"`
-	GasLimit             []uint64 `json:"gasLimit"`
-	Value                []string `json:"value"`
-	PrivateKey           []byte   `json:"secretKey"`
+	GasPrice             *big.Int            `json:"gasPrice"`
+	MaxFeePerGas         *big.Int            `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas *big.Int            `json:"maxPriorityFeePerGas"`
+	Nonce                uint64              `json:"nonce"`
+	To                   string              `json:"to"`
+	Data                 []string            `json:"data"`
+	AccessLists          []*types.AccessList `json:"accessLists,omitempty"`
+	GasLimit             []uint64            `json:"gasLimit"`
+	Value                []string            `json:"value"`
+	PrivateKey           []byte              `json:"secretKey"`
 }
 
 type stTransactionMarshaling struct {
@@ -385,9 +386,14 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, fmt.Errorf("invalid tx data %q", dataHex)
 	}
 
+	var accessList types.AccessList
+	if tx.AccessLists != nil && tx.AccessLists[ps.Indexes.Data] != nil {
+		accessList = *tx.AccessLists[ps.Indexes.Data]
+	}
+
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = useEthIntrinsicGas(data, to == nil, r)
+		intrinsicGas, err = useEthIntrinsicGas(data, accessList, to == nil, r)
 	} else {
 		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
 	}
@@ -395,7 +401,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, nil)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, accessList)
 	return msg, nil
 }
 
@@ -447,11 +453,11 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, nil, contractCreation, r)
+	return types.IntrinsicGas(data, accessList, contractCreation, r)
 }
 
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {

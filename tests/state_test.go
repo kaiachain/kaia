@@ -87,14 +87,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	}
 	st := new(testMatcher)
 
-	// TODO-Kaia: should support EIPs introduced at following forks
-	st.skipLoad(`^frontier\/`)
-	st.skipLoad(`^homestead\/`)
-	st.skipLoad(`^byzantium\/`)
-	st.skipLoad(`^constantinople\/`)
-	st.skipLoad(`^istanbul\/`)
-	st.skipLoad(`^berlin\/`)
-
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
