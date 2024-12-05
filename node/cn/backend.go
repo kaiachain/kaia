@@ -555,7 +555,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mValset.Init(&valset_impl.InitOpts{
 			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
-			HeaderGov:   hgm,
+			Governance:  mGov,
 			StakingInfo: mStaking,
 			NodeAddress: s.nodeAddress,
 		}),
