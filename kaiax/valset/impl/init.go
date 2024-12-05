@@ -149,13 +149,19 @@ func (v *ValsetModule) migrate() {
 	lowestSciNum, err := readLowestScannedCheckpointInterval(v.ChainKv)
 	if err != nil {
 		logger.Error(err.Error())
+		return
 	}
-	for lowestSciNum >= 0 {
+	for int64(lowestSciNum) >= 0 {
 		_, err = v.replayValSetVotes(lowestSciNum, lowestSciNum+params.CheckpointInterval, true)
 		if err != nil {
 			logger.Error(err.Error())
+			return
 		}
-		lowestSciNum = lowestSciNum - 1024
+		lowestSciNum = lowestSciNum - params.CheckpointInterval
+		if err = writeLowestScannedCheckpointInterval(v.ChainKv, lowestSciNum); err != nil {
+			logger.Error(err.Error())
+			return
+		}
 	}
 }
 
