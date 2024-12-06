@@ -26,14 +26,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/statedb"
 )
-
-// emptyRoot is the known root hash of an empty trie.
-var emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
 
 type DumpAccount struct {
 	Balance  string            `json:"balance"`
@@ -78,7 +76,7 @@ func (self *StateDB) RawDump() Dump {
 			acc.CodeHash = common.Bytes2Hex(pa.GetCodeHash())
 			acc.Code = common.Bytes2Hex(obj.Code(self.db))
 		} else {
-			acc.Root = common.Bytes2Hex(emptyRoot.Bytes())
+			acc.Root = common.Bytes2Hex(types.EmptyRootHash.Bytes())
 			acc.CodeHash = common.Bytes2Hex(emptyCodeHash)
 		}
 		storageTrie := obj.getStorageTrie(self.db)

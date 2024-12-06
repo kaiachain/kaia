@@ -604,6 +604,18 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.TriesInMemory = ctx.Uint64(TriesInMemoryFlag.Name)
 	cfg.LivePruning = ctx.Bool(LivePruningFlag.Name)
 	cfg.LivePruningRetention = ctx.Uint64(LivePruningRetentionFlag.Name)
+	cfg.TxPruning = ctx.Bool(TxPruningFlag.Name)
+	if cfg.TxPruning {
+		cfg.TxPruningRetention = ctx.Uint64(TxPruningRetentionFlag.Name)
+	} else {
+		cfg.TxPruningRetention = 0
+	}
+	cfg.ReceiptPruning = ctx.Bool(ReceiptPruningFlag.Name)
+	if cfg.ReceiptPruning {
+		cfg.ReceiptPruningRetention = ctx.Uint64(ReceiptPruningRetentionFlag.Name)
+	} else {
+		cfg.ReceiptPruningRetention = 0
+	}
 
 	if ctx.IsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.Int(CacheScaleFlag.Name)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/params"
 )
 
 type canonicalizerT func(v any) (any, error)
@@ -17,8 +18,9 @@ type Param struct {
 	Canonicalizer canonicalizerT
 	FormatChecker func(cv any) bool // validation on canonical value.
 
-	DefaultValue  any
-	VoteForbidden bool
+	ChainConfigValue func(c *params.ChainConfig) (any, error)
+	DefaultValue     any
+	VoteForbidden    bool
 }
 
 var (
@@ -210,8 +212,9 @@ var Params = map[ParamName]*Param{
 			}
 			return v <= 2 // deriveShaImpl has only three options.
 		},
-		DefaultValue:  uint64(0),
-		VoteForbidden: false,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) { return uint64(c.DeriveShaImpl), nil },
+		DefaultValue:     uint64(0),
+		VoteForbidden:    false,
 	},
 	GovernanceGovernanceMode: {
 		Canonicalizer: stringCanonicalizer,
@@ -225,6 +228,12 @@ var Params = map[ParamName]*Param{
 			}
 			return false
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil {
+				return nil, errors.New("governance is not set")
+			}
+			return c.Governance.GovernanceMode, nil
+		},
 		DefaultValue:  "none",
 		VoteForbidden: true,
 	},
@@ -233,6 +242,12 @@ var Params = map[ParamName]*Param{
 		FormatChecker: func(cv any) bool {
 			_, ok := cv.(common.Address)
 			return ok
+		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil {
+				return nil, errors.New("governance is not set")
+			}
+			return c.Governance.GoverningNode, nil
 		},
 		DefaultValue:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		VoteForbidden: false,
@@ -243,14 +258,21 @@ var Params = map[ParamName]*Param{
 			_, ok := cv.(common.Address)
 			return ok
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil {
+				return nil, errors.New("governance is not set")
+			}
+			return c.Governance.GovParamContract, nil
+		},
 		DefaultValue:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		VoteForbidden: false,
 	},
 	GovernanceUnitPrice: {
-		Canonicalizer: uint64Canonicalizer,
-		FormatChecker: noopFormatChecker,
-		DefaultValue:  uint64(250e9),
-		VoteForbidden: false,
+		Canonicalizer:    uint64Canonicalizer,
+		FormatChecker:    noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) { return c.UnitPrice, nil },
+		DefaultValue:     uint64(250e9),
+		VoteForbidden:    false,
 	},
 	IstanbulCommitteeSize: {
 		Canonicalizer: uint64Canonicalizer,
@@ -261,12 +283,24 @@ var Params = map[ParamName]*Param{
 			}
 			return v > 0
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Istanbul == nil {
+				return nil, errors.New("istanbul is not set")
+			}
+			return c.Istanbul.SubGroupSize, nil
+		},
 		DefaultValue:  uint64(21),
 		VoteForbidden: false,
 	},
 	IstanbulEpoch: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Istanbul == nil {
+				return nil, errors.New("istanbul is not set")
+			}
+			return c.Istanbul.Epoch, nil
+		},
 		DefaultValue:  uint64(604800),
 		VoteForbidden: true,
 	},
@@ -279,6 +313,12 @@ var Params = map[ParamName]*Param{
 			}
 			return v <= 2 // policy has only three options.
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Istanbul == nil {
+				return nil, errors.New("istanbul is not set")
+			}
+			return c.Istanbul.ProposerPolicy, nil
+		},
 		DefaultValue:  uint64(RoundRobin),
 		VoteForbidden: true,
 	},
@@ -288,36 +328,72 @@ var Params = map[ParamName]*Param{
 			v, ok := cv.(uint64)
 			return ok && v != 0
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.KIP71 == nil {
+				return nil, errors.New("kip71 is not set")
+			}
+			return c.Governance.KIP71.BaseFeeDenominator, nil
+		},
 		DefaultValue:  uint64(20),
 		VoteForbidden: false,
 	},
 	Kip71GasTarget: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.KIP71 == nil {
+				return nil, errors.New("kip71 is not set")
+			}
+			return c.Governance.KIP71.GasTarget, nil
+		},
 		DefaultValue:  uint64(30000000),
 		VoteForbidden: false,
 	},
 	Kip71LowerBoundBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.KIP71 == nil {
+				return nil, errors.New("kip71 is not set")
+			}
+			return c.Governance.KIP71.LowerBoundBaseFee, nil
+		},
 		DefaultValue:  uint64(25000000000),
 		VoteForbidden: false,
 	},
 	Kip71MaxBlockGasUsedForBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.KIP71 == nil {
+				return nil, errors.New("kip71 is not set")
+			}
+			return c.Governance.KIP71.MaxBlockGasUsedForBaseFee, nil
+		},
 		DefaultValue:  uint64(60000000),
 		VoteForbidden: false,
 	},
 	Kip71UpperBoundBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.KIP71 == nil {
+				return nil, errors.New("kip71 is not set")
+			}
+			return c.Governance.KIP71.UpperBoundBaseFee, nil
+		},
 		DefaultValue:  uint64(750000000000),
 		VoteForbidden: false,
 	},
 	RewardDeferredTxFee: {
 		Canonicalizer: boolCanonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.DeferredTxFee, nil
+		},
 		DefaultValue:  false,
 		VoteForbidden: true,
 	},
@@ -346,12 +422,24 @@ var Params = map[ParamName]*Param{
 
 			return sum == 100
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.Kip82Ratio, nil
+		},
 		DefaultValue:  "20/80",
 		VoteForbidden: false,
 	},
 	RewardMintingAmount: {
 		Canonicalizer: bigIntCanonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil || c.Governance.Reward.MintingAmount == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.MintingAmount, nil
+		},
 		DefaultValue:  big.NewInt(0),
 		VoteForbidden: false,
 	},
@@ -364,12 +452,24 @@ var Params = map[ParamName]*Param{
 			}
 			return v.Sign() >= 0
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil || c.Governance.Reward.MinimumStake == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.MinimumStake, nil
+		},
 		DefaultValue:  big.NewInt(2000000),
 		VoteForbidden: true,
 	},
 	RewardProposerUpdateInterval: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.ProposerUpdateInterval, nil
+		},
 		DefaultValue:  uint64(3600),
 		VoteForbidden: true,
 	},
@@ -398,18 +498,36 @@ var Params = map[ParamName]*Param{
 
 			return sum == 100
 		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.Ratio, nil
+		},
 		DefaultValue:  "100/0/0",
 		VoteForbidden: false,
 	},
 	RewardStakingUpdateInterval: {
 		Canonicalizer: uint64Canonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.StakingUpdateInterval, nil
+		},
 		DefaultValue:  uint64(86400),
 		VoteForbidden: true,
 	},
 	RewardUseGiniCoeff: {
 		Canonicalizer: boolCanonicalizer,
 		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.UseGiniCoeff, nil
+		},
 		DefaultValue:  false,
 		VoteForbidden: true,
 	},

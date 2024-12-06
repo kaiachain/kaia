@@ -26,16 +26,19 @@ import (
 type StakingModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
+	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
 	// GetStakingInfo returns the staking info to be used for the given block number.
 	// This is the most commonly used getter.
 	GetStakingInfo(num uint64) (*StakingInfo, error)
 
-	// GetStakingInfoFromDB returns the staking info from the database.
+	// Directly access the database.
+	// Note that db access is only effective before Kaia hardfork.
 	// The given number indicates the number that the staking info is measured from, not when the staking info is used.
 	// This is useful when syncing the staking info database over p2p.
-	GetStakingInfoFromDB(sourceNum uint64) (*StakingInfo, error)
+	GetStakingInfoFromDB(sourceNum uint64) *StakingInfo
+	PutStakingInfoToDB(sourceNum uint64, stakingInfo *StakingInfo)
 
 	// Preload features allow staking info to be preloaded into memory
 	// which helps the situation where the state is not available in the database

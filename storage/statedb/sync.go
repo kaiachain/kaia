@@ -28,6 +28,7 @@ import (
 	"strconv"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/storage/database"
@@ -171,7 +172,7 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 // AddSubTrie registers a new trie to the sync code, rooted at the designated parent.
 func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent common.Hash, callback LeafCallback) {
 	// Short circuit if the trie is empty or already known
-	if root == emptyRoot {
+	if root == types.EmptyRootHash {
 		return
 	}
 	if s.membatch.hasNode(root) {
@@ -217,7 +218,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 // as is.
 func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent common.Hash) {
 	// Short circuit if the entry is empty or already known
-	if hash == emptyState {
+	if hash == types.EmptyCodeHash {
 		return
 	}
 	if s.membatch.hasCode(hash) {

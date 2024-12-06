@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
@@ -57,7 +58,7 @@ func randomAccount() []byte {
 	if rand.Uint32()%2 == 0 {
 		acc, _ = genExternallyOwnedAccount(rand.Uint64(), big.NewInt(rand.Int63()))
 	} else {
-		acc, _ = genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, emptyCode[:])
+		acc, _ = genSmartContractAccount(rand.Uint64(), big.NewInt(rand.Int63()), root, types.EmptyCodeHash.Bytes())
 	}
 
 	serializer := account.NewAccountSerializerWithAccount(acc)

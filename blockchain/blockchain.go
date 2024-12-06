@@ -109,10 +109,10 @@ const (
 )
 
 const (
-	DefaultTriesInMemory        = 128
-	DefaultBlockInterval        = 128
-	DefaultLivePruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
-	MaxPrefetchTxs              = 20000
+	DefaultTriesInMemory    = 128
+	DefaultBlockInterval    = 128
+	DefaultPruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
+	MaxPrefetchTxs          = 20000
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:
@@ -239,7 +239,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			CacheSize:            512,
 			BlockInterval:        DefaultBlockInterval,
 			TriesInMemory:        DefaultTriesInMemory,
-			LivePruningRetention: DefaultLivePruningRetention,
+			LivePruningRetention: DefaultPruningRetention,
 			TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 			SnapshotCacheSize:    512,
 			SnapshotAsyncGen:     true,
@@ -637,9 +637,6 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 		bc.db.DeleteGovernance(num)
 		if params.IsCheckpointInterval(num) {
 			bc.db.DeleteIstanbulSnapshot(hash)
-		}
-		if bc.Config().Istanbul.ProposerPolicy == params.WeightedRandom && !bc.Config().IsKaiaForkEnabled(new(big.Int).SetUint64(num)) && params.IsStakingUpdateInterval(num) {
-			bc.db.DeleteStakingInfo(num)
 		}
 
 		for _, module := range bc.rewindableModules {
