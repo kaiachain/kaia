@@ -2373,10 +2373,18 @@ func TestEIP7702(t *testing.T) {
 	if !bytes.Equal(code, want) {
 		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
 	}
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion1 && ok) {
+		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
+	}
+
 	code, want = state.GetCode(addr2), types.AddressToDelegation(auth2.Address)
 	if !bytes.Equal(code, want) {
 		t.Fatalf("addr2 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
 	}
+	if vmVersion, ok := state.GetVmVersion(addr2); !(vmVersion == params.VmVersion1 && ok) {
+		t.Fatalf("addr2 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
+	}
+
 	// Verify delegation executed the correct code.
 	var (
 		fortyTwo = common.BytesToHash([]byte{0x42})
@@ -2407,6 +2415,39 @@ func TestEIP7702(t *testing.T) {
 		// It only checks whether the transaction is successful.
 		err = applyTransaction(chain, state, tx, addr1)
 		assert.Equal(t, nil, err)
+	}
+
+	// Set 0x0000000000000000000000000000000000000000000 test
+	{
+		authForEmpty, _ := types.SignAuth(&types.Authorization{
+			ChainID: gspec.Config.ChainID.Uint64(),
+			Address: common.Address{},
+			Nonce:   state.GetNonce(addr1) + 1,
+		}, key1)
+
+		authorizationList := []types.Authorization{*authForEmpty}
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		if err != nil {
+			t.Fatalf("failed to run intrinsic gas: %v", err)
+		}
+
+		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, state.GetNonce(addr1), nil, 500000, nil, newGkei(50),
+			big.NewInt(20), nil, false, intrinsicGas, nil, authorizationList), signer, key1)
+		if err != nil {
+			t.Fatalf("failed to sign tx: %v", err)
+		}
+		err = applyTransaction(chain, state, tx, addr1)
+		assert.Equal(t, nil, err)
+
+		state.GetCode(addr1)
+	}
+
+	// Checks whether code and codeInfo are initialized.
+	if !bytes.Equal(state.GetCode(addr1), nil) {
+		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
+	}
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion0 && !ok) {
+		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
 	}
 }
 

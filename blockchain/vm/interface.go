@@ -50,7 +50,7 @@ type StateDB interface {
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte) error
-	SetCodeToEOA(common.Address, []byte) error
+	SetCodeToEOA(common.Address, []byte, params.Rules) error
 	GetCodeSize(common.Address) int
 	GetVmVersion(common.Address) (params.VmVersion, bool)
 

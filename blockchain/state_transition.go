@@ -372,7 +372,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if msg.AuthorizationList() != nil {
 		// SetCode sender nonce increment should be done before set code process.
 		st.state.IncNonce(msg.ValidatedSender())
-		st.processAuthorizationList(msg.AuthorizationList(), *msg.To())
+		st.processAuthorizationList(msg.AuthorizationList(), *msg.To(), rules)
 	}
 
 	// Check whether the init code size has been exceeded.
@@ -524,7 +524,7 @@ func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
 
-func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address) {
+func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address, rules params.Rules) {
 	for _, auth := range authList {
 		// Verify chain ID is 0 or equal to current chain ID.
 		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
@@ -568,7 +568,7 @@ func (st *StateTransition) processAuthorizationList(authList types.Authorization
 
 		// We treat EOA and SCA as separate objects and therefore need to use
 		// distinct methods.
-		st.state.SetCodeToEOA(authority, delegation)
+		st.state.SetCodeToEOA(authority, delegation, rules)
 
 		// Usually the transaction destination and delegation target are added to
 		// the access list in statedb.Prepare(..), however if the delegation is in
