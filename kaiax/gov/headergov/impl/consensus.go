@@ -2,6 +2,7 @@ package impl
 
 import (
 	"reflect"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -10,6 +11,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"golang.org/x/exp/maps"
 )
 
 func (h *headerGovModule) VerifyHeader(header *types.Header) error {
@@ -161,7 +163,11 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
 	govs := make(gov.PartialParamSet)
 
-	for _, vote := range prevEpochVotes {
+	sortedVoteBlocks := maps.Keys(prevEpochVotes)
+	slices.Sort(sortedVoteBlocks)
+
+	for _, voteBlock := range sortedVoteBlocks {
+		vote := prevEpochVotes[voteBlock]
 		govs.Add(string(vote.Name()), vote.Value())
 	}
 
