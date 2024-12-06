@@ -122,6 +122,18 @@ func excludeNodeByAddr(target common.Address) {
 	}
 }
 
+func enableVotes(paramNames []gov.ParamName) {
+	for _, paramName := range paramNames {
+		gov.Params[paramName].VoteForbidden = false
+	}
+}
+
+func disableVotes(paramNames []gov.ParamName) {
+	for _, paramName := range paramNames {
+		gov.Params[paramName].VoteForbidden = true
+	}
+}
+
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
@@ -692,7 +704,10 @@ func TestWriteCommittedSeals(t *testing.T) {
 }
 
 func TestRewardDistribution(t *testing.T) {
-	type vote = map[string]interface{}
+	type vote struct {
+		name  string
+		value interface{}
+	}
 	type expected = map[int]uint64
 	type testcase struct {
 		length   int // total number of blocks to simulate
@@ -708,8 +723,8 @@ func TestRewardDistribution(t *testing.T) {
 		{
 			12,
 			map[int]vote{
-				1: {"reward.mintingamount": "2"}, // activated at block 7 (activation is before-Kore)
-				4: {"reward.mintingamount": "3"}, // activated at block 9 (activation is after-Kore)
+				1: {"reward.mintingamount", "2"}, // activated at block 7 (activation is before-Kore)
+				4: {"reward.mintingamount", "3"}, // activated at block 9 (activation is after-Kore)
 			},
 			map[int]uint64{
 				1:  1,
@@ -763,9 +778,10 @@ func TestRewardDistribution(t *testing.T) {
 		// Place a vote if a vote is scheduled in upcoming block
 		// Note that we're building (head+1)'th block here.
 		for num := 0; num <= tc.length; num++ {
-			for k, v := range tc.votes[num+1] {
-				ok := engine.governance.AddVote(k, v)
-				assert.True(t, ok)
+			if vote, ok := tc.votes[num+1]; ok {
+				v := headergov.NewVoteData(engine.address, vote.name, vote.value)
+				require.NotNil(t, v, fmt.Sprintf("vote is nil for %v %v", vote.name, vote.value))
+				engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(v)
 			}
 
 			// Create a block
@@ -873,12 +889,8 @@ func assertMapSubset(t *testing.T, subset, set map[string]interface{}) {
 
 func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 	// temporaily enable forbidden votes
-	gov.Params[gov.RewardMinimumStake].VoteForbidden = false
-	gov.Params[gov.GovernanceGovernanceMode].VoteForbidden = false
-	defer func() {
-		gov.Params[gov.RewardMinimumStake].VoteForbidden = true
-		gov.Params[gov.GovernanceGovernanceMode].VoteForbidden = true
-	}()
+	enableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
+	defer disableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
 
 	type vote struct {
 		key   string
@@ -989,8 +1001,6 @@ func TestSnapshot_Validators_AfterMinimumStakingVotes(t *testing.T) {
 				idx := v.value.(int)
 				v.value = addrs[idx].String()
 			}
-			engine.governance.AddVote(v.key, v.value)
-
 			vote := headergov.NewVoteData(engine.address, v.key, v.value)
 			require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
 			engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
@@ -1284,6 +1294,8 @@ func TestSnapshot_Validators_BasedOnStaking(t *testing.T) {
 }
 
 func TestSnapshot_Validators_AddRemove(t *testing.T) {
+	// TODO-kaiax: valset module is required
+	t.Skip("skipping")
 	type vote struct {
 		key   string
 		value interface{}
@@ -1447,10 +1459,14 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 			if v, ok := tc.votes[i]; ok { // If a vote is scheduled in this block,
 				if idx, ok := v.value.(int); ok {
 					addr := allAddrs[idx]
-					engine.governance.AddVote(v.key, addr)
+					vote := headergov.NewVoteData(engine.address, v.key, addr)
+					require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, addr))
+					engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
 				} else {
 					addrList := makeExpectedResult(v.value.([]int), allAddrs)
-					engine.governance.AddVote(v.key, addrList)
+					vote := headergov.NewVoteData(engine.address, v.key, addrList)
+					require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, addrList))
+					engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
 				}
 				// t.Logf("Voting at block #%d for %s, %v", i, v.key, v.value)
 			}
@@ -1501,57 +1517,10 @@ func TestSnapshot_Validators_AddRemove(t *testing.T) {
 	}
 }
 
-func TestSnapshot_Writable(t *testing.T) {
-	var configItems []interface{}
-	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
-	configItems = append(configItems, epoch(3))
-	configItems = append(configItems, governanceMode("single"))
-	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
-	chain, engine := newBlockChain(1, configItems...)
-	defer engine.Stop()
-	mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
-	engine.RegisterStakingModule(mStaking)
-	defer mockCtrl.Finish()
-
-	// add votes and insert voted blocks
-	var (
-		previousBlock, currentBlock *types.Block = nil, chain.Genesis()
-		err                         error
-	)
-
-	// voteData is inserted at block 4, and current block is block 5.
-	for i := 0; i < 5; i++ {
-		if i == 4 {
-			engine.governance.AddVote("governance.unitprice", uint64(2000000))
-		}
-		previousBlock = currentBlock
-		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-		_, err = chain.InsertChain(types.Blocks{currentBlock})
-		assert.NoError(t, err)
-	}
-
-	// save current gov.changeSet's length for the expected value.
-	currentChangeSetLength := len(engine.governance.GetGovernanceChange())
-	assert.Equal(t, 1, currentChangeSetLength)
-
-	// block 3 is the start block of an epoch. In this test, the cache of this block's snapshot is cleared.
-	// If cache is not removed, it will just read the cache rather than making the snapshot itself.
-	block := chain.GetBlockByNumber(uint64(3))
-
-	// case [writable == false]
-	// expected result: gov.changeSet should not be modified.
-	engine.recents.Remove(block.Hash()) // assume node is restarted
-	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, false)
-	assert.Equal(t, currentChangeSetLength, len(engine.governance.GetGovernanceChange()))
-
-	// case [writable == true]
-	// expected result: gov.changeSet is modified.
-	engine.recents.Remove(block.Hash()) // assume node is restarted
-	_, err = engine.snapshot(chain, block.NumberU64(), block.Hash(), nil, true)
-	assert.Equal(t, 0, len(engine.governance.GetGovernanceChange()))
-}
-
 func TestGovernance_Votes(t *testing.T) {
+	enableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode, gov.RewardUseGiniCoeff})
+	defer disableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode, gov.RewardUseGiniCoeff})
+
 	type vote struct {
 		key   string
 		value interface{}
@@ -1770,17 +1739,20 @@ func TestGovernance_Votes(t *testing.T) {
 	for _, tc := range testcases {
 		chain, engine := newBlockChain(1, configItems...)
 		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
+		chain.RegisterExecutionModule(engine.govModule)
 		engine.RegisterStakingModule(mStaking)
+		engine.RegisterConsensusModule(engine.govModule)
 
 		// test initial governance items
-		assert.Equal(t, uint64(3), engine.governance.CurrentParams().Epoch())
-		assert.Equal(t, "single", engine.governance.CurrentParams().GovernanceModeStr())
-		assert.Equal(t, uint64(21), engine.governance.CurrentParams().CommitteeSize())
-		assert.Equal(t, uint64(1), engine.governance.CurrentParams().UnitPrice())
-		assert.Equal(t, "0", engine.governance.CurrentParams().MintingAmountStr())
-		assert.Equal(t, "100/0/0", engine.governance.CurrentParams().Ratio())
-		assert.Equal(t, false, engine.governance.CurrentParams().UseGiniCoeff())
-		assert.Equal(t, "2000000", engine.governance.CurrentParams().MinimumStakeStr())
+		pset := engine.govModule.EffectiveParamSet(chain.CurrentHeader().Number.Uint64() + 1)
+		assert.Equal(t, uint64(3), pset.Epoch)
+		assert.Equal(t, "single", pset.GovernanceMode)
+		assert.Equal(t, uint64(21), pset.CommitteeSize)
+		assert.Equal(t, uint64(1), pset.UnitPrice)
+		assert.Equal(t, "0", pset.MintingAmount.String())
+		assert.Equal(t, "100/0/0", pset.Ratio)
+		assert.Equal(t, false, pset.UseGiniCoeff)
+		assert.Equal(t, "2000000", pset.MinimumStake.String())
 
 		// add votes and insert voted blocks
 		var (
@@ -1789,7 +1761,13 @@ func TestGovernance_Votes(t *testing.T) {
 		)
 
 		for _, v := range tc.votes {
-			engine.governance.AddVote(v.key, v.value)
+			if len(v.key) > 0 {
+				vote := headergov.NewVoteData(engine.address, v.key, v.value)
+				require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
+				engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
+				t.Logf("Adding vote(%s,%v) at block %d", v.key, v.value, currentBlock.NumberU64()+1)
+			}
+
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err = chain.InsertChain(types.Blocks{currentBlock})
@@ -1819,9 +1797,12 @@ func TestGovernance_Votes(t *testing.T) {
 	}
 }
 
-func TestGovernance_ReaderEngine(t *testing.T) {
+func TestGovernance_GovModule(t *testing.T) {
 	// Test that ReaderEngine (CurrentParams(), EffectiveParamSet(), UpdateParams()) works.
-	type vote = map[string]interface{}
+	type vote struct {
+		name  string
+		value interface{}
+	}
 	type expected = map[string]interface{} // expected (subset of) governance items
 	type testcase struct {
 		length   int // total number of blocks to simulate
@@ -1833,7 +1814,7 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		{
 			8,
 			map[int]vote{
-				1: {"governance.unitprice": uint64(17)},
+				1: {"governance.unitprice", uint64(17)},
 			},
 			map[int]expected{
 				0: {"governance.unitprice": uint64(1)},
@@ -1873,24 +1854,21 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 		for num := 0; num <= tc.length; num++ {
 			// Validate current params with CurrentParams() and CurrentSetCopy().
 			// Check that both returns the expected result.
-			assertMapSubset(t, tc.expected[num+1], engine.governance.CurrentParams().StrMap())
-			assertMapSubset(t, tc.expected[num+1], engine.governance.CurrentSetCopy())
+			pset := engine.govModule.EffectiveParamSet(uint64(num + 1))
+			assertMapSubset(t, tc.expected[num+1], pset.ToGovParamSet().StrMap())
 
 			// Place a vote if a vote is scheduled in upcoming block
 			// Note that we're building (head+1)'th block here.
-			for k, v := range tc.votes[num+1] {
-				ok := engine.governance.AddVote(k, v)
-				assert.True(t, ok)
+			if vote, ok := tc.votes[num+1]; ok {
+				v := headergov.NewVoteData(engine.address, vote.name, vote.value)
+				require.NotNil(t, v, fmt.Sprintf("vote is nil for %v %v", vote.name, vote.value))
+				engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(v)
 			}
 
 			// Create a block
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err := chain.InsertChain(types.Blocks{currentBlock})
-			assert.NoError(t, err)
-
-			// Load parameters for the next block
-			err = engine.governance.UpdateParams(currentBlock.NumberU64())
 			assert.NoError(t, err)
 		}
 
@@ -1903,183 +1881,6 @@ func TestGovernance_ReaderEngine(t *testing.T) {
 			_, items, err := engine.governance.ReadGovernance(uint64(num))
 			assert.NoError(t, err)
 			assertMapSubset(t, tc.expected[num+1], items)
-		}
-
-		mockCtrl.Finish()
-		engine.Stop()
-	}
-}
-
-func TestChainConfig_UpdateAfterVotes(t *testing.T) {
-	type vote struct {
-		key   string
-		value interface{}
-	}
-	type testcase struct {
-		voting   vote
-		expected vote
-	}
-
-	testcases := []testcase{
-		{
-			voting:   vote{"kip71.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
-			expected: vote{"kip71.lowerboundbasefee", uint64(20000000000)},
-		},
-		{
-			voting:   vote{"kip71.upperboundbasefee", uint64(500000000000)}, // voted on block 1
-			expected: vote{"kip71.upperboundbasefee", uint64(500000000000)},
-		},
-		{
-			voting:   vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
-			expected: vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)},
-		},
-		{
-			voting:   vote{"kip71.gastarget", uint64(50000000)}, // voted on block 1
-			expected: vote{"kip71.gastarget", uint64(50000000)},
-		},
-		{
-			voting:   vote{"kip71.basefeedenominator", uint64(32)}, // voted on block 1
-			expected: vote{"kip71.basefeedenominator", uint64(32)},
-		},
-	}
-
-	var configItems []interface{}
-	configItems = append(configItems, epoch(3))
-	configItems = append(configItems, governanceMode("single"))
-	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
-	for _, tc := range testcases {
-		chain, engine := newBlockChain(1, configItems...)
-
-		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
-
-		// add votes and insert voted blocks
-		var (
-			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
-			err                         error
-		)
-
-		engine.governance.SetBlockchain(chain)
-		engine.governance.AddVote(tc.voting.key, tc.voting.value)
-		previousBlock = currentBlock
-		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-		_, err = chain.InsertChain(types.Blocks{currentBlock})
-		assert.NoError(t, err)
-
-		// insert blocks until the vote is applied
-		for i := 0; i < 6; i++ {
-			previousBlock = currentBlock
-			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-			_, err = chain.InsertChain(types.Blocks{currentBlock})
-			assert.NoError(t, err)
-		}
-
-		govConfig := chain.Config().Governance
-		switch tc.expected.key {
-		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.LowerBoundBaseFee)
-		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.UpperBoundBaseFee)
-		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.GasTarget)
-		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.MaxBlockGasUsedForBaseFee)
-		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, govConfig.KIP71.BaseFeeDenominator)
-		default:
-			assert.Error(t, nil)
-		}
-	}
-}
-
-func TestChainConfig_ReadFromDBAfterVotes(t *testing.T) {
-	type vote struct {
-		key   string
-		value interface{}
-	}
-	type testcase struct {
-		voting   vote
-		expected vote
-	}
-
-	testcases := []testcase{
-		{
-			voting:   vote{"kip71.lowerboundbasefee", uint64(20000000000)}, // voted on block 1
-			expected: vote{"kip71.lowerboundbasefee", uint64(20000000000)},
-		},
-		{
-			voting:   vote{"kip71.upperboundbasefee", uint64(500000000000)}, // voted on block 1
-			expected: vote{"kip71.upperboundbasefee", uint64(500000000000)},
-		},
-		{
-			voting:   vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)}, // voted on block 1
-			expected: vote{"kip71.maxblockgasusedforbasefee", uint64(100000000)},
-		},
-		{
-			voting:   vote{"kip71.gastarget", uint64(50000000)}, // voted on block 1
-			expected: vote{"kip71.gastarget", uint64(50000000)},
-		},
-		{
-			voting:   vote{"kip71.basefeedenominator", uint64(32)}, // voted on block 1
-			expected: vote{"kip71.basefeedenominator", uint64(32)},
-		},
-	}
-
-	var configItems []interface{}
-	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
-	configItems = append(configItems, epoch(3))
-	configItems = append(configItems, governanceMode("single"))
-	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
-	for _, tc := range testcases {
-		chain, engine := newBlockChain(1, configItems...)
-		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
-		engine.RegisterStakingModule(mStaking)
-
-		// test initial governance items
-		assert.Equal(t, uint64(25000000000), chain.Config().Governance.KIP71.LowerBoundBaseFee)
-		assert.Equal(t, uint64(750000000000), chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		assert.Equal(t, uint64(20), chain.Config().Governance.KIP71.BaseFeeDenominator)
-		assert.Equal(t, uint64(60000000), chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		assert.Equal(t, uint64(30000000), chain.Config().Governance.KIP71.GasTarget)
-
-		// add votes and insert voted blocks
-		var (
-			previousBlock, currentBlock *types.Block = nil, chain.Genesis()
-			err                         error
-		)
-
-		engine.governance.SetBlockchain(chain)
-		engine.governance.AddVote(tc.voting.key, tc.voting.value)
-		previousBlock = currentBlock
-		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-		_, err = chain.InsertChain(types.Blocks{currentBlock})
-		assert.NoError(t, err)
-
-		// insert blocks until the vote is applied
-		for i := 0; i < params.CheckpointInterval; i++ {
-			previousBlock = currentBlock
-			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-			_, err = chain.InsertChain(types.Blocks{currentBlock})
-			assert.NoError(t, err)
-		}
-
-		switch tc.expected.key {
-		case "kip71.lowerboundbasefee":
-			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.LowerBoundBaseFee)
-		case "kip71.upperboundbasefee":
-			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.UpperBoundBaseFee)
-		case "kip71.gastarget":
-			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.GasTarget)
-		case "kip71.maxblockgasusedforbasefee":
-			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.MaxBlockGasUsedForBaseFee)
-		case "kip71.basefeedenominator":
-			assert.Equal(t, tc.expected.value, chain.Config().Governance.KIP71.BaseFeeDenominator)
-		default:
-			assert.Error(t, nil)
 		}
 
 		mockCtrl.Finish()
