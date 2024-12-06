@@ -290,14 +290,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return errUnexpectedRandao
 	}
 
-	// At every epoch governance data will come in block header. Verify it.
-	pset := sb.govModule.EffectiveParamSet(number)
-	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
-	if number%pset.Epoch == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
-		if err := sb.governance.VerifyGovernance(header.Governance); err != nil {
-			return err
-		}
-	}
 	return sb.verifyCommittedSeals(chain, header, parents)
 }
 
