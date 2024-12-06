@@ -41,15 +41,12 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
-	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -374,12 +371,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 
-	// Setup reward related components
-	if pset.Policy() == uint64(istanbul.WeightedRandom) {
-		// NewStakingManager is called with proper non-nil parameters
-		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-	}
-
 	// Governance states which are not yet applied to the db remains at in-memory storage
 	// It disappears during the node restart, so restoration is needed before the sync starts
 	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
@@ -494,7 +485,7 @@ func (s *CN) createSnapshot() {
 	if headers, err = s.Engine().GetKaiaHeadersForSnapshotApply(s.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
+		preloadRef, err := reward.PreloadStakingInfo(s.blockchain, headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
@@ -542,12 +533,10 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking     = staking_impl.NewStakingModule()
-		mReward      = reward_impl.NewRewardModule()
-		mSupply      = supply_impl.NewSupplyModule()
-		mHeaderGov   = headergov_impl.NewHeaderGovModule()
-		mContractGov = contractgov_impl.NewContractGovModule()
-		mGov         = gov_impl.NewGovModule()
+		mStaking = staking_impl.NewStakingModule()
+		mReward  = reward_impl.NewRewardModule()
+		mSupply  = supply_impl.NewSupplyModule()
+		mGov     = gov_impl.NewGovModule()
 	)
 
 	// Initialize modules
@@ -569,21 +558,11 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:        s.blockchain,
 			RewardModule: mReward,
 		}),
-		mHeaderGov.Init(&headergov_impl.InitOpts{
-			ChainKv:     s.chainDB.GetMiscDB(),
+		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: s.chainConfig,
+			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
 			NodeAddress: s.nodeAddress,
-		}),
-		mContractGov.Init(&contractgov_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Hgm:         mHeaderGov,
-		}),
-		mGov.Init(&gov_impl.InitOpts{
-			Hgm:   mHeaderGov,
-			Cgm:   mContractGov,
-			Chain: s.blockchain,
 		}),
 	)
 	if err != nil {
@@ -594,7 +573,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
@@ -901,10 +880,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-
 	return nil
 }
 
@@ -925,7 +900,6 @@ func (s *CN) Stop() error {
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

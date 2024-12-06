@@ -94,18 +94,31 @@ func (mr *MockStakingModuleMockRecorder) GetStakingInfo(arg0 interface{}) *gomoc
 }
 
 // GetStakingInfoFromDB mocks base method.
-func (m *MockStakingModule) GetStakingInfoFromDB(arg0 uint64) (*staking.StakingInfo, error) {
+func (m *MockStakingModule) GetStakingInfoFromDB(arg0 uint64) *staking.StakingInfo {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStakingInfoFromDB", arg0)
 	ret0, _ := ret[0].(*staking.StakingInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // GetStakingInfoFromDB indicates an expected call of GetStakingInfoFromDB.
 func (mr *MockStakingModuleMockRecorder) GetStakingInfoFromDB(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStakingInfoFromDB", reflect.TypeOf((*MockStakingModule)(nil).GetStakingInfoFromDB), arg0)
+}
+
+// PostInsertBlock mocks base method.
+func (m *MockStakingModule) PostInsertBlock(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockStakingModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockStakingModule)(nil).PostInsertBlock), arg0)
 }
 
 // PreloadFromState mocks base method.
@@ -120,6 +133,18 @@ func (m *MockStakingModule) PreloadFromState(arg0 uint64, arg1 *types.Header, ar
 func (mr *MockStakingModuleMockRecorder) PreloadFromState(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreloadFromState", reflect.TypeOf((*MockStakingModule)(nil).PreloadFromState), arg0, arg1, arg2)
+}
+
+// PutStakingInfoToDB mocks base method.
+func (m *MockStakingModule) PutStakingInfoToDB(arg0 uint64, arg1 *staking.StakingInfo) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PutStakingInfoToDB", arg0, arg1)
+}
+
+// PutStakingInfoToDB indicates an expected call of PutStakingInfoToDB.
+func (mr *MockStakingModuleMockRecorder) PutStakingInfoToDB(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutStakingInfoToDB", reflect.TypeOf((*MockStakingModule)(nil).PutStakingInfoToDB), arg0, arg1)
 }
 
 // RewindDelete mocks base method.

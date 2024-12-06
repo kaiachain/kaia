@@ -822,32 +822,6 @@ func TestDBManager_Governance(t *testing.T) {
 	// TODO-Kaia-Database Implement this!
 }
 
-func TestDBManager_SupplyCheckpoint(t *testing.T) {
-	for _, dbm := range dbManagers {
-		// SupplyCheckpoint
-		testcases := []struct {
-			Number     uint64
-			Checkpoint *SupplyCheckpoint
-		}{
-			{1000, &SupplyCheckpoint{big.NewInt(1111), big.NewInt(99)}},
-			{2000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(88)}},
-			{3000, &SupplyCheckpoint{big.NewInt(2222), big.NewInt(0)}},
-			{4000, &SupplyCheckpoint{big.NewInt(0), big.NewInt(0)}},
-		}
-		for _, tc := range testcases {
-			assert.Nil(t, dbm.ReadSupplyCheckpoint(tc.Number))
-			dbm.WriteSupplyCheckpoint(tc.Number, tc.Checkpoint)
-			assert.Equal(t, tc.Checkpoint, dbm.ReadSupplyCheckpoint(tc.Number))
-		}
-
-		// LastSupplyCheckpointNumber
-		lastNum := uint64(54321)
-		assert.Zero(t, dbm.ReadLastSupplyCheckpointNumber())
-		dbm.WriteLastSupplyCheckpointNumber(lastNum)
-		assert.Equal(t, lastNum, dbm.ReadLastSupplyCheckpointNumber())
-	}
-}
-
 func TestDatabaseManager_CreateMigrationDBAndSetStatus(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for i, dbm := range dbManagers {

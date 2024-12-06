@@ -29,11 +29,12 @@ func newGovModuleMock(t *testing.T, config *params.ChainConfig) (*headergov_mock
 	chain := blockchain_mock.NewMockBlockChain(gomock.NewController(t))
 	chain.EXPECT().Config().Return(config).AnyTimes()
 	m := NewGovModule()
-	m.Init(&InitOpts{
-		Hgm:   hgm,
-		Cgm:   cgm,
-		Chain: chain,
-	})
+
+	// don't use Init, we need to use mock Hgm and Cgm.
+	m.Chain = chain
+	m.ChainConfig = config
+	m.Hgm = hgm
+	m.Cgm = cgm
 	return hgm, cgm, m
 }
 

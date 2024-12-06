@@ -1,6 +1,7 @@
 package log
 
 import (
+	"flag"
 	"io"
 	"os"
 	"testing"
@@ -18,7 +19,8 @@ import (
 // `verboseLvl` is used if `go test -v` flag is given
 func EnableLogForTest(normalLvl, verboseLvl Lvl) {
 	lvl := Lvl(normalLvl)
-	if testing.Verbose() {
+	// testing.Verbose() panics in the init() function. flag.Parsed() prevents that.
+	if flag.Parsed() && testing.Verbose() {
 		lvl = Lvl(verboseLvl)
 	}
 

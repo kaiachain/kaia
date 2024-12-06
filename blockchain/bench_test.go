@@ -294,8 +294,8 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 			Number:      num,
 			ParentHash:  hash,
 			BlockScore:  big.NewInt(1),
-			TxHash:      types.EmptyRootHash(num),
-			ReceiptHash: types.EmptyRootHash(num),
+			TxHash:      types.GetEmptyRootHash(num),
+			ReceiptHash: types.GetEmptyRootHash(num),
 		}
 		hash = header.Hash()
 
