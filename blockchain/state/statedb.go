@@ -565,7 +565,7 @@ func (s *StateDB) SelfDestruct6780(addr common.Address) {
 		return
 	}
 
-	if stateObject.created {
+	if stateObject.created && stateObject.account.Type() == account.SmartContractAccountType {
 		s.SelfDestruct(addr)
 	}
 }
@@ -1111,7 +1111,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 	for addr, stateObject := range s.stateObjects {
 		_, isDirty := s.stateObjectsDirty[addr]
 		switch {
-		case (stateObject.selfDestructed && stateObject.account.Type() == account.SmartContractAccountType) || (isDirty && deleteEmptyObjects && stateObject.empty()):
+		case stateObject.selfDestructed || (isDirty && deleteEmptyObjects && stateObject.empty()):
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
