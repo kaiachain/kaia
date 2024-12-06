@@ -21,7 +21,7 @@ type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 /**
  * @dev This unit & scenario test is for StakingTrackerV2.sol.
  */
-describe.only("StakingTrackerV2.sol", function () {
+describe("StakingTrackerV2.sol", function () {
   async function verifyTrackerState(
     stakingTracker: StakingTrackerV2,
     trackerId: number,
