@@ -463,12 +463,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		}
 	}
 
-	// if there is a vote to attach, attach it to the header
-	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
-	if len(header.Vote) > 0 {
-		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
-	}
-
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
 		prevMixHash := headerMixHash(chain, parent)
 		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
