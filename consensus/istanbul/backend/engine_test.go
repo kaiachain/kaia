@@ -146,6 +146,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	var (
 		key    *ecdsa.PrivateKey
 		period = istanbul.DefaultConfig.BlockPeriod
+		err    error
 	)
 	// force enable Istanbul engine and governance
 	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
@@ -208,6 +209,23 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	}
 
 	appendValidators(genesis, addrs)
+
+	genesisGov := make(gov.PartialParamSet)
+	for name, param := range gov.Params {
+		val, err := param.ChainConfigValue(genesis.Config)
+		if err != nil {
+			panic(err)
+		}
+		err = genesisGov.Add(string(name), val)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	genesis.Governance, err = headergov.NewGovData(genesisGov).ToGovBytes()
+	if err != nil {
+		panic(err)
+	}
 
 	genesis.MustCommit(b.db)
 
@@ -880,8 +898,8 @@ func makeExpectedResult(indices []int, candidate []common.Address) []common.Addr
 	return copyAndSortAddrs(expected)
 }
 
-// Asserts taht if all (key,value) pairs of `subset` exists in `set`
-func assertMapSubset(t *testing.T, subset, set map[string]interface{}) {
+// Asserts that if all (key,value) pairs of `subset` exists in `set`
+func assertMapSubset[M ~map[K]any, K comparable](t *testing.T, subset, set M) {
 	for k, v := range subset {
 		assert.Equal(t, set[k], v)
 	}
@@ -1787,9 +1805,13 @@ func TestGovernance_Votes(t *testing.T) {
 			if blockNumber == 0 {
 				blockNumber = chain.CurrentBlock().NumberU64()
 			}
-			_, items, err := engine.governance.ReadGovernance(blockNumber)
-			assert.NoError(t, err)
-			assert.Equal(t, item.value, items[item.key])
+			partialParamSet := engine.govModule.(*gov_impl.GovModule).Hgm.EffectiveParamsPartial(blockNumber + 1)
+			switch val := partialParamSet[gov.ParamName(item.key)]; v := val.(type) {
+			case *big.Int:
+				require.Equal(t, item.value, v.String())
+			default:
+				require.Equal(t, item.value, v)
+			}
 		}
 
 		mockCtrl.Finish()
@@ -1872,15 +1894,17 @@ func TestGovernance_GovModule(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		// Validate historic parameters with EffectiveParamSet() and ReadGovernance().
+		// Validate historic parameters with EffectiveParamSet() and EffectiveParamsPartial().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
 			pset := engine.govModule.EffectiveParamSet(uint64(num))
 			assertMapSubset(t, tc.expected[num], pset.ToGovParamSet().StrMap())
 
-			_, items, err := engine.governance.ReadGovernance(uint64(num))
-			assert.NoError(t, err)
-			assertMapSubset(t, tc.expected[num+1], items)
+			partialParamSet := make(map[string]any)
+			for k, v := range engine.govModule.(*gov_impl.GovModule).Hgm.EffectiveParamsPartial(uint64(num + 1)) {
+				partialParamSet[string(k)] = v
+			}
+			assertMapSubset(t, tc.expected[num+1], partialParamSet)
 		}
 
 		mockCtrl.Finish()

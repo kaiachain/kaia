@@ -737,13 +737,6 @@ func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager
 	return db, bc, err
 }
 
-func expectedGovMap(t *testing.T, gov *governance.MixedEngine, num uint64, item string, value interface{}, expectedCacheSize int) {
-	_, govMap, err := gov.ReadGovernance(num)
-	assert.Nil(t, err)
-	assert.Equal(t, govMap[item], value)
-	assert.Equal(t, len(gov.IdxCache())-1, expectedCacheSize)
-}
-
 func TestSetHead(t *testing.T) {
 	headerGovSetHeadTest(t, &rewindTest{
 		// `params.CheckpointInterval` is constant value of 1024.
@@ -779,23 +772,26 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 		epoch              uint64 = 5
 		govBlockNum               = 10
 		appliedGovBlockNum uint64 = 20
-		governance                = governance.NewMixedEngine(testCfg(epoch), db)
+		oldMintingAmount          = "0"
+		newMintingAmount          = "123"
 		govModule                 = gov_impl.NewGovModule()
 		_                         = govModule.Init(&gov_impl.InitOpts{
 			Chain:       chain,
-			ChainConfig: chain.Config(),
+			ChainConfig: testCfg(epoch),
 			ChainKv:     db.GetMiscDB(),
+			NodeAddress: addrs[0],
 		})
 		gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
+	chain.RegisterRewindableModule(govModule)
+	chain.RegisterExecutionModule(govModule)
 
 	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
 		if i == govBlockNum-1 { // Subtract 1, because the callback starts to enumerate from zero
 			// "reward.mintingamount" = 123
 			govData := hexutil.MustDecode("0x9e7b227265776172642e6d696e74696e67616d6f756e74223a22313233227d")
 			b.SetGovData(govData)
-			governance.WriteGovernanceForNextEpoch(uint64(govBlockNum), govData)
 		}
 	})
 
@@ -812,10 +808,10 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	assert.Nil(t, err)
 
 	// Before setHead
-	expectedGovMap(t, governance, appliedGovBlockNum, "reward.mintingamount", "123", 1)
+	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// Set the head of the chain back to the requested number
-	err = doSetHead(chain, chain.Engine(), governance, gpo, tt.setheadBlock)
+	err = doSetHead(chain, chain.Engine(), gpo, tt.setheadBlock)
 	assert.Nil(t, err)
 
 	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {
@@ -829,7 +825,7 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	}
 	// After setHead
 	// governance db and cachelookup
-	expectedGovMap(t, governance, appliedGovBlockNum, "reward.mintingamount", "0", 0)
+	assert.Equal(t, oldMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// snapshot db lookup
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
@@ -841,12 +837,11 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 		}
 		if len(b.Header().Governance) > 0 {
 			assert.Equal(t, b.Header().Number.Uint64()%uint64(epoch), uint64(0))
-			governance.WriteGovernanceForNextEpoch(uint64(govBlockNum), b.Header().Governance)
 		}
 	}
 	if head := chain.CurrentBlock(); head.NumberU64() != uint64(tt.canonicalBlocks) {
 		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
 	}
 	// After setHead and sync
-	expectedGovMap(t, governance, appliedGovBlockNum, "reward.mintingamount", "123", 1)
+	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 }
