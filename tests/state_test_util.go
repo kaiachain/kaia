@@ -336,10 +336,14 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			if isTestExecutionSpecState {
-				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+			if _, ok := types.ParseDelegation(a.Code); ok {
+				statedb.SetCodeToEOA(addr, a.Code, params.Rules{IsIstanbul: true})
+			} else {
+				if isTestExecutionSpecState {
+					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+				}
+				statedb.SetCode(addr, a.Code)
 			}
-			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
@@ -414,12 +418,6 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 
-	var intrinsicGas uint64
-	if isTestExecutionSpecState {
-		intrinsicGas, err = useEthIntrinsicGas(data, accessList, to == nil, r)
-	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
-	}
 	var authorizationList types.AuthorizationList
 	if tx.AuthorizationList != nil {
 		authorizationList = make(types.AuthorizationList, 0)
@@ -433,6 +431,13 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 				S:       auth.S,
 			})
 		}
+	}
+
+	var intrinsicGas uint64
+	if isTestExecutionSpecState {
+		intrinsicGas, err = useEthIntrinsicGas(data, accessList, authorizationList, to == nil, r)
+	} else {
+		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
 
 	if err != nil {
@@ -491,11 +496,11 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, accessList types.AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList types.AuthorizationList, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, accessList, nil, contractCreation, r)
+	return types.IntrinsicGas(data, accessList, authorizationList, contractCreation, r)
 }
 
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
