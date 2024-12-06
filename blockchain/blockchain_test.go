@@ -2248,7 +2248,7 @@ func TestProcessParentBlockHash(t *testing.T) {
 		}
 	}
 	t.Run("MPT", func(t *testing.T) {
-		statedb, _ := state.New(types.EmptyRootHashOriginal, db, nil, nil)
+		statedb, _ := state.New(types.EmptyRootHash, db, nil, nil)
 		test(statedb)
 	})
 }

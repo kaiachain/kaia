@@ -66,7 +66,7 @@ func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	config = chainConfig
 	govModule = g
 	types.DeriveSha = DeriveShaMux
-	types.EmptyRootHash = EmptyRootHashMux
+	types.GetEmptyRootHash = EmptyRootHashMux
 	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
