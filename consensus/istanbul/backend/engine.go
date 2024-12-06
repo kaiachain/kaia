@@ -211,13 +211,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
 		pset := sb.govModule.EffectiveParamSet(blockNum)
-		kip71 := &params.KIP71Config{
-			LowerBoundBaseFee:         pset.LowerBoundBaseFee,
-			UpperBoundBaseFee:         pset.UpperBoundBaseFee,
-			GasTarget:                 pset.GasTarget,
-			MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
-			BaseFeeDenominator:        pset.BaseFeeDenominator,
-		}
+		kip71 := pset.ToKip71Config()
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
 		}

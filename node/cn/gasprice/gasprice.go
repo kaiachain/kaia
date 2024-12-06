@@ -340,13 +340,7 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 // and the next base fee is at the lower bound.
 func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
 	pset := oracle.govModule.EffectiveParamSet(header.Number.Uint64() + 1)
-	kip71 := &params.KIP71Config{
-		LowerBoundBaseFee:         pset.LowerBoundBaseFee,
-		UpperBoundBaseFee:         pset.UpperBoundBaseFee,
-		GasTarget:                 pset.GasTarget,
-		MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
-		BaseFeeDenominator:        pset.BaseFeeDenominator,
-	}
+	kip71 := pset.ToKip71Config()
 	nextBaseFee := misc.NextMagmaBlockBaseFee(header, kip71)
 	return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee))) <= 0
 }
