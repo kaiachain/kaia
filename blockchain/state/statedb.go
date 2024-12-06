@@ -398,7 +398,7 @@ func (s *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
-// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) fails and the account is EOA without code.
+// GetVmVersion returns true when the address is an SCA or an EOA with code.
 func (s *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
