@@ -2373,7 +2373,7 @@ func TestEIP7702(t *testing.T) {
 	if !bytes.Equal(code, want) {
 		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
 	}
-	if vmVersion, ok := state.GetVmVersion(addr1); vmVersion != params.VmVersion1 || !ok {
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion1 && ok) {
 		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
 	}
 
@@ -2381,7 +2381,7 @@ func TestEIP7702(t *testing.T) {
 	if !bytes.Equal(code, want) {
 		t.Fatalf("addr2 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
 	}
-	if vmVersion, ok := state.GetVmVersion(addr2); vmVersion != params.VmVersion1 || !ok {
+	if vmVersion, ok := state.GetVmVersion(addr2); !(vmVersion == params.VmVersion1 && ok) {
 		t.Fatalf("addr2 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
 	}
 
@@ -2446,7 +2446,7 @@ func TestEIP7702(t *testing.T) {
 	if !bytes.Equal(state.GetCode(addr1), nil) {
 		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
 	}
-	if vmVersion, ok := state.GetVmVersion(addr1); vmVersion != params.VmVersion0 || ok {
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion0 && !ok) {
 		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
 	}
 }
