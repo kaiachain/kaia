@@ -255,10 +255,10 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
-	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState)
+	rules := config.Rules(block.Number())
+	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState, rules)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	rules := config.Rules(block.Number())
 	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
 	if err != nil {
 		return st, common.Hash{}, err
@@ -331,16 +331,16 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool) *state.StateDB {
+func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool, rules params.Rules) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
 			if _, ok := types.ParseDelegation(a.Code); ok {
-				statedb.SetCodeToEOA(addr, a.Code, params.Rules{IsIstanbul: true})
+				statedb.SetCodeToEOA(addr, a.Code, rules)
 			} else {
 				if isTestExecutionSpecState {
-					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 				}
 				statedb.SetCode(addr, a.Code)
 			}
