@@ -17,40 +17,48 @@
 package compress
 
 import (
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/compress"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-type BodyCompressModule struct {
-	compress.InitOpts
+var (
+	_      compress.CompressionModule = &CompressModule{}
+	logger                            = log.NewModuleLogger(log.KaiaxCompress)
+)
+
+type BlockChain interface {
+	CurrentBlock() *types.Block
 }
 
-func NewBodyCompression() *BodyCompressModule {
-	return &BodyCompressModule{}
+type InitOpts struct {
+	Chain BlockChain
+	Dbm   database.DBManager
 }
 
-func (bc *BodyCompressModule) GetChain() compress.BlockChain {
-	return bc.Chain
+type CompressModule struct {
+	InitOpts
 }
 
-func (bc *BodyCompressModule) GetDbm() database.DBManager {
-	return bc.Dbm
+func NewCompression() *CompressModule {
+	return &CompressModule{}
 }
 
-func (bc *BodyCompressModule) Init(opts *compress.InitOpts) error {
+func (c *CompressModule) Init(opts *InitOpts) error {
 	if opts == nil || opts.Chain == nil || opts.Dbm == nil {
-		return errBCInitNil
+		return compress.ErrInitNil
 	}
-	bc.InitOpts = *opts
+	c.InitOpts = *opts
 	return nil
 }
 
-func (bc *BodyCompressModule) Start() error {
-	compress.Logger.Info("[Body Compression] Compression started")
-	go bc.Compress()
+func (c *CompressModule) Start() error {
+	logger.Info("[ Compression] Compression started")
+	go c.Compress()
 	return nil
 }
 
-func (bc *BodyCompressModule) Stop() {
-	compress.Logger.Info("[Body Compression] Compression Stopped")
+func (c *CompressModule) Stop() {
+	logger.Info("[ Compression] Compression Stopped")
 }

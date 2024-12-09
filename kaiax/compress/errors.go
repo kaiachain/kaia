@@ -20,4 +20,4 @@ import (
 	"errors"
 )
 
-var errRCInitNil = errors.New("[Receipt Compression] Failed to initialize due to nil value")
+var ErrInitNil = errors.New("[Compression Module] Failed to initialize due to nil value")

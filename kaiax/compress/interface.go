@@ -16,7 +16,12 @@
 
 package compress
 
-import "github.com/kaiachain/kaia/kaiax"
+import (
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/storage/database"
+)
 
 //go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/compress CompressModule
 type CompressionModule interface {
@@ -24,4 +29,8 @@ type CompressionModule interface {
 	// TODO-hyunsooda: Implement getter APIs
 	// kaiax.JsonRpcModule
 	kaiax.RewindableModule
+
+	FindHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (*types.Header, error)
+	FindBodyFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (*types.Body, error)
+	FindReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (types.Receipts, error)
 }

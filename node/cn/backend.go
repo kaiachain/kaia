@@ -48,10 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
-	compress_common "github.com/kaiachain/kaia/kaiax/compress"
-	compress_bc "github.com/kaiachain/kaia/kaiax/compress/body"
-	compress_hc "github.com/kaiachain/kaia/kaiax/compress/header"
-	compress_rc "github.com/kaiachain/kaia/kaiax/compress/receipts"
+	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -545,19 +542,13 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking         = staking_impl.NewStakingModule()
-		mReward          = reward_impl.NewRewardModule()
-		mSupply          = supply_impl.NewSupplyModule()
-		mHeaderGov       = headergov_impl.NewHeaderGovModule()
-		mContractGov     = contractgov_impl.NewContractGovModule()
-		mGov             = gov_impl.NewGovModule()
-		mCompressHC      = compress_hc.NewHeaderCompression()
-		mCompressBC      = compress_bc.NewBodyCompression()
-		mCompressRC      = compress_rc.NewReceiptCompression()
-		compressInitOpts = &compress_common.InitOpts{
-			Chain: s.blockchain,
-			Dbm:   s.chainDB,
-		}
+		mStaking     = staking_impl.NewStakingModule()
+		mReward      = reward_impl.NewRewardModule()
+		mSupply      = supply_impl.NewSupplyModule()
+		mHeaderGov   = headergov_impl.NewHeaderGovModule()
+		mContractGov = contractgov_impl.NewContractGovModule()
+		mGov         = gov_impl.NewGovModule()
+		mCompress    = compress_impl.NewCompression()
 	)
 
 	// Initialize modules
@@ -595,9 +586,10 @@ func (s *CN) SetupKaiaxModules() error {
 			Cgm:   mContractGov,
 			Chain: s.blockchain,
 		}),
-		mCompressHC.Init(compressInitOpts),
-		mCompressBC.Init(compressInitOpts),
-		mCompressRC.Init(compressInitOpts),
+		mCompress.Init(&compress_impl.InitOpts{
+			Chain: s.blockchain,
+			Dbm:   s.chainDB,
+		}),
 	)
 	if err != nil {
 		return err
@@ -605,11 +597,11 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompressHC, mCompressBC, mCompressRC)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompress)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompressHC, mCompressBC, mCompressRC)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompress)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterStakingModule(mStaking)
 		engine.RegisterConsensusModule(mReward, mGov)
@@ -617,6 +609,7 @@ func (s *CN) SetupKaiaxModules() error {
 	s.protocolManager.RegisterStakingModule(mStaking)
 
 	s.stakingModule = mStaking
+	s.chainDB.SetCompressModule(mCompress)
 	return nil
 }
 

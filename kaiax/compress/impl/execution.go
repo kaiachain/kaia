@@ -17,7 +17,14 @@
 package compress
 
 import (
-	"errors"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
-var errBCInitNil = errors.New("[Body Compression] Failed to initialize due to nil value")
+func (c *CompressModule) RewindTo(newBlock *types.Block) {}
+
+func (c *CompressModule) RewindDelete(hash common.Hash, num uint64) {
+	c.deleteHeader(hash, num)
+	c.deleteBody(hash, num)
+	c.deleteReceipts(hash, num)
+}

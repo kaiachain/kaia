@@ -109,12 +109,9 @@ var (
 	blockBodyPrefix     = []byte("b") // blockBodyPrefix + num (uint64 big endian) + hash -> block body
 	blockReceiptsPrefix = []byte("r") // blockReceiptsPrefix + num (uint64 big endian) + hash -> block receipts
 
-	nextCompressionNumberPrefix         = []byte("NextCompression-")
-	nextReceiptsCompressionNumberPrefix = []byte("NextCompression-Receipts-")
-	nextBodyCompressionNumberPrefix     = []byte("NextCompression-Body-")
-	compressHeaderPrefix                = []byte("CompressHeader-")
-	compressReceiptPrefix               = []byte("CompressReceipt-")
-	compressBodyPrefix                  = []byte("CompressBody-")
+	compressHeaderPrefix  = []byte("CompressHeader-")
+	compressReceiptPrefix = []byte("CompressReceipt-")
+	compressBodyPrefix    = []byte("CompressBody-")
 
 	txLookupPrefix        = []byte("l") // txLookupPrefix + hash -> transaction/receipt lookup metadata
 	SnapshotAccountPrefix = []byte("a") // SnapshotAccountPrefix + account hash -> account trie value
