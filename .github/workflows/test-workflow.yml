@@ -52,7 +52,7 @@ jobs:
         ./set_CNonly.sh
         cd ..
         cp config_template.json config.json
-        pip3 install html-testRunner
+        curl https://bootstrap.pypa.io/get-pip.py | python
         pip3 install -r requirements.txt
         python3 main.py --protocol rpc
 
