@@ -775,8 +775,6 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
 
-	newobj.created = true
-
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
 		return newobj, prev
@@ -810,8 +808,6 @@ func (s *StateDB) createObjectWithMap(addr common.Address, accountType account.A
 	} else {
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
-
-	newobj.created = true
 
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
@@ -856,6 +852,7 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := s.createObjectWithMap(addr, account.SmartContractAccountType, values)
+	new.created = true
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
 	}
