@@ -503,14 +503,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// It needs to update gas price of tx pool since magma hardfork
 	if pool.rules.IsMagma {
 		pset := pool.govModule.EffectiveParamSet(newHead.Number.Uint64() + 1)
-		kip71config := &params.KIP71Config{
-			LowerBoundBaseFee:         pset.LowerBoundBaseFee,
-			UpperBoundBaseFee:         pset.UpperBoundBaseFee,
-			GasTarget:                 pset.GasTarget,
-			MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
-			BaseFeeDenominator:        pset.BaseFeeDenominator,
-		}
-		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, kip71config)
+		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 }
 
