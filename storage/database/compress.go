@@ -10,7 +10,6 @@ import (
 )
 
 type CompressStructTyp interface {
-	GetBlkNumber() uint64
 	GetBlkHash() common.Hash
 }
 
@@ -51,10 +50,6 @@ type ReceiptCompressionRLP struct {
 	StorageReceipts []*types.ReceiptForStorage
 }
 
-func (r *ReceiptCompression) GetBlkNumber() uint64 {
-	return r.BlkNumber
-}
-
 func (r *ReceiptCompression) GetBlkHash() common.Hash {
 	return r.BlkHash
 }
@@ -86,26 +81,22 @@ type BodyCompressionRLP struct {
 	Body      *types.Body
 }
 
-func (r *BodyCompression) GetBlkNumber() uint64 {
-	return r.BlkNumber
+func (b *BodyCompression) GetBlkHash() common.Hash {
+	return b.BlkHash
 }
 
-func (r *BodyCompression) GetBlkHash() common.Hash {
-	return r.BlkHash
+func (b *BodyCompression) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, &BodyCompressionRLP{BlkNumber: b.BlkNumber, BlkHash: b.BlkHash, Body: b.Body})
 }
 
-func (r *BodyCompression) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, &BodyCompressionRLP{BlkNumber: r.BlkNumber, BlkHash: r.BlkHash, Body: r.Body})
-}
-
-func (r *BodyCompression) DecodeRLP(s *rlp.Stream) error {
+func (b *BodyCompression) DecodeRLP(s *rlp.Stream) error {
 	var dec BodyCompressionRLP
 	if err := s.Decode(&dec); err != nil {
 		return err
 	}
-	r.BlkNumber = dec.BlkNumber
-	r.BlkHash = dec.BlkHash
-	r.Body = dec.Body
+	b.BlkNumber = dec.BlkNumber
+	b.BlkHash = dec.BlkHash
+	b.Body = dec.Body
 	return nil
 }
 

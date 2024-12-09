@@ -42,8 +42,9 @@ func (typ CompressionType) String() string {
 		return "Body Compression"
 	case ReceiptCompressType:
 		return "Receipts Compression"
+	default:
+		return ""
 	}
-	return ""
 }
 
 const (
@@ -343,41 +344,6 @@ func supplyCheckpointKey(blockNumber uint64) []byte {
 	return append(supplyCheckpointPrefix, common.Int64ToByteBigEndian(blockNumber)...)
 }
 
-func getBodyCompressKey(from, to uint64) []byte {
-	bFrom, bTo := make([]byte, 8), make([]byte, 8)
-	binary.BigEndian.PutUint64(bFrom, from)
-	binary.BigEndian.PutUint64(bTo, to)
-	return append(append(compressBodyPrefix, bFrom...), bTo...)
-}
-
-func parseBodyCompressKey(key []byte) (uint64, uint64) {
-	prefixLen := len(compressBodyPrefix)
-	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
-	to := binary.BigEndian.Uint64(key[prefixLen+8:])
-	return from, to
-}
-
-func getReceiptsCompressKey(from, to uint64) []byte {
-	bFrom, bTo := make([]byte, 8), make([]byte, 8)
-	binary.BigEndian.PutUint64(bFrom, from)
-	binary.BigEndian.PutUint64(bTo, to)
-	return append(append(compressReceiptPrefix, bFrom...), bTo...)
-}
-
-func parseReceiptsCompressKey(key []byte) (uint64, uint64) {
-	prefixLen := len(compressReceiptPrefix)
-	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
-	to := binary.BigEndian.Uint64(key[prefixLen+8:])
-	return from, to
-}
-
-func getHeaderCompressKey(from, to uint64) []byte {
-	bFrom, bTo := make([]byte, 8), make([]byte, 8)
-	binary.BigEndian.PutUint64(bFrom, from)
-	binary.BigEndian.PutUint64(bTo, to)
-	return append(append(compressHeaderPrefix, bFrom...), bTo...)
-}
-
 func getCompressKey(from, to uint64, typ CompressionType) []byte {
 	bFrom, bTo := make([]byte, 8), make([]byte, 8)
 	binary.BigEndian.PutUint64(bFrom, from)
@@ -428,11 +394,11 @@ func getDBType(compressTyp CompressionType) DBEntryType {
 func getDBTypeWithCompressKey(compressTyp CompressionType, from, to uint64) (DBEntryType, []byte) {
 	switch compressTyp {
 	case HeaderCompressType:
-		return CompressHeaderDB, getHeaderCompressKey(from, to)
+		return CompressHeaderDB, getCompressKey(from, to, compressTyp)
 	case BodyCompressType:
-		return CompressBodyDB, getBodyCompressKey(from, to)
+		return CompressBodyDB, getCompressKey(from, to, compressTyp)
 	case ReceiptCompressType:
-		return CompressReceiptsDB, getReceiptsCompressKey(from, to)
+		return CompressReceiptsDB, getCompressKey(from, to, compressTyp)
 	default:
 		panic("unreachable")
 	}
