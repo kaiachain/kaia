@@ -368,10 +368,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
 
+	// SetCode sender nonce increment should be done before set code process.
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		st.state.IncNonce(msg.ValidatedSender())
+	}
+
 	// Check authorization list validity and set code.
 	if msg.AuthorizationList() != nil {
-		// SetCode sender nonce increment should be done before set code process.
-		st.state.IncNonce(msg.ValidatedSender())
 		st.processAuthorizationList(msg.AuthorizationList(), *msg.To(), rules)
 	}
 
