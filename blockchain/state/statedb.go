@@ -565,7 +565,7 @@ func (s *StateDB) SelfDestruct6780(addr common.Address) {
 		return
 	}
 
-	if stateObject.created && stateObject.account.Type() == account.SmartContractAccountType {
+	if stateObject.created {
 		s.SelfDestruct(addr)
 	}
 }
