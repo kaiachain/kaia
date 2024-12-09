@@ -75,6 +75,9 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	// 1. Init gov. If Gov DB is empty, migrate from legacy governance DB.
 	if ReadGovDataBlockNums(h.ChainKv) == nil {
 		legacyGovBlockNums := ReadLegacyIdxHistory(h.ChainKv)
+		if legacyGovBlockNums == nil {
+			legacyGovBlockNums = StoredUint64Array{0}
+		}
 		WriteGovDataBlockNums(h.ChainKv, legacyGovBlockNums)
 	}
 
@@ -209,11 +212,6 @@ func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.
 func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.GovData {
 	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]headergov.GovData)
-
-	// TODO: in production, govBlocks must not be nil. Remove this after implementing kcn init and data migration.
-	if govBlocks == nil {
-		govBlocks = StoredUint64Array{0}
-	}
 
 	for _, blockNum := range govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)

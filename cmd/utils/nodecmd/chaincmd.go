@@ -195,13 +195,6 @@ func initGenesis(ctx *cli.Context) error {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
 
-		// Write governance items to database
-		// If governance data already exist, it'll be skipped with an error log and will not return an error
-		gov := governance.NewMixedEngineNoInit(genesis.Config, chainDB)
-		if err := gov.WriteGovernance(0, govSet, governance.NewGovernanceSet()); err != nil {
-			logger.Crit("Failed to write governance items", "err", err)
-		}
-
 		// Write the live pruning flag to database
 		if livePruning {
 			logger.Info("Writing live pruning flag to database")

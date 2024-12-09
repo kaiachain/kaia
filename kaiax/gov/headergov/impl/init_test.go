@@ -106,3 +106,16 @@ func TestReadGovDataFromDB(t *testing.T) {
 
 	assert.Equal(t, govs, readGovDataFromDB(chain, db))
 }
+
+func TestInitialDB(t *testing.T) {
+	config := params.TestChainConfig.Copy()
+	config.Istanbul = &params.IstanbulConfig{Epoch: 10}
+
+	h := newHeaderGovModule(t, config)
+	require.NotNil(t, h)
+
+	assert.Nil(t, ReadLegacyIdxHistory(h.ChainKv))
+	assert.Equal(t, StoredUint64Array{0}, ReadGovDataBlockNums(h.ChainKv))
+	assert.Nil(t, StoredUint64Array(nil), ReadVoteDataBlockNums(h.ChainKv))
+	assert.Equal(t, uint64(0), *ReadLowestVoteScannedBlockNum(h.ChainKv))
+}
