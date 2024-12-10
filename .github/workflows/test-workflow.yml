@@ -41,6 +41,7 @@ jobs:
         make test-tests
 
   test-rpc:
+    permissions: write-all
     uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
