@@ -17,13 +17,9 @@ describe("TreasuryRebalanceV2", function () {
   async function buildFixture() {
     await ethers.provider.send("hardhat_reset", []);
     // Prepare parameters for deploying contracts
-    const [
-      _rebalance_manager,
-      _eoaZeroed,
-      _allocated1,
-      _allocated2,
-      ..._zeroedAdmins
-    ] = (await ethers.getSigners()).slice(0, 8);
+    const [_rebalance_manager, _eoaZeroed, _allocated1, _allocated2, ..._zeroedAdmins] = (
+      await ethers.getSigners()
+    ).slice(0, 8);
 
     // Deploy and fund KIF and KEF which will be zeroed after rebalancing.
     const KIF = await ethers.getContractFactory("SenderTest1");
@@ -64,12 +60,9 @@ describe("TreasuryRebalanceV2", function () {
       value: value,
     });
 
-    const _mockZeroed3 = await smock.fake<SenderTest1>(
-      SenderTest1__factory.abi,
-      {
-        address: "0x38138d89c321b3b5f421e9452b69cf29e4380bae",
-      }
-    );
+    const _mockZeroed3 = await smock.fake<SenderTest1>(SenderTest1__factory.abi, {
+      address: "0x38138d89c321b3b5f421e9452b69cf29e4380bae",
+    });
 
     const REBALANCE = await ethers.getContractFactory("TreasuryRebalanceV2");
     const _trV2 = await REBALANCE.deploy(executionBlock);
@@ -95,15 +88,8 @@ describe("TreasuryRebalanceV2", function () {
     allocated2: SignerWithAddress;
 
   before(async function () {
-    const {
-      _rebalance_manager,
-      _zeroedAdmins,
-      _eoaZeroed,
-      _zeroed1,
-      _zeroed2,
-      _allocated1,
-      _allocated2,
-    } = await loadFixture(buildFixture);
+    const { _rebalance_manager, _zeroedAdmins, _eoaZeroed, _zeroed1, _zeroed2, _allocated1, _allocated2 } =
+      await loadFixture(buildFixture);
     rebalance_manager = _rebalance_manager;
     zeroedAdmins = _zeroedAdmins;
     eoaZeroed = _eoaZeroed;
@@ -146,32 +132,26 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should add a zeroed and emit a RegisterZeroed event", async function () {
-      await expect(trV2.registerZeroed(zeroed1.address))
-        .to.emit(trV2, "ZeroedRegistered")
-        .withArgs(zeroed1.address);
+      await expect(trV2.registerZeroed(zeroed1.address)).to.emit(trV2, "ZeroedRegistered").withArgs(zeroed1.address);
       const zeroedInfo = await trV2.getZeroed(zeroed1.address);
       expect(zeroedInfo[0]).to.equal(zeroed1.address);
       expect(zeroedInfo[1].length).to.equal(0);
     });
 
     it("Should not allow non-owner to add a zeroed", async function () {
-      await expect(
-        trV2.connect(zeroedAdmins[0]).registerZeroed(zeroed2.address)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(trV2.connect(zeroedAdmins[0]).registerZeroed(zeroed2.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
 
     it("Should not allow adding the same zeroed twice", async function () {
       await trV2.registerZeroed(zeroed2.address);
       expect(await trV2.zeroedExists(zeroed2.address)).to.equal(true);
-      await expect(trV2.registerZeroed(zeroed2.address)).to.be.revertedWith(
-        "Zeroed address is already registered"
-      );
+      await expect(trV2.registerZeroed(zeroed2.address)).to.be.revertedWith("Zeroed address is already registered");
     });
 
     it("Should revert if the zeroed address is zero", async function () {
-      await expect(
-        trV2.registerZeroed(ethers.constants.AddressZero)
-      ).to.be.revertedWith("Invalid address");
+      await expect(trV2.registerZeroed(ethers.constants.AddressZero)).to.be.revertedWith("Invalid address");
     });
 
     it("zeroeds length should be two", async function () {
@@ -191,24 +171,18 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should remove a zeroed and emit a RemoveZeroed event", async function () {
-      await expect(trV2.removeZeroed(zeroed1.address))
-        .to.emit(trV2, "ZeroedRemoved")
-        .withArgs(zeroed1.address);
-      await expect(trV2.getZeroed(zeroed1.address)).to.be.revertedWith(
-        "Zeroed not registered"
-      );
+      await expect(trV2.removeZeroed(zeroed1.address)).to.emit(trV2, "ZeroedRemoved").withArgs(zeroed1.address);
+      await expect(trV2.getZeroed(zeroed1.address)).to.be.revertedWith("Zeroed not registered");
     });
 
     it("Should not allow removing a non-existent zeroed", async function () {
-      await expect(
-        trV2.removeZeroed(rebalance_manager.address)
-      ).to.be.revertedWith("Zeroed not registered");
+      await expect(trV2.removeZeroed(rebalance_manager.address)).to.be.revertedWith("Zeroed not registered");
     });
 
     it("Should not allow non-owner to remove a zeroed", async function () {
-      await expect(
-        trV2.connect(zeroedAdmins[0]).removeZeroed(zeroed2.address)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(trV2.connect(zeroedAdmins[0]).removeZeroed(zeroed2.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
@@ -238,31 +212,25 @@ describe("TreasuryRebalanceV2", function () {
     it("Should revert if register allocated twice", async function () {
       const amount1 = hre.ethers.utils.parseEther("20");
       expect(await trV2.allocatedExists(allocated1.address)).to.equal(true);
-      await expect(
-        trV2.registerAllocated(allocated1.address, amount1)
-      ).to.be.revertedWith("Allocated address is already registered");
+      await expect(trV2.registerAllocated(allocated1.address, amount1)).to.be.revertedWith(
+        "Allocated address is already registered"
+      );
     });
 
     it("Should not allow non-owner to add a allocated", async function () {
       const amount1 = hre.ethers.utils.parseEther("20");
-      await expect(
-        trV2
-          .connect(zeroedAdmins[0])
-          .registerAllocated(allocated1.address, amount1)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(trV2.connect(zeroedAdmins[0]).registerAllocated(allocated1.address, amount1)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
 
     it("Should revert if the allocated address is zero", async function () {
       const amount1 = hre.ethers.utils.parseEther("20");
-      await expect(
-        trV2.registerAllocated(ethers.constants.AddressZero, amount1)
-      ).to.be.revertedWith("Invalid address");
+      await expect(trV2.registerAllocated(ethers.constants.AddressZero, amount1)).to.be.revertedWith("Invalid address");
     });
 
     it("Should revert if the amount is set to 0", async function () {
-      await expect(
-        trV2.registerAllocated(allocated2.address, 0)
-      ).to.be.revertedWith("Amount cannot be set to 0");
+      await expect(trV2.registerAllocated(allocated2.address, 0)).to.be.revertedWith("Amount cannot be set to 0");
     });
   });
 
@@ -283,9 +251,7 @@ describe("TreasuryRebalanceV2", function () {
         .withArgs(allocated1.address);
       expect(await trV2.getAllocatedCount()).to.equal(1);
       expect(await trV2.getTreasuryAmount()).to.equal(value);
-      await expect(trV2.getAllocated(allocated1.address)).to.be.revertedWith(
-        "Allocated not registered"
-      );
+      await expect(trV2.getAllocated(allocated1.address)).to.be.revertedWith("Allocated not registered");
     });
 
     it("Should not remove unregistered allocated", async function () {
@@ -293,9 +259,9 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should not allow non-owner to remove a allocated", async function () {
-      await expect(
-        trV2.connect(allocated2).removeAllocated(allocated2.address)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(trV2.connect(allocated2).removeAllocated(allocated2.address)).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
@@ -323,9 +289,7 @@ describe("TreasuryRebalanceV2", function () {
       const updatedZeroedDetails = await trV2.getZeroed(zeroed1.address);
       expect(updatedZeroedDetails[1][0]).to.equal(zeroedAdmins[0].address);
 
-      await expect(tx)
-        .to.emit(trV2, "Approved")
-        .withArgs(zeroed1.address, zeroedAdmins[0].address, 1);
+      await expect(tx).to.emit(trV2, "Approved").withArgs(zeroed1.address, zeroedAdmins[0].address, 1);
     });
 
     it("Should approve zeroed eoa if msg.sender is same as zeroed eoa", async function () {
@@ -335,42 +299,30 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should revert if zeroed is already approved", async function () {
-      await expect(
-        trV2.connect(eoaZeroed).approve(eoaZeroed.address)
-      ).to.be.revertedWith("Already approved");
+      await expect(trV2.connect(eoaZeroed).approve(eoaZeroed.address)).to.be.revertedWith("Already approved");
     });
 
     it("Should revert if zeroed is not registered", async function () {
       // try to approve unregistered zeroed
-      await expect(trV2.approve(zeroed2.address)).to.be.revertedWith(
-        "zeroed needs to be registered before approval"
-      );
+      await expect(trV2.approve(zeroed2.address)).to.be.revertedWith("zeroed needs to be registered before approval");
     });
 
     it("Should revert if zeroed is a EOA and if msg.sender is not the admin of zeroed", async function () {
-      await expect(trV2.approve(eoaZeroed.address)).to.be.revertedWith(
-        "zeroedAddress is not the msg.sender"
-      );
+      await expect(trV2.approve(eoaZeroed.address)).to.be.revertedWith("zeroedAddress is not the msg.sender");
     });
 
     it("Should revert if zeroed is a contract address but does not have getState() method", async function () {
       mockZeroed3.getState.reverts();
-      await expect(
-        trV2.approve(mockZeroed3.address)
-      ).to.be.revertedWithoutReason();
+      await expect(trV2.approve(mockZeroed3.address)).to.be.revertedWithoutReason();
     });
 
     it("Should revert if zeroed is a contract but adminList is empty", async function () {
       mockZeroed3.getState.returns([[], 0]);
-      await expect(trV2.approve(mockZeroed3.address)).to.be.revertedWith(
-        "admin list cannot be empty"
-      );
+      await expect(trV2.approve(mockZeroed3.address)).to.be.revertedWith("admin list cannot be empty");
     });
 
     it("Should not approve if zeroed is a contract but msg.sender is not the admin", async function () {
-      await expect(trV2.approve(zeroed1.address)).to.be.revertedWith(
-        "msg.sender is not the admin"
-      );
+      await expect(trV2.approve(zeroed1.address)).to.be.revertedWith("msg.sender is not the admin");
     });
   });
 
@@ -387,52 +339,38 @@ describe("TreasuryRebalanceV2", function () {
       });
 
       it("should set status to Registered and emit StatusChanged event", async function () {
-        await expect(trV2.finalizeRegistration())
-          .to.emit(trV2, "StatusChanged")
-          .withArgs(1);
+        await expect(trV2.finalizeRegistration()).to.emit(trV2, "StatusChanged").withArgs(1);
         expect(await trV2.status()).to.equal(1);
       });
 
       it("Should not register zeroed when contract is not in Initialized state", async function () {
-        await expect(trV2.registerZeroed(zeroed2.address)).to.be.revertedWith(
-          "Not in the designated status"
-        );
+        await expect(trV2.registerZeroed(zeroed2.address)).to.be.revertedWith("Not in the designated status");
       });
       it("Should not register allocated when contract is not in Initialized state", async function () {
-        await expect(
-          trV2.registerAllocated(allocated1.address, value)
-        ).to.be.revertedWith("Not in the designated status");
-      });
-      it("Should revert if the current status is tried to set again", async function () {
-        await expect(trV2.finalizeRegistration()).to.be.revertedWith(
+        await expect(trV2.registerAllocated(allocated1.address, value)).to.be.revertedWith(
           "Not in the designated status"
         );
+      });
+      it("Should revert if the current status is tried to set again", async function () {
+        await expect(trV2.finalizeRegistration()).to.be.revertedWith("Not in the designated status");
       });
 
       it("Should revert if owner tries to set pendingMemo after Registered", async function () {
-        await expect(trV2.setPendingMemo(memo)).to.be.revertedWith(
-            "Not in the designated status"
-        );
+        await expect(trV2.setPendingMemo(memo)).to.be.revertedWith("Not in the designated status");
       });
       it("should revert if not called by the owner", async () => {
-        await expect(
-          trV2.connect(zeroedAdmins[0]).finalizeRegistration()
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(trV2.connect(zeroedAdmins[0]).finalizeRegistration()).to.be.revertedWith(
+          "Ownable: caller is not the owner"
+        );
       });
       it("Should not remove allocated when contract is not in Initialized state", async function () {
-        await expect(
-          trV2.removeAllocated(allocated1.address)
-        ).to.be.revertedWith("Not in the designated status");
+        await expect(trV2.removeAllocated(allocated1.address)).to.be.revertedWith("Not in the designated status");
       });
       it("Should not remove zeroed when contract is not in Initialized state", async function () {
-        await expect(trV2.removeZeroed(zeroed2.address)).to.be.revertedWith(
-          "Not in the designated status"
-        );
+        await expect(trV2.removeZeroed(zeroed2.address)).to.be.revertedWith("Not in the designated status");
       });
       it("should revert if its not called at the Approved stage", async () => {
-        await expect(trV2.finalizeContract(memo)).to.be.revertedWith(
-          "Not in the designated status"
-        );
+        await expect(trV2.finalizeContract()).to.be.revertedWith("Not in the designated status");
       });
     });
 
@@ -448,41 +386,32 @@ describe("TreasuryRebalanceV2", function () {
         await trV2.connect(zeroedAdmins[1]).approve(zeroed1.address);
       });
       it("should set status to Approved and emit StatusChanged event", async function () {
-        await expect(trV2.finalizeApproval())
-          .to.emit(trV2, "StatusChanged")
-          .withArgs(2);
+        await expect(trV2.finalizeApproval()).to.emit(trV2, "StatusChanged").withArgs(2);
         expect(await trV2.status()).to.equal(2);
       });
       it("should revert if owner tries to set Registered after Approved", async function () {
-        await expect(trV2.finalizeRegistration()).to.be.revertedWith(
-          "Not in the designated status"
-        );
+        await expect(trV2.finalizeRegistration()).to.be.revertedWith("Not in the designated status");
       });
       it("should revert if not called by the owner", async () => {
-        await expect(
-          trV2.connect(zeroedAdmins[0]).finalizeApproval()
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+        await expect(trV2.connect(zeroedAdmins[0]).finalizeApproval()).to.be.revertedWith(
+          "Ownable: caller is not the owner"
+        );
       });
     });
 
     describe("Should revert finalizeApproval if zeroed contract can't reach Quorom", function () {
-      beforeEach(
-        "Should set status to Approved and emit StatusChanged event",
-        async function () {
-          const { _trV2, _mockZeroed3 } = await loadFixture(buildFixture);
-          trV2 = _trV2;
-          mockZeroed3 = _mockZeroed3;
+      beforeEach("Should set status to Approved and emit StatusChanged event", async function () {
+        const { _trV2, _mockZeroed3 } = await loadFixture(buildFixture);
+        trV2 = _trV2;
+        mockZeroed3 = _mockZeroed3;
 
-          await trV2.registerAllocated(allocated1.address, value);
-        }
-      );
+        await trV2.registerAllocated(allocated1.address, value);
+      });
 
       it("Should revert if min required admins does not approve", async function () {
         await trV2.registerZeroed(zeroed1.address);
         await trV2.finalizeRegistration();
-        await expect(trV2.finalizeApproval()).to.be.revertedWith(
-          "min required admins should approve"
-        );
+        await expect(trV2.finalizeApproval()).to.be.revertedWith("min required admins should approve");
       });
 
       it("Should revert if approved admin change during the contract ", async function () {
@@ -490,21 +419,14 @@ describe("TreasuryRebalanceV2", function () {
         await trV2.finalizeRegistration();
         mockZeroed3.getState.returns([[rebalance_manager.address], 1]);
         await trV2.approve(mockZeroed3.address);
-        mockZeroed3.getState.returns([
-          [rebalance_manager.address, zeroedAdmins[0].address],
-          2,
-        ]);
-        await expect(trV2.finalizeApproval()).to.be.revertedWith(
-          "min required admins should approve"
-        );
+        mockZeroed3.getState.returns([[rebalance_manager.address, zeroedAdmins[0].address], 2]);
+        await expect(trV2.finalizeApproval()).to.be.revertedWith("min required admins should approve");
       });
 
       it("Should revert if EOA did not approve", async function () {
         await trV2.registerZeroed(eoaZeroed.address);
         await trV2.finalizeRegistration();
-        await expect(trV2.finalizeApproval()).to.be.revertedWith(
-          "EOA should approve"
-        );
+        await expect(trV2.finalizeApproval()).to.be.revertedWith("EOA should approve");
         await trV2.connect(eoaZeroed).approve(eoaZeroed.address);
         await trV2.finalizeApproval();
       });
@@ -528,9 +450,7 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should revert if owner tries to set Approved before Registered", async function () {
-      await expect(trV2.finalizeApproval()).to.be.revertedWith(
-        "Not in the designated status"
-      );
+      await expect(trV2.finalizeApproval()).to.be.revertedWith("Not in the designated status");
     });
   });
 
@@ -595,9 +515,7 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("Should not allow non-owner to reset", async function () {
-      await expect(trV2.connect(zeroedAdmins[0]).reset()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+      await expect(trV2.connect(zeroedAdmins[0]).reset()).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
 
@@ -610,9 +528,7 @@ describe("TreasuryRebalanceV2", function () {
     });
 
     it("should revert if current block is larger than rebalanceBlockNumber", async function () {
-      await expect(
-        trV2.updateRebalanceBlocknumber(await ethers.provider.getBlockNumber())
-      ).to.be.revertedWith(
+      await expect(trV2.updateRebalanceBlocknumber(await ethers.provider.getBlockNumber())).to.be.revertedWith(
         "rebalance blockNumber should be greater than current block"
       );
     });
@@ -644,7 +560,7 @@ describe("TreasuryRebalanceV2", function () {
     });
     it("should revert finalizeContract before rebalanceBlockNumber", async () => {
       await expect(trV2.finalizeContract()).to.be.revertedWith(
-          "Contract can only finalize after executing rebalancing",
+        "Contract can only finalize after executing rebalancing"
       );
     });
     it("should revert finalizeContract when pendingMemo is never initialized", async function () {

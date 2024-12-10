@@ -11,9 +11,9 @@ import {
   REGISTRY_ADDRESS,
 } from "../common/helper";
 import { ethers } from "hardhat";
-import { stakingTrackerV2TestFixture } from "../common/fixtures";
+import { registerContract, stakingTrackerV2TestFixture } from "../materials";
 import { smock } from "@defi-wonderland/smock";
-import { ICLRegistry, ICLRegistry__factory, Registry, Registry__factory } from "../../typechain-types";
+import { ICLRegistry, ICLRegistry__factory } from "../../typechain-types";
 
 const DAY = 24 * 60 * 60;
 const WEEK = 7 * DAY;
@@ -31,10 +31,9 @@ describe("StakingTrackerV2.sol", function () {
   beforeEach(async function () {
     augmentChai();
     fixture = await loadFixture(stakingTrackerV2TestFixture);
-    const fakeRegistry = await smock.fake<Registry>(Registry__factory.abi, { address: REGISTRY_ADDRESS });
     const fakeCLRegistry = await smock.fake<ICLRegistry>(ICLRegistry__factory.abi);
 
-    fakeRegistry.getActiveAddr.returns(fakeCLRegistry.address);
+    await registerContract(fixture.registry, "CLRegistry", fakeCLRegistry.address);
     fakeCLRegistry.getAllCLs.returns([[], [], [], []]);
   });
 
@@ -109,7 +108,7 @@ describe("StakingTrackerV2.sol", function () {
       // Note that contractValidator(= accounts[0]) is an owner of contracts by hardhat default setting
       await expect(stakingTracker.connect(other1).createTracker(trackStart, trackEnd)).to.be.revertedWithCustomError(
         stakingTracker,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
     it("Create and check a single tracker", async function () {
@@ -236,7 +235,7 @@ describe("StakingTrackerV2.sol", function () {
       // 3. Create tracker 2
       await expect(stakingTracker.createTracker(trackStart + trackInterval, trackEnd + trackInterval)).to.emit(
         stakingTracker,
-        "CreateTracker",
+        "CreateTracker"
       );
 
       // 4. CnStakingV2C removes 2m KLAY stakes: expire tracker 1 and CnStakingV2C loses its vote
@@ -270,7 +269,7 @@ describe("StakingTrackerV2.sol", function () {
       // 5. Create tracker 3
       await expect(stakingTracker.createTracker(trackStart + trackInterval * 2, trackEnd + trackInterval * 2)).to.emit(
         stakingTracker,
-        "CreateTracker",
+        "CreateTracker"
       );
 
       // 6. CnStakingV2C adds 2m KLAY free-stakes: expire tracker 2 and CnStakingV2C recovers its vote
@@ -318,13 +317,13 @@ describe("StakingTrackerV2.sol", function () {
         // 2. Create tracker 2
         await expect(stakingTracker.createTracker(trackStart + 10, trackEnd + 10)).to.emit(
           stakingTracker,
-          "CreateTracker",
+          "CreateTracker"
         );
 
         // 3. Create tracker 3
         await expect(stakingTracker.createTracker(trackStart + 20, trackEnd + 20)).to.emit(
           stakingTracker,
-          "CreateTracker",
+          "CreateTracker"
         );
 
         await setBlock(trackStart + 30);
@@ -359,13 +358,13 @@ describe("StakingTrackerV2.sol", function () {
         // 2. Create tracker 2
         await expect(stakingTracker.createTracker(trackEnd, trackEnd + trackInterval)).to.emit(
           stakingTracker,
-          "CreateTracker",
+          "CreateTracker"
         );
 
         // 3. Create tracker 3
         await expect(stakingTracker.createTracker(trackEnd + 10, trackEnd + trackInterval + 10)).to.emit(
           stakingTracker,
-          "CreateTracker",
+          "CreateTracker"
         );
 
         await setBlock(trackStart + 30);
@@ -405,7 +404,7 @@ describe("StakingTrackerV2.sol", function () {
 
         // 1. V1 contract can't update voter
         await expect(stakingTracker.refreshVoter(cnStakingV1A.address)).to.be.revertedWith(
-          "Invalid CnStaking contract",
+          "Invalid CnStaking contract"
         );
 
         // 2. Not a staking contract
@@ -440,7 +439,7 @@ describe("StakingTrackerV2.sol", function () {
         // CnStakingV1A stake 4m KLAY
         await expect(cnStakingV1A.connect(admin1).stakeKlay({ value: toPeb(4_000_000n) })).to.emit(
           cnStakingV1A,
-          "StakeKlay",
+          "StakeKlay"
         );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
@@ -458,7 +457,7 @@ describe("StakingTrackerV2.sol", function () {
         // CnStakingV2B stake 4m KLAY
         await expect(cnStakingV2B.connect(admin2).stakeKlay({ value: toPeb(4_000_000n) })).to.emit(
           cnStakingV2B,
-          "StakeKlay",
+          "StakeKlay"
         );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
@@ -560,7 +559,7 @@ describe("StakingTrackerV2.sol", function () {
           requirement,
           FuncID.CancelApprovedStakingWithdrawal,
           admin3,
-          [1, FuncID.CancelApprovedStakingWithdrawal, 0, 0, 0],
+          [1, FuncID.CancelApprovedStakingWithdrawal, 0, 0, 0]
         );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);

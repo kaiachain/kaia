@@ -11,11 +11,11 @@ import {
   DAY,
   WEEK,
   Actions,
-} from "./common/helper";
+} from "../common/helper";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers.js";
 import { ethers } from "hardhat";
 import { BytesLike } from "ethers";
-import { votingTestFixture } from "./common/fixtures";
+import { votingTestFixture } from "../materials";
 
 const minVotingDelay = 1 * DAY;
 const maxVotingDelay = 28 * DAY;

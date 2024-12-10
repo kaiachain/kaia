@@ -8,13 +8,10 @@ import {
   submitAndExecuteRequest,
   ABOOK_ADDRESS,
   setBlock,
-} from "./common/helper";
+  WEEK,
+} from "../common/helper";
 import { ethers } from "hardhat";
-import { stakingTrackerV1TestFixture } from "./common/fixtures";
-
-// const RAND_ADDR = "0xe3B0C44298FC1C149AfBF4C8996fb92427aE41E4"; // non-null placeholder
-const DAY = 24 * 60 * 60;
-const WEEK = 7 * DAY;
+import { stakingTrackerV1TestFixture } from "../materials";
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
