@@ -57,7 +57,6 @@ func TestFeeHistory(t *testing.T) {
 	}
 	magmaBlock, kaiaBlock := int64(16), int64(20)
 	backend, govModule := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock))
-	// govModule.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: backend.ChainConfig().UnitPrice}).AnyTimes()
 
 	defer backend.teardown()
 	for i, c := range cases {
