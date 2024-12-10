@@ -56,8 +56,7 @@ jobs:
         apt update
         apt install python3.8 python3-venv -y
         python3.8 -m venv --without-pip venv
-        echo "test"
-        source venv/bin/activate
+        source ./venv/bin/activate
         curl https://bootstrap.pypa.io/get-pip.py | python
         pip3 install -r requirements.txt
         python3 main.py --protocol rpc
