@@ -53,6 +53,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
 			myvote.Name() == vote.Name() &&
 			reflect.DeepEqual(myvote.Value(), vote.Value()) {
+			logger.Debug("Removing myvote", "vote", h.myVotes[i])
 			h.PopMyVotes(i)
 			break
 		}

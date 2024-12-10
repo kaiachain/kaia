@@ -38,6 +38,8 @@ import (
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	mock_filter "github.com/kaiachain/kaia/node/cn/filters/mock"
 	"github.com/kaiachain/kaia/params"
@@ -55,6 +57,15 @@ var (
 	code1Bytes    = common.FromHex(deployedCode)
 	code2Bytes    = common.FromHex(reverterDeployedBin)
 )
+
+// Because we can't directly use GovModule mock due to import cycle.
+type dummyGovModule struct {
+	chainConfig *params.ChainConfig
+}
+
+func (d *dummyGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
+	return gov.ParamSet{UnitPrice: d.chainConfig.UnitPrice}
+}
 
 func newTestBlockchain() *blockchain.BlockChain {
 	config := params.TestChainConfig.Copy()
@@ -263,12 +274,14 @@ func TestBlockChainEstimateGas(t *testing.T) {
 }
 
 func TestBlockChainSendTransaction(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+
 	bc := newTestBlockchain()
 	block := bc.CurrentBlock()
 	state, err := bc.State()
 	txPoolConfig := blockchain.DefaultTxPoolConfig
 	txPoolConfig.Journal = "/dev/null" // disable journaling to file
-	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()})
 	defer txPool.Stop()
 	assert.Nil(t, err)
 	c := NewBlockchainContractBackend(bc, txPool, nil)
@@ -352,7 +365,7 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 	any := gomock.Any()
 	txPoolConfig := blockchain.DefaultTxPoolConfig
 	txPoolConfig.Journal = "/dev/null" // disable journaling to file
-	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc)
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()})
 	subscribeNewTxsEvent := func(ch chan<- blockchain.NewTxsEvent) kaia.Subscription {
 		return txPool.SubscribeNewTxsEvent(ch)
 	}

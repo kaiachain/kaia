@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
+	headergov "github.com/kaiachain/kaia/kaiax/gov/headergov"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -134,6 +135,18 @@ func (m *MockHeaderGovModule) PrepareHeader(arg0 *types.Header) error {
 func (mr *MockHeaderGovModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockHeaderGovModule)(nil).PrepareHeader), arg0)
+}
+
+// PushMyVotes mocks base method.
+func (m *MockHeaderGovModule) PushMyVotes(arg0 headergov.VoteData) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PushMyVotes", arg0)
+}
+
+// PushMyVotes indicates an expected call of PushMyVotes.
+func (mr *MockHeaderGovModuleMockRecorder) PushMyVotes(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PushMyVotes", reflect.TypeOf((*MockHeaderGovModule)(nil).PushMyVotes), arg0)
 }
 
 // RewindDelete mocks base method.

@@ -24,9 +24,10 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var dummyList = types.Transactions([]*types.Transaction{
@@ -48,10 +49,10 @@ var testGovSchedule = map[uint64]int{
 	8: types.ImplDeriveShaConcat,
 }
 
-func (e *testGov) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	return params.NewGovParamSetIntMap(map[int]interface{}{
-		params.DeriveShaImpl: testGovSchedule[num],
-	})
+func (e *testGov) EffectiveParamSet(num uint64) gov.ParamSet {
+	return gov.ParamSet{
+		DeriveShaImpl: uint64(testGovSchedule[num]),
+	}
 }
 
 func TestEmptyRoot(t *testing.T) {

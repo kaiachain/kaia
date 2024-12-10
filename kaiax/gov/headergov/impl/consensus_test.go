@@ -107,32 +107,24 @@ func TestGetVotesInEpoch(t *testing.T) {
 }
 
 func TestGetExpectedGovernance(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	var (
 		paramName = string(gov.GovernanceUnitPrice)
-		config    = &params.ChainConfig{
-			Istanbul: &params.IstanbulConfig{
-				Epoch: 1000,
-			},
-		}
-		h  = newHeaderGovModule(t, config)
-		v1 = headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
-		v2 = headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
-		g1 = headergov.NewGovData(gov.PartialParamSet{
-			gov.GovernanceUnitPrice: uint64(100),
-		})
-		g2 = headergov.NewGovData(gov.PartialParamSet{
-			gov.GovernanceUnitPrice: uint64(200),
-		})
+		config    = &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}}
+		h         = newHeaderGovModule(t, config)
+		v1        = headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
+		v2        = headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
+		g         = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)})
 	)
 
+	// v2 overrides v1
 	h.HandleVote(500, v1)
-	h.HandleVote(1500, v2)
+	h.HandleVote(600, v2)
 
-	h.HandleGov(1000, g1)
-	h.HandleGov(2000, g2)
-
-	assert.Equal(t, g1, h.getExpectedGovernance(1000))
-	assert.Equal(t, g2, h.getExpectedGovernance(2000))
+	// test many times for deterministic result
+	for range 100 {
+		assert.Equal(t, g, h.getExpectedGovernance(1000))
+	}
 }
 
 func TestPrepareHeader(t *testing.T) {

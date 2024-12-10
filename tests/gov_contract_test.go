@@ -30,9 +30,14 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
@@ -40,9 +45,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGovernance_Engines tests MixedEngine, ContractEngine, and their
-// (1) CurrentParams() and (2) EffectiveParams() results.
-func TestGovernance_Engines(t *testing.T) {
+// TestGovernance_GovModule tests GovModule and ContractGovModule
+func TestGovernance_GovModule(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
 	config := params.MainnetChainConfig.Copy()
@@ -84,6 +88,11 @@ func TestGovernance_Engines(t *testing.T) {
 	// (a) contract engine disabled
 	// (b) contract engine enabled (via vote)
 
+	govModule := node.GovModule().(*gov_impl.GovModule)
+	chain.Engine().(consensus.Istanbul).RegisterConsensusModule(govModule)
+	chain.RegisterExecutionModule(govModule)
+	node.Miner().RegisterExecutionModule(govModule)
+
 	// Run tx sender thread
 	go func() {
 		deployGovParamTx_constructor(t, node, owner, chainId)
@@ -94,12 +103,10 @@ func TestGovernance_Engines(t *testing.T) {
 
 		deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
 
-		node.Governance().AddVote("governance.govparamcontract", contractAddr)
+		vote := headergov.NewVoteData(validator.Addr, string(gov.GovernanceGovParamContract), contractAddr)
+		require.NotNil(t, vote)
+		govModule.Hgm.PushMyVotes(vote)
 	}()
-
-	// Run param reader thread
-	mixedEngine := node.Governance()
-	contractEngine := node.Governance().ContractGov()
 
 	// Validate current params from mixedEngine.CurrentParams() & contractEngine.CurrentParams(),
 	// alongside block processing.
@@ -109,32 +116,19 @@ func TestGovernance_Engines(t *testing.T) {
 	subscription := chain.SubscribeChainEvent(chainEventCh)
 	defer subscription.Unsubscribe()
 
-	// 1. test CurrentParams() while subscribing new blocks
+	// 1. wait until header.Governance block + 5
 	for {
 		ev := <-chainEventCh
 		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
 
 		num := ev.Block.Number().Uint64()
-		mixedEngine.UpdateParams(num)
-
-		mixedVal, _ := mixedEngine.CurrentParams().Get(params.CommitteeSize)
-		contractVal, _ := contractEngine.CurrentParams().Get(params.CommitteeSize)
-
-		if len(ev.Block.Header().Governance) > 0 {
+		if govBytes := ev.Block.Header().Governance; len(govBytes) > 0 {
 			govBlock = num
 			// stopBlock is the epoch block, so we stop when receiving it
 			// otherwise, EffectiveParams(stopBlock) may fail
 			stopBlock = govBlock + 5
 			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
-			t.Logf("Governance at block=%2d, stopBlock=%2d", num, stopBlock)
-		}
-
-		if govBlock == 0 || num <= govBlock { // ContractEngine disabled
-			assert.Equal(t, oldVal, mixedVal)
-			assert.Equal(t, nil, contractVal)
-		} else { // ContractEngine enabled
-			assert.Equal(t, newVal, mixedVal)
-			assert.Equal(t, newVal, contractVal)
+			t.Logf("Governance at block=%2d, stopBlock=%2d, gov=%v", num, stopBlock, hexutil.Encode(govBytes))
 		}
 
 		if stopBlock != 0 && num >= stopBlock {
@@ -146,21 +140,16 @@ func TestGovernance_Engines(t *testing.T) {
 		}
 	}
 
-	// 2. test EffectiveParams():  Validate historic params from both Engines
+	// 2. test EffectiveParamSet():  Validate historic params from both Engines
 	for num := uint64(0); num < stopBlock; num++ {
-		mixedpset, err := mixedEngine.EffectiveParams(num)
-		assert.Nil(t, err)
-		mixedVal, _ := mixedpset.Get(params.CommitteeSize)
-
-		contractpset, err := contractEngine.EffectiveParams(num)
-		assert.Nil(t, err)
+		govVal := govModule.EffectiveParamSet(num).CommitteeSize
+		contractVal := govModule.Cgm.EffectiveParamSet(num).CommitteeSize
 
 		if num <= govBlock+1 { // ContractEngine disabled
-			assert.Equal(t, oldVal, mixedVal)
-			assert.Equal(t, params.NewGovParamSet(), contractpset)
+			assert.Equal(t, oldVal, govVal)
+			assert.Equal(t, gov.Params[gov.IstanbulCommitteeSize].DefaultValue, contractVal)
 		} else { // ContractEngine enabled
-			assert.Equal(t, newVal, mixedVal)
-			contractVal, _ := contractpset.Get(params.CommitteeSize)
+			assert.Equal(t, newVal, govVal)
 			assert.Equal(t, newVal, contractVal)
 		}
 	}

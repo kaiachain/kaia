@@ -31,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"golang.org/x/exp/slices"
@@ -56,10 +57,6 @@ type OracleBackend interface {
 	CurrentBlock() *types.Block
 }
 
-type Governance interface {
-	EffectiveParams(bn uint64) (*params.GovParamSet, error)
-}
-
 type TxPool interface {
 	GasPrice() *big.Int
 }
@@ -74,7 +71,7 @@ type Oracle struct {
 	cacheLock sync.RWMutex
 	fetchLock sync.Mutex
 	txPool    TxPool
-	gov       Governance
+	govModule gov.GovModule
 
 	checkBlocks, maxEmpty, maxBlocks  int
 	percentile                        int
@@ -84,7 +81,7 @@ type Oracle struct {
 }
 
 // NewOracle returns a new oracle.
-func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance Governance) *Oracle {
+func NewOracle(backend OracleBackend, config Config, txPool TxPool, govModule gov.GovModule) *Oracle {
 	blocks := config.Blocks
 	if blocks < 1 {
 		blocks = 1
@@ -124,7 +121,7 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, governance G
 		maxHeaderHistory: maxHeaderHistory,
 		maxBlockHistory:  maxBlockHistory,
 		txPool:           txPool,
-		gov:              governance,
+		govModule:        govModule,
 		historyCache:     cache,
 	}
 }
@@ -342,12 +339,10 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 // paying any tip is unnecessary. It returns true when the head block is after Magma fork
 // and the next base fee is at the lower bound.
 func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
-	pset, err := oracle.gov.EffectiveParams(header.Number.Uint64() + 1)
-	if pset != nil && err == nil {
-		nextBaseFee := misc.NextMagmaBlockBaseFee(header, pset.ToKIP71Config())
-		return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee()))) <= 0
-	}
-	return false
+	pset := oracle.govModule.EffectiveParamSet(header.Number.Uint64() + 1)
+	kip71 := pset.ToKip71Config()
+	nextBaseFee := misc.NextMagmaBlockBaseFee(header, kip71)
+	return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee))) <= 0
 }
 
 func (oracle *Oracle) readCacheChecked(headHash common.Hash) (*big.Int, bool) {

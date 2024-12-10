@@ -2,13 +2,16 @@ package impl
 
 import (
 	"reflect"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"golang.org/x/exp/maps"
 )
 
 func (h *headerGovModule) VerifyHeader(header *types.Header) error {
@@ -39,6 +42,7 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if this node has a vote waiting to be casted, put Vote field.
 	if len(h.myVotes) > 0 {
 		header.Vote, _ = h.myVotes[0].ToVoteBytes()
+		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
 	}
 
 	// if epoch block & vote exists in the last epoch, put Governance field.
@@ -46,6 +50,7 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 		gov := h.getExpectedGovernance(header.Number.Uint64())
 		if len(gov.Items()) > 0 {
 			header.Governance, _ = gov.ToGovBytes()
+			logger.Debug("Prepare header with governance", "num", header.Number.Uint64(), "governance", hexutil.Encode(header.Governance))
 		}
 	}
 
@@ -157,7 +162,11 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
 	govs := make(gov.PartialParamSet)
 
-	for _, vote := range prevEpochVotes {
+	sortedVoteBlocks := maps.Keys(prevEpochVotes)
+	slices.Sort(sortedVoteBlocks)
+
+	for _, voteBlock := range sortedVoteBlocks {
+		vote := prevEpochVotes[voteBlock]
 		govs.Add(string(vote.Name()), vote.Value())
 	}
 

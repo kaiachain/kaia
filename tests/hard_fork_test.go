@@ -21,6 +21,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -38,6 +39,7 @@ import (
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/log"
@@ -94,35 +96,47 @@ func TestHardForkBlock(t *testing.T) {
 
 	gov := generateGovernaceDataForTest()
 	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false, false)
+	chainConfig.Istanbul = &params.IstanbulConfig{
+		Epoch: 100,
+	}
 	require.Nil(t, err)
 
 	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
+	govModule := gov_impl.NewGovModule()
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
 		PrivateKey:     genesisKey,
 		DB:             chainDb,
 		Governance:     gov,
+		GovModule:      govModule,
 		NodeType:       common.CONSENSUSNODE,
 	})
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	err = mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   chainConfig,
-		Chain:         chain,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	})
-	require.Nil(t, err)
+	err = errors.Join(
+		govModule.Init(&gov_impl.InitOpts{
+			ChainConfig: chainConfig,
+			ChainKv:     chainDb.GetMiscDB(),
+			Chain:       chain,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   chainConfig,
+			Chain:         chain,
+			GovModule:     govModule,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
+	require.NoError(t, err)
 	engine.RegisterConsensusModule(mReward)
 
 	r1, err := hexutil.Decode(string(rawb1))
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	r2, err := hexutil.Decode(string(rawb2))
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	rawBlocks := [...][]byte{r1, r2}
 
 	var blocks types.Blocks
@@ -182,7 +196,7 @@ func genBlocks(t *testing.T) {
 	// Initialize blockchain
 	start := time.Now()
 	bcdata, err := NewBCData(6, 4)
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	b, err := json.Marshal(bcdata.genesis)

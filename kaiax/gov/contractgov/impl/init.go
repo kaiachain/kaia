@@ -43,8 +43,8 @@ func NewContractGovModule() *contractGovModule {
 }
 
 func (c *contractGovModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.Hgm == nil {
-		return ErrInitNil
+	if err := validateOpts(opts); err != nil {
+		return err
 	}
 
 	c.InitOpts = *opts
@@ -58,4 +58,18 @@ func (c *contractGovModule) Start() error {
 
 func (c *contractGovModule) Stop() {
 	logger.Info("ContractGovModule stopped")
+}
+
+func validateOpts(opts *InitOpts) error {
+	switch {
+	case opts == nil:
+		return errInitNil("opts")
+	case opts.ChainConfig == nil:
+		return errInitNil("opts.ChainConfig")
+	case opts.Chain == nil:
+		return errInitNil("opts.Chain")
+	case opts.Hgm == nil:
+		return errInitNil("opts.Hgm")
+	}
+	return nil
 }

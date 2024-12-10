@@ -35,6 +35,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
 	"github.com/kaiachain/kaia/governance"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	mocks2 "github.com/kaiachain/kaia/node/cn/mocks"
@@ -172,9 +175,28 @@ func testGov() *governance.MixedEngine {
 	return governance.NewMixedEngine(config, db)
 }
 
+func testGovModule(chain gov_impl.BlockChain) *gov_impl.GovModule {
+	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+	config := params.TestChainConfig.Copy()
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
+	// chain can be a mock, this prevents reading all headers in an epoch.
+	headergov_impl.WriteLowestVoteScannedBlockNum(db.GetMiscDB(), 0)
+	govModule := gov_impl.NewGovModule()
+	govModule.Init(&gov_impl.InitOpts{
+		ChainConfig: config,
+		ChainKv:     db.GetMiscDB(),
+		Chain:       chain,
+	})
+	return govModule
+}
+
 func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
+
+	// headergov.Init reads genesis block
+	mockBlockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{}).Times(1)
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	mockDownloader.EXPECT().Cancel().Times(1)
@@ -182,7 +204,8 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	api.cn.protocolManager = pm
 	api.cn.engine = gxhash.NewFullFaker()
 	api.cn.governance = testGov()
-	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, api.cn.governance)
+	govModule := testGovModule(mockBlockChain)
+	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 
 	number := uint64(123)
 	mockBlockChain.EXPECT().SetHead(number).Times(1)
@@ -714,15 +737,8 @@ func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager
 	return db, bc, err
 }
 
-func expectedGovMap(t *testing.T, gov *governance.MixedEngine, num uint64, item string, value interface{}, expectedCacheSize int) {
-	_, govMap, err := gov.ReadGovernance(num)
-	assert.Nil(t, err)
-	assert.Equal(t, govMap[item], value)
-	assert.Equal(t, len(gov.IdxCache())-1, expectedCacheSize)
-}
-
 func TestSetHead(t *testing.T) {
-	headerGovTest(t, &rewindTest{
+	headerGovSetHeadTest(t, &rewindTest{
 		// `params.CheckpointInterval` is constant value of 1024.
 		// Make it longer to include its working coverage
 		canonicalBlocks:    1500,
@@ -742,7 +758,8 @@ func testCfg(epoch uint64) *params.ChainConfig {
 	return config
 }
 
-func headerGovTest(t *testing.T, tt *rewindTest) {
+func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
 	if err != nil {
 		t.Fatalf("failed to create pristine chain: %v", err)
@@ -755,17 +772,26 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 		epoch              uint64 = 5
 		govBlockNum               = 10
 		appliedGovBlockNum uint64 = 20
-		gov                       = governance.NewMixedEngine(testCfg(epoch), db)
-		gpo                       = gasprice.NewOracle(api, gasprice.Config{}, nil, gov)
+		oldMintingAmount          = "0"
+		newMintingAmount          = "123"
+		govModule                 = gov_impl.NewGovModule()
+		_                         = govModule.Init(&gov_impl.InitOpts{
+			Chain:       chain,
+			ChainConfig: testCfg(epoch),
+			ChainKv:     db.GetMiscDB(),
+			NodeAddress: addrs[0],
+		})
+		gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
+	chain.RegisterRewindableModule(govModule)
+	chain.RegisterExecutionModule(govModule)
 
 	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
 		if i == govBlockNum-1 { // Subtract 1, because the callback starts to enumerate from zero
 			// "reward.mintingamount" = 123
 			govData := hexutil.MustDecode("0x9e7b227265776172642e6d696e74696e67616d6f756e74223a22313233227d")
 			b.SetGovData(govData)
-			gov.WriteGovernanceForNextEpoch(uint64(govBlockNum), govData)
 		}
 	})
 
@@ -782,10 +808,10 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	assert.Nil(t, err)
 
 	// Before setHead
-	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
+	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// Set the head of the chain back to the requested number
-	err = doSetHead(chain, chain.Engine(), gov, gpo, tt.setheadBlock)
+	err = doSetHead(chain, chain.Engine(), gpo, tt.setheadBlock)
 	assert.Nil(t, err)
 
 	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {
@@ -799,7 +825,7 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 	}
 	// After setHead
 	// governance db and cachelookup
-	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "0", 0)
+	assert.Equal(t, oldMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// snapshot db lookup
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
@@ -811,12 +837,11 @@ func headerGovTest(t *testing.T, tt *rewindTest) {
 		}
 		if len(b.Header().Governance) > 0 {
 			assert.Equal(t, b.Header().Number.Uint64()%uint64(epoch), uint64(0))
-			gov.WriteGovernanceForNextEpoch(uint64(govBlockNum), b.Header().Governance)
 		}
 	}
 	if head := chain.CurrentBlock(); head.NumberU64() != uint64(tt.canonicalBlocks) {
 		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
 	}
 	// After setHead and sync
-	expectedGovMap(t, gov, appliedGovBlockNum, "reward.mintingamount", "123", 1)
+	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
 }

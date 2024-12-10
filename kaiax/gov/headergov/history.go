@@ -47,5 +47,6 @@ func (g *History) Search(blockNum uint64) (gov.ParamSet, error) {
 		return ret, nil
 	}
 
-	panic("must not happen")
+	// This can happen in tests. On production, it must never happen.
+	return gov.ParamSet{}, ErrNoHistory
 }

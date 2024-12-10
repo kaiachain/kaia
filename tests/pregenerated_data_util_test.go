@@ -40,6 +40,7 @@ import (
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -355,7 +356,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
-	gov := generateGovernaceDataForTest()
+	governance := generateGovernaceDataForTest()
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Prepare sender addresses and private keys
@@ -381,7 +382,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDB,
-		Governance:     gov,
+		Governance:     governance,
 		NodeType:       common.CONSENSUSNODE,
 	})
 
@@ -403,6 +404,12 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}
 
+	mGov := gov_impl.NewGovModule()
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainConfig: genesis.Config,
+		Chain:       bc,
+		ChainKv:     chainDB.GetMiscDB(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +417,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov,
+		validatorPrivKeys, engine, genesis, mGov, governance,
 	}, nil
 }
 

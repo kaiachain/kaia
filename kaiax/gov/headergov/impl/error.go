@@ -1,10 +1,12 @@
 package impl
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrZeroEpoch                      = errors.New("epoch cannot be zero")
-	ErrInitNil                        = errors.New("cannot init headergov module because of nil")
 	ErrLowestVoteScannedBlockNotFound = errors.New("lowest vote scanned block not found")
 
 	ErrVotePermissionDenied = errors.New("you don't have the right to vote")
@@ -19,3 +21,7 @@ var (
 	ErrLowerBoundBaseFee   = errors.New("lowerboundbasefee is greater than upperboundbasefee")
 	ErrUpperBoundBaseFee   = errors.New("upperboundbasefee is less than lowerboundbasefee")
 )
+
+func errInitNil(msg string) error {
+	return fmt.Errorf("cannot init headergov module because of nil: %s", msg)
+}

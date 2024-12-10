@@ -9,8 +9,8 @@ It's essentially a setting that can be adjusted to fine-tune how the network ope
 These parameters could control stuff like transaction fees, inflation rate, reward distribution, etc.
 A governance parameter has a name and a value; see [./param.go](./param.go).
 
-`EffectiveParams(blockNum)` returns the governance parameter set that are used for mining the given block.
-For example, if `EffectiveParams(10000)` is `{UnitPrice: 25 kei, ...}`, it indicates that the unit price will be 25 kei when mining the 10000th block.
+`EffectiveParamSet(blockNum)` returns the governance parameter set that are used for mining the given block.
+For example, if `EffectiveParamSet(10000)` is `{UnitPrice: 25 kei, ...}`, it indicates that the unit price will be 25 kei when mining the 10000th block.
 
 Here are the list of governance parameters:
 
@@ -45,11 +45,12 @@ reward.useginicoeff: true
 This module utilizes [header governance](./headergov/README.md) and [contract governance](./contractgov/README.md) underneath to fetch the parameter set and to handle governance parameter updates.
 
 ```
-EffectiveParams(blockNum):
+EffectiveParamSet(blockNum):
     ret := defaultParamSet()
-    merge ret with HeaderGov.EffectiveParams(blockNum)
+    merge ret with fallback (ChainConfig)
+    merge ret with HeaderGov.EffectiveParamSet(blockNum)
     if blockNum is post-Kore-HF:
-        merge ret with ContractGov.EffectiveParams(blockNum)
+        merge ret with ContractGov.EffectiveParamSet(blockNum)
     return ret
 ```
 

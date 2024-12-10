@@ -820,7 +820,7 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		// if governance mode is single, set the node key to the governing node.
 		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	gov := governance.NewMixedEngine(chainConfig, dbm)
+	g := governance.NewMixedEngine(chainConfig, dbm)
 	istanbulConfig := istanbul.DefaultConfig
 	istanbulConfig.BlockPeriod = blockPeriod
 	istanbulConfig.ProposerPolicy = istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy)
@@ -832,10 +832,10 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Rewardbase:     getTestRewards()[0],
 		PrivateKey:     key,
 		DB:             dbm,
-		Governance:     gov,
+		Governance:     g,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
-	gov.SetNodeAddress(backend.Address())
+	g.SetNodeAddress(backend.Address())
 	return backend
 }
 
