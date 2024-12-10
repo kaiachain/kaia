@@ -62,6 +62,7 @@ func (typ CompressionType) String() string {
 	}
 }
 
+// Compressed range is represented as `to-from`
 func getCompressKey(typ CompressionType, from, to uint64) []byte {
 	bFrom, bTo := make([]byte, 8), make([]byte, 8)
 	binary.BigEndian.PutUint64(bFrom, from)
@@ -76,9 +77,10 @@ func getCompressKey(typ CompressionType, from, to uint64) []byte {
 	case ReceiptCompressType:
 		prefix = compressReceiptPrefix
 	}
-	return append(append(prefix, bFrom...), bTo...)
+	return append(append(prefix, bTo...), bFrom...)
 }
 
+// Returned compressed range is represented as `from-to`
 func parseCompressKey(typ CompressionType, key []byte) (uint64, uint64) {
 	var prefixLen int
 	switch typ {
@@ -90,9 +92,15 @@ func parseCompressKey(typ CompressionType, key []byte) (uint64, uint64) {
 		prefixLen = len(compressReceiptPrefix)
 	}
 
-	from := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
-	to := binary.BigEndian.Uint64(key[prefixLen+8:])
+	to := binary.BigEndian.Uint64(key[prefixLen : prefixLen+8])
+	from := binary.BigEndian.Uint64(key[prefixLen+8:])
 	return from, to
+}
+
+func toBinary(number uint64) []byte {
+	bstart := make([]byte, 8)
+	binary.BigEndian.PutUint64(bstart, number)
+	return bstart
 }
 
 func getCompressDB(dbm database.DBManager, compressTyp CompressionType) database.Database {

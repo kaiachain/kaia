@@ -97,7 +97,7 @@ func findDataFromChunk(dbm database.DBManager, compressTyp CompressionType, find
 	}
 	var (
 		prefix       = getCompressPrefix(compressTyp)
-		it           = getCompressDB(dbm, compressTyp).NewIterator(prefix, nil)
+		it           = getCompressDB(dbm, compressTyp).NewIterator(prefix, toBinary(number))
 		decompressed any
 		err          error
 	)
@@ -318,7 +318,7 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, de
 		db     = getCompressDB(dbm, compressTyp)
 	)
 	// 1. Find a chunk through range search
-	it := db.NewIterator(prefix, nil)
+	it := db.NewIterator(prefix, toBinary(number))
 	defer it.Release()
 	for it.Next() {
 		from, to := parseCompressKey(compressTyp, it.Key())

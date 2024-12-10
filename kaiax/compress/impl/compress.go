@@ -214,9 +214,9 @@ func (c *CompressModule) TestCompress(compressTyp CompressionType, from, to uint
 
 func TestCompress(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
 	var (
-		// copyTempDirHC         = "copy_header"
-		copyTempDirBC = "copy_body"
-		// copyTempDirRC         = "copy_receipts"
+		copyTempDirHC         = "copy_header"
+		copyTempDirBC         = "copy_body"
+		copyTempDirRC         = "copy_receipts"
 		bc, chainDB, setupErr = setup(t)
 		initOpts              = &InitOpts{
 			Chain: bc,
@@ -240,7 +240,7 @@ func TestCompress(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain
 
 	from, to := uint64(0), uint64(3300)
 	// receipt compression test
-	// assert.Nil(t, mCompress.TestCompress(HeaderCompressType, from, to, &from, copyTempDirHC))
+	assert.Nil(t, mCompress.TestCompress(HeaderCompressType, from, to, &from, copyTempDirHC))
 	assert.Nil(t, mCompress.TestCompress(BodyCompressType, from, to, &from, copyTempDirBC))
-	// assert.Nil(t, mCompress.TestCompress(ReceiptCompressType, from, to, &from, copyTempDirRC))
+	assert.Nil(t, mCompress.TestCompress(ReceiptCompressType, from, to, &from, copyTempDirRC))
 }
