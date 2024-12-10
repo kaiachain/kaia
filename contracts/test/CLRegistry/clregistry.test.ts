@@ -1,6 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { clRegistryTestFixture } from "../common/fixtures";
+import { clRegistryTestFixture } from "../materials";
 import { expect } from "chai";
+import { ethers } from "hardhat";
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
@@ -18,22 +19,22 @@ describe("CLRegistry add/remove/update", function () {
   it("Add pair", async function () {
     const { clRegistry } = fixture;
 
-    await expect(clRegistry.addCLPair([[nodeId, gcId, clPool, clStaking]])).to.emit(clRegistry, "RegisterPair");
+    await expect(clRegistry.addCLPair([{ nodeId, gcId, clPool, clStaking }])).to.emit(clRegistry, "RegisterPair");
 
     // Invalid pair input
-    await expect(clRegistry.addCLPair([[nodeId, 0, clPool, clStaking]])).to.be.revertedWith(
+    await expect(clRegistry.addCLPair([{ nodeId, gcId: 0, clPool, clStaking }])).to.be.revertedWith(
       "CLRegistry::addCLPair: Invalid pair input",
     );
 
     // Duplicated registration
-    await expect(clRegistry.addCLPair([[nodeId, gcId, clPool, clStaking]])).to.be.revertedWith(
+    await expect(clRegistry.addCLPair([{ nodeId, gcId, clPool, clStaking }])).to.be.revertedWith(
       "CLRegistry::addCLPair: GC ID does exist",
     );
 
     // ownership check
     const [, unknown] = await ethers.getSigners();
     await expect(
-      clRegistry.connect(unknown).addCLPair([[nodeId, gcId, clPool, clStaking]]),
+      clRegistry.connect(unknown).addCLPair([{ nodeId, gcId, clPool, clStaking }]),
     ).to.be.revertedWithCustomError(clRegistry, "OwnableUnauthorizedAccount");
   });
 
@@ -51,9 +52,9 @@ describe("CLRegistry add/remove/update", function () {
 
     await expect(
       clRegistry.addCLPair([
-        [nodeId, gcId, clPool, clStaking],
-        [nodeId2, gcId2, clPool2, clStaking2],
-        [nodeId3, gcId3, clPool3, clStaking3],
+        { nodeId, gcId, clPool, clStaking },
+        { nodeId: nodeId2, gcId: gcId2, clPool: clPool2, clStaking: clStaking2 },
+        { nodeId: nodeId3, gcId: gcId3, clPool: clPool3, clStaking: clStaking3 },
       ]),
     ).to.emit(clRegistry, "RegisterPair");
 
@@ -71,7 +72,7 @@ describe("CLRegistry add/remove/update", function () {
     const { clRegistry } = fixture;
 
     // Register a pair
-    await expect(clRegistry.addCLPair([[nodeId, gcId, clPool, clStaking]])).to.emit(clRegistry, "RegisterPair");
+    await expect(clRegistry.addCLPair([{ nodeId, gcId, clPool, clStaking }])).to.emit(clRegistry, "RegisterPair");
 
     // Remoeve a pair registered before
     await expect(clRegistry.removeCLPair(gcId)).to.emit(clRegistry, "RetirePair");
@@ -94,28 +95,31 @@ describe("CLRegistry add/remove/update", function () {
     const { clRegistry } = fixture;
 
     // Register a pair
-    await expect(clRegistry.addCLPair([[nodeId, gcId, clPool, clStaking]])).to.emit(clRegistry, "RegisterPair");
+    await expect(clRegistry.addCLPair([{ nodeId, gcId, clPool, clStaking }])).to.emit(clRegistry, "RegisterPair");
 
     // Update a pair
     const newCLPool = "0x000000000000000000000000000000000000001A";
-    await expect(clRegistry.updateCLPair([[nodeId, gcId, newCLPool, clStaking]])).to.emit(clRegistry, "UpdatePair");
+    await expect(clRegistry.updateCLPair([{ nodeId, gcId, clPool: newCLPool, clStaking }])).to.emit(
+      clRegistry,
+      "UpdatePair",
+    );
 
     expect(await clRegistry.getAllCLs()).to.deep.equal([[nodeId], [gcId], [newCLPool], [clStaking]]);
 
     // Invalid pair input
-    await expect(clRegistry.updateCLPair([[nodeId, 0, clPool, clStaking]])).to.be.revertedWith(
+    await expect(clRegistry.updateCLPair([{ nodeId, gcId: 0, clPool, clStaking }])).to.be.revertedWith(
       "CLRegistry::updateCLPair: Invalid pair input",
     );
 
     // Try to update not existing pair
-    await expect(clRegistry.updateCLPair([[nodeId, gcId + 1, clPool, clStaking]])).to.be.revertedWith(
+    await expect(clRegistry.updateCLPair([{ nodeId, gcId: gcId + 1, clPool, clStaking }])).to.be.revertedWith(
       "CLRegistry::updateCLPair: GC ID does not exist",
     );
 
     // ownership check
     const [, unknown] = await ethers.getSigners();
     await expect(
-      clRegistry.connect(unknown).updateCLPair([[nodeId, gcId, clPool, clStaking]]),
+      clRegistry.connect(unknown).updateCLPair([{ nodeId, gcId, clPool, clStaking }]),
     ).to.be.revertedWithCustomError(clRegistry, "OwnableUnauthorizedAccount");
   });
 
@@ -137,9 +141,9 @@ describe("CLRegistry add/remove/update", function () {
 
     await expect(
       clRegistry.addCLPair([
-        [nodeId, gcId, clPool, clStaking],
-        [nodeId2, gcId2, clPool2, clStaking2],
-        [nodeId3, gcId3, clPool3, clStaking3],
+        { nodeId, gcId, clPool, clStaking },
+        { nodeId: nodeId2, gcId: gcId2, clPool: clPool2, clStaking: clStaking2 },
+        { nodeId: nodeId3, gcId: gcId3, clPool: clPool3, clStaking: clStaking3 },
       ]),
     ).to.emit(clRegistry, "RegisterPair");
 
@@ -152,9 +156,9 @@ describe("CLRegistry add/remove/update", function () {
 
     await expect(
       clRegistry.updateCLPair([
-        [nodeId, gcId, newCLPool1, clStaking],
-        [nodeId2, gcId2, newCLPool2, clStaking2],
-        [nodeId3, gcId3, newCLPool3, clStaking3],
+        { nodeId, gcId, clPool: newCLPool1, clStaking },
+        { nodeId: nodeId2, gcId: gcId2, clPool: newCLPool2, clStaking: clStaking2 },
+        { nodeId: nodeId3, gcId: gcId3, clPool: newCLPool3, clStaking: clStaking3 },
       ]),
     ).to.emit(clRegistry, "UpdatePair");
 

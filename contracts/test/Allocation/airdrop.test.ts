@@ -1,9 +1,6 @@
-import {
-  loadFixture,
-  setBalance,
-} from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { airdropTestFixture } from "../common/fixtures";
+import { airdropTestFixture } from "../materials";
 import { Airdrop__factory } from "../../typechain-types";
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
@@ -21,11 +18,11 @@ describe("Airdrop", function () {
       const { airdrop, notClaimer, claimInfo } = fixture;
 
       await expect(
-        airdrop.connect(notClaimer).addClaim(claimInfo[0].claimer, claimInfo[0].amount),
+        airdrop.connect(notClaimer).addClaim(claimInfo[0].claimer, claimInfo[0].amount)
       ).to.be.revertedWithCustomError(airdrop, "OwnableUnauthorizedAccount");
 
       await expect(
-        airdrop.connect(notClaimer).addBatchClaims([claimInfo[0].claimer], [claimInfo[0].amount]),
+        airdrop.connect(notClaimer).addBatchClaims([claimInfo[0].claimer], [claimInfo[0].amount])
       ).to.be.revertedWithCustomError(airdrop, "OwnableUnauthorizedAccount");
     });
     it("#addClaim", async function () {
@@ -51,7 +48,7 @@ describe("Airdrop", function () {
 
       await airdrop.addBatchClaims(
         claimInfo.map((claim) => claim.claimer),
-        claimInfo.map((claim) => claim.amount),
+        claimInfo.map((claim) => claim.amount)
       );
 
       for (const claim of claimInfo) {
@@ -65,7 +62,7 @@ describe("Airdrop", function () {
 
       await airdrop.addBatchClaims(
         claimInfo.map((claim) => claim.claimer),
-        claimInfo.map((claim) => claim.amount),
+        claimInfo.map((claim) => claim.amount)
       );
 
       await airdrop.toggleClaimAllowed();
@@ -80,7 +77,7 @@ describe("Airdrop", function () {
       await expect(airdrop.connect(claimers[0]).claim()).to.be.revertedWith("Airdrop: claim not allowed");
 
       await expect(airdrop.connect(claimers[0]).claimFor(claimers[0].address)).to.be.revertedWith(
-        "Airdrop: claim not allowed",
+        "Airdrop: claim not allowed"
       );
     });
     it("#claim/claimFor: can't claim if not in the list", async function () {
@@ -89,7 +86,7 @@ describe("Airdrop", function () {
       await expect(airdrop.connect(notClaimer).claim()).to.be.revertedWith("Airdrop: no claimable amount");
 
       await expect(airdrop.connect(claimers[0]).claimFor(notClaimer.address)).to.be.revertedWith(
-        "Airdrop: no claimable amount",
+        "Airdrop: no claimable amount"
       );
     });
     it("#claim: successfully get airdrop", async function () {
@@ -129,14 +126,14 @@ describe("Airdrop", function () {
       await expect(airdrop.connect(claimers[0]).claim()).to.be.revertedWith("Airdrop: already claimed");
 
       await expect(airdrop.connect(notClaimer).claimFor(claimers[0].address)).to.be.revertedWith(
-        "Airdrop: already claimed",
+        "Airdrop: already claimed"
       );
     });
     it("#claimBatch: successfully get airdrop", async function () {
       const { airdrop, notClaimer, claimers, claimInfo } = fixture;
 
       const beforeBalances = await Promise.all(
-        claimers.map((claimer) => hre.ethers.provider.getBalance(claimer.address)),
+        claimers.map((claimer) => hre.ethers.provider.getBalance(claimer.address))
       );
 
       await airdrop.connect(notClaimer).claimBatch(claimers.map((claimer) => claimer.address));
@@ -148,7 +145,7 @@ describe("Airdrop", function () {
       //   );
 
       const afterBalances = await Promise.all(
-        claimers.map((claimer) => hre.ethers.provider.getBalance(claimer.address)),
+        claimers.map((claimer) => hre.ethers.provider.getBalance(claimer.address))
       );
       for (let i = 0; i < claimers.length; i++) {
         expect(afterBalances[i].sub(beforeBalances[i])).to.equal(claimInfo[i].amount);
@@ -163,7 +160,7 @@ describe("Airdrop", function () {
       const beforeBalance = await hre.ethers.provider.getBalance(airdrop.address);
 
       await expect(airdrop.connect(notClaimer).claimFor(noReceiverContract.address)).to.be.revertedWith(
-        "Airdrop: claim failed",
+        "Airdrop: claim failed"
       );
       expect(await airdrop.claimed(noReceiverContract.address)).to.be.false;
       expect(await hre.ethers.provider.getBalance(airdrop.address)).to.equal(beforeBalance);
