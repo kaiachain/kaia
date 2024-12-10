@@ -42,6 +42,8 @@ var (
 
 	// TODO-hyunsooda: Make me configurable through CLI, not API
 	CompressMigrationThreshold = uint64(10000)
+	MB_1                       = uint64(1000000)
+	MB_100                     = MB_1 * 100
 
 	// Create a writer that caches compressors.
 	// For this operation type we supply a nil Reader.
@@ -273,4 +275,11 @@ func (h *HeaderCompression) DecodeRLP(s *rlp.Stream) error {
 	h.BlkHash = dec.BlkHash
 	h.Header = dec.Header
 	return nil
+}
+
+type CompressionSize common.StorageSize
+
+func (c *CompressionSize) Write(b []byte) (int, error) {
+	*c += CompressionSize(len(b))
+	return len(b), nil
 }

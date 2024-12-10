@@ -158,8 +158,12 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 		return 0, err
 	}
 
-	itIdx := 0
-	compressions := make([]any, to-from)
+	var (
+		itIdx               = uint64(0)
+		compressedTo        = from
+		compressions        = make([]any, to-from)
+		accumulatedByteSize = CompressionSize(0)
+	)
 	// migration loop
 	for i := from; i < to; i++ {
 		blkHash := dbm.ReadCanonicalHash(i)
@@ -175,23 +179,31 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 					BlkHash:   blkHash,
 					Header:    data.(*types.Header),
 				}
+				rlp.Encode(&accumulatedByteSize, data.(*types.Header))
 			case BodyCompressType:
 				compressions[itIdx] = &BodyCompression{
 					BlkNumber: i,
 					BlkHash:   blkHash,
 					Body:      data.(*types.Body),
 				}
+				rlp.Encode(&accumulatedByteSize, data.(*types.Body))
 			case ReceiptCompressType:
 				compressions[itIdx] = &ReceiptCompression{
 					BlkNumber:       i,
 					BlkHash:         blkHash,
 					StorageReceipts: data.([]*types.ReceiptForStorage),
 				}
+				rlp.Encode(&accumulatedByteSize, data.([]*types.ReceiptForStorage))
 			}
 			itIdx++
+			compressedTo = uint64(i)
+			if uint64(accumulatedByteSize) > MB_100 {
+				break
+			}
 		}
 	}
 	if itIdx == 0 {
+		// There is no data to compress
 		return to, nil
 	}
 	bytes, err := rlp.EncodeToBytes(compressions[:itIdx])
@@ -199,17 +211,18 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 		return 0, err
 	}
 
-	writeCompression(dbm, compressTyp, bytes, from, to)
+	writeCompression(dbm, compressTyp, bytes, from, compressedTo)
 	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
 	// API1: Return all pair of comprression range for each type(header, tx, receipt)
 	// API2: Return a next compression target number for each type(header, tx, receipt)
+	nextCompressStart := compressedTo + 1
 	if migrationMode {
-		writeSubsequentCompressionBlkNumber(dbm, compressTyp, to)
+		writeSubsequentCompressionBlkNumber(dbm, compressTyp, nextCompressStart)
 	}
 
 	// TODO-hyunsooda: Recover me
 	// dbm.removeOriginAfterCompress( compressions[:itIdx])
-	return to, nil
+	return nextCompressStart, nil
 }
 
 func writeCompression(dbm database.DBManager, compressTyp CompressionType, compressedBytes []byte, from, to uint64) int {
