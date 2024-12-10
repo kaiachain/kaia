@@ -133,8 +133,9 @@ type SendTxArgs struct {
 
 	Key *hexutil.Bytes `json:"key"`
 
-	AccessList *types.AccessList `json:"accessList,omitempty"`
-	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+	AccessList        *types.AccessList        `json:"accessList,omitempty"`
+	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
+	ChainID           *hexutil.Big             `json:"chainId,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -178,11 +179,11 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		args.Price = (*hexutil.Big)(price)
 	}
 
-	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
+	if *args.TypeInt == types.TxTypeEthereumDynamicFee || *args.TypeInt == types.TxTypeEthereumSetCode {
 		if args.MaxPriorityFeePerGas == nil {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
 		}
@@ -263,8 +264,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil {
 		return values
 	}
-	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee or TxTypeEthereumSetCode.
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		return values
 	}
 
@@ -278,8 +279,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.Price != nil {
 		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 	}
-	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
-		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
+	if args.TypeInt.IsContractDeploy() || (args.TypeInt.IsEthereumTransaction() && *args.TypeInt != types.TxTypeEthereumSetCode) {
+		// contract deploy type and ethereum tx types except set code type allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
@@ -323,6 +324,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.AccessList != nil {
 		values[types.TxValueKeyAccessList] = *args.AccessList
+	}
+	if args.AuthorizationList != nil {
+		values[types.TxValueKeyAuthorizationList] = *args.AuthorizationList
 	}
 	if args.MaxPriorityFeePerGas != nil {
 		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
@@ -776,7 +780,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas, accessList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, accessList, nil), nil
 }
 
 // toTransaction converts the arguments to a transaction.

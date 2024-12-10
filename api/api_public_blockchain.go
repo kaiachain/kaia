@@ -327,7 +327,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -642,7 +642,7 @@ func newRPCTransaction(header *types.Header, tx *types.Transaction, blockHash co
 	output["from"] = getFrom(tx)
 	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
-	if tx.Type() == types.TxTypeEthereumDynamicFee {
+	if tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode {
 		if header != nil {
 			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(header, config))
 		} else {
@@ -737,5 +737,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, args.InputData(), false, intrinsicGas, accessList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil), nil
 }

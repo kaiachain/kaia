@@ -55,6 +55,8 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 		enable1344(jt)
 	case 1153:
 		enable1153(jt)
+	case 7702:
+		enable7702(jt)
 	default:
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
@@ -381,4 +383,28 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 
 func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
 	jt[opCode].constantGas = constantGas
+}
+
+// enable7702 the EIP-7702 changes to support delegation designators.
+func enable7702(jt *JumpTable) {
+	jt[EXTCODECOPY].constantGas = params.WarmStorageReadCostEIP2929
+	jt[EXTCODECOPY].dynamicGas = gasExtCodeCopyEIP7702
+
+	jt[EXTCODESIZE].constantGas = params.WarmStorageReadCostEIP2929
+	jt[EXTCODESIZE].dynamicGas = gasEip7702CodeCheck
+
+	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
+	jt[EXTCODEHASH].dynamicGas = gasEip7702CodeCheck
+
+	jt[CALL].constantGas = params.WarmStorageReadCostEIP2929
+	jt[CALL].dynamicGas = gasCallEIP7702
+
+	jt[CALLCODE].constantGas = params.WarmStorageReadCostEIP2929
+	jt[CALLCODE].dynamicGas = gasCallCodeEIP7702
+
+	jt[STATICCALL].constantGas = params.WarmStorageReadCostEIP2929
+	jt[STATICCALL].dynamicGas = gasStaticCallEIP7702
+
+	jt[DELEGATECALL].constantGas = params.WarmStorageReadCostEIP2929
+	jt[DELEGATECALL].dynamicGas = gasDelegateCallEIP7702
 }

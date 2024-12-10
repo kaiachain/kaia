@@ -114,6 +114,7 @@ type stTransaction struct {
 	GasLimit             []uint64            `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           []byte              `json:"secretKey"`
+	AuthorizationList    []*stAuthorization  `json:"authorizationList"`
 }
 
 type stTransactionMarshaling struct {
@@ -123,6 +124,28 @@ type stTransactionMarshaling struct {
 	Nonce                math.HexOrDecimal64
 	GasLimit             []math.HexOrDecimal64
 	PrivateKey           hexutil.Bytes
+}
+
+//go:generate gencodec -type stAuthorization -field-override stAuthorizationMarshaling -out gen_stauthorization.go
+
+// Authorization is an authorization from an account to deploy code at it's
+// address.
+type stAuthorization struct {
+	ChainID uint64
+	Address common.Address `gencodec:"required" json:"address"`
+	Nonce   uint64         `gencodec:"required" json:"nonce"`
+	V       uint8          `gencodec:"required" json:"v"`
+	R       *big.Int       `gencodec:"required" json:"r"`
+	S       *big.Int       `gencodec:"required" json:"s"`
+}
+
+// field type overrides for gencodec
+type stAuthorizationMarshaling struct {
+	ChainID math.HexOrDecimal64
+	Nonce   math.HexOrDecimal64
+	V       math.HexOrDecimal64
+	R       *math.HexOrDecimal256
+	S       *math.HexOrDecimal256
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
@@ -232,10 +255,10 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
-	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState)
+	rules := config.Rules(block.Number())
+	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState, rules)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	rules := config.Rules(block.Number())
 	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
 	if err != nil {
 		return st, common.Hash{}, err
@@ -308,15 +331,19 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool) *state.StateDB {
+func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool, rules params.Rules) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			if isTestExecutionSpecState {
-				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+			if _, ok := types.ParseDelegation(a.Code); ok {
+				statedb.SetCodeToEOA(addr, a.Code, rules)
+			} else {
+				if isTestExecutionSpecState {
+					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
+				}
+				statedb.SetCode(addr, a.Code)
 			}
-			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
@@ -391,17 +418,33 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 
+	var authorizationList types.AuthorizationList
+	if tx.AuthorizationList != nil {
+		authorizationList = make(types.AuthorizationList, 0)
+		for _, auth := range tx.AuthorizationList {
+			authorizationList = append(authorizationList, types.Authorization{
+				ChainID: auth.ChainID,
+				Address: auth.Address,
+				Nonce:   auth.Nonce,
+				V:       auth.V,
+				R:       auth.R,
+				S:       auth.S,
+			})
+		}
+	}
+
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = useEthIntrinsicGas(data, accessList, to == nil, r)
+		intrinsicGas, err = useEthIntrinsicGas(data, accessList, authorizationList, to == nil, r)
 	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
+		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, accessList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, authorizationList)
 	return msg, nil
 }
 
@@ -453,11 +496,11 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, accessList types.AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList types.AuthorizationList, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, accessList, contractCreation, r)
+	return types.IntrinsicGas(data, accessList, authorizationList, contractCreation, r)
 }
 
 func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {

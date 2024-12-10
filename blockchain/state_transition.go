@@ -123,6 +123,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
+	AuthorizationList() types.AuthorizationList
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -291,6 +292,16 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
+
+	// Check that EIP-7702 authorization list signatures are well formed.
+	for i, auth := range st.msg.AuthorizationList() {
+		switch {
+		case auth.R.BitLen() > 256:
+			return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
+		case auth.S.BitLen() > 256:
+			return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
+		}
+	}
 	return st.buyGas()
 }
 
@@ -347,10 +358,25 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 
+	// Verify authorization list is not empty.
+	if msg.AuthorizationList() != nil && len(msg.AuthorizationList()) == 0 {
+		return nil, fmt.Errorf("%w: address %v", ErrEmptyAuthList, msg.ValidatedSender())
+	}
+
 	// Execute the preparatory steps for state transition which includes:
 	// - prepare accessList(post-berlin)
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+
+	// SetCode sender nonce increment should be done before set code process.
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		st.state.IncNonce(msg.ValidatedSender())
+	}
+
+	// Check authorization list validity and set code.
+	if msg.AuthorizationList() != nil {
+		st.processAuthorizationList(msg.AuthorizationList(), *msg.To(), rules)
+	}
 
 	// Check whether the init code size has been exceeded.
 	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
@@ -499,4 +525,59 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address, rules params.Rules) {
+	for _, auth := range authList {
+		// Verify chain ID is 0 or equal to current chain ID.
+		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
+			continue
+		}
+		// Limit nonce to 2^64-1 per EIP-2681.
+		if auth.Nonce+1 < auth.Nonce {
+			continue
+		}
+		// Validate signature values and recover authority.
+		authority, err := auth.Authority()
+		if err != nil {
+			continue
+		}
+		// Check the authority account 1) doesn't have code or has exisiting
+		// delegation 2) matches the auth's nonce
+		st.state.AddAddressToAccessList(authority)
+		code := st.state.GetCode(authority)
+		if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
+			continue
+		}
+		if have := st.state.GetNonce(authority); have != auth.Nonce {
+			continue
+		}
+		// If the account already exists in state, refund the new account cost
+		// charged in the initrinsic calculation.
+		if exists := st.state.Exist(authority); exists {
+			// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
+			if !st.state.GetKey(authority).Type().IsLegacyAccountKey() {
+				continue
+			}
+			st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
+		}
+		st.state.IncNonce(authority)
+		delegation := types.AddressToDelegation(auth.Address)
+		if common.EmptyAddress(auth.Address) {
+			// If the delegation is for the zero address, completely clear all
+			// delegations from the account.
+			delegation = []byte{}
+		}
+
+		// We treat EOA and SCA as separate objects and therefore need to use
+		// distinct methods.
+		st.state.SetCodeToEOA(authority, delegation, rules)
+
+		// Usually the transaction destination and delegation target are added to
+		// the access list in statedb.Prepare(..), however if the delegation is in
+		// the same transaction we need add here as Prepare already happened.
+		if to == authority {
+			st.state.AddAddressToAccessList(auth.Address)
+		}
+	}
 }

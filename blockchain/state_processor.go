@@ -112,7 +112,7 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 		gasLimit = uint64(30_000_000)
 	)
 
-	intrinsicGas, err := types.IntrinsicGas(data, nil, false, rules)
+	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
 	if err != nil {
 		return err
 	}
@@ -124,9 +124,12 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 		common.Big0,
 		gasLimit,
 		common.Big0,
+		nil,
+		nil,
 		data,
 		false,
 		intrinsicGas,
+		nil,
 		nil,
 	)
 
