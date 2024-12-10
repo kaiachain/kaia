@@ -24,7 +24,14 @@ import (
 func (c *CompressModule) RewindTo(newBlock *types.Block) {}
 
 func (c *CompressModule) RewindDelete(hash common.Hash, num uint64) {
-	c.deleteHeader(hash, num)
-	c.deleteBody(hash, num)
-	c.deleteReceipts(hash, num)
+	// Ovewrite subsequent block number to new starting number which contains compression range before
+	if newHeaderFromAfterRewind := c.deleteHeader(hash, num); newHeaderFromAfterRewind != 0 {
+		writeSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType, newHeaderFromAfterRewind)
+	}
+	if newBodyFromAfterRewind := c.deleteBody(hash, num); newBodyFromAfterRewind != 0 {
+		writeSubsequentCompressionBlkNumber(c.Dbm, BodyCompressType, newBodyFromAfterRewind)
+	}
+	if newReceiptsFromAfterRewind := c.deleteReceipts(hash, num); newReceiptsFromAfterRewind != 0 {
+		writeSubsequentCompressionBlkNumber(c.Dbm, ReceiptCompressType, newReceiptsFromAfterRewind)
+	}
 }

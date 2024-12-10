@@ -291,26 +291,10 @@ func decompressReceipts(dbm database.DBManager, from, to uint64) ([]*ReceiptComp
 	return decompressed.([]*ReceiptCompression), nil
 }
 
-func recompress(dbm database.DBManager, compressions []CompressStructTyp, compressTyp CompressionType, from, to uint64, blkHash common.Hash) error {
-	for idx, rc := range compressions {
-		if rc.GetBlkHash() == blkHash {
-			newCompressions := append(compressions[:idx], compressions[idx+1:]...)
-			bytes, err := rlp.EncodeToBytes(newCompressions)
-			if err != nil {
-				return err
-			}
-			// Write to the same key (overwrite)
-			writeCompression(dbm, compressTyp, bytes, from, to)
-			return nil
-		}
-	}
-	return nil
-}
-
-func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, decompressFn DecompressFn, number uint64, blkHash common.Hash) error {
+func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, decompressFn DecompressFn, number uint64, blkHash common.Hash) (uint64, error) {
 	// Badger DB does not support `NewIterator()`
 	if dbm.GetDBConfig().DBType == database.BadgerDB {
-		return nil
+		return 0, nil
 	}
 
 	var (
@@ -323,29 +307,25 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, de
 	for it.Next() {
 		from, to := parseCompressKey(compressTyp, it.Key())
 		if from <= number && number <= to {
-			// 2. Once a find chunk, decompress it
-			compressions, err := decompressFn(dbm, compressTyp, from, to)
-			if err != nil {
-				return err
+			// delete compression and return the starting number so that the compression moduel can start work from there
+			if err := db.Delete(it.Key()); err != nil {
+				logger.Crit(fmt.Sprintf("Failed to delete compressed type(%s), from=%d, to=%d", compressTyp.String(), from, to))
 			}
-			// 3. Recompress except for the target data to be deleted
-			if err := recompress(dbm, compressions, compressTyp, from, to, blkHash); err != nil {
-				return err
-			}
+			return from, nil
 		}
 	}
-	return nil
+	return 0, nil
 }
 
-func deleteHeaderFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) error {
+func deleteHeaderFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
 	return deleteDataFromChunk(dbm, HeaderCompressType, decompressCommon, number, blkHash)
 }
 
-func deleteBodyFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) error {
+func deleteBodyFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
 	return deleteDataFromChunk(dbm, BodyCompressType, decompressCommon, number, blkHash)
 }
 
-func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) error {
+func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
 	return deleteDataFromChunk(dbm, ReceiptCompressType, decompressCommon, number, blkHash)
 }
 
