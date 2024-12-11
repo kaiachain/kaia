@@ -7,38 +7,38 @@ on:
 
 jobs:
   # Basic test jobs
-#  build:
-#    uses: ./.github/workflows/test-excutor.yml
-#    with:
-#      test_command: |
-#        git config --global --add safe.directory /__w/kaia/kaia
-#        make all
-#
-#  test-linter:
-#    uses: ./.github/workflows/test-excutor.yml
-#    with:
-#      test_command: |
-#        git config --global --add safe.directory /__w/kaia/kaia
-#        go run build/ci.go lint -v --new-from-rev=dev
-#
-#  test-networks:
-#    uses: ./.github/workflows/test-excutor.yml
-#    with:
-#      test_command: |
-#        git config --global --add safe.directory /__w/kaia/kaia
-#        make test-networks
-#
-#  test-node:
-#    uses: ./.github/workflows/test-excutor.yml
-#    with:
-#      test_command: make test-node
-#
-#  test-tests:
-#    uses: ./.github/workflows/test-excutor.yml
-#    with:
-#      test_command: |
-#        git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
-#        make test-tests
+  build:
+    uses: ./.github/workflows/test-excutor.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        make all
+
+  test-linter:
+    uses: ./.github/workflows/test-excutor.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        go run build/ci.go lint -v --new-from-rev=dev
+
+  test-networks:
+    uses: ./.github/workflows/test-excutor.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        make test-networks
+
+  test-node:
+    uses: ./.github/workflows/test-excutor.yml
+    with:
+      test_command: make test-node
+
+  test-tests:
+    uses: ./.github/workflows/test-excutor.yml
+    with:
+      test_command: |
+        git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+        make test-tests
 
   test-rpc:
     permissions: write-all
@@ -56,36 +56,35 @@ jobs:
         apt update
         apt install python3.8 python3-venv -y
         python3.8 -m venv --without-pip venv
-        ls -la
-        /bin/bash source venv/bin/activate
+        source venv/bin/activate
         curl https://bootstrap.pypa.io/get-pip.py | python
         pip3 install -r requirements.txt
         python3 main.py --protocol rpc
 
-#  # Service-dependent test jobs
-#  test-datasync:
-#    uses: ./.github/workflows/test-other-excutor.yml
-#    with:
-#      test_command: make test-datasync
-#    secrets:
-#      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#
-#  test-others:
-#    uses: ./.github/workflows/test-other-excutor.yml
-#    with:
-#      test_command: make test-others
-#    secrets:
-#      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#
-#  check-tagger:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - id: check-tag
-#        run: |
-#          if [[ ${{ github.event.ref }} =~ ^refs/tags/^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-#            echo "match=true" >> $GITHUB_OUTPUT
-#          fi
-#      - if: steps.check-tag.outputs.match == true
-#        run: echo "Tag is good"
+  # Service-dependent test jobs
+  test-datasync:
+    uses: ./.github/workflows/test-other-excutor.yml
+    with:
+      test_command: make test-datasync
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  test-others:
+    uses: ./.github/workflows/test-other-excutor.yml
+    with:
+      test_command: make test-others
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  check-tagger:
+    runs-on: ubuntu-latest
+    steps:
+      - id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "match=true" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.check-tag.outputs.match == true
+        run: echo "Tag is good"
