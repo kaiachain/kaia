@@ -59,9 +59,7 @@ func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error)
 	return getParams(api.g, num)
 }
 
-func distill(g *GovModule, gp gov.ParamSet, blockNum uint64) gov.ParamSet {
-	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNum))
-
+func patchDeprecatedParams(gp gov.ParamSet, rule params.Rules) gov.ParamSet {
 	// To avoid confusion, override some parameters that are deprecated after hardforks.
 	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
 	if rule.IsKore {
@@ -90,7 +88,8 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	}
 
 	pset := g.EffectiveParamSet(blocknum)
-	pset = distill(g, pset, blocknum)
+	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blocknum))
+	pset = patchDeprecatedParams(pset, rule)
 	latestConfig := g.Chain.Config()
 	config := pset.ToGovParamSet().ToChainConfig()
 	config.ChainID = latestConfig.ChainID
@@ -137,8 +136,9 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 		blockNumber = uint64(num.Int64())
 	}
 
+	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
 	gp := g.EffectiveParamSet(blockNumber)
-	gp = distill(g, gp, blockNumber)
+	gp = patchDeprecatedParams(gp, rule)
 	ret := gp.ToMap()
 	return ret, nil
 }
