@@ -186,7 +186,7 @@ commands:
                   KAIROS="-kairos"
                 fi
                 TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/
+                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
                 aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
               fi
             done
@@ -195,9 +195,9 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/ rhel/stream9/kaia/
-            createrepo --update rhel/stream9/kaia
-            aws s3 sync --delete rhel/stream9/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/repodata/
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/ rhel/9-stream/kaia/
+            createrepo --update rhel/9-stream/kaia
+            aws s3 sync --delete rhel/9-stream/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/repodata/
   tag-verify:
     steps:
       - run:
