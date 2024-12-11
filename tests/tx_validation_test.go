@@ -485,7 +485,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
