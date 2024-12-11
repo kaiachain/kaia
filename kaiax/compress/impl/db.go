@@ -90,7 +90,7 @@ func removeOriginAfterCompress(dbm database.DBManager, compressions []any) {
 	}
 }
 
-func findDataFromChunk(dbm database.DBManager, compressTyp CompressionType, finder Finder, number uint64, blkOrTxHash common.Hash, notFoundErr error) (any, error) {
+func findDataFromChunk(dbm database.DBManager, compressTyp CompressionType, finder Finder, number uint64, blkHash common.Hash, notFoundErr error) (any, error) {
 	// Badger DB does not support `NewIterator()`
 	if dbm.GetDBConfig().DBType == database.BadgerDB {
 		return nil, nil
@@ -106,7 +106,7 @@ func findDataFromChunk(dbm database.DBManager, compressTyp CompressionType, find
 	for it.Next() {
 		from, to := parseCompressKey(compressTyp, it.Key())
 		if from <= number && number <= to {
-			decompressed, err = finder(dbm, from, to, number, blkOrTxHash)
+			decompressed, err = finder(dbm, from, to, number, blkHash)
 			if err != nil {
 				return nil, err
 			}
@@ -357,7 +357,7 @@ func compressedHeaderFinder(dbm database.DBManager, from, to, number uint64, blk
 	return nil, nil
 }
 
-func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkOrTxHash common.Hash) (any, error) {
+func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
 	// Find a chunk and decompress
 	bodyCompressions, err := decompressBody(dbm, from, to)
 	if err != nil {
@@ -365,21 +365,14 @@ func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkOr
 	}
 	// Make a `types.Receipt` struct and returns it`
 	for _, bc := range bodyCompressions {
-		if bc.BlkHash == blkOrTxHash {
+		if bc.BlkHash == blkHash {
 			return bc.Body, nil
-		}
-		if bc.BlkNumber == number {
-			for _, tx := range bc.Body.Transactions {
-				if tx.Hash() == blkOrTxHash {
-					return types.Body{Transactions: []*types.Transaction{tx}}, nil
-				}
-			}
 		}
 	}
 	return nil, nil
 }
 
-func compressedReceiptFinder(dbm database.DBManager, from, to, number uint64, blkOrTxHash common.Hash) (any, error) {
+func compressedReceiptFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
 	// Find a chunk and decompress
 	receiptCompressions, err := decompressReceipts(dbm, from, to)
 	if err != nil {
@@ -387,19 +380,12 @@ func compressedReceiptFinder(dbm database.DBManager, from, to, number uint64, bl
 	}
 	// Make a `types.Receipt` struct and returns it`
 	for _, rc := range receiptCompressions {
-		if rc.BlkHash == blkOrTxHash {
+		if rc.BlkHash == blkHash {
 			receipts := make(types.Receipts, len(rc.StorageReceipts))
 			for idx, receipt := range rc.StorageReceipts {
 				receipts[idx] = (*types.Receipt)(receipt)
 			}
 			return receipts, nil
-		}
-		if rc.BlkNumber == number {
-			for _, receipt := range rc.StorageReceipts {
-				if receipt.TxHash == blkOrTxHash {
-					return types.Receipts{(*types.Receipt)(receipt)}, nil
-				}
-			}
 		}
 	}
 	return nil, nil
@@ -417,18 +403,6 @@ func findReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, blk
 	return decompressed.(types.Receipts), nil
 }
 
-func findReceiptFromChunkWithTxHash(dbm database.DBManager, number uint64, txHash common.Hash) (*types.Receipt, error) {
-	notFoundErr := fmt.Errorf("[Receipt Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
-	decompressed, err := findDataFromChunk(dbm, ReceiptCompressType, compressedReceiptFinder, number, txHash, notFoundErr)
-	if err != nil {
-		return nil, err
-	}
-	if decompressed == nil {
-		return nil, errors.New("[Receipt Compression] receipt not found")
-	}
-	return decompressed.(types.Receipts)[0], nil
-}
-
 func findBodyFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (*types.Body, error) {
 	notFoundErr := fmt.Errorf("[Body Compression] Failed to find transactions (blkNumber= %d, blkHash=%s)", number, blkHash.String())
 	decompressed, err := findDataFromChunk(dbm, BodyCompressType, compressedBodyFinder, number, blkHash, notFoundErr)
@@ -439,18 +413,6 @@ func findBodyFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash
 		return nil, errors.New("[Body Compression] body not found")
 	}
 	return decompressed.(*types.Body), nil
-}
-
-func findTxFromChunkWithTxHash(dbm database.DBManager, number uint64, txHash common.Hash) (*types.Transaction, error) {
-	notFoundErr := fmt.Errorf("[Body Compression] Failed to find a receipt (blkNumber= %d, txHash=%s)", number, txHash.String())
-	decompressed, err := findDataFromChunk(dbm, BodyCompressType, compressedBodyFinder, number, txHash, notFoundErr)
-	if err != nil {
-		return nil, err
-	}
-	if decompressed == nil {
-		return nil, errors.New("[Body Compression] body not found")
-	}
-	return decompressed.(types.Body).Transactions[0], nil
 }
 
 func findHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (*types.Header, error) {

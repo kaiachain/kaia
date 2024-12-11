@@ -137,9 +137,10 @@ func (c *CompressModule) testCopyOriginData(compressTyp CompressionType, copyTes
 
 func (c *CompressModule) testVerifyCompressionIntegrity(compressTyp CompressionType, from, to uint64) error {
 	for i := from; i < to; i++ {
+		blkHash := c.Dbm.ReadCanonicalHash(i)
 		switch compressTyp {
 		case HeaderCompressType:
-			originHeader := c.Dbm.ReadHeader(c.Dbm.ReadCanonicalHash(i), i)
+			originHeader := c.Dbm.ReadHeader(blkHash, i)
 			compressedHeader, err := findHeaderFromChunkWithBlkHash(c.Dbm, i, originHeader.Hash())
 			if err != nil {
 				return err
@@ -148,24 +149,29 @@ func (c *CompressModule) testVerifyCompressionIntegrity(compressTyp CompressionT
 				return fmt.Errorf("[Header Compression Test] Compressed header is not the same data with origin header data (number=%d, txHash=%s)", i, originHeader.Hash().String())
 			}
 		case BodyCompressType:
-			originBody := c.Dbm.ReadBody(c.Dbm.ReadCanonicalHash(i), i)
-			for _, originTx := range originBody.Transactions {
-				compressedTx, err := findTxFromChunkWithTxHash(c.Dbm, i, originTx.Hash())
+			originBody := c.Dbm.ReadBody(blkHash, i)
+			if len(originBody.Transactions) > 0 {
+				compressedBody, err := findBodyFromChunkWithBlkHash(c.Dbm, i, blkHash)
 				if err != nil {
 					return err
 				}
-				if !originTx.Equal(compressedTx) {
-					return fmt.Errorf("[Body Compression Test] Compressed body is not the same data with origin body data (number=%d, txHash=%s)", i, originTx.Hash().String())
+				for idx, originTx := range originBody.Transactions {
+					if !originTx.Equal(compressedBody.Transactions[idx]) {
+						return fmt.Errorf("[Body Compression Test] Compressed body is not the same data with origin body data (number=%d, txHash=%s)", i, originTx.Hash().String())
+					}
 				}
 			}
 		case ReceiptCompressType:
-			for _, originReceipt := range c.Dbm.ReadReceipts(c.Dbm.ReadCanonicalHash(i), i) {
-				compressedReceipt, err := findReceiptFromChunkWithTxHash(c.Dbm, i, originReceipt.TxHash)
+			originReceipts := c.Dbm.ReadReceipts(blkHash, i)
+			if len(originReceipts) > 0 {
+				compressedReceipts, err := findReceiptsFromChunkWithBlkHash(c.Dbm, i, blkHash)
 				if err != nil {
 					return err
 				}
-				if !reflect.DeepEqual(originReceipt, compressedReceipt) {
-					return fmt.Errorf("[Receipt Compression Test] Compressed receipt is not the same data with origin receipt data (number=%d, txHash=%s)", i, originReceipt.TxHash.String())
+				for idx, originReceipt := range originReceipts {
+					if !reflect.DeepEqual(originReceipt, compressedReceipts[idx]) {
+						return fmt.Errorf("[Receipt Compression Test] Compressed receipt is not the same data with origin receipt data (number=%d, txHash=%s)", i, originReceipt.TxHash.String())
+					}
 				}
 			}
 		}
@@ -173,20 +179,30 @@ func (c *CompressModule) testVerifyCompressionIntegrity(compressTyp CompressionT
 	return nil
 }
 
-func (c *CompressModule) TestCompress(compressTyp CompressionType, from, to uint64, startNum *uint64, tempDir string) error {
+func (c *CompressModule) testFinder(compressTyp CompressionType, from, to uint64) {
+	for i := from; i < to; i++ {
+		blkHash := c.Dbm.ReadCanonicalHash(i)
+		switch compressTyp {
+		case HeaderCompressType:
+			findHeaderFromChunkWithBlkHash(c.Dbm, i, blkHash)
+		case BodyCompressType:
+			findBodyFromChunkWithBlkHash(c.Dbm, i, blkHash)
+		case ReceiptCompressType:
+			findReceiptsFromChunkWithBlkHash(c.Dbm, i, blkHash)
+		}
+	}
+}
+
+func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint64, tempDir string) error {
 	dbConfig := c.Dbm.GetDBConfig()
 	copyTestDB, err := database.TestCreateNewDB(dbConfig, filepath.Join(dbConfig.Dir, tempDir))
 	if err != nil {
 		return err
 	}
 	defer copyTestDB.Release()
-	if startNum != nil {
-		writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, *startNum)
-	}
+	writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
 	curBlkNum := c.Chain.CurrentBlock().NumberU64()
 	for {
-		// Copy origin receipts
-		c.testCopyOriginData(compressTyp, copyTestDB, from, to)
 
 		var (
 			subsequentBlkNumber uint64
@@ -194,16 +210,19 @@ func (c *CompressModule) TestCompress(compressTyp CompressionType, from, to uint
 		)
 		switch compressTyp {
 		case HeaderCompressType:
-			subsequentBlkNumber, err = compressHeader(c.Dbm, from, to, curBlkNum, true)
+			subsequentBlkNumber, err = compressHeader(c.Dbm, from, 0, curBlkNum, true)
 		case BodyCompressType:
-			subsequentBlkNumber, err = compressBody(c.Dbm, from, to, curBlkNum, true)
+			subsequentBlkNumber, err = compressBody(c.Dbm, from, 0, curBlkNum, true)
 		case ReceiptCompressType:
-			subsequentBlkNumber, err = compressReceipts(c.Dbm, from, to, curBlkNum, true)
+			subsequentBlkNumber, err = compressReceipts(c.Dbm, from, 0, curBlkNum, true)
 		}
 		if err != nil {
 			return err
 		}
-		if err = c.testVerifyCompressionIntegrity(compressTyp, from, to); err != nil {
+		// Copy origin receipts
+		c.testCopyOriginData(compressTyp, copyTestDB, from, subsequentBlkNumber-1)
+		// Compression integrity test
+		if err = c.testVerifyCompressionIntegrity(compressTyp, from, subsequentBlkNumber-1); err != nil {
 			return err
 		}
 		if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
@@ -218,11 +237,72 @@ func (c *CompressModule) TestCompress(compressTyp CompressionType, from, to uint
 	return nil
 }
 
-func TestCompress(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
+func (c *CompressModule) testCompressPerformance(from, to uint64) error {
 	var (
-		copyTempDirHC         = "copy_header"
-		copyTempDirBC         = "copy_body"
-		copyTempDirRC         = "copy_receipts"
+		originFrom = from
+		curBlkNum  = c.Chain.CurrentBlock().NumberU64()
+
+		totalHeaderCompressedElapsedTime   time.Duration
+		totalBodyCompressedElapsedTime     time.Duration
+		totalReceiptsCompressedElapsedTime time.Duration
+		totalHeaderFinderElapsedTime       time.Duration
+		totalBodyFinderElapsedTime         time.Duration
+		totalReceiptsFinderElapsedTime     time.Duration
+	)
+	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+		from = originFrom
+		writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
+		for {
+			var (
+				subsequentBlkNumber uint64
+				err                 error
+			)
+			startCompress := time.Now()
+			switch compressTyp {
+			case HeaderCompressType:
+				subsequentBlkNumber, err = compressHeader(c.Dbm, from, 0, curBlkNum, true)
+				totalHeaderCompressedElapsedTime += time.Since(startCompress)
+			case BodyCompressType:
+				subsequentBlkNumber, err = compressBody(c.Dbm, from, 0, curBlkNum, true)
+				totalBodyCompressedElapsedTime += time.Since(startCompress)
+			case ReceiptCompressType:
+				subsequentBlkNumber, err = compressReceipts(c.Dbm, from, 0, curBlkNum, true)
+				totalReceiptsCompressedElapsedTime += time.Since(startCompress)
+			}
+			if err != nil {
+				return err
+			}
+			startFinder := time.Now()
+			c.testFinder(compressTyp, from, subsequentBlkNumber-1)
+			switch compressTyp {
+			case HeaderCompressType:
+				totalHeaderFinderElapsedTime += time.Since(startFinder)
+			case BodyCompressType:
+				totalBodyFinderElapsedTime += time.Since(startFinder)
+			case ReceiptCompressType:
+				totalReceiptsFinderElapsedTime += time.Since(startFinder)
+			}
+			if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
+				logger.Info("[Compression] compression is completed", "from", from, "to", to, "subsequentBlkNumber", subsequentBlkNumber)
+				break
+			}
+			from = subsequentBlkNumber
+		}
+	}
+	fmt.Println("--------------------------------------------------")
+	fmt.Printf("block range (from=%d) (to=%d) (# of blocks = %d)\n", originFrom, to, to-originFrom)
+	fmt.Println("total header   compression elpased time: ", totalHeaderCompressedElapsedTime)
+	fmt.Println("total body     compression elpased time: ", totalBodyCompressedElapsedTime)
+	fmt.Println("total receipts compression elpased time: ", totalReceiptsCompressedElapsedTime)
+	fmt.Println("total header   finder      elpased time: ", totalHeaderFinderElapsedTime)
+	fmt.Println("total body     finder      elpased time: ", totalBodyFinderElapsedTime)
+	fmt.Println("total receipts finder      elpased time: ", totalReceiptsFinderElapsedTime)
+	fmt.Println("--------------------------------------------------")
+	return nil
+}
+
+func testInit(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) (*CompressModule, database.DBManager) {
+	var (
 		bc, chainDB, setupErr = setup(t)
 		initOpts              = &InitOpts{
 			Chain: bc,
@@ -236,17 +316,35 @@ func TestCompress(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain
 		if errors.Is(err, compress.ErrInitNil) {
 			// If no environment varaible set, do not execute compression test
 			// TODO-hyunsooda: Change this test to functional test and remove temp storage directory
-			return
+			return nil, nil
 		} else {
 			t.Fatal(err)
 		}
 	}
 	chainDB.SetCompressModule(mCompress)
+	return mCompress, chainDB
+}
+
+func TestCompressFunction(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
+	mCompress, chainDB := testInit(t, setup)
+	if mCompress == nil || chainDB == nil {
+		return
+	}
 	defer chainDB.Close()
 
 	from, to := uint64(0), uint64(3300)
-	// receipt compression test
-	assert.Nil(t, mCompress.TestCompress(HeaderCompressType, from, to, &from, copyTempDirHC))
-	assert.Nil(t, mCompress.TestCompress(BodyCompressType, from, to, &from, copyTempDirBC))
-	assert.Nil(t, mCompress.TestCompress(ReceiptCompressType, from, to, &from, copyTempDirRC))
+	assert.Nil(t, mCompress.testCompress(HeaderCompressType, from, to, "copy_header"))
+	assert.Nil(t, mCompress.testCompress(BodyCompressType, from, to, "copy_body"))
+	assert.Nil(t, mCompress.testCompress(ReceiptCompressType, from, to, "copy_receipts"))
+}
+
+func TestCompressPerformance(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
+	mCompress, chainDB := testInit(t, setup)
+	if mCompress == nil || chainDB == nil {
+		return
+	}
+	defer chainDB.Close()
+
+	from, to := uint64(0), uint64(3300)
+	assert.Nil(t, mCompress.testCompressPerformance(from, to))
 }

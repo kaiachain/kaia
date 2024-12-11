@@ -77,6 +77,10 @@ func setup(t *testing.T) (*blockchain.BlockChain, database.DBManager, error) {
 	return bc, chainDB, nil
 }
 
-func TestCompress(t *testing.T) {
-	compress_impl.TestCompress(t, setup)
+func TestCompressFunction(t *testing.T) {
+	compress_impl.TestCompressFunction(t, setup)
+}
+
+func TestCompressPerformance(t *testing.T) {
+	compress_impl.TestCompressPerformance(t, setup)
 }
