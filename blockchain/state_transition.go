@@ -391,6 +391,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Defer transferring Tx fee when DeferredTxFee is true
+	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		if rules.IsMagma {
 			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
