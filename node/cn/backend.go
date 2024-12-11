@@ -25,7 +25,6 @@ package cn
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -132,8 +131,7 @@ type CN struct {
 
 	APIBackend *CNAPIBackend
 
-	miner    Miner
-	gasPrice *big.Int
+	miner Miner
 
 	rewardbase  common.Address
 	nodeAddress common.Address
@@ -237,8 +235,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
 	mGov := gov_impl.NewGovModule()
 	cn := &CN{
 		config:            config,
@@ -248,7 +244,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		accountManager:    ctx.AccountManager,
 		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
-		gasPrice:          config.GasPrice,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
@@ -410,10 +405,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.APIBackend = &CNAPIBackend{cn, nil}
 
 	gpoParams := config.GPO
-
-	// NOTE-Kaia Now we use latest unitPrice
-	//         So let's override gpoParams.Default with config.GasPrice
-	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, mGov)
 	//@TODO Kaia add core component
