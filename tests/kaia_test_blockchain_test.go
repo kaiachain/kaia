@@ -95,7 +95,6 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a governance
 	governance := generateGovernaceDataForTest()
-	governance.SetNodeAddress(nodeAddr)
 	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
 	chainDb := NewDatabase(dir, database.LevelDB)
@@ -143,6 +142,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 			ChainConfig: genesis.Config,
 			Chain:       bc,
 			ChainKv:     chainDb.GetMiscDB(),
+			NodeAddress: nodeAddr,
 		}),
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   genesis.Config,

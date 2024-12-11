@@ -1003,7 +1003,6 @@ func (gov *Governance) toJSON(num uint64) ([]byte, error) {
 		BlockNumber:     num,
 		ChainConfig:     gov.ChainConfig,
 		VoteMap:         gov.voteMap.Copy(),
-		NodeAddress:     gov.nodeAddress.Load().(common.Address),
 		GovernanceVotes: gov.GovernanceVotes.Copy(),
 		GovernanceTally: gov.GovernanceTallies.Copy(),
 		CurrentSet:      gov.currentSet.Items(),

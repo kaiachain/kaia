@@ -260,7 +260,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
 		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
-		governance.SetNodeAddress(cn.nodeAddress)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)

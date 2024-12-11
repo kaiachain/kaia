@@ -835,7 +835,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Governance:     g,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
-	g.SetNodeAddress(backend.Address())
 	return backend
 }
 
