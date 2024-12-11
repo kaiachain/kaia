@@ -97,7 +97,7 @@ executors:
   default:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     docker:
-      - image: cimg/go:1.22.1
+      - image: cimg/go:1.23.3
 
 commands:
   pre-build:
@@ -139,12 +139,12 @@ commands:
               # install awscli
               brew install awscli
               # install golang
-              curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
-              mkdir $HOME/go1.22.1
-              tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
+              curl -O https://dl.google.com/go/go1.23.3.darwin-arm64.tar.gz
+              mkdir $HOME/go1.23.3
+              tar -C $HOME/go1.23.3 -xzf go1.23.3.darwin-arm64.tar.gz
               # Set GOPATH and update PATH
               echo 'export GOPATH=~/go' >> ~/.bashrc
-              echo 'export PATH=$HOME/go1.22.1/go/bin:$PATH' >> ~/.bashrc
+              echo 'export PATH=$HOME/go1.23.3/go/bin:$PATH' >> ~/.bashrc
               source ~/.bashrc
             fi
       - pre-build
@@ -186,7 +186,7 @@ commands:
                   KAIROS="-kairos"
                 fi
                 TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/
                 aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
               fi
             done
@@ -195,9 +195,9 @@ commands:
       - run:
           name: "createrepo update"
           command: |
-            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
-            createrepo --update rhel/7/kaia
-            aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/ rhel/stream9/kaia/
+            createrepo --update rhel/stream9/kaia
+            aws s3 sync --delete rhel/stream9/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/stream9/kaia/repodata/
   tag-verify:
     steps:
       - run:
