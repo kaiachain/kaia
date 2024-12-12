@@ -25,8 +25,17 @@ var (
 	ErrInitUnexpectedNil   = errors.New("unexpected nil during module init")
 	ErrZeroStakingInterval = errors.New("staking interval cannot be zero")
 	ErrAddressBookResult   = errors.New("invalid result from AddressBook")
+	ErrCLRegistryResult    = errors.New("invalid result from CLRegistry")
 )
+
+func ErrMultiCallCall(err error) error {
+	return fmt.Errorf("error calling MultiCall: %w", err)
+}
 
 func ErrAddressBookCall(err error) error {
 	return fmt.Errorf("error calling AddressBook: %w", err)
+}
+
+func ErrCLRegistryCall(err error) error {
+	return fmt.Errorf("error calling CLRegistry: %w", err)
 }

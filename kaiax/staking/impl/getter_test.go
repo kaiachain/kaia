@@ -31,6 +31,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
+	var config *params.ChainConfig
+
+	config = &params.ChainConfig{
+		ChainID: common.Big1,
+		Governance: &params.GovernanceConfig{
+			Reward: &params.RewardConfig{
+				UseGiniCoeff:          true,
+				StakingUpdateInterval: 86400,
+			},
+			KIP71: params.GetDefaultKIP71Config(),
+		},
+	}
+	config.LondonCompatibleBlock = big.NewInt(0)
+	config.IstanbulCompatibleBlock = big.NewInt(0)
+	config.EthTxTypeCompatibleBlock = big.NewInt(0)
+	config.MagmaCompatibleBlock = big.NewInt(0)
+	config.KoreCompatibleBlock = big.NewInt(0)
+	config.ShanghaiCompatibleBlock = big.NewInt(0)
+	config.CancunCompatibleBlock = big.NewInt(0)
+	config.RandaoCompatibleBlock = nil
+	config.KaiaCompatibleBlock = big.NewInt(0)
+	config.PragueCompatibleBlock = forkNum
+
+	return config
+}
+
+func copyAlloc(alloc blockchain.GenesisAlloc) blockchain.GenesisAlloc {
+	copiedAlloc := blockchain.GenesisAlloc{}
+	for addr, acc := range alloc {
+		copiedAlloc[addr] = acc
+	}
+	return copiedAlloc
+}
+
 func TestGetStakingInfo_Uncached(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
@@ -47,16 +82,7 @@ func TestGetStakingInfo_Uncached(t *testing.T) {
 				Balance: new(big.Int).Mul(big.NewInt(99_000_000), big.NewInt(params.KAIA)),
 			},
 		}
-		config = &params.ChainConfig{
-			ChainID: common.Big1,
-			Governance: &params.GovernanceConfig{
-				Reward: &params.RewardConfig{
-					UseGiniCoeff:          true,
-					StakingUpdateInterval: 86400,
-				},
-				KIP71: params.GetDefaultKIP71Config(),
-			},
-		}
+		config = testPragueForkChainConfig(nil)
 
 		// Addresses are already stored in AddressBookMock.sol:AddressBookMockTwoCN
 		// The balances are given at the GenesisAlloc above
@@ -77,9 +103,132 @@ func TestGetStakingInfo_Uncached(t *testing.T) {
 			KIFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000F06"),
 			KEFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000f07"),
 			StakingAmounts: []uint64{42_000_000, 99_000_000},
+			CLStakingInfos: nil,
 		}
 	)
 
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	// Test GetStakingInfo()
+	mStaking := NewStakingModule()
+	mStaking.Init(&InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+	})
+	si, err := mStaking.GetStakingInfo(0)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, si)
+}
+
+func TestGetStakingInfo_Prague_Uncached(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	var (
+		alloc = blockchain.GenesisAlloc{
+			system.AddressBookAddr: {
+				Code:    system.AddressBookMockTwoCNCode,
+				Balance: big.NewInt(0),
+			},
+			system.RegistryAddr: {
+				Code:    system.RegistryMockForCLCode,
+				Balance: big.NewInt(0),
+			},
+			common.HexToAddress("0x0000000000000000000000000000000000000F01"): { // staking1
+				Balance: new(big.Int).Mul(big.NewInt(42_000_000), big.NewInt(params.KAIA)),
+			},
+			common.HexToAddress("0x0000000000000000000000000000000000000f04"): { // staking2
+				Balance: new(big.Int).Mul(big.NewInt(99_000_000), big.NewInt(params.KAIA)),
+			},
+			common.HexToAddress("0x0000000000000000000000000000000000000e00"): { // CLPool1
+				Balance: new(big.Int).Mul(big.NewInt(20_000_000), big.NewInt(params.KAIA)),
+			},
+			common.HexToAddress("0x0000000000000000000000000000000000000e01"): { // CLPool2
+				Balance: new(big.Int).Mul(big.NewInt(23_000_000), big.NewInt(params.KAIA)),
+			},
+			common.HexToAddress("0x0000000000000000000000000000000000000e02"): { // CLPool3
+				Balance: new(big.Int).Mul(big.NewInt(30_000_000), big.NewInt(params.KAIA)),
+			},
+		}
+		expected = &staking.StakingInfo{
+			SourceBlockNum: 0,
+			NodeIds: []common.Address{
+				common.HexToAddress("0x0000000000000000000000000000000000000F00"),
+				common.HexToAddress("0x0000000000000000000000000000000000000F03"),
+			},
+			StakingContracts: []common.Address{
+				common.HexToAddress("0x0000000000000000000000000000000000000F01"),
+				common.HexToAddress("0x0000000000000000000000000000000000000f04"),
+			},
+			RewardAddrs: []common.Address{
+				common.HexToAddress("0x0000000000000000000000000000000000000f02"),
+				common.HexToAddress("0x0000000000000000000000000000000000000f05"),
+			},
+			KIFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000F06"),
+			KEFAddr:        common.HexToAddress("0x0000000000000000000000000000000000000f07"),
+			StakingAmounts: []uint64{42_000_000, 99_000_000},
+			CLStakingInfos: staking.CLStakingInfos{
+				{
+					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F00"),
+					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e00"),
+					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e03"),
+					CLStakingAmount: 20_000_000,
+				},
+				{
+					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F03"),
+					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e01"),
+					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e04"),
+					CLStakingAmount: 23_000_000,
+				},
+				{
+					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F06"),
+					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e02"),
+					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e05"),
+					CLStakingAmount: 30_000_000,
+				},
+			},
+		}
+	)
+
+	testGetStakingInfo_CL_NoCLRegistry(t, alloc)
+	testGetStakingInfo_CL(t, alloc, expected)
+}
+
+func testGetStakingInfo_CL_NoCLRegistry(t *testing.T, alloc blockchain.GenesisAlloc) {
+	db := database.NewMemoryDBManager()
+
+	config := testPragueForkChainConfig(big.NewInt(0))
+	alloc = copyAlloc(alloc)
+	alloc[system.RegistryAddr] = blockchain.GenesisAccount{
+		Code:    system.RegistryMockZero,
+		Balance: big.NewInt(0),
+	}
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	// Test GetStakingInfo()
+	mStaking := NewStakingModule()
+	mStaking.Init(&InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+	})
+	si, err := mStaking.GetStakingInfo(0)
+	assert.NoError(t, err)
+	assert.EqualValues(t, staking.CLStakingInfos(nil), si.CLStakingInfos)
+}
+
+func testGetStakingInfo_CL(t *testing.T, alloc blockchain.GenesisAlloc, expected *staking.StakingInfo) {
+	db := database.NewMemoryDBManager()
+
+	config := testPragueForkChainConfig(big.NewInt(0))
+	alloc = copyAlloc(alloc)
+	alloc[system.CLRegistryMockThreeCLAddr] = blockchain.GenesisAccount{
+		Code:    system.CLRegistryMockThreeCLCode,
+		Balance: big.NewInt(0),
+	}
+	alloc[system.WrappedKaiaMockAddr] = blockchain.GenesisAccount{
+		Code:    system.WrappedKaiaMockCode,
+		Balance: big.NewInt(0),
+	}
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	// Test GetStakingInfo()

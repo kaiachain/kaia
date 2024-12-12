@@ -284,6 +284,8 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 	kif.Add(kif, ratioRemainder)
 
 	// Further distribute using Kip82Ratio. By the way, remainder goes to proposer.
+	// After Prague, if the CLStaking is not nil, the proposer and staking rewards are proportionally distributed to both CN and CL.
+	// For proposer rewards, see `specWithProposerAndFunds`.
 	stakersAlloc, kip82Remainder := assignStakingRewards(config, stakers, si)
 	proposer.Add(proposer, kip82Remainder)
 	stakers.Sub(stakers, kip82Remainder)
@@ -357,13 +359,21 @@ func calcRemainder(total *big.Int, parts ...*big.Int) *big.Int {
 // Returns the allocation and the remainder.
 func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
 	var (
-		cns            = si.ConsolidatedNodes()
-		minStake       = config.MinimumStake.Uint64()
-		totalExcessInt = uint64(0) // sum of excess stakes (the amount over minStake) over all stakers
+		cns               = si.ConsolidatedNodes()
+		minStake          = config.MinimumStake.Uint64()
+		totalExcessInt    = uint64(0) // sum of excess stakes (the amount over minStake) over all stakers
+		cnTotalStakingMap = make(map[common.Address]uint64)
 	)
 	for _, cn := range cns {
-		if cn.StakingAmount > minStake {
-			totalExcessInt += cn.StakingAmount - minStake
+		// If the CNStaking is less than minStake, skip it.
+		if cn.StakingAmount >= minStake {
+			// Calculate total staking amount once
+			cnTotalStakingAmount := cn.StakingAmount
+			if cn.CLStakingInfo != nil {
+				cnTotalStakingAmount += cn.CLStakingInfo.CLStakingAmount
+			}
+			totalExcessInt += cnTotalStakingAmount - minStake
+			cnTotalStakingMap[cn.RewardAddr] = cnTotalStakingAmount
 		}
 	}
 
@@ -373,16 +383,22 @@ func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, s
 		alloc       = make(map[common.Address]*big.Int)
 	)
 	for _, cn := range cns {
-		if cn.StakingAmount > minStake {
+		cnTotalStakingAmount := cnTotalStakingMap[cn.RewardAddr]
+		if cnTotalStakingAmount > minStake {
 			// The KAIA unit will cancel out:
 			// reward (kei) = excess (KAIA) * stakersReward (kei) / totalExcess (KAIA)
-			excess := new(big.Int).SetUint64(cn.StakingAmount - minStake)
-			reward := new(big.Int).Mul(excess, stakersReward)
-			reward.Div(reward, totalExcess)
-			if reward.Sign() > 0 {
-				alloc[cn.RewardAddr] = reward
+			excess := new(big.Int).SetUint64(cnTotalStakingAmount - minStake)
+			if reward := new(big.Int).Div(new(big.Int).Mul(excess, stakersReward), totalExcess); reward.Sign() > 0 {
+				if cn.CLStakingInfo != nil {
+					// The remaining amount will be added to the cnAmount.
+					cnAmount, clAmount := cn.Split(reward)
+					alloc[cn.RewardAddr] = cnAmount
+					alloc[cn.CLStakingInfo.CLRewardAddr] = clAmount
+				} else {
+					alloc[cn.RewardAddr] = reward
+				}
+				remaining.Sub(remaining, reward)
 			}
-			remaining.Sub(remaining, reward)
 		}
 	}
 	return alloc, remaining
@@ -411,6 +427,29 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 	}
 
 	newSpec.Proposer = proposer
+	if si.CLStakingInfos == nil {
+		newSpec.IncRecipient(config.Rewardbase, proposer)
+		return newSpec
+	}
+
+	// Handle CLStakingInfo for proposer if not nil
+	cns := si.ConsolidatedNodes()
+	for _, cn := range cns {
+		if cn.RewardAddr != config.Rewardbase {
+			continue
+		}
+		if cn.CLStakingInfo == nil {
+			// Early exit if there's no CL for proposer
+			break
+		}
+
+		cnAmount, clAmount := cn.Split(proposer)
+
+		newSpec.IncRecipient(cn.RewardAddr, cnAmount)
+		newSpec.IncRecipient(cn.CLStakingInfo.CLRewardAddr, clAmount)
+		return newSpec
+	}
+
 	newSpec.IncRecipient(config.Rewardbase, proposer)
 	return newSpec
 }

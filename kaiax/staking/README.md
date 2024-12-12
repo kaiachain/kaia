@@ -6,6 +6,7 @@ This module is responsible for tracking validator staking amounts and their addr
 
 - StakingInfo is a struct representing Validator staking information at a certain block including staked amount, reward address, and node address. It is primarily used to determine validator set and rewards distribution.
 - StakingInfo summarizes the current AddressBook contract state, and all the staking contracts registered in the AddressBook, and their native token balances.
+  - Since the Prague hardfork, the StakingInfo will include the [consensus liquidity](https://kips.kaia.io/KIPs/kip-226) information from the CLRegistry.
 - When processing a block at `num`, the StakingInfo from a historic block state is used and the historic block (i.e. source block) is determined by the following:
   - If `num` is before Kaia hardfork, then StakingInfo is drawn from the beginning of the previous staking interval. Note that if the `num` is a multiple of StakingInterval, the staking info is drawn from two epochs ahead (e.g. in the example below, the staking info at block 3000 is drawn from block 1000).
     ```go
@@ -67,9 +68,23 @@ type StakingInfo struct {
 
   // Staking amounts of each staking contracts, in KAIA, rounded down.
   StakingAmounts []uint64 `json:"councilStakingAmounts"`
+
+  // The consensus liquidity information
+  CLStakingInfos *CLStakingInfos `json:"clStakingInfos"`
 }
+
+type CLStakingInfo struct {
+	CLNodeId        common.Address `json:"clNodeId"`
+	CLPoolAddr      common.Address `json:"clPoolAddr"`
+	CLRewardAddr    common.Address `json:"clRewardAddr"`
+	CLStakingAmount uint64         `json:"clStakingAmount"`
+}
+
+type CLStakingInfos []*CLStakingInfo
 ```
+
 - `ConsolidatedNodes()` returns the nodes consolidated by the duplicating reward addresses. Note that the AddressBook entries with the same reward address are considered a single validator.
+  - If `CLStakingInfo` exists for a validator after the Prague hardfork, the `ConsolidatedNodes()` will consolidate it. Note that `CLStakingInfo` has different reward address so the `CLNodeId` is used to consolidate.
 - `Gini(minStake)` returns the gini coefficient of the staking amounts that are no less than `minStake`.
 
 ### StakingInfoResponse
