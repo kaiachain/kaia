@@ -285,9 +285,15 @@ func GetGenesisGovBytes(config *params.ChainConfig) headergov.GovBytes {
 	return ret
 }
 
+// getGenesisParamNames returns a subset of parameters to be included
+// in the genesis block header's Governance field.
+// The subset depends on genesis block's hardfork level and genesis chain config.
+// For backward compatibility, some fields may be intentionally omitted.
 func getGenesisParamNames(config *params.ChainConfig) []gov.ParamName {
 	genesisParamNames := make([]gov.ParamName, 0)
 
+	// DeriveShaImpl is excluded unless the genesis is Kore HF,
+	// even though it has been always included in the genesis chain config.
 	if config.Governance != nil {
 		genesisParamNames = append(genesisParamNames, []gov.ParamName{
 			gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
