@@ -257,3 +257,71 @@ func validateOpts(opts *InitOpts) error {
 
 	return nil
 }
+
+// GetGenesisGovBytes returns the genesis governance bytes for initGenesis().
+// It panics if the given chain config is invalid.
+func GetGenesisGovBytes(config *params.ChainConfig) headergov.GovBytes {
+	partialParamSet := make(gov.PartialParamSet)
+	genesisParamNames := getGenesisParamNames(config)
+	for _, name := range genesisParamNames {
+		param := gov.Params[name]
+		value, err := param.ChainConfigValue(config)
+		if err != nil {
+			panic(err)
+		}
+
+		err = partialParamSet.Add(string(name), value)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	govData := headergov.NewGovData(partialParamSet)
+	ret, err := govData.ToGovBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	return ret
+}
+
+func getGenesisParamNames(config *params.ChainConfig) []gov.ParamName {
+	genesisParamNames := make([]gov.ParamName, 0)
+
+	if config.Governance != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+			gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+			gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+			gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+		}...)
+	}
+
+	if config.Istanbul != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+		}...)
+	}
+
+	if config.IsMagmaForkEnabled(common.Big0) &&
+		config.Governance.KIP71 != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.Kip71LowerBoundBaseFee, gov.Kip71UpperBoundBaseFee, gov.Kip71GasTarget,
+			gov.Kip71BaseFeeDenominator, gov.Kip71MaxBlockGasUsedForBaseFee,
+		}...)
+	}
+
+	if config.IsKoreForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		genesisParamNames = append(genesisParamNames, gov.GovernanceDeriveShaImpl)
+		if !common.EmptyAddress(config.Governance.GovParamContract) {
+			genesisParamNames = append(genesisParamNames, gov.GovernanceGovParamContract)
+		}
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.Kip82Ratio != "" {
+			genesisParamNames = append(genesisParamNames, gov.RewardKip82Ratio)
+		}
+	}
+
+	return genesisParamNames
+}

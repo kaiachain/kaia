@@ -2,9 +2,12 @@ package impl
 
 import (
 	"math/big"
+	"reflect"
+	"strings"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -118,4 +121,124 @@ func TestInitialDB(t *testing.T) {
 	assert.Equal(t, StoredUint64Array{0}, ReadGovDataBlockNums(h.ChainKv))
 	assert.Nil(t, StoredUint64Array(nil), ReadVoteDataBlockNums(h.ChainKv))
 	assert.Equal(t, uint64(0), *ReadLowestVoteScannedBlockNum(h.ChainKv))
+}
+
+func TestGetGenesisParamNames(t *testing.T) {
+	magmaGenesisConfig := params.MainnetChainConfig.Copy()
+	magmaGenesisConfig.MagmaCompatibleBlock = new(big.Int).SetUint64(0)
+	magmaGenesisConfig.Governance.KIP71 = params.GetDefaultKIP71Config()
+
+	koreGenesisConfig := magmaGenesisConfig.Copy()
+	koreGenesisConfig.KoreCompatibleBlock = new(big.Int).SetUint64(0)
+	koreGenesisConfig.Governance.GovParamContract = common.HexToAddress("0x123")
+	koreGenesisConfig.Governance.Reward.Kip82Ratio = "20/80"
+
+	testcases := []struct {
+		desc     string
+		config   *params.ChainConfig
+		expected []gov.ParamName
+	}{
+		{
+			desc:   "Mainnet config",
+			config: params.MainnetChainConfig.Copy(),
+			expected: []gov.ParamName{
+				gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+				gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+				gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+				gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+				gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+			},
+		},
+		{
+			desc:   "Kairos config",
+			config: params.KairosChainConfig.Copy(),
+			expected: []gov.ParamName{
+				gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+				gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+				gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+				gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+				gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+			},
+		},
+		{
+			desc:   "Private net config - genesis is Magma",
+			config: magmaGenesisConfig,
+			expected: []gov.ParamName{
+				gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+				gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+				gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+				gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+				gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+				gov.Kip71LowerBoundBaseFee, gov.Kip71UpperBoundBaseFee, gov.Kip71GasTarget,
+				gov.Kip71BaseFeeDenominator, gov.Kip71MaxBlockGasUsedForBaseFee,
+			},
+		},
+		{
+			desc:   "Private net config - genesis is Kore",
+			config: koreGenesisConfig,
+			expected: []gov.ParamName{
+				gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+				gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+				gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+				gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+				gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+				gov.Kip71LowerBoundBaseFee, gov.Kip71UpperBoundBaseFee, gov.Kip71GasTarget,
+				gov.Kip71BaseFeeDenominator, gov.Kip71MaxBlockGasUsedForBaseFee,
+				gov.GovernanceDeriveShaImpl, gov.GovernanceGovParamContract, gov.RewardKip82Ratio,
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			assert.Equal(t, tc.expected, getGenesisParamNames(tc.config))
+		})
+	}
+
+	// this prevents forgetting to update getGenesisParamNames after adding a new governance parameter
+	t.Run("getGenesisParamNames must include all governance parameters when all hardforks are enabled", func(t *testing.T) {
+		latestGenesisConfig := koreGenesisConfig.Copy()
+
+		// Set all *CompatibleBlock fields to zero.
+		configValue := reflect.ValueOf(latestGenesisConfig).Elem()
+		configType := configValue.Type()
+
+		for i := 0; i < configType.NumField(); i++ {
+			field := configType.Field(i)
+			if strings.HasSuffix(field.Name, "CompatibleBlock") {
+				fieldValue := configValue.Field(i)
+				if fieldValue.Type() == reflect.TypeOf((*big.Int)(nil)) {
+					fieldValue.Set(reflect.ValueOf(big.NewInt(0)))
+				}
+			}
+		}
+
+		assert.Equal(t, len(gov.Params), len(getGenesisParamNames(latestGenesisConfig)))
+	})
+}
+
+func TestKairosGenesisHash(t *testing.T) {
+	kairosHash := params.KairosGenesisHash
+	genesis := blockchain.DefaultKairosGenesisBlock()
+	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
+	blockchain.InitDeriveSha(genesis.Config)
+
+	db := database.NewMemoryDBManager()
+	block, _ := genesis.Commit(common.Hash{}, db)
+	if block.Hash() != kairosHash {
+		t.Errorf("Generated hash is not equal to Kairos's hash. Want %v, Have %v", kairosHash.String(), block.Hash().String())
+	}
+}
+
+func TestMainnetGenesisHash(t *testing.T) {
+	mainnetHash := params.MainnetGenesisHash
+	genesis := blockchain.DefaultGenesisBlock()
+	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
+	blockchain.InitDeriveSha(genesis.Config)
+
+	db := database.NewMemoryDBManager()
+	block, _ := genesis.Commit(common.Hash{}, db)
+	if block.Hash() != mainnetHash {
+		t.Errorf("Generated hash is not equal to Mainnet's hash. Want %v, Have %v", mainnetHash.String(), block.Hash().String())
+	}
 }

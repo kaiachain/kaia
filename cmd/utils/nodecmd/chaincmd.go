@@ -32,9 +32,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
 	"github.com/kaiachain/kaia/governance"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
@@ -128,14 +128,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Set genesis.Governance and reward intervals
-	govSet := governance.GetGovernanceItemsFromChainConfig(genesis.Config)
-	govItemBytes, err := json.Marshal(govSet.Items())
-	if err != nil {
-		logger.Crit("Failed to json marshaling governance data", "err", err)
-	}
-	if genesis.Governance, err = rlp.EncodeToBytes(govItemBytes); err != nil {
-		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
-	}
+	genesis.Governance = headergov_impl.GetGenesisGovBytes(genesis.Config)
 	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
 
