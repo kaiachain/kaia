@@ -17,32 +17,125 @@
 package compress
 
 import (
+	"sync"
+	"time"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
+const MB_1 = uint64(1000000)
+
 var (
 	_      compress.CompressionModule = &CompressModule{}
 	logger                            = log.NewModuleLogger(log.KaiaxCompress)
 )
 
+//go:generate mockgen -destination=mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/compress/impl BlockChain
 type BlockChain interface {
 	CurrentBlock() *types.Block
 }
 
 type InitOpts struct {
-	Chain BlockChain
-	Dbm   database.DBManager
+	ChunkBlockSize uint64
+	ChunkCap       uint64
+	Chain          BlockChain
+	Dbm            database.DBManager
+}
+
+type IdleState struct {
+	isIdle   bool
+	idleTime time.Duration
 }
 
 type CompressModule struct {
 	InitOpts
+
+	// TODO-hyunsooda: Make me configurable through CLI, not API
+	compressChunkMu sync.RWMutex
+	maxSizeMu       sync.RWMutex
+
+	headerIdleState     *IdleState
+	bodyIdleState       *IdleState
+	receiptsIdleState   *IdleState
+	headerIdleStateMu   sync.RWMutex
+	bodyIdleStateMu     sync.RWMutex
+	receiptsIdleStateMu sync.RWMutex
 }
 
 func NewCompression() *CompressModule {
 	return &CompressModule{}
+}
+
+func (c *CompressModule) setMaxSize(v uint64) {
+	c.maxSizeMu.Lock()
+	defer c.maxSizeMu.Unlock()
+	c.InitOpts.ChunkCap = v
+}
+
+func (c *CompressModule) getChunkCap() uint64 {
+	c.maxSizeMu.RLock()
+	defer c.maxSizeMu.RUnlock()
+	return c.InitOpts.ChunkCap
+}
+
+func (c *CompressModule) setCompressChunk(v uint64) {
+	c.compressChunkMu.Lock()
+	defer c.compressChunkMu.Unlock()
+	c.InitOpts.ChunkBlockSize = v
+}
+
+func (c *CompressModule) getCompressChunk() uint64 {
+	c.compressChunkMu.RLock()
+	defer c.compressChunkMu.RUnlock()
+	return c.InitOpts.ChunkBlockSize
+}
+
+func (c *CompressModule) setIdleState(compressTyp CompressionType, is *IdleState) {
+	switch compressTyp {
+	case HeaderCompressType:
+		c.headerIdleStateMu.Lock()
+		defer c.headerIdleStateMu.Unlock()
+		c.headerIdleState = is
+	case BodyCompressType:
+		c.bodyIdleStateMu.Lock()
+		defer c.bodyIdleStateMu.Unlock()
+		c.bodyIdleState = is
+	case ReceiptCompressType:
+		c.receiptsIdleStateMu.Lock()
+		defer c.receiptsIdleStateMu.Unlock()
+		c.receiptsIdleState = is
+	}
+}
+
+func (c *CompressModule) getIdleState(compressTyp CompressionType) IdleState {
+	switch compressTyp {
+	case HeaderCompressType:
+		c.headerIdleStateMu.RLock()
+		defer c.headerIdleStateMu.RUnlock()
+		if c.headerIdleState == nil {
+			return IdleState{}
+		}
+		return *c.headerIdleState
+	case BodyCompressType:
+		c.bodyIdleStateMu.RLock()
+		defer c.bodyIdleStateMu.RUnlock()
+		if c.bodyIdleState == nil {
+			return IdleState{}
+		}
+		return *c.bodyIdleState
+	case ReceiptCompressType:
+		c.receiptsIdleStateMu.RLock()
+		defer c.receiptsIdleStateMu.RUnlock()
+		if c.receiptsIdleState == nil {
+			return IdleState{}
+		}
+		return *c.receiptsIdleState
+	default:
+		panic("unreachable")
+	}
 }
 
 func (c *CompressModule) Init(opts *InitOpts) error {
@@ -54,11 +147,11 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 }
 
 func (c *CompressModule) Start() error {
-	logger.Info("[ Compression] Compression started")
+	logger.Info("[Compression] Compression started")
 	go c.Compress()
 	return nil
 }
 
 func (c *CompressModule) Stop() {
-	logger.Info("[ Compression] Compression Stopped")
+	logger.Info("[Compression] Compression Stopped")
 }

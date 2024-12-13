@@ -589,6 +589,9 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.Int64(DynamoDBWriteCapacityFlag.Name)
 	cfg.DynamoDBConfig.ReadOnly = ctx.Bool(DynamoDBReadOnlyFlag.Name)
 
+	cfg.CompressBlockChunkSize = ctx.Uint64(CompressBlockChunkSizeFlag.Name)
+	cfg.CompressChunkCap = ctx.Uint64(CompressChunkCapFlag.Name)
+
 	if gcmode := ctx.String(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}

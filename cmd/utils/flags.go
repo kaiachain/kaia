@@ -488,6 +488,22 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS", "KAIA_DB_NO_PERF_METRICS"},
 		Category: "DATABASE",
 	}
+	CompressBlockChunkSizeFlag = &cli.Uint64Flag{
+		Name:     "database.compress-check-block-size",
+		Usage:    "Number of blocks which chunk can accomodate",
+		Value:    blockchain.DefaultChunkBlockSize,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_COMPRESS_BLOCK_CHUNK_SIZE", "KAIA_COMPRESS_BLOCK_CHUNK_SIZE"},
+		Category: "DATABASE",
+	}
+	CompressChunkCapFlag = &cli.Uint64Flag{
+		Name:     "database.compress-check-cap",
+		Usage:    "Byte size which chunk can accomodate",
+		Value:    blockchain.DefaultCompressChunkCap,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_COMPRESS_CHUNK_CAP", "KAIA_COMPRESS_CHUNK_CAP"},
+		Category: "DATABASE",
+	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",

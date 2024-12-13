@@ -587,8 +587,10 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain: s.blockchain,
 		}),
 		mCompress.Init(&compress_impl.InitOpts{
-			Chain: s.blockchain,
-			Dbm:   s.chainDB,
+			Chain:          s.blockchain,
+			Dbm:            s.chainDB,
+			ChunkBlockSize: s.config.CompressBlockChunkSize,
+			ChunkCap:       s.config.CompressChunkCap,
 		}),
 	)
 	if err != nil {

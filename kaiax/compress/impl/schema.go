@@ -40,11 +40,6 @@ var (
 	compressReceiptPrefix = []byte("CompressdReceipt-")
 	compressBodyPrefix    = []byte("CompressdBody-")
 
-	// TODO-hyunsooda: Make me configurable through CLI, not API
-	CompressMigrationThreshold = uint64(10000)
-	MB_1                       = uint64(1000000)
-	MB_100                     = MB_1 * 100
-
 	// Create a writer that caches compressors.
 	// For this operation type we supply a nil Reader.
 	encoder, _ = zstd.NewWriter(nil)
@@ -106,6 +101,9 @@ func toBinary(number uint64) []byte {
 }
 
 func getCompressDB(dbm database.DBManager, compressTyp CompressionType) database.Database {
+	if dbm.GetDBConfig().DBType == database.MemoryDB {
+		return dbm.GetMemDB()
+	}
 	switch compressTyp {
 	case HeaderCompressType:
 		return dbm.GetCompressHeaderDB()
@@ -164,7 +162,7 @@ type CompressStructTyp interface {
 
 type (
 	Finder       func(dbm database.DBManager, from, to, headNumber uint64, blkOrTxHash common.Hash) (any, error)
-	CompressFn   func(dbm database.DBManager, from, to, headNumber uint64, migrationMode bool) (uint64, error)
+	CompressFn   func(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error)
 	DecompressFn func(dbm database.DBManager, compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error)
 )
 

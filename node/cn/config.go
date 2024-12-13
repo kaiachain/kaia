@@ -112,28 +112,30 @@ type Config struct {
 	StartBlockNumber uint64
 
 	// Database options
-	DBType               database.DBType
-	SkipBcVersionCheck   bool `toml:"-"`
-	SingleDB             bool
-	NumStateTrieShards   uint
-	EnableDBPerfMetrics  bool
-	LevelDBCompression   database.LevelDBCompressionType
-	LevelDBBufferPool    bool
-	LevelDBCacheSize     int
-	PebbleDBCacheSize    int
-	DynamoDBConfig       database.DynamoDBConfig
-	RocksDBConfig        database.RocksDBConfig
-	TrieCacheSize        int
-	TrieTimeout          time.Duration
-	TrieBlockInterval    uint
-	TriesInMemory        uint64
-	LivePruning          bool
-	LivePruningRetention uint64
-	SenderTxHashIndexing bool
-	ParallelDBWrite      bool
-	TrieNodeCacheConfig  statedb.TrieNodeCacheConfig
-	SnapshotCacheSize    int
-	SnapshotAsyncGen     bool
+	DBType                 database.DBType
+	SkipBcVersionCheck     bool `toml:"-"`
+	SingleDB               bool
+	NumStateTrieShards     uint
+	EnableDBPerfMetrics    bool
+	LevelDBCompression     database.LevelDBCompressionType
+	LevelDBBufferPool      bool
+	LevelDBCacheSize       int
+	PebbleDBCacheSize      int
+	DynamoDBConfig         database.DynamoDBConfig
+	RocksDBConfig          database.RocksDBConfig
+	TrieCacheSize          int
+	TrieTimeout            time.Duration
+	TrieBlockInterval      uint
+	TriesInMemory          uint64
+	LivePruning            bool
+	LivePruningRetention   uint64
+	CompressBlockChunkSize uint64
+	CompressChunkCap       uint64
+	SenderTxHashIndexing   bool
+	ParallelDBWrite        bool
+	TrieNodeCacheConfig    statedb.TrieNodeCacheConfig
+	SnapshotCacheSize      int
+	SnapshotAsyncGen       bool
 
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`

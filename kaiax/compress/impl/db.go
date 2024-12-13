@@ -57,13 +57,13 @@ func writeSubsequentCompressionBlkNumber(dbm database.DBManager, compressTyp Com
 	}
 }
 
-func sanitizeRange(dbm database.DBManager, compressTyp CompressionType, from, to, headNumber uint64) (uint64, uint64, error) {
+func sanitizeRange(dbm database.DBManager, compressTyp CompressionType, from, to, headNumber, compressChunk uint64) (uint64, uint64, error) {
 	var err error
 	if from == 0 {
 		from = readSubsequentCompressionBlkNumber(dbm, compressTyp)
 	}
 	if to == 0 {
-		nextRange := from + uint64(CompressMigrationThreshold)
+		nextRange := from + compressChunk
 		if headNumber < nextRange {
 			to = headNumber
 		} else {
@@ -152,10 +152,10 @@ func decompress(dbm database.DBManager, compressTyp CompressionType, from, to ui
 	}
 }
 
-func compressStorage(dbm database.DBManager, compressTyp CompressionType, readData func(common.Hash, uint64) any, from, to, headNumber uint64, migrationMode bool) (uint64, error) {
-	from, to, err := sanitizeRange(dbm, compressTyp, from, to, headNumber)
+func compressStorage(dbm database.DBManager, compressTyp CompressionType, readData func(common.Hash, uint64) any, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
+	from, to, err := sanitizeRange(dbm, compressTyp, from, to, headNumber, compressChunk)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	var (
@@ -168,7 +168,7 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 	for i := from; i < to; i++ {
 		blkHash := dbm.ReadCanonicalHash(i)
 		if common.EmptyHash(blkHash) {
-			return 0, fmt.Errorf("[Receipt Compression] Block does not exist (number=%d)", i)
+			return 0, 0, fmt.Errorf("[%s Compression] Block does not exist (number=%d)", compressTyp.String(), i)
 		}
 		data := readData(blkHash, i)
 		if data != nil {
@@ -197,21 +197,21 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 			}
 			itIdx++
 			compressedTo = uint64(i)
-			if uint64(accumulatedByteSize) > MB_100 {
+			if uint64(accumulatedByteSize) > maxSize {
 				break
 			}
 		}
 	}
 	if itIdx == 0 {
 		// There is no data to compress
-		return to, nil
+		return to, 0, nil
 	}
 	bytes, err := rlp.EncodeToBytes(compressions[:itIdx])
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	writeCompression(dbm, compressTyp, bytes, from, compressedTo)
+	compressedSize := writeCompression(dbm, compressTyp, bytes, from, compressedTo)
 	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
 	// API1: Return all pair of comprression range for each type(header, tx, receipt)
 	// API2: Return a next compression target number for each type(header, tx, receipt)
@@ -222,7 +222,7 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 
 	// TODO-hyunsooda: Recover me
 	// dbm.removeOriginAfterCompress( compressions[:itIdx])
-	return nextCompressStart, nil
+	return nextCompressStart, compressedSize, nil
 }
 
 func writeCompression(dbm database.DBManager, compressTyp CompressionType, compressedBytes []byte, from, to uint64) int {
@@ -239,14 +239,14 @@ func writeCompression(dbm database.DBManager, compressTyp CompressionType, compr
 	return len(compressed)
 }
 
-func compressHeader(dbm database.DBManager, from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+func compressHeader(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		return dbm.ReadHeader(blkHash, blkNumber)
 	}
-	return compressStorage(dbm, HeaderCompressType, readData, from, to, headNumber, migrationMode)
+	return compressStorage(dbm, HeaderCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
-func compressBody(dbm database.DBManager, from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+func compressBody(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		body := dbm.ReadBody(blkHash, blkNumber)
 		if body == nil || len(body.Transactions) == 0 {
@@ -254,10 +254,10 @@ func compressBody(dbm database.DBManager, from, to, headNumber uint64, migration
 		}
 		return body
 	}
-	return compressStorage(dbm, BodyCompressType, readData, from, to, headNumber, migrationMode)
+	return compressStorage(dbm, BodyCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
-func compressReceipts(dbm database.DBManager, from, to, headNumber uint64, migrationMode bool) (uint64, error) {
+func compressReceipts(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		receipts := dbm.ReadReceipts(blkHash, blkNumber)
 		if receipts == nil || len(receipts) == 0 {
@@ -269,7 +269,7 @@ func compressReceipts(dbm database.DBManager, from, to, headNumber uint64, migra
 		}
 		return storageReceipts
 	}
-	return compressStorage(dbm, ReceiptCompressType, readData, from, to, headNumber, migrationMode)
+	return compressStorage(dbm, ReceiptCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
 func decompressCommon(dbm database.DBManager, compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error) {
@@ -348,7 +348,7 @@ func compressedHeaderFinder(dbm database.DBManager, from, to, number uint64, blk
 	if err != nil {
 		return nil, err
 	}
-	// Make a `types.Receipt` struct and returns it`
+	// Make a `types.Header` struct and returns it`
 	for _, hc := range headerCompressions {
 		if hc.BlkHash == blkHash {
 			return hc.Header, nil
@@ -363,7 +363,7 @@ func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkHa
 	if err != nil {
 		return nil, err
 	}
-	// Make a `types.Receipt` struct and returns it`
+	// Make a `types.Body` struct and returns it`
 	for _, bc := range bodyCompressions {
 		if bc.BlkHash == blkHash {
 			return bc.Body, nil
@@ -391,16 +391,16 @@ func compressedReceiptFinder(dbm database.DBManager, from, to, number uint64, bl
 	return nil, nil
 }
 
-func findReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (types.Receipts, error) {
-	notFoundErr := fmt.Errorf("[Receipt Compression] Failed to find receipts (blkNumber= %d, blkHash=%s)", number, blkHash.String())
-	decompressed, err := findDataFromChunk(dbm, ReceiptCompressType, compressedReceiptFinder, number, blkHash, notFoundErr)
+func findHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (*types.Header, error) {
+	notFoundErr := fmt.Errorf("[Header Compression] Failed to find a header (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	decompressed, err := findDataFromChunk(dbm, HeaderCompressType, compressedHeaderFinder, number, blkHash, notFoundErr)
 	if err != nil {
 		return nil, err
 	}
 	if decompressed == nil {
-		return nil, errors.New("[Receipt Compression] receipt not found")
+		return nil, errors.New("[Header Compression] header not found")
 	}
-	return decompressed.(types.Receipts), nil
+	return decompressed.(*types.Header), nil
 }
 
 func findBodyFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (*types.Body, error) {
@@ -415,14 +415,14 @@ func findBodyFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash
 	return decompressed.(*types.Body), nil
 }
 
-func findHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (*types.Header, error) {
-	notFoundErr := fmt.Errorf("[Header Compression] Failed to find a header (blkNumber= %d, blkHash=%s)", number, blkHash.String())
-	decompressed, err := findDataFromChunk(dbm, HeaderCompressType, compressedHeaderFinder, number, blkHash, notFoundErr)
+func findReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, blkHash common.Hash) (types.Receipts, error) {
+	notFoundErr := fmt.Errorf("[Receipt Compression] Failed to find receipts (blkNumber= %d, blkHash=%s)", number, blkHash.String())
+	decompressed, err := findDataFromChunk(dbm, ReceiptCompressType, compressedReceiptFinder, number, blkHash, notFoundErr)
 	if err != nil {
 		return nil, err
 	}
 	if decompressed == nil {
-		return nil, errors.New("[Header Compression] header not found")
+		return nil, errors.New("[Receipt Compression] receipt not found")
 	}
-	return decompressed.(*types.Header), nil
+	return decompressed.(types.Receipts), nil
 }

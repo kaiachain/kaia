@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/compress CompressModule
+//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/compress CompressionModule
 type CompressionModule interface {
 	kaiax.BaseModule
 	// TODO-hyunsooda: Implement getter APIs

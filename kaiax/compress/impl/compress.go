@@ -54,25 +54,29 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 	for {
 		var (
 			curBlkNum             = c.Chain.CurrentBlock().NumberU64()
-			residualBlkCnt        = curBlkNum % CompressMigrationThreshold
+			residualBlkCnt        = curBlkNum % c.getCompressChunk()
 			nextCompressionBlkNum = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
 			// Do not wait if next compression block number is far awway. Start migration right now
-			noWait = curBlkNum > nextCompressionBlkNum && curBlkNum-nextCompressionBlkNum > CompressMigrationThreshold
+			noWait     = curBlkNum > nextCompressionBlkNum && curBlkNum-nextCompressionBlkNum > c.getCompressChunk()
+			originFrom = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
+			from       = originFrom
 		)
 
 		if residualBlkCnt != 0 && !noWait {
-			time.Sleep(time.Second * time.Duration(CompressMigrationThreshold-residualBlkCnt))
+			idleTime := time.Second * time.Duration(c.getCompressChunk()-residualBlkCnt)
+			c.setIdleState(compressTyp, &IdleState{true, idleTime})
+			time.Sleep(idleTime)
 			continue
 		}
-		from, to := uint64(0), uint64(0)
+		c.setIdleState(compressTyp, nil)
 		for {
-			subsequentBlkNumber, err := compressFn(c.Dbm, from, to, curBlkNum, true)
+			subsequentBlkNumber, compressedSize, err := compressFn(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			if err != nil {
-				logger.Warn("[Compression] failed to compress chunk", "err", err)
+				logger.Warn("[Compression] failed to compress chunk", "type", compressTyp.String(), "err", err)
 				break
 			}
-			if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
-				logger.Info("[Compression] compression is completed", "from", from, "to", to, "subsequentBlkNumber", subsequentBlkNumber)
+			if subsequentBlkNumber >= curBlkNum {
+				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "compressedSize", common.StorageSize(compressedSize))
 				break
 			}
 			from = subsequentBlkNumber
@@ -210,11 +214,11 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 		)
 		switch compressTyp {
 		case HeaderCompressType:
-			subsequentBlkNumber, err = compressHeader(c.Dbm, from, 0, curBlkNum, true)
+			subsequentBlkNumber, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 		case BodyCompressType:
-			subsequentBlkNumber, err = compressBody(c.Dbm, from, 0, curBlkNum, true)
+			subsequentBlkNumber, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 		case ReceiptCompressType:
-			subsequentBlkNumber, err = compressReceipts(c.Dbm, from, 0, curBlkNum, true)
+			subsequentBlkNumber, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 		}
 		if err != nil {
 			return err
@@ -260,13 +264,13 @@ func (c *CompressModule) testCompressPerformance(from, to uint64) error {
 			startCompress := time.Now()
 			switch compressTyp {
 			case HeaderCompressType:
-				subsequentBlkNumber, err = compressHeader(c.Dbm, from, 0, curBlkNum, true)
+				subsequentBlkNumber, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalHeaderCompressedElapsedTime += time.Since(startCompress)
 			case BodyCompressType:
-				subsequentBlkNumber, err = compressBody(c.Dbm, from, 0, curBlkNum, true)
+				subsequentBlkNumber, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalBodyCompressedElapsedTime += time.Since(startCompress)
 			case ReceiptCompressType:
-				subsequentBlkNumber, err = compressReceipts(c.Dbm, from, 0, curBlkNum, true)
+				subsequentBlkNumber, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalReceiptsCompressedElapsedTime += time.Since(startCompress)
 			}
 			if err != nil {
@@ -305,8 +309,10 @@ func testInit(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, da
 	var (
 		bc, chainDB, setupErr = setup(t)
 		initOpts              = &InitOpts{
-			Chain: bc,
-			Dbm:   chainDB,
+			ChunkBlockSize: blockchain.DefaultChunkBlockSize,
+			ChunkCap:       blockchain.DefaultCompressChunkCap,
+			Chain:          bc,
+			Dbm:            chainDB,
 		}
 		mCompress     = NewCompression()
 		moduleInitErr = mCompress.Init(initOpts)
