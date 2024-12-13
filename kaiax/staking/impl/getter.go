@@ -37,6 +37,13 @@ const ( // Numeric Type IDs used by AddressBook.getAllAddress(), and in turn by 
 	KIR_CONTRACT_TYPE       = 4 // The AddressBook's kirContractAddress field repurposed as KIR, KCF, KEF
 )
 
+type clRegistryResult struct {
+	NodeIds        []common.Address
+	ClPools        []common.Address
+	ClStakings     []common.Address
+	StakingAmounts []*big.Int
+}
+
 func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error) {
 	isKaia := s.ChainConfig.IsKaiaForkEnabled(new(big.Int).SetUint64(num))
 	sourceNum := sourceBlockNum(num, isKaia, s.stakingInterval)
@@ -93,6 +100,7 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 // Efficiently read addresses and balances from the AddressBook in one EVM call.
 // Works by temporarily injecting the MultiCallContract to a copied state.
 func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateDB) (*staking.StakingInfo, error) {
+	isPrague := s.ChainConfig.IsPragueForkEnabled(header.Number)
 	num := header.Number.Uint64()
 
 	// Bail out if AddressBook is not installed.
@@ -102,20 +110,39 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		return emptyStakingInfo(num), nil
 	}
 
-	// Now we're safe to call the  MultiCall contract.
+	// Now we're safe to call the MultiCall contract.
 	contract, err := system.NewMultiCallContractCaller(statedb, s.Chain, header)
 	if err != nil {
-		return nil, staking.ErrAddressBookCall(err)
+		return nil, staking.ErrMultiCallCall(err)
 	}
-	res, err := contract.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number})
+
+	// Get staking info from AddressBook
+	callOpts := &bind.CallOpts{BlockNumber: header.Number}
+	abRes, err := contract.MultiCallStakingInfo(callOpts)
 	if err != nil {
 		return nil, staking.ErrAddressBookCall(err)
 	}
 
-	return parseCallResult(num, res.TypeList, res.AddressList, res.StakingAmounts)
+	// Get CL registry info if Prague fork is enabled
+	var clRes clRegistryResult
+	if isPrague {
+		// If Registry is not installed, do not handle CL staking info.
+		if statedb.GetCode(system.RegistryAddr) == nil {
+			logger.Trace("Registry not installed", "sourceNum", num)
+		} else {
+			// Note that if CLRegistry is not registered in Registry,
+			// it will return empty result and no error.
+			clRes, err = contract.MultiCallDPStakingInfo(callOpts)
+			if err != nil {
+				return nil, staking.ErrCLRegistryCall(err)
+			}
+		}
+	}
+
+	return parseCallResult(num, abRes.TypeList, abRes.AddressList, abRes.StakingAmounts, clRes)
 }
 
-func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts []*big.Int) (*staking.StakingInfo, error) {
+func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts []*big.Int, clRes clRegistryResult) (*staking.StakingInfo, error) {
 	// Sanity check.
 	if len(types) == 0 && len(addrs) == 0 {
 		// This is an expected behavior when the AddressBook contract is not activated yet.
@@ -126,8 +153,12 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		logger.Error("length of type list and address list differ", "sourceNum", num, "typeLen", len(types), "addrLen", len(addrs))
 		return nil, staking.ErrAddressBookResult
 	}
+	if len(clRes.NodeIds) != len(clRes.ClPools) || len(clRes.NodeIds) != len(clRes.ClStakings) || len(clRes.NodeIds) != len(clRes.StakingAmounts) {
+		logger.Error("length of CL registry result fields differ", "sourceNum", num, "nodeLen", len(clRes.NodeIds), "poolLen", len(clRes.ClPools), "stakingLen", len(clRes.ClStakings), "amountLen", len(clRes.StakingAmounts))
+		return nil, staking.ErrCLRegistryResult
+	}
 
-	// Collect the results to StakingInfo fields.
+	// Collect the AddressBook results to StakingInfo fields.
 	var (
 		nodeIds          []common.Address
 		stakingContracts []common.Address
@@ -159,6 +190,21 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		stakingAmounts[i] = big.NewInt(0).Div(a, big.NewInt(params.KAIA)).Uint64()
 	}
 
+	// Collect the CL registry results to StakingInfo fields.
+	// If there is no CL registry result, it will be nil.
+	var clStakingInfos staking.CLStakingInfos
+	if len(clRes.NodeIds) > 0 {
+		clStakingInfos = make(staking.CLStakingInfos, len(clRes.NodeIds))
+		for i := range clRes.NodeIds {
+			clStakingInfos[i] = &staking.CLStakingInfo{
+				CLNodeId:        clRes.NodeIds[i],
+				CLPoolAddr:      clRes.ClPools[i],
+				CLRewardAddr:    clRes.ClStakings[i],
+				CLStakingAmount: big.NewInt(0).Div(clRes.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
+			}
+		}
+	}
+
 	// Sanity check
 	if len(nodeIds) != len(stakingContracts) || len(nodeIds) != len(rewardAddrs) || len(nodeIds) != len(amounts) ||
 		common.EmptyAddress(kefAddr) || common.EmptyAddress(kifAddr) {
@@ -175,6 +221,7 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		KEFAddr:          kefAddr,
 		KIFAddr:          kifAddr,
 		StakingAmounts:   stakingAmounts,
+		CLStakingInfos:   clStakingInfos,
 	}, nil
 }
 
