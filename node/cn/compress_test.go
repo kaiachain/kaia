@@ -69,7 +69,7 @@ func setup(t *testing.T) (*blockchain.BlockChain, database.DBManager, error) {
 	}
 	config := GetDefaultConfig()
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
-	engine := CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType())
+	engine := CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, nil, ctx.NodeType())
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, chainConfig, engine, vm.Config{})
 	if err != nil {
 		t.Fatal(err)
