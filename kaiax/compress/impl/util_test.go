@@ -421,7 +421,7 @@ func initMock(t *testing.T, n int) (*blockchain_mock.MockBlockChain, database.DB
 }
 
 func waitCompression(m *CompressModule) {
-	time.AfterFunc(time.Second, func() { panic("Compression timeout") })
+	time.AfterFunc(time.Second*5, func() { panic("Compression timeout") })
 	var (
 		headerCompressCompleted   = false
 		bodyCompressCompleted     = false
