@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -49,8 +48,7 @@ import (
 	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
 	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
-	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -149,6 +147,7 @@ type CN struct {
 	components []interface{}
 
 	governance governance.Engine
+	govModule  gov.GovModule
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -241,13 +240,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
 
+	mGov := gov_impl.NewGovModule()
 	cn := &CN{
 		config:            config,
 		chainDB:           chainDB,
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
+		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
 		gasPrice:          config.GasPrice,
 		rewardbase:        config.Rewardbase,
@@ -255,6 +255,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		closeBloomHandler: make(chan struct{}),
 		governance:        governance,
+		govModule:         mGov,
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
@@ -316,18 +317,26 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
 		return nil, err
 	}
-	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
 
-	// Synchronize proposerpolicy & useGiniCoeff
-	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainKv:     chainDB.GetMiscDB(),
+		ChainConfig: cn.chainConfig,
+		Chain:       cn.blockchain,
+		NodeAddress: cn.nodeAddress,
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
+
+	// Synchronize proposerpolicy & useGiniCoeff
+	pset := mGov.EffectiveParamSet(bc.CurrentBlock().NumberU64() + 1)
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.ProposerPolicy
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff
 	}
 
 	if config.SenderTxHashIndexing {
@@ -349,8 +358,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
-	governance.SetTxPool(cn.txPool)
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -373,12 +381,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		if _, err := cn.Rewardbase(); err != nil {
 			logger.Error("Cannot determine the rewardbase address", "err", err)
 		}
-	}
-
-	// Setup reward related components
-	if pset.Policy() == uint64(istanbul.WeightedRandom) {
-		// NewStakingManager is called with proper non-nil parameters
-		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
 	}
 
 	// Governance states which are not yet applied to the db remains at in-memory storage
@@ -415,7 +417,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	//         So let's override gpoParams.Default with config.GasPrice
 	gpoParams.Default = config.GasPrice
 
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, cn.governance)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, mGov)
 	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
@@ -486,7 +488,7 @@ func (s *CN) createSnapshot() {
 	mReward.Init(&reward_impl.InitOpts{
 		ChainConfig:   s.chainConfig,
 		Chain:         s.blockchain,
-		GovModule:     reward_impl.FromLegacy(s.governance),
+		GovModule:     s.govModule,
 		StakingModule: mStaking,
 	})
 	s.blockchain.Engine().(consensus.Istanbul).RegisterStakingModule(mStaking)
@@ -494,7 +496,7 @@ func (s *CN) createSnapshot() {
 	if headers, err = s.Engine().GetKaiaHeadersForSnapshotApply(s.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
 		logger.Error("Failed to get headers to apply", "err", err)
 	} else {
-		preloadRef, err := reward.PreloadStakingInfo(headers, mStaking)
+		preloadRef, err := reward.PreloadStakingInfo(s.blockchain, headers, mStaking)
 		if err != nil {
 			logger.Error("Preload staking info failed", "err", err)
 		}
@@ -542,13 +544,11 @@ func (s *CN) SetupKaiaxModules() error {
 	// Declare modules
 
 	var (
-		mStaking     = staking_impl.NewStakingModule()
-		mReward      = reward_impl.NewRewardModule()
-		mSupply      = supply_impl.NewSupplyModule()
-		mHeaderGov   = headergov_impl.NewHeaderGovModule()
-		mContractGov = contractgov_impl.NewContractGovModule()
-		mGov         = gov_impl.NewGovModule()
-		mCompress    = compress_impl.NewCompression()
+		mStaking  = staking_impl.NewStakingModule()
+		mReward   = reward_impl.NewRewardModule()
+		mSupply   = supply_impl.NewSupplyModule()
+		mGov      = gov_impl.NewGovModule()
+		mCompress = compress_impl.NewCompression()
 	)
 
 	// Initialize modules
@@ -561,7 +561,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			Chain:         s.blockchain,
-			GovModule:     reward_impl.FromLegacy(s.governance),
+			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
 		mSupply.Init(&supply_impl.InitOpts{
@@ -570,21 +570,11 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:        s.blockchain,
 			RewardModule: mReward,
 		}),
-		mHeaderGov.Init(&headergov_impl.InitOpts{
-			ChainKv:     s.chainDB.GetMiscDB(),
+		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: s.chainConfig,
+			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
 			NodeAddress: s.nodeAddress,
-		}),
-		mContractGov.Init(&contractgov_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Hgm:         mHeaderGov,
-		}),
-		mGov.Init(&gov_impl.InitOpts{
-			Hgm:   mHeaderGov,
-			Cgm:   mContractGov,
-			Chain: s.blockchain,
 		}),
 		mCompress.Init(&compress_impl.InitOpts{
 			Chain:          s.blockchain,
@@ -601,7 +591,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompress)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompress)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
@@ -655,7 +645,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, g governance.Engine, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
@@ -666,7 +656,8 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		PrivateKey:     ctx.NodeKey(),
 		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
-		Governance:     gov,
+		Governance:     g,
+		GovModule:      govModule,
 		NodeType:       nodetype,
 	})
 }
@@ -871,6 +862,7 @@ func (s *CN) ProtocolVersion() int                    { return s.protocolManager
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() kaia.SyncProgress             { return s.protocolManager.Downloader().Progress() }
 func (s *CN) Governance() governance.Engine           { return s.governance }
+func (s *CN) GovModule() gov.GovModule                { return s.govModule }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -909,10 +901,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-
 	return nil
 }
 
@@ -933,7 +921,6 @@ func (s *CN) Stop() error {
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

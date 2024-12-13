@@ -20,7 +20,7 @@ import {
   addTime,
 } from "../common/helper";
 import { ethers } from "hardhat";
-import { ROLES, cnV3MultiSigPublicDelegationTestFixture, cnV3MultiSigUnitTestFixture } from "../common/fixtures";
+import { ROLES, cnV3MultiSigPublicDelegationTestFixture, cnV3MultiSigUnitTestFixture } from "../materials";
 
 const DAY = 24 * 60 * 60;
 const WEEK = 7 * DAY;

@@ -13,6 +13,7 @@ func TestParam(t *testing.T) {
 	for name, param := range Params {
 		assert.NotEmpty(t, param.Canonicalizer, name)
 		assert.NotEmpty(t, param.FormatChecker, name)
+		assert.NotEmpty(t, param.ChainConfigValue, name)
 	}
 }
 

@@ -11,6 +11,7 @@ Block rewards are granted in native tokens (KAIA) every block. At high level, th
 The rules have changed over hardforks.
 - [Magma hardfork](https://github.com/klaytn/klaytn/releases/tag/v1.9.0) implements [KIP-71](https://kips.kaia.io/KIPs/kip-71) which burns the half of the transaction fees.
 - [Kore hardfork](https://github.com/klaytn/klaytn/releases/tag/v1.10.0) implements [KIP-82](https://kips.kaia.io/KIPs/kip-82) which stipulates the reward distribution to the stakers and proposer.
+- [Prague hardfork]() implements [KIP-226](https://kips.kaia.io/KIPs/kip-226) which introduces consensus liquidity.
 
 ![reward_scheme](./reward_scheme.png)
 
@@ -70,6 +71,15 @@ The rules have changed over hardforks.
     - Summing up, the proposer is guaranteed a minimum even if transaction fees are no enough to support the validator operating cost, yet incentivized to include as many transactions as possible for more reward.
 
 ![kip82_reward](./kip82_reward.png)
+
+- **Prague rule (KIP-226)**: The rule since the KIP-226 hardfork with `istanbul.policy == 2` and `reward.deferredtxfee = true`.
+  - Since Prague hardfork, the consensus liquidity is introduced. The validator's total staking amount is summed up with the KAIA staked in consensus liquidity.
+    - If the validator has staked more than `reward.minstake` in staking-only (CNStaking) contract, the validator's total staking amount will be summed up with the consensus liquidity.
+    - In this case, the reward between staking-only and consensus liquidity will be distributed proportionally to their staking amounts.
+    - Otherwise, validator will not be eligible for rewards.
+  - Other rules are the same as the Kore rule.
+
+![kip226_reward](./kip226_reward.png)
 
 ## Persistent schema
 

@@ -14,7 +14,6 @@ import (
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,9 +65,6 @@ func TestStateReexec(t *testing.T) {
 	ctx.Restart()
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	testStateReexec_run(t, ctx.nodes[0], 5) // post-kaia
-
-	// Ensure preloaded staking info are released after use.
-	assert.Equal(t, 0, reward.TestGetStakingPreloadSize())
 }
 
 func testStateReexec_config(forkNum *big.Int) *params.ChainConfig {

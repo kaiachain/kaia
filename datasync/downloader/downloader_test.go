@@ -23,17 +23,16 @@
 package downloader
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -41,12 +40,16 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/stretchr/testify/assert"
 )
 
 // Reduce some of the parameters to make the tester faster.
@@ -66,7 +69,6 @@ var (
 type govSetter struct {
 	numTesting          uint32
 	origStakingInterval uint64
-	origStakingManager  *reward.StakingManager
 }
 
 // setTestGovernance sets staking manager with memory db and staking update interval to 4.
@@ -77,10 +79,8 @@ func setTestGovernance(db database.DBManager) {
 		setter = &govSetter{
 			numTesting:          0,
 			origStakingInterval: params.StakingUpdateInterval(),
-			origStakingManager:  reward.GetStakingManager(),
 		}
 
-		reward.SetTestStakingManagerWithDB(db)
 		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
@@ -92,7 +92,6 @@ func rollbackOrigGovernance() {
 	defer lock.Unlock()
 	setter.numTesting -= 1
 	if setter.numTesting == 0 {
-		reward.SetTestStakingManager(setter.origStakingManager)
 		params.SetStakingUpdateInterval(setter.origStakingInterval)
 
 		setter = nil
@@ -127,7 +126,9 @@ type downloadTester struct {
 }
 
 // newTester creates a new downloader test mocker.
-func newTester() *downloadTester {
+func newTester(t *testing.T) *downloadTester {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+
 	remotedb := database.NewMemoryDBManager()
 	localdb := database.NewMemoryDBManager()
 	genesis := blockchain.GenesisBlockForTesting(remotedb, testAddress, big.NewInt(1000000000))
@@ -153,7 +154,16 @@ func newTester() *downloadTester {
 	tester.stateDb = localdb
 	tester.stateDb.WriteTrieNode(genesis.Root().ExtendZero(), []byte{0x00})
 
-	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, tester.dropPeer, uint64(istanbul.WeightedRandom))
+	mockCtrl := gomock.NewController(t)
+	mStaking := mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfoFromDB(gomock.Any()).DoAndReturn(func(blockNum uint64) *staking.StakingInfo {
+		return staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), blockNum)
+	}).AnyTimes()
+	mStaking.EXPECT().PutStakingInfoToDB(gomock.Any(), gomock.Any()).Do(func(blockNum uint64, stakingInfo *staking.StakingInfo) {
+		staking_impl.WriteStakingInfo(tester.stateDb.GetMiscDB(), blockNum, stakingInfo)
+	}).AnyTimes()
+
+	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, mStaking, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
 	return tester
 }
@@ -195,9 +205,9 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 		blockNum := block.Number().Uint64()
 		if blockNum%testStakingUpdateInterval == 0 {
-			si, siBytes := dl.makeStakingInfoData(blockNum)
+			si, _ := dl.makeStakingInfoData(blockNum)
 			stakingUpdatedBlocks[blockNum] = si
-			dl.peerDb.WriteStakingInfo(blockNum, siBytes)
+			staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), blockNum, reward.ToKaiax(si))
 		}
 	})
 	// Convert the block-chain into a hash-chain and header/block maps
@@ -215,9 +225,9 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 	stakingInfom := make(map[common.Hash]*reward.StakingInfo)
 	if parent.NumberU64()%testStakingUpdateInterval == 0 {
-		si, siBytes := dl.makeStakingInfoData(parent.NumberU64())
+		si, _ := dl.makeStakingInfoData(parent.NumberU64())
 		stakingInfom[parent.Hash()] = si
-		dl.peerDb.WriteStakingInfo(parent.NumberU64(), siBytes)
+		staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), parent.NumberU64(), reward.ToKaiax(si))
 	}
 
 	for i, b := range blocks {
@@ -466,11 +476,9 @@ func (dl *downloadTester) InsertReceiptChain(blocks types.Blocks, receipts []typ
 		dl.ownBlocks[blocks[i].Hash()] = blocks[i]
 		dl.ownReceipts[blocks[i].Hash()] = receipts[i]
 
-		siBytes, _ := dl.peerDb.ReadStakingInfo(blocks[i].NumberU64())
-		if siBytes != nil {
-			stakingInfo := new(reward.StakingInfo)
-			json.Unmarshal(siBytes, stakingInfo)
-			dl.ownStakingInfo[blocks[i].Hash()] = stakingInfo
+		si := staking_impl.ReadStakingInfo(dl.peerDb.GetMiscDB(), blocks[i].NumberU64())
+		if si != nil {
+			dl.ownStakingInfo[blocks[i].Hash()] = reward.FromKaiax(si)
 		}
 	}
 	return len(blocks), nil
@@ -825,7 +833,7 @@ func TestCanonicalSynchronisation65Fast(t *testing.T) { testCanonicalSynchronisa
 func testCanonicalSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -851,7 +859,7 @@ func TestThrottling65Fast(t *testing.T) { testThrottling(t, 65, FastSync) }
 
 func testThrottling(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a long block chain to download and the tester
@@ -934,7 +942,7 @@ func TestForkedSync65Fast(t *testing.T)  { testForkedSync(t, 65, FastSync) }
 func testForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a long enough forked chain
@@ -969,7 +977,7 @@ func TestHeavyForkedSync65Fast(t *testing.T)  { testHeavyForkedSync(t, 65, FastS
 func testHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a long enough forked chain
@@ -1005,7 +1013,7 @@ func TestBoundedForkedSync65Fast(t *testing.T)  { testBoundedForkedSync(t, 65, F
 func testBoundedForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a long enough forked chain
@@ -1040,7 +1048,7 @@ func TestBoundedHeavyForkedSync65Fast(t *testing.T)  { testBoundedHeavyForkedSyn
 func testBoundedHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a long enough forked chain
@@ -1067,7 +1075,7 @@ func testBoundedHeavyForkedSync(t *testing.T, protocol int, mode SyncMode) {
 func TestInactiveDownloader62(t *testing.T) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Check that neither block headers nor bodies are accepted
@@ -1084,7 +1092,7 @@ func TestInactiveDownloader62(t *testing.T) {
 func TestInactiveDownloader63(t *testing.T) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Check that neither block headers nor bodies are accepted
@@ -1110,7 +1118,7 @@ func TestCancel65Fast(t *testing.T)  { testCancel(t, 65, FastSync) }
 func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download and the tester
@@ -1151,7 +1159,7 @@ func TestMultiSynchronisation65Fast(t *testing.T)  { testMultiSynchronisation(t,
 func testMultiSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create various peers with various parts of the chain
@@ -1181,7 +1189,7 @@ func TestMultiProtoSynchronisation65Fast(t *testing.T)  { testMultiProtoSync(t, 
 func testMultiProtoSync(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1221,7 +1229,7 @@ func TestEmptyShortCircuit65Fast(t *testing.T)  { testEmptyShortCircuit(t, 65, F
 func testEmptyShortCircuit(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a block chain to download
@@ -1276,7 +1284,7 @@ func TestMissingHeaderAttack65Fast(t *testing.T)  { testMissingHeaderAttack(t, 6
 func testMissingHeaderAttack(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1311,7 +1319,7 @@ func TestShiftedHeaderAttack65Fast(t *testing.T)  { testShiftedHeaderAttack(t, 6
 func testShiftedHeaderAttack(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1344,7 +1352,7 @@ func TestInvalidHeaderRollback65Fast(t *testing.T)  { testInvalidHeaderRollback(
 func testInvalidHeaderRollback(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1436,7 +1444,7 @@ func TestHighTDStarvationAttack65Fast(t *testing.T)  { testHighTDStarvationAttac
 func testHighTDStarvationAttack(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(0, 0, tester.genesis, nil, false)
@@ -1477,7 +1485,7 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 		{errCancelContentProcessing, false}, // Synchronisation was canceled, origin may be innocent, don't drop
 	}
 	// Run the tests and check disconnection status
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	for i, tt := range tests {
@@ -1511,7 +1519,7 @@ func TestSyncProgress65Fast(t *testing.T)  { testSyncProgress(t, 65, FastSync) }
 func testSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1584,7 +1592,7 @@ func TestForkedSyncProgress65Fast(t *testing.T)  { testForkedSyncProgress(t, 65,
 func testForkedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a forked chain to simulate origin revertal
@@ -1660,7 +1668,7 @@ func TestFailedSyncProgress65Fast(t *testing.T)  { testFailedSyncProgress(t, 65,
 func testFailedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1737,7 +1745,7 @@ func TestFakedSyncProgress65Fast(t *testing.T)  { testFakedSyncProgress(t, 65, F
 func testFakedSyncProgress(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small block chain
@@ -1885,12 +1893,12 @@ func (ftp *floodingTestPeer) RequestHeadersByNumber(from uint64, count, skip int
 func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	t.Parallel()
 
-	master := newTester()
+	master := newTester(t)
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts, stakingInfos := master.makeChain(5, 0, master.genesis, nil, false)
 	for i := 0; i < 200; i++ {
-		tester := newTester()
+		tester := newTester(t)
 		tester.peerDb = master.peerDb
 
 		tester.newPeer("peer", protocol, hashes, headers, blocks, receipts, stakingInfos)
@@ -1913,9 +1921,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 func TestStakingInfoSync(t *testing.T) { testStakingInfoSync(t, 65) }
 
 func testStakingInfoSync(t *testing.T, protocol int) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
-
-	tester := newTester()
+	tester := newTester(t)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download
@@ -1932,8 +1938,8 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 
 	// check staking information is not stored in database
 	for _, block := range stakedBlocks {
-		si, err := tester.stateDb.ReadStakingInfo(block)
-		if len(si) != 0 && !strings.Contains(err.Error(), "data is not found with the given key") {
+		si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), block)
+		if si != nil {
 			t.Errorf("already staking info exists")
 		}
 	}
@@ -1945,13 +1951,12 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	time.Sleep(3 * time.Second)
 
 	for _, stakingInfo := range stakingInfos {
-		expected, _ := json.Marshal(stakingInfo)
-		actual, err := tester.stateDb.ReadStakingInfo(stakingInfo.BlockNum)
-		if err != nil {
-			t.Errorf("failed to read stakingInfo: %v", err)
+		expected, _ := json.Marshal(reward.ToKaiax(stakingInfo))
+		si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), stakingInfo.BlockNum)
+		if si == nil {
+			t.Errorf("failed to read stakingInfo")
 		}
-		if bytes.Compare(expected, actual) != 0 {
-			t.Errorf("staking infos are different (expected: %v, actual: %v)", string(expected), string(actual))
-		}
+		actual, _ := json.Marshal(si)
+		assert.JSONEq(t, string(expected), string(actual))
 	}
 }

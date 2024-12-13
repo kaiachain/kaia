@@ -81,11 +81,11 @@ func TestVote(t *testing.T) {
 	)
 
 	for i := 0; i < n; i++ {
-		h.AddVote(uint64(i%epoch), uint64(i), v)
+		h.AddVote(calcEpochIdx(uint64(i), uint64(epoch)), uint64(i), v)
 	}
 
 	assert.Equal(t, n, len(h.VoteBlockNums()))
-	assert.Equal(t, n/epoch, len(h.groupedVotes))
+	assert.Equal(t, 4, len(h.groupedVotes)) // ceil(n/epoch)
 }
 
 func TestGov(t *testing.T) {

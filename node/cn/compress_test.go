@@ -62,7 +62,7 @@ func setup(t *testing.T) (*blockchain.BlockChain, database.DBManager, error) {
 		CacheSize:            512,
 		BlockInterval:        blockchain.DefaultBlockInterval,
 		TriesInMemory:        blockchain.DefaultTriesInMemory,
-		LivePruningRetention: blockchain.DefaultLivePruningRetention,
+		LivePruningRetention: blockchain.DefaultPruningRetention,
 		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 		SnapshotCacheSize:    512,
 		SnapshotAsyncGen:     true,

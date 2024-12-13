@@ -37,6 +37,8 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -108,9 +110,11 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	return bc
 }
 
-func testTxPool(dataDir string, bc *blockchain.BlockChain) *blockchain.TxPool {
+func testTxPool(t *testing.T, dataDir string, bc *blockchain.BlockChain) *blockchain.TxPool {
 	blockchain.DefaultTxPoolConfig.Journal = path.Join(dataDir, blockchain.DefaultTxPoolConfig.Journal)
-	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc)
+	mockGov := gov_mock.NewMockGovModule(gomock.NewController(t))
+	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
+	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc, mockGov)
 }
 
 // TestCreateDB tests creation of chain database and proper working of database operation.

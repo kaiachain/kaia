@@ -26,12 +26,14 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -121,8 +123,9 @@ func (tc *testChain) copy(newlen int) *testChain {
 // contains a transaction to allow testing correct block
 // reassembly.
 func (tc *testChain) generate(n int, seed byte, parent *types.Block, heavy bool) {
-	// start := time.Now()
-	// defer func() { fmt.Printf("test chain generated in %v\n", time.Since(start)) }()
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+	start := time.Now()
+	defer func() { fmt.Printf("test chain generated in %v\n", time.Since(start)) }()
 
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testDB, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})

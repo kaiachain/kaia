@@ -185,6 +185,16 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 	return ps
 }
 
+func (p *ParamSet) ToKip71Config() *params.KIP71Config {
+	return &params.KIP71Config{
+		LowerBoundBaseFee:         p.LowerBoundBaseFee,
+		UpperBoundBaseFee:         p.UpperBoundBaseFee,
+		GasTarget:                 p.GasTarget,
+		MaxBlockGasUsedForBaseFee: p.MaxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        p.BaseFeeDenominator,
+	}
+}
+
 func (p PartialParamSet) Add(name string, value any) error {
 	param, ok := Params[ParamName(name)]
 	if !ok {

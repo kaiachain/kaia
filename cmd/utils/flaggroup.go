@@ -116,6 +116,10 @@ var FlagGroups = []FlagGroup{
 			DBNoPerformanceMetricsFlag,
 			CompressBlockChunkSizeFlag,
 			CompressChunkCapFlag,
+			TxPruningFlag,
+			TxPruningRetentionFlag,
+			ReceiptPruningFlag,
+			ReceiptPruningRetentionFlag,
 		},
 	},
 	{

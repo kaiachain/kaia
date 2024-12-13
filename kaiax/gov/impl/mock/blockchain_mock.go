@@ -11,6 +11,7 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	consensus "github.com/kaiachain/kaia/consensus"
 	params "github.com/kaiachain/kaia/params"
 )
 
@@ -65,6 +66,20 @@ func (mr *MockBlockChainMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlock))
 }
 
+// Engine mocks base method.
+func (m *MockBlockChain) Engine() consensus.Engine {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Engine")
+	ret0, _ := ret[0].(consensus.Engine)
+	return ret0
+}
+
+// Engine indicates an expected call of Engine.
+func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
+}
+
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
@@ -77,6 +92,20 @@ func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 func (mr *MockBlockChainMockRecorder) GetBlock(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBlockChain)(nil).GetBlock), arg0, arg1)
+}
+
+// GetHeader mocks base method.
+func (m *MockBlockChain) GetHeader(arg0 common.Hash, arg1 uint64) *types.Header {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHeader", arg0, arg1)
+	ret0, _ := ret[0].(*types.Header)
+	return ret0
+}
+
+// GetHeader indicates an expected call of GetHeader.
+func (mr *MockBlockChainMockRecorder) GetHeader(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeader", reflect.TypeOf((*MockBlockChain)(nil).GetHeader), arg0, arg1)
 }
 
 // GetHeaderByNumber mocks base method.
@@ -105,6 +134,21 @@ func (m *MockBlockChain) GetReceiptsByBlockHash(arg0 common.Hash) types.Receipts
 func (mr *MockBlockChainMockRecorder) GetReceiptsByBlockHash(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReceiptsByBlockHash", reflect.TypeOf((*MockBlockChain)(nil).GetReceiptsByBlockHash), arg0)
+}
+
+// State mocks base method.
+func (m *MockBlockChain) State() (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "State")
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// State indicates an expected call of State.
+func (mr *MockBlockChainMockRecorder) State() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "State", reflect.TypeOf((*MockBlockChain)(nil).State))
 }
 
 // StateAt mocks base method.

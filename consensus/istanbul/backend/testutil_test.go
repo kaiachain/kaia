@@ -34,9 +34,9 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -105,7 +105,6 @@ type testContext struct {
 
 	chain  *blockchain.BlockChain
 	engine *backend
-	sm     *reward.StakingManager
 }
 
 func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOverrides) *testContext {
@@ -165,6 +164,8 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		Epoch:          config.Istanbul.Epoch,
 		SubGroupSize:   config.Istanbul.SubGroupSize,
 	}
+
+	mGov := gov_impl.NewGovModule()
 	engine := New(&BackendOpts{
 		IstanbulConfig:    istanbulConfig,
 		Rewardbase:        common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
@@ -172,13 +173,11 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		BlsSecretKey:      nodeBlsKeys[0],
 		DB:                dbm,
 		Governance:        gov,
+		GovModule:         mGov,
 		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
 		NodeType:          common.CONSENSUSNODE,
 	}).(*backend)
 	gov.SetNodeAddress(engine.Address())
-
-	// Override StakingManager
-	sm := makeTestStakingManager(nodeAddrs, overrides.stakingAmounts)
 
 	// Create blockchain
 	cacheConfig := &blockchain.CacheConfig{
@@ -193,6 +192,11 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		panic(err)
 	}
 	gov.SetBlockchain(chain)
+	mGov.Init(&gov_impl.InitOpts{
+		Chain:       chain,
+		ChainKv:     dbm.GetMiscDB(),
+		ChainConfig: config,
+	})
 
 	// Start the engine
 	if err := engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
@@ -206,7 +210,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 		chain:  chain,
 		engine: engine,
-		sm:     sm,
 	}
 }
 
@@ -301,29 +304,6 @@ func makeGenesisExtra(addrs []common.Address) []byte {
 
 	vanity := make([]byte, types.IstanbulExtraVanity)
 	return append(vanity, encoded...)
-}
-
-// Set StakingInfo with given addresses and amounts, returns the original (old) StakingManager.
-// Must call `reward.SetTestStakingManager(oldStakingManager)` after testing
-// because StakingManager is a global singleton.
-func makeTestStakingManager(addrs []common.Address, amounts []uint64) *reward.StakingManager {
-	info := &reward.StakingInfo{BlockNum: 0}
-	for i, addr := range addrs {
-		// Assign random reward address
-		rewardKey, _ := crypto.GenerateKey()
-		rewardAddr := crypto.PubkeyToAddress(rewardKey.PublicKey)
-
-		info.CouncilNodeAddrs = append(info.CouncilNodeAddrs, addr)
-		info.CouncilStakingAddrs = append(info.CouncilStakingAddrs, addr)
-		info.CouncilStakingAmounts = append(info.CouncilStakingAmounts, amounts[i])
-		info.CouncilRewardAddrs = append(info.CouncilRewardAddrs, rewardAddr)
-	}
-
-	// Save old StakingManager, overwrite with the fake one.
-	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerWithStakingInfoCache(info)
-
-	return oldStakingManager
 }
 
 func TestTestContext(t *testing.T) {

@@ -38,12 +38,10 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
 )
@@ -82,17 +80,12 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
 	// Initialize snapshot cache, staking info cache, and governance cache
 	cn.InitSnapshot()
-	if reward.GetStakingManager() != nil {
-		reward.PurgeStakingInfoCache()
-	}
-	gov.InitGovCache()
-	gov.InitLastGovStateBlkNum()
 	gpo.PurgeCache()
 	return nil
 }
@@ -101,7 +94,7 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
-	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.gpo, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
@@ -323,27 +316,21 @@ func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.EffectiveParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.EffectiveParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 

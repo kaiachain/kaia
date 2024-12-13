@@ -313,7 +313,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		if config.Istanbul != nil {
 			proposerPolicy = config.Istanbul.ProposerPolicy
 		}
-		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.removePeer, proposerPolicy)
+		manager.downloader = downloader.New(mode, chainDB, stateBloom, manager.eventMux, blockchain, nil, manager.stakingModule, manager.removePeer, proposerPolicy)
 	}
 
 	// Create and set fetcher
@@ -1062,8 +1062,8 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			}
 			result = reward.FromKaiaxWithGini(st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		} else {
-			st, err := pm.stakingModule.GetStakingInfoFromDB(number)
-			if st == nil || err != nil {
+			st := pm.stakingModule.GetStakingInfoFromDB(number)
+			if st == nil {
 				continue
 			}
 			result = reward.FromKaiaxWithGini(st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())

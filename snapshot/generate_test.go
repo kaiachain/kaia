@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -76,7 +77,7 @@ func TestGeneration(t *testing.T) {
 
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
 
-	acc1, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+	acc1, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer := account.NewAccountSerializerWithAccount(acc1)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
@@ -86,7 +87,7 @@ func TestGeneration(t *testing.T) {
 	val, _ = rlp.EncodeToBytes(serializer2)
 	accTrie.Update([]byte("acc-2"), val) // 0x11944b79b322f047379973e18ba21657b8ad4b50ecd94217177bc56f89905228
 
-	acc3, _ := genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
+	acc3, _ := genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer3 := account.NewAccountSerializerWithAccount(acc3)
 	val, _ = rlp.EncodeToBytes(serializer3) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
 	accTrie.Update([]byte("acc-3"), val)
@@ -143,7 +144,7 @@ func TestGenerateExistentState(t *testing.T) {
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
-	acc, _ := genSmartContractAccount(uint64(0), big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ := genSmartContractAccount(uint64(0), big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer := account.NewAccountSerializerWithAccount(acc)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x9250573b9c18c664139f3b6a7a8081b7d8f8916a8fcc5d94feec6c29f5fd4e9e
@@ -152,14 +153,14 @@ func TestGenerateExistentState(t *testing.T) {
 	diskdb.WriteStorageSnapshot(hashData([]byte("acc-1")), hashData([]byte("key-2")), []byte("val-2"))
 	diskdb.WriteStorageSnapshot(hashData([]byte("acc-1")), hashData([]byte("key-3")), []byte("val-3"))
 
-	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(2), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(2), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer = account.NewAccountSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x65145f923027566669a1ae5ccac66f945b55ff6eaeb17d2ea8e048b7d381f2d7
 	// diskdb.Put(hashData([]byte("acc-2")).Bytes(), val)
 	diskdb.WriteAccountSnapshot(hashData([]byte("acc-2")), val)
 
-	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ = genSmartContractAccount(uint64(0), big.NewInt(3), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer = account.NewAccountSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-3"), val) // 0x50815097425d000edfc8b3a4a13e175fc2bdcfee8bdfbf2d1ff61041d3c235b2
@@ -295,23 +296,23 @@ func TestGenerateExistentStateWithWrongStorage(t *testing.T) {
 	helper.addSnapStorage("acc-1", []string{"key-1", "key-2", "key-3"}, []string{"val-1", "val-2", "val-3"})
 
 	// Account two, non empty root but empty database
-	acc2, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+	acc2, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 	helper.addAccount("acc-2", acc2)
 
 	// Miss slots
 	{
 		// Account three, non empty root but misses slots in the beginning
-		acc3, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc3, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-3", acc3)
 		helper.addSnapStorage("acc-3", []string{"key-2", "key-3"}, []string{"val-2", "val-3"})
 
 		// Account four, non empty root but misses slots in the middle
-		acc4, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc4, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-4", acc4)
 		helper.addSnapStorage("acc-4", []string{"key-1", "key-3"}, []string{"val-1", "val-3"})
 
 		// Account five, non empty root but misses slots in the end
-		acc5, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc5, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-5", acc5)
 		helper.addSnapStorage("acc-5", []string{"key-1", "key-2"}, []string{"val-1", "val-2"})
 	}
@@ -320,22 +321,22 @@ func TestGenerateExistentStateWithWrongStorage(t *testing.T) {
 	{
 		// Account six, non empty root but wrong slots in the beginning
 
-		acc6, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc6, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-6", acc6)
 		helper.addSnapStorage("acc-6", []string{"key-1", "key-2", "key-3"}, []string{"badval-1", "val-2", "val-3"})
 
 		// Account seven, non empty root but wrong slots in the middle
-		acc7, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc7, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-7", acc7)
 		helper.addSnapStorage("acc-7", []string{"key-1", "key-2", "key-3"}, []string{"val-1", "badval-2", "val-3"})
 
 		// Account eight, non empty root but wrong slots in the end
-		acc8, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc8, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-8", acc8)
 		helper.addSnapStorage("acc-8", []string{"key-1", "key-2", "key-3"}, []string{"val-1", "val-2", "badval-3"})
 
 		// Account 9, non empty root but rotated slots
-		acc9, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc9, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-9", acc9)
 		helper.addSnapStorage("acc-9", []string{"key-1", "key-2", "key-3"}, []string{"val-1", "val-3", "val-2"})
 	}
@@ -343,17 +344,17 @@ func TestGenerateExistentStateWithWrongStorage(t *testing.T) {
 	// Extra storage slots
 	{
 		// Account 10, non empty root but extra slots in the beginning
-		acc10, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc10, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-10", acc10)
 		helper.addSnapStorage("acc-10", []string{"key-0", "key-1", "key-2", "key-3"}, []string{"val-0", "val-1", "val-2", "val-3"})
 
 		// Account 11, non empty root but extra slots in the middle
-		acc11, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc11, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-11", acc11)
 		helper.addSnapStorage("acc-11", []string{"key-1", "key-2", "key-2-1", "key-3"}, []string{"val-1", "val-2", "val-2-1", "val-3"})
 
 		// Account 12, non empty root but extra slots in the end
-		acc12, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc12, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount("acc-12", acc12)
 		helper.addSnapStorage("acc-12", []string{"key-1", "key-2", "key-3", "key-4"}, []string{"val-1", "val-2", "val-3", "val-4"})
 	}
@@ -390,22 +391,22 @@ func TestGenerateExistentStateWithWrongAccounts(t *testing.T) {
 	// Missing accounts, only in the trie
 	{
 
-		acc1, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc1, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount("acc-1", acc1) // Beginning
-		acc4, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc4, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount("acc-4", acc4) // Middle
-		acc6, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc6, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount("acc-6", acc6) // End
 	}
 
 	// Wrong accounts
 	{
-		acc2, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc2, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount("acc-2", acc2)
 		acc2, _ = genSmartContractAccount(0, big.NewInt(1), stRoot, common.Hex2Bytes("0x1234"))
 		helper.addSnapAccount("acc-2", acc2)
 
-		acc3, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc3, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount("acc-3", acc3)
 		acc3, _ = genExternallyOwnedAccount(0, big.NewInt(1))
 		helper.addSnapAccount("acc-3", acc3)
@@ -413,11 +414,11 @@ func TestGenerateExistentStateWithWrongAccounts(t *testing.T) {
 
 	// Extra accounts, only in the snap
 	{
-		acc0, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyRoot.Bytes())
+		acc0, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyRootHash.Bytes())
 		helper.addSnapAccount("acc-0", acc0) // before the beginning
-		acc5, _ := genSmartContractAccount(0, big.NewInt(1), emptyRoot, common.Hex2Bytes("0x1234"))
+		acc5, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHash, common.Hex2Bytes("0x1234"))
 		helper.addSnapAccount("acc-5", acc5) // Middle
-		acc7, _ := genSmartContractAccount(0, big.NewInt(1), emptyRoot, emptyRoot.Bytes())
+		acc7, _ := genSmartContractAccount(0, big.NewInt(1), types.EmptyRootHash, types.EmptyRootHash.Bytes())
 		helper.addSnapAccount("acc-7", acc7) // after the end
 	}
 
@@ -506,16 +507,16 @@ func TestGenerateMissingStorageTrie(t *testing.T) {
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
-	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(2), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ = genSmartContractAccount(0, big.NewInt(2), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	val, _ = rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-2"), val) // 0xff964e27aca3ef5766a7709de6beff44863d539c9af88ab1719865b80a55b6b2
 	t.Log(accTrie.Hash().String())
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	val, _ = rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 	accTrie.Update([]byte("acc-3"), val) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
 	accTrie.Commit(nil)                  // Root: 0xa2282b99de1fc11e32d26bee37707ef49a6978b2d375796a1b026a497193a2ef
@@ -567,7 +568,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 	stTrie.Commit(nil)                              // Root: 0xddefcd9376dd029653ef384bd2f0a126bb755fe84fdcc9e7cf421ba454f2bc67
 
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
-	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer := account.NewAccountSerializerWithAccount(acc)
 	val, _ := rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-1"), val) // 0x30301e37c9af8ee5f609f1d60a3307d3e113bea03bef203e39aadc46bd5ad5ee
@@ -577,7 +578,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-2"), val) // 0x11944b79b322f047379973e18ba21657b8ad4b50ecd94217177bc56f89905228
 
-	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), emptyCode.Bytes())
+	acc, _ = genSmartContractAccount(0, big.NewInt(3), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 	serializer = account.NewAccountSerializerWithAccount(acc)
 	val, _ = rlp.EncodeToBytes(serializer)
 	accTrie.Update([]byte("acc-3"), val) // 0x8c2477df4801bbf88c6636445a2a9feff54c098cc218df403dc3f1007add780c
@@ -633,7 +634,7 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 	)
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
 	{ // Account one in the trie
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 		accTrie.Update([]byte("acc-1"), val) // 0xfa43eb0210d32b0013ae744d26ded52489ee3cab4a5bd9128a599135aba7c088
 		// Identical in the snap
@@ -646,7 +647,7 @@ func TestGenerateWithExtraAccounts(t *testing.T) {
 		diskdb.WriteStorageSnapshot(key, hashData([]byte("key-5")), []byte("val-5"))
 	}
 	{ // Account two exists only in the snapshot
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 		key := hashData([]byte("acc-2"))
 		diskdb.WriteAccountSnapshot(key, val)
@@ -693,7 +694,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 	)
 	accTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
 	{ // Account one in the trie
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), emptyCode.Bytes())
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stTrie.Hash(), types.EmptyCodeHash.Bytes())
 		val, _ := rlp.EncodeToBytes(account.NewAccountSerializerWithAccount(acc))
 		accTrie.Update([]byte("acc-1"), val) // 0xe9ddf05eaf05dbd7c6fb1137e90b4f3b1ed43383aaaa88312de297e304599966
 		// Identical in the snap
@@ -838,7 +839,7 @@ func TestGenerateFromEmptySnap(t *testing.T) {
 	stRoot := helper.makeStorageTrie([]string{"key-1", "key-2", "key-3"}, []string{"val-1", "val-2", "val-3"})
 	// Add 1K accounts to the trie
 	for i := 0; i < 400; i++ {
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount(fmt.Sprintf("acc-%d", i), acc)
 	}
 	root, snap := helper.Generate()
@@ -876,7 +877,7 @@ func TestGenerateWithIncompleteStorage(t *testing.T) {
 	// on the sensitive spots at the boundaries
 	for i := 0; i < 8; i++ {
 		accKey := fmt.Sprintf("acc-%d", i)
-		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, emptyCode.Bytes())
+		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount(accKey, acc)
 		var moddedKeys []string
 		var moddedVals []string

@@ -41,6 +41,8 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/params"
@@ -66,6 +68,7 @@ type BCData struct {
 	validatorPrivKeys  []*ecdsa.PrivateKey
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
+	govModule          gov.GovModule
 	governance         governance.Engine
 }
 
@@ -90,13 +93,13 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
+	// Create a governance
+	governance := generateGovernaceDataForTest()
+	governance.SetNodeAddress(nodeAddr)
+	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
 	chainDb := NewDatabase(dir, database.LevelDB)
 
-	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	gov := generateGovernaceDataForTest()
-	gov.SetNodeAddress(nodeAddr)
 	////////////////////////////////////////////////////////////////////////////////
 	// Create accounts as many as maxAccounts
 	addrs, privKeys, err := createAccounts(maxAccounts)
@@ -114,12 +117,14 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
+	mGov := gov_impl.NewGovModule()
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDb,
-		Governance:     gov,
+		Governance:     governance,
+		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
 	})
 	////////////////////////////////////////////////////////////////////////////////
@@ -133,24 +138,30 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	// Setup Kaiax modules
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   genesis.Config,
-		Chain:         bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: genesis.Config,
+			Chain:       bc,
+			ChainKv:     chainDb.GetMiscDB(),
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   genesis.Config,
+			Chain:         bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
+	if err != nil {
 		return nil, err
 	}
 	engine.RegisterConsensusModule(mReward)
 
 	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
 
-	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
-
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov,
+		validatorPrivKeys, engine, genesis, mGov, governance,
 	}, nil
 }
 
@@ -336,17 +347,26 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	gov := generateGovernaceDataForTest()
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   bcdata.bc.Config(),
-		Chain:         bcdata.bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
+	mGov := gov_impl.NewGovModule()
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: bcdata.bc.Config(),
+			ChainKv:     bcdata.db.GetMiscDB(),
+			Chain:       bcdata.bc,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   bcdata.bc.Config(),
+			Chain:         bcdata.bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
+	if err != nil {
 		return err
 	}
+
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
 	if spec, err := mReward.GetDeferredReward(header, b.Transactions(), receipts); err != nil {
 		return err
@@ -416,17 +436,22 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
-	gov := generateGovernaceDataForTest()
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	if err := mReward.Init(&reward_impl.InitOpts{
-		ChainConfig:   bcdata.bc.Config(),
-		Chain:         bcdata.bc,
-		GovModule:     reward_impl.FromLegacy(gov),
-		StakingModule: mStaking, // Not used in "Simple" istanbul policy
-	}); err != nil {
-		return err
-	}
+	mGov := gov_impl.NewGovModule()
+	err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: bcdata.bc.Config(),
+			ChainKv:     bcdata.db.GetMiscDB(),
+			Chain:       bcdata.bc,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   bcdata.bc.Config(),
+			Chain:         bcdata.bc,
+			GovModule:     mGov,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+	)
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
 	if spec, err := mReward.GetDeferredReward(b.Header(), b.Transactions(), receipts); err != nil {
 		return err

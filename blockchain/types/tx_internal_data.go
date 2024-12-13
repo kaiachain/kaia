@@ -25,8 +25,10 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -36,6 +38,8 @@ import (
 const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
+
+var emptyCodeHash = crypto.Keccak256(nil)
 
 type TxType uint16
 
@@ -58,7 +62,10 @@ const (
 	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
-	TxTypeEthereumLast       = TxType(0x7803)
+	// EIP-4844 BLOB_TX_TYPE not supported in Kaia.
+	_                     = TxType(0x7803)
+	TxTypeEthereumSetCode = TxType(0x7804)
+	TxTypeEthereumLast    = TxType(0x7805)
 )
 
 type TxValueKeyType uint
@@ -83,6 +90,7 @@ const (
 	TxValueKeyChainID
 	TxValueKeyGasTipCap
 	TxValueKeyGasFeeCap
+	TxValueKeyAuthorizationList
 )
 
 type TxTypeMask uint8
@@ -115,6 +123,7 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyAuthorizationListInvalid  = errors.New("AuthorizationList must be a type of AuthorizationList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
 	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
@@ -164,6 +173,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyGasTipCap"
 	case TxValueKeyGasFeeCap:
 		return "TxValueKeyGasFeeCap"
+	case TxValueKeyAuthorizationList:
+		return "TxValueKeyAuthorizationList"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -223,6 +234,8 @@ func (t TxType) String() string {
 		return "TxTypeEthereumAccessList"
 	case TxTypeEthereumDynamicFee:
 		return "TxTypeEthereumDynamicFee"
+	case TxTypeEthereumSetCode:
+		return "TxTypeEthereumSetCode"
 	}
 
 	return "UndefinedTxType"
@@ -427,6 +440,7 @@ type StateDB interface {
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
 	GetKey(addr common.Address) accountkey.AccountKey
+	GetAccount(addr common.Address) account.Account
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {
@@ -481,6 +495,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFee(), nil
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCode(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -538,6 +554,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFeeWithMap(values)
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCodeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType
@@ -624,7 +642,7 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, authorizationList AuthorizationList, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
 	if contractCreation {
@@ -654,6 +672,13 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 	if accessList != nil {
 		gasPayloadWithGas += uint64(len(accessList)) * params.TxAccessListAddressGas
 		gasPayloadWithGas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
+	}
+
+	// We charge additional gas for the authorizationList:
+	// PER_EMPTY_ACCOUNT_COST : gas per address in authorizationList
+	// Since this is the same value as CallNewAccountGas, we will use this.
+	if authorizationList != nil {
+		gasPayloadWithGas += uint64(len(authorizationList)) * params.CallNewAccountGas
 	}
 
 	return gasPayloadWithGas, nil
@@ -697,4 +722,68 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	c := writeCounter(0)
 	rlp.Encode(&c, data)
 	return common.StorageSize(c)
+}
+
+func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool {
+	switch txType {
+	// Group 1: Recipient must be EOA without code
+	case TxTypeValueTransfer,
+		TxTypeFeeDelegatedValueTransfer,
+		TxTypeFeeDelegatedValueTransferWithRatio,
+		TxTypeValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return true
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 2: From must be EOA without code
+	case TxTypeAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdateWithRatio:
+		acc := stateDB.GetAccount(from)
+		if acc == nil {
+			return false
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return false
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return false
+		}
+
+		return true
+
+	// Group 3: Recipient must be EOA with code or SCA
+	case TxTypeSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return false
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return true
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return true
+		}
+
+		return true
+
+	default:
+		return false
+	}
 }

@@ -256,7 +256,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
-	if common.IsPrecompiledContractAddress(addr) {
+	if IsPrecompiledContractAddress(addr, evm.chainRules) {
 		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
@@ -284,7 +284,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		// Initialise a new contract and set the code that is to be used by the EVM.
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, to, value, gas)
-		contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+		contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 		ret, err = run(evm, contract, input)
 		gas = contract.Gas
 	}
@@ -346,7 +346,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -396,7 +396,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -449,7 +449,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, new(big.Int), gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.StateDB.ResolveCodeHash(addr), evm.StateDB.ResolveCode(addr))
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -512,7 +512,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 
 	// Ensure there's no existing contract already at the designated address
-	contractHash := evm.StateDB.GetCodeHash(address)
+	contractHash := evm.StateDB.ResolveCodeHash(address)
 
 	// The early Kaia design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.
@@ -527,7 +527,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 
-	if common.IsPrecompiledContractAddress(address) {
+	if IsPrecompiledContractAddress(address, evm.chainRules) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
 
@@ -552,13 +552,22 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	ret, err = evm.interpreter.Run(contract, nil)
 
-	// check whether the max code size has been exceeded
-	maxCodeSizeExceeded := len(ret) > params.MaxCodeSize
+	// Check whether the max code size has been exceeded.
+	// Note that EIP-170 is default in Kaia.
+	if err == nil && len(ret) > params.MaxCodeSize {
+		err = ErrMaxCodeSizeExceeded
+	}
+
+	// Reject code starting with 0xEF if Prague hardfork is enabled.
+	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsPrague {
+		err = ErrInvalidCode
+	}
+
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	if err == nil && !maxCodeSizeExceeded {
+	if err == nil {
 		createDataGas := uint64(len(ret)) * params.CreateDataGas
 		if contract.UseGas(createDataGas) {
 			if evm.StateDB.SetCode(address, ret) != nil {
@@ -577,19 +586,18 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining.
-	if maxCodeSizeExceeded || err != nil {
+	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != ErrExecutionReverted {
 			contract.UseGas(contract.Gas)
 		}
 	}
-	// Assign err if contract code size exceeds the max while the err is still empty.
-	if maxCodeSizeExceeded && err == nil {
-		err = ErrMaxCodeSizeExceeded // TODO-Klaytn-Issue615
-	}
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
-	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsKore {
+	// This validation was incorrectly placed after the code was already stored in state DB,
+	// which should have been prevented. This is kept for backwards compatibility
+	// and will be properly handled after Prague hardfork.
+	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsKore && !evm.chainRules.IsPrague {
 		err = ErrInvalidCode
 	}
 

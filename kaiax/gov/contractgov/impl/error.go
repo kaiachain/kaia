@@ -1,10 +1,15 @@
 package impl
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
-	ErrInitNil = errors.New("cannot init contractgov module because of nil")
-
 	ErrNotReady      = errors.New("ContractEngine is not ready")
-	ErrHeaderGovFail = errors.New("headerGov EffectiveParams() failed")
+	ErrHeaderGovFail = errors.New("headerGov EffectiveParamSet() failed")
 )
+
+func errInitNil(msg string) error {
+	return fmt.Errorf("cannot init contractgov module because of nil: %s", msg)
+}

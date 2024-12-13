@@ -210,12 +210,8 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
-		pset, err := sb.governance.EffectiveParams(blockNum)
-		if err != nil {
-			return err
-		}
-
-		kip71 := pset.ToKIP71Config()
+		pset := sb.govModule.EffectiveParamSet(blockNum)
+		kip71 := pset.ToKip71Config()
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
 		}
@@ -288,17 +284,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return errUnexpectedRandao
 	}
 
-	// At every epoch governance data will come in block header. Verify it.
-	pset, err := sb.governance.EffectiveParams(number)
-	if err != nil {
-		return err
-	}
-	pendingBlockNum := new(big.Int).Add(chain.CurrentHeader().Number, common.Big1)
-	if number%pset.Epoch() == 0 && len(header.Governance) > 0 && pendingBlockNum.Cmp(header.Number) == 0 {
-		if err := sb.governance.VerifyGovernance(header.Governance); err != nil {
-			return err
-		}
-	}
 	return sb.verifyCommittedSeals(chain, header, parents)
 }
 
@@ -449,11 +434,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// If it reaches the Epoch, governance config will be added to block header
-	pset, err := sb.governance.EffectiveParams(number)
-	if err != nil {
-		return err
-	}
-	if number%pset.Epoch() == 0 {
+	pset := sb.govModule.EffectiveParamSet(number)
+	if number%pset.Epoch == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
 				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
@@ -465,12 +447,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 				}
 			}
 		}
-	}
-
-	// if there is a vote to attach, attach it to the header
-	header.Vote = sb.governance.GetEncodedVote(sb.address, number)
-	if len(header.Vote) > 0 {
-		logger.Info("Put voteData", "num", number, "data", hex.EncodeToString(header.Vote))
 	}
 
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
@@ -792,15 +768,12 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	pset, err := sb.governance.EffectiveParams(0)
-	if err != nil {
-		return nil, err
-	}
+	pset := sb.govModule.EffectiveParamSet(0)
 	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
-		istanbul.ProposerPolicy(pset.Policy()),
-		pset.CommitteeSize(), chain)
+		istanbul.ProposerPolicy(pset.ProposerPolicy),
+		pset.CommitteeSize, chain)
 	valSet.SetMixHash(genesis.MixHash)
-	snap := newSnapshot(sb.governance, 0, genesis.Hash(), valSet, chain.Config())
+	snap := newSnapshot(sb.govModule, 0, genesis.Hash(), valSet, chain.Config())
 
 	if err := snap.store(sb.db); err != nil {
 		return nil, err
@@ -998,11 +971,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	pset, err := sb.governance.EffectiveParams(snap.Number)
-	if err != nil {
-		return nil, err
-	}
-	snap, err = snap.apply(headers, sb.governance, sb.address, pset.Policy(), chain, sb.stakingModule, writable)
+	pset := sb.govModule.EffectiveParamSet(snap.Number)
+	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err
 	}

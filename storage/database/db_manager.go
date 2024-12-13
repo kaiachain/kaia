@@ -299,19 +299,6 @@ type DBManager interface {
 	DeleteGovernance(num uint64)
 	// TODO-Kaia implement governance DB deletion methods.
 
-	// StakingInfo related functions
-	ReadStakingInfo(blockNum uint64) ([]byte, error)
-	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
-	HasStakingInfo(blockNum uint64) (bool, error)
-	DeleteStakingInfo(blockNum uint64)
-
-	// TotalSupply checkpoint functions
-	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
-	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
-	DeleteSupplyCheckpoint(blockNum uint64)
-	ReadLastSupplyCheckpointNumber() uint64
-	WriteLastSupplyCheckpointNumber(blockNum uint64)
-
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
@@ -2950,74 +2937,6 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
-}
-
-// ReadSupplyCheckpoint retrieves the SupplyCheckpoint for a block number
-// Returns nil if the SupplyCheckpoint is not found.
-func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint {
-	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(supplyCheckpointKey(blockNum))
-	if len(data) == 0 || err != nil {
-		return nil
-	}
-	stored := struct {
-		Minted   []byte
-		BurntFee []byte
-	}{}
-	if err := rlp.DecodeBytes(data, &stored); err != nil {
-		logger.Crit("Corrupt supply checkpoint", "err", err)
-	}
-	return &SupplyCheckpoint{
-		Minted:   new(big.Int).SetBytes(stored.Minted),
-		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
-	}
-}
-
-// WriteSupplyCheckpoint stores the SupplyCheckpoint for a specific block number.
-func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint) {
-	db := dbm.getDatabase(MiscDB)
-	stored := struct {
-		Minted   []byte
-		BurntFee []byte
-	}{
-		Minted:   checkpoint.Minted.Bytes(),
-		BurntFee: checkpoint.BurntFee.Bytes(),
-	}
-	data, err := rlp.EncodeToBytes(stored)
-	if err != nil {
-		logger.Crit("Failed to write supply checkpoint", "err", err)
-	}
-	if err := db.Put(supplyCheckpointKey(blockNum), data); err != nil {
-		logger.Crit("Failed to write supply checkpoint", "err", err)
-	}
-}
-
-// DeleteSupplyCheckpoint removes the SupplyCheckpoint for a specific block number.
-func (dbm *databaseManager) DeleteSupplyCheckpoint(blockNum uint64) {
-	db := dbm.getDatabase(MiscDB)
-	if err := db.Delete(supplyCheckpointKey(blockNum)); err != nil {
-		logger.Crit("Failed to delete supply checkpoint", "err", err)
-	}
-}
-
-// ReadLastSupplyCheckpointNumber retrieves the highest number for which the SupplyCheckpoint is stored.
-func (dbm *databaseManager) ReadLastSupplyCheckpointNumber() uint64 {
-	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(lastSupplyCheckpointNumberKey)
-	if len(data) == 0 || err != nil {
-		return 0
-	} else {
-		return binary.BigEndian.Uint64(data)
-	}
-}
-
-// WriteLastSupplyCheckpointNumber stores the highest number for which the SupplyCheckpoint is stored.
-func (dbm *databaseManager) WriteLastSupplyCheckpointNumber(blockNum uint64) {
-	db := dbm.getDatabase(MiscDB)
-	data := common.Int64ToByteBigEndian(blockNum)
-	if err := db.Put(lastSupplyCheckpointNumberKey, data); err != nil {
-		logger.Crit("Failed to write last supply checkpoint number", "err", err)
-	}
 }
 
 func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) {

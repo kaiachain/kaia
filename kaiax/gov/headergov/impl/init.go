@@ -33,7 +33,7 @@ type InitOpts struct {
 	NodeAddress common.Address
 }
 
-//go:generate mockgen -destination=kaiax/headergov/mocks/headergov_mock.go github.com/kaiachain/kaia/kaiax/headergov HeaderGovModule
+//go:generate mockgen -destination=mock/headergov_mock.go github.com/kaiachain/kaia/kaiax/headergov HeaderGovModule
 type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
@@ -56,8 +56,8 @@ func NewHeaderGovModule() *headerGovModule {
 }
 
 func (h *headerGovModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainKv == nil || opts.ChainConfig == nil || opts.ChainConfig.Istanbul == nil || opts.Chain == nil {
-		return ErrInitNil
+	if err := validateOpts(opts); err != nil {
+		return err
 	}
 
 	h.ChainKv = opts.ChainKv
@@ -241,4 +241,21 @@ func calcEpochIdx(blockNum uint64, epoch uint64) uint64 {
 
 func calcEpochStartBlock(epochIdx uint64, epoch uint64) uint64 {
 	return epochIdx * epoch
+}
+
+func validateOpts(opts *InitOpts) error {
+	switch {
+	case opts == nil:
+		return errInitNil("opts")
+	case opts.ChainKv == nil:
+		return errInitNil("opts.ChainKv")
+	case opts.ChainConfig == nil:
+		return errInitNil("opts.ChainConfig")
+	case opts.ChainConfig.Istanbul == nil:
+		return errInitNil("opts.ChainConfig.Istanbul")
+	case opts.Chain == nil:
+		return errInitNil("opts.Chain")
+	}
+
+	return nil
 }

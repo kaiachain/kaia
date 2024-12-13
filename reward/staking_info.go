@@ -21,15 +21,12 @@ package reward
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"sort"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -40,8 +37,6 @@ const (
 )
 
 var (
-	maxStakingLimitBigInt = big.NewInt(0).SetUint64(maxStakingLimit)
-
 	ErrAddrNotInStakingInfo = errors.New("Address is not in stakingInfo")
 )
 
@@ -87,6 +82,18 @@ func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *
 		CouncilStakingAmounts: si.StakingAmounts,
 		UseGini:               useGini,
 		Gini:                  si.Gini(minStake),
+	}
+}
+
+func ToKaiax(si *StakingInfo) *staking.StakingInfo {
+	return &staking.StakingInfo{
+		SourceBlockNum:   si.BlockNum,
+		NodeIds:          si.CouncilNodeAddrs,
+		StakingContracts: si.CouncilStakingAddrs,
+		RewardAddrs:      si.CouncilRewardAddrs,
+		KEFAddr:          si.KEFAddr,
+		KIFAddr:          si.KIFAddr,
+		StakingAmounts:   si.CouncilStakingAmounts,
 	}
 }
 
@@ -237,97 +244,6 @@ func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
 		UseGini:               false,
 	}
 	return stakingInfo
-}
-
-// newStakingInfo fills stakingAmount from effectiveStakings if set. Otherwise, stakingAmount is filled with the balances of staking contracts at a given block.
-// Currently, effectiveStakings are same as `statedb.GetBalance(stakingAddr)`, which is the balance of staking contracts.
-func newStakingInfo(bc blockChain, helper governanceHelper, blockNum uint64, types []uint8, addrs []common.Address, effectiveStakings ...*big.Int) (*StakingInfo, error) {
-	var (
-		nodeIds      = []common.Address{}
-		stakingAddrs = []common.Address{}
-		rewardAddrs  = []common.Address{}
-		pocAddr      = common.Address{}
-		kirAddr      = common.Address{}
-	)
-
-	// Parse and construct node information
-	for i, addrType := range types {
-		switch addrType {
-		case addressTypeNodeID:
-			nodeIds = append(nodeIds, addrs[i])
-		case addressTypeStakingAddr:
-			stakingAddrs = append(stakingAddrs, addrs[i])
-		case addressTypeRewardAddr:
-			rewardAddrs = append(rewardAddrs, addrs[i])
-		case addressTypePoCAddr:
-			pocAddr = addrs[i]
-		case addressTypeKIRAddr:
-			kirAddr = addrs[i]
-		default:
-			return nil, fmt.Errorf("invalid type from AddressBook: %d", addrType)
-		}
-	}
-
-	// validate parsed node information
-	if len(nodeIds) != len(stakingAddrs) ||
-		len(nodeIds) != len(rewardAddrs) ||
-		len(effectiveStakings) > 0 && len(stakingAddrs) != len(effectiveStakings) ||
-		common.EmptyAddress(pocAddr) ||
-		common.EmptyAddress(kirAddr) {
-		// This is an expected behavior when the addressBook contract is not activated yet.
-		logger.Info("The addressBook is not yet activated. Use empty stakingInfo")
-		return newEmptyStakingInfo(blockNum), nil
-	}
-
-	// Get balance of stakingAddrs
-	stakingAmounts := make([]uint64, len(stakingAddrs))
-	if len(effectiveStakings) == 0 {
-		intervalBlock := bc.GetBlockByNumber(blockNum)
-		if intervalBlock == nil {
-			logger.Trace("Failed to get the block by the given number", "blockNum", blockNum)
-			return nil, errors.New(fmt.Sprintf("Failed to get the block by the given number. blockNum: %d", blockNum))
-		}
-		statedb, err := bc.StateAt(intervalBlock.Root())
-		if err != nil {
-			logger.Trace("Failed to make a state for interval block", "interval blockNum", blockNum, "err", err)
-			return nil, err
-		}
-		for i, stakingAddr := range stakingAddrs {
-			tempStakingAmount := big.NewInt(0).Div(statedb.GetBalance(stakingAddr), big.NewInt(0).SetUint64(params.KAIA))
-			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
-				tempStakingAmount.SetUint64(maxStakingLimit)
-			}
-			stakingAmounts[i] = tempStakingAmount.Uint64()
-		}
-	} else {
-		for i, effectiveStaking := range effectiveStakings {
-			tempStakingAmount := big.NewInt(0).Div(effectiveStaking, big.NewInt(0).SetUint64(params.KAIA))
-			if tempStakingAmount.Cmp(maxStakingLimitBigInt) > 0 {
-				tempStakingAmount.SetUint64(maxStakingLimit)
-			}
-			stakingAmounts[i] = tempStakingAmount.Uint64()
-		}
-	}
-
-	pset, err := helper.EffectiveParams(blockNum)
-	if err != nil {
-		return nil, err
-	}
-	useGini := pset.UseGiniCoeff()
-	gini := DefaultGiniCoefficient
-
-	stakingInfo := &StakingInfo{
-		BlockNum:              blockNum,
-		CouncilNodeAddrs:      nodeIds,
-		CouncilStakingAddrs:   stakingAddrs,
-		CouncilRewardAddrs:    rewardAddrs,
-		KEFAddr:               kirAddr,
-		KIFAddr:               pocAddr,
-		CouncilStakingAmounts: stakingAmounts,
-		Gini:                  gini,
-		UseGini:               useGini,
-	}
-	return stakingInfo, nil
 }
 
 func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, error) {

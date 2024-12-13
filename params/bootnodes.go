@@ -36,7 +36,11 @@ var MainnetBootnodes = map[common.ConnType]bootnodesByTypes{
 		[]string{},
 	},
 	common.PROXYNODE: {
-		[]string{},
+		[]string{
+			"kni://18b36118cce093673499fc6e9aa196f047fe17a0de35b6f2a76a4557802f6abf9f89aa5e7330e93c9014b714b9df6378393611efe39aec9d3d831d6aa9d617ae@ston65.node.kaia.io:32323?ntype=bn",
+			"kni://63f1c96874da85140ecca3ce24875cb5ef28fa228bc3572e16f690db4a48fc8067502d2f6e8f0c66fb558276a5ada1e4906852c7ae42b0003e9f9f25d1e123b1@ston873.node.kaia.io:32323?ntype=bn",
+			"kni://94cc15e2014b86584908707de55800c0a2ea8a24dc5550dcb507043e4cf18ff04f21dc86ed17757dc63b1fa85bb418b901e5e24e4197ad4bbb0d96cd9389ed98@ston106.node.kaia.io:32323?ntype=bn",
+		},
 	},
 	common.ENDPOINTNODE: {
 		[]string{
@@ -53,7 +57,9 @@ var KairosBootnodes = map[common.ConnType]bootnodesByTypes{
 		[]string{},
 	},
 	common.PROXYNODE: {
-		[]string{},
+		[]string{
+			"kni://779d766628247ebda5f3e108e9303bd8efdb8eba9fd8d6c529e2614aec7207ebf6614fe7e61d0d99b75e8b23dd3a679b112fd0de7e4e71a7008f0718710da48f@ston45-kairos.node.kaia.io:32323?ntype=bn",
+		},
 	},
 	common.ENDPOINTNODE: {
 		[]string{

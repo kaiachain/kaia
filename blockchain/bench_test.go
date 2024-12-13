@@ -111,7 +111,7 @@ func genValueTx(nbytes int) func(int, *BlockGen) {
 	return func(i int, gen *BlockGen) {
 		toaddr := common.Address{}
 		data := make([]byte, nbytes)
-		gas, _ := types.IntrinsicGas(data, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
+		gas, _ := types.IntrinsicGas(data, nil, nil, false, params.TestChainConfig.Rules(big.NewInt(0)))
 		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 		tx, _ := types.SignTx(types.NewTransaction(gen.TxNonce(benchRootAddr), toaddr, big.NewInt(1), gas, nil, data), signer, benchRootKey)
 		gen.AddTx(tx)
@@ -294,8 +294,8 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 			Number:      num,
 			ParentHash:  hash,
 			BlockScore:  big.NewInt(1),
-			TxHash:      types.EmptyRootHash(num),
-			ReceiptHash: types.EmptyRootHash(num),
+			TxHash:      types.GetEmptyRootHash(num),
+			ReceiptHash: types.GetEmptyRootHash(num),
 		}
 		hash = header.Hash()
 

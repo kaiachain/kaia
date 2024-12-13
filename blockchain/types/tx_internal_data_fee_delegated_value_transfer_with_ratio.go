@@ -345,8 +345,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB Stat
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if stateDB.IsProgramAccount(t.Recipient) {
-		return kerrors.ErrNotForProgramAccount
+	if !validate7702(stateDB, t.Type(), t.From, t.Recipient) {
+		return kerrors.ErrNotEOAWithoutCode
 	}
 	return nil
 }
