@@ -212,9 +212,6 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 	}
 
 	compressedSize := writeCompression(dbm, compressTyp, bytes, from, compressedTo)
-	// TODO-hyunsooda: Store compression range and make an API of its getter for informational notice
-	// API1: Return all pair of comprression range for each type(header, tx, receipt)
-	// API2: Return a next compression target number for each type(header, tx, receipt)
 	nextCompressStart := compressedTo + 1
 	if migrationMode {
 		writeSubsequentCompressionBlkNumber(dbm, compressTyp, nextCompressStart)

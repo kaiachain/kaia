@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/kaiachain/kaia/log"
@@ -53,7 +54,6 @@ type IdleState struct {
 type CompressModule struct {
 	InitOpts
 
-	// TODO-hyunsooda: Make me configurable through CLI, not API
 	compressChunkMu sync.RWMutex
 	maxSizeMu       sync.RWMutex
 
@@ -78,6 +78,9 @@ func (c *CompressModule) setMaxSize(v uint64) {
 func (c *CompressModule) getChunkCap() uint64 {
 	c.maxSizeMu.RLock()
 	defer c.maxSizeMu.RUnlock()
+	if c.InitOpts.ChunkCap == 0 {
+		return blockchain.DefaultCompressChunkCap
+	}
 	return c.InitOpts.ChunkCap
 }
 
@@ -90,6 +93,9 @@ func (c *CompressModule) setCompressChunk(v uint64) {
 func (c *CompressModule) getCompressChunk() uint64 {
 	c.compressChunkMu.RLock()
 	defer c.compressChunkMu.RUnlock()
+	if c.InitOpts.ChunkBlockSize == 0 {
+		return blockchain.DefaultChunkBlockSize
+	}
 	return c.InitOpts.ChunkBlockSize
 }
 

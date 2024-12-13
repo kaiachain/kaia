@@ -26,8 +26,6 @@ import (
 //go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/compress CompressionModule
 type CompressionModule interface {
 	kaiax.BaseModule
-	// TODO-hyunsooda: Implement getter APIs
-	// kaiax.JsonRpcModule
 	kaiax.RewindableModule
 
 	FindHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (*types.Header, error)
