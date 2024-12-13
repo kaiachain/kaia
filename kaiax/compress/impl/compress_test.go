@@ -61,21 +61,21 @@ func TestDeleteStorage(t *testing.T) {
 
 func TestCompressModule(t *testing.T) {
 	var (
-		nBlocks = 100
-		_, dbm  = runCompress(t, nBlocks)
+		nBlocks                           = 100
+		_, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
 	)
-	checkCompressedIntegrity(t, dbm, nBlocks-1, false)
+	checkCompressedIntegrity(t, dbm, nBlocks-1, headers, bodies, receipts, false)
 }
 
 func TestRewind(t *testing.T) {
 	var (
-		nBlocks        = 100
-		mCompress, dbm = runCompress(t, nBlocks)
+		nBlocks                                   = 100
+		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
 	)
 	for i := range nBlocks - 1 {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
 		mCompress.RewindDelete(hash, num)
 	}
-	checkCompressedIntegrity(t, dbm, nBlocks-1, true)
+	checkCompressedIntegrity(t, dbm, nBlocks-1, headers, bodies, receipts, true)
 }

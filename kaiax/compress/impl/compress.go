@@ -61,7 +61,6 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 			originFrom = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
 			from       = originFrom
 		)
-
 		if residualBlkCnt != 0 && !noWait {
 			idleTime := time.Second * time.Duration(c.getCompressChunk()-residualBlkCnt)
 			c.setIdleState(compressTyp, &IdleState{true, idleTime})
@@ -76,7 +75,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			if subsequentBlkNumber >= curBlkNum {
-				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "compressedSize", common.StorageSize(compressedSize))
+				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "compressedSize", common.StorageSize(compressedSize))
 				break
 			}
 			from = subsequentBlkNumber
@@ -321,7 +320,6 @@ func testInit(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, da
 	if err := errors.Join(setupErr, moduleInitErr); err != nil {
 		if errors.Is(err, compress.ErrInitNil) {
 			// If no environment varaible set, do not execute compression test
-			// TODO-hyunsooda: Change this test to functional test and remove temp storage directory
 			return nil, nil
 		} else {
 			t.Fatal(err)

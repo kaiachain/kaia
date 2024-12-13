@@ -445,7 +445,29 @@ func waitCompression(m *CompressModule) {
 	}
 }
 
-func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager) {
+func readOriginData(t *testing.T, dbm database.DBManager, nBlocks int) ([]*types.Header, []*types.Body, []types.Receipts) {
+	var (
+		headers  = make([]*types.Header, nBlocks)
+		bodies   = make([]*types.Body, nBlocks)
+		receipts = make([]types.Receipts, nBlocks)
+	)
+	for i := range nBlocks {
+		num := uint64(i)
+		hash := dbm.ReadCanonicalHash(num)
+		h := dbm.ReadHeader(hash, num)
+		assert.NotNil(t, h)
+		headers[i] = h
+		b := dbm.ReadBody(hash, num)
+		assert.NotNil(t, b)
+		bodies[i] = b
+		r := dbm.ReadReceipts(hash, num)
+		assert.NotNil(t, r)
+		receipts[i] = r
+	}
+	return headers, bodies, receipts
+}
+
+func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager, []*types.Header, []*types.Body, []types.Receipts) {
 	var (
 		chain, dbm = initMock(t, nBlocks)
 		mCompress  = NewCompression()
@@ -457,13 +479,14 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 		})
 	)
 	assert.Nil(t, err)
+	headers, bodies, receipts := readOriginData(t, dbm, nBlocks)
 	mCompress.setCompressChunk(10)
 	go mCompress.Compress()
 	waitCompression(mCompress)
-	return mCompress, dbm
+	return mCompress, dbm, headers, bodies, receipts
 }
 
-func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int, mustErr bool) {
+func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int, originHeaders []*types.Header, originBodies []*types.Body, originReceipts []types.Receipts, mustErr bool) {
 	for i := range nBlocks {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
@@ -473,9 +496,7 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 			if mustErr {
 				assert.NotNil(t, err)
 			} else {
-				originHeader := dbm.ReadHeader(hash, num)
-				assert.Nil(t, err)
-				assert.Equal(t, decompressedH.Hash(), originHeader.Hash())
+				assert.Equal(t, decompressedH.Hash(), originHeaders[i].Hash())
 			}
 		}
 		// compressed body integrity verification
@@ -484,9 +505,8 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 			if mustErr {
 				assert.NotNil(t, err)
 			} else {
-				originBody := dbm.ReadBody(hash, num)
 				assert.Nil(t, err)
-				for idx, originTx := range originBody.Transactions {
+				for idx, originTx := range originBodies[i].Transactions {
 					assert.True(t, originTx.Equal(decompressedB.Transactions[idx]))
 				}
 			}
@@ -497,9 +517,8 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 			if mustErr {
 				assert.NotNil(t, err)
 			} else {
-				originReceipts := dbm.ReadReceipts(hash, num)
 				assert.Nil(t, err)
-				for idx, originReceipt := range originReceipts {
+				for idx, originReceipt := range originReceipts[i] {
 					assert.True(t, reflect.DeepEqual(originReceipt, decompressedR[idx]))
 				}
 			}

@@ -81,7 +81,7 @@ func removeOriginAfterCompress(dbm database.DBManager, compressions []any) {
 	for _, compressed := range compressions {
 		switch c := compressed.(type) {
 		case *HeaderCompression:
-			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
+			dbm.DeleteHeader(c.BlkHash, c.BlkNumber)
 		case *BodyCompression:
 			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
 		case *ReceiptCompression:
@@ -217,8 +217,7 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 		writeSubsequentCompressionBlkNumber(dbm, compressTyp, nextCompressStart)
 	}
 
-	// TODO-hyunsooda: Recover me
-	// dbm.removeOriginAfterCompress( compressions[:itIdx])
+	removeOriginAfterCompress(dbm, compressions[:itIdx])
 	return nextCompressStart, compressedSize, nil
 }
 
