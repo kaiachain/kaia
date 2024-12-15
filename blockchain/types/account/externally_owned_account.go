@@ -105,6 +105,9 @@ func (e *ExternallyOwnedAccount) String() string {
 func (e *ExternallyOwnedAccount) DeepCopy() Account {
 	return &ExternallyOwnedAccount{
 		AccountCommon: e.AccountCommon.DeepCopy(),
+		storageRoot:   e.storageRoot,
+		codeHash:      common.CopyBytes(e.codeHash),
+		codeInfo:      e.codeInfo,
 	}
 }
 
