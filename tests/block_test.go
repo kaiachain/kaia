@@ -24,6 +24,10 @@ package tests
 
 import (
 	"testing"
+
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
+	"github.com/stretchr/testify/suite"
 )
 
 func TestBlockchain(t *testing.T) {
@@ -48,4 +52,85 @@ func TestBlockchain(t *testing.T) {
 	//		t.Error(err)
 	//	}
 	//})
+}
+
+// func execBlockTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
+// 	for _, subtest := range test.Subtests() {
+// 		subtest := subtest
+// 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+// 		name := name + "/" + key
+// 		t.Run(key, func(t *testing.T) {
+// 			for _, skip := range skipForks {
+// 				if skip == subtest.Fork {
+// 					t.Skipf("%s not supported yet", subtest.Fork)
+// 				}
+// 			}
+// 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
+// 				err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
+// 				return st.checkFailure(t, name, err)
+// 			})
+// 		})
+// 	}
+// }
+
+// TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
+
+type ExecutionSpecBlockTestSuite struct {
+	suite.Suite
+}
+
+func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
+	vm.RelaxPrecompileRangeForTest(true)
+}
+
+func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
+	vm.RelaxPrecompileRangeForTest(false)
+}
+
+func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
+	t := suite.T()
+
+	if !common.FileExist(executionSpecBlockTestDir) {
+		t.Skipf("directory %s does not exist", executionSpecBlockTestDir)
+	}
+	bt := new(testMatcher)
+
+	// TODO-Kaia: should remove these skip
+	// json format error
+	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
+	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
+	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
+
+	// only target cuncun
+	bt.skipLoad(`^berlin\/`)
+	bt.skipLoad(`^byzantium\/`)
+	// bt.skipLoad(`^cancun\/`)
+	bt.skipLoad(`^cancun\/eip1153_tstore\/tload.*\/`)
+	bt.skipLoad(`^cancun\/eip1153_tstore\/tstorage.*\/`)
+	bt.skipLoad(`^cancun\/eip1153_tstore\/tstore_reentrancy\/`)
+	bt.skipLoad(`^cancun\/eip5656_mcopy\/`)
+	bt.skipLoad(`^cancun\/eip6780_selfdestruct\/`)
+	bt.skipLoad(`^cancun\/eip7516_blobgasfee\/`)
+	bt.skipLoad(`^constantinople\/`)
+	bt.skipLoad(`^frontier\/`)
+	bt.skipLoad(`^homestead\/`)
+	bt.skipLoad(`^istanbul\/`)
+	bt.skipLoad(`^paris\/`)
+	bt.skipLoad(`^prague\/`)
+	bt.skipLoad(`^shanghai\/`)
+
+	// tests to skip
+	// unsupported EIPs
+	bt.skipLoad(`^cancun\/eip4788_beacon_root\/`)
+	bt.skipLoad(`^cancun\/eip4844_blobs\/`)
+
+	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
+		if err := bt.checkFailure(t, name, test.Run()); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestExecutionSpecBlockTestSuite(t *testing.T) {
+	suite.Run(t, new(ExecutionSpecBlockTestSuite))
 }

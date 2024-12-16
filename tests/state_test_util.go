@@ -305,7 +305,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	}
 
 	if err == nil && isTestExecutionSpecState {
-		useEthMiningReward(st, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
+		useEthMiningReward(st, evm.Context.Coinbase, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice, rules)
 	}
 
 	root, _ = st.Commit(true)
@@ -504,8 +504,12 @@ func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationL
 	return types.IntrinsicGas(data, accessList, authorizationList, contractCreation, r)
 }
 
-func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
-	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
+func useEthMiningReward(statedb *state.StateDB, coinbase common.Address, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int, rules params.Rules) {
+	fee := calculateEthMiningReward(gasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, envBaseFee, usedGas, rules)
+	statedb.AddBalance(coinbase, fee)
+}
+
+func calculateEthMiningReward(gasPrice, maxFeePerGas, maxPriorityFeePerGas, envBaseFee *big.Int, usedGas uint64, rules params.Rules) *big.Int {
 	effectiveTip := new(big.Int).Set(gasPrice)
 
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
@@ -517,12 +521,11 @@ func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, 
 			// parent - 2 : 0xa as the basefee for 'this' context.
 			baseFee = big.NewInt(0x0a)
 		}
-		effectiveTip = math.BigMin(tx.MaxPriorityFeePerGas, new(big.Int).Sub(tx.MaxFeePerGas, baseFee))
+		effectiveTip = math.BigMin(maxPriorityFeePerGas, new(big.Int).Sub(maxFeePerGas, baseFee))
 	}
 
 	fee := new(big.Int).SetUint64(usedGas)
-	fee.Mul(fee, effectiveTip)
-	statedb.AddBalance(evm.Context.Coinbase, fee)
+	return fee.Mul(fee, effectiveTip)
 }
 
 func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
