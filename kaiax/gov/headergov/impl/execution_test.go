@@ -81,7 +81,7 @@ func TestVote(t *testing.T) {
 	)
 
 	for i := 0; i < n; i++ {
-		h.AddVote(calcEpochIdx(uint64(i), uint64(epoch)), uint64(i), v)
+		h.AddVote(uint64(i), v)
 	}
 
 	assert.Equal(t, n, len(h.VoteBlockNums()))

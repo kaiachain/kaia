@@ -3,6 +3,7 @@ package impl
 import (
 	"math/big"
 	"sync"
+	"sync/atomic"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -56,6 +57,9 @@ type headerGovModule struct {
 	// for APIs
 	nodeAddress common.Address
 	myVotes     []headergov.VoteData // queue
+
+	quit atomic.Int32 // stop the migration thread
+	wg   sync.WaitGroup
 }
 
 func NewHeaderGovModule() *headerGovModule {
@@ -72,15 +76,36 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.Chain = opts.Chain
 	h.ValSet = opts.ValSet
 	h.nodeAddress = opts.NodeAddress
-	h.myVotes = make([]headergov.VoteData, 0)
-	h.mu = &sync.RWMutex{}
 
 	h.epoch = h.ChainConfig.Istanbul.Epoch
 	if h.epoch == 0 {
 		return ErrZeroEpoch
 	}
 
-	// 1. Init gov. If Gov DB is empty, migrate from legacy governance DB.
+	h.initSchema()
+
+	// init memory
+	h.groupedVotes = make(map[uint64]headergov.VotesInEpoch)
+	h.governances = make(map[uint64]headergov.GovData)
+	h.history = make(headergov.History)
+	h.myVotes = make([]headergov.VoteData, 0)
+	h.mu = &sync.RWMutex{}
+
+	govs := readGovDataFromDB(h.Chain, h.ChainKv)
+	for blockNum, gov := range govs {
+		h.AddGov(blockNum, gov)
+	}
+
+	votes := readVoteDataFromDB(h.Chain, h.ChainKv)
+	for blockNum, vote := range votes {
+		h.AddVote(blockNum, vote)
+	}
+
+	return nil
+}
+
+func (h *headerGovModule) initSchema() {
+	// 1. Init gov from legacy governance DB, if empty.
 	if ReadGovDataBlockNums(h.ChainKv) == nil {
 		legacyGovBlockNums := ReadLegacyIdxHistory(h.ChainKv)
 		if legacyGovBlockNums == nil {
@@ -89,52 +114,49 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		WriteGovDataBlockNums(h.ChainKv, legacyGovBlockNums)
 	}
 
-	h.groupedVotes = make(map[uint64]headergov.VotesInEpoch)
-	h.governances = make(map[uint64]headergov.GovData)
-	govs := readGovDataFromDB(h.Chain, h.ChainKv)
-	h.history = make(headergov.History)
-	for blockNum, gov := range govs {
-		h.AddGov(blockNum, gov)
-	}
-
-	// 2. Init votes. If votes exist in the latest epoch, read from DB. Otherwise, accumulate.
-	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
-	if lowestVoteScannedEpochIdxPtr != nil {
-		votes := readVoteDataFromDB(h.Chain, h.ChainKv)
-
-		for blockNum, vote := range votes {
-			h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
-		}
-	} else {
+	// 2. Init vote and lowest vote scanned epoch index, if empty.
+	if ReadLowestVoteScannedEpochIdx(h.ChainKv) == nil {
 		latestEpochIdx := calcEpochIdx(h.Chain.CurrentBlock().NumberU64(), h.epoch)
 		h.accumulateVotesInEpoch(latestEpochIdx)
 	}
-
-	return nil
 }
 
 func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
 
-	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
-	if lowestVoteScannedEpochIdxPtr == nil {
-		return ErrLowestVoteScannedEpochIdxFound
-	}
-
-	// Scan all epochs in the background including 0th epoch
-	epochIdxIter := *lowestVoteScannedEpochIdxPtr
-	go func() {
-		for int64(epochIdxIter) > 0 {
-			epochIdxIter -= 1
-			h.accumulateVotesInEpoch(epochIdxIter)
-		}
-	}()
+	// Reset the quit state.
+	h.quit.Store(0)
+	h.wg.Add(1)
+	go h.migrate()
 
 	return nil
 }
 
 func (h *headerGovModule) Stop() {
 	logger.Info("HeaderGovModule stopped")
+	h.quit.Store(1)
+	h.wg.Wait()
+}
+
+func (h *headerGovModule) migrate() {
+	defer h.wg.Done()
+
+	// Scan all epochs in the background including 0th epoch
+	pBorder := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if pBorder == nil {
+		logger.Crit("Unexpected nil: lowest vote scanned epoch index")
+		return
+	}
+
+	border := *pBorder
+	for int64(border) > 0 {
+		if h.quit.Load() == 1 {
+			return
+		}
+
+		border -= 1
+		h.accumulateVotesInEpoch(border)
+	}
 }
 
 func (h *headerGovModule) isKoreHF(num uint64) bool {
@@ -184,17 +206,15 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 // accumulateVotesInEpoch scans and saves votes to cache and DB.
 // Because this function updates lowestVoteScannedEpochIdx, it verifies epochIdx.
 func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
-	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
-
-	// assert epochIdx == lowestVoteScannedEpochIdx - 1
-	if lowestVoteScannedEpochIdxPtr != nil && *lowestVoteScannedEpochIdxPtr != epochIdx+1 {
-		logger.Error("Invalid epochIdx", "epochIdx", epochIdx, "lowestScanned", *lowestVoteScannedEpochIdxPtr)
+	pBorder := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if pBorder != nil && *pBorder != epochIdx+1 {
+		logger.Error("Invalid epochIdx", "epochIdx", epochIdx, "lowestScanned", *pBorder)
 		return
 	}
 
 	votes := h.scanAllVotesInEpoch(epochIdx)
 	for blockNum, vote := range votes {
-		h.AddVote(epochIdx, blockNum, vote)
+		h.AddVote(blockNum, vote)
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
 
