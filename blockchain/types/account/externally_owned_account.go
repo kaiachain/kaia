@@ -99,12 +99,22 @@ func (e *ExternallyOwnedAccount) Dump() {
 }
 
 func (e *ExternallyOwnedAccount) String() string {
-	return fmt.Sprintf("EOA: %s", e.AccountCommon.String())
+	return fmt.Sprintf(`EOA:%s
+	StorageRoot: %s
+	CodeHash: %s
+	CodeInfo: %s`,
+		e.AccountCommon.String(),
+		e.storageRoot.String(),
+		common.Bytes2Hex(e.codeHash),
+		e.codeInfo.String())
 }
 
 func (e *ExternallyOwnedAccount) DeepCopy() Account {
 	return &ExternallyOwnedAccount{
 		AccountCommon: e.AccountCommon.DeepCopy(),
+		storageRoot:   e.storageRoot,
+		codeHash:      common.CopyBytes(e.codeHash),
+		codeInfo:      e.codeInfo,
 	}
 }
 
@@ -114,7 +124,10 @@ func (e *ExternallyOwnedAccount) Equal(a Account) bool {
 		return false
 	}
 
-	return e.AccountCommon.Equal(e2.AccountCommon)
+	return e.AccountCommon.Equal(e2.AccountCommon) &&
+		e.storageRoot == e2.storageRoot &&
+		bytes.Equal(e.codeHash, e2.codeHash) &&
+		e.codeInfo == e2.codeInfo
 }
 
 func (e *ExternallyOwnedAccount) GetStorageRoot() common.ExtHash {

@@ -35,7 +35,9 @@ import (
 	"testing/quick"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -209,6 +211,28 @@ func TestStateObjects(t *testing.T) {
 	}
 
 	assert.Equal(t, 128, len(stateDB.stateObjects))
+}
+
+// TestCopiedEIP7702 tests that copied EOA has the same code related fields as the original EOA.
+// This test has been introduced since the implementation of EIP-7702.
+func TestCopiedEIP7702(t *testing.T) {
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	testCode := common.Hex2Bytes("0xef0100")
+	testCodeHash := crypto.Keccak256Hash(testCode)
+
+	addr := common.BytesToAddress([]byte{5})
+	stateDB.SetCodeToEOA(addr, testCode, params.Rules{})
+
+	assert.Equal(t, stateDB.GetCodeHash(addr), testCodeHash)
+	pa := account.GetProgramAccount(stateDB.GetAccount(addr))
+	assert.Equal(t, pa.GetStorageRoot(), types.EmptyRootHash.ExtendZero())
+
+	copy := stateDB.Copy()
+
+	assert.Equal(t, copy.GetCodeHash(addr), testCodeHash)
+	pa = account.GetProgramAccount(copy.GetAccount(addr))
+	assert.Equal(t, pa.GetStorageRoot(), types.EmptyRootHash.ExtendZero())
 }
 
 // Test that invalid pruning options are prohibited.

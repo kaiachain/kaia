@@ -149,6 +149,9 @@ func TestAccountSerializer(t *testing.T) {
 			"Empty EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFieldsEmpty,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["","","","01",[]]
 			"0x01c580808001c0",
@@ -171,6 +174,9 @@ func TestAccountSerializer(t *testing.T) {
 			"Nonempty EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFields,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["0x2a","0x12345678","","0x01",[]]
 			"0x01c92a84123456788001c0",
@@ -193,6 +199,9 @@ func TestAccountSerializer(t *testing.T) {
 			"AccountUpdated EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFieldsUpdated,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["0x2a","0x12345678","","0x02","0x038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75"]
 			"0x01ea2a84123456788002a1038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75",
