@@ -24,6 +24,7 @@ package state
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -1182,8 +1183,8 @@ func (s *StateDB) GetTxHash() common.Hash {
 }
 
 var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotProgramAccount  = fmt.Errorf("given address is not a program account")
+	errNotExistingAddress = errors.New("there is no account corresponding to the given address")
+	errNotProgramAccount  = errors.New("given address is not a program account")
 )
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
