@@ -25,7 +25,6 @@ package cn
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -132,8 +131,7 @@ type CN struct {
 
 	APIBackend *CNAPIBackend
 
-	miner    Miner
-	gasPrice *big.Int
+	miner Miner
 
 	rewardbase  common.Address
 	nodeAddress common.Address
@@ -237,8 +235,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	governance := governance.NewMixedEngine(chainConfig, chainDB)
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
 	mGov := gov_impl.NewGovModule()
 	cn := &CN{
 		config:            config,
@@ -248,7 +244,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		accountManager:    ctx.AccountManager,
 		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
-		gasPrice:          config.GasPrice,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
@@ -260,7 +255,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
 		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
-		governance.SetNodeAddress(cn.nodeAddress)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -402,7 +396,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
 	}
 
 	// istanbul BFT
@@ -411,10 +405,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.APIBackend = &CNAPIBackend{cn, nil}
 
 	gpoParams := config.GPO
-
-	// NOTE-Kaia Now we use latest unitPrice
-	//         So let's override gpoParams.Default with config.GasPrice
-	gpoParams.Default = config.GasPrice
 
 	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, mGov)
 	//@TODO Kaia add core component

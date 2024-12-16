@@ -177,7 +177,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
 		NodeType:          common.CONSENSUSNODE,
 	}).(*backend)
-	gov.SetNodeAddress(engine.Address())
 
 	// Create blockchain
 	cacheConfig := &blockchain.CacheConfig{
@@ -196,6 +195,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		Chain:       chain,
 		ChainKv:     dbm.GetMiscDB(),
 		ChainConfig: config,
+		NodeAddress: engine.Address(),
 	})
 
 	// Start the engine

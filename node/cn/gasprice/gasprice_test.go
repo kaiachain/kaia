@@ -201,7 +201,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 5, oracle.maxBlocks)
 	assert.Equal(t, 100, oracle.percentile)
 
-	params = Config{Percentile: 101, Default: big.NewInt(123)}
+	params = Config{Percentile: 101}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
@@ -234,7 +234,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	assert.Equal(t, common.Big0, price)
 	assert.Nil(t, err)
 
-	params = Config{Default: big.NewInt(123)}
+	params = Config{}
 	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 25}).Times(1)
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
 	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
@@ -250,7 +250,6 @@ func TestSuggestTipCap(t *testing.T) {
 	config := Config{
 		Blocks:           3,
 		Percentile:       60,
-		Default:          big.NewInt(params.Gkei),
 		MaxHeaderHistory: 30,
 		MaxBlockHistory:  30,
 	}

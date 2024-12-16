@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -150,6 +151,7 @@ type worker struct {
 	chain            BlockChain
 	proc             blockchain.Validator
 	chainDB          database.DBManager
+	govModule        gov.GovModule
 	executionModules []kaiax.ExecutionModule
 
 	extra []byte
@@ -169,7 +171,7 @@ type worker struct {
 	nodetype common.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -185,6 +187,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
 		rewardbase:  rewardbase,
+		govModule:   govModule,
 	}
 
 	// Subscribe NewTxsEvent for tx pool
@@ -551,7 +554,8 @@ func (self *worker) commitNewWork() {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
+			pset := self.govModule.EffectiveParamSet(nextBlockNum.Uint64())
+			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}

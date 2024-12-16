@@ -440,14 +440,6 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 	logger.Info("successfully set the canonical block", "blockNum", blockNum)
 }
 
-func (bc *BlockChain) UseGiniCoeff() bool {
-	return bc.chainConfig.Governance.Reward.UseGiniCoeff
-}
-
-func (bc *BlockChain) ProposerPolicy() uint64 {
-	return bc.chainConfig.Istanbul.ProposerPolicy
-}
-
 func (bc *BlockChain) getProcInterrupt() bool {
 	return atomic.LoadInt32(&bc.procInterrupt) == 1
 }
@@ -1540,7 +1532,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	}
 
 	if bc.chainConfig.Istanbul != nil {
-		return bc.ProposerPolicy() == params.WeightedRandom &&
+		return bc.chainConfig.Istanbul.ProposerPolicy == params.WeightedRandom &&
 			params.IsStakingUpdateInterval(blockNum)
 	}
 	return false
