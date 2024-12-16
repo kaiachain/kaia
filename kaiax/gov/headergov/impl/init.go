@@ -158,6 +158,7 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
 		header := h.Chain.GetHeaderByNumber(blockNum)
 		if header == nil || len(header.Vote) == 0 {
+			logger.Warn("Missing header found", "num", blockNum)
 			continue
 		}
 
