@@ -230,14 +230,14 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 }
 
 func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
-	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
-	if lowestVoteScannedBlockNumPtr == nil {
-		panic("lowest vote scanned block num must exist")
+	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if lowestVoteScannedEpochIdxPtr == nil {
+		panic("lowest vote scanned epoch index must exist")
 	}
-	lowestVoteScannedBlockNum := *lowestVoteScannedBlockNumPtr
+	lowestVoteScannedEpochIdx := *lowestVoteScannedEpochIdxPtr
 
-	if lowestVoteScannedBlockNum <= calcEpochStartBlock(epochIdx, h.epoch) {
-		logger.Info("scanning votes fastpath")
+	if lowestVoteScannedEpochIdx <= epochIdx {
+		logger.Debug("Scanning votes fastpath")
 		votes := make(map[uint64]headergov.VoteData)
 
 		h.mu.RLock()
@@ -247,7 +247,7 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 		}
 		return votes
 	} else {
-		logger.Info("scanning votes slowpath")
+		logger.Debug("Scanning votes slowpath")
 		return h.scanAllVotesInEpoch(epochIdx)
 	}
 }

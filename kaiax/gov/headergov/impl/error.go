@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrZeroEpoch                      = errors.New("epoch cannot be zero")
-	ErrLowestVoteScannedBlockNotFound = errors.New("lowest vote scanned block not found")
+	ErrLowestVoteScannedEpochIdxFound = errors.New("lowest vote scanned epoch index not found")
 
 	ErrVotePermissionDenied = errors.New("you don't have the right to vote")
 	ErrInvalidKeyValue      = errors.New("your vote couldn't be placed. Please check your vote's key and value")

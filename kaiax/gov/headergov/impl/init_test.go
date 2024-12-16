@@ -69,7 +69,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		ChainConfig: config,
 	})
 	require.NoError(t, err)
-	WriteLowestVoteScannedBlockNum(db, 0)
+	WriteLowestVoteScannedEpochIdx(db, 0)
 	h.Start()
 
 	return h
@@ -132,7 +132,7 @@ func TestInitialDB(t *testing.T) {
 	assert.Nil(t, ReadLegacyIdxHistory(h.ChainKv))
 	assert.Equal(t, StoredUint64Array{0}, ReadGovDataBlockNums(h.ChainKv))
 	assert.Nil(t, StoredUint64Array(nil), ReadVoteDataBlockNums(h.ChainKv))
-	assert.Equal(t, uint64(0), *ReadLowestVoteScannedBlockNum(h.ChainKv))
+	assert.Equal(t, uint64(0), *ReadLowestVoteScannedEpochIdx(h.ChainKv))
 }
 
 func TestGetGenesisParamNames(t *testing.T) {

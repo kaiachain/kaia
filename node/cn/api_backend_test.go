@@ -181,7 +181,7 @@ func testGovModule(chain gov_impl.BlockChain) *gov_impl.GovModule {
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
 	// chain can be a mock, this prevents reading all headers in an epoch.
-	headergov_impl.WriteLowestVoteScannedBlockNum(db.GetMiscDB(), 0)
+	headergov_impl.WriteLowestVoteScannedEpochIdx(db.GetMiscDB(), 0)
 	govModule := gov_impl.NewGovModule()
 	govModule.Init(&gov_impl.InitOpts{
 		ChainConfig: config,

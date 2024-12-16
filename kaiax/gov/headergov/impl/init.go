@@ -98,8 +98,8 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	}
 
 	// 2. Init votes. If votes exist in the latest epoch, read from DB. Otherwise, accumulate.
-	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
-	if lowestVoteScannedBlockNumPtr != nil {
+	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if lowestVoteScannedEpochIdxPtr != nil {
 		votes := readVoteDataFromDB(h.Chain, h.ChainKv)
 
 		for blockNum, vote := range votes {
@@ -116,13 +116,13 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 func (h *headerGovModule) Start() error {
 	logger.Info("HeaderGovModule started")
 
-	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
-	if lowestVoteScannedBlockNumPtr == nil {
-		return ErrLowestVoteScannedBlockNotFound
+	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if lowestVoteScannedEpochIdxPtr == nil {
+		return ErrLowestVoteScannedEpochIdxFound
 	}
 
 	// Scan all epochs in the background including 0th epoch
-	epochIdxIter := calcEpochIdx(*lowestVoteScannedBlockNumPtr, h.epoch)
+	epochIdxIter := *lowestVoteScannedEpochIdxPtr
 	go func() {
 		for int64(epochIdxIter) > 0 {
 			epochIdxIter -= 1
@@ -182,13 +182,13 @@ func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]header
 }
 
 // accumulateVotesInEpoch scans and saves votes to cache and DB.
-// Because this function updates lowestVoteScannedBlockNum, it verifies epochIdx.
+// Because this function updates lowestVoteScannedEpochIdx, it verifies epochIdx.
 func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
-	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
+	lowestVoteScannedEpochIdxPtr := ReadLowestVoteScannedEpochIdx(h.ChainKv)
 
-	// assert epochIdx == lowestVoteScannedBlockNum - 1
-	if lowestVoteScannedBlockNumPtr != nil && *lowestVoteScannedBlockNumPtr != epochIdx+1 {
-		logger.Error("Invalid epochIdx", "epochIdx", epochIdx, "lowestScanned", *lowestVoteScannedBlockNumPtr)
+	// assert epochIdx == lowestVoteScannedEpochIdx - 1
+	if lowestVoteScannedEpochIdxPtr != nil && *lowestVoteScannedEpochIdxPtr != epochIdx+1 {
+		logger.Error("Invalid epochIdx", "epochIdx", epochIdx, "lowestScanned", *lowestVoteScannedEpochIdxPtr)
 		return
 	}
 
@@ -198,7 +198,7 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
 
-	WriteLowestVoteScannedBlockNum(h.ChainKv, epochIdx)
+	WriteLowestVoteScannedEpochIdx(h.ChainKv, epochIdx)
 	logger.Info("Accumulated votes", "epochIdx", epochIdx, "lowestScanned", epochIdx)
 }
 
