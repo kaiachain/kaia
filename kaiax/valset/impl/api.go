@@ -44,7 +44,7 @@ func newValidatorAPI(v *ValsetModule) *ValidatorAPI {
 }
 
 func (api *ValidatorAPI) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.v.chain, number)
+	header, err := headerByRpcNumber(api.v.Chain, number)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (api *ValidatorAPI) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
 }
 
 func (api *ValidatorAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.v.chain, number)
+	header, err := headerByRpcNumber(api.v.Chain, number)
 	if err != nil {
 		return nil, err
 	}
@@ -76,49 +76,44 @@ func (api *ValidatorAPI) GetCommitteeSize(number *rpc.BlockNumber) (int, error) 
 }
 
 func (api *ValidatorAPI) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.v.chain, number)
+	header, err := headerByRpcNumber(api.v.Chain, number)
 	if err != nil {
 		return nil, err
 	}
-
 	qualified, err := api.v.getQualifiedValidators(header.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
-	return qualified.BytesCmpSortedList(), nil
+	return qualified.List(), nil
 }
 
 // GetValidatorsAtHash retrieves the list of qualified validators with the given block hash.
 func (api *ValidatorAPI) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
-	header := api.v.chain.GetHeaderByHash(hash)
+	header := api.v.Chain.GetHeaderByHash(hash)
 	if header != nil {
-		return nil, errNilHeader
+		return nil, errNoHeader
 	}
-	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
-	return api.GetValidators(&rpcBlockNumber)
+	qualified, err := api.v.getQualifiedValidators(header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	return qualified.List(), nil
 }
 
 func (api *ValidatorAPI) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.v.chain, number)
+	header, err := headerByRpcNumber(api.v.Chain, number)
 	if err != nil {
 		return nil, err
 	}
-
-	demoted, err := api.v.getDemotedValidators(header.Number.Uint64())
-	if err != nil {
-		return nil, err
-	}
-	return demoted.BytesCmpSortedList(), nil
+	return api.v.GetDemotedValidators(header.Number.Uint64())
 }
 
-// GetDemotedValidatorsAtHash retrieves the list of demoted validators with the given block hash.
 func (api *ValidatorAPI) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
-	header := api.v.chain.GetHeaderByHash(hash)
+	header := api.v.Chain.GetHeaderByHash(hash)
 	if header != nil {
-		return nil, errNilHeader
+		return nil, errNoHeader
 	}
-	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
-	return api.GetDemotedValidators(&rpcBlockNumber)
+	return api.v.GetDemotedValidators(header.Number.Uint64())
 }
 
 // Retrieve the header at requested block number
@@ -127,7 +122,6 @@ func headerByRpcNumber(chain chain, number *rpc.BlockNumber) (*types.Header, err
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = chain.CurrentBlock().Header()
 	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get council list of the pending block.", "number", number)
 		return nil, errPendingNotAllowed
 	} else {
 		header = chain.GetHeaderByNumber(uint64(number.Int64()))

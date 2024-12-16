@@ -1,0 +1,275 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
+
+package impl
+
+import (
+	"math"
+	"math/big"
+
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
+)
+
+// blockContext is the common input for committee and proposer selection for a block.
+// Because committee and proposer selection calls each other, we collect common inputs here.
+type blockContext struct {
+	num uint64
+
+	// Computed inputs
+	qualified    *valset.AddressSet
+	prevHeader   *types.Header
+	prevProposer common.Address
+	// convenience fields
+	rules params.Rules
+	pset  gov.ParamSet
+}
+
+func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
+	qualified, err := v.getQualifiedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+	prevHeader := v.Chain.GetHeaderByNumber(num - 1)
+	if prevHeader == nil {
+		return nil, errNoHeader
+	}
+	prevProposer, err := v.Chain.Engine().Author(prevHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	return &blockContext{
+		num:          num,
+		qualified:    qualified,
+		prevHeader:   prevHeader,
+		prevProposer: prevProposer,
+		rules:        v.Chain.Config().Rules(new(big.Int).SetUint64(num)),
+		pset:         v.GovModule.EffectiveParamSet(num),
+	}, nil
+}
+
+func (v *ValsetModule) getCommittee(c *blockContext, round uint64) ([]common.Address, error) {
+	if c.num == 0 {
+		return c.qualified.List(), nil
+	}
+
+	currProposer, err := v.getProposer(c, round)
+	if err != nil {
+		return nil, err
+	}
+	nextDistinctProposer := currProposer // TOOD
+
+	switch istanbul.ProposerPolicy(c.pset.ProposerPolicy) {
+	case istanbul.RoundRobin, istanbul.Sticky:
+		return selectRandomCommittee(c.qualified, c.pset.CommitteeSize, currProposer, nextDistinctProposer), nil
+	case istanbul.WeightedRandom:
+		if c.rules.IsRandao {
+			return selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash), nil
+		} else {
+			return selectRandomCommittee(c.qualified, c.pset.CommitteeSize, currProposer, nextDistinctProposer), nil
+		}
+	default:
+		return nil, errInvalidProposerPolicy
+	}
+}
+
+func selectRandomCommittee(qualified *valset.AddressSet, committeeSize uint64, currProposer, nextDistinctProposer common.Address) []common.Address {
+	if qualified.Len() <= int(committeeSize) {
+		return qualified.List()
+	}
+
+	if committeeSize == 1 {
+		return []common.Address{currProposer}
+	}
+
+	qualified.Remove(currProposer)
+	qualified.Remove(nextDistinctProposer)
+
+	seed := valset.HashToSeed(currProposer.Hash().Bytes())
+	shuffled := qualified.ShuffledList(seed)
+	return shuffled[:committeeSize]
+}
+
+func selectRandaoCommittee(qualified *valset.AddressSet, committeeSize uint64, prevMixHash []byte) []common.Address {
+	if qualified.Len() <= int(committeeSize) {
+		return qualified.List()
+	}
+
+	// Note: If committeeSize == 1, below code is equivalent to return []common.Address{currProposer}.
+	// Because, the resulting committee will be one validator, and the only validator is also selected as the proposer.
+	// Therefore no special handling for committeeSize == 1 is needed.
+
+	seed := valset.HashToSeed(prevMixHash)
+	shuffled := qualified.ShuffledList(seed)
+	return shuffled[:committeeSize]
+}
+
+func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Address, error) {
+	switch istanbul.ProposerPolicy(c.pset.ProposerPolicy) {
+	case istanbul.RoundRobin:
+		return selectRoundRobinProposer(c.qualified, c.prevProposer, round), nil
+	case istanbul.Sticky:
+		return selectStickyProposer(c.qualified, c.prevProposer, round), nil
+	case istanbul.WeightedRandom:
+		if c.rules.IsRandao {
+			committee := selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash)
+			return selectRandaoProposer(committee, round), nil
+		} else {
+			list, sourceNum, err := v.getProposerList(c)
+			if err != nil {
+				return common.Address{}, err
+			}
+			return selectWeightedRandomProposer(list, sourceNum, c.num, round), nil
+		}
+	default:
+		return common.Address{}, errInvalidProposerPolicy
+	}
+}
+
+func selectRoundRobinProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
+	prevIdx := qualified.IndexOf(prevProposer)
+	if prevIdx < 0 {
+		prevIdx = 0
+	}
+	return qualified.At((prevIdx + int(round) + 1) % qualified.Len())
+}
+
+func selectStickyProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
+	prevIdx := qualified.IndexOf(prevProposer)
+	if prevIdx < 0 {
+		prevIdx = 0
+	}
+	return qualified.At((prevIdx + int(round)) % qualified.Len())
+}
+
+func computeGini(amounts map[common.Address]float64) float64 {
+	list := make([]float64, 0, len(amounts))
+	for _, amount := range amounts {
+		list = append(list, amount)
+	}
+	return staking.ComputeGini(list)
+}
+
+// listSourceNum is the block number at which the list is generated.
+func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint64, round uint64) common.Address {
+	idx := num + round - listSourceNum - 1
+	return list[int(idx)%len(list)]
+}
+
+func selectRandaoProposer(committee []common.Address, round uint64) common.Address {
+	return committee[round%uint64(len(committee))]
+}
+
+func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint64, error) {
+	var (
+		useGini   = c.pset.UseGiniCoeff // because UseGiniCoeff is immutable, it's safe to pass ParamSet(num).UseGiniCoeff to calculate proposer list for updateNum.
+		updateNum = roundDown(c.num-1, uint64(c.pset.ProposerUpdateInterval))
+	)
+
+	// Lookup from cache
+	if list, ok := v.proposerListCache.Get(updateNum); ok {
+		return list.([]common.Address), updateNum, nil
+	}
+
+	// Generate here
+	updateHeader := v.Chain.GetHeaderByNumber(updateNum)
+	if updateHeader == nil {
+		return nil, 0, errNoHeader
+	}
+	var list []common.Address
+	if c.rules.IsKore {
+		list = generateProposerListUniform(c.qualified, updateHeader.Hash())
+	} else {
+		si, err := v.StakingModule.GetStakingInfo(updateNum)
+		if err != nil {
+			return nil, 0, err
+		}
+		list = generateProposerListWeighted(c.qualified, si, useGini, updateHeader.Hash())
+	}
+
+	// Store to cache
+	v.proposerListCache.Add(updateNum, list)
+	return list, updateNum, nil
+}
+
+// generateProposerList generates a proposer list at a certain block (i.e. proposer update interval),
+// whose qualified validators are `qualified`, staking amounts are in `si`, parameters are `pset` and its block hash is `blockHash`.
+func generateProposerListWeighted(qualified *valset.AddressSet, si *staking.StakingInfo, useGini bool, blockHash common.Hash) []common.Address {
+	var (
+		addrs          = qualified.List()
+		stakingAmounts = collectStakingAmounts(addrs, si)
+		gini           = computeGini(stakingAmounts) // si.Gini is computed over every CN. But we want gini among validators, so we calculate here.
+		exponent       = 1.0 / (1 + gini)
+		totalStakes    = float64(0)
+	)
+
+	// Adjust staking amounts and calculate the sum
+	if useGini {
+		for addr, amount := range stakingAmounts {
+			stakingAmounts[addr] = math.Round(math.Pow(float64(amount), exponent))
+			totalStakes += stakingAmounts[addr]
+		}
+	} else {
+		for _, amount := range stakingAmounts {
+			totalStakes += amount
+		}
+	}
+
+	// Calculate percentile weights
+	weights := make(map[common.Address]uint64)
+	if totalStakes > 0 {
+		for _, addr := range addrs {
+			weight := uint64(math.Round(stakingAmounts[addr] * 100 / totalStakes))
+			if weight <= 0 {
+				weight = 1
+			}
+			weights[addr] = weight
+		}
+	} else {
+		for _, addr := range addrs {
+			weights[addr] = 0
+		}
+	}
+
+	// Generate weighted repeated list
+	proposerList := make([]common.Address, 0)
+	for _, addr := range addrs {
+		for i := uint64(0); i < weights[addr]; i++ {
+			proposerList = append(proposerList, addr)
+		}
+	}
+	// If the list is empty (i.e. all weights are zero), list each validator once.
+	if len(proposerList) == 0 {
+		for _, addr := range addrs {
+			proposerList = append(proposerList, addr)
+		}
+	}
+
+	seed := valset.HashToSeedLegacy(blockHash)
+	return valset.NewAddressSet(proposerList).ShuffledListLegacy(seed)
+}
+
+func generateProposerListUniform(qualified *valset.AddressSet, blockHash common.Hash) []common.Address {
+	proposerList := qualified.List()
+	seed := valset.HashToSeedLegacy(blockHash)
+	return valset.NewAddressSet(proposerList).ShuffledListLegacy(seed)
+}

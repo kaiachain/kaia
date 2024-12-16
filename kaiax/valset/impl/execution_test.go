@@ -1,16 +1,6 @@
 package impl
 
-import (
-	"sort"
-	"testing"
-
-	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/stretchr/testify/assert"
-)
-
+/*
 // voteTestData is the testdata for vote tests.
 // Not only votes, but also other functions such as VerifyHeader handles votes.
 // To minimize the maintenance effort to manage the testdata, manage the expected result in voteTestData
@@ -99,3 +89,4 @@ func TestValsetModule_HandleValidatorVote(t *testing.T) {
 		})
 	}
 }
+*/

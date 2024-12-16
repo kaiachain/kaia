@@ -293,10 +293,10 @@ func TestComputedFields(t *testing.T) {
 }
 
 func TestComputeGini(t *testing.T) {
-	assert.Equal(t, EmptyGini, computeGini([]float64{}))
-	assert.Equal(t, 0.0, computeGini([]float64{1, 1, 1}))
-	assert.Equal(t, 0.8, computeGini([]float64{0, 8, 0, 0, 0}))
-	assert.Equal(t, 0.27, computeGini([]float64{5, 4, 1, 2, 3}))
+	assert.Equal(t, EmptyGini, ComputeGini([]float64{}))
+	assert.Equal(t, 0.0, ComputeGini([]float64{1, 1, 1}))
+	assert.Equal(t, 0.8, ComputeGini([]float64{0, 8, 0, 0, 0}))
+	assert.Equal(t, 0.27, ComputeGini([]float64{5, 4, 1, 2, 3}))
 }
 
 func TestLegacy(t *testing.T) {

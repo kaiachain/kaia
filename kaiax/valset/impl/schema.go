@@ -1,22 +1,20 @@
 package impl
 
 import (
+	"encoding/binary"
 	"encoding/json"
-	"fmt"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
-	valSetVoteBlockNumsKey             = []byte("valSetVoteBlockNums")
-	lowestScannedCheckpointIntervalKey = []byte("lowestScannedCheckpointIntervalKey")
-	councilPrefix                      = []byte("council")
-	istanbulSnapshotKeyPrefix          = []byte("snapshot") // snapshotKeyPrefix is a governance snapshot prefix
+	validatorVoteBlockNums      = []byte("validatorVoteBlockNums")
+	lowestScannedSnapshotNumKey = []byte("lowestScannedSnapshotNum")
+	councilPrefix               = []byte("council")
+	istanbulSnapshotKeyPrefix   = []byte("snapshot")
 
 	mu = &sync.RWMutex{}
 )
@@ -29,136 +27,129 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 	return append(istanbulSnapshotKeyPrefix, hash[:]...)
 }
 
-func readValsetVoteBlockNums(db database.Database) []uint64 {
-	b, err := db.Get(valSetVoteBlockNumsKey)
+func ReadValsetVoteBlockNums(db database.Database) []uint64 {
+	b, err := db.Get(validatorVoteBlockNums)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
-	ret := new([]uint64)
-	if err := json.Unmarshal(b, ret); err != nil {
-		logger.Error("Invalid valSetVoteDataBlocks JSON", "err", err)
+	var ret []uint64
+	if err := json.Unmarshal(b, &ret); err != nil {
+		logger.Error("Malformed valset vote block nums", "err", err)
 		return nil
 	}
-	return *ret
+	return ret
 }
 
-func writeValsetVoteBlockNums(db database.Database, voteBlk uint64) error {
-	voteBlks := []uint64{0}
-	if voteBlk != 0 {
-		voteBlks = readValsetVoteBlockNums(db)
-		if len(voteBlks) == 0 {
-			return errEmptyVoteBlock
-		}
-		if voteBlks[len(voteBlks)-1] > voteBlk {
-			return fmt.Errorf("invalid voteBlk %d, last voteBlk %d", voteBlk, voteBlks[len(voteBlks)-1])
-		}
-		voteBlks = append(voteBlks, voteBlk)
-	}
-
-	b, err := json.Marshal(voteBlks)
+func writeValsetVoteBlockNums(db database.Database, nums []uint64) {
+	slices.Sort(nums)
+	b, err := json.Marshal(nums)
 	if err != nil {
-		return err
+		logger.Crit("Failed to marshal valset vote block nums", "err", err)
 	}
-	if err = db.Put(valSetVoteBlockNumsKey, b); err != nil {
-		return err
+	if err = db.Put(validatorVoteBlockNums, b); err != nil {
+		logger.Crit("Failed to write valset vote block nums", "err", err)
 	}
-	return nil
 }
 
-func readCouncil(db database.Database, num uint64) ([]common.Address, error) {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	var (
-		voteBlocks = readValsetVoteBlockNums(db)
-		voteBlock  = uint64(0)
-	)
-
-	if voteBlocks == nil {
-		return nil, errEmptyVoteBlock
-	}
-	for i := len(voteBlocks) - 1; i >= 0; i-- {
-		if voteBlocks[i] <= num {
-			voteBlock = voteBlocks[i]
-			break
-		}
-	}
-
-	b, err := db.Get(councilKey(voteBlock))
-	if err != nil || len(b) == 0 {
-		return nil, fmt.Errorf("failed to read council from db at voteBlk %d. error=%v, b=%v", voteBlock, err, string(b))
-	}
-
-	var set []common.Address
-	if err = json.Unmarshal(b, &set); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encoded council at voteBlk %d. err=%v", voteBlock, err)
-	}
-	if num > 0 && voteBlock == 0 {
-		sort.Sort(valset.AddressList(set))
-	}
-	return set, nil
-}
-
-func writeCouncil(db database.Database, voteBlk uint64, council []common.Address) error {
+func insertValsetVoteBlockNums(db database.Database, num uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	copiedList := make([]common.Address, len(council))
-	copy(copiedList, council)
+	nums := ReadValsetVoteBlockNums(db)
 
-	if err := writeValsetVoteBlockNums(db, voteBlk); err != nil {
-		return err
+	// Skip if num already exists in the array
+	for _, n := range nums {
+		if n == num {
+			return
+		}
 	}
 
-	if voteBlk > 0 {
-		sort.Sort(valset.AddressList(copiedList))
-	}
-	b, err := json.Marshal(copiedList)
-	if err != nil {
-		return err
-	}
-	if err = db.Put(councilKey(voteBlk), b); err != nil {
-		return err
-	}
-	return nil
+	nums = append(nums, num)
+	writeValsetVoteBlockNums(db, nums)
 }
 
-func readIstanbulSnapshot(db database.Database, blockHash common.Hash) (*istanbulBackend.Snapshot, error) {
-	startBlockHash := blockHash
+// trimValsetVoteBlockNums deletes all block nums greater than or equal to `since`.
+func trimValsetVoteBlockNums(db database.Database, since uint64) {
+	mu.Lock()
+	defer mu.Unlock()
 
-	b, err := db.Get(istanbulSnapshotKey(startBlockHash))
-	if err != nil || len(b) == 0 {
-		return nil, fmt.Errorf("failed to read istanbul snapshot from db. hash:%s, err:%v, b:%v", startBlockHash.String(), err, string(b))
+	nums := ReadValsetVoteBlockNums(db)
+	if nums == nil {
+		return
 	}
 
-	snap := new(istanbulBackend.Snapshot)
+	nums = slices.DeleteFunc(nums, func(n uint64) bool { return n >= since })
+	writeValsetVoteBlockNums(db, nums)
+}
+
+func ReadCouncil(db database.Database, num uint64) []common.Address {
+	b, err := db.Get(councilKey(num))
+	if err != nil || len(b) == 0 {
+		return nil
+	}
+
+	var addrs []common.Address
+	if err = json.Unmarshal(b, &addrs); err != nil {
+		logger.Error("Malformed council", "num", num, "err", err)
+		return nil
+	}
+	return addrs
+}
+
+func writeCouncil(db database.Database, num uint64, addrs []common.Address) {
+	b, err := json.Marshal(addrs)
+	if err != nil {
+		logger.Crit("Failed to marshal council", "num", num, "err", err)
+	}
+	if err = db.Put(councilKey(num), b); err != nil {
+		logger.Crit("Failed to write council", "num", num, "err", err)
+	}
+}
+
+func deleteCouncil(db database.Database, num uint64) {
+	if err := db.Delete(councilKey(num)); err != nil {
+		logger.Crit("Failed to delete council", "num", num, "err", err)
+	}
+}
+
+func ReadLowestScannedSnapshotNum(db database.Database) *uint64 {
+	b, err := db.Get(lowestScannedSnapshotNumKey)
+	if err != nil || len(b) == 0 {
+		return nil
+	}
+	if len(b) != 8 {
+		logger.Error("Malformed lowest scanned snapshot num", "length", len(b))
+		return nil
+	}
+	ret := binary.BigEndian.Uint64(b)
+	return &ret
+}
+
+func writeLowestScannedSnapshotNum(db database.Database, num uint64) {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+	if err := db.Put(lowestScannedSnapshotNumKey, b); err != nil {
+		logger.Crit("Failed to write lowest scanned snapshot num", "num", num, "err", err)
+	}
+}
+
+// Only relevant fields of the JSON-encoded istanbul snapshot.
+type istanbulSnapshotStorage struct {
+	Validators        []common.Address `json:"validators"` // qualified validators
+	DemotedValidators []common.Address `json:"demotedValidators"`
+}
+
+func ReadIstanbulSnapshot(db database.Database, hash common.Hash) []common.Address {
+	b, err := db.Get(istanbulSnapshotKey(hash))
+	if err != nil || len(b) == 0 {
+		return nil
+	}
+
+	snap := new(istanbulSnapshotStorage)
 	if err := json.Unmarshal(b, snap); err != nil {
-		return nil, err
+		logger.Error("Malformed istanbul snapshot", "hash", hash.String(), "err", err)
+		return nil
 	}
-
-	return snap, nil
-}
-
-func readLowestScannedCheckpointInterval(db database.Database) (uint64, error) {
-	b, err := db.Get(lowestScannedCheckpointIntervalKey)
-	if err != nil || len(b) == 0 {
-		return 0, fmt.Errorf("failed to read lowest scanned blocknumber from db. error=%v, b=%v", err, string(b))
-	}
-	var lowestScannedNum uint64
-	if err = json.Unmarshal(b, &lowestScannedNum); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal encoded lowestScannedNum. err=%v", err)
-	}
-	return lowestScannedNum, nil
-}
-
-func writeLowestScannedCheckpointInterval(db database.Database, scanned uint64) error {
-	b, err := json.Marshal(scanned)
-	if err != nil {
-		return err
-	}
-	if err = db.Put(lowestScannedCheckpointIntervalKey, b); err != nil {
-		return err
-	}
-	return nil
+	return append(snap.Validators, snap.DemotedValidators...)
 }
