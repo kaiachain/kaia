@@ -4,11 +4,27 @@ import (
 	"math/big"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
+	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
+
+func newGovModule(t *testing.T, chainConfig *params.ChainConfig) (*GovModule, *mocks.MockBlockChain, *headergov_mock.MockHeaderGovModule, *contractgov_mock.MockContractGovModule) {
+	govModule := NewGovModule()
+	mockChain := mocks.NewMockBlockChain(gomock.NewController(t))
+	mockHgm := headergov_mock.NewMockHeaderGovModule(gomock.NewController(t))
+	mockCgm := contractgov_mock.NewMockContractGovModule(gomock.NewController(t))
+
+	govModule.Chain = mockChain
+	govModule.Hgm = mockHgm
+	govModule.Cgm = mockCgm
+	return govModule, mockChain, mockHgm, mockCgm
+}
 
 func TestChainConfigFallback(t *testing.T) {
 	tests := []struct {
