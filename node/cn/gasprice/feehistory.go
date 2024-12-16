@@ -102,7 +102,7 @@ func (oracle *Oracle) processBlock(bf *blockFees, percentiles []float64) {
 		isCurrBlockMagma = chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber)))
 		isNextBlockMagma = chainconfig.IsMagmaForkEnabled(big.NewInt(int64(bf.blockNumber + 1)))
 
-		pset        = oracle.govModule.EffectiveParamSet(bf.blockNumber + 1)
+		pset        = oracle.govModule.GetParamSet(bf.blockNumber + 1)
 		kip71Config = pset.ToKip71Config()
 	)
 	if bf.results.baseFee = bf.header.BaseFee; bf.results.baseFee == nil {

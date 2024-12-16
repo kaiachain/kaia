@@ -63,7 +63,7 @@ type dummyGovModule struct {
 	chainConfig *params.ChainConfig
 }
 
-func (d *dummyGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
+func (d *dummyGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
 	return gov.ParamSet{UnitPrice: d.chainConfig.UnitPrice}
 }
 

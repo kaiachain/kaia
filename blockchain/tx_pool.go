@@ -179,7 +179,7 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 }
 
 type GovModule interface {
-	EffectiveParamSet(blockNum uint64) gov.ParamSet
+	GetParamSet(blockNum uint64) gov.ParamSet
 }
 
 // TxPool contains all currently known transactions. Transactions
@@ -233,7 +233,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
-	pset := govModule.EffectiveParamSet(chain.CurrentBlock().NumberU64() + 1)
+	pset := govModule.GetParamSet(chain.CurrentBlock().NumberU64() + 1)
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
@@ -502,7 +502,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// It needs to update gas price of tx pool since magma hardfork
 	if pool.rules.IsMagma {
-		pset := pool.govModule.EffectiveParamSet(newHead.Number.Uint64() + 1)
+		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 }

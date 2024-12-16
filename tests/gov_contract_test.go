@@ -125,7 +125,7 @@ func TestGovernance_GovModule(t *testing.T) {
 		if govBytes := ev.Block.Header().Governance; len(govBytes) > 0 {
 			govBlock = num
 			// stopBlock is the epoch block, so we stop when receiving it
-			// otherwise, EffectiveParams(stopBlock) may fail
+			// otherwise, GetParamSet(stopBlock) may fail
 			stopBlock = govBlock + 5
 			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
 			t.Logf("Governance at block=%2d, stopBlock=%2d, gov=%v", num, stopBlock, hexutil.Encode(govBytes))
@@ -140,10 +140,10 @@ func TestGovernance_GovModule(t *testing.T) {
 		}
 	}
 
-	// 2. test EffectiveParamSet():  Validate historic params from both Engines
+	// 2. test GetParamSet():  Validate historic params from both Engines
 	for num := uint64(0); num < stopBlock; num++ {
-		govVal := govModule.EffectiveParamSet(num).CommitteeSize
-		contractVal := govModule.Cgm.EffectiveParamSet(num).CommitteeSize
+		govVal := govModule.GetParamSet(num).CommitteeSize
+		contractVal := govModule.Cgm.GetParamSet(num).CommitteeSize
 
 		if num <= govBlock+1 { // ContractEngine disabled
 			assert.Equal(t, oldVal, govVal)

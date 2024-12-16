@@ -45,7 +45,7 @@ type RewardConfig struct {
 
 // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 type GovModule interface {
-	EffectiveParamSet(blockNum uint64) gov.ParamSet
+	GetParamSet(blockNum uint64) gov.ParamSet
 }
 
 func NewRewardConfig(chainConfig *params.ChainConfig, govModule GovModule, header *types.Header) (*RewardConfig, error) {
@@ -54,7 +54,7 @@ func NewRewardConfig(chainConfig *params.ChainConfig, govModule GovModule, heade
 	rc.Rules = chainConfig.Rules(header.Number)
 	rc.Rewardbase = header.Rewardbase
 
-	paramset := govModule.EffectiveParamSet(header.Number.Uint64())
+	paramset := govModule.GetParamSet(header.Number.Uint64())
 	rc.IsSimple = paramset.ProposerPolicy != uint64(istanbul.WeightedRandom)
 	rc.UnitPrice = new(big.Int).SetUint64(paramset.UnitPrice)
 	rc.MintingAmount = new(big.Int).Set(paramset.MintingAmount)

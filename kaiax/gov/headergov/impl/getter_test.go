@@ -53,7 +53,7 @@ func TestEffectiveParams(t *testing.T) {
 				h.HandleGov(num, g)
 			}
 
-			gp := h.EffectiveParamSet(tc.blockNum)
+			gp := h.GetParamSet(tc.blockNum)
 			assert.Equal(t, tc.expectedPrice, gp.UnitPrice)
 		})
 	}
@@ -85,7 +85,7 @@ func TestEffectiveParamsPartial(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Block %d", tc.blockNum), func(t *testing.T) {
-			gp := h.EffectiveParamsPartial(tc.blockNum)
+			gp := h.GetPartialParamSet(tc.blockNum)
 			assert.Equal(t, tc.expectedPrice, gp[gov.GovernanceUnitPrice])
 		})
 	}

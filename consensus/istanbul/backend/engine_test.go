@@ -794,8 +794,8 @@ func TestRewardDistribution(t *testing.T) {
 	chain.RegisterExecutionModule(engine.govModule)
 	defer engine.Stop()
 
-	assert.Equal(t, uint64(testEpoch), engine.govModule.EffectiveParamSet(0).Epoch)
-	assert.Equal(t, mintAmount, engine.govModule.EffectiveParamSet(0).MintingAmount.Uint64())
+	assert.Equal(t, uint64(testEpoch), engine.govModule.GetParamSet(0).Epoch)
+	assert.Equal(t, mintAmount, engine.govModule.GetParamSet(0).MintingAmount.Uint64())
 
 	var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1744,7 +1744,7 @@ func TestGovernance_Votes(t *testing.T) {
 		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
 
 		// test initial governance items
-		pset := engine.govModule.EffectiveParamSet(chain.CurrentHeader().Number.Uint64() + 1)
+		pset := engine.govModule.GetParamSet(chain.CurrentHeader().Number.Uint64() + 1)
 		assert.Equal(t, uint64(3), pset.Epoch)
 		assert.Equal(t, "single", pset.GovernanceMode)
 		assert.Equal(t, uint64(21), pset.CommitteeSize)
@@ -1787,7 +1787,7 @@ func TestGovernance_Votes(t *testing.T) {
 			if blockNumber == 0 {
 				blockNumber = chain.CurrentBlock().NumberU64()
 			}
-			partialParamSet := engine.govModule.(*gov_impl.GovModule).Hgm.EffectiveParamsPartial(blockNumber + 1)
+			partialParamSet := engine.govModule.(*gov_impl.GovModule).Hgm.GetPartialParamSet(blockNumber + 1)
 			switch val := partialParamSet[gov.ParamName(item.key)]; v := val.(type) {
 			case *big.Int:
 				require.Equal(t, item.value, v.String())
@@ -1802,7 +1802,7 @@ func TestGovernance_Votes(t *testing.T) {
 }
 
 func TestGovernance_GovModule(t *testing.T) {
-	// Test that ReaderEngine (CurrentParams(), EffectiveParamSet(), UpdateParams()) works.
+	// Test that ReaderEngine (CurrentParams(), GetParamSet(), UpdateParams()) works.
 	type vote struct {
 		name  string
 		value interface{}
@@ -1856,7 +1856,7 @@ func TestGovernance_GovModule(t *testing.T) {
 		for num := 0; num <= tc.length; num++ {
 			// Validate current params with CurrentParams() and CurrentSetCopy().
 			// Check that both returns the expected result.
-			pset := engine.govModule.EffectiveParamSet(uint64(num + 1))
+			pset := engine.govModule.GetParamSet(uint64(num + 1))
 			assertMapSubset(t, tc.expected[num+1], pset.ToGovParamSet().StrMap())
 
 			// Place a vote if a vote is scheduled in upcoming block
@@ -1874,14 +1874,14 @@ func TestGovernance_GovModule(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		// Validate historic parameters with EffectiveParamSet() and EffectiveParamsPartial().
+		// Validate historic parameters with GetParamSet() and GetPartialParamSet().
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
-			pset := engine.govModule.EffectiveParamSet(uint64(num))
+			pset := engine.govModule.GetParamSet(uint64(num))
 			assertMapSubset(t, tc.expected[num], pset.ToGovParamSet().StrMap())
 
 			partialParamSet := make(map[string]any)
-			for k, v := range engine.govModule.(*gov_impl.GovModule).Hgm.EffectiveParamsPartial(uint64(num + 1)) {
+			for k, v := range engine.govModule.(*gov_impl.GovModule).Hgm.GetPartialParamSet(uint64(num + 1)) {
 				partialParamSet[string(k)] = v
 			}
 			assertMapSubset(t, tc.expected[num+1], partialParamSet)

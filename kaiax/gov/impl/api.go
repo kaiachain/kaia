@@ -138,7 +138,7 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 	}
 
 	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	gp := g.EffectiveParamSet(blockNumber)
+	gp := g.GetParamSet(blockNumber)
 	gp = patchDeprecatedParams(gp, rule)
 	ret := gp.ToMap()
 	return ret, nil

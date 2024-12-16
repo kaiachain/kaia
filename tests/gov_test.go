@@ -63,7 +63,7 @@ func TestMainnetGenesisGovernance(t *testing.T) {
 		"reward.useginicoeff":             true,
 	}
 
-	pset := govModule.EffectiveParamSet(0)
+	pset := govModule.GetParamSet(0)
 	govParamsMap := pset.ToMap()
 	assert.Equal(t, len(genesisParamsMap), len(govParamsMap))
 

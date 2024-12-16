@@ -100,7 +100,7 @@ func makeTestRewardModule(t *testing.T,
 	chain.EXPECT().GetReceiptsByBlockHash(block.Hash()).Return(receipts).AnyTimes()
 	chain.EXPECT().Engine().Return(engine).AnyTimes()
 	engine.EXPECT().Author(gomock.Any()).Return(common.HexToAddress("0xeee"), nil).AnyTimes() // Author is different from Rewardbase
-	mGov.EXPECT().EffectiveParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
+	mGov.EXPECT().GetParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
 	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
 
 	return r

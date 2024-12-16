@@ -186,12 +186,12 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {
 			return ErrLowerBoundBaseFee
 		}
 	case gov.Kip71UpperBoundBaseFee:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
 		}

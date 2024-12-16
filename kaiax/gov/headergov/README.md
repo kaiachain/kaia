@@ -1,6 +1,7 @@
 # kaiax/gov/headergov
 
 This module is responsible for providing the governance parameter set from **header governance** at a given block number.
+This module is not meant to be used by any modules except for gov.
 
 ## Concepts
 
@@ -12,7 +13,7 @@ Please read [gov module](../README.md) first.
 - _ratification_: votes in an epoch being declared as ratified (accepted).
 - _epoch_: a fixed period for header governance ratification. Defined in the genesis block. In Mainnet and Kairos, epoch is 604800 blocks (1 week).
 - _epoch index_: the index of the epoch, starting from 0. Given a block number `N`, its epoch index is `floor(N / epoch)`. In other words, all blocks in `[k*epoch, (k+1)*epoch - 1]` belong to the `k`-th epoch.
-- _effective parameter set at blockNum_: the governance parameter set that are effective when mining the given block.
+- _parameter set at blockNum_: the governance parameter set that are effective when mining the given block.
 
 ### Header governance
 
@@ -50,13 +51,13 @@ It is worth noting that the effective time of the ratification is `(k+1)*epoch +
 
 ### Reading a parameter set
 
-The effective parameter set at block `N` (in `k`-th epoch) is determined as follows:
+The parameter set at block `N` (in `k`-th epoch) is determined as follows:
 
 - Collect all the ratified parameters from 0-th to `k-1`-th epoch. In case of duplication, recent ratification is prioritized.
   - `k-1` is calculated by [PrevEpochStart](./impl/getter.go#L41).
 - For each parameter, take the last ratified value. If a parameter has never been ratified, use the default value as a fallback.
 
-This is the description of `EffectiveParamSet(N)`, which is implemented [here](./impl/getter.go#L9).
+This is the description of `GetParamSet(N)`, which is implemented [here](./impl/getter.go#L9).
 
 For example, given `epoch=1000`, assume that `header` is as follows:
 
@@ -455,13 +456,13 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- `EffectiveParamSet(num)`: Returns the effective parameter set at the block `num`.
+- `GetParamSet(num)`: Returns the parameter set at the block `num`.
 
   ```
-  EffectiveParamSet(num) -> ParamSet
+  GetParamSet(num) -> ParamSet
   ```
 
-- `EffectiveParamsPartial(num)`: Returns only the parameters effective by header governance, which is the union of `header.governance` from block 0 to `num`. It is used for assembling parameters in a gov module.
+- `GetPartialParamSet(num)`: Returns only the parameters effective by header governance, which is the union of `header.governance` from block 0 to `num`. It is used for assembling parameters in a gov module.
   ```
-  EffectiveParamsPartial(num) -> PartialParamSet
+  GetPartialParamSet(num) -> PartialParamSet
   ```

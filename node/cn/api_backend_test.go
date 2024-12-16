@@ -808,7 +808,7 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	assert.Nil(t, err)
 
 	// Before setHead
-	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
+	assert.Equal(t, newMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// Set the head of the chain back to the requested number
 	err = doSetHead(chain, chain.Engine(), gpo, tt.setheadBlock)
@@ -825,7 +825,7 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	}
 	// After setHead
 	// governance db and cachelookup
-	assert.Equal(t, oldMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
+	assert.Equal(t, oldMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// snapshot db lookup
 	_, err = db.ReadIstanbulSnapshot(snap.Hash)
@@ -843,5 +843,5 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
 	}
 	// After setHead and sync
-	assert.Equal(t, newMintingAmount, govModule.EffectiveParamSet(appliedGovBlockNum).MintingAmount.String())
+	assert.Equal(t, newMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
 }

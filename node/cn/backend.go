@@ -325,7 +325,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
 
 	// Synchronize proposerpolicy & useGiniCoeff
-	pset := mGov.EffectiveParamSet(bc.CurrentBlock().NumberU64() + 1)
+	pset := mGov.GetParamSet(bc.CurrentBlock().NumberU64() + 1)
 	if cn.blockchain.Config().Istanbul != nil {
 		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.ProposerPolicy
 	}

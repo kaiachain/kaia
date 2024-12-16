@@ -113,7 +113,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 func testTxPool(t *testing.T, dataDir string, bc *blockchain.BlockChain) *blockchain.TxPool {
 	blockchain.DefaultTxPoolConfig.Journal = path.Join(dataDir, blockchain.DefaultTxPoolConfig.Journal)
 	mockGov := gov_mock.NewMockGovModule(gomock.NewController(t))
-	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
 	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc, mockGov)
 }
 

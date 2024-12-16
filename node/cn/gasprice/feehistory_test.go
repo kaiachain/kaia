@@ -94,8 +94,8 @@ func TestFeeHistory(t *testing.T) {
 		}
 		oracle = NewOracle(backend, config, nil, govModule)
 
-		atMagmaPset    = oracle.govModule.EffectiveParamSet(uint64(magmaBlock))
-		afterMagmaPset = oracle.govModule.EffectiveParamSet(uint64(magmaBlock + 1))
+		atMagmaPset    = oracle.govModule.GetParamSet(uint64(magmaBlock))
+		afterMagmaPset = oracle.govModule.GetParamSet(uint64(magmaBlock + 1))
 
 		beforeMagmaExpectedBaseFee = big.NewInt(0)
 		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaPset.LowerBoundBaseFee))

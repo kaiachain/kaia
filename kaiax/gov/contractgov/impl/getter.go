@@ -9,12 +9,12 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
-// EffectiveParamSet returns default parameter set in case of the following errors:
+// GetParamSet returns default parameter set in case of the following errors:
 // (1) contractgov is disabled (i.e., pre-Kore or GovParam address is zero)
 // (2) GovParam address is not set
 // (3) Contract call to GovParam failed
 // Invalid parameters in the contract (i.e., invalid parameter name or non-canonical value) are ignored.
-func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
+func (c *contractGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
 		return *gov.GetDefaultGovernanceParamSet()
@@ -31,7 +31,7 @@ func (c *contractGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	return ret
 }
 
-func (c *contractGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
+func (c *contractGovModule) GetPartialParamSet(blockNum uint64) gov.PartialParamSet {
 	m, err := c.contractGetAllParamsAt(blockNum)
 	if err != nil {
 		return nil
@@ -85,7 +85,7 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 }
 
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
-	headerParams := c.Hgm.EffectiveParamSet(blockNum)
+	headerParams := c.Hgm.GetParamSet(blockNum)
 	return headerParams.GovParamContract, nil
 }
 

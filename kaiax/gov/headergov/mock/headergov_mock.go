@@ -53,34 +53,6 @@ func (mr *MockHeaderGovModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockHeaderGovModule)(nil).APIs))
 }
 
-// EffectiveParamSet mocks base method.
-func (m *MockHeaderGovModule) EffectiveParamSet(arg0 uint64) gov.ParamSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParamSet", arg0)
-	ret0, _ := ret[0].(gov.ParamSet)
-	return ret0
-}
-
-// EffectiveParamSet indicates an expected call of EffectiveParamSet.
-func (mr *MockHeaderGovModuleMockRecorder) EffectiveParamSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParamSet", reflect.TypeOf((*MockHeaderGovModule)(nil).EffectiveParamSet), arg0)
-}
-
-// EffectiveParamsPartial mocks base method.
-func (m *MockHeaderGovModule) EffectiveParamsPartial(arg0 uint64) gov.PartialParamSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParamsPartial", arg0)
-	ret0, _ := ret[0].(gov.PartialParamSet)
-	return ret0
-}
-
-// EffectiveParamsPartial indicates an expected call of EffectiveParamsPartial.
-func (mr *MockHeaderGovModuleMockRecorder) EffectiveParamsPartial(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParamsPartial", reflect.TypeOf((*MockHeaderGovModule)(nil).EffectiveParamsPartial), arg0)
-}
-
 // FinalizeHeader mocks base method.
 func (m *MockHeaderGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
 	m.ctrl.T.Helper()
@@ -93,6 +65,34 @@ func (m *MockHeaderGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.Sta
 func (mr *MockHeaderGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockHeaderGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+}
+
+// GetParamSet mocks base method.
+func (m *MockHeaderGovModule) GetParamSet(arg0 uint64) gov.ParamSet {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetParamSet", arg0)
+	ret0, _ := ret[0].(gov.ParamSet)
+	return ret0
+}
+
+// GetParamSet indicates an expected call of GetParamSet.
+func (mr *MockHeaderGovModuleMockRecorder) GetParamSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParamSet", reflect.TypeOf((*MockHeaderGovModule)(nil).GetParamSet), arg0)
+}
+
+// GetPartialParamSet mocks base method.
+func (m *MockHeaderGovModule) GetPartialParamSet(arg0 uint64) gov.PartialParamSet {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPartialParamSet", arg0)
+	ret0, _ := ret[0].(gov.PartialParamSet)
+	return ret0
+}
+
+// GetPartialParamSet indicates an expected call of GetPartialParamSet.
+func (mr *MockHeaderGovModuleMockRecorder) GetPartialParamSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartialParamSet", reflect.TypeOf((*MockHeaderGovModule)(nil).GetPartialParamSet), arg0)
 }
 
 // NodeAddress mocks base method.

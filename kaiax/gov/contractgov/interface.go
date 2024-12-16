@@ -10,6 +10,6 @@ type ContractGovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
 
-	EffectiveParamSet(blockNum uint64) gov.ParamSet
-	EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet
+	GetParamSet(blockNum uint64) gov.ParamSet
+	GetPartialParamSet(blockNum uint64) gov.PartialParamSet
 }
