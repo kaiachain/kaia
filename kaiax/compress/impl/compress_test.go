@@ -17,7 +17,11 @@
 package compress
 
 import (
+	"math/big"
 	"testing"
+	"time"
+
+	"github.com/kaiachain/kaia/blockchain/types"
 )
 
 func TestCompressStorage(t *testing.T) {
@@ -64,18 +68,62 @@ func TestCompressModule(t *testing.T) {
 		nBlocks                           = 100
 		_, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
 	)
-	checkCompressedIntegrity(t, dbm, nBlocks-1, headers, bodies, receipts, false)
+	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, headers, bodies, receipts, false)
 }
 
 func TestRewind(t *testing.T) {
 	var (
 		nBlocks                                   = 100
+		setHeadTo                                 = 55
 		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
 	)
-	for i := range nBlocks - 1 {
+
+	// Scenario Description:
+	// 1. `setHead` invoked targeting block number 55
+	//    - Removed origin data from 100 to 55
+	//    - Removed compressed data from 100 to 50 (because chunk size is set to 10)
+	// 2. Generate new blocks from 55 to 100
+	// 3. Restart the compression module
+	// 	  - start compression from block number 50 to 100
+
+	for i := nBlocks - 1; i >= setHeadTo; i-- {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
+		// delete origin data
+		dbm.DeleteBody(hash, num)
+		dbm.DeleteReceipts(hash, num)
+		dbm.DeleteHeader(hash, num)
+		// delete compression data
 		mCompress.RewindDelete(hash, num)
 	}
-	checkCompressedIntegrity(t, dbm, nBlocks-1, headers, bodies, receipts, true)
+	checkCompressedIntegrity(t, dbm, setHeadTo, nBlocks-1, headers, bodies, receipts, true)
+
+	var (
+		newHeaders  []*types.Header
+		newBodies   []*types.Body
+		newReceipts []types.Receipts
+	)
+	for i := setHeadTo; i < nBlocks; i++ {
+		h := genHeader()
+		h.Number = big.NewInt(int64(i))
+		hn, hh := h.Number.Uint64(), h.Hash()
+		dbm.WriteCanonicalHash(hh, hn)
+		dbm.WriteHeader(h)
+
+		b, r := genBody(100), genReceipts(100)
+		dbm.WriteBody(hh, hn, b)
+		dbm.WriteReceipts(hh, hn, *r)
+
+		newHeaders = append(newHeaders, h)
+		newBodies = append(newBodies, b)
+		newReceipts = append(newReceipts, *r)
+	}
+	canonicalHeaders := append(headers[:setHeadTo], newHeaders[:]...)
+	canonicalBodies := append(bodies[:setHeadTo], newBodies[:]...)
+	canonicalReceipts := append(receipts[:setHeadTo], newReceipts[:]...)
+
+	go mCompress.Compress()
+	time.Sleep(time.Second)
+	waitCompression(mCompress)
+	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, canonicalHeaders, canonicalBodies, canonicalReceipts, false)
 }

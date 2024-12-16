@@ -486,8 +486,8 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 	return mCompress, dbm, headers, bodies, receipts
 }
 
-func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int, originHeaders []*types.Header, originBodies []*types.Body, originReceipts []types.Receipts, mustErr bool) {
-	for i := range nBlocks {
+func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, from, to int, originHeaders []*types.Header, originBodies []*types.Body, originReceipts []types.Receipts, mustErr bool) {
+	for i := from; i < to; i++ {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
 		// compressed header integrity verification
@@ -495,6 +495,7 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 			decompressedH, err := findHeaderFromChunkWithBlkHash(dbm, num, hash)
 			if mustErr {
 				assert.NotNil(t, err)
+				assert.Nil(t, dbm.ReadHeader(hash, num))
 			} else {
 				assert.Equal(t, decompressedH.Hash(), originHeaders[i].Hash())
 			}
@@ -503,6 +504,7 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 		{
 			decompressedB, err := findBodyFromChunkWithBlkHash(dbm, num, hash)
 			if mustErr {
+				assert.Nil(t, dbm.ReadBody(hash, num))
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
@@ -515,6 +517,7 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, nBlocks int,
 		{
 			decompressedR, err := findReceiptsFromChunkWithBlkHash(dbm, num, hash)
 			if mustErr {
+				assert.Nil(t, dbm.ReadReceipts(hash, num))
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)

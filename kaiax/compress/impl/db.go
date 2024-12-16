@@ -268,14 +268,6 @@ func compressReceipts(dbm database.DBManager, from, to, headNumber, compressChun
 	return compressStorage(dbm, ReceiptCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
-func decompressCommon(dbm database.DBManager, compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error) {
-	decompressed, err := decompress(dbm, compressTyp, from, to)
-	if err != nil {
-		return nil, err
-	}
-	return decompressed.([]CompressStructTyp), nil
-}
-
 func decompressHeader(dbm database.DBManager, from, to uint64) ([]*HeaderCompression, error) {
 	decompressed, err := decompress(dbm, HeaderCompressType, from, to)
 	if err != nil {
@@ -300,7 +292,7 @@ func decompressReceipts(dbm database.DBManager, from, to uint64) ([]*ReceiptComp
 	return decompressed.([]*ReceiptCompression), nil
 }
 
-func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, decompressFn DecompressFn, number uint64, blkHash common.Hash) (uint64, error) {
+func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, number uint64, blkHash common.Hash) (uint64, error) {
 	// Badger DB does not support `NewIterator()`
 	if dbm.GetDBConfig().DBType == database.BadgerDB {
 		return 0, nil
@@ -313,12 +305,15 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, de
 	// 1. Find a chunk through range search
 	it := db.NewIterator(prefix, toBinary(number))
 	defer it.Release()
-	for it.Next() {
+	for it.Next() { // ascending order iteration
 		from, to := parseCompressKey(compressTyp, it.Key())
+		if from > number { // early exit if `from` is larger than target `number`
+			return 0, nil
+		}
 		if from <= number && number <= to {
 			// delete compression and return the starting number so that the compression moduel can start work from there
 			if err := db.Delete(it.Key()); err != nil {
-				logger.Crit(fmt.Sprintf("Failed to delete compressed type(%s), from=%d, to=%d", compressTyp.String(), from, to))
+				logger.Crit(fmt.Sprintf("Failed to delete compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
 			}
 			return from, nil
 		}
@@ -327,15 +322,15 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, de
 }
 
 func deleteHeaderFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
-	return deleteDataFromChunk(dbm, HeaderCompressType, decompressCommon, number, blkHash)
+	return deleteDataFromChunk(dbm, HeaderCompressType, number, blkHash)
 }
 
 func deleteBodyFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
-	return deleteDataFromChunk(dbm, BodyCompressType, decompressCommon, number, blkHash)
+	return deleteDataFromChunk(dbm, BodyCompressType, number, blkHash)
 }
 
 func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
-	return deleteDataFromChunk(dbm, ReceiptCompressType, decompressCommon, number, blkHash)
+	return deleteDataFromChunk(dbm, ReceiptCompressType, number, blkHash)
 }
 
 func compressedHeaderFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
