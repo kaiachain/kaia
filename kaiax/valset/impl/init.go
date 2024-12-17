@@ -106,7 +106,8 @@ func (v *ValsetModule) initSchema() error {
 		if err != nil {
 			return err
 		}
-		writeLowestScannedVoteNum(v.ChainKv, snapshotNum)
+		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
+		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
 	}
 
 	return nil
@@ -146,14 +147,21 @@ func (v *ValsetModule) migrate() {
 		if v.quit.Load() == 1 {
 			break
 		}
+		// At each iteration, targetNum should decrease like ... -> 2048 -> 1024 -> 0.
+		// get(2048,true) scans [1025, 2048] and returns snapshotNum=1024. So we write lowestScannedVoteNum=1025.
+		// get(1024,true) scans [1, 1024] and returns snapshotNum=0. So we write lowestScannedVoteNum=1.
 		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(targetNum, true)
 		if err != nil {
 			logger.Error("Failed to migrate", "targetNum", targetNum, "err", err)
 			break
 		}
+		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
+		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
 		targetNum = snapshotNum
-		writeLowestScannedVoteNum(v.ChainKv, targetNum)
 	}
+
+	// Now the migration is complete.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
 }
 
 // getCouncilFromIstanbulSnapshot re-generates the council at the given targetNum.
@@ -167,9 +175,7 @@ func (v *ValsetModule) migrate() {
 // If write is true, ValidatorVoteBlockNums and Council in the extended range
 // [snapshotNum+1, targetNum] are written to the database. Note that this time
 // the targetNum is included in the range for completeness. This property is
-// useful for snapshot interval-wise migration. e.g.
-// getCouncilFromIstanbulSnapshot(3072, true) will scan the votes in the interval [2049, 3072] and return snapshotNum=2048.
-// getCouncilFromIstanbulSnapshot(2048, true) will scan the votes in the interval [1025, 2048] and return snapshotNum=1024.
+// useful for snapshot interval-wise migration.
 func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
 	if targetNum == 0 {
 		council, err := v.getCouncilGenesis()

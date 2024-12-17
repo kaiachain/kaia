@@ -67,45 +67,70 @@ func TestGetCouncilGenesis(t *testing.T) {
 	), council.List())
 }
 
+func TestLastNumLessThan(t *testing.T) {
+	var (
+		nums    = []uint64{0, 2, 4}
+		inputs  = []uint64{0, 1, 2, 3, 4, 5}
+		outputs = []uint64{0, 0, 0, 2, 2, 4}
+	)
+	for i, input := range inputs {
+		assert.Equal(t, outputs[i], lastNumLessThan(nums, input))
+	}
+}
+
 func TestGetCouncilDB(t *testing.T) {
 	var (
+		// An hypothetical chain where:
+		// voteNums         0     2     4
+		// num              0  1  2  3  4  5  6
+		// council          A  A  A  B  B  C  C
+		// lastNumLessThan  0  0  0  2  2  4  4
+		voteNums = []uint64{0, 2, 4}
+		setA     = numsToAddrs(1)
+		setB     = numsToAddrs(1, 2)
+		setC     = numsToAddrs(1, 2, 3)
 		db       = database.NewMemDB()
-		voteNums = []uint64{0, 2, 5, 6}
-		council0 = numsToAddrs(0) // affects blocks 0,1,2
-		council2 = numsToAddrs(2) // affects blocks 3,4,5
-		council5 = numsToAddrs(5) // affects block 6
-		council6 = numsToAddrs(6) // affects blocks 7,8,9,...
 	)
-
 	writeValidatorVoteBlockNums(db, voteNums)
-	writeCouncil(db, 0, council0)
-	writeCouncil(db, 2, council2)
-	writeCouncil(db, 5, council5)
-	writeCouncil(db, 6, council6)
+	writeCouncil(db, 0, setA)
+	writeCouncil(db, 2, setB)
+	writeCouncil(db, 4, setC)
 
-	testcases := []struct {
-		num     uint64
-		voteNum uint64
+	// Test getCouncilDB under various LowestScannedVoteNum.
+	type expected struct { // expected result of getCouncilDB()
 		council []common.Address
+		ok      bool
+	}
+	testcases := []struct {
+		desc                 string
+		lowestScannedVoteNum uint64
+		expected             [7]expected // expected output for blocks 0..6
 	}{
-		{0, 0, council0},
-		{1, 0, council0},
-		{2, 0, council0},
-		{3, 2, council2},
-		{4, 2, council2},
-		{5, 2, council2},
-		{6, 5, council5},
-		{7, 6, council6},
-		{8, 6, council6},
+		{
+			"migration complete",
+			0,
+			[7]expected{{setA, true}, {setA, true}, {setA, true}, {setB, true}, {setB, true}, {setC, true}, {setC, true}},
+		},
+		{
+			"migration incomplete",
+			4,
+			[7]expected{{nil, false}, {nil, false}, {nil, false}, {setB, false}, {setB, false}, {setC, true}, {setC, true}},
+		},
 	}
 	for _, tc := range testcases {
-		voteNum := lastNumLessThan(voteNums, tc.num)
-		assert.Equal(t, tc.voteNum, voteNum, tc.num)
-
 		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}
-		council, err := v.getCouncilDB(tc.num)
-		assert.NoError(t, err)
-		assert.Equal(t, tc.council, council.List(), tc.num)
+		writeLowestScannedVoteNum(db, tc.lowestScannedVoteNum)
+
+		for i := uint64(0); i < 7; i++ {
+			council, ok, err := v.getCouncilDB(i)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected[i].ok, ok)
+			if ok {
+				assert.Equal(t, tc.expected[i].council, council.List())
+			} else {
+				assert.Nil(t, council)
+			}
+		}
 	}
 }
 

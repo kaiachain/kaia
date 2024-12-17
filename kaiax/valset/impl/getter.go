@@ -27,12 +27,15 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 		return v.getCouncilGenesis()
 	}
 
-	pBorder := ReadLowestScannedVoteNum(v.ChainKv)
-	if pBorder == nil || *pBorder > 0 { // migration not started or migration not completed.
+	// First try to get from the (migrated) DB.
+	if council, ok, err := v.getCouncilDB(num); err != nil {
+		return nil, err
+	} else if ok {
+		return council, nil
+	} else {
+		// Then fall back to the legacy istanbul snapshot.
 		council, _, err := v.getCouncilFromIstanbulSnapshot(num, false)
 		return council, err
-	} else {
-		return v.getCouncilDB(num)
 	}
 }
 
@@ -49,17 +52,25 @@ func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 	return valset.NewAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, error) {
-	if v.validatorVoteBlockNumsCache == nil {
-		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
+func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
+	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+	if pMinVoteNum == nil {
+		return nil, false, errNoLowestScannedNum
 	}
-	nums := v.validatorVoteBlockNumsCache
+	nums := ReadValidatorVoteBlockNums(v.ChainKv)
 	if nums == nil {
-		return nil, errEmptyVoteBlock
+		return nil, false, errNoVoteBlockNums
 	}
+
 	voteNum := lastNumLessThan(nums, num)
-	council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
-	return council, nil
+	if voteNum < *pMinVoteNum {
+		// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
+		// Return false to indicate that the data is not yet available.
+		return nil, false, nil
+	} else {
+		council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
+		return council, true, nil
+	}
 }
 
 // lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
