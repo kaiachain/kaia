@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -380,7 +381,7 @@ func TestCompressFunction(t *testing.T, setup func(t *testing.T) (*blockchain.Bl
 	}
 	defer chainDB.Close()
 
-	from, to := uint64(0), uint64(3300)
+	from, to := uint64(0), uint64(5000)
 	assert.Nil(t, mCompress.testCompress(HeaderCompressType, from, to, "copy_header"))
 	assert.Nil(t, mCompress.testCompress(BodyCompressType, from, to, "copy_body"))
 	assert.Nil(t, mCompress.testCompress(ReceiptCompressType, from, to, "copy_receipts"))
@@ -393,6 +394,69 @@ func TestCompressPerformance(t *testing.T, setup func(t *testing.T) (*blockchain
 	}
 	defer chainDB.Close()
 
-	from, to := uint64(0), uint64(3300)
+	from, to := uint64(0), uint64(5000)
 	assert.Nil(t, mCompress.testCompressPerformance(from, to))
+}
+
+func TestCompressFinder(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
+	mCompress, chainDB := testInit(t, setup)
+	if mCompress == nil || chainDB == nil {
+		return
+	}
+	defer chainDB.Close()
+
+	rand.Seed(time.Now().UnixNano())
+
+	var (
+		headerElapsed         time.Duration
+		bodyElapsed           time.Duration
+		receiptsElapsed       time.Duration
+		originHeaderElapsed   time.Duration
+		originBodyElapsed     time.Duration
+		originReceiptsElapsed time.Duration
+	)
+	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+		var (
+			r    = rand.Uint64() % (5000)
+			hash = mCompress.Dbm.ReadCanonicalHash(r)
+		)
+		startOrigin := time.Now()
+		switch compressTyp {
+		case HeaderCompressType:
+			header := mCompress.Dbm.ReadHeader(hash, r)
+			assert.NotNil(t, header)
+			originHeaderElapsed = time.Since(startOrigin)
+		case BodyCompressType:
+			body := mCompress.Dbm.ReadBody(hash, r)
+			assert.NotNil(t, body)
+			originBodyElapsed = time.Since(startOrigin)
+		case ReceiptCompressType:
+			receipts := mCompress.Dbm.ReadReceipts(hash, r)
+			assert.NotNil(t, receipts)
+			originReceiptsElapsed = time.Since(startOrigin)
+		}
+
+		startFinder := time.Now()
+		switch compressTyp {
+		case HeaderCompressType:
+			header, _ := findHeaderFromChunkWithBlkHash(mCompress.Dbm, r, hash)
+			assert.NotNil(t, header)
+			headerElapsed = time.Since(startFinder)
+		case BodyCompressType:
+			body, _ := findBodyFromChunkWithBlkHash(mCompress.Dbm, r, hash)
+			assert.NotNil(t, body)
+			bodyElapsed = time.Since(startFinder)
+		case ReceiptCompressType:
+			receipts, _ := findReceiptsFromChunkWithBlkHash(mCompress.Dbm, r, hash)
+			assert.NotNil(t, receipts)
+			receiptsElapsed = time.Since(startFinder)
+		}
+	}
+
+	fmt.Println("header elapsed:", headerElapsed)
+	fmt.Println("body elapsed:", bodyElapsed)
+	fmt.Println("receipts elapsed:", receiptsElapsed)
+	fmt.Println("origin header elapsed:", originHeaderElapsed)
+	fmt.Println("origin body elapsed:", originBodyElapsed)
+	fmt.Println("origin receipts elapsed:", originReceiptsElapsed)
 }
