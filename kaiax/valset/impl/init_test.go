@@ -214,3 +214,32 @@ func makeGenesisBlock(council []common.Address) *types.Block {
 func makeEmptyBlock(num uint64) *types.Block {
 	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(num))})
 }
+
+func numToAddr(n int) common.Address {
+	return common.BigToAddress(big.NewInt(int64(n)))
+}
+
+func numsToAddrs(n ...int) []common.Address {
+	addrs := make([]common.Address, len(n))
+	for i, num := range n {
+		addrs[i] = common.BigToAddress(big.NewInt(int64(num)))
+	}
+	return addrs
+}
+
+func addrsToNums(addrs []common.Address) []int {
+	nums := make([]int, len(addrs))
+	for i, addr := range addrs {
+		b := new(big.Int).SetBytes(addr.Bytes())
+		nums[i] = int(b.Int64())
+	}
+	return nums
+}
+
+func hexToAddrs(s ...string) []common.Address {
+	addrs := make([]common.Address, len(s))
+	for i, addr := range s {
+		addrs[i] = common.HexToAddress(addr)
+	}
+	return addrs
+}
