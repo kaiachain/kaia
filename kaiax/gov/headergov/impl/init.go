@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -301,7 +302,7 @@ func GetGenesisGovBytes(config *params.ChainConfig) headergov.GovBytes {
 
 		err = partialParamSet.Add(string(name), value)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("failed to add param %s: %w", name, err))
 		}
 	}
 

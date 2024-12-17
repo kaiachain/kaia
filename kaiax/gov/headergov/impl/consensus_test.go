@@ -9,7 +9,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +19,7 @@ func TestVerifyHeader(t *testing.T) {
 		voteBytes, _       = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
 		invalidGovBytes, _ = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
-		h                  = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
+		h                  = newHeaderGovModule(t, getTestChainConfig())
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
 
@@ -34,13 +33,13 @@ func TestVerifyHeader(t *testing.T) {
 		{desc: "valid vote", header: &types.Header{Number: big.NewInt(1), Vote: voteBytes, Extra: extra}, expectedError: nil},
 		{desc: "invalid vote rlp", header: &types.Header{Number: big.NewInt(1), Vote: []byte{1, 2, 3}, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
 		{desc: "invalid vote bytes", header: &types.Header{Number: big.NewInt(1), Vote: invalidVoteRlp, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
-		{desc: "valid gov", header: &types.Header{Number: big.NewInt(1000), Governance: govBytes, Extra: extra}, expectedError: nil},
-		{desc: "invalid gov rlp", header: &types.Header{Number: big.NewInt(1000), Governance: []byte{1, 2, 3}, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
-		{desc: "gov must not be nil", header: &types.Header{Number: big.NewInt(1000), Governance: nil}, expectedError: ErrGovVerification},
-		{desc: "gov mismatch", header: &types.Header{Number: big.NewInt(1000), Governance: invalidGovBytes}, expectedError: ErrGovVerification},
-		{desc: "gov not on epoch", header: &types.Header{Number: big.NewInt(1001), Governance: []byte{1, 2, 3}}, expectedError: ErrGovInNonEpochBlock},
-		{desc: "gov must be nil", header: &types.Header{Number: big.NewInt(2000), Governance: govBytes}, expectedError: ErrGovVerification},
-		{desc: "valid gov", header: &types.Header{Number: big.NewInt(2000), Governance: nil}, expectedError: nil},
+		{desc: "valid gov", header: &types.Header{Number: big.NewInt(100), Governance: govBytes, Extra: extra}, expectedError: nil},
+		{desc: "invalid gov rlp", header: &types.Header{Number: big.NewInt(100), Governance: []byte{1, 2, 3}, Extra: extra}, expectedError: headergov.ErrInvalidRlp},
+		{desc: "gov must not be nil", header: &types.Header{Number: big.NewInt(100), Governance: nil}, expectedError: ErrGovVerification},
+		{desc: "gov mismatch", header: &types.Header{Number: big.NewInt(100), Governance: invalidGovBytes}, expectedError: ErrGovVerification},
+		{desc: "gov not on epoch", header: &types.Header{Number: big.NewInt(101), Governance: []byte{1, 2, 3}}, expectedError: ErrGovInNonEpochBlock},
+		{desc: "gov must be nil", header: &types.Header{Number: big.NewInt(200), Governance: govBytes}, expectedError: ErrGovVerification},
+		{desc: "valid gov", header: &types.Header{Number: big.NewInt(200), Governance: nil}, expectedError: nil},
 	}
 
 	for _, tc := range tcs {
@@ -54,11 +53,7 @@ func TestVerifyHeader(t *testing.T) {
 
 func TestVerifyVote(t *testing.T) {
 	var (
-		h = newHeaderGovModule(t, &params.ChainConfig{
-			Istanbul: &params.IstanbulConfig{
-				Epoch: 1000,
-			},
-		})
+		h          = newHeaderGovModule(t, getTestChainConfig())
 		statedb, _ = h.Chain.State()
 
 		eoa      = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -93,47 +88,42 @@ func TestVerifyVote(t *testing.T) {
 }
 
 func TestGetVotesInEpoch(t *testing.T) {
-	h := newHeaderGovModule(t, &params.ChainConfig{
-		Istanbul: &params.IstanbulConfig{
-			Epoch: 1000,
-		},
-	})
+	h := newHeaderGovModule(t, getTestChainConfig())
 
 	paramName := string(gov.GovernanceUnitPrice)
 	v1 := headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
-	h.HandleVote(500, v1)
+	h.HandleVote(50, v1)
 	v2 := headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
-	h.HandleVote(1500, v2)
+	h.HandleVote(150, v2)
 
-	assert.Equal(t, map[uint64]headergov.VoteData{500: v1}, h.getVotesInEpoch(0))
-	assert.Equal(t, map[uint64]headergov.VoteData{1500: v2}, h.getVotesInEpoch(1))
+	assert.Equal(t, map[uint64]headergov.VoteData{50: v1}, h.getVotesInEpoch(0))
+	assert.Equal(t, map[uint64]headergov.VoteData{150: v2}, h.getVotesInEpoch(1))
 }
 
 func TestGetExpectedGovernance(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	var (
 		paramName = string(gov.GovernanceUnitPrice)
-		config    = &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}}
-		h         = newHeaderGovModule(t, config)
+		h         = newHeaderGovModule(t, getTestChainConfig())
 		v1        = headergov.NewVoteData(common.Address{1}, paramName, uint64(100))
 		v2        = headergov.NewVoteData(common.Address{2}, paramName, uint64(200))
 		g         = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)})
 	)
 
 	// v2 overrides v1
-	h.HandleVote(500, v1)
-	h.HandleVote(600, v2)
+	h.HandleVote(50, v1)
+	h.HandleVote(60, v2)
 
 	// test many times for deterministic result
 	for range 100 {
-		assert.Equal(t, g, h.getExpectedGovernance(1000))
+		assert.Equal(t, g, h.getExpectedGovernance(100))
 	}
 }
 
 func TestPrepareHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
-		h      = newHeaderGovModule(t, &params.ChainConfig{Istanbul: &params.IstanbulConfig{Epoch: 1000}})
+		h      = newHeaderGovModule(t, getTestChainConfig())
 		vote   = headergov.NewVoteData(h.nodeAddress, string(gov.GovernanceUnitPrice), uint64(100))
 		header = &types.Header{}
 	)

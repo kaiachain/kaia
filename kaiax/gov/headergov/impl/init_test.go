@@ -27,6 +27,12 @@ var (
 	extra      = hexutil.MustDecode("0xd883010703846b6c617988676f312e31352e37856c696e757800000000000000f90164f85494571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c89499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb2b841acb7fcc5152506250d1ea49745e7d0d5930157724b410e6e62e0885e7978c81863647d90700dcf3e5d0727cb886f2cc2c63f8f6f3910b4341b302a0aa06eae4500f8c9b841d79c07fbee8861585a71af08a867546320ba804c49c7a3c8641b4d235fd50d5a29bf72d20f3ff1ddfb945ff193d7938967be694f3e602a1cffdea686acf2b0ea01b841dfcf5b5608ca86bc92e7fa3d88a8b25840a629234614ecb312621234ed665ae562ee64ea09fcc88080aaab1ee095acf705d7cc495732682ffee23023ed41feb200b841fefc3b618b2384ea5c7c519ddecc666c19e8a600a6e30c5d9831941c0d5af78d28250bab36ce29202e667c9c1681fd9930aab002988c7228b64caab003bd998100")
 )
 
+func getTestChainConfig() *params.ChainConfig {
+	cc := params.MainnetChainConfig.Copy()
+	cc.Istanbul.Epoch = 100
+	return cc
+}
+
 // genesis block must have the default governance params
 func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModule {
 	var (
@@ -37,6 +43,10 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 
 		m      = gov.GetDefaultGovernanceParamSet().ToMap()
 		gov, _ = headergov.NewGovData(m).ToGovBytes()
+		chain  = mocks.NewMockBlockChain(gomock.NewController(t))
+		dbm    = database.NewMemoryDBManager()
+		db     = dbm.GetMemDB()
+		gov    = GetGenesisGovBytes(config)
 	)
 
 	WriteVoteDataBlockNums(db, StoredUint64Array{})
@@ -67,6 +77,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		ValSet:      valSet,
 		ChainKv:     db,
 		ChainConfig: config,
+		NodeAddress: config.Governance.GoverningNode,
 	})
 	require.NoError(t, err)
 	WriteLowestVoteScannedEpochIdx(db, 0)
@@ -123,8 +134,7 @@ func TestReadGovDataFromDB(t *testing.T) {
 }
 
 func TestInitialDB(t *testing.T) {
-	config := params.TestChainConfig.Copy()
-	config.Istanbul = &params.IstanbulConfig{Epoch: 10}
+	config := getTestChainConfig()
 
 	h := newHeaderGovModule(t, config)
 	require.NotNil(t, h)
