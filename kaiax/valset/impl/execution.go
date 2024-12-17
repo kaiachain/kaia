@@ -24,9 +24,12 @@ import (
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	header := block.Header()
 	num := header.Number.Uint64()
+	if num == 0 {
+		return nil
+	}
 
 	// Ingest validator vote
-	council, err := v.getCouncil(num)
+	council, err := v.getCouncil(num - 1)
 	if err != nil {
 		return err
 	}

@@ -16,93 +16,66 @@
 
 package impl
 
-/*
-// voteTestData is the testdata for vote tests.
-// Not only votes, but also other functions such as VerifyHeader handles votes.
-// To minimize the maintenance effort to manage the testdata, manage the expected result in voteTestData
-type testNetworkInfo struct {
-	validators []common.Address
-	proposer   common.Address
-}
+import (
+	"math/big"
+	"testing"
 
-type testHandleValidatorVoteExpectation struct {
-	expectCList valset.AddressList
-	expectError error
-}
+	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/storage/database"
+	chain_mock "github.com/kaiachain/kaia/work/mocks"
+	"github.com/stretchr/testify/assert"
+)
 
-func TestValsetModule_HandleValidatorVote(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestPostInsertBlock(t *testing.T) {
+	var (
+		governingNode  = numToAddr(3)
+		pset           = gov.ParamSet{GoverningNode: governingNode}
+		genesisCouncil = numsToAddrs(1, 2, 3)
 
-	for _, tc := range []struct {
-		name                      string
-		networkInfo               testNetworkInfo
-		voteData                  headergov.VoteData
-		expectHandleValidatorVote testHandleValidatorVoteExpectation
-	}{
-		{
-			name:                      "remove a validator",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[1]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[2], n[3]}, nil},
-		},
-		{
-			name:                      "add a validator",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[4]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3], n[4]}, nil},
-		},
-		{
-			name:                      "remove multiple validators",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[1], n[2], n[3]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn}, nil},
-		},
-		{
-			name:                      "add multiple validators",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[2], n[3]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
-		},
-		{
-			name:                      "govnode cannot be removed",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{tgn}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
-		},
-		{
-			name:                      "cannot add existing validator",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.addvalidator", valset.AddressList([]common.Address{n[1]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
-		},
-		{
-			name:                      "cannot remove non-exist validator",
-			networkInfo:               testNetworkInfo{[]common.Address{tgn, n[1], n[2], n[3]}, tgn},
-			voteData:                  headergov.NewVoteData(tgn, "governance.removevalidator", valset.AddressList([]common.Address{n[4]}).ToString()),
-			expectHandleValidatorVote: testHandleValidatorVoteExpectation{[]common.Address{tgn, n[1], n[2], n[3]}, nil},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			vModule, tm, err := newTestVModule(ctrl)
-			assert.NoError(t, err)
-
-			tm.prepareMockExpectGovParam(2, testProposerPolicy, testSubGroupSize, tgn)
-
-			err = writeCouncil(vModule.ChainKv, 1, tc.networkInfo.validators)
-			assert.NoError(t, err)
-
-			byteVote, err := tc.voteData.ToVoteBytes()
-			assert.NoError(t, err)
-
-			err = vModule.HandleValidatorVote(2, byteVote)
-			assert.Equal(t, tc.expectHandleValidatorVote.expectError, err)
-
-			cList, err := readCouncil(vModule.ChainKv, uint64(2))
-			sort.Sort(tc.expectHandleValidatorVote.expectCList)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expectHandleValidatorVote.expectCList, valset.AddressList(cList))
+		voteAdd1, _ = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(1)).ToVoteBytes()
+		block1      = types.NewBlockWithHeader(&types.Header{
+			Number: big.NewInt(1),
+			Vote:   voteAdd1,
 		})
-	}
+		voteAdd6, _ = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(6)).ToVoteBytes()
+		block2      = types.NewBlockWithHeader(&types.Header{
+			Number: big.NewInt(2),
+			Vote:   voteAdd6,
+		})
+	)
+
+	var (
+		ctrl        = gomock.NewController(t)
+		db          = database.NewMemDB()
+		mockChain   = chain_mock.NewMockBlockChain(ctrl)
+		mockGov     = gov_mock.NewMockGovModule(ctrl)
+		mockStaking = staking_mock.NewMockStakingModule(ctrl)
+		v           = &ValsetModule{InitOpts: InitOpts{
+			ChainKv:       db,
+			Chain:         mockChain,
+			GovModule:     mockGov,
+			StakingModule: mockStaking,
+		}}
+	)
+	writeCouncil(db, 0, genesisCouncil)
+	writeValidatorVoteBlockNums(db, []uint64{0})
+	writeLowestScannedVoteNum(db, 0)
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil).Header()).AnyTimes()
+	mockGov.EXPECT().EffectiveParamSet(uint64(1)).Return(pset).AnyTimes()
+	mockGov.EXPECT().EffectiveParamSet(uint64(2)).Return(pset).AnyTimes()
+
+	// Ineffective vote (adding already existing address)
+	assert.NoError(t, v.PostInsertBlock(block1))
+
+	// Effective vote (adding new address)
+	assert.NoError(t, v.PostInsertBlock(block2))
+
+	// Check the DB
+	assert.Equal(t, []uint64{0, 2}, ReadValidatorVoteBlockNums(db))
+	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2))
 }
-*/

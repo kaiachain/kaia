@@ -53,7 +53,21 @@ func TestGetDemotedValidators(t *testing.T) {
 			// "none mode, some demoted" case in TestFilterValidators
 			StakingAmounts: []uint64{0, aL, aM, aM, aM},
 		}
+	)
 
+	testcases := []struct {
+		desc       string
+		isIstanbul bool
+		policy     istanbul.ProposerPolicy
+		demoted    []common.Address
+	}{
+		{"RoundRobin", false, istanbul.RoundRobin, numsToAddrs()},
+		{"Sticky", false, istanbul.Sticky, numsToAddrs()},
+		{"WeightedRandom before istanbul", false, istanbul.WeightedRandom, numsToAddrs()},
+		{"WeightedRandom after istanbul", true, istanbul.WeightedRandom, numsToAddrs(1, 2)},
+	}
+
+	var (
 		ctrl        = gomock.NewController(t)
 		db          = database.NewMemDB()
 		mockChain   = chain_mock.NewMockBlockChain(ctrl)
@@ -67,18 +81,6 @@ func TestGetDemotedValidators(t *testing.T) {
 		}}
 	)
 	defer ctrl.Finish()
-
-	testcases := []struct {
-		desc       string
-		isIstanbul bool
-		policy     istanbul.ProposerPolicy
-		demoted    []common.Address
-	}{
-		{"RoundRobin", false, istanbul.RoundRobin, numsToAddrs()},
-		{"Sticky", false, istanbul.Sticky, numsToAddrs()},
-		{"WeightedRandom before istanbul", false, istanbul.WeightedRandom, numsToAddrs()},
-		{"WeightedRandom after istanbul", true, istanbul.WeightedRandom, numsToAddrs(1, 2)},
-	}
 	for _, tc := range testcases {
 		if tc.isIstanbul {
 			config.IstanbulCompatibleBlock = big.NewInt(1)
