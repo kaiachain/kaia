@@ -83,14 +83,14 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 		return ErrZeroEpoch
 	}
 
-	h.initSchema()
-
 	// init memory
 	h.groupedVotes = make(map[uint64]headergov.VotesInEpoch)
 	h.governances = make(map[uint64]headergov.GovData)
 	h.history = make(headergov.History)
 	h.myVotes = make([]headergov.VoteData, 0)
 	h.mu = &sync.RWMutex{}
+
+	h.initSchema()
 
 	govs := readGovDataFromDB(h.Chain, h.ChainKv)
 	for blockNum, gov := range govs {
@@ -176,12 +176,19 @@ func (h *headerGovModule) PopMyVotes(idx int) {
 func (h *headerGovModule) scanAllVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
 	rangeStart := calcEpochStartBlock(epochIdx, h.epoch)
 	rangeEnd := calcEpochStartBlock(epochIdx+1, h.epoch)
+	if currBlock := h.Chain.CurrentBlock().NumberU64(); rangeEnd > currBlock {
+		rangeEnd = currBlock + 1 // so currBlock is scanned
+	}
 
 	votes := make(map[uint64]headergov.VoteData)
 	for blockNum := rangeStart; blockNum < rangeEnd; blockNum++ {
 		header := h.Chain.GetHeaderByNumber(blockNum)
-		if header == nil || len(header.Vote) == 0 {
+		if header == nil {
 			logger.Warn("Missing header found", "num", blockNum)
+			continue
+		}
+
+		if len(header.Vote) == 0 {
 			continue
 		}
 

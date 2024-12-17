@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"encoding/json"
 	"math/big"
 	"reflect"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
@@ -33,6 +35,13 @@ func getTestChainConfig() *params.ChainConfig {
 	return cc
 }
 
+func getTestChainConfigKore() *params.ChainConfig {
+	cc := params.MainnetChainConfig.Copy()
+	cc.Istanbul.Epoch = 100
+	cc.KoreCompatibleBlock = common.Big0
+	return cc
+}
+
 // genesis block must have the default governance params
 func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModule {
 	var (
@@ -40,20 +49,14 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 		valSet = mock_valset.NewMockValsetModule(gomock.NewController(t))
 		dbm    = database.NewMemoryDBManager()
 		db     = dbm.GetMemDB()
-
-		m      = gov.GetDefaultGovernanceParamSet().ToMap()
-		gov, _ = headergov.NewGovData(m).ToGovBytes()
-		chain  = mocks.NewMockBlockChain(gomock.NewController(t))
-		dbm    = database.NewMemoryDBManager()
-		db     = dbm.GetMemDB()
-		gov    = GetGenesisGovBytes(config)
+		b      = GetGenesisGovBytes(config)
 	)
 
 	WriteVoteDataBlockNums(db, StoredUint64Array{})
 	WriteGovDataBlockNums(db, StoredUint64Array{0})
 	genesisHeader := &types.Header{
 		Number:     big.NewInt(0),
-		Governance: gov,
+		Governance: b,
 	}
 	dbm.WriteHeader(genesisHeader)
 
@@ -262,5 +265,81 @@ func TestMainnetGenesisHash(t *testing.T) {
 	block, _ := genesis.Commit(common.Hash{}, db)
 	if block.Hash() != mainnetHash {
 		t.Errorf("Generated hash is not equal to Mainnet's hash. Want %v, Have %v", mainnetHash.String(), block.Hash().String())
+	}
+}
+
+func makeEmptyBlock(num uint64) *types.Block {
+	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(num))})
+}
+
+func TestMigration(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	var (
+		config        = getTestChainConfigKore()
+		mockChain     = mocks.NewMockBlockChain(gomock.NewController(t))
+		dbm           = database.NewMemoryDBManager()
+		db            = dbm.GetMemDB()
+		governingNode = config.Governance.GoverningNode
+		vote50, _     = headergov.NewVoteData(governingNode, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
+		vote150, _    = headergov.NewVoteData(governingNode, string(gov.GovernanceUnitPrice), uint64(200)).ToVoteBytes()
+		vote200, _    = headergov.NewVoteData(governingNode, string(gov.GovernanceUnitPrice), uint64(300)).ToVoteBytes()
+		vote222, _    = headergov.NewVoteData(governingNode, string(gov.GovernanceUnitPrice), uint64(400)).ToVoteBytes()
+		gov0          = GetGenesisGovBytes(config)
+		gov100, _     = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
+		gov200, _     = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
+		votes         = map[uint64][]byte{50: vote50, 150: vote150, 200: vote200, 222: vote222}
+		govs          = map[uint64][]byte{0: gov0, 100: gov100, 200: gov200}
+		expected      = map[uint64]uint64{0: config.UnitPrice, 100: config.UnitPrice, 200: 100}
+	)
+
+	// 1. Setup DB and Headers
+	legacyIdxHistory, _ := json.Marshal([]uint64{0, 100, 200})
+	db.Put(legacyIdxHistoryKey, legacyIdxHistory)
+
+	for i := uint64(0); i <= 222; i++ {
+		header := &types.Header{Number: big.NewInt(int64(i)), Vote: votes[i], Governance: govs[i]}
+		mockChain.EXPECT().GetHeaderByNumber(i).Return(header).AnyTimes()
+	}
+	mockChain.EXPECT().CurrentBlock().Return(makeEmptyBlock(222)).AnyTimes()
+
+	assert.Nil(t, ReadLowestVoteScannedEpochIdx(db))
+	assert.Nil(t, ReadVoteDataBlockNums(db))
+	assert.Nil(t, ReadGovDataBlockNums(db))
+	assert.Equal(t, StoredUint64Array{0, 100, 200}, ReadLegacyIdxHistory(db))
+
+	// 2. Run Init() and check resulting initial schema
+	h := NewHeaderGovModule()
+	h.Init(&InitOpts{
+		ChainConfig: config,
+		ChainKv:     db,
+		Chain:       mockChain,
+		NodeAddress: config.Governance.GoverningNode,
+	})
+
+	assert.Equal(t, uint64(2), *ReadLowestVoteScannedEpochIdx(db))
+	assert.Equal(t, StoredUint64Array{200, 222}, ReadVoteDataBlockNums(db))
+	assert.Equal(t, []uint64{200, 222}, h.VoteBlockNums())
+	assert.Equal(t, StoredUint64Array{0, 100, 200}, ReadGovDataBlockNums(db))
+	assert.Equal(t, []uint64{0, 100, 200}, h.GovBlockNums())
+
+	// 3. Before migration, check GetParamSet() results
+	for num, expectedValue := range expected {
+		paramSet := h.GetParamSet(num)
+		assert.Equal(t, expectedValue, paramSet.UnitPrice, "wrong at block %d", num)
+	}
+
+	// 4. Run migrate() and check resulting migrated schema
+	h.wg.Add(1)
+	h.migrate()
+
+	assert.Equal(t, uint64(0), *ReadLowestVoteScannedEpochIdx(db))
+	assert.Equal(t, StoredUint64Array{50, 150, 200, 222}, ReadVoteDataBlockNums(db))
+	assert.Equal(t, []uint64{50, 150, 200, 222}, h.VoteBlockNums())
+	assert.Equal(t, StoredUint64Array{0, 100, 200}, ReadGovDataBlockNums(db))
+	assert.Equal(t, []uint64{0, 100, 200}, h.GovBlockNums())
+
+	for num, expectedValue := range expected {
+		paramSet := h.GetParamSet(num)
+		assert.Equal(t, expectedValue, paramSet.UnitPrice, "wrong at block %d", num)
 	}
 }

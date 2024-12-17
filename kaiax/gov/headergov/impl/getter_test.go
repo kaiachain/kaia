@@ -55,8 +55,7 @@ func TestEffectiveParams(t *testing.T) {
 }
 
 func TestEffectiveParamsPartial(t *testing.T) {
-	config := getTestChainConfig()
-	config.KoreCompatibleBlock = big.NewInt(0)
+	config := getTestChainConfigKore()
 	h := newHeaderGovModule(t, config)
 
 	testCases := []struct {
