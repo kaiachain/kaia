@@ -144,7 +144,7 @@ func TestInitialDB(t *testing.T) {
 
 	assert.Nil(t, ReadLegacyIdxHistory(h.ChainKv))
 	assert.Equal(t, StoredUint64Array{0}, ReadGovDataBlockNums(h.ChainKv))
-	assert.Nil(t, StoredUint64Array(nil), ReadVoteDataBlockNums(h.ChainKv))
+	assert.Equal(t, StoredUint64Array{}, ReadVoteDataBlockNums(h.ChainKv))
 	assert.Equal(t, uint64(0), *ReadLowestVoteScannedEpochIdx(h.ChainKv))
 }
 
@@ -272,6 +272,40 @@ func makeEmptyBlock(num uint64) *types.Block {
 	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(num))})
 }
 
+func TestAccumulateVotesInEpoch(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
+	var (
+		config    = getTestChainConfigKore()
+		mockChain = mocks.NewMockBlockChain(gomock.NewController(t))
+		dbm       = database.NewMemoryDBManager()
+		db        = dbm.GetMemDB()
+	)
+
+	for i := uint64(0); i <= 222; i++ {
+		header := makeEmptyBlock(i).Header()
+		mockChain.EXPECT().GetHeaderByNumber(i).Return(header).AnyTimes()
+	}
+	mockChain.EXPECT().CurrentBlock().Return(makeEmptyBlock(222)).AnyTimes()
+	assert.Nil(t, ReadLowestVoteScannedEpochIdx(db))
+
+	h := NewHeaderGovModule()
+	err := h.Init(&InitOpts{
+		ChainConfig: config,
+		ChainKv:     db,
+		Chain:       mockChain,
+		NodeAddress: config.Governance.GoverningNode,
+	})
+	require.Nil(t, err)
+	// Init calls h.accumulateVotesInEpoch(2)
+	assert.Equal(t, uint64(2), *ReadLowestVoteScannedEpochIdx(db))
+
+	h.accumulateVotesInEpoch(1)
+	assert.Equal(t, uint64(1), *ReadLowestVoteScannedEpochIdx(db))
+
+	h.accumulateVotesInEpoch(0)
+	assert.Equal(t, uint64(0), *ReadLowestVoteScannedEpochIdx(db))
+}
+
 func TestMigration(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 	var (
@@ -309,12 +343,13 @@ func TestMigration(t *testing.T) {
 
 	// 2. Run Init() and check resulting initial schema
 	h := NewHeaderGovModule()
-	h.Init(&InitOpts{
+	err := h.Init(&InitOpts{
 		ChainConfig: config,
 		ChainKv:     db,
 		Chain:       mockChain,
 		NodeAddress: config.Governance.GoverningNode,
 	})
+	require.Nil(t, err)
 
 	assert.Equal(t, uint64(2), *ReadLowestVoteScannedEpochIdx(db))
 	assert.Equal(t, StoredUint64Array{200, 222}, ReadVoteDataBlockNums(db))
