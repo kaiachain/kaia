@@ -35,7 +35,105 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestGetCommittee tests various branches of getCommittee().
+// Individual selectors are tested as separate tests.
+func TestGetCommittee(t *testing.T) {
+	var (
+		qualified = numsToAddrs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+		aM        = uint64(2000000)
+		si        = &staking.StakingInfo{
+			NodeIds:          qualified,
+			StakingContracts: qualified,
+			RewardAddrs:      qualified,
+			StakingAmounts:   []uint64{aM, aM, aM, aM, aM, aM, aM, aM, aM, aM},
+		}
+		c = &blockContext{
+			num:       101,
+			qualified: valset.NewAddressSet(qualified),
+			prevHeader: &types.Header{
+				Number:  big.NewInt(100),
+				MixHash: common.HexToHash("0x1122334455667788af897911c946935ca28f37cb3b1bf9a30f17c84084276a84").Bytes(),
+			},
+			prevProposer: numToAddr(1),
+			rules: params.Rules{
+				IsIstanbul:  true,
+				IsLondon:    true,
+				IsEthTxType: true,
+				IsMagma:     true,
+			},
+			pset: gov.ParamSet{
+				CommitteeSize:          6,
+				UseGiniCoeff:           true,
+				ProposerUpdateInterval: 100,
+			},
+		}
+	)
+
+	testcases := []struct {
+		desc     string
+		isKore   bool
+		isRandao bool
+		policy   istanbul.ProposerPolicy
+		expected []common.Address
+	}{
+		// Refer to other Test*Proposer tests for the expected results.
+		{"RoundRobin", false, false, istanbul.RoundRobin, numsToAddrs(2, 3, 4, 1, 7, 5)},                      // prev=1, curr=2, next=3
+		{"Sticky", false, false, istanbul.Sticky, numsToAddrs(1, 2, 4, 3, 7, 5)},                              // prev=1, curr=1, next=2
+		{"WeightedRandom, before Kore", false, false, istanbul.WeightedRandom, numsToAddrs(4, 6, 2, 1, 7, 3)}, // curr=4, next=6, list=[4,6,1,7,...]
+		{"WeightedRandom, after Kore", true, false, istanbul.WeightedRandom, numsToAddrs(7, 1, 3, 2, 6, 4)},   // curr=7, next=1, list=[7,1,0,4,...]
+		{"WeightedRandom, after Randao", true, true, istanbul.WeightedRandom, numsToAddrs(8, 3, 5, 1, 0, 9)},  // committee=[8,3,5,1,0,9]
+	}
+
+	var (
+		ctrl        = gomock.NewController(t)
+		mockChain   = chain_mock.NewMockBlockChain(ctrl)
+		mockGov     = gov_mock.NewMockGovModule(ctrl)
+		mockStaking = staking_mock.NewMockStakingModule(ctrl)
+		cache, _    = lru.New(128)
+		v           = &ValsetModule{
+			InitOpts: InitOpts{
+				Chain:         mockChain,
+				GovModule:     mockGov,
+				StakingModule: mockStaking,
+			},
+			proposerListCache: cache,
+		}
+	)
+	mockChain.EXPECT().GetHeaderByNumber(uint64(100)).Return(c.prevHeader).AnyTimes()
+	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+
+	for _, tc := range testcases {
+		c.pset.ProposerPolicy = uint64(tc.policy)
+		c.rules.IsKore = tc.isKore
+		c.rules.IsShanghai = tc.isRandao
+		c.rules.IsCancun = tc.isRandao
+		c.rules.IsRandao = tc.isRandao
+
+		v.proposerListCache.Purge()
+		committee, err := v.getCommittee(c, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, tc.expected, committee, tc.desc)
+	}
+}
+
 func TestRandomCommittee(t *testing.T) {
+	var (
+		qualified            = valset.NewAddressSet(numsToAddrs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+		prevHash             = common.HexToHash("0x1122334455667788af897911c946935ca28f37cb3b1bf9a30f17c84084276a84")
+		currProposer         = numToAddr(3)
+		nextDistinctProposer = numToAddr(7)
+	)
+	assert.Equal(t, numsToAddrs(3, 7), selectRandomCommittee(qualified, 2, prevHash, currProposer, nextDistinctProposer))
+	assert.Equal(t, numsToAddrs(3, 7, 6, 8, 1, 2), selectRandomCommittee(qualified, 6, prevHash, currProposer, nextDistinctProposer))
+}
+
+func TestRandaoCommittee(t *testing.T) {
+	var (
+		qualified = valset.NewAddressSet(numsToAddrs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+		mixHash   = common.HexToHash("0x1122334455667788af897911c946935ca28f37cb3b1bf9a30f17c84084276a84").Bytes()
+	)
+	assert.Equal(t, numsToAddrs(8), selectRandaoCommittee(qualified, 1, mixHash))
+	assert.Equal(t, numsToAddrs(8, 3, 5, 1, 0, 9), selectRandaoCommittee(qualified, 6, mixHash))
 }
 
 // TestGetProposer tests various branches of getProposer().
@@ -80,11 +178,11 @@ func TestGetProposer(t *testing.T) {
 		expected common.Address
 	}{
 		// Refer to other Test*Proposer tests for the expected results.
-		{"RoundRobin", false, false, istanbul.RoundRobin, numToAddr(2)},
-		{"Sticky", false, false, istanbul.Sticky, numToAddr(1)},
-		{"WeightedRandom, before Kore", false, false, istanbul.WeightedRandom, numToAddr(3)}, // weighted random (list is mostly 3)
-		{"WeightedRandom, after Kore", true, false, istanbul.WeightedRandom, numToAddr(2)},   // uniform random (list is [2,1,3,0])
-		{"WeightedRandom, after Randao", true, true, istanbul.WeightedRandom, numToAddr(0)},  // randao (committee is [0,1,2,3])
+		{"RoundRobin", false, false, istanbul.RoundRobin, numToAddr(2)},                      // prev=1, curr=2
+		{"Sticky", false, false, istanbul.Sticky, numToAddr(1)},                              // prev=1, curr=1
+		{"WeightedRandom, before Kore", false, false, istanbul.WeightedRandom, numToAddr(3)}, // list=[(mostly 9)]
+		{"WeightedRandom, after Kore", true, false, istanbul.WeightedRandom, numToAddr(2)},   // list=[2,1,3,0]
+		{"WeightedRandom, after Randao", true, true, istanbul.WeightedRandom, numToAddr(0)},  // committee=[0,1,2,3]
 	}
 
 	var (

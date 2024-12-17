@@ -71,49 +71,87 @@ func (v *ValsetModule) getCommittee(c *blockContext, round uint64) ([]common.Add
 	if c.num == 0 {
 		return c.qualified.List(), nil
 	}
-
-	currProposer, err := v.getProposer(c, round)
-	if err != nil {
-		return nil, err
+	if c.qualified.Len() <= int(c.pset.CommitteeSize) {
+		return c.qualified.List(), nil
 	}
-	nextDistinctProposer := currProposer // TOOD
 
+	var useRandomCommittee bool
 	switch istanbul.ProposerPolicy(c.pset.ProposerPolicy) {
 	case istanbul.RoundRobin, istanbul.Sticky:
-		return selectRandomCommittee(c.qualified, c.pset.CommitteeSize, currProposer, nextDistinctProposer), nil
+		useRandomCommittee = true
 	case istanbul.WeightedRandom:
-		if c.rules.IsRandao {
-			return selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash), nil
-		} else {
-			return selectRandomCommittee(c.qualified, c.pset.CommitteeSize, currProposer, nextDistinctProposer), nil
-		}
+		useRandomCommittee = !c.rules.IsRandao
 	default:
 		return nil, errInvalidProposerPolicy
 	}
+
+	if useRandomCommittee {
+		currProposer, err := v.getProposer(c, round)
+		if err != nil {
+			return nil, err
+		}
+		if c.pset.CommitteeSize == 1 {
+			return []common.Address{currProposer}, nil
+		}
+		// From here, we can assume 1 < committeeSize < qualified.Len, so there must be a nextDistinctProposer.
+		nextDistinctProposer, err := v.getNextDistinctProposer(c, currProposer, round)
+		if err == errNoNextDistinctProposer {
+			// This should not happen, but let the consensus to continue anyway.
+			logger.Error("failed to find next distinct proposer", "num", c.num, "round", round)
+			return c.qualified.List(), nil
+		} else if err != nil {
+			return nil, err
+		}
+		logger.Trace("SelectRandomCommittee", "number", c.num, "round", round, "curr", currProposer.Hex(), "next", nextDistinctProposer.Hex())
+		return selectRandomCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.Hash(), currProposer, nextDistinctProposer), nil
+	} else {
+		// In the legacy code weighted.go, the Randao mode also had the same [if committeeSize == 1 return {currProposer}] logic.
+		// This logic is implicitly fulfilled: If committeeSize == 1, the committee shall return one address {x},
+		// where x must be the current proposer, because the RandaoProposer is picked from the RandaoCommittee.
+		return selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash), nil
+	}
 }
 
-func selectRandomCommittee(qualified *valset.AddressSet, committeeSize uint64, currProposer, nextDistinctProposer common.Address) []common.Address {
-	if qualified.Len() <= int(committeeSize) {
-		return qualified.List()
-	}
+func (v *ValsetModule) getNextDistinctProposer(c *blockContext, currProposer common.Address, round uint64) (common.Address, error) {
+	switch istanbul.ProposerPolicy(c.pset.ProposerPolicy) {
+	case istanbul.RoundRobin, istanbul.Sticky:
+		// For RoundRobin and Sticky, next round proposer has to be different from the current.
+		return v.getProposer(c, round+1)
+	case istanbul.WeightedRandom:
+		if c.rules.IsRandao { // If IsRandao this function is not called.
+			return common.Address{}, errInvalidProposerPolicy
+		}
 
-	if committeeSize == 1 {
-		return []common.Address{currProposer}
+		list, sourceNum, err := v.getProposerList(c)
+		if err != nil {
+			return common.Address{}, err
+		}
+		// scan one proposer update interval
+		for i := uint64(1); i <= c.pset.ProposerUpdateInterval; i++ {
+			nextProposer := selectWeightedRandomProposer(list, sourceNum, c.num, round+uint64(i))
+			if currProposer != nextProposer {
+				return nextProposer, nil
+			}
+		}
+		return common.Address{}, errNoNextDistinctProposer
+	default:
+		return common.Address{}, errInvalidProposerPolicy
 	}
+}
 
+func selectRandomCommittee(qualified *valset.AddressSet, committeeSize uint64, prevBlockHash common.Hash, currProposer, nextDistinctProposer common.Address) []common.Address {
+	qualified = qualified.Copy()
 	qualified.Remove(currProposer)
 	qualified.Remove(nextDistinctProposer)
 
-	seed := valset.HashToSeed(currProposer.Hash().Bytes())
-	shuffled := qualified.ShuffledList(seed)
-	return shuffled[:committeeSize]
+	seed := valset.HashToSeedLegacy(prevBlockHash)
+	shuffled := qualified.ShuffledListLegacy(seed)
+	committee := []common.Address{currProposer, nextDistinctProposer}
+	committee = append(committee, shuffled[:committeeSize-2]...)
+	return committee
 }
 
 func selectRandaoCommittee(qualified *valset.AddressSet, committeeSize uint64, prevMixHash []byte) []common.Address {
-	if qualified.Len() <= int(committeeSize) {
-		return qualified.List()
-	}
-
 	// Note: If committeeSize == 1, below code is equivalent to return []common.Address{currProposer}.
 	// Because, the resulting committee will be one validator, and the only validator is also selected as the proposer.
 	// Therefore no special handling for committeeSize == 1 is needed.
@@ -205,6 +243,7 @@ func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint6
 		}
 		list = generateProposerListWeighted(c.qualified, si, useGini, updateHeader.Hash())
 	}
+	logger.Debug("GetProposerList", "number", c.num, "list", valset.NewAddressSet(list).String())
 
 	// Store to cache
 	v.proposerListCache.Add(updateNum, list)

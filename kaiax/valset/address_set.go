@@ -18,6 +18,7 @@ package valset
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/rand"
 	"sort"
 	"strings"
@@ -55,6 +56,17 @@ func NewAddressSet(addrs []common.Address) *AddressSet {
 	return &AddressSet{
 		list: list,
 	}
+}
+
+func (as *AddressSet) String() string {
+	as.mu.RLock()
+	defer as.mu.RUnlock()
+
+	addrs := make([]string, len(as.list))
+	for i, addr := range as.list {
+		addrs[i] = addr.Hex()
+	}
+	return fmt.Sprintf("[%s]", strings.Join(addrs, ","))
 }
 
 func (as *AddressSet) Copy() *AddressSet {

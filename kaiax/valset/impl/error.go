@@ -22,12 +22,13 @@ import (
 )
 
 var (
-	errInitUnexpectedNil     = errors.New("unexpected nil during module init")
-	errInvalidProposerPolicy = errors.New("invalid proposer policy")
-	errNoHeader              = errors.New("no header found")
-	errNoBlock               = errors.New("no block found")
-	errNoLowestScannedNum    = errors.New("no lowest scanned validator vote num")
-	errNoVoteBlockNums       = errors.New("no validator vote block nums")
+	errInitUnexpectedNil      = errors.New("unexpected nil during module init")
+	errInvalidProposerPolicy  = errors.New("invalid proposer policy")
+	errNoNextDistinctProposer = errors.New("cannot determine next distinct proposer")
+	errNoHeader               = errors.New("no header found")
+	errNoBlock                = errors.New("no block found")
+	errNoLowestScannedNum     = errors.New("no lowest scanned validator vote num")
+	errNoVoteBlockNums        = errors.New("no validator vote block nums")
 
 	// rpc related errors
 	errPendingNotAllowed = errors.New("pending is not allowed")
