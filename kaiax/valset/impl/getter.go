@@ -24,7 +24,7 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 
 func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
-		return getCouncilGenesis(v.Chain.GetHeaderByNumber(0))
+		return v.getCouncilGenesis()
 	}
 
 	pBorder := ReadLowestScannedSnapshotNum(v.ChainKv)
@@ -37,7 +37,11 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 }
 
 // getCouncilGenesis parses the genesis council from the header's extraData.
-func getCouncilGenesis(header *types.Header) (*valset.AddressSet, error) {
+func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
+	header := v.Chain.GetHeaderByNumber(0)
+	if header == nil {
+		return nil, errNoHeader
+	}
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
 		return nil, err

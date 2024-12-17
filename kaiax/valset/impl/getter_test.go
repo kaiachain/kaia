@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -11,6 +12,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
+	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,10 +46,18 @@ func hexToAddrs(s ...string) []common.Address {
 }
 
 func TestGetCouncilGenesis(t *testing.T) {
-	h := &types.Header{ // Kairos block 0
+	var (
+		ctrl      = gomock.NewController(t)
+		mockChain = chain_mock.NewMockBlockChain(ctrl)
+		v         = &ValsetModule{InitOpts: InitOpts{Chain: mockChain}}
+	)
+	defer ctrl.Finish()
+	// Kairos block 0
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{
 		Extra: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
-	}
-	council, err := getCouncilGenesis(h)
+	}).AnyTimes()
+
+	council, err := v.getCouncilGenesis()
 	assert.NoError(t, err)
 	assert.Equal(t, hexToAddrs(
 		"0x571e53df607be97431a5bbefca1dffe5aef56f4d",

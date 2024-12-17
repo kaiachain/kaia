@@ -91,11 +91,7 @@ func (v *ValsetModule) initSchema() error {
 		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
 	}
 	if council := ReadCouncil(v.ChainKv, 0); council == nil {
-		header := v.Chain.GetHeaderByNumber(0)
-		if header == nil {
-			return errNoHeader
-		}
-		genesisCouncil, err := getCouncilGenesis(header)
+		genesisCouncil, err := v.getCouncilGenesis()
 		if err != nil {
 			return err
 		}
@@ -176,13 +172,11 @@ func (v *ValsetModule) migrate() {
 // getCouncilFromIstanbulSnapshot(2048, true) will scan the votes in the interval [1025, 2048] and return snapshotNum=1024.
 func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
 	if targetNum == 0 {
-		header := v.Chain.GetHeaderByNumber(0)
-		if header == nil {
-			return nil, 0, errNoHeader
-		}
-		council, err := getCouncilGenesis(header)
+		council, err := v.getCouncilGenesis()
 		return council, 0, err
 	}
+	// Load council at the nearest istanbul snapshot. This is the result
+	// applying the votes up to the snapshotNum.
 	snapshotNum := roundDown(targetNum-1, istanbulCheckpointInterval)
 	header := v.Chain.GetHeaderByNumber(snapshotNum)
 	if header == nil {
@@ -193,11 +187,13 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 		return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
 	}
 
+	// Apply the votes in the interval [snapshotNum+1, targetNum-1].
 	for n := snapshotNum + 1; n < targetNum; n++ {
 		if err := v.replayBlock(council, n, write); err != nil {
 			return nil, 0, err
 		}
 	}
+	// Apply the vote at targetNum to write to database, but do not return the modified council.
 	if write {
 		// Apply the vote at targetNum and write to database, but do not affect the returning council.
 		if err := v.replayBlock(council.Copy(), targetNum, true); err != nil {
