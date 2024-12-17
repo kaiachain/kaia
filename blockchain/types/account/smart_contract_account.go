@@ -21,7 +21,6 @@ package account
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -257,18 +256,6 @@ func (sca *SmartContractAccount) UpdateKey(newKey accountkey.AccountKey, current
 	return ErrAccountKeyNotModifiable
 }
 
-func (sca *SmartContractAccount) Equal(a Account) bool {
-	sca2, ok := a.(*SmartContractAccount)
-	if !ok {
-		return false
-	}
-
-	return sca.AccountCommon.Equal(sca2.AccountCommon) &&
-		sca.storageRoot == sca2.storageRoot &&
-		bytes.Equal(sca.codeHash, sca2.codeHash) &&
-		sca.codeInfo == sca2.codeInfo
-}
-
 func (sca *SmartContractAccount) DeepCopy() Account {
 	return &SmartContractAccount{
 		AccountCommon: sca.AccountCommon.DeepCopy(),
@@ -276,15 +263,4 @@ func (sca *SmartContractAccount) DeepCopy() Account {
 		codeHash:      common.CopyBytes(sca.codeHash),
 		codeInfo:      sca.codeInfo,
 	}
-}
-
-func (sca *SmartContractAccount) String() string {
-	return fmt.Sprintf(`Common:%s
-	StorageRoot: %s
-	CodeHash: %s
-	CodeInfo: %s`,
-		sca.AccountCommon.String(),
-		sca.storageRoot.String(),
-		common.Bytes2Hex(sca.codeHash),
-		sca.codeInfo.String())
 }
