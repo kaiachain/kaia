@@ -72,12 +72,6 @@ func TestCompressModule(t *testing.T) {
 }
 
 func TestRewind(t *testing.T) {
-	var (
-		nBlocks                                   = 100
-		setHeadTo                                 = 55
-		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
-	)
-
 	// Scenario Description:
 	// 1. `setHead` invoked targeting block number 55
 	//    - Removed origin data from 100 to 55
@@ -106,6 +100,12 @@ func TestRewind(t *testing.T) {
 			0 ------------ 50 ------------ 99
 			Chunks = C1|C2|C3|C4|C5|C6|C7|C8|C9|C10
 	*/
+
+	var (
+		nBlocks                                   = 100
+		setHeadTo                                 = 55
+		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
+	)
 
 	for i := nBlocks - 1; i >= setHeadTo; i-- {
 		num := uint64(i)
