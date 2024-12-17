@@ -106,7 +106,7 @@ func (v *ValsetModule) initSchema() error {
 	if pBorder := ReadLowestScannedSnapshotNum(v.ChainKv); pBorder == nil {
 		// migration not started. Migrating the last interval and leave the rest to be migrated by background thread.
 		currentNum := v.Chain.CurrentBlock().NumberU64()
-		_, snapshotNum, err := v.replayFromIstanbulSnapshot(currentNum, true)
+		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(currentNum, true)
 		if err != nil {
 			return err
 		}
@@ -150,7 +150,7 @@ func (v *ValsetModule) migrate() {
 		if v.quit.Load() == 1 {
 			break
 		}
-		_, snapshotNum, err := v.replayFromIstanbulSnapshot(border, true)
+		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(border, true)
 		if err != nil {
 			logger.Error("Failed to migrate", "targetNum", border, "err", err)
 			break
@@ -160,10 +160,21 @@ func (v *ValsetModule) migrate() {
 	}
 }
 
-// replayFromIstanbulSnapshot re-generates the council at the given target block number.
-// The council is calculated from the nearest istanbul snapshot plus the validator votes in the range [nearestSnapshotNum+1, num-1].
+// getCouncilFromIstanbulSnapshot re-generates the council at the given targetNum.
 // Returns the council at targetNum, the nearest snapshot number, and error if any.
-func (v *ValsetModule) replayFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
+//
+// The council is calculated from the nearest istanbul snapshot (at snapshotNum)
+// plus the validator votes in the range [snapshotNum+1, targetNum-1]. Note that
+// snapshot at snapshotNum already reflects the validator vote at snapshotNum,
+// so we apply the votes starting from snapshotNum+1.
+//
+// If write is true, ValidatorVoteBlockNums and Council in the extended range
+// [snapshotNum+1, targetNum] are written to the database. Note that this time
+// the targetNum is included in the range for completeness. This property is
+// useful for snapshot interval-wise migration. e.g.
+// getCouncilFromIstanbulSnapshot(3072, true) will scan the votes in the interval [2049, 3072] and return snapshotNum=2048.
+// getCouncilFromIstanbulSnapshot(2048, true) will scan the votes in the interval [1025, 2048] and return snapshotNum=1024.
+func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
 	if targetNum == 0 {
 		header := v.Chain.GetHeaderByNumber(0)
 		if header == nil {
@@ -188,7 +199,8 @@ func (v *ValsetModule) replayFromIstanbulSnapshot(targetNum uint64, write bool) 
 		}
 	}
 	if write {
-		if err := v.replayBlock(council.Copy(), targetNum, write); err != nil {
+		// Apply the vote at targetNum and write to database, but do not affect the returning council.
+		if err := v.replayBlock(council.Copy(), targetNum, true); err != nil {
 			return nil, 0, err
 		}
 	}

@@ -29,7 +29,7 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 
 	pBorder := ReadLowestScannedSnapshotNum(v.ChainKv)
 	if pBorder == nil || *pBorder > 0 { // migration not started or migration not completed.
-		council, _, err := v.replayFromIstanbulSnapshot(num, false)
+		council, _, err := v.getCouncilFromIstanbulSnapshot(num, false)
 		return council, err
 	} else {
 		return v.getCouncilDB(num)

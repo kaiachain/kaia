@@ -195,7 +195,7 @@ func TestMigration(t *testing.T) {
 
 	// 5. After migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
-		council, _, err := v.replayFromIstanbulSnapshot(tc.num, false)
+		council, _, err := v.getCouncilFromIstanbulSnapshot(tc.num, false)
 		require.NoError(t, err)
 		assert.Equal(t, tc.council, council.List(), tc.num)
 	}
