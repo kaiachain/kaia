@@ -1,14 +1,7 @@
 package impl
 
 import (
-	"math/big"
-	"sort"
-
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
@@ -19,73 +12,6 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 		return nil, err
 	} else {
 		return council.List(), nil
-	}
-}
-
-func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
-	if num == 0 {
-		return v.getCouncilGenesis()
-	}
-
-	// First try to get from the (migrated) DB.
-	if council, ok, err := v.getCouncilDB(num); err != nil {
-		return nil, err
-	} else if ok {
-		return council, nil
-	} else {
-		// Then fall back to the legacy istanbul snapshot.
-		council, _, err := v.getCouncilFromIstanbulSnapshot(num, false)
-		return council, err
-	}
-}
-
-// getCouncilGenesis parses the genesis council from the header's extraData.
-func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
-	header := v.Chain.GetHeaderByNumber(0)
-	if header == nil {
-		return nil, errNoHeader
-	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
-		return nil, err
-	}
-	return valset.NewAddressSet(istanbulExtra.Validators), nil
-}
-
-func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
-	if pMinVoteNum == nil {
-		return nil, false, errNoLowestScannedNum
-	}
-	nums := ReadValidatorVoteBlockNums(v.ChainKv)
-	if nums == nil {
-		return nil, false, errNoVoteBlockNums
-	}
-
-	voteNum := lastNumLessThan(nums, num)
-	if voteNum < *pMinVoteNum {
-		// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
-		// Return false to indicate that the data is not yet available.
-		return nil, false, nil
-	} else {
-		council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
-		return council, true, nil
-	}
-}
-
-// lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
-// If no such number exists, it returns 0.
-// Suppose nums = [10, 20, 30]. If num = 25, the result is 20. If num = 7, the result is 0.
-func lastNumLessThan(nums []uint64, num uint64) uint64 {
-	// idx is the smallest index that is greater than or equal to `num`.
-	// idx-1 is the largest index that is less than `num`.
-	idx := sort.Search(len(nums), func(i int) bool {
-		return nums[i] >= num
-	})
-	if idx > 0 && nums[idx-1] < num {
-		return nums[idx-1]
-	} else {
-		return 0
 	}
 }
 
@@ -112,63 +38,6 @@ func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, e
 		return nil, err
 	}
 	return council.Subtract(demoted), nil
-}
-
-// getDemotedValidators returns the demoted validators at the given block number.
-func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint64) (*valset.AddressSet, error) {
-	if num == 0 {
-		return valset.NewAddressSet(nil), nil
-	}
-
-	pset := v.GovModule.EffectiveParamSet(num)
-	rules := v.Chain.Config().Rules(new(big.Int).SetUint64(num))
-
-	switch istanbul.ProposerPolicy(pset.ProposerPolicy) {
-	case istanbul.RoundRobin, istanbul.Sticky:
-		// All council members are qualified for both RoundRobin and Sticky.
-		return valset.NewAddressSet(nil), nil
-	case istanbul.WeightedRandom:
-		// All council members are qualified for WeightedRandom before Istanbul hardfork.
-		if !rules.IsIstanbul {
-			return valset.NewAddressSet(nil), nil
-		}
-		// Otherwise, filter out based on staking amounts.
-		si, err := v.StakingModule.GetStakingInfo(num)
-		if err != nil {
-			return nil, err
-		}
-		return filterValidatorsIstanbul(council, si, pset), nil
-	default:
-		return nil, errInvalidProposerPolicy
-	}
-}
-
-func filterValidatorsIstanbul(council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
-	var (
-		demoted        = valset.NewAddressSet(nil)
-		singleMode     = pset.GovernanceMode == "single"
-		governingNode  = pset.GoverningNode
-		minStake       = pset.MinimumStake.Uint64() // in KAIA
-		stakingAmounts = collectStakingAmounts(council.List(), si)
-	)
-
-	// First filter by staking amounts.
-	for _, node := range council.List() {
-		if uint64(stakingAmounts[node]) < minStake {
-			demoted.Add(node)
-		}
-	}
-
-	// If all validators are demoted, then no one is demoted.
-	if demoted.Len() == len(council.List()) {
-		demoted = valset.NewAddressSet(nil)
-	}
-
-	// Under single governnace mode, governing node cannot be demoted.
-	if singleMode && demoted.Contains(governingNode) {
-		demoted.Remove(governingNode)
-	}
-	return demoted
 }
 
 // GetCommittee returns the current block's committee.
