@@ -67,7 +67,7 @@ func TestGetCouncilDB(t *testing.T) {
 		council6 = numsToAddrs(6) // affects blocks 7,8,9,...
 	)
 
-	writeValsetVoteBlockNums(db, voteNums)
+	writeValidatorVoteBlockNums(db, voteNums)
 	writeCouncil(db, 0, council0)
 	writeCouncil(db, 2, council2)
 	writeCouncil(db, 5, council5)
@@ -92,7 +92,8 @@ func TestGetCouncilDB(t *testing.T) {
 		voteNum := lastVoteBlockNum(voteNums, tc.num)
 		assert.Equal(t, tc.voteNum, voteNum, tc.num)
 
-		council, err := getCouncilDB(db, tc.num)
+		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}
+		council, err := v.getCouncilDB(tc.num)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.council, council.List(), tc.num)
 	}

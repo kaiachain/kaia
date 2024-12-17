@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -65,6 +64,9 @@ type ValsetModule struct {
 
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
+
+	// cache for validatorVoteBlockNums
+	validatorVoteBlockNumsCache []uint64
 }
 
 func NewValsetModule() *ValsetModule {
@@ -85,8 +87,8 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 
 func (v *ValsetModule) initSchema() error {
 	// Ensure mandatory schema at block 0
-	if voteBlockNums := ReadValsetVoteBlockNums(v.ChainKv); voteBlockNums == nil {
-		writeValsetVoteBlockNums(v.ChainKv, []uint64{0})
+	if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
+		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
 	}
 	if council := ReadCouncil(v.ChainKv, 0); council == nil {
 		header := v.Chain.GetHeaderByNumber(0)
@@ -116,6 +118,10 @@ func (v *ValsetModule) initSchema() error {
 
 func (v *ValsetModule) Start() error {
 	logger.Info("ValsetModule Started")
+
+	// Reset all caches
+	v.proposerListCache.Purge()
+	v.validatorVoteBlockNumsCache = nil
 
 	// Reset the quit state.
 	v.quit.Store(0)
@@ -150,7 +156,6 @@ func (v *ValsetModule) migrate() {
 			break
 		}
 		border = snapshotNum
-		fmt.Println("border", border)
 		writeLowestScannedSnapshotNum(v.ChainKv, border)
 	}
 }
@@ -197,7 +202,7 @@ func (v *ValsetModule) replayBlock(council *valset.AddressSet, num uint64, write
 	}
 	governingNode := v.GovModule.EffectiveParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
-		insertValsetVoteBlockNums(v.ChainKv, num)
+		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())
 	}
 	return nil

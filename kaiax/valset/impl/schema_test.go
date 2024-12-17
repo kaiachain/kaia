@@ -29,11 +29,11 @@ import (
 func TestSchema_ValsetVoteBlockNums(t *testing.T) {
 	db := database.NewMemDB()
 	nums := []uint64{10, 20, 30, 40, 50}
-	writeValsetVoteBlockNums(db, nums)
-	assert.Equal(t, nums, ReadValsetVoteBlockNums(db))
+	writeValidatorVoteBlockNums(db, nums)
+	assert.Equal(t, nums, ReadValidatorVoteBlockNums(db))
 
-	insertValsetVoteBlockNums(db, 22)
-	assert.Equal(t, []uint64{10, 20, 22, 30, 40, 50}, ReadValsetVoteBlockNums(db))
+	insertValidatorVoteBlockNums(db, 22)
+	assert.Equal(t, []uint64{10, 20, 22, 30, 40, 50}, ReadValidatorVoteBlockNums(db))
 }
 
 func TestSchema_Council(t *testing.T) {

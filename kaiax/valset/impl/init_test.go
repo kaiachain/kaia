@@ -169,7 +169,7 @@ func TestMigration(t *testing.T) {
 		StakingModule: mockStaking,
 	}))
 	// After initSchema: DB has mandatory schema + last istanbul snapshot interval (2048..2050)
-	assert.Equal(t, []uint64{0, 2049}, ReadValsetVoteBlockNums(db))
+	assert.Equal(t, []uint64{0, 2049}, ReadValidatorVoteBlockNums(db))
 	assert.Equal(t, uint64(2048), *ReadLowestScannedSnapshotNum(db))
 	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0))
 	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049))
@@ -185,7 +185,7 @@ func TestMigration(t *testing.T) {
 	// 4. Run migrate() and check resulting migrated schema
 	v.wg.Add(1)
 	v.migrate()
-	assert.Equal(t, []uint64{0, 1024, 1025, 1027, 2049}, ReadValsetVoteBlockNums(db)) // valid votes
+	assert.Equal(t, []uint64{0, 1024, 1025, 1027, 2049}, ReadValidatorVoteBlockNums(db)) // valid votes
 	assert.Equal(t, uint64(0), *ReadLowestScannedSnapshotNum(db))
 	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0))          // genesis council
 	assert.Equal(t, numsToAddrs(1, 2, 3, 5), ReadCouncil(db, 1024))    // after vote at 1024 (+1)

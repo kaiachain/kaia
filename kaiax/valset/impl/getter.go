@@ -10,7 +10,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 // GetCouncil returns the whole validator list for validating the block `num`.
@@ -33,7 +32,7 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 		council, _, err := v.replayFromIstanbulSnapshot(num, false)
 		return council, err
 	} else {
-		return getCouncilDB(v.ChainKv, num)
+		return v.getCouncilDB(num)
 	}
 }
 
@@ -46,13 +45,16 @@ func getCouncilGenesis(header *types.Header) (*valset.AddressSet, error) {
 	return valset.NewAddressSet(istanbulExtra.Validators), nil
 }
 
-func getCouncilDB(db database.Database, num uint64) (*valset.AddressSet, error) {
-	nums := ReadValsetVoteBlockNums(db)
+func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, error) {
+	if v.validatorVoteBlockNumsCache == nil {
+		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
+	}
+	nums := v.validatorVoteBlockNumsCache
 	if nums == nil {
 		return nil, errEmptyVoteBlock
 	}
 	voteNum := lastVoteBlockNum(nums, num)
-	council := valset.NewAddressSet(ReadCouncil(db, voteNum))
+	council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
 	return council, nil
 }
 

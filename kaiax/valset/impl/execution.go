@@ -32,7 +32,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	}
 	governingNode := v.GovModule.EffectiveParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
-		insertValsetVoteBlockNums(v.ChainKv, num)
+		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())
 	}
 
@@ -40,7 +40,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 }
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
-	trimValsetVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
+	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {

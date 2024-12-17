@@ -27,21 +27,21 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 	return append(istanbulSnapshotKeyPrefix, hash[:]...)
 }
 
-func ReadValsetVoteBlockNums(db database.Database) []uint64 {
+func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 	b, err := db.Get(validatorVoteBlockNums)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
-	var ret []uint64
-	if err := json.Unmarshal(b, &ret); err != nil {
+	var nums []uint64
+	if err := json.Unmarshal(b, &nums); err != nil {
 		logger.Error("Malformed valset vote block nums", "err", err)
 		return nil
 	}
-	return ret
+	return nums
 }
 
-func writeValsetVoteBlockNums(db database.Database, nums []uint64) {
+func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
 	slices.Sort(nums)
 	b, err := json.Marshal(nums)
 	if err != nil {
@@ -52,11 +52,12 @@ func writeValsetVoteBlockNums(db database.Database, nums []uint64) {
 	}
 }
 
-func insertValsetVoteBlockNums(db database.Database, num uint64) {
+// insertValidatorVoteBlockNums inserts a new block num into the validator vote block nums.
+func insertValidatorVoteBlockNums(db database.Database, num uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	nums := ReadValsetVoteBlockNums(db)
+	nums := ReadValidatorVoteBlockNums(db)
 
 	// Skip if num already exists in the array
 	for _, n := range nums {
@@ -66,21 +67,21 @@ func insertValsetVoteBlockNums(db database.Database, num uint64) {
 	}
 
 	nums = append(nums, num)
-	writeValsetVoteBlockNums(db, nums)
+	writeValidatorVoteBlockNums(db, nums)
 }
 
-// trimValsetVoteBlockNums deletes all block nums greater than or equal to `since`.
-func trimValsetVoteBlockNums(db database.Database, since uint64) {
+// trimValidatorVoteBlockNums deletes all block nums greater than or equal to `since`.
+func trimValidatorVoteBlockNums(db database.Database, since uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	nums := ReadValsetVoteBlockNums(db)
+	nums := ReadValidatorVoteBlockNums(db)
 	if nums == nil {
 		return
 	}
 
 	nums = slices.DeleteFunc(nums, func(n uint64) bool { return n >= since })
-	writeValsetVoteBlockNums(db, nums)
+	writeValidatorVoteBlockNums(db, nums)
 }
 
 func ReadCouncil(db database.Database, num uint64) []common.Address {
