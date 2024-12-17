@@ -19,7 +19,6 @@ package compress
 import (
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/stretchr/testify/assert"
@@ -152,7 +151,6 @@ func TestRewind(t *testing.T) {
 	assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
 
 	go mCompress.Start() // fragment restore invoked before starting compression
-	time.Sleep(time.Second)
 	waitCompression(mCompress)
 	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, canonicalHeaders, canonicalBodies, canonicalReceipts, false)
 
