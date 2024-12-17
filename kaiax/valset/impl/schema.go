@@ -33,6 +33,8 @@ var (
 	istanbulSnapshotKeyPrefix        = []byte("snapshot")
 
 	mu = &sync.RWMutex{}
+
+	validatorVoteBlockNumsCache []uint64
 )
 
 func councilKey(num uint64) []byte {
@@ -44,6 +46,10 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 }
 
 func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
+	if validatorVoteBlockNumsCache != nil {
+		return validatorVoteBlockNumsCache
+	}
+
 	b, err := db.Get(validatorVoteBlockNums)
 	if err != nil || len(b) == 0 {
 		return nil
@@ -54,10 +60,13 @@ func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 		logger.Error("Malformed valset vote block nums", "err", err)
 		return nil
 	}
+
+	validatorVoteBlockNumsCache = nums
 	return nums
 }
 
 func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
+	validatorVoteBlockNumsCache = nil
 	slices.Sort(nums)
 	b, err := json.Marshal(nums)
 	if err != nil {
