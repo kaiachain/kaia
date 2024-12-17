@@ -64,7 +64,7 @@ This module operates one background thread to iterate over the blocks and compre
 
 ### Rewind
 
-Upon rewind, this module deletes the related persistent compressed data and flushes the in-memory cache.
+Upon rewind, this module deletes the related persistent compressed data.
 
 ## APIs
 No additional APIs has been added within this package.

@@ -52,6 +52,10 @@ func (c *CompressModule) compressReceipts() {
 }
 
 func (c *CompressModule) compress(compressTyp CompressionType, compressFn CompressFn) {
+	var (
+		SEC_TEN     = time.Second * 10
+		totalChunks = 0
+	)
 	for {
 		var (
 			curBlkNum             = c.Chain.CurrentBlock().NumberU64()
@@ -62,10 +66,11 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 			originFrom = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
 			from       = originFrom
 		)
-		if residualBlkCnt != 0 && !noWait {
-			idleTime := time.Second * time.Duration(c.getCompressChunk()-residualBlkCnt)
-			c.setIdleState(compressTyp, &IdleState{true, idleTime})
-			time.Sleep(idleTime)
+		if curBlkNum < c.getCompressChunk() || (residualBlkCnt != 0 && !noWait) {
+			idealIdleTime := time.Second * time.Duration(c.getCompressChunk()-residualBlkCnt)
+			c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
+			logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
+			time.Sleep(SEC_TEN)
 			continue
 		}
 		c.setIdleState(compressTyp, nil)
@@ -76,10 +81,11 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			if subsequentBlkNumber >= curBlkNum {
-				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "compressedSize", common.StorageSize(compressedSize))
+				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
 				break
 			}
 			from = subsequentBlkNumber
+			totalChunks++
 		}
 	}
 }
