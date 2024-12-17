@@ -27,7 +27,7 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 		return v.getCouncilGenesis()
 	}
 
-	pBorder := ReadLowestScannedSnapshotNum(v.ChainKv)
+	pBorder := ReadLowestScannedVoteNum(v.ChainKv)
 	if pBorder == nil || *pBorder > 0 { // migration not started or migration not completed.
 		council, _, err := v.getCouncilFromIstanbulSnapshot(num, false)
 		return council, err
@@ -57,14 +57,15 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, error) {
 	if nums == nil {
 		return nil, errEmptyVoteBlock
 	}
-	voteNum := lastVoteBlockNum(nums, num)
+	voteNum := lastNumLessThan(nums, num)
 	council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
 	return council, nil
 }
 
-// lastVoteBlockNum returns the last block number in the list that is less than the given block number.
-// For instance, if nums = [0, 10, 20, 30] and num = 25, the result is 20.
-func lastVoteBlockNum(nums []uint64, num uint64) uint64 {
+// lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
+// If no such number exists, it returns 0.
+// Suppose nums = [10, 20, 30]. If num = 25, the result is 20. If num = 7, the result is 0.
+func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	// idx is the smallest index that is greater than or equal to `num`.
 	// idx-1 is the largest index that is less than `num`.
 	idx := sort.Search(len(nums), func(i int) bool {

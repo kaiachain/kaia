@@ -412,9 +412,9 @@ proposer  x  1  3  2  0  3  2  3  1  2  3
   ```
   "council" || Uint64BE(num) => JSON.Marshal([addr1, addr2, ...])
   ```
-- `lowestCheckpointScannedBlockNum`: The lowest block number whose vote data and council is calculated from the legacy istanbul snapshot schema. That is, only vote block numbers are greater than or equal to this value are stored in `validatorVoteBlockNums`. It grows downwards by `istanbulCheckpointInterval` blocks.
+- `lowestScannedValidatorVoteNum`: The lowest block number whose vote data and council is calculated and stored. That is, only vote block numbers are greater than or equal to this value are stored in `validatorVoteBlockNums`. It grows downwards by `istanbulCheckpointInterval` blocks.
   ```
-  "lowestCheckpointScannedBlockNum" => Uint64BE(num)
+  "lowestScannedValidatorVoteNum" => Uint64BE(num)
   ```
 - `istanbulSnapshot`: The legacy schema that periodically (every `istanbulCheckpointInterval` block) commits the council and other fields. Council at an arbitrary block can be recovered by accumulating the validator votes from the nearest istanbul snapshot.
   ```
@@ -480,7 +480,7 @@ type committeeContext struct {
 
 ### Start and stop
 
-This module maintains a background thread that migrates `istanbulCheckpoint` schema into the new `valsetVoteBlockNums` and `council` schemas.
+This module maintains a background thread that migrates `istanbulSnapshot` schema into the new `validatorVoteBlockNums` and `council` schemas. The progress is stored in `lowestScannedValidatorVoteNum`.
 
 ## Block processing
 
@@ -506,7 +506,7 @@ This module does not expose APIs.
   ```
   GetCouncil(num) -> []common.Address
   ```
-- `GetValidators(num)`: Returns the demoted validators at block `num`. Note that you can calculate the qualified validators as Council.Subtract(DemotedValidators).
+- `GetDemotedValidators(num)`: Returns the demoted validators at block `num`. Note that you can calculate the qualified validators as Council.Subtract(DemotedValidators).
   ```
   GetDemotedValidators(num) -> []common.Address
   ```
@@ -518,42 +518,3 @@ This module does not expose APIs.
   ```
   GetProposer(num, round) -> common.Address
   ```
-
-### Implementation outline
-
-```
-# getters
-GetCouncil
-  getCouncilGenesis
-  getCouncilLegacyDB
-  getCouncilDB
-GetValidators
-  GetCouncil
-  getStakingDemoted
-GetCommittee
-  GetValidators
-  selectRandomCommittee
-  selectRandaoCommittee
-GetProposer
-  GetValidators
-  selectRoundRobinProposer
-  selectStickyProposer
-  selectWeightedRandomProposer
-  selectUniformRandomProposer
-  selectRandaoProposer
-
-# types
-AddressSet
-  Add
-  Remove
-  Has
-  ToSortedList
-
-AddressList
-  At
-  IndexOf
-  Swap
-  Sort
-  ShuffleLegacy
-  ShuffleRandao
-```

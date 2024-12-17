@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	validatorVoteBlockNums      = []byte("validatorVoteBlockNums")
-	lowestScannedSnapshotNumKey = []byte("lowestScannedSnapshotNum")
-	councilPrefix               = []byte("council")
-	istanbulSnapshotKeyPrefix   = []byte("snapshot")
+	validatorVoteBlockNums           = []byte("validatorVoteBlockNums")
+	lowestScannedValidatorVoteNumKey = []byte("lowestScannedValidatorVoteNum")
+	councilPrefix                    = []byte("council")
+	istanbulSnapshotKeyPrefix        = []byte("snapshot")
 
 	mu = &sync.RWMutex{}
 )
@@ -114,8 +114,8 @@ func deleteCouncil(db database.Database, num uint64) {
 	}
 }
 
-func ReadLowestScannedSnapshotNum(db database.Database) *uint64 {
-	b, err := db.Get(lowestScannedSnapshotNumKey)
+func ReadLowestScannedVoteNum(db database.Database) *uint64 {
+	b, err := db.Get(lowestScannedValidatorVoteNumKey)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
@@ -127,10 +127,10 @@ func ReadLowestScannedSnapshotNum(db database.Database) *uint64 {
 	return &ret
 }
 
-func writeLowestScannedSnapshotNum(db database.Database, num uint64) {
+func writeLowestScannedVoteNum(db database.Database, num uint64) {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, num)
-	if err := db.Put(lowestScannedSnapshotNumKey, b); err != nil {
+	if err := db.Put(lowestScannedValidatorVoteNumKey, b); err != nil {
 		logger.Crit("Failed to write lowest scanned snapshot num", "num", num, "err", err)
 	}
 }

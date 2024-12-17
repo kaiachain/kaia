@@ -71,14 +71,14 @@ func TestSchema_IstanbulSnapshot(t *testing.T) {
 	), addrs)
 }
 
-func TestSchema_LowestScannedSnapshotNum(t *testing.T) {
+func TestSchema_LowestScannedVoteNum(t *testing.T) {
 	db := database.NewMemDB()
 
-	assert.Nil(t, ReadLowestScannedSnapshotNum(db))
+	assert.Nil(t, ReadLowestScannedVoteNum(db))
 
 	num := uint64(10)
-	writeLowestScannedSnapshotNum(db, num)
-	pNum := ReadLowestScannedSnapshotNum(db)
+	writeLowestScannedVoteNum(db, num)
+	pNum := ReadLowestScannedVoteNum(db)
 	require.NotNil(t, pNum)
 	assert.Equal(t, num, *pNum)
 }

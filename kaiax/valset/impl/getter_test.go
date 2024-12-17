@@ -99,7 +99,7 @@ func TestGetCouncilDB(t *testing.T) {
 		{8, 6, council6},
 	}
 	for _, tc := range testcases {
-		voteNum := lastVoteBlockNum(voteNums, tc.num)
+		voteNum := lastNumLessThan(voteNums, tc.num)
 		assert.Equal(t, tc.voteNum, voteNum, tc.num)
 
 		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}

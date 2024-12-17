@@ -99,14 +99,14 @@ func (v *ValsetModule) initSchema() error {
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval
-	if pBorder := ReadLowestScannedSnapshotNum(v.ChainKv); pBorder == nil {
+	if pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv); pMinVoteNum == nil {
 		// migration not started. Migrating the last interval and leave the rest to be migrated by background thread.
 		currentNum := v.Chain.CurrentBlock().NumberU64()
 		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(currentNum, true)
 		if err != nil {
 			return err
 		}
-		writeLowestScannedSnapshotNum(v.ChainKv, snapshotNum)
+		writeLowestScannedVoteNum(v.ChainKv, snapshotNum)
 	}
 
 	return nil
@@ -135,24 +135,24 @@ func (v *ValsetModule) Stop() {
 func (v *ValsetModule) migrate() {
 	defer v.wg.Done()
 
-	pBorder := ReadLowestScannedSnapshotNum(v.ChainKv)
-	if pBorder == nil {
+	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+	if pMinVoteNum == nil {
 		logger.Error("No lowest scanned snapshot num")
 		return
 	}
 
-	border := *pBorder
-	for border > 0 {
+	targetNum := *pMinVoteNum
+	for targetNum > 0 {
 		if v.quit.Load() == 1 {
 			break
 		}
-		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(border, true)
+		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(targetNum, true)
 		if err != nil {
-			logger.Error("Failed to migrate", "targetNum", border, "err", err)
+			logger.Error("Failed to migrate", "targetNum", targetNum, "err", err)
 			break
 		}
-		border = snapshotNum
-		writeLowestScannedSnapshotNum(v.ChainKv, border)
+		targetNum = snapshotNum
+		writeLowestScannedVoteNum(v.ChainKv, targetNum)
 	}
 }
 
