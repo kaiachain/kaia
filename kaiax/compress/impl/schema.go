@@ -40,6 +40,14 @@ var (
 	compressReceiptPrefix = []byte("CompressdReceipt-")
 	compressBodyPrefix    = []byte("CompressdBody-")
 
+	lastHeaderCompressionDeleteKey     = []byte("LastHeaderCompressionDeleteKey")
+	lastHeaderCompressionDeleteValue   = []byte("LastHeaderCompressionDeleteValue")
+	lastBodyCompressionDeleteKey       = []byte("LastBodyCompressionDeleteKey")
+	lastBodyCompressionDeleteValue     = []byte("LastBodyCompressionDeleteValue")
+	lastReceiptsCompressionDeleteKey   = []byte("LastReceiptsCompressionDeleteKey")
+	lastReceiptsCompressionDeleteValue = []byte("LastReceiptsCompressionDeleteValue")
+	lastCompressionCleared             = []byte("NoLastCompressionkeyReserved")
+
 	// Create a writer that caches compressors.
 	// For this operation type we supply a nil Reader.
 	encoder, _ = zstd.NewWriter(nil)
@@ -56,6 +64,32 @@ func (typ CompressionType) String() string {
 		return "Receipts Compression"
 	default:
 		return ""
+	}
+}
+
+func getLsatCompressionDeleteKeyPrefix(typ CompressionType) []byte {
+	switch typ {
+	case HeaderCompressType:
+		return lastHeaderCompressionDeleteKey
+	case BodyCompressType:
+		return lastBodyCompressionDeleteKey
+	case ReceiptCompressType:
+		return lastReceiptsCompressionDeleteKey
+	default:
+		panic("unreacahble")
+	}
+}
+
+func getLsatCompressionDeleteValuePrefix(typ CompressionType) []byte {
+	switch typ {
+	case HeaderCompressType:
+		return lastHeaderCompressionDeleteValue
+	case BodyCompressType:
+		return lastBodyCompressionDeleteValue
+	case ReceiptCompressType:
+		return lastReceiptsCompressionDeleteValue
+	default:
+		panic("unreacahble")
 	}
 }
 

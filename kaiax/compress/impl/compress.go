@@ -17,6 +17,7 @@
 package compress
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -117,6 +118,43 @@ func (c *CompressModule) FindBodyFromChunkWithBlkHash(dbm database.DBManager, nu
 
 func (c *CompressModule) FindReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (types.Receipts, error) {
 	return findReceiptsFromChunkWithBlkHash(dbm, number, hash)
+}
+
+func (c *CompressModule) restoreFragmentByRewind() {
+	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+		var (
+			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix = getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
+			miscDB                                                     = c.Dbm.GetMiscDB()
+		)
+		key, err := miscDB.Get(lastCompressDeleteKeyPrefix)
+		if err != nil {
+			return
+		}
+		value, err := miscDB.Get(lastCompressDeleteValuePrefix)
+		if err != nil {
+			return
+		}
+		if bytes.Equal(key, lastCompressionCleared) && bytes.Equal(value, lastCompressionCleared) {
+			// No reserved last compression data. Noting to do
+			return
+		}
+
+		var (
+			db       = getCompressDB(c.Dbm, compressTyp)
+			from, to = parseCompressKey(compressTyp, key)
+		)
+		// 1. restore last compression data
+		if err := db.Put(key, value); err != nil {
+			logger.Crit(fmt.Sprintf("Failed to restore last compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
+		}
+		// 2. clear last compression data
+		if err := miscDB.Put(lastCompressDeleteKeyPrefix, lastCompressionCleared); err != nil {
+			logger.Crit("Failed to clear last decompression key")
+		}
+		if err := miscDB.Put(lastCompressDeleteValuePrefix, lastCompressionCleared); err != nil {
+			logger.Crit("Failed to clear last decompression value")
+		}
+	}
 }
 
 // TODO-hyunsooda: Move to `compress_test.go`

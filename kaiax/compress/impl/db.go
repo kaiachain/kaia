@@ -311,6 +311,15 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, nu
 			return 0, nil
 		}
 		if from <= number && number <= to {
+			// Temporally store compression to MiscDB to restore `from` to setHead block
+			miscDB := dbm.GetMiscDB()
+			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix := getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
+			if err := miscDB.Put(lastCompressDeleteKeyPrefix, it.Key()); err != nil {
+				logger.Crit(fmt.Sprintf("Failed to store temporal compressed data by rewind. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
+			}
+			if err := miscDB.Put(lastCompressDeleteValuePrefix, it.Value()); err != nil {
+				logger.Crit(fmt.Sprintf("Failed to store temporal compressed data by rewind. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
+			}
 			// delete compression and return the starting number so that the compression moduel can start work from there
 			if err := db.Delete(it.Key()); err != nil {
 				logger.Crit(fmt.Sprintf("Failed to delete compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))

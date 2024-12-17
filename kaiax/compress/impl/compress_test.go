@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCompressStorage(t *testing.T) {
@@ -86,6 +87,27 @@ func TestRewind(t *testing.T) {
 	// 3. Restart the compression module
 	// 	  - start compression from block number 50 to 100
 
+	/*
+		[Phase1: Setup]
+			Compression completed
+			0 ------------ 50 ------------ 99
+											^
+								next compression block number
+			Chunks = C1|C2|C3|C4|C5|C6|C7|C8|C9|C10
+
+		[Phase2: Rewind]
+			Once `setHead` is invoked,
+			0 ------------ 50 ---- 55
+							^
+				next compression block number
+			Chunks = C1|C2|C3|C4|C5
+
+		[Phase3: Compress again]
+			compressed data range 50-59 is restored and Sync is started from 55. Finally,
+			0 ------------ 50 ------------ 99
+			Chunks = C1|C2|C3|C4|C5|C6|C7|C8|C9|C10
+	*/
+
 	for i := nBlocks - 1; i >= setHeadTo; i-- {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
@@ -103,6 +125,7 @@ func TestRewind(t *testing.T) {
 		newBodies   []*types.Body
 		newReceipts []types.Receipts
 	)
+
 	for i := setHeadTo; i < nBlocks; i++ {
 		h := genHeader()
 		h.Number = big.NewInt(int64(i))
@@ -122,8 +145,18 @@ func TestRewind(t *testing.T) {
 	canonicalBodies := append(bodies[:setHeadTo], newBodies[:]...)
 	canonicalReceipts := append(receipts[:setHeadTo], newReceipts[:]...)
 
-	go mCompress.Compress()
+	// expected next compression block number should be equal or less than `setHeadTo`.
+	// Given the value of `setHeadTo` is 55 and chunk size is 10,
+	// The rewinded next compression block number should be 50.
+	nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, HeaderCompressType)
+	assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
+
+	go mCompress.Start() // fragment restore invoked before starting compression
 	time.Sleep(time.Second)
 	waitCompression(mCompress)
 	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, canonicalHeaders, canonicalBodies, canonicalReceipts, false)
+
+	// Once completed the compression, next compression block number reaches to `nBlocks - 1`
+	nextCompressionNumber = readSubsequentCompressionBlkNumber(dbm, HeaderCompressType)
+	assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
 }
