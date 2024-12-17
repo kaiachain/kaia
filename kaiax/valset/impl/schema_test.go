@@ -34,6 +34,9 @@ func TestSchema_ValsetVoteBlockNums(t *testing.T) {
 
 	insertValidatorVoteBlockNums(db, 22)
 	assert.Equal(t, []uint64{10, 20, 22, 30, 40, 50}, ReadValidatorVoteBlockNums(db))
+
+	trimValidatorVoteBlockNums(db, 30)
+	assert.Equal(t, []uint64{10, 20, 22}, ReadValidatorVoteBlockNums(db))
 }
 
 func TestSchema_Council(t *testing.T) {

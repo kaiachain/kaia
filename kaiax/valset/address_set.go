@@ -49,11 +49,12 @@ type AddressSet struct {
 }
 
 func NewAddressSet(addrs []common.Address) *AddressSet {
-	as := &AddressSet{
-		list: sortableAddressList(addrs),
+	list := make(sortableAddressList, len(addrs))
+	copy(list, addrs)
+	sort.Sort(list)
+	return &AddressSet{
+		list: list,
 	}
-	sort.Sort(as.list)
-	return as
 }
 
 func (as *AddressSet) Copy() *AddressSet {
@@ -100,6 +101,12 @@ func (as *AddressSet) Contains(addr common.Address) bool {
 func (as *AddressSet) Add(addr common.Address) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
+
+	for _, a := range as.list {
+		if a == addr {
+			return
+		}
+	}
 	as.list = append(as.list, addr)
 	sort.Sort(as.list)
 }

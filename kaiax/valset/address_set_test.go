@@ -72,8 +72,12 @@ func TestAddressSet_Set(t *testing.T) {
 
 	as.Add(common.HexToAddress("0x120d"))
 	assert.Equal(t, sorted1, as.List())
+	as.Add(common.HexToAddress("0x120d")) // duplicate add is ignored
+	assert.Equal(t, sorted1, as.List())
 
 	as.Remove(common.HexToAddress("0x120d"))
+	assert.Equal(t, sorted2, as.List())
+	as.Remove(common.HexToAddress("0x120d")) // duplicate remove is ignored
 	assert.Equal(t, sorted2, as.List())
 }
 

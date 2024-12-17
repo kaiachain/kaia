@@ -124,21 +124,21 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 
 	// Apply the votes in the interval [snapshotNum+1, targetNum-1].
 	for n := snapshotNum + 1; n < targetNum; n++ {
-		if err := v.replayBlock(council, n, write); err != nil {
+		if err := v.applyBlock(council, n, write); err != nil {
 			return nil, 0, err
 		}
 	}
 	// Apply the vote at targetNum to write to database, but do not return the modified council.
 	if write {
 		// Apply the vote at targetNum and write to database, but do not affect the returning council.
-		if err := v.replayBlock(council.Copy(), targetNum, true); err != nil {
+		if err := v.applyBlock(council.Copy(), targetNum, true); err != nil {
 			return nil, 0, err
 		}
 	}
 	return council, snapshotNum, nil
 }
 
-func (v *ValsetModule) replayBlock(council *valset.AddressSet, num uint64, write bool) error {
+func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write bool) error {
 	header := v.Chain.GetHeaderByNumber(num)
 	if header == nil {
 		return errNoHeader

@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
@@ -147,6 +148,83 @@ func TestGetCouncilDB(t *testing.T) {
 				assert.Nil(t, council)
 			}
 		}
+	}
+}
+
+func TestParseValidatorVote(t *testing.T) {
+	testcases := []struct {
+		voteHex string
+		voteKey gov.ValidatorParamName
+		voteVal []common.Address
+		ok      bool
+	}{
+		{ // Empty
+			"0x",
+			"", nil, false,
+		},
+		{ // Malformed
+			"0xabcd",
+			"", nil, false,
+		},
+		{ // Kairos block 83863326 (not a validator vote)
+			"0xf09499fb17d324fa0e07f23b49d09028ac0919414db694676f7665726e616e63652e756e6974707269636585ae9f7bcc00",
+			"", nil, false,
+		},
+		{ // Kairos block 4202779 (add one address)
+			"0xf8429499fb17d324fa0e07f23b49d09028ac0919414db697676f7665726e616e63652e61646476616c696461746f72948a88a093c05376886754a9b70b0d0a826a5e64be",
+			"governance.addvalidator", hexToAddrs("0x8a88a093c05376886754a9b70b0d0a826a5e64be"), true,
+		},
+		{ // Kairos block 4740968 (remove one address)
+			"0xf8459499fb17d324fa0e07f23b49d09028ac0919414db69a676f7665726e616e63652e72656d6f766576616c696461746f72949419fa2e3b9eb1158de31be66c586a52f49c5de7",
+			"governance.removevalidator", hexToAddrs("0x9419fa2e3b9eb1158de31be66c586a52f49c5de7"), true,
+		},
+		{ // Mainnet block 90897408 (remove one address in hex string)
+			"0xf85b9452d41ca72af615a1ac3301b0a93efa222ecc75419a676f7665726e616e63652e72656d6f766576616c696461746f72aa307831366331393235383561306162323462353532373833623462663764386463396636383535633335",
+			"governance.removevalidator", hexToAddrs("0x16c192585a0ab24b552783b4bf7d8dc9f6855c35"), true,
+		},
+	}
+	for _, tc := range testcases {
+		header := &types.Header{
+			Vote: hexutil.MustDecode(tc.voteHex),
+		}
+		voteKey, voteVal, ok := parseValidatorVote(header)
+		assert.Equal(t, tc.voteKey, voteKey)
+		assert.Equal(t, tc.voteVal, voteVal)
+		assert.Equal(t, tc.ok, ok)
+	}
+}
+
+func TestApplyVote(t *testing.T) {
+	var (
+		governingNode  = numToAddr(3)
+		initialCouncil = numsToAddrs(1, 2, 3)
+
+		voteAdd1, _    = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(1)).ToVoteBytes()
+		voteAdd6, _    = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(6)).ToVoteBytes()
+		voteRemove2, _ = headergov.NewVoteData(governingNode, string(gov.RemoveValidator), numToAddr(2)).ToVoteBytes()
+		voteRemove3, _ = headergov.NewVoteData(governingNode, string(gov.RemoveValidator), numToAddr(3)).ToVoteBytes()
+		voteRemove7, _ = headergov.NewVoteData(governingNode, string(gov.RemoveValidator), numToAddr(7)).ToVoteBytes()
+	)
+	testcases := []struct {
+		voteData []byte
+		council  []common.Address
+		modified bool
+	}{
+		{nil, numsToAddrs(1, 2, 3), false},
+		{voteAdd1, numsToAddrs(1, 2, 3), false},    // Cannot add already existing one
+		{voteAdd6, numsToAddrs(1, 2, 3, 6), true},  // Add one
+		{voteRemove2, numsToAddrs(1, 3), true},     // Remove one
+		{voteRemove3, numsToAddrs(1, 2, 3), false}, // Cannot remove governingNode
+		{voteRemove7, numsToAddrs(1, 2, 3), false}, // Cannot remove non-existing one
+	}
+	for i, tc := range testcases {
+		header := &types.Header{
+			Vote: tc.voteData,
+		}
+		council := valset.NewAddressSet(initialCouncil)
+		modified := applyVote(header, council, governingNode)
+		assert.Equal(t, tc.modified, modified)
+		assert.Equal(t, tc.council, council.List(), i) // council is modified in-place
 	}
 }
 
