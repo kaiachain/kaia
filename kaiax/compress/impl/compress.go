@@ -135,16 +135,15 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				logger.Warn("[Compression] failed to compress chunk", "type", compressTyp.String(), "err", err)
 				break
 			}
+			if compressedSize != 0 {
+				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
+				totalChunks++
+			}
 			if subsequentBlkNumber >= curBlkNum {
-				if compressedSize != 0 {
-					logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
-				}
 				break
 			}
 			from = subsequentBlkNumber
-			totalChunks++
 		}
-
 	}
 }
 
