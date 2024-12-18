@@ -305,19 +305,44 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 	defer copyTestDB.Release()
 	writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
 	curBlkNum := c.Chain.CurrentBlock().NumberU64()
-	for {
 
+	var (
+		totalHeaderCompressedElapsedTime   time.Duration
+		totalBodyCompressedElapsedTime     time.Duration
+		totalReceiptsCompressedElapsedTime time.Duration
+		nCompressedHeader                  = uint64(0)
+		nCompressedBody                    = uint64(0)
+		nCompressedReceipts                = uint64(0)
+		nHeaderChunks                      = 0
+		nBodyChunkcs                       = 0
+		nReceiptsChunkcs                   = 0
+		loopCnt                            = 0
+
+		originFrom = from
+	)
+
+	for {
 		var (
 			subsequentBlkNumber uint64
 			err                 error
 		)
+		startCompress := time.Now()
 		switch compressTyp {
 		case HeaderCompressType:
 			subsequentBlkNumber, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			totalHeaderCompressedElapsedTime += time.Since(startCompress)
+			nCompressedHeader = subsequentBlkNumber - 1
+			nHeaderChunks++
 		case BodyCompressType:
 			subsequentBlkNumber, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			totalBodyCompressedElapsedTime += time.Since(startCompress)
+			nCompressedBody = subsequentBlkNumber - 1
+			nBodyChunkcs++
 		case ReceiptCompressType:
 			subsequentBlkNumber, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			totalReceiptsCompressedElapsedTime += time.Since(startCompress)
+			nCompressedReceipts = subsequentBlkNumber - 1
+			nReceiptsChunkcs++
 		}
 		if err != nil {
 			return err
@@ -333,9 +358,25 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 			break
 		}
 		from = subsequentBlkNumber
+		loopCnt++
+		if loopCnt%100 == 0 {
+			fmt.Printf("%s ... remaining: %d\n", compressTyp.String(), to-subsequentBlkNumber)
+		}
 	}
 	if _, err := database.WriteBatches(copyTestDB); err != nil {
 		return err
+	}
+
+	switch compressTyp {
+	case HeaderCompressType:
+		fmt.Printf("number of compressed header    (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedHeader-originFrom, nHeaderChunks)
+		fmt.Println("total header   compression    elpased time: ", totalHeaderCompressedElapsedTime)
+	case BodyCompressType:
+		fmt.Printf("number of compressed body      (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedBody-originFrom, nBodyChunkcs)
+		fmt.Println("total body     compression    elpased time: ", totalBodyCompressedElapsedTime)
+	case ReceiptCompressType:
+		fmt.Printf("number of compressed receipts  (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedReceipts-originFrom, nReceiptsChunkcs)
+		fmt.Println("total receipts compression    elpased time: ", totalReceiptsCompressedElapsedTime)
 	}
 	return nil
 }
