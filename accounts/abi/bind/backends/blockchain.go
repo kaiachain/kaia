@@ -226,6 +226,7 @@ func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.I
 			return new(big.Int).Mul(b.bc.CurrentBlock().Header().BaseFee, big.NewInt(2)), nil
 		}
 	} else {
+		// This is used for sending txs, so it's ok to use the genesis value instead of the latest value from governance.
 		return new(big.Int).SetUint64(b.bc.Config().UnitPrice), nil
 	}
 }

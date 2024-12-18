@@ -75,6 +75,9 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	// 1. Init gov. If Gov DB is empty, migrate from legacy governance DB.
 	if ReadGovDataBlockNums(h.ChainKv) == nil {
 		legacyGovBlockNums := ReadLegacyIdxHistory(h.ChainKv)
+		if legacyGovBlockNums == nil {
+			legacyGovBlockNums = StoredUint64Array{0}
+		}
 		WriteGovDataBlockNums(h.ChainKv, legacyGovBlockNums)
 	}
 
@@ -210,11 +213,6 @@ func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.G
 	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]headergov.GovData)
 
-	// TODO: in production, govBlocks must not be nil. Remove this after implementing kcn init and data migration.
-	if govBlocks == nil {
-		govBlocks = StoredUint64Array{0}
-	}
-
 	for _, blockNum := range govBlocks {
 		header := chain.GetHeaderByNumber(blockNum)
 
@@ -258,4 +256,78 @@ func validateOpts(opts *InitOpts) error {
 	}
 
 	return nil
+}
+
+// GetGenesisGovBytes returns the genesis governance bytes for initGenesis().
+// It panics if the given chain config is invalid.
+func GetGenesisGovBytes(config *params.ChainConfig) headergov.GovBytes {
+	partialParamSet := make(gov.PartialParamSet)
+	genesisParamNames := getGenesisParamNames(config)
+	for _, name := range genesisParamNames {
+		param := gov.Params[name]
+		value, err := param.ChainConfigValue(config)
+		if err != nil {
+			panic(err)
+		}
+
+		err = partialParamSet.Add(string(name), value)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	govData := headergov.NewGovData(partialParamSet)
+	ret, err := govData.ToGovBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	return ret
+}
+
+// getGenesisParamNames returns a subset of parameters to be included
+// in the genesis block header's Governance field.
+// The subset depends on genesis block's hardfork level and genesis chain config.
+// For backward compatibility, some fields may be intentionally omitted.
+func getGenesisParamNames(config *params.ChainConfig) []gov.ParamName {
+	genesisParamNames := make([]gov.ParamName, 0)
+
+	// DeriveShaImpl is excluded unless the genesis is Kore HF,
+	// even though it has been always included in the genesis chain config.
+	if config.Governance != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.GovernanceGovernanceMode, gov.GovernanceGoverningNode, gov.GovernanceUnitPrice,
+			gov.RewardMintingAmount, gov.RewardRatio, gov.RewardUseGiniCoeff,
+			gov.RewardDeferredTxFee, gov.RewardMinimumStake,
+			gov.RewardStakingUpdateInterval, gov.RewardProposerUpdateInterval,
+		}...)
+	}
+
+	if config.Istanbul != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.IstanbulEpoch, gov.IstanbulPolicy, gov.IstanbulCommitteeSize,
+		}...)
+	}
+
+	if config.IsMagmaForkEnabled(common.Big0) &&
+		config.Governance.KIP71 != nil {
+		genesisParamNames = append(genesisParamNames, []gov.ParamName{
+			gov.Kip71LowerBoundBaseFee, gov.Kip71UpperBoundBaseFee, gov.Kip71GasTarget,
+			gov.Kip71BaseFeeDenominator, gov.Kip71MaxBlockGasUsedForBaseFee,
+		}...)
+	}
+
+	if config.IsKoreForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		genesisParamNames = append(genesisParamNames, gov.GovernanceDeriveShaImpl)
+		if !common.EmptyAddress(config.Governance.GovParamContract) {
+			genesisParamNames = append(genesisParamNames, gov.GovernanceGovParamContract)
+		}
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.Kip82Ratio != "" {
+			genesisParamNames = append(genesisParamNames, gov.RewardKip82Ratio)
+		}
+	}
+
+	return genesisParamNames
 }

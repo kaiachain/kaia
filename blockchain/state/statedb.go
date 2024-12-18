@@ -24,6 +24,7 @@ package state
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -1182,8 +1183,8 @@ func (s *StateDB) GetTxHash() common.Hash {
 }
 
 var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotContractAddress = fmt.Errorf("given address is not a contract address")
+	errNotExistingAddress = errors.New("there is no account corresponding to the given address")
+	errNotProgramAccount  = errors.New("given address is not a program account")
 )
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
@@ -1191,14 +1192,11 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 	if acc == nil {
 		return common.ExtHash{}, errNotExistingAddress
 	}
-	if acc.Type() != account.SmartContractAccountType {
-		return common.ExtHash{}, errNotContractAddress
+	pa := account.GetProgramAccount(acc)
+	if pa == nil {
+		return common.ExtHash{}, errNotProgramAccount
 	}
-	contract, true := acc.(*account.SmartContractAccount)
-	if !true {
-		return common.ExtHash{}, errNotContractAddress
-	}
-	return contract.GetStorageRoot(), nil
+	return pa.GetStorageRoot(), nil
 }
 
 // Prepare handles the preparatory steps for executing a state transition with.

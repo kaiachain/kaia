@@ -19,6 +19,7 @@
 package account
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -44,6 +45,35 @@ var (
 	_ AccountWithKey = (*SmartContractAccount)(nil)
 )
 
+func checkCommonFields(t *testing.T, a, b AccountWithKey) {
+	assert.Equal(t, a.GetNonce(), b.GetNonce())
+	assert.Zero(t, a.GetBalance().Cmp(b.GetBalance()))
+	assert.Equal(t, a.GetHumanReadable(), b.GetHumanReadable())
+	assert.True(t, a.GetKey().Equal(b.GetKey()))
+}
+
+func checkProgramFields(t *testing.T, a, b ProgramAccount) {
+	assert.Equal(t, a.GetStorageRoot(), b.GetStorageRoot())
+	assert.True(t, bytes.Equal(a.GetCodeHash(), b.GetCodeHash()))
+	assert.Equal(t, a.GetCodeFormat(), b.GetCodeFormat())
+	assert.Equal(t, a.GetVmVersion(), b.GetVmVersion())
+}
+
+func checkEqual(t *testing.T, a, b Account) {
+	assert.Equal(t, a.Type(), b.Type())
+
+	// Using AccountWithKey to check `Key` field together.
+	ak := GetAccountWithKey(a)
+	bk := GetAccountWithKey(b)
+	checkCommonFields(t, ak, bk)
+
+	// Since the implementation of EIP-7702, the EOA also has program fields.
+	// So, we use ProgramAccount to check these fields for both EOA and SCA.
+	pa := GetProgramAccount(a)
+	pb := GetProgramAccount(b)
+	checkProgramFields(t, pa, pb)
+}
+
 func checkEncode(t *testing.T, account Account, expected string) {
 	enc := NewAccountSerializerWithAccount(account)
 	b, err := rlp.EncodeToBytes(enc)
@@ -63,7 +93,7 @@ func checkDecode(t *testing.T, encoded string, expected Account) {
 	dec := NewAccountSerializer()
 	err := rlp.DecodeBytes(b, &dec)
 	assert.Nil(t, err)
-	assert.True(t, dec.GetAccount().Equal(expected))
+	checkEqual(t, expected, dec.GetAccount())
 }
 
 func checkDecodeExt(t *testing.T, encoded string, expected Account) {
@@ -71,7 +101,7 @@ func checkDecodeExt(t *testing.T, encoded string, expected Account) {
 	dec := NewAccountSerializerExt()
 	err := rlp.DecodeBytes(b, &dec)
 	assert.Nil(t, err)
-	assert.True(t, dec.GetAccount().Equal(expected))
+	checkEqual(t, expected, dec.GetAccount())
 }
 
 func checkEncodeJSON(t *testing.T, account Account, expectedMap map[string]interface{}) {
@@ -91,7 +121,7 @@ func checkDecodeJSON(t *testing.T, j map[string]interface{}, expected Account) {
 	dec := NewAccountSerializer()
 	err = dec.UnmarshalJSON(b)
 	assert.Nil(t, err)
-	assert.True(t, dec.GetAccount().Equal(expected))
+	checkEqual(t, expected, dec.GetAccount())
 }
 
 func TestAccountSerializer(t *testing.T) {
@@ -149,6 +179,9 @@ func TestAccountSerializer(t *testing.T) {
 			"Empty EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFieldsEmpty,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["","","","01",[]]
 			"0x01c580808001c0",
@@ -171,6 +204,9 @@ func TestAccountSerializer(t *testing.T) {
 			"Nonempty EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFields,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["0x2a","0x12345678","","0x01",[]]
 			"0x01c92a84123456788001c0",
@@ -193,6 +229,9 @@ func TestAccountSerializer(t *testing.T) {
 			"AccountUpdated EOA",
 			&ExternallyOwnedAccount{
 				AccountCommon: commonFieldsUpdated,
+				storageRoot:   emptyRoot.ExtendZero(),
+				codeHash:      emptyCodeHash,
+				codeInfo:      codeinfoZero,
 			},
 			// 01 ["0x2a","0x12345678","","0x02","0x038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75"]
 			"0x01ea2a84123456788002a1038318535b54105d4a7aae60c08fc45f9687181b4fdfc625bd1a753fa7397fed75",

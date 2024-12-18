@@ -21,7 +21,6 @@ package account
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -94,27 +93,13 @@ func (e *ExternallyOwnedAccount) Type() AccountType {
 	return ExternallyOwnedAccountType
 }
 
-func (e *ExternallyOwnedAccount) Dump() {
-	fmt.Println(e.String())
-}
-
-func (e *ExternallyOwnedAccount) String() string {
-	return fmt.Sprintf("EOA: %s", e.AccountCommon.String())
-}
-
 func (e *ExternallyOwnedAccount) DeepCopy() Account {
 	return &ExternallyOwnedAccount{
 		AccountCommon: e.AccountCommon.DeepCopy(),
+		storageRoot:   e.storageRoot,
+		codeHash:      common.CopyBytes(e.codeHash),
+		codeInfo:      e.codeInfo,
 	}
-}
-
-func (e *ExternallyOwnedAccount) Equal(a Account) bool {
-	e2, ok := a.(*ExternallyOwnedAccount)
-	if !ok {
-		return false
-	}
-
-	return e.AccountCommon.Equal(e2.AccountCommon)
 }
 
 func (e *ExternallyOwnedAccount) GetStorageRoot() common.ExtHash {

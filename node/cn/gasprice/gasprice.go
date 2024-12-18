@@ -44,7 +44,6 @@ type Config struct {
 	Percentile       int
 	MaxHeaderHistory int
 	MaxBlockHistory  int
-	Default          *big.Int `toml:",omitempty"`
 	MaxPrice         *big.Int `toml:",omitempty"`
 }
 

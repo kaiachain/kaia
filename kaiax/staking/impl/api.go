@@ -66,5 +66,5 @@ func (api *stakingAPI) GetStakingInfo(num rpc.BlockNumber) (*staking.StakingInfo
 		useGini = api.s.useGiniCoeff
 	}
 	// Calculate Gini coefficient regardless of useGini flag
-	return si.ToResponse(useGini, api.s.stakingInterval), nil
+	return si.ToResponse(useGini, api.s.minimumStake.Uint64()), nil
 }

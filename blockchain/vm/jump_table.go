@@ -63,10 +63,17 @@ var (
 	KoreInstructionSet           = newKoreInstructionSet()
 	ShanghaiInstructionSet       = newShanghaiInstructionSet()
 	CancunInstructionSet         = newCancunInstructionSet()
+	PragueInstructionSet         = newPragueInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newPragueInstructionSet() JumpTable {
+	instructionSet := newCancunInstructionSet()
+	enable7702(&instructionSet) // EIP-7702 Set EOA account
+	return instructionSet
+}
 
 func newCancunInstructionSet() JumpTable {
 	instructionSet := newShanghaiInstructionSet()
@@ -77,7 +84,6 @@ func newCancunInstructionSet() JumpTable {
 	enable1153(&instructionSet) // EIP-1153 TLOAD, TSTORE opcode
 	enable1052(&instructionSet) // EIP-1052 EXTCODEHASH fix
 	enableCancunComputationCostModification(&instructionSet)
-	enable7702(&instructionSet)
 	return instructionSet
 }
 

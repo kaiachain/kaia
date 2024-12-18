@@ -58,7 +58,6 @@ func GetDefaultConfig() *Config {
 		LivePruningRetention:    blockchain.DefaultPruningRetention,
 		TxPruningRetention:      blockchain.DefaultPruningRetention,
 		ReceiptPruningRetention: blockchain.DefaultPruningRetention,
-		GasPrice:                big.NewInt(18 * params.Gkei),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -147,7 +146,6 @@ type Config struct {
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
 	ExtraData          []byte         `toml:",omitempty"`
-	GasPrice           *big.Int
 
 	// Reward
 	Rewardbase common.Address `toml:",omitempty"`

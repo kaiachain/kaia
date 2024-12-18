@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -83,13 +82,8 @@ func TestEthereumAPI_Coinbase(t *testing.T) {
 
 // testNodeAddress generates nodeAddress and tests Etherbase and Coinbase.
 func testNodeAddress(t *testing.T, testAPIName string) {
-	gov := governance.NewMixedEngineNoInit(
-		dummyChainConfigForEthereumAPITest,
-		database.NewMemoryDBManager(),
-	)
 	key, _ := crypto.GenerateKey()
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
-	gov.SetNodeAddress(nodeAddress)
 
 	api := EthereumAPI{nodeAddress: nodeAddress}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
