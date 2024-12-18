@@ -173,7 +173,7 @@ func headerCompress(from, to, headerNumber uint64, headers []*types.Header) (dat
 		dbm.WriteHeader(h)
 		originSize += h.Size()
 	}
-	nextCompressNum, compressedSize, err := compressHeader(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
+	nextCompressNum, _, compressedSize, err := compressHeader(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
 	return dbm, nextCompressNum, originSize, common.StorageSize(float64(compressedSize)), err
 }
 
@@ -186,7 +186,7 @@ func bodyCompress(from, to, headerNumber uint64, blkHashes []common.Hash, bodies
 		dbm.WriteBody(blkHashes[idx], blkNum, body)
 		rlp.Encode(&originSize, body)
 	}
-	nextCompressNum, compressedSize, err := compressBody(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
+	nextCompressNum, _, compressedSize, err := compressBody(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
 	return dbm, nextCompressNum, common.StorageSize(originSize), common.StorageSize(float64(compressedSize)), err
 }
 
@@ -199,7 +199,7 @@ func receiptsCompress(from, to, headerNumber uint64, blkHashes []common.Hash, re
 		dbm.WriteReceipts(blkHashes[idx], blkNum, *receipts)
 		rlp.Encode(&originSize, receipts)
 	}
-	nextCompressNum, compressedSize, err := compressReceipts(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
+	nextCompressNum, _, compressedSize, err := compressReceipts(dbm, from, to, headerNumber, blockchain.DefaultChunkBlockSize, blockchain.DefaultCompressChunkCap, true)
 	return dbm, nextCompressNum, common.StorageSize(originSize), common.StorageSize(float64(compressedSize)), err
 }
 

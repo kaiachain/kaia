@@ -152,10 +152,10 @@ func decompress(dbm database.DBManager, compressTyp CompressionType, from, to ui
 	}
 }
 
-func compressStorage(dbm database.DBManager, compressTyp CompressionType, readData func(common.Hash, uint64) any, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
+func compressStorage(dbm database.DBManager, compressTyp CompressionType, readData func(common.Hash, uint64) any, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error) {
 	from, to, err := sanitizeRange(dbm, compressTyp, from, to, headNumber, compressChunk)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	var (
@@ -168,7 +168,7 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 	for i := from; i < to; i++ {
 		blkHash := dbm.ReadCanonicalHash(i)
 		if common.EmptyHash(blkHash) {
-			return 0, 0, fmt.Errorf("[%s Compression] Block does not exist (number=%d)", compressTyp.String(), i)
+			return 0, 0, 0, fmt.Errorf("[%s Compression] Block does not exist (number=%d)", compressTyp.String(), i)
 		}
 		data := readData(blkHash, i)
 		if data != nil {
@@ -204,11 +204,11 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 	}
 	if itIdx == 0 {
 		// There is no data to compress
-		return to, 0, nil
+		return to, 0, 0, nil
 	}
 	bytes, err := rlp.EncodeToBytes(compressions[:itIdx])
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	compressedSize := writeCompression(dbm, compressTyp, bytes, from, compressedTo)
@@ -218,7 +218,7 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 	}
 
 	removeOriginAfterCompress(dbm, compressions[:itIdx])
-	return nextCompressStart, compressedSize, nil
+	return nextCompressStart, len(bytes), compressedSize, nil
 }
 
 func writeCompression(dbm database.DBManager, compressTyp CompressionType, compressedBytes []byte, from, to uint64) int {
@@ -235,14 +235,14 @@ func writeCompression(dbm database.DBManager, compressTyp CompressionType, compr
 	return len(compressed)
 }
 
-func compressHeader(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
+func compressHeader(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		return dbm.ReadHeader(blkHash, blkNumber)
 	}
 	return compressStorage(dbm, HeaderCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
-func compressBody(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
+func compressBody(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		body := dbm.ReadBody(blkHash, blkNumber)
 		if body == nil || len(body.Transactions) == 0 {
@@ -253,7 +253,7 @@ func compressBody(dbm database.DBManager, from, to, headNumber, compressChunk, m
 	return compressStorage(dbm, BodyCompressType, readData, from, to, headNumber, compressChunk, maxSize, migrationMode)
 }
 
-func compressReceipts(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error) {
+func compressReceipts(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error) {
 	readData := func(blkHash common.Hash, blkNumber uint64) any {
 		receipts := dbm.ReadReceipts(blkHash, blkNumber)
 		if receipts == nil || len(receipts) == 0 {

@@ -130,13 +130,15 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				return
 			default:
 			}
-			subsequentBlkNumber, compressedSize, err := compressFn(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			subsequentBlkNumber, originSize, compressedSize, err := compressFn(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			if err != nil {
 				logger.Warn("[Compression] failed to compress chunk", "type", compressTyp.String(), "err", err)
 				break
 			}
 			if subsequentBlkNumber >= curBlkNum {
-				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
+				if compressedSize != 0 {
+					logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
+				}
 				break
 			}
 			from = subsequentBlkNumber
@@ -325,21 +327,23 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 		var (
 			subsequentBlkNumber uint64
 			err                 error
+			originSize          int
+			compressedSize      int
 		)
 		startCompress := time.Now()
 		switch compressTyp {
 		case HeaderCompressType:
-			subsequentBlkNumber, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			subsequentBlkNumber, originSize, compressedSize, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			totalHeaderCompressedElapsedTime += time.Since(startCompress)
 			nCompressedHeader = subsequentBlkNumber - 1
 			nHeaderChunks++
 		case BodyCompressType:
-			subsequentBlkNumber, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			subsequentBlkNumber, originSize, compressedSize, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			totalBodyCompressedElapsedTime += time.Since(startCompress)
 			nCompressedBody = subsequentBlkNumber - 1
 			nBodyChunkcs++
 		case ReceiptCompressType:
-			subsequentBlkNumber, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+			subsequentBlkNumber, originSize, compressedSize, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			totalReceiptsCompressedElapsedTime += time.Since(startCompress)
 			nCompressedReceipts = subsequentBlkNumber - 1
 			nReceiptsChunkcs++
@@ -354,7 +358,7 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 			return err
 		}
 		if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
-			logger.Info("[Compression] compression is completed", "from", from, "to", to, "subsequentBlkNumber", subsequentBlkNumber)
+			logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize))
 			break
 		}
 		from = subsequentBlkNumber
@@ -404,13 +408,13 @@ func (c *CompressModule) testCompressPerformance(from, to uint64) error {
 			startCompress := time.Now()
 			switch compressTyp {
 			case HeaderCompressType:
-				subsequentBlkNumber, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+				subsequentBlkNumber, _, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalHeaderCompressedElapsedTime += time.Since(startCompress)
 			case BodyCompressType:
-				subsequentBlkNumber, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+				subsequentBlkNumber, _, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalBodyCompressedElapsedTime += time.Since(startCompress)
 			case ReceiptCompressType:
-				subsequentBlkNumber, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
+				subsequentBlkNumber, _, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 				totalReceiptsCompressedElapsedTime += time.Since(startCompress)
 			}
 			if err != nil {

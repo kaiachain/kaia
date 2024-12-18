@@ -203,7 +203,7 @@ type CompressStructTyp interface {
 
 type (
 	Finder       func(dbm database.DBManager, from, to, headNumber uint64, blkOrTxHash common.Hash) (any, error)
-	CompressFn   func(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, error)
+	CompressFn   func(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error)
 	DecompressFn func(dbm database.DBManager, compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error)
 )
 
