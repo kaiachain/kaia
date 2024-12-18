@@ -20,12 +20,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCompressStorage(t *testing.T) {
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		switch compressTyp {
 		case HeaderCompressType:
 			testHeaderCompress(t)
@@ -38,7 +39,7 @@ func TestCompressStorage(t *testing.T) {
 }
 
 func TestDecompressStorage(t *testing.T) {
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		switch compressTyp {
 		case HeaderCompressType:
 			testHeaderDecompress(t)
@@ -51,7 +52,7 @@ func TestDecompressStorage(t *testing.T) {
 }
 
 func TestDeleteStorage(t *testing.T) {
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		switch compressTyp {
 		case HeaderCompressType:
 			testCompressedHeaderDelete(t)
@@ -88,14 +89,14 @@ func TestRewind(t *testing.T) {
 								next compression block number
 			Chunks = C1|C2|C3|C4|C5|C6|C7|C8|C9|C10
 
-		[Phase2: Rewind]
+		[Phase2: Rewind] (`Stop` called)
 			Once `setHead` is invoked,
 			0 ------------ 50 ---- 55
 							^
 				next compression block number
 			Chunks = C1|C2|C3|C4|C5
 
-		[Phase3: Compress again]
+		[Phase3: Compress again] (`Start` called)
 			compressed data range 50-59 is restored and Sync is started from 55. Finally,
 			0 ------------ 50 ------------ 99
 			Chunks = C1|C2|C3|C4|C5|C6|C7|C8|C9|C10
@@ -107,6 +108,7 @@ func TestRewind(t *testing.T) {
 		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
 	)
 
+	mCompress.Stop()
 	for i := nBlocks - 1; i >= setHeadTo; i-- {
 		num := uint64(i)
 		hash := dbm.ReadCanonicalHash(num)
@@ -147,14 +149,54 @@ func TestRewind(t *testing.T) {
 	// expected next compression block number should be equal or less than `setHeadTo`.
 	// Given the value of `setHeadTo` is 55 and chunk size is 10,
 	// The rewinded next compression block number should be 50.
-	nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, HeaderCompressType)
-	assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
+	}
 
-	go mCompress.Start() // fragment restore invoked before starting compression
+	mCompress.Start() // fragment restore invoked before starting compression
 	waitCompression(mCompress)
 	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, canonicalHeaders, canonicalBodies, canonicalReceipts, false)
 
 	// Once completed the compression, next compression block number reaches to `nBlocks - 1`
-	nextCompressionNumber = readSubsequentCompressionBlkNumber(dbm, HeaderCompressType)
-	assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
+	}
+}
+
+func TestRetention(t *testing.T) {
+	var (
+		nBlocks    = 100
+		chain, dbm = initMock(t, nBlocks)
+		mCompress  = NewCompression()
+		err        = mCompress.Init(&InitOpts{
+			ChunkBlockSize: blockchain.DefaultChunkBlockSize,
+			ChunkCap:       blockchain.DefaultCompressChunkCap,
+			Chain:          chain,
+			Dbm:            dbm,
+		})
+	)
+	assert.Nil(t, err)
+	dbm.SetCompressModule(mCompress)
+	mCompress.setCompressChunk(10)
+	mCompress.setCompressRetention(uint64(nBlocks))
+	go mCompress.Start()
+	waitCompression(mCompress)
+
+	// compression is not performed by retention
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, nextCompressionNumber, uint64(0))
+	}
+	mCompress.Stop()
+
+	// compress work by reset retention
+	mCompress.setCompressRetention(0)
+	mCompress.Start()
+	waitCompression(mCompress)
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
+	}
 }

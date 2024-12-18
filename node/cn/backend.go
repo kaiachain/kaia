@@ -581,6 +581,7 @@ func (s *CN) SetupKaiaxModules() error {
 			Dbm:            s.chainDB,
 			ChunkBlockSize: s.config.CompressBlockChunkSize,
 			ChunkCap:       s.config.CompressChunkCap,
+			Retention:      s.config.CompressRetention,
 		}),
 	)
 	if err != nil {

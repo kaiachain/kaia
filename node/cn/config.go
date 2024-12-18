@@ -137,6 +137,7 @@ type Config struct {
 	ReceiptPruningRetention uint64
 	CompressBlockChunkSize  uint64
 	CompressChunkCap        uint64
+	CompressRetention       uint64
 	SenderTxHashIndexing    bool
 	ParallelDBWrite         bool
 	TrieNodeCacheConfig     statedb.TrieNodeCacheConfig

@@ -489,7 +489,7 @@ var (
 		Category: "DATABASE",
 	}
 	CompressBlockChunkSizeFlag = &cli.Uint64Flag{
-		Name:     "database.compress-check-block-size",
+		Name:     "database.compress-chunk-block-size",
 		Usage:    "Number of blocks which chunk can accomodate",
 		Value:    blockchain.DefaultChunkBlockSize,
 		Aliases:  []string{},
@@ -497,11 +497,19 @@ var (
 		Category: "DATABASE",
 	}
 	CompressChunkCapFlag = &cli.Uint64Flag{
-		Name:     "database.compress-check-cap",
+		Name:     "database.compress-chunk-cap",
 		Usage:    "Byte size which chunk can accomodate",
 		Value:    blockchain.DefaultCompressChunkCap,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_COMPRESS_CHUNK_CAP", "KAIA_COMPRESS_CHUNK_CAP"},
+		Category: "DATABASE",
+	}
+	CompressRetentionFlag = &cli.Uint64Flag{
+		Name:     "database.compress-retention",
+		Usage:    "Number of blocks from the latest block where compression should not be performed",
+		Value:    blockchain.DefaultCompressRetention,
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_COMPRESS_RETENTIONP", "KAIA_COMPRESS_RETENTION"},
 		Category: "DATABASE",
 	}
 	SenderTxHashIndexingFlag = &cli.BoolFlag{

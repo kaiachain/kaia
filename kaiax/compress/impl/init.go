@@ -42,6 +42,7 @@ type BlockChain interface {
 type InitOpts struct {
 	ChunkBlockSize uint64
 	ChunkCap       uint64
+	Retention      uint64
 	Chain          BlockChain
 	Dbm            database.DBManager
 }
@@ -54,8 +55,11 @@ type IdleState struct {
 type CompressModule struct {
 	InitOpts
 
-	compressChunkMu sync.RWMutex
-	maxSizeMu       sync.RWMutex
+	terminateCompress chan any
+
+	compressChunkMu   sync.RWMutex
+	compressMaxSizeMu sync.RWMutex
+	compressRetention sync.RWMutex
 
 	headerIdleState     *IdleState
 	bodyIdleState       *IdleState
@@ -70,14 +74,14 @@ func NewCompression() *CompressModule {
 }
 
 func (c *CompressModule) setMaxSize(v uint64) {
-	c.maxSizeMu.Lock()
-	defer c.maxSizeMu.Unlock()
+	c.compressMaxSizeMu.Lock()
+	defer c.compressMaxSizeMu.Unlock()
 	c.InitOpts.ChunkCap = v
 }
 
 func (c *CompressModule) getChunkCap() uint64 {
-	c.maxSizeMu.RLock()
-	defer c.maxSizeMu.RUnlock()
+	c.compressMaxSizeMu.RLock()
+	defer c.compressMaxSizeMu.RUnlock()
 	if c.InitOpts.ChunkCap == 0 {
 		return blockchain.DefaultCompressChunkCap
 	}
@@ -97,6 +101,18 @@ func (c *CompressModule) getCompressChunk() uint64 {
 		return blockchain.DefaultChunkBlockSize
 	}
 	return c.InitOpts.ChunkBlockSize
+}
+
+func (c *CompressModule) setCompressRetention(v uint64) {
+	c.compressRetention.Lock()
+	defer c.compressRetention.Unlock()
+	c.InitOpts.Retention = v
+}
+
+func (c *CompressModule) getCompressRetention() uint64 {
+	c.compressRetention.RLock()
+	defer c.compressRetention.RUnlock()
+	return c.InitOpts.Retention
 }
 
 func (c *CompressModule) setIdleState(compressTyp CompressionType, is *IdleState) {
@@ -149,6 +165,7 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 		return compress.ErrInitNil
 	}
 	c.InitOpts = *opts
+	c.terminateCompress = make(chan any, TotalCompressTypeSize)
 	return nil
 }
 
@@ -160,5 +177,6 @@ func (c *CompressModule) Start() error {
 }
 
 func (c *CompressModule) Stop() {
+	c.stopCompress()
 	logger.Info("[Compression] Compression Stopped")
 }

@@ -33,7 +33,14 @@ const (
 	HeaderCompressType = iota
 	BodyCompressType
 	ReceiptCompressType
+	TotalCompressTypeSize
 )
+
+var allCompressTypes = [TotalCompressTypeSize]CompressionType{
+	HeaderCompressType,
+	BodyCompressType,
+	ReceiptCompressType,
+}
 
 var (
 	compressHeaderPrefix  = []byte("CompressdHeader-")

@@ -34,6 +34,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const SEC_TEN = time.Second * 10
+
+func (c *CompressModule) stopCompress() {
+	for range allCompressTypes {
+		c.terminateCompress <- struct{}{}
+	}
+	for {
+		if len(c.terminateCompress) == 0 {
+			for _, compressTyp := range allCompressTypes {
+				c.setIdleState(compressTyp, nil)
+			}
+			return
+		}
+	}
+}
+
 func (c *CompressModule) Compress() {
 	go c.compressHeader()
 	go c.compressBody()
@@ -52,30 +68,68 @@ func (c *CompressModule) compressReceipts() {
 	c.compress(ReceiptCompressType, compressReceipts)
 }
 
-func (c *CompressModule) compress(compressTyp CompressionType, compressFn CompressFn) {
-	var (
-		SEC_TEN     = time.Second * 10
-		totalChunks = 0
-	)
+func (c *CompressModule) idle(compressTyp CompressionType, nBlocks uint64) bool {
+	idle := false
 	for {
+		select {
+		case <-c.terminateCompress:
+			logger.Info("[Compression] Stop signal received", "type", compressTyp.String())
+			return true
+		case <-time.After(SEC_TEN):
+			return false
+		default:
+			if !idle {
+				idealIdleTime := time.Second * time.Duration(nBlocks)
+				c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
+				logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
+				idle = true
+			}
+		}
+	}
+}
+
+func (c *CompressModule) compress(compressTyp CompressionType, compressFn CompressFn) {
+	totalChunks := 0
+	for {
+		select {
+		case <-c.terminateCompress:
+			logger.Info("[Compression] Stop signal received", "type", compressTyp.String())
+			return
+		default:
+		}
+
 		var (
-			curBlkNum             = c.Chain.CurrentBlock().NumberU64()
-			residualBlkCnt        = curBlkNum % c.getCompressChunk()
-			nextCompressionBlkNum = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
+			curBlkNum               = c.Chain.CurrentBlock().NumberU64()
+			residualBlkCnt          = curBlkNum % c.getCompressChunk()
+			nextCompressionBlkNum   = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
+			nextCompressionDistance = curBlkNum - nextCompressionBlkNum
 			// Do not wait if next compression block number is far awway. Start migration right now
-			noWait     = curBlkNum > nextCompressionBlkNum && curBlkNum-nextCompressionBlkNum > c.getCompressChunk()
+			noWait     = curBlkNum > nextCompressionBlkNum && nextCompressionDistance > c.getCompressChunk()
 			originFrom = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
 			from       = originFrom
 		)
+		// 1. Idle check
 		if curBlkNum < c.getCompressChunk() || (residualBlkCnt != 0 && !noWait) {
-			idealIdleTime := time.Second * time.Duration(c.getCompressChunk()-residualBlkCnt)
-			c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
-			logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
-			time.Sleep(SEC_TEN)
+			if c.idle(compressTyp, c.getCompressChunk()-residualBlkCnt) {
+				return
+			}
+			continue
+		}
+		if c.getCompressRetention() > nextCompressionDistance {
+			if c.idle(compressTyp, c.getCompressRetention()-nextCompressionDistance) {
+				return
+			}
 			continue
 		}
 		c.setIdleState(compressTyp, nil)
+		// 2. Main loop (compression)
 		for {
+			select {
+			case <-c.terminateCompress:
+				logger.Info("[Compression] Stop signal received", "type", compressTyp.String())
+				return
+			default:
+			}
 			subsequentBlkNumber, compressedSize, err := compressFn(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
 			if err != nil {
 				logger.Warn("[Compression] failed to compress chunk", "type", compressTyp.String(), "err", err)
@@ -88,6 +142,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 			from = subsequentBlkNumber
 			totalChunks++
 		}
+
 	}
 }
 
@@ -128,7 +183,7 @@ func (c *CompressModule) FindReceiptsFromChunkWithBlkHash(dbm database.DBManager
 }
 
 func (c *CompressModule) restoreFragmentByRewind() {
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		var (
 			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix = getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
 			miscDB                                                     = c.Dbm.GetMiscDB()
@@ -297,7 +352,7 @@ func (c *CompressModule) testCompressPerformance(from, to uint64) error {
 		totalBodyFinderElapsedTime         time.Duration
 		totalReceiptsFinderElapsedTime     time.Duration
 	)
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		from = originFrom
 		writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
 		for {
@@ -415,7 +470,7 @@ func TestCompressFinder(t *testing.T, setup func(t *testing.T) (*blockchain.Bloc
 		originBodyElapsed     time.Duration
 		originReceiptsElapsed time.Duration
 	)
-	for _, compressTyp := range []CompressionType{HeaderCompressType, BodyCompressType, ReceiptCompressType} {
+	for _, compressTyp := range allCompressTypes {
 		var (
 			r    = rand.Uint64() % (5000)
 			hash = mCompress.Dbm.ReadCanonicalHash(r)

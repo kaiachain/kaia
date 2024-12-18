@@ -109,13 +109,14 @@ const (
 )
 
 const (
-	DefaultTriesInMemory    = 128
-	DefaultBlockInterval    = 128
-	DefaultPruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
-	MaxPrefetchTxs          = 20000
-	DefaultChunkBlockSize   = uint64(10000)
-	MB_1                    = uint64(1000000)
-	DefaultCompressChunkCap = MB_1 * 100 // 100MB
+	DefaultTriesInMemory     = 128
+	DefaultBlockInterval     = 128
+	DefaultPruningRetention  = 172800 // 2*params.DefaultStakeUpdateInterval
+	MaxPrefetchTxs           = 20000
+	MB_1                     = uint64(1000000)
+	DefaultChunkBlockSize    = uint64(10000)
+	DefaultCompressChunkCap  = MB_1 * 100 // 100MB
+	DefaultCompressRetention = 86400
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:

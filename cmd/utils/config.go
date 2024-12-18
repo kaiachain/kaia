@@ -591,6 +591,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 
 	cfg.CompressBlockChunkSize = ctx.Uint64(CompressBlockChunkSizeFlag.Name)
 	cfg.CompressChunkCap = ctx.Uint64(CompressChunkCapFlag.Name)
+	cfg.CompressRetention = ctx.Uint64(CompressRetentionFlag.Name)
 
 	if gcmode := ctx.String(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)

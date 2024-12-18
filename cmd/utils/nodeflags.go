@@ -199,6 +199,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewBoolFlag(LevelDBNoBufferPoolFlag),
 	altsrc.NewUint64Flag(CompressBlockChunkSizeFlag),
 	altsrc.NewUint64Flag(CompressChunkCapFlag),
+	altsrc.NewUint64Flag(CompressRetentionFlag),
 	altsrc.NewBoolFlag(DBNoPerformanceMetricsFlag),
 	altsrc.NewBoolFlag(RocksDBSecondaryFlag),
 	altsrc.NewUint64Flag(RocksDBCacheSizeFlag),
