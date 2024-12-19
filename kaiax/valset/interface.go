@@ -24,7 +24,6 @@ import (
 //go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
 type ValsetModule interface {
 	kaiax.BaseModule
-	kaiax.JsonRpcModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
