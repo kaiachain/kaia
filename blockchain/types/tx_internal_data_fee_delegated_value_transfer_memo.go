@@ -350,8 +350,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, 
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if !validate7702(stateDB, t.Type(), t.From, t.Recipient) {
-		return kerrors.ErrNotEOAWithoutCode
+	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
+		return err
 	}
 	return nil
 }

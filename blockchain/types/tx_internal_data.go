@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -724,7 +725,7 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	return common.StorageSize(c)
 }
 
-func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool {
+func validate7702(stateDB StateDB, txType TxType, from, to common.Address) error {
 	switch txType {
 	// Group 1: Recipient must be EOA without code
 	case TxTypeValueTransfer,
@@ -735,17 +736,17 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		TxTypeFeeDelegatedValueTransferMemoWithRatio:
 		acc := stateDB.GetAccount(to)
 		if acc == nil {
-			return true
+			return nil
 		}
 		if acc.Type() == account.SmartContractAccountType {
-			return false
+			return kerrors.ErrToMustBeEOAWithoutCode
 		}
 		eoa, ok := acc.(*account.ExternallyOwnedAccount)
 		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
-			return false
+			return kerrors.ErrToMustBeEOAWithoutCode
 		}
 
-		return true
+		return nil
 
 	// Group 2: From must be EOA without code
 	case TxTypeAccountUpdate,
@@ -753,17 +754,17 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		TxTypeFeeDelegatedAccountUpdateWithRatio:
 		acc := stateDB.GetAccount(from)
 		if acc == nil {
-			return false
+			return nil
 		}
 		if acc.Type() == account.SmartContractAccountType {
-			return false
+			return kerrors.ErrFromMustBeEOAWithoutCode
 		}
 		eoa, ok := acc.(*account.ExternallyOwnedAccount)
 		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
-			return false
+			return kerrors.ErrFromMustBeEOAWithoutCode
 		}
 
-		return true
+		return nil
 
 	// Group 3: Recipient must be EOA with code or SCA
 	case TxTypeSmartContractExecution,
@@ -771,19 +772,19 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) bool 
 		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
 		acc := stateDB.GetAccount(to)
 		if acc == nil {
-			return false
+			return kerrors.ErrToMustBeEOAWithCodeOrSCA
 		}
 		if acc.Type() == account.SmartContractAccountType {
-			return true
+			return nil
 		}
 		eoa, ok := acc.(*account.ExternallyOwnedAccount)
 		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
-			return true
+			return nil
 		}
 
-		return true
+		return kerrors.ErrToMustBeEOAWithCodeOrSCA
 
 	default:
-		return false
+		return nil
 	}
 }
