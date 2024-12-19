@@ -84,6 +84,7 @@ func (c *CompressModule) idle(compressTyp CompressionType, nBlocks uint64) bool 
 				logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
 				idle = true
 			}
+			time.Sleep(time.Second)
 		}
 	}
 }

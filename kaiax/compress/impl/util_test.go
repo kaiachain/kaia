@@ -482,7 +482,7 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 	dbm.SetCompressModule(mCompress)
 	headers, bodies, receipts := readOriginData(t, dbm, nBlocks)
 	mCompress.setCompressChunk(10)
-	go mCompress.Start()
+	mCompress.Start()
 	waitCompression(mCompress)
 	return mCompress, dbm, headers, bodies, receipts
 }
