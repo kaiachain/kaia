@@ -26,12 +26,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
-	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/event"
@@ -69,16 +67,26 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	})
 
 	eventMux := new(event.TypeMux)
-	validatorSet := validator.NewWeightedCouncil(validatorAddrs, nil, validatorAddrs, nil, nil,
-		istanbul.WeightedRandom, committeeSize, 0, 0, &blockchain.BlockChain{})
 
 	mockCtrl := gomock.NewController(t)
+	mockValset := istanbul.NewBlockValSet(validatorAddrs, []common.Address{})
 	mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 
 	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
+
 	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().Validators(initBlock).Return(validatorSet).AnyTimes()
+	mockBackend.EXPECT().GetCommitteeStateByRound(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
+			if round == 2 {
+				return istanbul.NewRoundCommitteeState(
+					mockValset, committeeSize, validatorAddrs[2:committeeSize+2], validatorAddrs[0],
+				), nil
+			}
+			return istanbul.NewRoundCommitteeState(
+				mockValset, committeeSize, validatorAddrs[0:committeeSize], validatorAddrs[0],
+			), nil
+		}).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
 
 	// Set an eventMux in which istanbul core will subscribe istanbul events
@@ -89,8 +97,8 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 
 	// Always return nil for broadcasting related functions
 	mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	mockBackend.EXPECT().GossipSubPeer(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().GossipSubPeer(gomock.Any(), gomock.Any()).Return().AnyTimes()
 
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
@@ -109,31 +117,6 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 		keyMap[addrs[i]] = key
 	}
 	return addrs, keyMap
-}
-
-// getRandomValidator selects a validator in the given validator set.
-// `isCommittee` determines whether it returns a committee or a non-committee.
-func getRandomValidator(isCommittee bool, valSet istanbul.ValidatorSet, prevHash common.Hash, view *istanbul.View) istanbul.Validator {
-	committee := valSet.SubList(prevHash, view)
-
-	if isCommittee {
-		return committee[rand.Int()%(len(committee)-1)]
-	}
-
-	for _, val := range valSet.List() {
-		for _, com := range committee {
-			if val.Address() == com.Address() {
-				isCommittee = true
-			}
-		}
-		if !isCommittee {
-			return val
-		}
-		isCommittee = false
-	}
-
-	// it should not be happened
-	return nil
 }
 
 // signBlock signs the given block with the given private key
@@ -274,19 +257,20 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	eventMux := mockBackend.EventMux()
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	validators := mockBackend.Validators(lastBlock)
+	cState, err := mockBackend.GetCommitteeStateByRound(istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+	assert.NoError(t, err)
 
 	// Preprepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -301,15 +285,15 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Preprepare message originated from valid sender and set a new proposal in the istanbul core
 	{
-		msgSender := validators.GetProposer()
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.Proposer()
+		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -319,15 +303,16 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 		}
 
 		time.Sleep(time.Second)
-		assert.Equal(t, istCore.current.Preprepare.Proposal.Header().String(), newProposal.Header().String())
+		currentHeader, proposalHeader := istCore.current.Preprepare.Proposal.Header().String(), newProposal.Header().String()
+		assert.Equal(t, currentHeader, proposalHeader)
 	}
 
 	// Prepare message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
-		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -342,10 +327,10 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
-		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -360,10 +345,10 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from invalid sender
 	{
-		msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
-		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -378,10 +363,10 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
-		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -414,10 +399,10 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// RoundChange message originated from valid sender
 	{
-		msgSender := getRandomValidator(true, validators, lastBlock.Hash(), istCore.currentView())
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
 
-		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -439,7 +424,7 @@ func TestCore_handlerMsg(t *testing.T) {
 	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
-	istConfig := istanbul.DefaultConfig
+	istConfig := istanbul.DefaultConfig.Copy()
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(mockBackend, istConfig).(*core)
@@ -450,7 +435,7 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	validators := mockBackend.Validators(lastBlock)
+	cState, _ := mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
 
 	// invalid format
 	{
@@ -481,15 +466,15 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	// valid message
 	{
-		msgSender := validators.GetProposer()
-		msgSenderKey := validatorKeyMap[msgSender.Address()]
+		msgSender := cState.Proposer()
+		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender.Address(), msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -517,11 +502,11 @@ func enableLog() {
 
 // splitSubList splits a committee into two groups w/o proposer
 // one for n nodes, the other for len(committee) - n - 1 nodes
-func splitSubList(committee []istanbul.Validator, n int, proposerAddr common.Address) ([]istanbul.Validator, []istanbul.Validator) {
-	var subCN, remainingCN []istanbul.Validator
+func splitSubList(committee []common.Address, n int, proposerAddr common.Address) ([]common.Address, []common.Address) {
+	var subCN, remainingCN []common.Address
 
 	for _, val := range committee {
-		if val.Address() == proposerAddr {
+		if val == proposerAddr {
 			// proposer is not included in any group
 			continue
 		}
@@ -559,9 +544,9 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 		// malProposal is an incorrect block that malicious CNs use to try stop consensus
 		lastProposal, _ = mockBackend.LastProposal()
 		lastBlock       = lastProposal.(*types.Block)
-		validators      = mockBackend.Validators(lastBlock)
-		proposer        = validators.GetProposer()
-		proposerKey     = validatorKeyMap[proposer.Address()]
+		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+		proposer        = cState.Proposer()
+		proposerKey     = validatorKeyMap[proposer]
 		// the proposer generates a block as newProposal
 		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
 		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
@@ -572,14 +557,13 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	istCore := New(mockBackend, istConfig).(*core)
-	err := istCore.Start()
-	require.Nil(t, err)
+	require.Nil(t, istCore.Start())
 	defer istCore.Stop()
 
 	// Step 1 - Pre-prepare with correct message
 
 	// Create pre-prepare message
-	istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, proposer.Address(), proposerKey)
+	istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, proposer, proposerKey)
 	require.Nil(t, err)
 
 	// Handle pre-prepare message
@@ -587,15 +571,14 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	require.Nil(t, err)
 
 	// splitSubList split current committee into benign CNs and malicious CNs
-	subList := validators.SubList(lastBlock.Hash(), istCore.currentView())
-	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer.Address())
+	subList := cState.Committee().List()
+	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer)
 	benignCNs = append(benignCNs, proposer)
 
 	// Shortcut for sending consensus message to everyone in `CNList`
-	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator) {
+	sendMessages := func(state uint64, proposal *types.Block, CNList []common.Address) {
 		for _, val := range CNList {
-			valKey := validatorKeyMap[val.Address()]
-			istanbulMsg, err := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
+			istanbulMsg, err = genIstanbulMsg(state, lastBlock.Hash(), proposal, val, validatorKeyMap[val])
 			assert.Nil(t, err)
 			err = istCore.handleMsg(istanbulMsg.Payload)
 			// assert.Nil(t, err)
@@ -652,9 +635,9 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	var (
 		lastProposal, _ = mockBackend.LastProposal()
 		lastBlock       = lastProposal.(*types.Block)
-		validators      = mockBackend.Validators(lastBlock)
-		proposer        = validators.GetProposer()
-		proposerKey     = validatorKeyMap[proposer.Address()]
+		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+		proposer        = cState.Proposer()
+		proposerKey     = validatorKeyMap[proposer]
 	)
 
 	// Start istanbul core
@@ -675,8 +658,8 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	// the number of group size is (numValidators-1/2) + 1
 	// groupA consists of proposer, coreA, unnamed node(s)
 	// groupB consists of proposer, coreB, unnamed node(s)
-	subList := validators.SubList(lastBlock.Hash(), coreProposer.currentView())
-	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer.Address())
+	subList := cState.Committee().List()
+	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer)
 	groupA = append(groupA, proposer)
 	groupB = append(groupB, proposer)
 
@@ -688,14 +671,14 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	assert.Nil(t, err)
 
 	// Shortcut for sending message `proposal` to core `c`
-	sendMessages := func(state uint64, proposal *types.Block, CNList []istanbul.Validator, c *core) {
+	sendMessages := func(state uint64, proposal *types.Block, CNList []common.Address, c *core) {
 		for _, val := range CNList {
-			valKey := validatorKeyMap[val.Address()]
+			valKey := validatorKeyMap[val]
 			if state == msgPreprepare {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer.Address(), valKey)
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer, valKey)
 				err = c.handleMsg(istanbulMsg.Payload)
 			} else {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val.Address(), valKey)
+				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val, valKey)
 				err = c.handleMsg(istanbulMsg.Payload)
 			}
 			if err != nil {

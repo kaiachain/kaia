@@ -23,10 +23,12 @@
 package istanbul
 
 import (
+	"math"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -129,3 +131,81 @@ type ValidatorSet interface {
 // ----------------------------------------------------------------------------
 
 type ProposalSelector func(ValidatorSet, common.Address, uint64) Validator
+
+type BlockValSet struct {
+	council   *valset.AddressSet // council = demoted + qualified
+	qualified *valset.AddressSet
+	demoted   *valset.AddressSet
+}
+
+func NewBlockValSet(council, demoted []common.Address) *BlockValSet {
+	councilSet := valset.NewAddressSet(council)
+	demotedSet := valset.NewAddressSet(demoted)
+	qualifiedSet := councilSet.Subtract(demotedSet)
+
+	return &BlockValSet{councilSet, qualifiedSet, demotedSet}
+}
+func (cs *BlockValSet) Council() *valset.AddressSet   { return cs.council }
+func (cs *BlockValSet) Qualified() *valset.AddressSet { return cs.qualified }
+func (cs *BlockValSet) Demoted() *valset.AddressSet   { return cs.demoted }
+func (cs *BlockValSet) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	// 1. Get signature address
+	signer, err := GetSignatureAddress(data, sig)
+	if err != nil {
+		logger.Error("Failed to get signer address", "err", err)
+		return common.Address{}, err
+	}
+
+	// 2. Check validator
+	if cs.Qualified().Contains(signer) {
+		return signer, nil
+	}
+
+	return common.Address{}, ErrUnauthorizedAddress
+}
+
+type RoundCommitteeState struct {
+	*BlockValSet
+	committeeSize uint64
+	committee     *valset.AddressSet
+	proposer      common.Address
+}
+
+func NewRoundCommitteeState(set *BlockValSet, committeeSize uint64, committee []common.Address, proposer common.Address) *RoundCommitteeState {
+	committeeSet := valset.NewAddressSet(committee)
+	return &RoundCommitteeState{set, committeeSize, committeeSet, proposer}
+}
+func (cs *RoundCommitteeState) ValSet() *BlockValSet          { return cs.BlockValSet }
+func (cs *RoundCommitteeState) CommitteeSize() uint64         { return cs.committeeSize }
+func (cs *RoundCommitteeState) Committee() *valset.AddressSet { return cs.committee }
+func (cs *RoundCommitteeState) NonCommittee() *valset.AddressSet {
+	return cs.qualified.Subtract(cs.committee)
+}
+func (cs *RoundCommitteeState) Proposer() common.Address            { return cs.proposer }
+func (cs *RoundCommitteeState) IsProposer(addr common.Address) bool { return cs.proposer == addr }
+
+// RequiredMessageCount returns a minimum required number of consensus messages to proceed
+func (cs *RoundCommitteeState) RequiredMessageCount() int {
+	var size int
+	if cs.qualified.Len() > int(cs.committeeSize) {
+		size = int(cs.committeeSize)
+	} else {
+		size = cs.qualified.Len()
+	}
+	// For less than 4 validators, quorum size equals validator count.
+	if size < 4 {
+		return size
+	}
+	// Adopted QBFT quorum implementation
+	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+	return int(math.Ceil(float64(2*size) / 3))
+}
+
+// F returns a maximum endurable number of byzantine fault nodes
+func (cs *RoundCommitteeState) F() int {
+	if cs.qualified.Len() > int(cs.committeeSize) {
+		return int(math.Ceil(float64(cs.committeeSize)/3)) - 1
+	} else {
+		return int(math.Ceil(float64(cs.qualified.Len())/3)) - 1
+	}
+}

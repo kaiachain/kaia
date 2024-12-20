@@ -52,6 +52,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -538,6 +539,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
 		mGov     = gov_impl.NewGovModule()
+		mValset  = valset_impl.NewValsetModule()
 	)
 
 	// Initialize modules
@@ -565,6 +567,12 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:       s.blockchain,
 			NodeAddress: s.nodeAddress,
 		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       s.chainDB.GetMiscDB(),
+			Chain:         s.blockchain,
+			GovModule:     mGov,
+			StakingModule: mStaking,
+		}),
 	)
 	if err != nil {
 		return err
@@ -572,12 +580,13 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
-	s.blockchain.RegisterExecutionModule(mSupply, mGov)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov)
+	s.blockchain.RegisterExecutionModule(mSupply, mGov, mValset)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
+		engine.RegisterValsetModule(mValset)
 		engine.RegisterStakingModule(mStaking)
 		engine.RegisterConsensusModule(mReward, mGov)
 	}

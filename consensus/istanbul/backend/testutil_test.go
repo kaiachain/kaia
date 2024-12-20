@@ -35,6 +35,8 @@ import (
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/governance"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -198,8 +200,26 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		NodeAddress: engine.Address(),
 	})
 
+	mStaking := staking_impl.NewStakingModule()
+	mStaking.Init(&staking_impl.InitOpts{
+		ChainKv:     dbm.GetMiscDB(),
+		ChainConfig: config,
+		Chain:       chain,
+	})
+	mValset := valset_impl.NewValsetModule()
+	mValset.Init(&valset_impl.InitOpts{
+		ChainKv:       dbm.GetMiscDB(),
+		Chain:         chain,
+		StakingModule: mStaking,
+		GovModule:     mGov,
+	})
+	engine.RegisterValsetModule(mValset)
+	if err = mValset.Start(); err != nil {
+		panic(err)
+	}
+
 	// Start the engine
-	if err := engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
+	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
 		panic(err)
 	}
 

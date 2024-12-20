@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
@@ -56,7 +57,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	}
 }
 
-func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
+func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	// Decode PRE-PREPARE
@@ -72,13 +73,14 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
 			// Get validator set for the given proposal
-			valSet := c.backend.ParentValidators(preprepare.Proposal).Copy()
-			previousProposer := c.backend.GetProposer(preprepare.Proposal.Number().Uint64() - 1)
-			valSet.CalcProposer(previousProposer, preprepare.View.Round.Uint64())
+			councilState, getCouncilError := c.backend.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+			if getCouncilError != nil {
+				return getCouncilError
+			}
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}
@@ -87,7 +89,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.valSet.IsProposer(src.Address()) {
+	if !c.currentCommittee.IsProposer(src) {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
@@ -100,7 +102,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			c.stopFuturePreprepareTimer()
 			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				c.sendEvent(backlogEvent{
-					src:  src.Address(),
+					src:  src,
 					msg:  msg,
 					Hash: msg.Hash,
 				})
@@ -128,7 +130,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 				if vrank != nil {
 					vrank.Log()
 				}
-				vrank = NewVrank(*c.currentView(), c.valSet.SubList(preprepare.Proposal.ParentHash(), c.currentView()))
+				vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 			} else {
 				// Send round change
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
@@ -144,7 +146,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			if vrank != nil {
 				vrank.Log()
 			}
-			vrank = NewVrank(*c.currentView(), c.valSet.SubList(preprepare.Proposal.ParentHash(), c.currentView()))
+			vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 		}
 	}
 

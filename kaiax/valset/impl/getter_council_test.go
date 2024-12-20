@@ -123,7 +123,7 @@ func TestGetCouncilDB(t *testing.T) {
 func TestParseValidatorVote(t *testing.T) {
 	testcases := []struct {
 		voteHex string
-		voteKey gov.ValidatorParamName
+		voteKey gov.ParamName
 		voteVal []common.Address
 		ok      bool
 	}{

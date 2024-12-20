@@ -44,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -113,6 +114,7 @@ type backend struct {
 	db               database.DBManager
 	chain            consensus.ChainReader
 	stakingModule    staking.StakingModule
+	valsetModule     valset.ValsetModule
 	consensusModules []kaiax.ConsensusModule
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
@@ -129,7 +131,7 @@ type backend struct {
 	// Protects the signer fields
 	candidatesLock sync.RWMutex
 	// Snapshots for recent block to speed up reorgs
-	recents *lru.ARCCache
+	recents *lru.ARCCache // TODO-kaiax: Remove snapshot cache
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -170,13 +172,8 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
-// Validators implements istanbul.Backend.Validators
-func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
-}
-
 // Broadcast implements istanbul.Backend.Broadcast
-func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Broadcast(prevHash common.Hash, payload []byte) error {
 	// send to others
 	// TODO Check gossip again in event handle
 	// sb.Gossip(valSet, payload)
@@ -190,7 +187,7 @@ func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet,
 }
 
 // Broadcast implements istanbul.Backend.Gossip
-func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Gossip(payload []byte) error {
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
@@ -224,49 +221,43 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// checkInSubList checks if the node is in a sublist
-func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
-	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address())
-}
-
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
-	targets := make(map[common.Address]bool)
-
+func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
-	view := &istanbul.View{
-		Round:    big.NewInt(cv.Round.Int64()),
-		Sequence: big.NewInt(cv.Sequence.Int64()),
-	}
 
-	proposer := valSet.GetProposer()
+	// calculates a map of target nodes which need to receive a message
+	// committee[currentView].Union(committee[newView]) => targets
+	targets := make(map[common.Address]bool)
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
-		for _, val := range committee {
-			if val.Address() != sb.Address() {
-				targets[val.Address()] = true
+		roundCommittee, err := sb.GetCommitteeStateByRound(cv.Sequence.Uint64(), cv.Round.Uint64()+uint64(i))
+		if err != nil {
+			return nil
+		}
+		// i == 0: get current round's committee. additionally, check if the node is in the current view's committee
+		if i == 0 && !roundCommittee.Committee().Contains(sb.Address()) {
+			return nil
+		}
+		for _, val := range roundCommittee.Committee().List() {
+			if val != sb.Address() {
+				targets[val] = true
 			}
 		}
-		view.Round = view.Round.Add(view.Round, common.Big1)
-		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
 	}
 	return targets
 }
 
 // GossipSubPeer implements istanbul.Backend.Gossip
-func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) map[common.Address]bool {
-	if !sb.checkInSubList(prevHash, valSet) {
-		return nil
+func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
+	targets := sb.getTargetReceivers()
+	if targets == nil {
+		return
 	}
-
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
-
-	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
@@ -294,7 +285,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			go p.Send(IstanbulMsg, cmsg)
 		}
 	}
-	return targets
+	return
 }
 
 // Commit implements istanbul.Backend.Commit
@@ -394,15 +385,6 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 // HasPropsal implements istanbul.Backend.HashBlock
 func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil
-}
-
-// GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
-	}
-	return common.Address{}
 }
 
 // ParentValidators implements istanbul.Backend.GetParentValidators

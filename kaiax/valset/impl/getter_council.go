@@ -183,7 +183,7 @@ func applyVote(header *types.Header, council *valset.AddressSet, governingNode c
 	return originalSize != council.Len()
 }
 
-func parseValidatorVote(header *types.Header) (gov.ValidatorParamName, []common.Address, bool) {
+func parseValidatorVote(header *types.Header) (gov.ParamName, []common.Address, bool) {
 	// Check that a vote exists and is a validator vote.
 	voteBytes := headergov.VoteBytes(header.Vote)
 	if len(voteBytes) == 0 {
@@ -193,7 +193,7 @@ func parseValidatorVote(header *types.Header) (gov.ValidatorParamName, []common.
 	if err != nil {
 		return "", nil, false
 	}
-	voteKey := gov.ValidatorParamName(vote.Name())
+	voteKey := vote.Name()
 	_, isValidatorVote := gov.ValidatorParams[voteKey]
 	if !isValidatorVote {
 		return "", nil, false

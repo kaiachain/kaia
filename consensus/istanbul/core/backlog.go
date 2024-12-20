@@ -80,10 +80,10 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 	return nil
 }
 
-func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
+func (c *core) storeBacklog(msg *message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
-	if src.Address() == c.Address() {
+	if src == c.Address() {
 		logger.Warn("Backlog from self")
 		return
 	}
@@ -93,7 +93,7 @@ func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	backlog := c.backlogs[src.Address()]
+	backlog := c.backlogs[src]
 	if backlog == nil {
 		backlog = prque.New()
 	}
@@ -112,7 +112,7 @@ func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 	}
-	c.backlogs[src.Address()] = backlog
+	c.backlogs[src] = backlog
 }
 
 func (c *core) processBacklog() {

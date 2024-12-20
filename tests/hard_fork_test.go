@@ -42,6 +42,7 @@ import (
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -117,6 +118,7 @@ func TestHardForkBlock(t *testing.T) {
 
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	err = errors.Join(
 		govModule.Init(&gov_impl.InitOpts{
 			ChainConfig: chainConfig,
@@ -129,9 +131,17 @@ func TestHardForkBlock(t *testing.T) {
 			GovModule:     govModule,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
 		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       chainDb.GetMiscDB(),
+			Chain:         chain,
+			GovModule:     govModule,
+			StakingModule: mStaking,
+		}),
 	)
 	require.NoError(t, err)
 	engine.RegisterConsensusModule(mReward)
+	engine.RegisterValsetModule(mValset)
+	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))
 	require.NoError(t, err)
