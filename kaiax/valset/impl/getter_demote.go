@@ -76,7 +76,7 @@ func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.Stakin
 		demoted = valset.NewAddressSet(nil)
 	}
 
-	// Under single governnace mode, governing node cannot be demoted.
+	// Under single governance mode, governing node cannot be demoted.
 	if singleMode && demoted.Contains(governingNode) {
 		demoted.Remove(governingNode)
 	}

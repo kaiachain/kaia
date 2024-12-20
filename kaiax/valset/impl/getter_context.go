@@ -155,7 +155,6 @@ func selectRandaoCommittee(qualified *valset.AddressSet, committeeSize uint64, p
 	// Note: If committeeSize == 1, below code is equivalent to return []common.Address{currProposer}.
 	// Because, the resulting committee will be one validator, and the only validator is also selected as the proposer.
 	// Therefore no special handling for committeeSize == 1 is needed.
-
 	seed := valset.HashToSeed(prevMixHash)
 	shuffled := qualified.ShuffledList(seed)
 	return shuffled[:committeeSize]
