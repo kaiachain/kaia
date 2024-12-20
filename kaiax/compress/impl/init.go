@@ -56,6 +56,7 @@ type CompressModule struct {
 	InitOpts
 
 	terminateCompress chan any
+	wg                sync.WaitGroup
 
 	compressChunkMu   sync.RWMutex
 	compressMaxSizeMu sync.RWMutex

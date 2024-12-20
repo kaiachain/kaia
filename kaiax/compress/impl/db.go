@@ -171,35 +171,42 @@ func compressStorage(dbm database.DBManager, compressTyp CompressionType, readDa
 			return 0, 0, 0, fmt.Errorf("[%s Compression] Block does not exist (number=%d)", compressTyp.String(), i)
 		}
 		data := readData(blkHash, i)
-		if data != nil {
-			switch compressTyp {
-			case HeaderCompressType:
-				compressions[itIdx] = &HeaderCompression{
-					BlkNumber: i,
-					BlkHash:   blkHash,
-					Header:    data.(*types.Header),
-				}
-				rlp.Encode(&accumulatedByteSize, data.(*types.Header))
-			case BodyCompressType:
-				compressions[itIdx] = &BodyCompression{
-					BlkNumber: i,
-					BlkHash:   blkHash,
-					Body:      data.(*types.Body),
-				}
-				rlp.Encode(&accumulatedByteSize, data.(*types.Body))
-			case ReceiptCompressType:
-				compressions[itIdx] = &ReceiptCompression{
-					BlkNumber:       i,
-					BlkHash:         blkHash,
-					StorageReceipts: data.([]*types.ReceiptForStorage),
-				}
-				rlp.Encode(&accumulatedByteSize, data.([]*types.ReceiptForStorage))
+		switch compressTyp {
+		case HeaderCompressType:
+			header := data.(*types.Header)
+			compressions[itIdx] = &HeaderCompression{
+				BlkNumber: i,
+				BlkHash:   blkHash,
+				Header:    header,
 			}
-			itIdx++
-			compressedTo = uint64(i)
-			if uint64(accumulatedByteSize) > maxSize {
-				break
+			rlp.Encode(&accumulatedByteSize, header)
+		case BodyCompressType:
+			body := &types.Body{}
+			if data != nil {
+				body = data.(*types.Body)
 			}
+			compressions[itIdx] = &BodyCompression{
+				BlkNumber: i,
+				BlkHash:   blkHash,
+				Body:      body,
+			}
+			rlp.Encode(&accumulatedByteSize, body)
+		case ReceiptCompressType:
+			receipts := []*types.ReceiptForStorage{}
+			if data != nil {
+				receipts = data.([]*types.ReceiptForStorage)
+			}
+			compressions[itIdx] = &ReceiptCompression{
+				BlkNumber:       i,
+				BlkHash:         blkHash,
+				StorageReceipts: receipts,
+			}
+			rlp.Encode(&accumulatedByteSize, receipts)
+		}
+		itIdx++
+		compressedTo = uint64(i)
+		if uint64(accumulatedByteSize) > maxSize {
+			break
 		}
 	}
 	if itIdx == 0 {
