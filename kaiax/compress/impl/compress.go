@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -296,13 +297,14 @@ func (c *CompressModule) testFinder(compressTyp CompressionType, from, to uint64
 	}
 }
 
-func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint64, tempDir string) error {
+func (c *CompressModule) testCompress(t *testing.T, compressTyp CompressionType, from, to uint64, tempDir string, wg *sync.WaitGroup) {
 	dbConfig := c.Dbm.GetDBConfig()
 	copyTestDB, err := database.TestCreateNewDB(dbConfig, filepath.Join(dbConfig.Dir, tempDir))
-	if err != nil {
-		return err
-	}
-	defer copyTestDB.Release()
+	assert.Nil(t, err)
+	defer func() {
+		copyTestDB.Release()
+		wg.Done()
+	}()
 	writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
 	curBlkNum := c.Chain.CurrentBlock().NumberU64()
 
@@ -346,15 +348,12 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 			nCompressedReceipts = subsequentBlkNumber - 1
 			nReceiptsChunkcs++
 		}
-		if err != nil {
-			return err
-		}
+		assert.Nil(t, err)
 		// Copy origin receipts
 		c.testCopyOriginData(compressTyp, copyTestDB, from, subsequentBlkNumber-1)
 		// Compression integrity test
-		if err = c.testVerifyCompressionIntegrity(compressTyp, from, subsequentBlkNumber-1); err != nil {
-			return err
-		}
+		err = c.testVerifyCompressionIntegrity(compressTyp, from, subsequentBlkNumber-1)
+		assert.Nil(t, err)
 		if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
 			logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize))
 			break
@@ -365,86 +364,20 @@ func (c *CompressModule) testCompress(compressTyp CompressionType, from, to uint
 			fmt.Printf("%s ... remaining: %d\n", compressTyp.String(), to-subsequentBlkNumber)
 		}
 	}
-	if _, err := database.WriteBatches(copyTestDB); err != nil {
-		return err
-	}
+	_, err = database.WriteBatches(copyTestDB)
+	assert.Nil(t, err)
 
 	switch compressTyp {
 	case HeaderCompressType:
 		fmt.Printf("number of compressed header    (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedHeader-originFrom, nHeaderChunks)
-		fmt.Println("total header   compression    elpased time: ", totalHeaderCompressedElapsedTime)
+		fmt.Println("total header   compression    elapsed time: ", totalHeaderCompressedElapsedTime)
 	case BodyCompressType:
 		fmt.Printf("number of compressed body      (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedBody-originFrom, nBodyChunkcs)
-		fmt.Println("total body     compression    elpased time: ", totalBodyCompressedElapsedTime)
+		fmt.Println("total body     compression    elapsed time: ", totalBodyCompressedElapsedTime)
 	case ReceiptCompressType:
 		fmt.Printf("number of compressed receipts  (from=%d) (to=%d) (# of blocks = %d) (# of chunks = %d) \n", originFrom, to, nCompressedReceipts-originFrom, nReceiptsChunkcs)
-		fmt.Println("total receipts compression    elpased time: ", totalReceiptsCompressedElapsedTime)
+		fmt.Println("total receipts compression    elapsed time: ", totalReceiptsCompressedElapsedTime)
 	}
-	return nil
-}
-
-func (c *CompressModule) testCompressPerformance(from, to uint64) error {
-	var (
-		originFrom = from
-		curBlkNum  = c.Chain.CurrentBlock().NumberU64()
-
-		totalHeaderCompressedElapsedTime   time.Duration
-		totalBodyCompressedElapsedTime     time.Duration
-		totalReceiptsCompressedElapsedTime time.Duration
-		totalHeaderFinderElapsedTime       time.Duration
-		totalBodyFinderElapsedTime         time.Duration
-		totalReceiptsFinderElapsedTime     time.Duration
-	)
-	for _, compressTyp := range allCompressTypes {
-		from = originFrom
-		writeSubsequentCompressionBlkNumber(c.Dbm, compressTyp, from)
-		for {
-			var (
-				subsequentBlkNumber uint64
-				err                 error
-			)
-			startCompress := time.Now()
-			switch compressTyp {
-			case HeaderCompressType:
-				subsequentBlkNumber, _, _, err = compressHeader(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
-				totalHeaderCompressedElapsedTime += time.Since(startCompress)
-			case BodyCompressType:
-				subsequentBlkNumber, _, _, err = compressBody(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
-				totalBodyCompressedElapsedTime += time.Since(startCompress)
-			case ReceiptCompressType:
-				subsequentBlkNumber, _, _, err = compressReceipts(c.Dbm, from, 0, curBlkNum, c.getCompressChunk(), c.getChunkCap(), true)
-				totalReceiptsCompressedElapsedTime += time.Since(startCompress)
-			}
-			if err != nil {
-				return err
-			}
-			startFinder := time.Now()
-			c.testFinder(compressTyp, from, subsequentBlkNumber-1)
-			switch compressTyp {
-			case HeaderCompressType:
-				totalHeaderFinderElapsedTime += time.Since(startFinder)
-			case BodyCompressType:
-				totalBodyFinderElapsedTime += time.Since(startFinder)
-			case ReceiptCompressType:
-				totalReceiptsFinderElapsedTime += time.Since(startFinder)
-			}
-			if subsequentBlkNumber >= curBlkNum || subsequentBlkNumber >= to {
-				logger.Info("[Compression] compression is completed", "from", from, "to", to, "subsequentBlkNumber", subsequentBlkNumber)
-				break
-			}
-			from = subsequentBlkNumber
-		}
-	}
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("block range (from=%d) (to=%d) (# of blocks = %d)\n", originFrom, to, to-originFrom)
-	fmt.Println("total header   compression elpased time: ", totalHeaderCompressedElapsedTime)
-	fmt.Println("total body     compression elpased time: ", totalBodyCompressedElapsedTime)
-	fmt.Println("total receipts compression elpased time: ", totalReceiptsCompressedElapsedTime)
-	fmt.Println("total header   finder      elpased time: ", totalHeaderFinderElapsedTime)
-	fmt.Println("total body     finder      elpased time: ", totalBodyFinderElapsedTime)
-	fmt.Println("total receipts finder      elpased time: ", totalReceiptsFinderElapsedTime)
-	fmt.Println("--------------------------------------------------")
-	return nil
 }
 
 func testInit(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) (*CompressModule, database.DBManager) {
@@ -480,20 +413,12 @@ func TestCompressFunction(t *testing.T, setup func(t *testing.T) (*blockchain.Bl
 	defer chainDB.Close()
 
 	from, to := uint64(0), uint64(5000)
-	assert.Nil(t, mCompress.testCompress(HeaderCompressType, from, to, "copy_header"))
-	assert.Nil(t, mCompress.testCompress(BodyCompressType, from, to, "copy_body"))
-	assert.Nil(t, mCompress.testCompress(ReceiptCompressType, from, to, "copy_receipts"))
-}
-
-func TestCompressPerformance(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
-	mCompress, chainDB := testInit(t, setup)
-	if mCompress == nil || chainDB == nil {
-		return
-	}
-	defer chainDB.Close()
-
-	from, to := uint64(0), uint64(5000)
-	assert.Nil(t, mCompress.testCompressPerformance(from, to))
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go mCompress.testCompress(t, HeaderCompressType, from, to, "copy_header", &wg)
+	go mCompress.testCompress(t, BodyCompressType, from, to, "copy_body", &wg)
+	go mCompress.testCompress(t, ReceiptCompressType, from, to, "copy_receipts", &wg)
+	wg.Wait()
 }
 
 func TestCompressFinder(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {

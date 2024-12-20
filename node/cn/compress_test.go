@@ -81,10 +81,6 @@ func TestCompressFunction(t *testing.T) {
 	compress_impl.TestCompressFunction(t, setup)
 }
 
-func TestCompressPerformance(t *testing.T) {
-	compress_impl.TestCompressPerformance(t, setup)
-}
-
 func TestCompressFinder(t *testing.T) {
 	compress_impl.TestCompressFinder(t, setup)
 }

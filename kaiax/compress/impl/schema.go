@@ -209,8 +209,9 @@ type (
 
 // Compress a buffer.
 // If you have a destination buffer, the allocation in the call can also be eliminated.
-func Compress(src []byte) []byte {
-	return encoder.EncodeAll(src, make([]byte, 0, len(src)))
+func Compress(src []byte) (int, []byte) {
+	encoded := encoder.EncodeAll(src, make([]byte, 0, len(src)))
+	return len(encoded), encoded
 }
 
 // Decompress a buffer. We don't supply a destination buffer,

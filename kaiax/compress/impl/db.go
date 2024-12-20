@@ -235,11 +235,11 @@ func writeCompression(dbm database.DBManager, compressTyp CompressionType, compr
 	)
 
 	// Store compressed receipts (range `from` to `to`)
-	compressed := Compress(compressedBytes)
-	if err := db.Put(compressKey, compressed); err != nil {
+	compressedSize, compressedData := Compress(compressedBytes)
+	if err := db.Put(compressKey, compressedData); err != nil {
 		logger.Crit("Failed to store compressed receipts")
 	}
-	return len(compressed)
+	return compressedSize
 }
 
 func compressHeader(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error) {
