@@ -1010,7 +1010,7 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 				idx := v.value.(int)
 				v.value = addrs[idx].String()
 			}
-			//assert.NoError(t, setEngineKeyAsProposer(engine, currentBlock.NumberU64()+1, 0))
+			// assert.NoError(t, setEngineKeyAsProposer(engine, currentBlock.NumberU64()+1, 0))
 
 			vote := headergov.NewVoteData(engine.address, v.key, v.value)
 			require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
