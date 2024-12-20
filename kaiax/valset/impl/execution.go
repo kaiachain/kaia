@@ -29,7 +29,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	// Ingest validator vote
-	council, err := v.getCouncil(num - 1)
+	council, err := v.getCouncil(num)
 	if err != nil {
 		return err
 	}
