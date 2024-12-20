@@ -128,6 +128,8 @@ type Engine interface {
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
 
+	// TODO-kaiax-valset: delete CreateSnapshot which is called after post insert block
+	//  e.g. insertChain, worker.wait, New()
 	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 
