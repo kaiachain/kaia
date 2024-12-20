@@ -120,9 +120,20 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	if header == nil {
 		return nil, 0, errNoHeader
 	}
-	council := valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
-	if council.Len() == 0 {
-		return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+
+	// Load council at the nearest istanbul snapshot except snapshot num is 0.
+	council := new(valset.AddressSet)
+	if snapshotNum > 0 {
+		council = valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
+		if council.Len() == 0 {
+			return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+		}
+	} else {
+		var err error
+		council, err = v.getCouncilGenesis()
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	// Apply the votes in the interval [snapshotNum+1, targetNum-1].

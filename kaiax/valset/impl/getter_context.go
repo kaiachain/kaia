@@ -52,9 +52,13 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 	if prevHeader == nil {
 		return nil, errNoHeader
 	}
-	prevProposer, err := v.Chain.Engine().Author(prevHeader)
-	if err != nil {
-		return nil, err
+
+	prevProposer := qualified.At(0)
+	if num-1 > 0 {
+		prevProposer, err = v.Chain.Engine().Author(prevHeader)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &blockContext{
@@ -155,7 +159,11 @@ func selectRandaoCommittee(qualified *valset.AddressSet, committeeSize uint64, p
 	// Note: If committeeSize == 1, below code is equivalent to return []common.Address{currProposer}.
 	// Because, the resulting committee will be one validator, and the only validator is also selected as the proposer.
 	// Therefore no special handling for committeeSize == 1 is needed.
-	seed := valset.HashToSeed(prevMixHash)
+	mixHash := prevMixHash
+	if prevMixHash == nil || len(prevMixHash) == 0 {
+		mixHash = params.ZeroMixHash
+	}
+	seed := valset.HashToSeed(mixHash)
 	shuffled := qualified.ShuffledList(seed)
 	return shuffled[:committeeSize]
 }

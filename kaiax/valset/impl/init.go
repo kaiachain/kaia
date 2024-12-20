@@ -105,8 +105,12 @@ func (v *ValsetModule) initSchema() error {
 		if err != nil {
 			return err
 		}
-		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
-		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		if currentNum > 0 {
+			// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
+			writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		} else {
+			writeLowestScannedVoteNum(v.ChainKv, 0)
+		}
 	}
 
 	return nil
