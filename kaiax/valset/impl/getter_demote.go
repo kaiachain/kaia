@@ -49,13 +49,13 @@ func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint
 		if err != nil {
 			return nil, err
 		}
-		return filterValidatorsIstanbul(council, si, pset), nil
+		return getDemotedValidatorsIstanbul(council, si, pset), nil
 	default:
 		return nil, errInvalidProposerPolicy
 	}
 }
 
-func filterValidatorsIstanbul(council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
+func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
 	var (
 		demoted        = valset.NewAddressSet(nil)
 		singleMode     = pset.GovernanceMode == "single"

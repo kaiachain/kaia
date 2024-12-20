@@ -100,7 +100,7 @@ func TestGetCouncilDB(t *testing.T) {
 		{
 			"migration incomplete",
 			4,
-			[7]expected{{nil, false}, {nil, false}, {nil, false}, {setB, false}, {setB, false}, {setC, true}, {setC, true}},
+			[7]expected{{nil, false}, {nil, false}, {nil, false}, {nil, false}, {nil, false}, {setC, true}, {setC, true}},
 		},
 	}
 	for _, tc := range testcases {

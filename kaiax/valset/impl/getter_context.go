@@ -207,7 +207,7 @@ func computeGini(amounts map[common.Address]float64) float64 {
 	return staking.ComputeGini(list)
 }
 
-// listSourceNum is the block number at which the list is generated.
+// listSourceNum is the block number at which the list is generated. The caller must ensure that `len(list) > 0` and `listSourceNum <= num - 1`
 func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint64, round uint64) common.Address {
 	idx := num + round - listSourceNum - 1
 	return list[int(idx)%len(list)]

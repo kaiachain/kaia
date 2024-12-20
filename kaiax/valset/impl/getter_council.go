@@ -86,7 +86,7 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	idx := sort.Search(len(nums), func(i int) bool {
 		return nums[i] >= num
 	})
-	if idx > 0 && nums[idx-1] < num {
+	if idx > 0 {
 		return nums[idx-1]
 	} else {
 		return 0
