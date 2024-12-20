@@ -104,7 +104,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 }
 
 // TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
-func TestValidationPoolInsert(t *testing.T) {
+func TestValidationPoolInsertEthTxType(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	testTxTypes := []testTxType{}
@@ -134,13 +134,10 @@ func TestValidationPoolInsert(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -258,14 +255,10 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	// prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -387,19 +380,10 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().CancunCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().KaiaCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -555,14 +539,10 @@ func TestValidationBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -784,9 +764,6 @@ func TestValidationInvalidSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -999,13 +976,10 @@ func TestInvalidBalance(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1396,14 +1370,10 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().PragueCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1810,13 +1780,10 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1973,13 +1940,10 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification

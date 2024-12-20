@@ -195,7 +195,7 @@ func genBlocks(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	assert.NoError(t, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
