@@ -40,17 +40,14 @@ func (c *CompressModule) stopCompress() {
 	for range allCompressTypes {
 		c.terminateCompress <- struct{}{}
 	}
-	for {
-		if len(c.terminateCompress) == 0 {
-			for _, compressTyp := range allCompressTypes {
-				c.setIdleState(compressTyp, nil)
-			}
-			return
-		}
+	for _, compressTyp := range allCompressTypes {
+		c.wg.Wait()
+		c.setIdleState(compressTyp, nil)
 	}
 }
 
 func (c *CompressModule) Compress() {
+	c.wg.Add(TotalCompressTypeSize)
 	go c.compressHeader()
 	go c.compressBody()
 	go c.compressReceipts()
@@ -71,25 +68,26 @@ func (c *CompressModule) compressReceipts() {
 func (c *CompressModule) idle(compressTyp CompressionType, nBlocks uint64) bool {
 	idle := false
 	for {
+		timer := time.NewTimer(time.Second)
 		select {
 		case <-c.terminateCompress:
 			logger.Info("[Compression] Stop signal received", "type", compressTyp.String())
 			return true
 		case <-time.After(SEC_TEN):
 			return false
-		default:
+		case <-timer.C:
 			if !idle {
 				idealIdleTime := time.Second * time.Duration(nBlocks)
 				c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
 				logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
 				idle = true
 			}
-			time.Sleep(time.Second)
 		}
 	}
 }
 
 func (c *CompressModule) compress(compressTyp CompressionType, compressFn CompressFn) {
+	defer c.wg.Done()
 	totalChunks := 0
 	for {
 		select {
