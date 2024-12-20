@@ -211,10 +211,11 @@ func (si *StakingInfo) computeGini(minStake uint64) float64 {
 		}
 	}
 
-	return computeGini(amounts)
+	return ComputeGini(amounts)
 }
 
-func computeGini(amounts sort.Float64Slice) float64 {
+// ComputeGini computes the Gini coefficient of the given array of numbers.
+func ComputeGini(amounts sort.Float64Slice) float64 {
 	if len(amounts) == 0 {
 		return EmptyGini
 	}
