@@ -28,7 +28,7 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		param, ok = gov.ValidatorParams[gov.ValidatorParamName(name)]
+		param, ok = gov.ValidatorParams[gov.ParamName(name)]
 		if !ok {
 			return nil
 		}

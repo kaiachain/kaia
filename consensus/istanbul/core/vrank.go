@@ -27,6 +27,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -215,8 +216,7 @@ func assessBatch(ts []time.Duration, threshold time.Duration) []uint8 {
 // If committee is sorted, we can simply figure out the validator position in the output array
 // by sorting the output of `kaia.getCommittee()`
 func serialize(committee []common.Address, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
-	sortedCommittee := make([]common.Address, len(committee))
-	copy(sortedCommittee[:], committee[:])
+	sortedCommittee := valset.NewAddressSet(committee).List()
 
 	serialized := make([]time.Duration, len(sortedCommittee))
 	for i, v := range sortedCommittee {

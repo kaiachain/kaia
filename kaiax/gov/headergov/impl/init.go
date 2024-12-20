@@ -26,10 +26,16 @@ type chain interface {
 	State() (*state.StateDB, error)
 }
 
+type ValsetModule interface {
+	GetCouncil(num uint64) ([]common.Address, error)
+	GetProposer(num uint64, round uint64) (common.Address, error)
+}
+
 type InitOpts struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ValSet      ValsetModule
 	NodeAddress common.Address
 }
 
@@ -38,6 +44,7 @@ type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ValSet      ValsetModule
 
 	groupedVotes headergov.GroupedVotesMap
 	governances  headergov.GovDataMap
@@ -63,6 +70,7 @@ func (h *headerGovModule) Init(opts *InitOpts) error {
 	h.ChainKv = opts.ChainKv
 	h.ChainConfig = opts.ChainConfig
 	h.Chain = opts.Chain
+	h.ValSet = opts.ValSet
 	h.nodeAddress = opts.NodeAddress
 	h.myVotes = make([]headergov.VoteData, 0)
 	h.mu = &sync.RWMutex{}

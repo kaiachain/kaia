@@ -565,6 +565,7 @@ func (s *CN) SetupKaiaxModules() error {
 			ChainConfig: s.chainConfig,
 			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
+			Valset:      mValset,
 			NodeAddress: s.nodeAddress,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
@@ -586,8 +587,7 @@ func (s *CN) SetupKaiaxModules() error {
 	s.blockchain.RegisterExecutionModule(mSupply, mGov, mValset)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterValsetModule(mValset)
-		engine.RegisterStakingModule(mStaking)
+		engine.RegisterKaiaxModules(mGov, mStaking, mValset)
 		engine.RegisterConsensusModule(mReward, mGov)
 	}
 	s.protocolManager.RegisterStakingModule(mStaking)

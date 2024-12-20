@@ -44,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -693,7 +694,10 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
 }
 
-func (sb *backend) RegisterValsetModule(mValset valset.ValsetModule) {
+// RegisterKaiaxModules sets kaiax modules of the Istanbul backend
+func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule) {
+	sb.govModule = mGov
+	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
 }
 

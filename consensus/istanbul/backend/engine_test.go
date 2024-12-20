@@ -254,6 +254,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			Chain:       bc,
 			ChainKv:     bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
 			ChainConfig: genesis.Config,
+			Valset:      mValset,
 			NodeAddress: b.address,
 		}),
 		mReward.Init(&reward_impl.InitOpts{
@@ -272,9 +273,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		panic(err)
 	}
 
-	b.govModule = mGov
-	b.RegisterStakingModule(mStaking)
-	b.RegisterValsetModule(mValset)
+	b.RegisterKaiaxModules(mGov, mStaking, mValset)
 	b.RegisterConsensusModule(mReward, mGov)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock) != nil {
@@ -884,6 +883,21 @@ func assertMapSubset[M ~map[K]any, K comparable](t *testing.T, subset, set M) {
 	}
 }
 
+//func setEngineKeyAsProposer(engine *backend, num, round uint64) error {
+//	cState, err := engine.GetCommitteeStateByRound(num, round)
+//	if err != nil {
+//		return err
+//	}
+//	for idx, addr := range addrs {
+//		if addr == cState.Proposer() {
+//			engine.privateKey = nodeKeys[idx]
+//			engine.address = addr
+//			break
+//		}
+//	}
+//	return nil
+//}
+
 func Test_AfterMinimumStakingVotes(t *testing.T) {
 	// temporaily enable forbidden votes
 	enableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
@@ -996,6 +1010,8 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 				idx := v.value.(int)
 				v.value = addrs[idx].String()
 			}
+			//assert.NoError(t, setEngineKeyAsProposer(engine, currentBlock.NumberU64()+1, 0))
+
 			vote := headergov.NewVoteData(engine.address, v.key, v.value)
 			require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
 			engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)

@@ -124,6 +124,7 @@ func TestHardForkBlock(t *testing.T) {
 			ChainConfig: chainConfig,
 			ChainKv:     chainDb.GetMiscDB(),
 			Chain:       chain,
+			Valset:      mValset,
 		}),
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   chainConfig,
@@ -140,7 +141,7 @@ func TestHardForkBlock(t *testing.T) {
 	)
 	require.NoError(t, err)
 	engine.RegisterConsensusModule(mReward)
-	engine.RegisterValsetModule(mValset)
+	engine.RegisterKaiaxModules(govModule, mStaking, mValset)
 	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))

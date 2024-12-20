@@ -148,6 +148,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 			ChainConfig: genesis.Config,
 			Chain:       bc,
 			ChainKv:     chainDb.GetMiscDB(),
+			Valset:      mValset,
 			NodeAddress: nodeAddr,
 		}),
 		mReward.Init(&reward_impl.InitOpts{
@@ -166,10 +167,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	if err != nil {
 		return nil, err
 	}
-	if err = mValset.Start(); err != nil {
-		return nil, err
-	}
-	engine.RegisterValsetModule(mValset)
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
 	engine.RegisterConsensusModule(mReward)
 	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock); err != nil {
 		return nil, err

@@ -19,6 +19,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"flag"
 	"math/big"
 	"testing"
@@ -193,31 +194,30 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		panic(err)
 	}
 	gov.SetBlockchain(chain)
-	mGov.Init(&gov_impl.InitOpts{
-		Chain:       chain,
-		ChainKv:     dbm.GetMiscDB(),
-		ChainConfig: config,
-		NodeAddress: engine.Address(),
-	})
 
 	mStaking := staking_impl.NewStakingModule()
-	mStaking.Init(&staking_impl.InitOpts{
-		ChainKv:     dbm.GetMiscDB(),
-		ChainConfig: config,
-		Chain:       chain,
-	})
 	mValset := valset_impl.NewValsetModule()
-	mValset.Init(&valset_impl.InitOpts{
-		ChainKv:       dbm.GetMiscDB(),
-		Chain:         chain,
-		StakingModule: mStaking,
-		GovModule:     mGov,
-	})
-	engine.RegisterValsetModule(mValset)
-	if err = mValset.Start(); err != nil {
+	if err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			Chain:       chain,
+			ChainKv:     dbm.GetMiscDB(),
+			ChainConfig: config,
+			NodeAddress: engine.Address(),
+		}),
+		mStaking.Init(&staking_impl.InitOpts{
+			ChainKv:     dbm.GetMiscDB(),
+			ChainConfig: config,
+			Chain:       chain,
+		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       dbm.GetMiscDB(),
+			Chain:         chain,
+			StakingModule: mStaking,
+			GovModule:     mGov,
+		})); err != nil {
 		panic(err)
 	}
-
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
 		panic(err)

@@ -167,10 +167,7 @@ func noopFormatChecker(cv any) bool {
 	return true
 }
 
-type (
-	ParamName          string
-	ValidatorParamName string
-)
+type ParamName string
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
 const (
@@ -198,8 +195,8 @@ const (
 )
 
 const (
-	AddValidator    ValidatorParamName = "governance.addvalidator"
-	RemoveValidator ValidatorParamName = "governance.removevalidator"
+	AddValidator    ParamName = "governance.addvalidator"
+	RemoveValidator ParamName = "governance.removevalidator"
 )
 
 var Params = map[ParamName]*Param{
@@ -533,7 +530,7 @@ var Params = map[ParamName]*Param{
 	},
 }
 
-var ValidatorParams = map[ValidatorParamName]*Param{
+var ValidatorParams = map[ParamName]*Param{
 	AddValidator: {
 		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,
