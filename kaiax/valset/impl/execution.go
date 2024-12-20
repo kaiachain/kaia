@@ -37,6 +37,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())
+		v.validatorVoteBlockNumsCache = nil
 	}
 
 	return nil
@@ -44,6 +45,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
+	v.validatorVoteBlockNumsCache = nil
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {

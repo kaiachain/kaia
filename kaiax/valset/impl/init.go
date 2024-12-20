@@ -63,6 +63,8 @@ type ValsetModule struct {
 
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
+
+	validatorVoteBlockNumsCache []uint64
 }
 
 func NewValsetModule() *ValsetModule {
@@ -85,6 +87,7 @@ func (v *ValsetModule) initSchema() error {
 	// Ensure mandatory schema at block 0
 	if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
 		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
+		v.validatorVoteBlockNumsCache = nil
 	}
 	if council := ReadCouncil(v.ChainKv, 0); council == nil {
 		genesisCouncil, err := v.getCouncilGenesis()
@@ -114,7 +117,6 @@ func (v *ValsetModule) Start() error {
 
 	// Reset all caches
 	v.proposerListCache.Purge()
-	validatorVoteBlockNumsCache = nil
 
 	// Reset the quit state.
 	v.quit.Store(0)

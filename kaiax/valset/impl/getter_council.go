@@ -61,7 +61,10 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error
 	if pMinVoteNum == nil {
 		return nil, false, errNoLowestScannedNum
 	}
-	nums := ReadValidatorVoteBlockNums(v.ChainKv)
+	if v.validatorVoteBlockNumsCache == nil {
+		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
+	}
+	nums := v.validatorVoteBlockNumsCache
 	if nums == nil {
 		return nil, false, errNoVoteBlockNums
 	}
@@ -147,6 +150,7 @@ func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write 
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())
+		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil
 }
