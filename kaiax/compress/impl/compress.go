@@ -67,22 +67,17 @@ func (c *CompressModule) compressReceipts() {
 }
 
 func (c *CompressModule) idle(compressTyp CompressionType, nBlocks uint64) bool {
-	idle := false
+	idealIdleTime := time.Second * time.Duration(nBlocks)
+	c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
+	logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
 	for {
-		timer := time.NewTimer(time.Second)
+		timer := time.NewTimer(SEC_TEN)
 		select {
 		case <-c.terminateCompress:
 			logger.Info("[Compression] Stop signal received", "type", compressTyp.String())
 			return true
-		case <-time.After(SEC_TEN):
-			return false
 		case <-timer.C:
-			if !idle {
-				idealIdleTime := time.Second * time.Duration(nBlocks)
-				c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
-				logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
-				idle = true
-			}
+			return false
 		}
 	}
 }
@@ -123,6 +118,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 		}
 		c.setIdleState(compressTyp, nil)
 		// 2. Main loop (compression)
+		logger.Info("[Compression] Start compression loop", "type", compressTyp.String(), "from", originFrom, "curBlknum", curBlkNum, "totalChunks", totalChunks)
 		for {
 			select {
 			case <-c.terminateCompress:
