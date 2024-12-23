@@ -92,9 +92,6 @@ func (as *AddressSet) Len() int {
 func (as *AddressSet) At(i int) common.Address {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
-	if i < 0 {
-		return common.Address{}
-	}
 	return as.list[i%len(as.list)]
 }
 
