@@ -230,7 +230,7 @@ func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	}
 
 	// calculates a map of target nodes which need to receive a message
-	// committee[currentView].Union(committee[newView]) => targets
+	// committee[currentView].Union(committee[nextView]) => targets
 	targets := make(map[common.Address]bool)
 	for i := 0; i < 2; i++ {
 		roundCommittee, err := sb.GetCommitteeStateByRound(cv.Sequence.Uint64(), cv.Round.Uint64()+uint64(i))
