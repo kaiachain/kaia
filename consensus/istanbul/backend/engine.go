@@ -452,7 +452,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		header.MixHash = mixHash
 	}
 
-	// add validators (council list) to extraData's validators section
+	// add qualified validators to extraData's validators section
 	valSet, err := sb.GetValidatorSet(number)
 	if err != nil {
 		return err
