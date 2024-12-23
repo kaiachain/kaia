@@ -57,14 +57,14 @@ func (sb *backend) GetProposer(number uint64) common.Address {
 	return common.Address{}
 }
 
-func (sb *backend) GetRewardAddress(num uint64, address common.Address) common.Address {
+func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
 	sInfo, err := sb.stakingModule.GetStakingInfo(num)
 	if err != nil {
 		return common.Address{}
 	}
 
-	for idx, nodeId := range sInfo.NodeIds {
-		if nodeId == address {
+	for idx, id := range sInfo.NodeIds {
+		if id == nodeId {
 			return sInfo.RewardAddrs[idx]
 		}
 	}
