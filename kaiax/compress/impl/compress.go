@@ -66,10 +66,10 @@ func (c *CompressModule) compressReceipts() {
 	c.compress(ReceiptCompressType, compressReceipts)
 }
 
-func (c *CompressModule) idle(compressTyp CompressionType, nBlocks uint64) bool {
+func (c *CompressModule) idle(compressTyp CompressionType, nBlocks, curBlkNum uint64) bool {
 	idealIdleTime := time.Second * time.Duration(nBlocks)
 	c.setIdleState(compressTyp, &IdleState{true, idealIdleTime})
-	logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime)
+	logger.Info("[Compression] Enter idle state", "type", compressTyp.String(), "idle", SEC_TEN, "ideal idle time", idealIdleTime, "curBlkNum", curBlkNum, "watingBlocks", nBlocks)
 	for {
 		timer := time.NewTimer(SEC_TEN)
 		select {
@@ -105,13 +105,13 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 		)
 		// 1. Idle check
 		if curBlkNum < c.getCompressChunk() || (residualBlkCnt != 0 && !noWait) {
-			if c.idle(compressTyp, c.getCompressChunk()-residualBlkCnt) {
+			if c.idle(compressTyp, c.getCompressChunk()-residualBlkCnt, curBlkNum) {
 				return
 			}
 			continue
 		}
 		if c.getCompressRetention() > nextCompressionDistance {
-			if c.idle(compressTyp, c.getCompressRetention()-nextCompressionDistance) {
+			if c.idle(compressTyp, c.getCompressRetention()-nextCompressionDistance, curBlkNum) {
 				return
 			}
 			continue
@@ -132,7 +132,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			if compressedSize != 0 {
-				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "from", originFrom, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
+				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "originFrom", originFrom, "startFrom", from, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
 				totalChunks++
 			}
 			if subsequentBlkNumber >= curBlkNum {
