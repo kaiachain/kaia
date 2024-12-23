@@ -693,7 +693,7 @@ func valueTransferToEOAWithCode(txType types.TxType, values txValueMap, contract
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
 		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrNotEOAWithoutCode
+		return values, kerrors.ErrToMustBeEOAWithoutCode
 	}
 
 	return values, nil
@@ -703,7 +703,7 @@ func keyUpdateFromEOAWithCode(txType types.TxType, values txValueMap, contract c
 	txType = toBasicType(txType)
 	if txType == types.TxTypeAccountUpdate {
 		values[types.TxValueKeyFrom] = contract
-		return values, kerrors.ErrNotEOAWithoutCode
+		return values, kerrors.ErrFromMustBeEOAWithoutCode
 	}
 
 	return values, nil
@@ -731,7 +731,7 @@ func valueTransferToContract(txType types.TxType, values txValueMap, contract co
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
 		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrNotEOAWithoutCode
+		return values, kerrors.ErrToMustBeEOAWithoutCode
 	}
 
 	return values, nil
@@ -741,7 +741,7 @@ func valueTransferToContract(txType types.TxType, values txValueMap, contract co
 func executeToEOA(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	if toBasicType(txType) == types.TxTypeSmartContractExecution {
 		values[types.TxValueKeyTo] = values[types.TxValueKeyFrom].(common.Address)
-		return values, kerrors.ErrNotProgramAccount
+		return values, kerrors.ErrToMustBeEOAWithCodeOrSCA
 	}
 
 	return values, nil
