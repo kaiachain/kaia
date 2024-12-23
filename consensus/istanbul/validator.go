@@ -23,7 +23,6 @@
 package istanbul
 
 import (
-	"math"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
@@ -166,46 +165,29 @@ func (cs *BlockValSet) CheckValidatorSignature(data []byte, sig []byte) (common.
 
 type RoundCommitteeState struct {
 	*BlockValSet
-	committeeSize uint64
-	committee     *valset.AddressSet
-	proposer      common.Address
+	committee *valset.AddressSet
+	proposer  common.Address
+
+	// pre-calculated values
+	committeeSize        uint64
+	requiredMessageCount int
+	f                    int
 }
 
 func NewRoundCommitteeState(set *BlockValSet, committeeSize uint64, committee []common.Address, proposer common.Address) *RoundCommitteeState {
 	committeeSet := valset.NewAddressSet(committee)
-	return &RoundCommitteeState{set, committeeSize, committeeSet, proposer}
+	reqMsgCnt := requiredMessageCount(set.Qualified().Len(), committeeSize)
+	fNum := f(set.Qualified().Len(), committeeSize)
+
+	return &RoundCommitteeState{set, committeeSet, proposer, committeeSize, reqMsgCnt, fNum}
 }
 func (cs *RoundCommitteeState) ValSet() *BlockValSet          { return cs.BlockValSet }
-func (cs *RoundCommitteeState) CommitteeSize() uint64         { return cs.committeeSize }
 func (cs *RoundCommitteeState) Committee() *valset.AddressSet { return cs.committee }
 func (cs *RoundCommitteeState) NonCommittee() *valset.AddressSet {
 	return cs.qualified.Subtract(cs.committee)
 }
 func (cs *RoundCommitteeState) Proposer() common.Address            { return cs.proposer }
 func (cs *RoundCommitteeState) IsProposer(addr common.Address) bool { return cs.proposer == addr }
-
-// RequiredMessageCount returns a minimum required number of consensus messages to proceed
-func (cs *RoundCommitteeState) RequiredMessageCount() int {
-	var size int
-	if cs.qualified.Len() > int(cs.committeeSize) {
-		size = int(cs.committeeSize)
-	} else {
-		size = cs.qualified.Len()
-	}
-	// For less than 4 validators, quorum size equals validator count.
-	if size < 4 {
-		return size
-	}
-	// Adopted QBFT quorum implementation
-	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
-	return int(math.Ceil(float64(2*size) / 3))
-}
-
-// F returns a maximum endurable number of byzantine fault nodes
-func (cs *RoundCommitteeState) F() int {
-	if cs.qualified.Len() > int(cs.committeeSize) {
-		return int(math.Ceil(float64(cs.committeeSize)/3)) - 1
-	} else {
-		return int(math.Ceil(float64(cs.qualified.Len())/3)) - 1
-	}
-}
+func (cs *RoundCommitteeState) CommitteeSize() uint64               { return cs.committeeSize }
+func (cs *RoundCommitteeState) RequiredMessageCount() int           { return cs.requiredMessageCount }
+func (cs *RoundCommitteeState) F() int                              { return cs.f }
