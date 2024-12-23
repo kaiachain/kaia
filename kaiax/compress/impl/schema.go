@@ -24,7 +24,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
-	"github.com/klauspost/compress/zstd"
 )
 
 type CompressionType uint8
@@ -57,8 +56,6 @@ var (
 
 	// Create a writer that caches compressors.
 	// For this operation type we supply a nil Reader.
-	encoder, _ = zstd.NewWriter(nil)
-	decoder, _ = zstd.NewReader(nil, zstd.WithDecoderConcurrency(0))
 )
 
 func (typ CompressionType) String() string {
@@ -206,19 +203,6 @@ type (
 	CompressFn   func(dbm database.DBManager, from, to, headNumber, compressChunk, maxSize uint64, migrationMode bool) (uint64, int, int, error)
 	DecompressFn func(dbm database.DBManager, compressTyp CompressionType, from, to uint64) ([]CompressStructTyp, error)
 )
-
-// Compress a buffer.
-// If you have a destination buffer, the allocation in the call can also be eliminated.
-func Compress(src []byte) (int, []byte) {
-	encoded := encoder.EncodeAll(src, make([]byte, 0, len(src)))
-	return len(encoded), encoded
-}
-
-// Decompress a buffer. We don't supply a destination buffer,
-// so it will be allocated by the decoder.
-func Decompress(src []byte) ([]byte, error) {
-	return decoder.DecodeAll(src, nil)
-}
 
 type ReceiptCompression struct {
 	BlkNumber       uint64
