@@ -17,14 +17,12 @@
 package impl
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
@@ -206,14 +204,6 @@ func selectStickyProposer(qualified *valset.AddressSet, prevProposer common.Addr
 	return qualified.At((prevIdx + int(round)) % qualified.Len())
 }
 
-func computeGini(amounts map[common.Address]float64) float64 {
-	list := make([]float64, 0, len(amounts))
-	for _, amount := range amounts {
-		list = append(list, amount)
-	}
-	return staking.ComputeGini(list)
-}
-
 // listSourceNum is the block number at which the list is generated. The caller must ensure that `len(list) > 0` and `listSourceNum <= num - 1`
 func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint64, round uint64) common.Address {
 	idx := num + round - listSourceNum - 1
@@ -222,100 +212,4 @@ func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint
 
 func selectRandaoProposer(committee []common.Address, round uint64) common.Address {
 	return committee[round%uint64(len(committee))]
-}
-
-func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint64, error) {
-	var (
-		useGini   = c.pset.UseGiniCoeff // because UseGiniCoeff is immutable, it's safe to pass ParamSet(num).UseGiniCoeff to calculate proposer list for updateNum.
-		updateNum = roundDown(c.num-1, uint64(c.pset.ProposerUpdateInterval))
-	)
-
-	// Lookup from cache
-	if list, ok := v.proposerListCache.Get(updateNum); ok {
-		return list.([]common.Address), updateNum, nil
-	}
-
-	// Generate here
-	updateHeader := v.Chain.GetHeaderByNumber(updateNum)
-	if updateHeader == nil {
-		return nil, 0, errNoHeader
-	}
-	var list []common.Address
-	if c.rules.IsKore {
-		list = generateProposerListUniform(c.qualified, updateHeader.Hash())
-	} else {
-		si, err := v.StakingModule.GetStakingInfo(updateNum)
-		if err != nil {
-			return nil, 0, err
-		}
-		list = generateProposerListWeighted(c.qualified, si, useGini, updateHeader.Hash())
-	}
-	logger.Debug("GetProposerList", "number", c.num, "list", valset.NewAddressSet(list).String())
-
-	// Store to cache
-	v.proposerListCache.Add(updateNum, list)
-	return list, updateNum, nil
-}
-
-// generateProposerList generates a proposer list at a certain block (i.e. proposer update interval),
-// whose qualified validators are `qualified`, staking amounts are in `si`, parameters are `pset` and its block hash is `blockHash`.
-func generateProposerListWeighted(qualified *valset.AddressSet, si *staking.StakingInfo, useGini bool, blockHash common.Hash) []common.Address {
-	var (
-		addrs          = qualified.List()
-		stakingAmounts = collectStakingAmounts(addrs, si)
-		gini           = computeGini(stakingAmounts) // si.Gini is computed over every CN. But we want gini among validators, so we calculate here.
-		exponent       = 1.0 / (1 + gini)
-		totalStakes    = float64(0)
-	)
-
-	// Adjust staking amounts and calculate the sum
-	if useGini {
-		for addr, amount := range stakingAmounts {
-			stakingAmounts[addr] = math.Round(math.Pow(float64(amount), exponent))
-			totalStakes += stakingAmounts[addr]
-		}
-	} else {
-		for _, amount := range stakingAmounts {
-			totalStakes += amount
-		}
-	}
-
-	// Calculate percentile weights
-	weights := make(map[common.Address]uint64)
-	if totalStakes > 0 {
-		for _, addr := range addrs {
-			weight := uint64(math.Round(stakingAmounts[addr] * 100 / totalStakes))
-			if weight <= 0 {
-				weight = 1
-			}
-			weights[addr] = weight
-		}
-	} else {
-		for _, addr := range addrs {
-			weights[addr] = 0
-		}
-	}
-
-	// Generate weighted repeated list
-	proposerList := make([]common.Address, 0)
-	for _, addr := range addrs {
-		for i := uint64(0); i < weights[addr]; i++ {
-			proposerList = append(proposerList, addr)
-		}
-	}
-	// If the list is empty (i.e. all weights are zero), list each validator once.
-	if len(proposerList) == 0 {
-		for _, addr := range addrs {
-			proposerList = append(proposerList, addr)
-		}
-	}
-
-	seed := valset.HashToSeedLegacy(blockHash)
-	return valset.NewAddressSet(proposerList).ShuffledListLegacy(seed)
-}
-
-func generateProposerListUniform(qualified *valset.AddressSet, blockHash common.Hash) []common.Address {
-	proposerList := qualified.List()
-	seed := valset.HashToSeedLegacy(blockHash)
-	return valset.NewAddressSet(proposerList).ShuffledListLegacy(seed)
 }

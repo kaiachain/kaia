@@ -248,6 +248,8 @@ proposer  x  0  0  0  0  0  0  1  2  2  2
 
 In "SelectWeightedRandomProposer", a proposer list is pre-generated every proposer interval block. A single validator can appear multiple times in the list. Higher the staking amount more frequently the validator appears in the list. The list is randomized using a deterministic PRNG.
 
+Note that the removevalidator vote removes validators from the proposer list. The purpose is not to give the removed validator a chance to be selected as a proposer.
+
 **proposer list generation**
 
 Given "proposer update block" in which all the information below (qualified validators, staking info, block hash) is based on,
@@ -303,6 +305,8 @@ Given block number N and round R,
     - ProposerInterval refers to the `reward.proposerupdateinterval` that is first defined in the ChainConfig (`Reward.ProposerUpdateInterval`) at genesis and never changes afterwards.
 1. Generate the proposer list `ProposerList(U)` from the information at block S.
     - Because multiple block numbers (N) maps to the same proposer update block number (U), it is worth caching the list.
+1. If there was remove votes between [U, n-1], remove the vote addresses from the proposer list.
+    - the removed validators should exist in the qualified list at vote block num
 1. Return the `[(N + R - U - 1) % len]`-th element of the proposer list.
 
 For example,
@@ -329,6 +333,32 @@ proposer  x  0  1  2  3  0  1  2  3  2  3  0  1  1  1  3  2  0  3  2  3  1  1  2
 *At block=11, round=0 => idx=(11+0-10-1)%100=0 => proposer=1
 ```
 
+RemoveValidatorsFromProposerList example.
+```
+The votes were given at:
+- block 3605: Remove validator (3,4)
+- block 3607: Add validator (3,6)
+- block 3609: Remove validator (3,7)
+
+The pre-caculated proposer list is [1 2 3 4].
+Validator 3 is being demoted at block 3606, so validator 3 cannot be removed from the proposer list at block 3606.
+Validator 3 is requalified at block 3609 and the remove vote has been voted at block 3609. 
+The validator 3 can be removed from proposer list at block 3610.
+
+| N            | Council(N) | qualified(N) | demoted(N) | proposers(N) |
+|--------------|------------|--------------|------------|--------------|
+| 3600         |  1,2,3,4   |  1,2,3,4     |      -     |  1,2,3,4     |
+| 3601         |  1,2,3,4   |  1,2,3,4     |      -     |  1,2,3,4     |
+| 3602         |  1,2,3,4   |  1,2,3,4     |      -     |  1,2,3,4     |
+| 3603         |  1,2,3,4   |  1,2,3,4     |      -     |  1,2,3,4     |
+| 3604         |  1,2,3,4   |  1,2,4       |      3     |  1,2,3,4     <----- 3 demoted
+| 3605 (R 3,4) |  1,2,3,4   |  1,2,4       |      3     |  1,2,3,4     |
+| 3606         |  1,2       |  1,2         |      -     |  1,2,3       |
+| 3607 (A 3,6) |  1,2       |  1,2         |      -     |  1,2,3       |
+| 3608         |  1,2,3,6   |  1,2,6       |      3     |  1,2,3       |
+| 3609 (R 3,7) |  1,2,3,6   |  1,2,3,6     |      -     |  1,2,3       <---- 3 requalified
+| 3610         |  1,2,6     |  1,2,6       |      -     |  1,2         |
+```
 </details>
 <details>
 <summary><b>SelectUniformRandomProposer</b></summary>
