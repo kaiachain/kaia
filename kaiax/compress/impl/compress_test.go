@@ -126,8 +126,16 @@ func TestRewind(t *testing.T) {
 		newBodies   []*types.Body
 		newReceipts []types.Receipts
 	)
+	// expected next compression block number should be equal or less than `setHeadTo`.
+	// Given the value of `setHeadTo` is 55 and chunk size is 10,
+	// The rewinded next compression block number should be 50.
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
+	}
 
-	for i := setHeadTo; i < nBlocks; i++ {
+	start := setHeadTo + setHeadTo%int(mCompress.getCompressChunk())
+	for i := start; i < nBlocks; i++ {
 		h := genHeader()
 		h.Number = big.NewInt(int64(i))
 		hn, hh := h.Number.Uint64(), h.Hash()
@@ -142,17 +150,9 @@ func TestRewind(t *testing.T) {
 		newBodies = append(newBodies, b)
 		newReceipts = append(newReceipts, *r)
 	}
-	canonicalHeaders := append(headers[:setHeadTo], newHeaders[:]...)
-	canonicalBodies := append(bodies[:setHeadTo], newBodies[:]...)
-	canonicalReceipts := append(receipts[:setHeadTo], newReceipts[:]...)
-
-	// expected next compression block number should be equal or less than `setHeadTo`.
-	// Given the value of `setHeadTo` is 55 and chunk size is 10,
-	// The rewinded next compression block number should be 50.
-	for _, compressTyp := range allCompressTypes {
-		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
-		assert.Equal(t, int(nextCompressionNumber), setHeadTo-(setHeadTo%int(mCompress.getCompressChunk())))
-	}
+	canonicalHeaders := append(headers[:start], newHeaders[:]...)
+	canonicalBodies := append(bodies[:start], newBodies[:]...)
+	canonicalReceipts := append(receipts[:start], newReceipts[:]...)
 
 	mCompress.Start() // fragment restore invoked before starting compression
 	waitCompression(mCompress)
@@ -181,7 +181,7 @@ func TestRetention(t *testing.T) {
 	dbm.SetCompressModule(mCompress)
 	mCompress.setCompressChunk(10)
 	mCompress.setCompressRetention(uint64(nBlocks))
-	go mCompress.Start()
+	mCompress.Start()
 	waitCompression(mCompress)
 
 	// compression is not performed by retention
@@ -199,4 +199,51 @@ func TestRetention(t *testing.T) {
 		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
 		assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
 	}
+}
+
+func TestCache(t *testing.T) {
+	var (
+		nBlocks        = 100
+		chunkBlockSize = uint64(10)
+		chain, dbm     = initMock(t, nBlocks)
+		mCompress      = NewCompression()
+		err            = mCompress.Init(&InitOpts{
+			ChunkBlockSize: chunkBlockSize,
+			ChunkCap:       blockchain.DefaultCompressChunkCap,
+			Chain:          chain,
+			Dbm:            dbm,
+		})
+	)
+	assert.Nil(t, err)
+	mCompress.Start()
+	waitCompression(mCompress)
+	targetNum := uint64(30)
+	hn, hh := uint64(targetNum), dbm.ReadCanonicalHash(targetNum)
+
+	// header compression cache
+	_, ok := getFromCache(HeaderCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.False(t, ok)
+	decompressedH, err := findHeaderFromChunkWithBlkHash(dbm, hn, hh)
+	assert.Nil(t, err)
+	assert.NotNil(t, decompressedH)
+	_, ok = getFromCache(HeaderCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.True(t, ok)
+
+	// body compression cache
+	_, ok = getFromCache(BodyCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.False(t, ok)
+	decompressedB, err := findBodyFromChunkWithBlkHash(dbm, hn, hh)
+	assert.Nil(t, err)
+	assert.NotNil(t, decompressedB)
+	_, ok = getFromCache(BodyCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.True(t, ok)
+
+	// receipts compression cache
+	_, ok = getFromCache(ReceiptCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.False(t, ok)
+	decompressedR, err := findReceiptsFromChunkWithBlkHash(dbm, hn, hh)
+	assert.Nil(t, err)
+	assert.NotNil(t, decompressedR)
+	_, ok = getFromCache(ReceiptCompressType, targetNum, uint64(targetNum+chunkBlockSize-1))
+	assert.True(t, ok)
 }
