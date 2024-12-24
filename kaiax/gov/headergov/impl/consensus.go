@@ -150,7 +150,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 	//nolint:exhaustive
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 
 		// skip the consistency check if governingMode is non-single.
 		if params.GovernanceMode != "single" {
@@ -196,7 +196,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return ErrUpperBoundBaseFee
 		}
 	case gov.AddValidator, gov.RemoveValidator:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 
 		if params.GovernanceMode != "single" {
 			return nil
