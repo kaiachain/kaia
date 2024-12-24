@@ -115,8 +115,11 @@ const (
 	MaxPrefetchTxs           = 20000
 	MB_1                     = uint64(1000000)
 	DefaultChunkBlockSize    = uint64(10000)
+	MinChunkBlockSize        = uint64(10000)
 	DefaultCompressChunkCap  = MB_1
+	MaxCompressChunkCap      = MB_1 * 1000
 	DefaultCompressRetention = 86400
+	MinCompressRetention     = DefaultChunkBlockSize
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:
