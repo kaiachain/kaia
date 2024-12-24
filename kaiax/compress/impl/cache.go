@@ -14,6 +14,9 @@ var (
 )
 
 func initCache(capSize uint64) {
+	if capSize == 0 {
+		capSize = blockchain.DefaultCompressChunkCap
+	}
 	// the maximum cache size is limited to 1GB
 	capped := GB_1 / capSize
 	if capSize > GB_1 {
