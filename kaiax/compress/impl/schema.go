@@ -115,6 +115,10 @@ func getCompressKey(typ CompressionType, from, to uint64) []byte {
 	return append(append(prefix, bTo...), bFrom...)
 }
 
+func getCacheKey(typ CompressionType, from, to uint64) common.CompressCacheKey {
+	return common.CompressCacheKey(getCompressKey(typ, from, to))
+}
+
 // Returned compressed range is represented as `from-to`
 func parseCompressKey(typ CompressionType, key []byte) (uint64, uint64) {
 	var prefixLen int

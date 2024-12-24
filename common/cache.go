@@ -350,3 +350,9 @@ type GovernanceCacheKey string
 func (g GovernanceCacheKey) getShardIndex(shardMask int) int {
 	return 0
 }
+
+type CompressCacheKey string
+
+func (key CompressCacheKey) getShardIndex(shardMask int) int {
+	return 0
+}

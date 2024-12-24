@@ -350,10 +350,18 @@ func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash comm
 }
 
 func compressedHeaderFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
-	// Find a chunk and decompress
-	headerCompressions, err := decompressHeader(dbm, from, to)
-	if err != nil {
-		return nil, err
+	var headerCompressions []*HeaderCompression
+	if hc, ok := getFromCache(HeaderCompressType, from, to); ok {
+		// Found from cache
+		headerCompressions = hc.([]*HeaderCompression)
+	} else {
+		// Find a chunk and decompress
+		if hc, err := decompressHeader(dbm, from, to); err == nil {
+			headerCompressions = hc
+			addCache(HeaderCompressType, from, to, headerCompressions)
+		} else {
+			return nil, err
+		}
 	}
 	// Make a `types.Header` struct and returns it`
 	for _, hc := range headerCompressions {
@@ -365,10 +373,17 @@ func compressedHeaderFinder(dbm database.DBManager, from, to, number uint64, blk
 }
 
 func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
-	// Find a chunk and decompress
-	bodyCompressions, err := decompressBody(dbm, from, to)
-	if err != nil {
-		return nil, err
+	var bodyCompressions []*BodyCompression
+	if bc, ok := getFromCache(BodyCompressType, from, to); ok {
+		bodyCompressions = bc.([]*BodyCompression)
+	} else {
+		// Find a chunk and decompress
+		if bc, err := decompressBody(dbm, from, to); err == nil {
+			bodyCompressions = bc
+			addCache(BodyCompressType, from, to, bodyCompressions)
+		} else {
+			return nil, err
+		}
 	}
 	// Make a `types.Body` struct and returns it`
 	for _, bc := range bodyCompressions {
@@ -380,13 +395,20 @@ func compressedBodyFinder(dbm database.DBManager, from, to, number uint64, blkHa
 }
 
 func compressedReceiptFinder(dbm database.DBManager, from, to, number uint64, blkHash common.Hash) (any, error) {
-	// Find a chunk and decompress
-	receiptCompressions, err := decompressReceipts(dbm, from, to)
-	if err != nil {
-		return nil, err
+	var receiptsCompressions []*ReceiptCompression
+	if rc, ok := getFromCache(ReceiptCompressType, from, to); ok {
+		receiptsCompressions = rc.([]*ReceiptCompression)
+	} else {
+		// Find a chunk and decompress
+		if rc, err := decompressReceipts(dbm, from, to); err == nil {
+			receiptsCompressions = rc
+			addCache(ReceiptCompressType, from, to, receiptsCompressions)
+		} else {
+			return nil, err
+		}
 	}
 	// Make a `types.Receipt` struct and returns it`
-	for _, rc := range receiptCompressions {
+	for _, rc := range receiptsCompressions {
 		if rc.BlkHash == blkHash {
 			receipts := make(types.Receipts, len(rc.StorageReceipts))
 			for idx, receipt := range rc.StorageReceipts {

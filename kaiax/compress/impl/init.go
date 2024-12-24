@@ -167,6 +167,7 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 	}
 	c.InitOpts = *opts
 	c.terminateCompress = make(chan any, TotalCompressTypeSize)
+	initCache(c.InitOpts.ChunkCap)
 	return nil
 }
 
@@ -179,5 +180,6 @@ func (c *CompressModule) Start() error {
 
 func (c *CompressModule) Stop() {
 	c.stopCompress()
+	clearCache()
 	logger.Info("[Compression] Compression Stopped")
 }

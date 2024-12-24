@@ -110,7 +110,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 			}
 			continue
 		}
-		if c.getCompressRetention() > nextCompressionDistance {
+		if nextCompressionDistance == 0 || c.getCompressRetention() > nextCompressionDistance {
 			if c.idle(compressTyp, c.getCompressRetention()-nextCompressionDistance, curBlkNum) {
 				return
 			}
@@ -180,6 +180,7 @@ func (c *CompressModule) FindReceiptsFromChunkWithBlkHash(dbm database.DBManager
 }
 
 func (c *CompressModule) restoreFragmentByRewind() {
+	defer clearCache()
 	for _, compressTyp := range allCompressTypes {
 		var (
 			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix = getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
