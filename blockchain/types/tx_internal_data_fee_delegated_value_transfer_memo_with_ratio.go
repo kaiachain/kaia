@@ -367,7 +367,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() co
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient) {
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)

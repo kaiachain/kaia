@@ -25,7 +25,6 @@ package tests
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -74,17 +73,18 @@ func TestBlockchain(t *testing.T) {
 // }
 
 // TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
-
 type ExecutionSpecBlockTestSuite struct {
 	suite.Suite
+	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
 }
 
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
-	vm.RelaxPrecompileRangeForTest(true)
+	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
+	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
-	vm.RelaxPrecompileRangeForTest(false)
+	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
