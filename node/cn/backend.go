@@ -280,6 +280,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	)
 
+	// Temporally set compression module for genesis block reterival
+	// Module will be reset in `SetupKaiaxModules`
+	chainDB.SetCompressModule(compress_impl.NewCompression())
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
 	if err != nil {
 		return nil, err
