@@ -456,7 +456,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	pset := sb.govModule.EffectiveParamSet(snap.Number)
+	pset := sb.govModule.GetParamSet(snap.Number)
 	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err

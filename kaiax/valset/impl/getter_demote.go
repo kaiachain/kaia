@@ -32,7 +32,7 @@ func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint
 		return valset.NewAddressSet(nil), nil
 	}
 
-	pset := v.GovModule.EffectiveParamSet(num)
+	pset := v.GovModule.GetParamSet(num)
 	rules := v.Chain.Config().Rules(new(big.Int).SetUint64(num))
 
 	switch istanbul.ProposerPolicy(pset.ProposerPolicy) {
