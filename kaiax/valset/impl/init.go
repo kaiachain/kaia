@@ -36,6 +36,7 @@ var (
 	_ (valset.ValsetModule) = &ValsetModule{}
 
 	istanbulCheckpointInterval = uint64(1024)
+	migrateLogInterval         = uint64(102400)
 
 	logger = log.NewModuleLogger(log.KaiaxValset)
 )
@@ -108,6 +109,7 @@ func (v *ValsetModule) initSchema() error {
 		if err != nil {
 			return err
 		}
+		logger.Info("ValsetModule migrate latest interval", "currentNum", currentNum, "snapshotNum", snapshotNum)
 		if currentNum > 0 {
 			// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
 			writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
@@ -149,6 +151,7 @@ func (v *ValsetModule) migrate() {
 	}
 
 	targetNum := *pMinVoteNum
+	logger.Info("ValsetModule migrate start", "targetNum", targetNum)
 	for targetNum > 0 {
 		if v.quit.Load() == 1 {
 			break
@@ -161,11 +164,15 @@ func (v *ValsetModule) migrate() {
 			logger.Error("Failed to migrate", "targetNum", targetNum, "err", err)
 			break
 		}
+		if targetNum%migrateLogInterval == 0 {
+			logger.Info("ValsetModule migrate", "targetNum", targetNum, "snapshotNum", snapshotNum)
+		}
 		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
 		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
 		targetNum = snapshotNum
 	}
 	if targetNum == 0 {
+		logger.Info("ValsetModule migrate complete")
 		// Now the migration is complete.
 		writeLowestScannedVoteNum(v.ChainKv, 0)
 	}
