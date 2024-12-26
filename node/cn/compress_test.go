@@ -13,7 +13,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/governance"
 	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
-
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
