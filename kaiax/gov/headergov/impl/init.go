@@ -158,6 +158,10 @@ func (h *headerGovModule) migrate() {
 		border -= 1
 		h.accumulateVotesInEpoch(border)
 	}
+
+	if border == 0 {
+		logger.Info("HeaderGovModule migrate complete")
+	}
 }
 
 func (h *headerGovModule) isKoreHF(num uint64) bool {
