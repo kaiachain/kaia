@@ -48,13 +48,29 @@ var Forks = map[string]*params.ChainConfig{
 		ChainID: big.NewInt(1),
 	},
 	"Istanbul": {
-		ChainID: big.NewInt(1),
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
 	},
 	"Berlin": {
 		ChainID: big.NewInt(1),
 	},
 	"London": {
-		ChainID: big.NewInt(1),
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
+		LondonCompatibleBlock:   new(big.Int),
+	},
+	"EthTxType": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+	},
+	"Magma": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
 	},
 	"Merge": {
 		ChainID: big.NewInt(1),
@@ -78,7 +94,6 @@ var Forks = map[string]*params.ChainConfig{
 		Kip103CompatibleBlock:    new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
 		CancunCompatibleBlock:    new(big.Int),
-		RandaoCompatibleBlock:    new(big.Int),
 		KaiaCompatibleBlock:      new(big.Int),
 		Kip160CompatibleBlock:    new(big.Int),
 	},
@@ -92,7 +107,6 @@ var Forks = map[string]*params.ChainConfig{
 		Kip103CompatibleBlock:    new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
 		CancunCompatibleBlock:    new(big.Int),
-		RandaoCompatibleBlock:    new(big.Int),
 		KaiaCompatibleBlock:      new(big.Int),
 		Kip160CompatibleBlock:    new(big.Int),
 		PragueCompatibleBlock:    new(big.Int),

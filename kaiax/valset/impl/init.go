@@ -63,14 +63,17 @@ type ValsetModule struct {
 
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
+	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
 
 	validatorVoteBlockNumsCache []uint64
 }
 
 func NewValsetModule() *ValsetModule {
-	cache, _ := lru.New(128)
+	pListCache, _ := lru.New(128)
+	rVoteCache, _ := lru.New(128)
 	return &ValsetModule{
-		proposerListCache: cache,
+		proposerListCache: pListCache,
+		removeVotesCache:  rVoteCache,
 	}
 }
 
@@ -105,8 +108,12 @@ func (v *ValsetModule) initSchema() error {
 		if err != nil {
 			return err
 		}
-		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
-		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		if currentNum > 0 {
+			// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
+			writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		} else {
+			writeLowestScannedVoteNum(v.ChainKv, 0)
+		}
 	}
 
 	return nil
@@ -117,6 +124,7 @@ func (v *ValsetModule) Start() error {
 
 	// Reset all caches
 	v.proposerListCache.Purge()
+	v.removeVotesCache.Purge()
 
 	// Reset the quit state.
 	v.quit.Store(0)

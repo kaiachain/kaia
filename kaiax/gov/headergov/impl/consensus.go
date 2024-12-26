@@ -18,21 +18,10 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 	if header.Number.Uint64() == 0 {
 		return nil
 	}
-
-	// 1. Verify Vote
-	if len(header.Vote) > 0 {
-		var vb headergov.VoteBytes = header.Vote
-		vote, err := vb.ToVoteData()
-		if err != nil {
-			logger.Error("ToVoteData error", "num", header.Number.Uint64(), "vote", vb, "err", err)
-			return err
-		}
-
-		err = h.VerifyVote(header.Number.Uint64(), vote)
-		if err != nil {
-			logger.Error("VerifyVote error", "num", header.Number.Uint64(), "vote", vb, "err", err)
-			return err
-		}
+	err := h.VerifyVote(header)
+	if err != nil {
+		logger.Error("VerifyVote error", "num", header.Number.Uint64(), "vote", header.Vote, "err", err)
+		return err
 	}
 
 	return h.VerifyGov(header)
@@ -65,15 +54,51 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 // (1) voter must be in valset,
 // (2) integrity of the voter (the voter must be the block proposer),
 // (3) the vote value must be consistent compared to the latest ParamSet.
-func (h *headerGovModule) VerifyVote(blockNum uint64, vote headergov.VoteData) error {
-	if vote == nil {
+func (h *headerGovModule) VerifyVote(header *types.Header) error {
+	if len(header.Vote) == 0 {
+		return nil
+	}
+	if header.Vote == nil {
 		return ErrNilVote
 	}
 
-	// TODO: check if if voter is in valset.
-	// TODO: check if Voter is the block proposer.
+	var (
+		vb       headergov.VoteBytes = header.Vote
+		blockNum                     = header.Number.Uint64()
+	)
 
-	// (3)
+	vote, err := vb.ToVoteData()
+	if err != nil {
+		logger.Error("ToVoteData error", "num", blockNum, "vote", vb, "err", err)
+		return err
+	}
+
+	council, err := h.ValSet.GetCouncil(blockNum)
+	if err != nil {
+		return err
+	}
+
+	// check if the voter is in council
+	found := false
+	for _, addr := range council {
+		if addr == vote.Voter() {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return ErrInvalidKeyValue
+	}
+
+	// check if Voter is the block proposer.
+	// TODO-kaia: derive author from header
+	//author, err := h.Chain.Engine().Author(header)
+	//if err != nil {
+	//	return err
+	//}
+	//if author != vote.Voter() {
+	//	return ErrInvalidVoter
+	//}
 	return h.checkConsistency(blockNum, vote)
 }
 
@@ -125,8 +150,27 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 	//nolint:exhaustive
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
-		// TODO: check in valset
-		break
+		params := h.EffectiveParamSet(blockNum)
+
+		// skip the consistency check if governingMode is non-single.
+		if params.GovernanceMode != "single" {
+			return nil
+		}
+
+		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
+		// it's definite that the valSet vote is not included in this block
+		// so the council(blockNum - 1) and council(blockNum) should be same
+		council, err := h.ValSet.GetCouncil(blockNum - 1)
+		if err != nil {
+			return err
+		}
+
+		for _, addr := range council {
+			if addr == params.GoverningNode {
+				return nil
+			}
+		}
+		return ErrGovNodeNotInValSetList
 	case gov.GovernanceGovParamContract:
 		state, err := h.Chain.State()
 		if err != nil {
@@ -150,6 +194,17 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		params := h.EffectiveParamSet(blockNum)
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
+		}
+	case gov.AddValidator, gov.RemoveValidator:
+		params := h.EffectiveParamSet(blockNum)
+
+		if params.GovernanceMode != "single" {
+			return nil
+		}
+		for _, address := range vote.Value().([]common.Address) {
+			if address == params.GoverningNode {
+				return ErrGovNodeInValSetVoteValue
+			}
 		}
 	}
 

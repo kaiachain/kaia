@@ -120,9 +120,20 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	if header == nil {
 		return nil, 0, errNoHeader
 	}
-	council := valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
-	if council.Len() == 0 {
-		return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+
+	// Load council at the nearest istanbul snapshot except snapshot num is 0.
+	council := new(valset.AddressSet)
+	if snapshotNum > 0 {
+		council = valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
+		if council.Len() == 0 {
+			return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+		}
+	} else {
+		var err error
+		council, err = v.getCouncilGenesis()
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	// Apply the votes in the interval [snapshotNum+1, targetNum-1].
@@ -183,7 +194,7 @@ func applyVote(header *types.Header, council *valset.AddressSet, governingNode c
 	return originalSize != council.Len()
 }
 
-func parseValidatorVote(header *types.Header) (gov.ValidatorParamName, []common.Address, bool) {
+func parseValidatorVote(header *types.Header) (gov.ParamName, []common.Address, bool) {
 	// Check that a vote exists and is a validator vote.
 	voteBytes := headergov.VoteBytes(header.Vote)
 	if len(voteBytes) == 0 {
@@ -193,7 +204,7 @@ func parseValidatorVote(header *types.Header) (gov.ValidatorParamName, []common.
 	if err != nil {
 		return "", nil, false
 	}
-	voteKey := gov.ValidatorParamName(vote.Name())
+	voteKey := vote.Name()
 	_, isValidatorVote := gov.ValidatorParams[voteKey]
 	if !isValidatorVote {
 		return "", nil, false

@@ -23,6 +23,8 @@
 package istanbul
 
 import (
+	"math"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
@@ -51,18 +53,28 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (common.Address, error) {
-	// 1. Get signature address
-	signer, err := GetSignatureAddress(data, sig)
-	if err != nil {
-		logger.Error("Failed to get signer address", "err", err)
-		return common.Address{}, err
+// requiredMessageCount returns a minimum required number of consensus messages to proceed
+func requiredMessageCount(qualifiedSize int, committeeSize uint64) int {
+	var size int
+	if qualifiedSize > int(committeeSize) {
+		size = int(committeeSize)
+	} else {
+		size = qualifiedSize
 	}
-
-	// 2. Check validator
-	if _, val := valSet.GetByAddress(signer); val != nil {
-		return val.Address(), nil
+	// For less than 4 validators, quorum size equals validator count.
+	if size < 4 {
+		return size
 	}
+	// Adopted QBFT quorum implementation
+	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+	return int(math.Ceil(float64(2*size) / 3))
+}
 
-	return common.Address{}, ErrUnauthorizedAddress
+// f returns a maximum endurable number of byzantine fault nodes
+func f(qualifiedSize int, committeeSize uint64) int {
+	if qualifiedSize > int(committeeSize) {
+		return int(math.Ceil(float64(committeeSize)/3)) - 1
+	} else {
+		return int(math.Ceil(float64(qualifiedSize)/3)) - 1
+	}
 }

@@ -27,6 +27,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -129,3 +130,64 @@ type ValidatorSet interface {
 // ----------------------------------------------------------------------------
 
 type ProposalSelector func(ValidatorSet, common.Address, uint64) Validator
+
+type BlockValSet struct {
+	council   *valset.AddressSet // council = demoted + qualified
+	qualified *valset.AddressSet
+	demoted   *valset.AddressSet
+}
+
+func NewBlockValSet(council, demoted []common.Address) *BlockValSet {
+	councilSet := valset.NewAddressSet(council)
+	demotedSet := valset.NewAddressSet(demoted)
+	qualifiedSet := councilSet.Subtract(demotedSet)
+
+	return &BlockValSet{councilSet, qualifiedSet, demotedSet}
+}
+func (cs *BlockValSet) Council() *valset.AddressSet   { return cs.council }
+func (cs *BlockValSet) Qualified() *valset.AddressSet { return cs.qualified }
+func (cs *BlockValSet) Demoted() *valset.AddressSet   { return cs.demoted }
+func (cs *BlockValSet) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	// 1. Get signature address
+	signer, err := GetSignatureAddress(data, sig)
+	if err != nil {
+		logger.Error("Failed to get signer address", "err", err)
+		return common.Address{}, err
+	}
+
+	// 2. Check validator
+	if cs.Qualified().Contains(signer) {
+		return signer, nil
+	}
+
+	return common.Address{}, ErrUnauthorizedAddress
+}
+
+type RoundCommitteeState struct {
+	*BlockValSet
+	committee *valset.AddressSet
+	proposer  common.Address
+
+	// pre-calculated values
+	committeeSize        uint64
+	requiredMessageCount int
+	f                    int
+}
+
+func NewRoundCommitteeState(set *BlockValSet, committeeSize uint64, committee []common.Address, proposer common.Address) *RoundCommitteeState {
+	committeeSet := valset.NewAddressSet(committee)
+	reqMsgCnt := requiredMessageCount(set.Qualified().Len(), committeeSize)
+	fNum := f(set.Qualified().Len(), committeeSize)
+
+	return &RoundCommitteeState{set, committeeSet, proposer, committeeSize, reqMsgCnt, fNum}
+}
+func (cs *RoundCommitteeState) ValSet() *BlockValSet          { return cs.BlockValSet }
+func (cs *RoundCommitteeState) Committee() *valset.AddressSet { return cs.committee }
+func (cs *RoundCommitteeState) NonCommittee() *valset.AddressSet {
+	return cs.qualified.Subtract(cs.committee)
+}
+func (cs *RoundCommitteeState) Proposer() common.Address            { return cs.proposer }
+func (cs *RoundCommitteeState) IsProposer(addr common.Address) bool { return cs.proposer == addr }
+func (cs *RoundCommitteeState) CommitteeSize() uint64               { return cs.committeeSize }
+func (cs *RoundCommitteeState) RequiredMessageCount() int           { return cs.requiredMessageCount }
+func (cs *RoundCommitteeState) F() int                              { return cs.f }

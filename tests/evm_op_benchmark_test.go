@@ -97,7 +97,7 @@ func BenchmarkEvmOp(t *testing.B) {
 		fmt.Println("reservoirAddr = ", reservoir.Addr.String())
 	}
 
-	gasPrice := new(big.Int).SetUint64(0)
+	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	gasLimit := uint64(100000000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
@@ -2180,7 +2180,7 @@ func BenchmarkEvmOp(t *testing.B) {
 	assert.Equal(t, nil, err)
 	amount := new(big.Int).SetUint64(0)
 
-	for _, tc := range testcases {
+	for idx, tc := range testcases {
 		t.Run(tc.testName, func(t *testing.B) {
 			if testing.Verbose() {
 				fmt.Printf("----------------------testing %s...\n", tc.testName)
@@ -2204,7 +2204,7 @@ func BenchmarkEvmOp(t *testing.B) {
 				types.TxValueKeyTo:       contractAddrs["OpCodeBenchmarkContract"],
 				types.TxValueKeyAmount:   amount,
 				types.TxValueKeyGasLimit: gasLimit,
-				types.TxValueKeyGasPrice: gasPrice,
+				types.TxValueKeyGasPrice: new(big.Int).Add(gasPrice, big.NewInt(int64(2*params.Gkei*idx))),
 				types.TxValueKeyData:     data,
 			}
 			tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)

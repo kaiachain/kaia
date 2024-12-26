@@ -14,6 +14,7 @@ import (
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -50,6 +51,7 @@ type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	ChainKv     database.Database
 	Chain       BlockChain
+	Valset      valset.ValsetModule
 	NodeAddress common.Address
 }
 
@@ -72,6 +74,7 @@ func (m *GovModule) Init(opts *InitOpts) error {
 			ChainKv:     opts.ChainKv,
 			ChainConfig: opts.ChainConfig,
 			Chain:       opts.Chain,
+			ValSet:      opts.Valset,
 			NodeAddress: opts.NodeAddress,
 		}),
 		cgm.Init(&contractgov_impl.InitOpts{

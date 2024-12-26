@@ -53,17 +53,17 @@ func (mr *MockBackendMockRecorder) Address() *gomock.Call {
 }
 
 // Broadcast mocks base method
-func (m *MockBackend) Broadcast(arg0 common.Hash, arg1 istanbul.ValidatorSet, arg2 []byte) error {
+func (m *MockBackend) Broadcast(arg0 common.Hash, arg1 []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Broadcast indicates an expected call of Broadcast
-func (mr *MockBackendMockRecorder) Broadcast(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockBackendMockRecorder) Broadcast(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockBackend)(nil).Broadcast), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockBackend)(nil).Broadcast), arg0, arg1)
 }
 
 // CheckSignature mocks base method
@@ -108,6 +108,36 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
 }
 
+// GetCommitteeState mocks base method
+func (m *MockBackend) GetCommitteeState(arg0 uint64) (*istanbul.RoundCommitteeState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCommitteeState", arg0)
+	ret0, _ := ret[0].(*istanbul.RoundCommitteeState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommitteeState indicates an expected call of GetCommitteeState
+func (mr *MockBackendMockRecorder) GetCommitteeState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitteeState", reflect.TypeOf((*MockBackend)(nil).GetCommitteeState), arg0)
+}
+
+// GetCommitteeStateByRound mocks base method
+func (m *MockBackend) GetCommitteeStateByRound(arg0, arg1 uint64) (*istanbul.RoundCommitteeState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCommitteeStateByRound", arg0, arg1)
+	ret0, _ := ret[0].(*istanbul.RoundCommitteeState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommitteeStateByRound indicates an expected call of GetCommitteeStateByRound
+func (mr *MockBackendMockRecorder) GetCommitteeStateByRound(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitteeStateByRound", reflect.TypeOf((*MockBackend)(nil).GetCommitteeStateByRound), arg0, arg1)
+}
+
 // GetProposer mocks base method
 func (m *MockBackend) GetProposer(arg0 uint64) common.Address {
 	m.ctrl.T.Helper()
@@ -136,46 +166,45 @@ func (mr *MockBackendMockRecorder) GetRewardBase() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardBase", reflect.TypeOf((*MockBackend)(nil).GetRewardBase))
 }
 
-// GetSubGroupSize mocks base method
-func (m *MockBackend) GetSubGroupSize() uint64 {
+// GetValidatorSet mocks base method
+func (m *MockBackend) GetValidatorSet(arg0 uint64) (*istanbul.BlockValSet, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubGroupSize")
-	ret0, _ := ret[0].(uint64)
-	return ret0
+	ret := m.ctrl.Call(m, "GetValidatorSet", arg0)
+	ret0, _ := ret[0].(*istanbul.BlockValSet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// GetSubGroupSize indicates an expected call of GetSubGroupSize
-func (mr *MockBackendMockRecorder) GetSubGroupSize() *gomock.Call {
+// GetValidatorSet indicates an expected call of GetValidatorSet
+func (mr *MockBackendMockRecorder) GetValidatorSet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubGroupSize", reflect.TypeOf((*MockBackend)(nil).GetSubGroupSize))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorSet", reflect.TypeOf((*MockBackend)(nil).GetValidatorSet), arg0)
 }
 
 // Gossip mocks base method
-func (m *MockBackend) Gossip(arg0 istanbul.ValidatorSet, arg1 []byte) error {
+func (m *MockBackend) Gossip(arg0 []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Gossip", arg0, arg1)
+	ret := m.ctrl.Call(m, "Gossip", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Gossip indicates an expected call of Gossip
-func (mr *MockBackendMockRecorder) Gossip(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockBackendMockRecorder) Gossip(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gossip", reflect.TypeOf((*MockBackend)(nil).Gossip), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gossip", reflect.TypeOf((*MockBackend)(nil).Gossip), arg0)
 }
 
 // GossipSubPeer mocks base method
-func (m *MockBackend) GossipSubPeer(arg0 common.Hash, arg1 istanbul.ValidatorSet, arg2 []byte) map[common.Address]bool {
+func (m *MockBackend) GossipSubPeer(arg0 common.Hash, arg1 []byte) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GossipSubPeer", arg0, arg1, arg2)
-	ret0, _ := ret[0].(map[common.Address]bool)
-	return ret0
+	m.ctrl.Call(m, "GossipSubPeer", arg0, arg1)
 }
 
 // GossipSubPeer indicates an expected call of GossipSubPeer
-func (mr *MockBackendMockRecorder) GossipSubPeer(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockBackendMockRecorder) GossipSubPeer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GossipSubPeer", reflect.TypeOf((*MockBackend)(nil).GossipSubPeer), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GossipSubPeer", reflect.TypeOf((*MockBackend)(nil).GossipSubPeer), arg0, arg1)
 }
 
 // HasBadProposal mocks base method
@@ -235,20 +264,6 @@ func (mr *MockBackendMockRecorder) NodeType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeType", reflect.TypeOf((*MockBackend)(nil).NodeType))
 }
 
-// ParentValidators mocks base method
-func (m *MockBackend) ParentValidators(arg0 istanbul.Proposal) istanbul.ValidatorSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParentValidators", arg0)
-	ret0, _ := ret[0].(istanbul.ValidatorSet)
-	return ret0
-}
-
-// ParentValidators indicates an expected call of ParentValidators
-func (mr *MockBackendMockRecorder) ParentValidators(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParentValidators", reflect.TypeOf((*MockBackend)(nil).ParentValidators), arg0)
-}
-
 // SetCurrentView mocks base method
 func (m *MockBackend) SetCurrentView(arg0 *istanbul.View) {
 	m.ctrl.T.Helper()
@@ -274,20 +289,6 @@ func (m *MockBackend) Sign(arg0 []byte) ([]byte, error) {
 func (mr *MockBackendMockRecorder) Sign(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sign", reflect.TypeOf((*MockBackend)(nil).Sign), arg0)
-}
-
-// Validators mocks base method
-func (m *MockBackend) Validators(arg0 istanbul.Proposal) istanbul.ValidatorSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validators", arg0)
-	ret0, _ := ret[0].(istanbul.ValidatorSet)
-	return ret0
-}
-
-// Validators indicates an expected call of Validators
-func (mr *MockBackendMockRecorder) Validators(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validators", reflect.TypeOf((*MockBackend)(nil).Validators), arg0)
 }
 
 // Verify mocks base method

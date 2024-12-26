@@ -23,18 +23,18 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/rcrowley/go-metrics"
 )
 
 type Vrank struct {
 	startTime             time.Time
 	view                  istanbul.View
-	committee             istanbul.Validators
+	committee             []common.Address
 	threshold             time.Duration
 	firstCommit           int64
 	quorumCommit          int64
@@ -65,7 +65,7 @@ const (
 	vrankNotArrivedPlaceholder = -1
 )
 
-func NewVrank(view istanbul.View, committee istanbul.Validators) *Vrank {
+func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
 	threshold, _ := time.ParseDuration(vrankDefaultThreshold)
 	return &Vrank{
 		startTime:             time.Now(),
@@ -84,10 +84,10 @@ func (v *Vrank) TimeSinceStart() time.Duration {
 	return time.Now().Sub(v.startTime)
 }
 
-func (v *Vrank) AddCommit(msg *istanbul.Subject, src istanbul.Validator) {
+func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 	if v.isTargetCommit(msg, src) {
 		t := v.TimeSinceStart()
-		v.commitArrivalTimeMap[src.Address()] = t
+		v.commitArrivalTimeMap[src] = t
 	}
 }
 
@@ -177,14 +177,14 @@ func (v *Vrank) updateMetrics() {
 	}
 }
 
-func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src istanbul.Validator) bool {
+func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
 	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
 		return false
 	}
 	if msg.View.Cmp(&v.view) != 0 {
 		return false
 	}
-	_, ok := v.commitArrivalTimeMap[src.Address()]
+	_, ok := v.commitArrivalTimeMap[src]
 	if ok {
 		return false
 	}
@@ -215,14 +215,12 @@ func assessBatch(ts []time.Duration, threshold time.Duration) []uint8 {
 // serialize serializes arrivalTime hashmap into array.
 // If committee is sorted, we can simply figure out the validator position in the output array
 // by sorting the output of `kaia.getCommittee()`
-func serialize(committee istanbul.Validators, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
-	sortedCommittee := make(istanbul.Validators, len(committee))
-	copy(sortedCommittee[:], committee[:])
-	sort.Sort(sortedCommittee)
+func serialize(committee []common.Address, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
+	sortedCommittee := valset.NewAddressSet(committee).List()
 
 	serialized := make([]time.Duration, len(sortedCommittee))
 	for i, v := range sortedCommittee {
-		val, ok := arrivalTimeMap[v.Address()]
+		val, ok := arrivalTimeMap[v]
 		if ok {
 			serialized[i] = val
 		} else {

@@ -29,7 +29,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -126,6 +128,8 @@ type Engine interface {
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
 
+	// TODO-kaiax-valset: delete CreateSnapshot which is called after post insert block
+	//  e.g. insertChain, worker.wait, New()
 	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
 	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
 
@@ -176,6 +180,8 @@ type Istanbul interface {
 
 	// UpdateParam updates the governance parameter
 	UpdateParam(num uint64) error
+
+	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule)
 
 	kaiax.ConsensusModuleHost
 	staking.StakingModuleHost
