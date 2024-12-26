@@ -33,7 +33,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/validator"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
@@ -52,8 +51,6 @@ type Snapshot struct {
 	ValSet        istanbul.ValidatorSet // Set of authorized validators at this moment
 	Policy        uint64
 	CommitteeSize uint64
-	Votes         []governance.GovernanceVote      // List of votes cast in chronological order
-	Tally         []governance.GovernanceTallyItem // Current vote tally to avoid recalculating
 }
 
 func effectiveParams(g gov.GovModule, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
@@ -78,8 +75,6 @@ func newSnapshot(g gov.GovModule, number uint64, hash common.Hash, valSet istanb
 		ValSet:        valSet,
 		Policy:        policy,
 		CommitteeSize: committeeSize,
-		Votes:         make([]governance.GovernanceVote, 0),
-		Tally:         make([]governance.GovernanceTallyItem, 0),
 	}
 	return snap
 }
@@ -117,12 +112,7 @@ func (s *Snapshot) copy() *Snapshot {
 		ValSet:        s.ValSet.Copy(),
 		Policy:        s.Policy,
 		CommitteeSize: s.CommitteeSize,
-		Votes:         make([]governance.GovernanceVote, len(s.Votes)),
-		Tally:         make([]governance.GovernanceTallyItem, len(s.Tally)),
 	}
-
-	copy(cpy.Votes, s.Votes)
-	copy(cpy.Tally, s.Tally)
 
 	return cpy
 }
@@ -135,7 +125,7 @@ func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModule gov.GovModule, addr common.Address, policy uint64, chain consensus.ChainReader, stakingModule staking.StakingModule, writable bool) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, govModule gov.GovModule, addr common.Address, policy uint64, chain consensus.ChainReader, stakingModule staking.StakingModule, writable bool) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -169,22 +159,9 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModu
 			return nil, errUnauthorized
 		}
 
-		if number%snap.Epoch == 0 {
-			if writable {
-				gov.UpdateCurrentSet(number)
-				if len(header.Governance) > 0 {
-					gov.WriteGovernanceForNextEpoch(number, header.Governance)
-				}
-				gov.ClearVotes(number)
-			}
-			snap.Votes = make([]governance.GovernanceVote, 0)
-			snap.Tally = make([]governance.GovernanceTallyItem, 0)
-		}
-
 		// Reload governance values
 		snap.Epoch, snap.Policy, snap.CommitteeSize = effectiveParams(govModule, number+1)
 
-		snap.ValSet, snap.Votes, snap.Tally = gov.HandleGovernanceVote(snap.ValSet, snap.Votes, snap.Tally, header, validator, addr, writable)
 		if policy == uint64(params.WeightedRandom) {
 			// Snapshot of block N (Snapshot_N) should contain proposers for N+1 and following blocks.
 			// Validators for Block N+1 can be calculated based on the staking information from the previous stakingUpdateInterval block.
@@ -239,11 +216,6 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModu
 	}
 	snap.ValSet.SetSubGroupSize(snap.CommitteeSize)
 
-	if writable {
-		gov.SetTotalVotingPower(snap.ValSet.TotalVotingPower())
-		gov.SetMyVotingPower(snap.getMyVotingPower(addr))
-	}
-
 	return snap, nil
 }
 
@@ -296,11 +268,9 @@ func sortValidatorArray(validators []common.Address) []common.Address {
 }
 
 type snapshotJSON struct {
-	Epoch  uint64                           `json:"epoch"`
-	Number uint64                           `json:"number"`
-	Hash   common.Hash                      `json:"hash"`
-	Votes  []governance.GovernanceVote      `json:"votes"`
-	Tally  []governance.GovernanceTallyItem `json:"tally"`
+	Epoch  uint64      `json:"epoch"`
+	Number uint64      `json:"number"`
+	Hash   common.Hash `json:"hash"`
 
 	// for validator set
 	Validators   []common.Address        `json:"validators"`
@@ -337,8 +307,6 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Epoch:             s.Epoch,
 		Number:            s.Number,
 		Hash:              s.Hash,
-		Votes:             s.Votes,
-		Tally:             s.Tally,
 		Validators:        validators,
 		Policy:            istanbul.ProposerPolicy(s.Policy),
 		SubGroupSize:      s.CommitteeSize,
@@ -362,8 +330,6 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Epoch = j.Epoch
 	s.Number = j.Number
 	s.Hash = j.Hash
-	s.Votes = j.Votes
-	s.Tally = j.Tally
 
 	if j.Policy == istanbul.WeightedRandom {
 		s.ValSet = validator.NewWeightedCouncil(j.Validators, j.DemotedValidators, j.RewardAddrs, j.VotingPowers, j.Weights, j.Policy, j.SubGroupSize, j.Number, j.ProposersBlockNum, nil)
@@ -457,16 +423,13 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	}
 
 	pset := sb.govModule.GetParamSet(snap.Number)
-	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
+	snap, err = snap.apply(headers, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err
 	}
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if writable && params.IsCheckpointInterval(snap.Number) && len(headers) > 0 {
-		if sb.governance.CanWriteGovernanceState(snap.Number) {
-			sb.governance.WriteGovernanceState(snap.Number, true)
-		}
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}

@@ -36,7 +36,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -69,25 +68,12 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 
-	gov := governance.NewMixedEngine(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: params.GetDefaultGovernanceConfig(),
-	}, db)
-
 	prvKey, _ := crypto.GenerateKey()
 	engine := backend.New(&backend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     common.Address{},
 		PrivateKey:     prvKey,
 		DB:             db,
-		Governance:     gov,
 		NodeType:       common.CONSENSUSNODE,
 	})
 

@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/governance"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
@@ -138,7 +137,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		nodeBlsKeys = make([]bls.SecretKey, numNodes)
 
 		dbm = database.NewMemoryDBManager()
-		gov = governance.NewMixedEngine(config, dbm)
 	)
 	nodeKeys[0] = overrides.node0Key
 	nodeAddrs[0] = crypto.PubkeyToAddress(nodeKeys[0].PublicKey)
@@ -175,7 +173,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		PrivateKey:        nodeKeys[0],
 		BlsSecretKey:      nodeBlsKeys[0],
 		DB:                dbm,
-		Governance:        gov,
 		GovModule:         mGov,
 		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
 		NodeType:          common.CONSENSUSNODE,
@@ -193,7 +190,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if err != nil {
 		panic(err)
 	}
-	gov.SetBlockchain(chain)
 
 	mStaking := staking_impl.NewStakingModule()
 	mValset := valset_impl.NewValsetModule()

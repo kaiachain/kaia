@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"os"
 	"path"
 	"strconv"
@@ -39,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -355,10 +353,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	governance := generateGovernaceDataForTest()
-
-	////////////////////////////////////////////////////////////////////////////////
 	// Prepare sender addresses and private keys
 	// 1) If generating test, create accounts and private keys as many as numTotalSenders
 	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
@@ -382,7 +376,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDB,
-		Governance:     governance,
 		NodeType:       common.CONSENSUSNODE,
 	})
 
@@ -417,7 +410,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, governance,
+		validatorPrivKeys, engine, genesis, mGov,
 	}, nil
 }
 
@@ -498,23 +491,6 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		},
 		SnapshotCacheSize: 512,
 	}
-}
-
-// generateGovernaceDataForTest returns governance.Engine for test.
-func generateGovernaceDataForTest() governance.Engine {
-	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-
-	return governance.NewMixedEngine(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: params.GetDefaultGovernanceConfig(),
-	}, dbm)
 }
 
 // setUpTest sets up test data directory, verbosity and profile file.

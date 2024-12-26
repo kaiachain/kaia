@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
@@ -70,7 +69,6 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
-	governance         governance.Engine
 }
 
 var (
@@ -98,9 +96,6 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	governance := generateGovernaceDataForTest()
-	////////////////////////////////////////////////////////////////////////////////
 	// Create a database
 	chainDb := NewDatabase(dir, database.LevelDB)
 
@@ -127,7 +122,6 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDb,
-		Governance:     governance,
 		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
 	})
@@ -176,7 +170,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, governance,
+		validatorPrivKeys, engine, genesis, mGov,
 	}, nil
 }
 

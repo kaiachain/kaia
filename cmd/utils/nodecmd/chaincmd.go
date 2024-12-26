@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/governance"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -245,10 +244,6 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 	}
 
 	if g.Config.Istanbul != nil {
-		if err := governance.CheckGenesisValues(g.Config); err != nil {
-			return err
-		}
-
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
