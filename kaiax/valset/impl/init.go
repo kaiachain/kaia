@@ -165,7 +165,8 @@ func (v *ValsetModule) migrate() {
 		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
 		targetNum = snapshotNum
 	}
-
-	// Now the migration is complete.
-	writeLowestScannedVoteNum(v.ChainKv, 0)
+	if targetNum == 0 {
+		// Now the migration is complete.
+		writeLowestScannedVoteNum(v.ChainKv, 0)
+	}
 }
