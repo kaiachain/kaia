@@ -227,7 +227,7 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 	}
 
 	WriteLowestVoteScannedEpochIdx(h.ChainKv, epochIdx)
-	logger.Info("Accumulated votes", "epochIdx", epochIdx, "lowestScanned", epochIdx)
+	logger.Info("Accumulated votes", "epochIdx", epochIdx)
 }
 
 func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {

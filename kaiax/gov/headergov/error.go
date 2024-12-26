@@ -1,6 +1,12 @@
 package headergov
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/kaiachain/kaia/log"
+)
+
+var logger = log.NewModuleLogger(log.KaiaxGov)
 
 var (
 	ErrInvalidRlp      = errors.New("invalid rlp")

@@ -16,6 +16,7 @@ func (h *headerGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
 	gh := h.history
 	gp, err := gh.Search(prevEpochStart)
 	if err != nil {
+		logger.Warn("No param set", "blockNum", blockNum, "prevEpochStart", prevEpochStart)
 		return *gov.GetDefaultGovernanceParamSet()
 	}
 	return gp
