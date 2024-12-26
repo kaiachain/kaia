@@ -212,7 +212,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		// the kip71Config used when creating the block number is a previous block config.
 		blockNum := header.Number.Uint64()
-		pset := sb.govModule.EffectiveParamSet(blockNum)
+		pset := sb.govModule.GetParamSet(blockNum)
 		kip71 := pset.ToKip71Config()
 		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
 			return err
@@ -427,7 +427,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	header.BlockScore = defaultBlockScore
 
 	// If it reaches the Epoch, governance config will be added to block header
-	pset := sb.govModule.EffectiveParamSet(number)
+	pset := sb.govModule.GetParamSet(number)
 	if number%pset.Epoch == 0 {
 		if g := sb.governance.GetGovernanceChange(); g != nil {
 			if data, err := json.Marshal(g); err != nil {
@@ -778,7 +778,7 @@ func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) 
 		return nil, err
 	}
 
-	pset := sb.govModule.EffectiveParamSet(0)
+	pset := sb.govModule.GetParamSet(0)
 	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
 		istanbul.ProposerPolicy(pset.ProposerPolicy),
 		pset.CommitteeSize, chain)

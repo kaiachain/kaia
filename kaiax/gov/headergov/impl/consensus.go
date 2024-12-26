@@ -150,7 +150,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 	//nolint:exhaustive
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 
 		// skip the consistency check if governingMode is non-single.
 		if params.GovernanceMode != "single" {
@@ -186,17 +186,17 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return ErrGovParamNotContract
 		}
 	case gov.Kip71LowerBoundBaseFee:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {
 			return ErrLowerBoundBaseFee
 		}
 	case gov.Kip71UpperBoundBaseFee:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
 		}
 	case gov.AddValidator, gov.RemoveValidator:
-		params := h.EffectiveParamSet(blockNum)
+		params := h.GetParamSet(blockNum)
 
 		if params.GovernanceMode != "single" {
 			return nil
@@ -230,14 +230,14 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 }
 
 func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
-	lowestVoteScannedBlockNumPtr := ReadLowestVoteScannedBlockNum(h.ChainKv)
-	if lowestVoteScannedBlockNumPtr == nil {
-		panic("lowest vote scanned block num must exist")
+	pBorder := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if pBorder == nil {
+		panic("lowest vote scanned epoch index must exist")
 	}
-	lowestVoteScannedBlockNum := *lowestVoteScannedBlockNumPtr
+	border := *pBorder
 
-	if lowestVoteScannedBlockNum <= calcEpochStartBlock(epochIdx, h.epoch) {
-		logger.Info("scanning votes fastpath")
+	if border <= epochIdx {
+		logger.Debug("Scanning votes fastpath")
 		votes := make(map[uint64]headergov.VoteData)
 
 		h.mu.RLock()
@@ -247,7 +247,7 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 		}
 		return votes
 	} else {
-		logger.Info("scanning votes slowpath")
+		logger.Debug("Scanning votes slowpath")
 		return h.scanAllVotesInEpoch(epochIdx)
 	}
 }

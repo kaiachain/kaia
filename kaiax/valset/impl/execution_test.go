@@ -66,8 +66,8 @@ func TestPostInsertBlock(t *testing.T) {
 	writeValidatorVoteBlockNums(db, []uint64{0})
 	writeLowestScannedVoteNum(db, 0)
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil).Header()).AnyTimes()
-	mockGov.EXPECT().EffectiveParamSet(uint64(1)).Return(pset).AnyTimes()
-	mockGov.EXPECT().EffectiveParamSet(uint64(2)).Return(pset).AnyTimes()
+	mockGov.EXPECT().GetParamSet(uint64(1)).Return(pset).AnyTimes()
+	mockGov.EXPECT().GetParamSet(uint64(2)).Return(pset).AnyTimes()
 
 	// Ineffective vote (adding already existing address)
 	assert.NoError(t, v.PostInsertBlock(block1))

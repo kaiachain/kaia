@@ -44,7 +44,7 @@ func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul
 		return nil, err
 	}
 
-	committeeSize := sb.govModule.EffectiveParamSet(num).CommitteeSize
+	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
 	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 

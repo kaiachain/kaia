@@ -87,10 +87,10 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 		blocknum = num.Uint64()
 	}
 
-	pset := g.EffectiveParamSet(blocknum)
-	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blocknum))
-	pset = patchDeprecatedParams(pset, rule)
 	latestConfig := g.Chain.Config()
+	pset := g.GetParamSet(blocknum)
+	rule := latestConfig.Rules(new(big.Int).SetUint64(blocknum))
+	pset = patchDeprecatedParams(pset, rule)
 	config := pset.ToGovParamSet().ToChainConfig()
 	config.ChainID = latestConfig.ChainID
 	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
@@ -138,7 +138,7 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 	}
 
 	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	gp := g.EffectiveParamSet(blockNumber)
+	gp := g.GetParamSet(blockNumber)
 	gp = patchDeprecatedParams(gp, rule)
 	ret := gp.ToMap()
 	return ret, nil

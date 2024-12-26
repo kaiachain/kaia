@@ -157,7 +157,7 @@ func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write 
 	if header == nil {
 		return errNoHeader
 	}
-	governingNode := v.GovModule.EffectiveParamSet(num).GoverningNode
+	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())

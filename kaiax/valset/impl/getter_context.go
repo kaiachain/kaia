@@ -65,7 +65,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 		prevHeader:   prevHeader,
 		prevProposer: prevProposer,
 		rules:        v.Chain.Config().Rules(new(big.Int).SetUint64(num)),
-		pset:         v.GovModule.EffectiveParamSet(num),
+		pset:         v.GovModule.GetParamSet(num),
 	}, nil
 }
 

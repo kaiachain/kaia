@@ -1,6 +1,8 @@
 package gov
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrInitNil = errors.New("cannot init gov module because of nil")

@@ -65,11 +65,11 @@ func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr comm
 		Hgm:         mockHGM,
 	})
 	require.Nil(t, err)
-	mockHGM.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{GovParamContract: addr}).AnyTimes()
+	mockHGM.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{GovParamContract: addr}).AnyTimes()
 	return cgm
 }
 
-func TestEffectiveParamSet(t *testing.T) {
+func TestGetParamSet(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	paramName := string(gov.GovernanceUnitPrice)
 	accounts, sim, addr, gp := createSimulateBackend(t)
@@ -86,7 +86,7 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		ps := cgm.EffectiveParamSet(activation.Uint64())
+		ps := cgm.GetParamSet(activation.Uint64())
 		assert.NotNil(t, ps)
 		assert.Equal(t, uint64(25), ps.UnitPrice)
 	}
@@ -102,7 +102,7 @@ func TestEffectiveParamSet(t *testing.T) {
 		require.NotNil(t, receipt)
 		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
-		ps := cgm.EffectiveParamSet(activation.Uint64())
+		ps := cgm.GetParamSet(activation.Uint64())
 		assert.NotNil(t, ps)
 		assert.Equal(t, uint64(125), ps.UnitPrice)
 	}

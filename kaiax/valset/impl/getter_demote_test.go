@@ -88,7 +88,7 @@ func TestGetDemotedValidators(t *testing.T) {
 		mockChain.EXPECT().Config().Return(config).Times(1)
 
 		pset.ProposerPolicy = uint64(tc.policy)
-		mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(pset).Times(1)
+		mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).Times(1)
 		mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
 		demoted, err := v.getDemotedValidators(valset.NewAddressSet(council), 1)

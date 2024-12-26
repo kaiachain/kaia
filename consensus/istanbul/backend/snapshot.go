@@ -57,7 +57,7 @@ type Snapshot struct {
 }
 
 func effectiveParams(g gov.GovModule, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset := g.EffectiveParamSet(number)
+	pset := g.GetParamSet(number)
 	epoch = pset.Epoch
 	policy = pset.ProposerPolicy
 	committeeSize = pset.CommitteeSize
@@ -194,7 +194,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModu
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 
 			// because snapshot(num)'s ValSet = validators for num+1
-			pset := govModule.EffectiveParamSet(number + 1)
+			pset := govModule.GetParamSet(number + 1)
 
 			isSingle := (pset.GovernanceMode == "single")
 			govNode := pset.GoverningNode
@@ -456,7 +456,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		return nil, err
 	}
 
-	pset := sb.govModule.EffectiveParamSet(snap.Number)
+	pset := sb.govModule.GetParamSet(snap.Number)
 	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
 	if err != nil {
 		return nil, err

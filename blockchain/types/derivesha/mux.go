@@ -37,7 +37,7 @@ type IDeriveSha interface {
 }
 
 type GovModule interface {
-	EffectiveParamSet(num uint64) gov.ParamSet
+	GetParamSet(num uint64) gov.ParamSet
 }
 
 var (
@@ -85,7 +85,7 @@ func getType(num *big.Int) int {
 	// and unit tests. govModule != nil if blockchain.InitDeriveShaWithGov is used,
 	// in ordinary blockchain processing.
 	if govModule != nil {
-		pset := govModule.EffectiveParamSet(num.Uint64())
+		pset := govModule.GetParamSet(num.Uint64())
 		implType = int(pset.DeriveShaImpl)
 	}
 

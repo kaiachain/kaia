@@ -100,7 +100,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	writeCouncil(v.ChainKv, 0, genesisCouncil)
 
 	// Mock gov module
-	mockGovModule.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{
+	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
 		StakingUpdateInterval:  1,
 		ProposerUpdateInterval: params.DefaultProposerRefreshInterval,
 		ProposerPolicy:         uint64(params.WeightedRandom),
