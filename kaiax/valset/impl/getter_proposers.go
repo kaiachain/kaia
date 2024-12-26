@@ -83,7 +83,10 @@ func (v *ValsetModule) getRemoveVotesInInterval(pUpdateNum, pUpdateInterval uint
 				logger.Error("Failed to get qualified validators", "block", num, "err", err)
 				return nil
 			}
-			removeVotes.add(num, addresses, qualified)
+			if removeVotes.add(num, addresses, qualified) == false {
+				logger.Error("remove vote is not added sequentially ascending order", "block", num)
+				return nil
+			}
 		}
 	}
 
@@ -125,9 +128,35 @@ type removeVote struct {
 	voteBlkNum  uint64
 	removeAddrs []common.Address
 }
+
+// removeVoteList has a list of remove validator votes contained within one proposer update interval
+// The block numbers in the list must be sorted in ascending order with no duplicates.
 type removeVoteList []removeVote
 
-func (r *removeVoteList) add(voteBlkNum uint64, addresses []common.Address, qualified *valset.AddressSet) {
+// isUniquelySorted checks if the block numbers are sorted in ascending order and contain no duplicates.
+func (r *removeVoteList) isUniquelySorted() bool {
+	list := *r
+	if len(list) <= 1 {
+		return true
+	}
+
+	for i := 1; i < len(list); i++ {
+		// Ensure no duplicate block numbers and maintain ascending order
+		if list[i-1].voteBlkNum >= list[i].voteBlkNum {
+			return false
+		}
+	}
+	return true
+}
+
+// add appends a new removeVote to the list
+// The new vote block number must be added sequentially in ascending order
+func (r *removeVoteList) add(voteBlkNum uint64, addresses []common.Address, qualified *valset.AddressSet) bool {
+	// last vote block number should be less than the new vote block number
+	if len(*r) > 0 && (*r)[len(*r)-1].voteBlkNum >= voteBlkNum {
+		return false
+	}
+
 	removeAddrs := valset.NewAddressSet([]common.Address{})
 	for _, addr := range addresses {
 		if qualified.Contains(addr) {
@@ -137,10 +166,16 @@ func (r *removeVoteList) add(voteBlkNum uint64, addresses []common.Address, qual
 	if removeAddrs.Len() > 0 {
 		*r = append(*r, removeVote{voteBlkNum, removeAddrs.List()})
 	}
+	return true
 }
 
 // filteredProposerList removes the removeVoteAddrs from the base proposers
 func (r *removeVoteList) filteredProposerList(currentNum uint64, proposers []common.Address) []common.Address {
+	if !(*r).isUniquelySorted() {
+		logger.Error("removeVoteList are not sorted. create the list in ascending order.")
+		return nil
+	}
+
 	removeAddrs := new(valset.AddressSet)
 	for _, vote := range *r {
 		if currentNum <= vote.voteBlkNum {
