@@ -424,7 +424,7 @@ func opExtCodeHash1052(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCont
 	slot := scope.Stack.peek()
 	address := common.Address(slot.Bytes20())
 	if interpreter.evm.StateDB.Empty(address) {
-		slot.Clear()
+		slot.Clear() // Return 0x0 for empty account
 	} else {
 		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
 	}
@@ -436,7 +436,11 @@ func opExtCodeHash1052(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCont
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
 	address := common.Address(slot.Bytes20())
-	slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+	if interpreter.evm.StateDB.Empty(address) {
+		slot.SetBytes(emptyCodeHash[:]) // Return 0xc5d246... for empty account before Cancun
+	} else {
+		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+	}
 	return nil, nil
 }
 
