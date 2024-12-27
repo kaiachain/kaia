@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO-hyunsooda: Move to `compress_test.go`
 func testCopyOriginData(c *CompressModule, compressTyp CompressionType, copyTestDB database.Batch, from, to uint64) {
 	// Copy origin
 	for i := from; i < to; i++ {
