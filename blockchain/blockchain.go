@@ -2150,18 +2150,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				return i, events, coalescedLogs, err
 			}
 		}
-
-		// update governance CurrentSet if it is at an epoch block
-		if bc.engine.CreateSnapshot(bc, block.NumberU64(), block.Hash(), nil) != nil {
-			return i, events, coalescedLogs, err
-		}
-
-		// update governance parameters
-		if istanbul, ok := bc.engine.(consensus.Istanbul); ok {
-			if err = istanbul.UpdateParam(block.NumberU64()); err != nil {
-				return i, events, coalescedLogs, err
-			}
-		}
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {

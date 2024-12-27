@@ -293,8 +293,6 @@ func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockC
 	).AnyTimes()
 
 	engine.EXPECT().VerifyHeader(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	engine.EXPECT().CreateSnapshot(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
 	engine.EXPECT().Finalize(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 			header.BlockScore = common.Big1

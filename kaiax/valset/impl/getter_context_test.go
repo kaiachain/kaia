@@ -286,3 +286,57 @@ func TestWeightedRandomProposer_Select(t *testing.T) {
 		assert.Equal(t, tc.expected, currProposer)
 	}
 }
+
+// TestCollectStakingAmounts checks if validators and stakingAmounts from a stakingInfo are matched well.
+// stakingAmounts of multiple staking contracts will be added to stakingAmounts of validators which have the same reward address.
+// input
+//   - validator and stakingInfo is matched by a nodeAddress.
+//
+// output
+//   - weightedValidators are sorted by nodeAddress
+//   - stakingAmounts should be same as expectedStakingAmounts
+func TestCollectStakingAmounts(t *testing.T) {
+	uintMS, floatMS := uint64(5000000), float64(5000000)
+	testCases := []struct {
+		validators             []common.Address
+		stakingInfo            *staking.StakingInfo
+		expectedStakingAmounts []float64
+	}{
+		{
+			numsToAddrs(1, 2, 3),
+			&staking.StakingInfo{
+				NodeIds:          numsToAddrs(1, 2, 3),
+				StakingContracts: numsToAddrs(1, 2, 3),
+				RewardAddrs:      numsToAddrs(4, 5, 6),
+				StakingAmounts:   []uint64{2 * uintMS, uintMS, uintMS},
+			},
+			[]float64{2 * floatMS, floatMS, floatMS},
+		},
+		{
+			numsToAddrs(1, 2, 3, 4),
+			&staking.StakingInfo{
+				NodeIds:          numsToAddrs(1, 2, 3, 4, 5),
+				StakingContracts: numsToAddrs(1, 2, 3, 4, 5),
+				RewardAddrs:      numsToAddrs(6, 7, 8, 9, 6),
+				StakingAmounts:   []uint64{uintMS, uintMS, uintMS, uintMS, uintMS},
+			},
+			[]float64{2 * floatMS, floatMS, floatMS, floatMS},
+		},
+		{
+			numsToAddrs(1, 2, 3, 4),
+			&staking.StakingInfo{
+				NodeIds:          numsToAddrs(1, 2, 3, 4, 5, 6),
+				StakingContracts: numsToAddrs(1, 2, 3, 4, 5, 6),
+				RewardAddrs:      numsToAddrs(7, 8, 9, 10, 7, 8),
+				StakingAmounts:   []uint64{uintMS, uintMS, uintMS, uintMS, uintMS, uintMS},
+			},
+			[]float64{2 * floatMS, 2 * floatMS, floatMS, floatMS},
+		},
+	}
+	for _, tc := range testCases {
+		stakingAmounts := collectStakingAmounts(tc.validators, tc.stakingInfo)
+		for idx, nodeId := range tc.validators {
+			assert.Equal(t, stakingAmounts[nodeId], tc.expectedStakingAmounts[idx])
+		}
+	}
+}

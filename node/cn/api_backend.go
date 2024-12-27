@@ -84,8 +84,8 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, ta
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
-	// Initialize snapshot cache, staking info cache, and governance cache
-	cn.InitSnapshot()
+	// Initialize staking info cache, and governance cache
+	cn.PurgeCache()
 	gpo.PurgeCache()
 	return nil
 }
