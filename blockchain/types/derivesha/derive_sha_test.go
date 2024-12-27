@@ -49,7 +49,7 @@ var testGovSchedule = map[uint64]int{
 	8: types.ImplDeriveShaConcat,
 }
 
-func (e *testGov) EffectiveParamSet(num uint64) gov.ParamSet {
+func (e *testGov) GetParamSet(num uint64) gov.ParamSet {
 	return gov.ParamSet{
 		DeriveShaImpl: uint64(testGovSchedule[num]),
 	}

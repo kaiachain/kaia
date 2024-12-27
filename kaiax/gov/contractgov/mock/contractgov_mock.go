@@ -49,32 +49,32 @@ func (mr *MockContractGovModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockContractGovModule)(nil).APIs))
 }
 
-// EffectiveParamSet mocks base method.
-func (m *MockContractGovModule) EffectiveParamSet(arg0 uint64) gov.ParamSet {
+// GetParamSet mocks base method.
+func (m *MockContractGovModule) GetParamSet(arg0 uint64) gov.ParamSet {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParamSet", arg0)
+	ret := m.ctrl.Call(m, "GetParamSet", arg0)
 	ret0, _ := ret[0].(gov.ParamSet)
 	return ret0
 }
 
-// EffectiveParamSet indicates an expected call of EffectiveParamSet.
-func (mr *MockContractGovModuleMockRecorder) EffectiveParamSet(arg0 interface{}) *gomock.Call {
+// GetParamSet indicates an expected call of GetParamSet.
+func (mr *MockContractGovModuleMockRecorder) GetParamSet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParamSet", reflect.TypeOf((*MockContractGovModule)(nil).EffectiveParamSet), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParamSet", reflect.TypeOf((*MockContractGovModule)(nil).GetParamSet), arg0)
 }
 
-// EffectiveParamsPartial mocks base method.
-func (m *MockContractGovModule) EffectiveParamsPartial(arg0 uint64) gov.PartialParamSet {
+// GetPartialParamSet mocks base method.
+func (m *MockContractGovModule) GetPartialParamSet(arg0 uint64) gov.PartialParamSet {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParamsPartial", arg0)
+	ret := m.ctrl.Call(m, "GetPartialParamSet", arg0)
 	ret0, _ := ret[0].(gov.PartialParamSet)
 	return ret0
 }
 
-// EffectiveParamsPartial indicates an expected call of EffectiveParamsPartial.
-func (mr *MockContractGovModuleMockRecorder) EffectiveParamsPartial(arg0 interface{}) *gomock.Call {
+// GetPartialParamSet indicates an expected call of GetPartialParamSet.
+func (mr *MockContractGovModuleMockRecorder) GetPartialParamSet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParamsPartial", reflect.TypeOf((*MockContractGovModule)(nil).EffectiveParamsPartial), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartialParamSet", reflect.TypeOf((*MockContractGovModule)(nil).GetPartialParamSet), arg0)
 }
 
 // Start mocks base method.

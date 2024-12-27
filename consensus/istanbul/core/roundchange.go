@@ -84,8 +84,8 @@ func (c *core) sendRoundChange(round *big.Int) {
 	})
 }
 
-func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
-	logger := c.logger.NewWith("state", c.state, "from", src.Address().Hex())
+func (c *core) handleRoundChange(msg *message, src common.Address) error {
+	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
 
 	// Decode ROUND CHANGE message
 	var rc *istanbul.Subject
@@ -115,8 +115,8 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	}
 
 	var numCatchUp, numStartNewRound int
-	n := RequiredMessageCount(c.valSet)
-	f := int(c.valSet.F())
+	n := c.currentCommittee.RequiredMessageCount()
+	f := c.currentCommittee.F()
 	// N ROUND CHANGE messages can start new round.
 	numStartNewRound = n
 	// F + 1 ROUND CHANGE messages can start catch up the round.
@@ -153,16 +153,16 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 
 // ----------------------------------------------------------------------------
 
-func newRoundChangeSet(valSet istanbul.ValidatorSet) *roundChangeSet {
+func newRoundChangeSet(councilState *istanbul.BlockValSet) *roundChangeSet {
 	return &roundChangeSet{
-		validatorSet: valSet,
+		valSet:       councilState,
 		roundChanges: make(map[uint64]*messageSet),
 		mu:           new(sync.Mutex),
 	}
 }
 
 type roundChangeSet struct {
-	validatorSet istanbul.ValidatorSet
+	valSet       *istanbul.BlockValSet
 	roundChanges map[uint64]*messageSet
 	mu           *sync.Mutex
 }
@@ -174,7 +174,7 @@ func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
 
 	round := r.Uint64()
 	if rcs.roundChanges[round] == nil {
-		rcs.roundChanges[round] = newMessageSet(rcs.validatorSet)
+		rcs.roundChanges[round] = newMessageSet(rcs.valSet)
 	}
 	err := rcs.roundChanges[round].Add(msg)
 	if err != nil {

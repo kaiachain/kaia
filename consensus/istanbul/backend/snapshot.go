@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"math/big"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -56,7 +57,7 @@ type Snapshot struct {
 }
 
 func effectiveParams(g gov.GovModule, number uint64) (epoch uint64, policy uint64, committeeSize uint64) {
-	pset := g.EffectiveParamSet(number)
+	pset := g.GetParamSet(number)
 	epoch = pset.Epoch
 	policy = pset.ProposerPolicy
 	committeeSize = pset.CommitteeSize
@@ -193,7 +194,7 @@ func (s *Snapshot) apply(headers []*types.Header, gov governance.Engine, govModu
 			// Refresh proposers in Snapshot_N using previous proposersUpdateInterval block for N+1, if not updated yet.
 
 			// because snapshot(num)'s ValSet = validators for num+1
-			pset := govModule.EffectiveParamSet(number + 1)
+			pset := govModule.GetParamSet(number + 1)
 
 			isSingle := (pset.GovernanceMode == "single")
 			govNode := pset.GoverningNode
@@ -378,4 +379,163 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 func (s *Snapshot) MarshalJSON() ([]byte, error) {
 	j := s.toJSONStruct()
 	return json.Marshal(j)
+}
+
+// prepareSnapshotApply is a helper function to prepare snapshot and headers for the given block number and hash.
+// It returns the snapshot, headers, and error if any.
+func (sb *backend) prepareSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, []*types.Header, error) {
+	// Search for a snapshot in memory or on disk for checkpoints
+	var (
+		headers []*types.Header
+		snap    *Snapshot
+	)
+
+	for snap == nil {
+		// If an in-memory snapshot was found, use that
+		if s, ok := sb.recents.Get(hash); ok {
+			snap = s.(*Snapshot)
+			break
+		}
+		// If an on-disk checkpoint snapshot can be found, use that
+		if params.IsCheckpointInterval(number) {
+			if s, err := loadSnapshot(sb.db, hash); err == nil {
+				logger.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				snap = s
+				break
+			}
+		}
+		// If we're at block zero, make a snapshot
+		if number == 0 {
+			var err error
+			if snap, err = sb.initSnapshot(chain); err != nil {
+				return nil, nil, err
+			}
+			break
+		}
+		// No snapshot for this header, gather the header and move backward
+		if header := getPrevHeaderAndUpdateParents(chain, number, hash, &parents); header == nil {
+			return nil, nil, consensus.ErrUnknownAncestor
+		} else {
+			headers = append(headers, header)
+			number, hash = number-1, header.ParentHash
+		}
+	}
+	// Previous snapshot found, apply any pending headers on top of it
+	for i := 0; i < len(headers)/2; i++ {
+		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
+	}
+
+	return snap, headers, nil
+}
+
+// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to create snapshot for the given block number.
+// Note that it only returns headers for kaia fork enabled blocks.
+func (sb *backend) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
+	_, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+
+	kaiaHeaders := []*types.Header{}
+	for i := 0; i < len(headers); i++ {
+		if chain.Config().IsKaiaForkEnabled(new(big.Int).Add(headers[i].Number, big.NewInt(1))) {
+			kaiaHeaders = headers[i:]
+			break
+		}
+	}
+
+	return kaiaHeaders, nil
+}
+
+// snapshot retrieves the state of the authorization voting at a given point in time.
+// There's in-memory snapshot and on-disk snapshot. On-disk snapshot is stored every checkpointInterval blocks.
+// Moreover, if the block has no in-memory or on-disk snapshot, before generating snapshot, it gathers the header and apply the vote in it.
+func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header, writable bool) (*Snapshot, error) {
+	snap, headers, err := sb.prepareSnapshotApply(chain, number, hash, parents)
+	if err != nil {
+		return nil, err
+	}
+
+	pset := sb.govModule.GetParamSet(snap.Number)
+	snap, err = snap.apply(headers, sb.governance, sb.govModule, sb.address, pset.ProposerPolicy, chain, sb.stakingModule, writable)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we've generated a new checkpoint snapshot, save to disk
+	if writable && params.IsCheckpointInterval(snap.Number) && len(headers) > 0 {
+		if sb.governance.CanWriteGovernanceState(snap.Number) {
+			sb.governance.WriteGovernanceState(snap.Number, true)
+		}
+		if err = snap.store(sb.db); err != nil {
+			return nil, err
+		}
+		logger.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+	}
+
+	sb.regen(chain, headers)
+
+	sb.recents.Add(snap.Hash, snap)
+	return snap, err
+}
+
+// regen commits snapshot data to database
+// regen is triggered if there is any checkpoint block in the `headers`.
+// For each checkpoint block, this function verifies the existence of its snapshot in DB and stores one if missing.
+/*
+ Triggered:
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+       			   | header1, .. headerN |
+ Not triggered: (Guaranteed SI* was committed before )
+ |   ^                          ^                          ^                          ^  ...|
+     SI                 SI*(last snapshot)                 SI                         SI
+	                            | header1, .. headerN |
+*/
+func (sb *backend) regen(chain consensus.ChainReader, headers []*types.Header) {
+	// Prevent nested call. Ignore header length one
+	// because it was handled before the `regen` called.
+	if !sb.isRestoringSnapshots.CompareAndSwap(false, true) || len(headers) <= 1 {
+		return
+	}
+	defer func() {
+		sb.isRestoringSnapshots.Store(false)
+	}()
+
+	var (
+		from        = headers[0].Number.Uint64()
+		to          = headers[len(headers)-1].Number.Uint64()
+		start       = time.Now()
+		commitTried = false
+	)
+
+	// Shortcut: No missing snapshot data to be processed.
+	if to-(to%uint64(params.CheckpointInterval)) < from {
+		return
+	}
+
+	for _, header := range headers {
+		var (
+			hn = header.Number.Uint64()
+			hh = header.Hash()
+		)
+		if params.IsCheckpointInterval(hn) {
+			// Store snapshot data if it was not committed before
+			if loadSnap, _ := sb.db.ReadIstanbulSnapshot(hh); loadSnap != nil {
+				continue
+			}
+			snap, err := sb.snapshot(chain, hn, hh, nil, false)
+			if err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+				continue
+			}
+			if err = snap.store(sb.db); err != nil {
+				logger.Warn("[Snapshot] Snapshot restoring failed", "len(headers)", len(headers), "from", from, "to", to, "headerNumber", hn)
+			}
+			commitTried = true
+		}
+	}
+	if commitTried { // This prevents pushing too many logs by potential DoS attack
+		logger.Trace("[Snapshot] Snapshot restoring completed", "len(headers)", len(headers), "from", from, "to", to, "elapsed", time.Since(start))
+	}
 }

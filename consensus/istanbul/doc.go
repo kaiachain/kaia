@@ -31,7 +31,7 @@ Various interfaces, constants and utility functions for Istanbul consensus engin
   - `errors.go`: Defines three errors used in Istanbul engine
   - `events.go`: Defines events which are used for Istanbul engine communication
   - `types.go`: Defines message structs such as Proposal, Request, View, Preprepare, Subject and ConsensusMsg
-  - `utils.go`: Provides three utility functions: RLPHash, GetSignatureAddress and CheckValidatorSignature
+  - `utils.go`: Provides three utility functions: RLPHash, GetSignatureAddress
   - `validator.go`: Defines Validator, ValidatorSet interfaces and Validators, ProposalSelector types
 */
 package istanbul

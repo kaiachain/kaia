@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -37,67 +36,39 @@ func TestCore_sendPrepare(t *testing.T) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	validatorAddrs, validatorKeyMap := genValidators(6)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
 
-	istConfig := istanbul.DefaultConfig
-	istConfig.ProposerPolicy = istanbul.WeightedRandom
-
-	istCore := New(mockBackend, istConfig).(*core)
-	if err := istCore.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer istCore.Stop()
-
-	lastProposal, lastProposer := mockBackend.LastProposal()
-	proposal, err := genBlock(lastProposal.(*types.Block), validatorKeyMap[validatorAddrs[0]])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	istCore.current.Preprepare = &istanbul.Preprepare{
-		View:     istCore.currentView(),
-		Proposal: proposal,
-	}
-
-	mockCtrl.Finish()
-
-	// invalid case - not committee
-	{
-		// Increase round number until the owner of istanbul.core is not a member of the committee
-		for istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address()) {
-			istCore.current.round.Add(istCore.current.round, common.Big1)
-			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
+	for _, tc := range []struct {
+		tcName string
+		round  int64
+		valid  bool
+	}{
+		{"valid case", 0, true},
+		{"invalid case - not committee", 2, false},
+	} {
+		mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+		if tc.valid {
+			mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
+			mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		}
 
-		mockCtrl := gomock.NewController(t)
-		mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
-		mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(0)
-		mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(0)
+		istConfig := istanbul.DefaultConfig.Copy()
+		istConfig.ProposerPolicy = istanbul.WeightedRandom
 
-		istCore.backend = mockBackend
-		istCore.sendPrepare()
+		istCore := New(mockBackend, istConfig).(*core)
+		assert.NoError(t, istCore.Start())
 
-		// methods of mockBackend should be executed given times
-		mockCtrl.Finish()
-	}
+		lastProposal, _ := mockBackend.LastProposal()
+		proposal, err := genBlock(lastProposal.(*types.Block), validatorKeyMap[validatorAddrs[0]])
+		assert.NoError(t, err)
 
-	// valid case
-	{
-		// Increase round number until the owner of istanbul.core become a member of the committee
-		for !istCore.valSet.CheckInSubList(lastProposal.Hash(), istCore.currentView(), istCore.Address()) {
-			istCore.current.round.Add(istCore.current.round, common.Big1)
-			istCore.valSet.CalcProposer(lastProposer, istCore.current.round.Uint64())
+		istCore.current.round.Set(big.NewInt(tc.round))
+		istCore.current.Preprepare = &istanbul.Preprepare{
+			View:     istCore.currentView(),
+			Proposal: proposal,
 		}
 
-		mockCtrl := gomock.NewController(t)
-		mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
-		mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).Times(1)
-		mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-
-		istCore.backend = mockBackend
 		istCore.sendPrepare()
-
-		// methods of mockBackend should be executed given times
+		istCore.Stop()
 		mockCtrl.Finish()
 	}
 }

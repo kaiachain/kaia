@@ -21,39 +21,29 @@ package core
 import (
 	"encoding/hex"
 	"math/big"
-	"sort"
 	"testing"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/istanbul/validator"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/stretchr/testify/assert"
 )
 
-func genCommitteeFromAddrs(addrs []common.Address) istanbul.Validators {
-	committee := []istanbul.Validator{}
-	for _, addr := range addrs {
-		committee = append(committee, validator.New(addr))
-	}
-	return committee
-}
-
 func TestVrank(t *testing.T) {
 	var (
-		N         = 6
-		quorum    = 4
-		addrs, _  = genValidators(N)
-		committee = genCommitteeFromAddrs(addrs)
-		view      = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
-		msg       = &istanbul.Subject{View: &view}
-		vrank     = NewVrank(view, committee)
+		N            = 6
+		quorum       = 4
+		committee, _ = genValidators(N)
+		view         = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
+		msg          = &istanbul.Subject{View: &view}
+		vrank        = NewVrank(view, committee)
 
 		expectedAssessList  []uint8
 		expectedLateCommits []time.Duration
 	)
 
-	sort.Sort(committee)
+	committee = valset.NewAddressSet(committee).List() // sort it
 	for i := 0; i < quorum; i++ {
 		vrank.AddCommit(msg, committee[i])
 		expectedAssessList = append(expectedAssessList, vrankArrivedEarly)
@@ -62,7 +52,7 @@ func TestVrank(t *testing.T) {
 	for i := quorum; i < N; i++ {
 		vrank.AddCommit(msg, committee[i])
 		expectedAssessList = append(expectedAssessList, vrankArrivedLate)
-		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i].Address()])
+		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i]])
 	}
 
 	bitmap, late := vrank.Bitmap(), vrank.LateCommits()
@@ -81,17 +71,16 @@ func TestVrankAssessBatch(t *testing.T) {
 
 func TestVrankSerialize(t *testing.T) {
 	var (
-		N         = 6
-		addrs, _  = genValidators(N)
-		committee = genCommitteeFromAddrs(addrs)
-		timeMap   = make(map[common.Address]time.Duration)
-		expected  = make([]time.Duration, len(addrs))
+		N            = 6
+		committee, _ = genValidators(N)
+		timeMap      = make(map[common.Address]time.Duration)
+		expected     = make([]time.Duration, len(committee))
 	)
 
-	sort.Sort(committee)
+	committee = valset.NewAddressSet(committee).List() // sort it
 	for i, val := range committee {
 		t := time.Duration((i * 100) * int(time.Millisecond))
-		timeMap[val.Address()] = t
+		timeMap[val] = t
 		expected[i] = t
 	}
 

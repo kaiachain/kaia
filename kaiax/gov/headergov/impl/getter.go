@@ -8,7 +8,7 @@ import (
 	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
-func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
+func (h *headerGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
@@ -16,12 +16,13 @@ func (h *headerGovModule) EffectiveParamSet(blockNum uint64) gov.ParamSet {
 	gh := h.history
 	gp, err := gh.Search(prevEpochStart)
 	if err != nil {
+		logger.Warn("No param set", "blockNum", blockNum, "prevEpochStart", prevEpochStart)
 		return *gov.GetDefaultGovernanceParamSet()
 	}
 	return gp
 }
 
-func (h *headerGovModule) EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet {
+func (h *headerGovModule) GetPartialParamSet(blockNum uint64) gov.PartialParamSet {
 	prevEpochStart := PrevEpochStart(blockNum, h.epoch, h.isKoreHF(blockNum))
 	ret := make(gov.PartialParamSet)
 

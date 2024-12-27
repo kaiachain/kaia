@@ -53,6 +53,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -328,7 +329,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
 
 	// Synchronize proposerpolicy & useGiniCoeff
-	pset := mGov.EffectiveParamSet(bc.CurrentBlock().NumberU64() + 1)
+	pset := mGov.GetParamSet(bc.CurrentBlock().NumberU64() + 1)
 	if cn.blockchain.Config().Istanbul != nil {
 		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.ProposerPolicy
 	}
@@ -541,6 +542,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mReward   = reward_impl.NewRewardModule()
 		mSupply   = supply_impl.NewSupplyModule()
 		mGov      = gov_impl.NewGovModule()
+		mValset   = valset_impl.NewValsetModule()
 		mCompress = compress_impl.NewCompression()
 	)
 
@@ -567,7 +569,14 @@ func (s *CN) SetupKaiaxModules() error {
 			ChainConfig: s.chainConfig,
 			ChainKv:     s.chainDB.GetMiscDB(),
 			Chain:       s.blockchain,
+			Valset:      mValset,
 			NodeAddress: s.nodeAddress,
+		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       s.chainDB.GetMiscDB(),
+			Chain:         s.blockchain,
+			GovModule:     mGov,
+			StakingModule: mStaking,
 		}),
 		mCompress.Init(&compress_impl.InitOpts{
 			Chain:          s.blockchain,
@@ -583,13 +592,13 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mCompress)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mCompress)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
-	s.blockchain.RegisterExecutionModule(mSupply, mGov)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mCompress)
+	s.blockchain.RegisterExecutionModule(mSupply, mGov, mValset)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mCompress)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterStakingModule(mStaking)
+		engine.RegisterKaiaxModules(mGov, mStaking, mValset)
 		engine.RegisterConsensusModule(mReward, mGov)
 	}
 	s.protocolManager.RegisterStakingModule(mStaking)

@@ -74,7 +74,11 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	if num == 0 {
 		return common.Address{}, nil
 	}
-
+	if header := v.Chain.GetHeaderByNumber(num); header != nil {
+		if uint64(header.Round()) == round {
+			return v.Chain.Engine().Author(header)
+		}
+	}
 	// TODO-kaiax: Sync blockContext
 	c, err := v.getBlockContext(num)
 	if err != nil {

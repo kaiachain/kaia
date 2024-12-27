@@ -54,7 +54,7 @@ func TestStartStop(t *testing.T) {
 	)
 	defer ctrl.Finish()
 
-	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= current.NumberU64(); i++ {
@@ -149,7 +149,7 @@ func TestMigration(t *testing.T) {
 	)
 	defer ctrl.Finish()
 
-	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(pset).AnyTimes()
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= 2050; i++ {

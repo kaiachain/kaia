@@ -103,13 +103,8 @@ func TestGasCalculation(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Shanghai"])
 	assert.Equal(t, nil, err)
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().KoreCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().ShanghaiCompatibleBlock = big.NewInt(0)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	defer bcdata.Shutdown()

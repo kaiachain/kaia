@@ -221,7 +221,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
 	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
-	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 0}).Times(1)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 0}).Times(1)
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
 
 	oracle := NewOracle(mockBackend, params, txPoolWith0, mockGov)
@@ -235,7 +235,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	assert.Nil(t, err)
 
 	params = Config{}
-	mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 25}).Times(1)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 25}).Times(1)
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
 	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
 	oracle = NewOracle(mockBackend, params, txPoolWith25, mockGov)
@@ -288,7 +288,7 @@ func TestSuggestTipCap(t *testing.T) {
 		chainConfig := testBackend.ChainConfig()
 		if c.isBusy {
 			mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
-			mockGov.EXPECT().EffectiveParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: testBackend.ChainConfig().UnitPrice, LowerBoundBaseFee: math.MaxUint64}).AnyTimes()
+			mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: testBackend.ChainConfig().UnitPrice, LowerBoundBaseFee: math.MaxUint64}).AnyTimes()
 			testGov = mockGov
 		}
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, testGov)

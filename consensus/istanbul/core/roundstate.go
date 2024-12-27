@@ -35,13 +35,13 @@ import (
 // newRoundState creates a new roundState instance with the given view and validatorSet
 // lockedHash and preprepare are for round change when lock exists,
 // we need to keep a reference of preprepare in order to propose locked proposal when there is a lock and itself is the proposer
-func newRoundState(view *istanbul.View, validatorSet istanbul.ValidatorSet, lockedHash common.Hash, preprepare *istanbul.Preprepare, pendingRequest *istanbul.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
+func newRoundState(view *istanbul.View, valSet *istanbul.BlockValSet, lockedHash common.Hash, preprepare *istanbul.Preprepare, pendingRequest *istanbul.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	return &roundState{
 		round:          view.Round,
 		sequence:       view.Sequence,
 		Preprepare:     preprepare,
-		Prepares:       newMessageSet(validatorSet),
-		Commits:        newMessageSet(validatorSet),
+		Prepares:       newMessageSet(valSet),
+		Commits:        newMessageSet(valSet),
 		lockedHash:     lockedHash,
 		mu:             new(sync.RWMutex),
 		pendingRequest: pendingRequest,

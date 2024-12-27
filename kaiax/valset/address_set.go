@@ -123,15 +123,16 @@ func (as *AddressSet) Add(addr common.Address) {
 	sort.Sort(as.list)
 }
 
-func (as *AddressSet) Remove(addr common.Address) {
+func (as *AddressSet) Remove(addr common.Address) bool {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 	for i, a := range as.list {
 		if a == addr {
 			as.list = append(as.list[:i], as.list[i+1:]...)
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (as *AddressSet) Subtract(other *AddressSet) *AddressSet {

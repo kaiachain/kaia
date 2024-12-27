@@ -31,6 +31,7 @@ import (
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -85,21 +86,25 @@ func TestGetCommittee(t *testing.T) {
 	}
 
 	var (
-		ctrl        = gomock.NewController(t)
-		mockChain   = chain_mock.NewMockBlockChain(ctrl)
-		mockGov     = gov_mock.NewMockGovModule(ctrl)
-		mockStaking = staking_mock.NewMockStakingModule(ctrl)
-		cache, _    = lru.New(128)
-		v           = &ValsetModule{
+		ctrl          = gomock.NewController(t)
+		mockChain     = chain_mock.NewMockBlockChain(ctrl)
+		mockGov       = gov_mock.NewMockGovModule(ctrl)
+		mockStaking   = staking_mock.NewMockStakingModule(ctrl)
+		pListCache, _ = lru.New(128)
+		rVoteCache, _ = lru.New(128)
+		v             = &ValsetModule{
 			InitOpts: InitOpts{
+				ChainKv:       database.NewMemoryDBManager().GetMiscDB(),
 				Chain:         mockChain,
 				GovModule:     mockGov,
 				StakingModule: mockStaking,
 			},
-			proposerListCache: cache,
+			proposerListCache: pListCache,
+			removeVotesCache:  rVoteCache,
 		}
 	)
-	mockChain.EXPECT().GetHeaderByNumber(uint64(100)).Return(c.prevHeader).AnyTimes()
+	v.validatorVoteBlockNumsCache = []uint64{}
+	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
 	for _, tc := range testcases {
@@ -110,6 +115,7 @@ func TestGetCommittee(t *testing.T) {
 		c.rules.IsRandao = tc.isRandao
 
 		v.proposerListCache.Purge()
+		v.removeVotesCache.Purge()
 		committee, err := v.getCommittee(c, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expected, committee, tc.desc)
@@ -186,21 +192,25 @@ func TestGetProposer(t *testing.T) {
 	}
 
 	var (
-		ctrl        = gomock.NewController(t)
-		mockChain   = chain_mock.NewMockBlockChain(ctrl)
-		mockGov     = gov_mock.NewMockGovModule(ctrl)
-		mockStaking = staking_mock.NewMockStakingModule(ctrl)
-		cache, _    = lru.New(128)
-		v           = &ValsetModule{
+		ctrl          = gomock.NewController(t)
+		mockChain     = chain_mock.NewMockBlockChain(ctrl)
+		mockGov       = gov_mock.NewMockGovModule(ctrl)
+		mockStaking   = staking_mock.NewMockStakingModule(ctrl)
+		pListCache, _ = lru.New(128)
+		rVoteCache, _ = lru.New(128)
+		v             = &ValsetModule{
 			InitOpts: InitOpts{
+				ChainKv:       database.NewMemoryDBManager().GetMiscDB(),
 				Chain:         mockChain,
 				GovModule:     mockGov,
 				StakingModule: mockStaking,
 			},
-			proposerListCache: cache,
+			proposerListCache: pListCache,
+			removeVotesCache:  rVoteCache,
 		}
 	)
-	mockChain.EXPECT().GetHeaderByNumber(uint64(100)).Return(c.prevHeader).AnyTimes()
+	v.validatorVoteBlockNumsCache = []uint64{}
+	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
 	for _, tc := range testcases {
@@ -211,6 +221,7 @@ func TestGetProposer(t *testing.T) {
 		c.rules.IsRandao = tc.isRandao
 
 		v.proposerListCache.Purge()
+		v.removeVotesCache.Purge()
 		proposer, err := v.getProposer(c, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expected, proposer, tc.desc)
@@ -274,85 +285,4 @@ func TestWeightedRandomProposer_Select(t *testing.T) {
 		currProposer := selectWeightedRandomProposer(tc.proposerList, tc.listSourceNum, tc.num, tc.round)
 		assert.Equal(t, tc.expected, currProposer)
 	}
-}
-
-func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
-	var (
-		blockHash = common.HexToHash("0x1122334455667788af897911c946935ca28f37cb3b1bf9a30f17c84084276a84")
-		aM        = uint64(2000000) // Exactly minstaking
-	)
-
-	testcases := []struct {
-		desc         string
-		qualified    []common.Address
-		amounts      []uint64
-		useGini      bool
-		expectedFreq []int            // expected appearance frequency
-		expectedList []common.Address // expected proposer list. Leave nil to skip check.
-	}{
-		{
-			desc:      "positive stakes, gini",
-			qualified: numsToAddrs(0, 1, 2, 3),
-			amounts:   []uint64{1 * aM, 2 * aM, 3 * aM, 4 * aM},
-			useGini:   true,
-			// gini=0.25, exponent=0.8 -> Adjusted staking amounts = [109856,191270,264558,333021] -> Percentile weights = [12,21,29,37]
-			expectedFreq: []int{12, 21, 29, 37},
-		},
-		{
-			desc:         "positive stakes, no gini",
-			qualified:    numsToAddrs(0, 1, 2, 3),
-			amounts:      []uint64{1 * aM, 2 * aM, 3 * aM, 4 * aM},
-			useGini:      false,
-			expectedFreq: []int{10, 20, 30, 40},
-			expectedList: numsToAddrs(1, 1, 3, 2, 0, 3, 2, 3, 1, 1, 3, 1, 3, 2, 3, 1, 2, 2, 0, 3, 3, 2, 3, 3, 2, 1, 1, 1, 3, 3, 2, 3, 1, 2, 3, 1, 2, 3, 2, 2, 0, 3, 2, 2, 1, 3, 1, 0, 2, 2, 2, 1, 1, 3, 2, 3, 1, 2, 3, 3, 0, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 0, 3, 2, 0, 1, 3, 2, 2, 1, 2, 3, 1, 3, 3, 0, 0, 3, 1, 2, 3, 3, 2, 2, 3, 2, 0, 3, 2),
-		},
-		{
-			desc:         "zero stakes",
-			qualified:    numsToAddrs(0, 1, 2, 3), // Note: validators can be qualified with zero stakes, if all are understaked.
-			amounts:      []uint64{0, 0, 0, 0},
-			useGini:      false,
-			expectedFreq: []int{1, 1, 1, 1},
-			expectedList: numsToAddrs(1, 3, 0, 2),
-		},
-		{
-			desc:         "severe inequality",
-			qualified:    numsToAddrs(0, 1, 2, 3),
-			amounts:      []uint64{aM, aM, aM, 200 * aM},
-			useGini:      false,
-			expectedFreq: []int{1, 1, 1, 99}, // at least 1 slot is guaranteed for each validator.
-		},
-	}
-	for _, tc := range testcases {
-		qualified := valset.NewAddressSet(tc.qualified)
-		si := &staking.StakingInfo{
-			NodeIds:          tc.qualified,
-			StakingContracts: tc.qualified,
-			RewardAddrs:      tc.qualified,
-			StakingAmounts:   tc.amounts,
-		}
-		proposerList := generateProposerListWeighted(qualified, si, tc.useGini, blockHash)
-
-		freq := make(map[common.Address]int)
-		for _, addr := range proposerList {
-			freq[addr]++
-		}
-		for idx, addr := range tc.qualified {
-			assert.Equal(t, tc.expectedFreq[idx], freq[addr], tc.desc)
-		}
-
-		if tc.expectedList != nil && !assert.Equal(t, tc.expectedList, proposerList, tc.desc) {
-			t.Logf("expected: %v", addrsToNums(tc.expectedList))
-			t.Logf("actual: %v", addrsToNums(proposerList))
-		}
-	}
-}
-
-func TestWeightedRandomProposer_ListUniform(t *testing.T) {
-	var (
-		blockHash    = common.HexToHash("0x1122334455667788af897911c946935ca28f37cb3b1bf9a30f17c84084276a84")
-		qualified    = valset.NewAddressSet(numsToAddrs(0, 1, 2, 3))
-		proposerList = generateProposerListUniform(qualified, blockHash)
-		expectedList = numsToAddrs(1, 3, 0, 2)
-	)
-	assert.Equal(t, expectedList, proposerList)
 }

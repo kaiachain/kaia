@@ -45,6 +45,7 @@ import (
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -77,7 +78,11 @@ var (
 	nodeAddr = common.StringToAddress("nodeAddr")
 )
 
-func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
+func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.ChainConfig) (*BCData, error) {
+	if chainCfg == nil {
+		return nil, errors.New("chainConfig is nil")
+	}
+
 	if numValidators > maxAccounts {
 		return nil, errors.New("maxAccounts should be bigger numValidators!!")
 	}
@@ -128,7 +133,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	})
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine)
+	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine, chainCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -137,11 +142,13 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 	// Setup Kaiax modules
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: genesis.Config,
 			Chain:       bc,
 			ChainKv:     chainDb.GetMiscDB(),
+			Valset:      mValset,
 			NodeAddress: nodeAddr,
 		}),
 		mReward.Init(&reward_impl.InitOpts{
@@ -150,19 +157,32 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
 		}),
+		mValset.Init(&valset_impl.InitOpts{
+			Chain:         bc,
+			ChainKv:       chainDb.GetMiscDB(),
+			GovModule:     mGov,
+			StakingModule: mStaking,
+		}),
 	)
 	if err != nil {
 		return nil, err
 	}
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
 	engine.RegisterConsensusModule(mReward)
-
-	engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock)
+	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock); err != nil {
+		return nil, err
+	}
 
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
 		validatorPrivKeys, engine, genesis, mGov, governance,
 	}, nil
+}
+
+// NewBCData enables all hardforks except randao hardfork
+func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
+	return NewBCDataWithForkConfig(maxAccounts, numValidators, Forks["Byzantium"])
 }
 
 func (bcdata *BCData) Shutdown() {
@@ -237,7 +257,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Create a transaction set where transactions are sorted by price and nonce
 	start = time.Now()
-	txset := types.NewTransactionsByPriceAndNonce(signer, txs, nil)
+	txset := types.NewTransactionsByPriceAndNonce(signer, txs, header.BaseFee)
 	prof.Profile("mine_NewTransactionsByPriceAndNonce", time.Now().Sub(start))
 
 	// Apply the set of transactions
@@ -510,13 +530,16 @@ func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
 }
 
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine,
+	genesis *blockchain.Genesis, engine consensus.Engine, config *params.ChainConfig,
 ) (*blockchain.BlockChain, *blockchain.Genesis, error) {
+	if config == nil {
+		return nil, nil, errors.New("config is nil")
+	}
 	extraData, err := prepareIstanbulExtra(validators)
 
 	if genesis == nil {
 		genesis = blockchain.DefaultGenesisBlock()
-		genesis.Config = Forks["Byzantium"]
+		genesis.Config = config.Copy()
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
 		genesis.Config.Governance = params.GetDefaultGovernanceConfig()

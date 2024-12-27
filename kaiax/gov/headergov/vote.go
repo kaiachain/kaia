@@ -28,22 +28,26 @@ type voteData struct {
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
-		param, ok = gov.ValidatorParams[gov.ValidatorParamName(name)]
+		param, ok = gov.ValidatorParams[gov.ParamName(name)]
 		if !ok {
+			logger.Error("Invalid vote name", "name", name)
 			return nil
 		}
 	}
 
 	if param.VoteForbidden {
+		logger.Error("Vote is forbidden", "name", name)
 		return nil
 	}
 
 	cv, err := param.Canonicalizer(value)
 	if err != nil {
+		logger.Error("Canonicalize error", "name", name, "value", value, "err", err)
 		return nil
 	}
 
 	if !param.FormatChecker(cv) {
+		logger.Error("Format check error", "name", name, "value", value)
 		return nil
 	}
 

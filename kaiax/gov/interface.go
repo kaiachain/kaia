@@ -12,5 +12,5 @@ type GovModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
-	EffectiveParamSet(blockNum uint64) ParamSet
+	GetParamSet(blockNum uint64) ParamSet
 }

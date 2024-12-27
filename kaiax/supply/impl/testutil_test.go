@@ -320,7 +320,7 @@ func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockC
 }
 
 func setupMockGov(mGov *gov_mock.MockGovModule, config *params.ChainConfig) {
-	mGov.EXPECT().EffectiveParamSet(gomock.Any()).DoAndReturn(func(num uint64) (gov.ParamSet, error) {
+	mGov.EXPECT().GetParamSet(gomock.Any()).DoAndReturn(func(num uint64) (gov.ParamSet, error) {
 		p0 := gov.ParamSet{
 			ProposerPolicy: uint64(config.Istanbul.ProposerPolicy),
 			UnitPrice:      config.UnitPrice,
