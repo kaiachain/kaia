@@ -436,7 +436,11 @@ func opExtCodeHash1052(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCont
 func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
 	address := common.Address(slot.Bytes20())
-	slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+	if interpreter.evm.StateDB.Empty(address) {
+		slot.SetBytes(emptyCodeHash[:]) // for empty account before Cancun
+	} else {
+		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+	}
 	return nil, nil
 }
 
