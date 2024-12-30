@@ -589,14 +589,6 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.Int64(DynamoDBWriteCapacityFlag.Name)
 	cfg.DynamoDBConfig.ReadOnly = ctx.Bool(DynamoDBReadOnlyFlag.Name)
 
-	cfg.CompressBlockChunkSize = ctx.Uint64(CompressBlockChunkSizeFlag.Name)
-	if cfg.CompressBlockChunkSize < blockchain.MinChunkBlockSize {
-		cfg.CompressBlockChunkSize = blockchain.MinChunkBlockSize
-	}
-	cfg.CompressChunkCap = ctx.Uint64(CompressChunkCapFlag.Name)
-	if cfg.CompressChunkCap > blockchain.MaxCompressChunkCap {
-		cfg.CompressChunkCap = blockchain.MaxCompressChunkCap
-	}
 	cfg.CompressRetention = ctx.Uint64(CompressRetentionFlag.Name)
 	if cfg.CompressRetention < blockchain.MinCompressRetention {
 		cfg.CompressRetention = blockchain.MinCompressRetention

@@ -581,8 +581,8 @@ func (s *CN) SetupKaiaxModules() error {
 		mCompress.Init(&compress_impl.InitOpts{
 			Chain:          s.blockchain,
 			Dbm:            s.chainDB,
-			ChunkBlockSize: s.config.CompressBlockChunkSize,
-			ChunkCap:       s.config.CompressChunkCap,
+			ChunkBlockSize: blockchain.DefaultChunkBlockSize,
+			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Retention:      s.config.CompressRetention,
 		}),
 	)
