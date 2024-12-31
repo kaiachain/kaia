@@ -256,6 +256,7 @@ func (h *handler) startCallProc(fn func(*callProc)) {
 		defer h.callWG.Done()
 		defer cancel()
 		defer atomic.AddInt64(&pendingRequestCount, -1)
+		defer rpcPendingRequestsCount.Dec(1)
 		fn(&callProc{ctx: ctx})
 	}()
 }
