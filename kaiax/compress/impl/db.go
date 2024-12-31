@@ -331,7 +331,7 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, nu
 			if err := db.Delete(it.Key()); err != nil {
 				logger.Crit(fmt.Sprintf("Failed to delete compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
 			}
-			logger.Info("[Compression] Chunk deleted", "type", compressTyp.String(), "from", from, "to", to)
+			logger.Info("[Compression] chunk deleted", "type", compressTyp.String(), "from", from, "to", to)
 			return from, nil
 		}
 	}
