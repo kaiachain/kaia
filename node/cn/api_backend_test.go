@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
-	"github.com/kaiachain/kaia/governance"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
@@ -167,14 +166,6 @@ func getTestConfig() *params.ChainConfig {
 	return config
 }
 
-func testGov() *governance.MixedEngine {
-	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-	config := params.TestChainConfig.Copy()
-	config.Governance = params.GetDefaultGovernanceConfig()
-	config.Istanbul = params.GetDefaultIstanbulConfig()
-	return governance.NewMixedEngine(config, db)
-}
-
 func testGovModule(chain gov_impl.BlockChain) *gov_impl.GovModule {
 	db := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
 	config := params.TestChainConfig.Copy()
@@ -203,7 +194,6 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	pm := &ProtocolManager{downloader: mockDownloader}
 	api.cn.protocolManager = pm
 	api.cn.engine = gxhash.NewFullFaker()
-	api.cn.governance = testGov()
 	govModule := testGovModule(mockBlockChain)
 	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 

@@ -232,8 +232,8 @@ var (
 
 	dockerImageIdFlag = &cli.StringFlag{
 		Name:        "docker-image-id",
-		Value:       "klaytn/klaytn:latest", // https://hub.docker.com/r/klaytn/klaytn
-		Usage:       "Base docker image ID (Image[:tag]), e.g., klaytn/klaytn:v1.5.3",
+		Value:       "kaiachain/kaia:latest", // https://hub.docker.com/r/kaiachain/kaia
+		Usage:       "Base docker image ID (Image[:tag]), e.g., kaiachain/kaia:v1.0.3",
 		Aliases:     []string{"deploy.docker.image-id"},
 		Destination: &dockerImageId,
 	}

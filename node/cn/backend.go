@@ -44,7 +44,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
 	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -145,8 +144,7 @@ type CN struct {
 
 	components []interface{}
 
-	governance governance.Engine
-	govModule  gov.GovModule
+	govModule gov.GovModule
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -234,7 +232,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// load governance state
 	chainConfig.SetDefaults()
 	// latest values will be applied to chainConfig after NewMixedEngine call
-	governance := governance.NewMixedEngine(chainConfig, chainDB)
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
 	mGov := gov_impl.NewGovModule()
@@ -244,13 +241,12 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, mGov, ctx.NodeType()),
+		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		closeBloomHandler: make(chan struct{}),
-		governance:        governance,
 		govModule:         mGov,
 	}
 
@@ -311,10 +307,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	cn.blockchain = bc
-	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
-		return nil, err
-	}
 
 	err = mGov.Init(&gov_impl.InitOpts{
 		ChainKv:     chainDB.GetMiscDB(),
@@ -648,7 +640,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, g governance.Engine, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
@@ -659,7 +651,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		PrivateKey:     ctx.NodeKey(),
 		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
-		Governance:     g,
 		GovModule:      govModule,
 		NodeType:       nodetype,
 	})
@@ -864,7 +855,6 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() kaia.SyncProgress             { return s.protocolManager.Downloader().Progress() }
-func (s *CN) Governance() governance.Engine           { return s.governance }
 func (s *CN) GovModule() gov.GovModule                { return s.govModule }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {

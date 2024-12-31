@@ -18,7 +18,6 @@
 package nodecmd
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,8 +32,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/governance"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/urfave/cli/v2"
 )
@@ -222,51 +220,15 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 }
 
 func decodeVote(bytes []byte) (map[string]interface{}, error) {
-	vote := new(governance.GovernanceVote)
-	m := make(map[string]interface{})
-	if err := rlp.DecodeBytes(bytes, &vote); err == nil {
-		m["validator"] = vote.Validator.String()
-		m["key"] = vote.Key
-		switch governance.GovernanceKeyMap[vote.Key] {
-		case params.GovernanceMode, params.MintingAmount, params.MinimumStake, params.Ratio, params.Kip82Ratio:
-			m["value"] = string(vote.Value.([]uint8))
-		case params.GoverningNode, params.GovParamContract:
-			m["value"] = common.BytesToAddress(vote.Value.([]uint8)).String()
-		case params.Epoch, params.CommitteeSize, params.UnitPrice, params.DeriveShaImpl, params.StakeUpdateInterval,
-			params.ProposerRefreshInterval, params.ConstTxGasHumanReadable, params.Policy, params.Timeout,
-			params.LowerBoundBaseFee, params.UpperBoundBaseFee, params.GasTarget, params.MaxBlockGasUsedForBaseFee, params.BaseFeeDenominator:
-			v := vote.Value.([]uint8)
-			v = append(make([]byte, 8-len(v)), v...)
-			m["value"] = binary.BigEndian.Uint64(v)
-		case params.UseGiniCoeff, params.DeferredTxFee:
-			v := vote.Value.([]uint8)
-			v = append(make([]byte, 8-len(v)), v...)
-			if binary.BigEndian.Uint64(v) != uint64(0) {
-				m["value"] = true
-			} else {
-				m["value"] = false
-			}
-		case params.AddValidator, params.RemoveValidator:
-			if v, ok := vote.Value.([]uint8); ok {
-				m["value"] = common.BytesToAddress(v)
-			} else if addresses, ok := vote.Value.([]interface{}); ok {
-				if len(addresses) == 0 {
-					return nil, governance.ErrValueTypeMismatch
-				}
-				var nodeAddresses []common.Address
-				for _, item := range addresses {
-					if in, ok := item.([]uint8); !ok || len(in) != common.AddressLength {
-						return nil, governance.ErrValueTypeMismatch
-					}
-					nodeAddresses = append(nodeAddresses, common.BytesToAddress(item.([]uint8)))
-				}
-				m["value"] = nodeAddresses
-			} else {
-				return nil, governance.ErrValueTypeMismatch
-			}
-		}
-		return m, nil
-	} else {
+	var vb headergov.VoteBytes = bytes
+	vote, err := vb.ToVoteData()
+	if err != nil {
 		return nil, err
 	}
+
+	m := make(map[string]interface{})
+	m["validator"] = vote.Voter()
+	m["key"] = vote.Name()
+	m["value"] = vote.Value()
+	return m, nil
 }
