@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -212,6 +211,22 @@ type Clique struct {
 
 	// The fields below are for testing only
 	fakeBlockScore bool // Skip blockScore verifications
+}
+
+type voteData struct {
+	Validator common.Address
+	Key       string
+	Value     any
+}
+
+func (v *voteData) ToVoteBytes() ([]byte, error) {
+	return rlp.EncodeToBytes(v)
+}
+
+func BytesToVoteData(b []byte) (voteData, error) {
+	var v voteData
+	err := rlp.DecodeBytes(b, &v)
+	return v, err
 }
 
 // New creates a Clique proof-of-authority consensus engine with the initial
@@ -527,19 +542,22 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		}
 		// If there's pending proposals, cast a vote on them
 		if len(addresses) > 0 {
-			vote := new(governance.GovernanceVote)
 			addr := addresses[rand.Intn(len(addresses))]
+			v := &voteData{
+				Validator: c.signer,
+				Value:     addr,
+			}
+
 			if c.proposals[addr] == true {
-				vote.Key = "addvalidator"
+				v.Key = "addvalidator"
 			} else {
-				vote.Key = "removevalidator"
+				v.Key = "removevalidator"
 			}
-			vote.Value = addr
-			encoded, err := rlp.EncodeToBytes(vote)
+
+			header.Vote, err = v.ToVoteBytes()
 			if err != nil {
-				logger.Error("Failed to RLP Encode a vote", "vote", vote)
+				logger.Error("Failed to RLP Encode a vote", "vote", v)
 			}
-			header.Vote = encoded
 		}
 		c.lock.RUnlock()
 	}

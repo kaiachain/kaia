@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -154,7 +153,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		// if governance mode is single, set the node key to the governing node.
 		chainConfig.Governance.GoverningNode = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	g := governance.NewMixedEngine(chainConfig, dbm)
 	istanbulConfig := &istanbul.Config{
 		Epoch:          chainConfig.Istanbul.Epoch,
 		ProposerPolicy: istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy),
@@ -168,7 +166,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     key,
 		DB:             dbm,
-		Governance:     g,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 	return backend

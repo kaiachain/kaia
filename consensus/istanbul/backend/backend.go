@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -62,7 +61,6 @@ type BackendOpts struct {
 	PrivateKey        *ecdsa.PrivateKey // Consensus message signing key
 	BlsSecretKey      bls.SecretKey     // Randao signing key. Required since Randao fork
 	DB                database.DBManager
-	Governance        governance.Engine // TODO-kaiax: Remove
 	GovModule         gov.GovModule
 	BlsPubkeyProvider BlsPubkeyProvider // If not nil, override the default BLS public key provider
 	NodeType          common.ConnType
@@ -87,7 +85,6 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		recentMessages:    recentMessages,
 		knownMessages:     knownMessages,
 		rewardbase:        opts.Rewardbase,
-		governance:        opts.Governance,
 		govModule:         opts.GovModule,
 		blsPubkeyProvider: opts.BlsPubkeyProvider,
 		nodetype:          opts.NodeType,
@@ -143,8 +140,7 @@ type backend struct {
 	currentView atomic.Value //*istanbul.View
 
 	// Reference to the governance.Engine
-	governance governance.Engine
-	govModule  gov.GovModule
+	govModule gov.GovModule
 
 	// Reference to BlsPubkeyProvider
 	blsPubkeyProvider BlsPubkeyProvider

@@ -239,7 +239,6 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	if err != nil {
 		panic(err)
 	}
-	b.governance.SetBlockchain(bc)
 
 	// kaiax module setup
 	mGov := gov_impl.NewGovModule()

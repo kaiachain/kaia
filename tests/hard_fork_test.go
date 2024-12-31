@@ -38,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -95,21 +94,18 @@ func TestHardForkBlock(t *testing.T) {
 		os.RemoveAll(dir)
 	}()
 
-	gov := generateGovernaceDataForTest()
 	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false, false)
 	chainConfig.Istanbul = &params.IstanbulConfig{
 		Epoch: 100,
 	}
 	require.Nil(t, err)
 
-	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
 	govModule := gov_impl.NewGovModule()
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
 		PrivateKey:     genesisKey,
 		DB:             chainDb,
-		Governance:     gov,
 		GovModule:      govModule,
 		NodeType:       common.CONSENSUSNODE,
 	})

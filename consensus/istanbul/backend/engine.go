@@ -25,7 +25,6 @@ package backend
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"math/big"
 	"time"
@@ -426,22 +425,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// use the same blockscore for all blocks
 	header.BlockScore = defaultBlockScore
 
-	// If it reaches the Epoch, governance config will be added to block header
-	pset := sb.govModule.GetParamSet(number)
-	if number%pset.Epoch == 0 {
-		if g := sb.governance.GetGovernanceChange(); g != nil {
-			if data, err := json.Marshal(g); err != nil {
-				logger.Error("Failed to encode governance changes!! Possible configuration mismatch!! ")
-			} else {
-				if header.Governance, err = rlp.EncodeToBytes(data); err != nil {
-					logger.Error("Failed to encode governance data for the header", "num", number)
-				} else {
-					logger.Info("Put governanceData", "num", number, "data", hex.EncodeToString(header.Governance))
-				}
-			}
-		}
-	}
-
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
 		prevMixHash := headerMixHash(chain, parent)
 		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
@@ -761,9 +744,6 @@ func (sb *backend) Stop() error {
 
 // UpdateParam implements consensus.Istanbul.UpdateParam and it updates the governance parameters
 func (sb *backend) UpdateParam(number uint64) error {
-	if err := sb.governance.UpdateParams(number); err != nil {
-		return err
-	}
 	return nil
 }
 
