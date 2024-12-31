@@ -428,7 +428,7 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 	}
 
 	newSpec.Proposer = proposer
-	if !config.Rules.IsPrague {
+	if !config.Rules.IsPrague || si.CLStakingInfos == nil {
 		newSpec.IncRecipient(config.Rewardbase, proposer)
 		return newSpec
 	}
