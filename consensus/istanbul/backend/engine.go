@@ -329,6 +329,9 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 
 	// Retrieve the snapshot needed to verify this header and cache it
 	valSet, err := sb.GetValidatorSet(number)
+	if err != nil {
+		return err
+	}
 
 	// resolve the authorization key and check against signers
 	signer, err := ecrecover(header)
