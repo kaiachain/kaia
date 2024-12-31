@@ -127,8 +127,10 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 	var clRes clRegistryResult
 	if isForPrague {
 		// If Registry is not installed, do not handle CL staking info.
-		// It can happen in private network where Randao and Prague hardfork are activated at the same block.
-		if statedb.GetCode(system.RegistryAddr) == nil {
+		// In private network, Randao and Prague hardfork can be activated at the same block.
+		// It leads to staking info inconsistency between block processing and rpc query since the Registry hasn't been installed when finalizing the header.
+		// Note that Randao can't be activated after Prague according to fork ordering (Randao <= Kaia <= Prague).
+		if statedb.GetCode(system.RegistryAddr) == nil || s.ChainConfig.IsRandaoForkBlockParent(header.Number) {
 			logger.Trace("Registry not installed", "sourceNum", num)
 		} else {
 			// Note that if CLRegistry is not registered in Registry,
