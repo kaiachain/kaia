@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/params"
@@ -83,8 +82,7 @@ func setup(t *testing.T) (*blockchain.BlockChain, database.DBManager, error) {
 		SnapshotAsyncGen:     true,
 	}
 	config := GetDefaultConfig()
-	governance := governance.NewMixedEngine(chainConfig, chainDB)
-	engine := CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, nil, ctx.NodeType())
+	engine := CreateConsensusEngine(ctx, config, chainConfig, chainDB, nil, ctx.NodeType())
 	chainDB.SetCompressModule(compress_impl.NewCompression())
 	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, chainConfig, engine, vm.Config{})
 	if err != nil {
