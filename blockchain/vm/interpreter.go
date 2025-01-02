@@ -49,6 +49,9 @@ type Config struct {
 	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set infinite to disable the computation cost limit.
 	ComputationCostLimit uint64
 
+	// UseConsoleLog enables console.log() in solidity for local network
+	UseConsoleLog bool
+
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
 

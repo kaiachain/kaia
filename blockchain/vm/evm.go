@@ -35,9 +35,14 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-// emptyCodeHash is used by create to ensure deployment is disallowed to already
-// deployed contract addresses (relevant after the account abstraction).
-var emptyCodeHash = crypto.Keccak256Hash(nil)
+var (
+	// emptyCodeHash is used by create to ensure deployment is disallowed to already
+	// deployed contract addresses (relevant after the account abstraction).
+	emptyCodeHash = crypto.Keccak256Hash(nil)
+
+	// consoleLog is a precompiled contract used for debugging purposes.
+	consoleLogContractAddress = common.HexToAddress("0x000000000000000000636F6E736F6C652E6C6F67")
+)
 
 const (
 	CancelByCtxDone = 1 << iota
@@ -256,7 +261,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
-	if IsPrecompiledContractAddress(addr, evm.chainRules) {
+	if IsPrecompiledContractAddress(addr, evm.chainRules) || (addr == consoleLogContractAddress && evm.Config.UseConsoleLog) {
 		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
@@ -636,6 +641,15 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 }
 
 func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
+	precompiles := evm.getPrecompiledContractForVersion(addr)
+	// If console.log is enabled, add console.log precompile too.
+	if evm.Config.UseConsoleLog {
+		precompiles[consoleLogContractAddress] = &consoleLog{}
+	}
+	return precompiles
+}
+
+func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common.Address]PrecompiledContract {
 	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
 	// Also, it follows old map's gas price & computation cost.
 
