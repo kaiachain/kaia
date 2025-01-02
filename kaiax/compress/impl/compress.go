@@ -17,8 +17,6 @@
 package compress
 
 import (
-	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -134,28 +132,28 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 	}
 }
 
-func (c *CompressModule) deleteHeader(hash common.Hash, num uint64) uint64 {
-	newFromAfterRewind, err := deleteHeaderFromChunk(c.Dbm, num, hash)
+func (c *CompressModule) deleteHeader(hash common.Hash, num uint64) (uint64, bool) {
+	newFromAfterRewind, shouldUpdate, err := deleteHeaderFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Header Compression] Failed to delete header", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind
+	return newFromAfterRewind, shouldUpdate
 }
 
-func (c *CompressModule) deleteBody(hash common.Hash, num uint64) uint64 {
-	newFromAfterRewind, err := deleteBodyFromChunk(c.Dbm, num, hash)
+func (c *CompressModule) deleteBody(hash common.Hash, num uint64) (uint64, bool) {
+	newFromAfterRewind, shouldUpdate, err := deleteBodyFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Body Compression] Failed to delete body", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind
+	return newFromAfterRewind, shouldUpdate
 }
 
-func (c *CompressModule) deleteReceipts(hash common.Hash, num uint64) uint64 {
-	newFromAfterRewind, err := deleteReceiptsFromChunk(c.Dbm, num, hash)
+func (c *CompressModule) deleteReceipts(hash common.Hash, num uint64) (uint64, bool) {
+	newFromAfterRewind, shouldUpdate, err := deleteReceiptsFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Receipt Compression] Failed to delete receipt", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind
+	return newFromAfterRewind, shouldUpdate
 }
 
 func (c *CompressModule) FindHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (*types.Header, error) {
@@ -168,42 +166,4 @@ func (c *CompressModule) FindBodyFromChunkWithBlkHash(dbm database.DBManager, nu
 
 func (c *CompressModule) FindReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (types.Receipts, error) {
 	return findReceiptsFromChunkWithBlkHash(dbm, number, hash)
-}
-
-func (c *CompressModule) restoreFragmentByRewind() {
-	defer clearCache()
-	for _, compressTyp := range allCompressTypes {
-		var (
-			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix = getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
-			miscDB                                                     = c.Dbm.GetMiscDB()
-		)
-		key, err := miscDB.Get(lastCompressDeleteKeyPrefix)
-		if err != nil {
-			return
-		}
-		value, err := miscDB.Get(lastCompressDeleteValuePrefix)
-		if err != nil {
-			return
-		}
-		if bytes.Equal(key, lastCompressionCleared) && bytes.Equal(value, lastCompressionCleared) {
-			// No reserved last compression data. Noting to do
-			return
-		}
-
-		var (
-			db       = getCompressDB(c.Dbm, compressTyp)
-			from, to = parseCompressKey(compressTyp, key)
-		)
-		// 1. restore last compression data
-		if err := db.Put(key, value); err != nil {
-			logger.Crit(fmt.Sprintf("Failed to restore last compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
-		}
-		// 2. clear last compression data
-		if err := miscDB.Put(lastCompressDeleteKeyPrefix, lastCompressionCleared); err != nil {
-			logger.Crit("Failed to clear last decompression key")
-		}
-		if err := miscDB.Put(lastCompressDeleteValuePrefix, lastCompressionCleared); err != nil {
-			logger.Crit("Failed to clear last decompression value")
-		}
-	}
 }

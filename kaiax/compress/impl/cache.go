@@ -67,7 +67,13 @@ func addCache(compressTyp CompressionType, from, to uint64, compressed any) {
 }
 
 func clearCache() {
-	compressHeaderCache.Purge()
-	compressBodyCache.Purge()
-	compressReceiptsCache.Purge()
+	if compressHeaderCache != nil {
+		compressHeaderCache.Purge()
+	}
+	if compressBodyCache != nil {
+		compressBodyCache.Purge()
+	}
+	if compressReceiptsCache != nil {
+		compressReceiptsCache.Purge()
+	}
 }

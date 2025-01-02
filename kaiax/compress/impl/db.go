@@ -81,7 +81,9 @@ func removeOriginAfterCompress(dbm database.DBManager, compressions []any) {
 	for _, compressed := range compressions {
 		switch c := compressed.(type) {
 		case *HeaderCompression:
-			dbm.DeleteHeader(c.BlkHash, c.BlkNumber)
+			// TODO-hyunsooda: Remove me
+			// dbm.DeleteHeader(c.BlkHash, c.BlkNumber)
+			dbm.DeleteHeaderOnly(c.BlkHash, c.BlkNumber)
 		case *BodyCompression:
 			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
 		case *ReceiptCompression:
@@ -299,10 +301,41 @@ func decompressReceipts(dbm database.DBManager, from, to uint64) ([]*ReceiptComp
 	return decompressed.([]*ReceiptCompression), nil
 }
 
-func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, number uint64, blkHash common.Hash) (uint64, error) {
+func migrateHeaderChunkToOriginDB(dbm database.DBManager, compressions any) {
+	headerCompressions := compressions.([]*HeaderCompression)
+	for _, c := range headerCompressions {
+		if !dbm.HasHeaderInDisk(c.BlkHash, c.BlkNumber) {
+			dbm.WriteHeader(c.Header)
+		}
+	}
+}
+
+func migrateBodyChunkToOriginDB(dbm database.DBManager, compressions any) {
+	bodyCompressions := compressions.([]*BodyCompression)
+	for _, c := range bodyCompressions {
+		if !dbm.HasBody(c.BlkHash, c.BlkNumber) {
+			dbm.WriteBody(c.BlkHash, c.BlkNumber, c.Body)
+		}
+	}
+}
+
+func migrateReceiptChunkToOriginDB(dbm database.DBManager, compressions any) {
+	receiptsCompressions := compressions.([]*ReceiptCompression)
+	for _, c := range receiptsCompressions {
+		if !dbm.HasReceipts(c.BlkHash, c.BlkNumber) {
+			receipts := make([]*types.Receipt, len(c.StorageReceipts))
+			for i, r := range c.StorageReceipts {
+				receipts[i] = (*types.Receipt)(r)
+			}
+			dbm.WriteReceipts(c.BlkHash, c.BlkNumber, types.Receipts(receipts))
+		}
+	}
+}
+
+func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, number uint64, blkHash common.Hash) (uint64, bool, error) {
 	// Badger DB does not support `NewIterator()`
 	if dbm.GetDBConfig().DBType == database.BadgerDB {
-		return 0, nil
+		return 0, false, nil
 	}
 
 	var (
@@ -315,38 +348,43 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, nu
 	for it.Next() { // ascending order iteration
 		from, to := parseCompressKey(compressTyp, it.Key())
 		if from > number { // early exit if `from` is larger than target `number`
-			return 0, nil
+			return 0, false, nil
 		}
 		if from <= number && number <= to {
-			// Temporally store compression to MiscDB to restore `from` to setHead block
-			miscDB := dbm.GetMiscDB()
-			lastCompressDeleteKeyPrefix, lastCompressDeleteValuePrefix := getLsatCompressionDeleteKeyPrefix(compressTyp), getLsatCompressionDeleteValuePrefix(compressTyp)
-			if err := miscDB.Put(lastCompressDeleteKeyPrefix, it.Key()); err != nil {
-				logger.Crit(fmt.Sprintf("Failed to store temporal compressed data by rewind. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
+			// 1. Once a find chunk, decompress it
+			compressions, err := decompress(dbm, compressTyp, from, to)
+			if err != nil {
+				logger.Crit("[Compression] Failed to decompress a chunk", "compressTyp", compressTyp.String(), "from", from, "to", to)
 			}
-			if err := miscDB.Put(lastCompressDeleteValuePrefix, it.Value()); err != nil {
-				logger.Crit(fmt.Sprintf("Failed to store temporal compressed data by rewind. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
+			// 2. Store decompressed chunk to origin database
+			switch compressTyp {
+			case HeaderCompressType:
+				migrateHeaderChunkToOriginDB(dbm, compressions)
+			case BodyCompressType:
+				migrateBodyChunkToOriginDB(dbm, compressions)
+			case ReceiptCompressType:
+				migrateReceiptChunkToOriginDB(dbm, compressions)
 			}
 			// delete compression and return the starting number so that the compression moduel can start work from there
 			if err := db.Delete(it.Key()); err != nil {
 				logger.Crit(fmt.Sprintf("Failed to delete compressed data. err(%s) type(%s), from=%d, to=%d", err.Error(), compressTyp.String(), from, to))
 			}
 			logger.Info("[Compression] chunk deleted", "type", compressTyp.String(), "from", from, "to", to)
-			return from, nil
+			return from, true, nil
 		}
 	}
-	return 0, nil
+	return 0, false, nil
 }
 
-func deleteHeaderFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
+func deleteHeaderFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, bool, error) {
 	return deleteDataFromChunk(dbm, HeaderCompressType, number, blkHash)
 }
 
-func deleteBodyFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
+func deleteBodyFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, bool, error) {
 	return deleteDataFromChunk(dbm, BodyCompressType, number, blkHash)
 }
 
-func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, error) {
+func deleteReceiptsFromChunk(dbm database.DBManager, number uint64, blkHash common.Hash) (uint64, bool, error) {
 	return deleteDataFromChunk(dbm, ReceiptCompressType, number, blkHash)
 }
 

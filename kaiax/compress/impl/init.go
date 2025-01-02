@@ -173,8 +173,7 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 
 func (c *CompressModule) Start() error {
 	logger.Info("[Compression] Compression started")
-	c.restoreFragmentByRewind()
-	go c.Compress()
+	c.Compress()
 	return nil
 }
 

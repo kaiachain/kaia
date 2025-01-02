@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"math/big"
+	mrand "math/rand"
 	"reflect"
 	"testing"
 	"time"
@@ -28,13 +29,30 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
 	blockchain_mock "github.com/kaiachain/kaia/kaiax/compress/impl/mock"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
+
+type rewindTest struct {
+	canonicalBlocks int     // Number of blocks to generate for the canonical chain (heavier)
+	sidechainBlocks int     // Number of blocks to generate for the side chain (lighter)
+	commitBlock     uint64  // Block number for which to commit the state to disk
+	pivotBlock      *uint64 // Pivot block number in case of fast sync
+
+	setheadBlock       uint64 // Block number to set head back to
+	expCanonicalBlocks int    // Number of canonical blocks expected to remain in the database (excl. genesis)
+	expSidechainBlocks int    // Number of sidechain blocks expected to remain in the database (excl. genesis)
+	expHeadHeader      uint64 // Block number of the expected head header
+	expHeadFastBlock   uint64 // Block number of the expected head fast sync block
+	expHeadBlock       uint64 // Block number of the expected head full block
+}
 
 func generateRandomBytes(n int) []byte {
 	b := make([]byte, n)
@@ -325,7 +343,7 @@ func testCompressedHeaderDelete(t *testing.T) {
 	assert.Equal(t, decompressedH1.Hash(), h1Hash)
 
 	// removed a compressed chunk
-	subsequentBlkNum, err := deleteHeaderFromChunk(dbm, h1Num, h1Hash)
+	subsequentBlkNum, _, err := deleteHeaderFromChunk(dbm, h1Num, h1Hash)
 	assert.Nil(t, err)
 	assert.Equal(t, subsequentBlkNum, h1Num)
 
@@ -355,7 +373,7 @@ func testCompressedBodyDelete(t *testing.T) {
 	}
 
 	// removed a compressed chunk
-	subsequentBlkNum, err := deleteBodyFromChunk(dbm, targetNum, targetHash)
+	subsequentBlkNum, _, err := deleteBodyFromChunk(dbm, targetNum, targetHash)
 	assert.Nil(t, err)
 	assert.Equal(t, subsequentBlkNum, targetNum)
 
@@ -385,7 +403,7 @@ func testCompressedReceiptsDelete(t *testing.T) {
 	}
 
 	// removed a compressed chunk
-	subsequentBlkNum, err := deleteReceiptsFromChunk(dbm, targetNum, targetHash)
+	subsequentBlkNum, _, err := deleteReceiptsFromChunk(dbm, targetNum, targetHash)
 	assert.Nil(t, err)
 	assert.Equal(t, subsequentBlkNum, targetNum)
 
@@ -527,5 +545,261 @@ func checkCompressedIntegrity(t *testing.T, dbm database.DBManager, from, to int
 				}
 			}
 		}
+	}
+}
+
+// verifyNoGaps checks that there are no gaps after the initial set of blocks in
+// the database and errors if found.
+func verifyNoGaps(t *testing.T, chain *blockchain.BlockChain, canonical bool, inserted types.Blocks) {
+	t.Helper()
+
+	var end uint64
+	for i := uint64(0); i <= uint64(len(inserted)); i++ {
+		header := chain.GetHeaderByNumber(i)
+		if header == nil && end == 0 {
+			end = i
+		}
+		if header != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical header gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain header gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+	end = 0
+	for i := uint64(0); i <= uint64(len(inserted)); i++ {
+		block := chain.GetBlockByNumber(i)
+		if block == nil && end == 0 {
+			end = i
+		}
+		if block != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical block gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain block gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+	end = 0
+	for i := uint64(1); i <= uint64(len(inserted)); i++ {
+		receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash())
+		if receipts == nil && end == 0 {
+			end = i
+		}
+		if receipts != nil && end > 0 {
+			if canonical {
+				t.Errorf("Canonical receipt gap between #%d-#%d", end, i-1)
+			} else {
+				t.Errorf("Sidechain receipt gap between #%d-#%d", end, i-1)
+			}
+			end = 0 // Reset for further gap detection
+		}
+	}
+}
+
+// verifyCutoff checks that there are no chain data available in the chain after
+// the specified limit, but that it is available before.
+func verifyCutoff(t *testing.T, chain *blockchain.BlockChain, canonical bool, inserted types.Blocks, head int) {
+	t.Helper()
+
+	for i := 1; i <= len(inserted); i++ {
+		if i <= head {
+			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header == nil {
+				if canonical {
+					t.Errorf("Canonical header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain header   #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block == nil {
+				if canonical {
+					t.Errorf("Canonical block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain block    #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if body := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); body == nil {
+				if canonical {
+					t.Errorf("Canonical body #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain body #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts == nil {
+				if canonical {
+					t.Errorf("Canonical receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain receipts #%2d [%x...] missing before cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+		} else {
+			if header := chain.GetHeader(inserted[i-1].Hash(), uint64(i)); header != nil {
+				if canonical {
+					t.Errorf("Canonical header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain header   #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if block := chain.GetBlock(inserted[i-1].Hash(), uint64(i)); block != nil {
+				if canonical {
+					t.Errorf("Canonical block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain block    #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if body := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); body != nil {
+				if canonical {
+					t.Errorf("Canonical body #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain body #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+			if receipts := chain.GetReceiptsByBlockHash(inserted[i-1].Hash()); receipts != nil {
+				if canonical {
+					t.Errorf("Canonical receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				} else {
+					t.Errorf("Sidechain receipts #%2d [%x...] present after cap %d", inserted[i-1].Number(), inserted[i-1].Hash().Bytes()[:3], head)
+				}
+			}
+		}
+	}
+}
+
+func testRewind(t *testing.T, tt *rewindTest) {
+	var (
+		db      = database.NewMemoryDBManager()
+		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address = crypto.PubkeyToAddress(key.PublicKey)
+		funds   = big.NewInt(1000000000)
+		gspec   = &blockchain.Genesis{
+			Config: params.TestChainConfig,
+			Alloc:  blockchain.GenesisAlloc{address: {Balance: funds}},
+		}
+		signer    = types.LatestSignerForChainID(gspec.Config.ChainID)
+		genesis   = gspec.MustCommit(db)
+		chain, _  = blockchain.NewBlockChain(db, nil, gspec.Config, gxhash.NewFullFaker(), vm.Config{})
+		mCompress = NewCompression()
+		err       = mCompress.Init(&InitOpts{
+			ChunkBlockSize: blockchain.DefaultChunkBlockSize,
+			ChunkCap:       blockchain.DefaultCompressChunkCap,
+			Chain:          chain,
+			Dbm:            db,
+		})
+	)
+	assert.Nil(t, err)
+
+	chain.RegisterRewindableModule(mCompress)
+
+	// Initialize a fresh chain with only a genesis block
+	defer chain.Stop()
+	chain.Config().Istanbul = params.GetDefaultIstanbulConfig()
+	mrand.Seed(time.Now().UnixNano())
+
+	canonblocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
+		for range 3 {
+			tx, err := types.SignTx(types.NewTransaction(b.TxNonce(address), generateAddress(), generateBigInt(10), params.TxGas, nil, nil), signer, key)
+			assert.Nil(t, err)
+			b.AddTx(tx)
+		}
+	})
+	if _, err := chain.InsertChain(canonblocks[:tt.commitBlock]); err != nil {
+		t.Fatalf("Failed to import canonical chain start: %v", err)
+	}
+	if tt.commitBlock > 0 {
+		chain.StateCache().TrieDB().Commit(canonblocks[tt.commitBlock-1].Root(), true, tt.commitBlock)
+	}
+	if _, err := chain.InsertChain(canonblocks[tt.commitBlock:]); err != nil {
+		t.Fatalf("Failed to import canonical chain tail: %v", err)
+	}
+
+	// Manually dereference anything not committed to not have to work with 128+ tries
+	for _, block := range canonblocks {
+		chain.StateCache().TrieDB().Dereference(block.Root())
+	}
+
+	db.SetCompressModule(mCompress)
+	blockChunks := uint64(5)
+	mCompress.setCompressChunk(blockChunks)
+	mCompress.Start()
+	waitCompression(mCompress)
+
+	// Set the head of the chain back to the requested number
+	chain.SetHead(tt.setheadBlock)
+
+	// Iterate over all the remaining blocks and ensure there are no gaps
+	verifyNoGaps(t, chain, true, canonblocks)
+	verifyCutoff(t, chain, true, canonblocks, tt.expCanonicalBlocks)
+
+	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {
+		t.Errorf("Head header mismatch!: have %d, want %d", head.Number, tt.expHeadHeader)
+	}
+	if head := chain.CurrentFastBlock(); head.NumberU64() != tt.expHeadFastBlock {
+		t.Errorf("Head fast block mismatch: have %d, want %d", head.NumberU64(), tt.expHeadFastBlock)
+	}
+	if head := chain.CurrentBlock(); head.NumberU64() != tt.expHeadBlock {
+		t.Errorf("Head block mismatch!!: have %d, want %d", head.NumberU64(), tt.expHeadBlock)
+	}
+
+	// check next compression block number
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(db, compressTyp)
+		assert.Equal(t, nextCompressionNumber, blockChunks)
+	}
+	// check canonical blocks after rewinding
+	for i := 0; i < len(canonblocks); i++ {
+		block := chain.GetHeader(canonblocks[i].Hash(), canonblocks[i].NumberU64())
+		body := chain.GetBodyRLP(canonblocks[i].Hash())
+		receipts := chain.GetReceiptsByBlockHash(canonblocks[i].Hash())
+		if canonblocks[i].Number().Uint64() <= tt.setheadBlock {
+			assert.False(t, block == nil)
+			assert.False(t, body == nil)
+			assert.False(t, receipts == nil)
+		} else {
+			assert.Nil(t, block)
+			assert.Nil(t, body)
+			assert.Nil(t, receipts)
+		}
+	}
+
+	// generate new blocks
+	curBlock := chain.CurrentBlock()
+	expectedNBlocks := uint64(30)
+	nBlocks := int(expectedNBlocks - curBlock.NumberU64())
+	nTxs := 3
+	newBlocks, _ := blockchain.GenerateChain(gspec.Config, curBlock, gxhash.NewFaker(), db, nBlocks, func(i int, b *blockchain.BlockGen) {
+		for range nTxs {
+			tx, err := types.SignTx(types.NewTransaction(b.TxNonce(address), generateAddress(), generateBigInt(10), params.TxGas, nil, nil), signer, key)
+			assert.Nil(t, err)
+			b.AddTx(tx)
+		}
+	})
+	if _, err := chain.InsertChain(newBlocks); err != nil {
+		t.Fatalf("Failed to import canonical chain start: %v", err)
+	}
+
+	// immediately restart to avoid idle time
+	mCompress.Stop()
+	mCompress.Start()
+	waitCompression(mCompress)
+
+	// check next compression block number
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(db, compressTyp)
+		assert.Equal(t, nextCompressionNumber, expectedNBlocks)
+	}
+
+	// check caonnical blocks after inserting some blocks
+	allBlocks := append(canonblocks[:tt.setheadBlock], newBlocks...)
+	assert.Equal(t, len(allBlocks), int(expectedNBlocks))
+	for i := 0; i < len(allBlocks); i++ {
+		block := chain.GetHeader(allBlocks[i].Hash(), allBlocks[i].NumberU64())
+		body := chain.GetBodyRLP(allBlocks[i].Hash())
+		receipts := chain.GetReceiptsByBlockHash(allBlocks[i].Hash())
+		assert.NotNil(t, block)
+		assert.NotNil(t, body)
+		assert.NotNil(t, receipts)
 	}
 }

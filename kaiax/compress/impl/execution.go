@@ -25,13 +25,13 @@ func (c *CompressModule) RewindTo(newBlock *types.Block) {}
 
 func (c *CompressModule) RewindDelete(hash common.Hash, num uint64) {
 	// Ovewrite subsequent block number to new starting number which contains compression range before
-	if newHeaderFromAfterRewind := c.deleteHeader(hash, num); newHeaderFromAfterRewind != 0 {
+	if newHeaderFromAfterRewind, shouldUpdate := c.deleteHeader(hash, num); shouldUpdate {
 		writeSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType, newHeaderFromAfterRewind)
 	}
-	if newBodyFromAfterRewind := c.deleteBody(hash, num); newBodyFromAfterRewind != 0 {
+	if newBodyFromAfterRewind, shouldUpdate := c.deleteBody(hash, num); shouldUpdate {
 		writeSubsequentCompressionBlkNumber(c.Dbm, BodyCompressType, newBodyFromAfterRewind)
 	}
-	if newReceiptsFromAfterRewind := c.deleteReceipts(hash, num); newReceiptsFromAfterRewind != 0 {
+	if newReceiptsFromAfterRewind, shouldUpdate := c.deleteReceipts(hash, num); shouldUpdate {
 		writeSubsequentCompressionBlkNumber(c.Dbm, ReceiptCompressType, newReceiptsFromAfterRewind)
 	}
 }
