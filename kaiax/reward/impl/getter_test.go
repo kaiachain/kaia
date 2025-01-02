@@ -886,6 +886,7 @@ func TestAssignStakingRewards(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		si := makeTestStakingInfo(tc.stakingAmounts, tc.prague)
+		config.Rules.IsPrague = tc.prague
 		alloc, remainder := assignStakingRewards(config, reward, si)
 
 		assert.Equal(t, tc.expectedAlloc, alloc, tc.desc)
@@ -965,7 +966,7 @@ func TestSpecWithProposerAndFundsPrague(t *testing.T) {
 		sumProposerKif = big.NewInt(proposer + kif)
 		sumProposerKef = big.NewInt(proposer + kef)
 
-		config = &reward.RewardConfig{Rewardbase: rewardbase}
+		config = &reward.RewardConfig{Rewardbase: rewardbase, Rules: params.Rules{IsPrague: true}}
 	)
 
 	testcases := []struct {
