@@ -217,8 +217,6 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
-	var dummyTotalDifficulty uint64 = 5
-	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
@@ -323,8 +321,6 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
-	var dummyTotalDifficulty uint64 = 5
-	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
