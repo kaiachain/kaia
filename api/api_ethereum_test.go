@@ -2488,6 +2488,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	mockBackend.EXPECT().StateAndHeaderByNumber(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().StateAndHeaderByNumberOrHash(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().GetEVM(any, any, any, any, any).DoAndReturn(getEVM).AnyTimes()
+	mockBackend.EXPECT().IsConsoleLogEnabled().Return(false).AnyTimes()
 
 	testcases := []struct {
 		args      EthTransactionArgs
