@@ -96,11 +96,13 @@ type DBManager interface {
 	WriteFastTrieProgress(count uint64)
 
 	HasHeader(hash common.Hash, number uint64) bool
+	HasHeaderInDisk(hash common.Hash, number uint64) bool
 	ReadHeader(hash common.Hash, number uint64) *types.Header
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
 	WriteHeader(header *types.Header)
 	PutHeaderToBatch(batch Batch, hash common.Hash, number uint64, header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
+	DeleteHeaderOnly(hash common.Hash, number uint64)
 	ReadHeaderNumber(hash common.Hash) *uint64
 
 	HasBody(hash common.Hash, number uint64) bool
@@ -117,6 +119,7 @@ type DBManager interface {
 	WriteTd(hash common.Hash, number uint64, td *big.Int)
 	DeleteTd(hash common.Hash, number uint64)
 
+	HasReceipts(hash common.Hash, number uint64) bool
 	ReadReceipt(txHash common.Hash) (*types.Receipt, common.Hash, uint64, uint64)
 	ReadReceipts(blockHash common.Hash, number uint64) types.Receipts
 	ReadReceiptsByBlockHash(hash common.Hash) types.Receipts
@@ -1173,6 +1176,14 @@ func (dbm *databaseManager) HasHeader(hash common.Hash, number uint64) bool {
 	return true
 }
 
+func (dbm *databaseManager) HasHeaderInDisk(hash common.Hash, number uint64) bool {
+	db := dbm.getDatabase(headerDB)
+	if has, err := db.Has(headerKey(number, hash)); !has || err != nil {
+		return false
+	}
+	return true
+}
+
 // ReadHeader retrieves the block header corresponding to the hash.
 func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.Header {
 	if cachedHeader := dbm.cm.readHeaderCache(hash); cachedHeader != nil {
@@ -1256,6 +1267,18 @@ func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 	}
 	if err := db.Delete(headerNumberKey(hash)); err != nil {
 		logger.Crit("Failed to delete hash to number mapping", "err", err)
+	}
+
+	// Delete cache at the end of successful delete.
+	dbm.cm.deleteHeaderCache(hash)
+	dbm.cm.deleteBlockNumberCache(hash)
+}
+
+// DeleteHeaderOnly removes only block header data associated with a hash.
+func (dbm *databaseManager) DeleteHeaderOnly(hash common.Hash, number uint64) {
+	db := dbm.getDatabase(headerDB)
+	if err := db.Delete(headerKey(number, hash)); err != nil {
+		logger.Crit("Failed to delete header", "err", err)
 	}
 
 	// Delete cache at the end of successful delete.
@@ -1375,6 +1398,19 @@ func (dbm *databaseManager) ReadBodyRLPByHash(hash common.Hash) rlp.RawValue {
 	db := dbm.getDatabase(BodyDB)
 	data, _ := db.Get(blockBodyKey(*number, hash))
 
+	// Fallback: if body is not found from `body` directory, detour to compression directory
+	if len(data) == 0 {
+		if dbm.compressModule != nil {
+			body, err := dbm.compressModule.FindBodyFromChunkWithBlkHash(dbm, *number, hash)
+			if err == nil {
+				data, err := rlp.EncodeToBytes(body)
+				if err == nil {
+					return data
+				}
+			}
+		}
+	}
+
 	// Write to cache at the end of successful read.
 	dbm.cm.writeBodyRLPCache(hash, data)
 	return data
@@ -1471,6 +1507,15 @@ func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 	}
 	// Delete cache at the end of successful delete.
 	dbm.cm.deleteTdCache(hash)
+}
+
+// HashReceipts verifies the existence of a block receipts
+func (dbm *databaseManager) HasReceipts(hash common.Hash, number uint64) bool {
+	db := dbm.getDatabase(BodyDB)
+	if has, err := db.Has(blockReceiptsKey(number, hash)); !has || err != nil {
+		return false
+	}
+	return true
 }
 
 // Receipts operations.
