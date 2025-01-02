@@ -53,6 +53,7 @@ type StateDB interface {
 	SetCodeToEOA(common.Address, []byte, params.Rules) error
 	GetCodeSize(common.Address) int
 	GetVmVersion(common.Address) (params.VmVersion, bool)
+	GetStorageRoot(common.Address) common.Hash
 
 	ResolveCodeHash(common.Address) common.Hash
 	ResolveCode(common.Address) []byte

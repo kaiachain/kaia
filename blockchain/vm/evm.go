@@ -511,8 +511,13 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 
-	// Ensure there's no existing contract already at the designated address
+	// Ensure there's no existing contract already at the designated address.
+	// Account is regarded as existent if any of these three conditions is met:
+	// - the nonce is nonzero
+	// - the code is non-empty
+	// - the storage is non-empty
 	contractHash := evm.StateDB.ResolveCodeHash(address)
+	storageRoot := evm.StateDB.GetStorageRoot(address)
 
 	// The early Kaia design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.
@@ -520,7 +525,9 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// Kaia enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
 	// NOTE: The following code should be re-considered when Kaia enables TxTypeAccountCreation
 	if evm.chainRules.IsShanghai {
-		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		if evm.StateDB.GetNonce(address) != 0 ||
+			(contractHash != (common.Hash{}) && contractHash != types.EmptyCodeHash) || // non-empty code
+			(storageRoot != (common.Hash{}) && storageRoot != types.EmptyRootHash) { // non-empty storage
 			return nil, common.Address{}, 0, ErrContractAddressCollision
 		}
 	} else if evm.StateDB.Exist(address) {
