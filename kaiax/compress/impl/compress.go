@@ -132,33 +132,33 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			from = subsequentBlkNumber
-			time.Sleep(c.loopIdleTime) // unconditional 1s idle
+			time.Sleep(c.loopIdleTime) // unconditional 50ms idle
 		}
 	}
 }
 
-func (c *CompressModule) deleteHeader(hash common.Hash, num uint64) (uint64, bool) {
+func (c *CompressModule) deleteHeader(hash common.Hash, num uint64) {
 	newFromAfterRewind, shouldUpdate, err := deleteHeaderFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Header Compression] Failed to delete header", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind, shouldUpdate
+	c.headerChunkDeleted <- ChunkDelete{shouldUpdate, newFromAfterRewind}
 }
 
-func (c *CompressModule) deleteBody(hash common.Hash, num uint64) (uint64, bool) {
+func (c *CompressModule) deleteBody(hash common.Hash, num uint64) {
 	newFromAfterRewind, shouldUpdate, err := deleteBodyFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Body Compression] Failed to delete body", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind, shouldUpdate
+	c.bodyChunkDeleted <- ChunkDelete{shouldUpdate, newFromAfterRewind}
 }
 
-func (c *CompressModule) deleteReceipts(hash common.Hash, num uint64) (uint64, bool) {
+func (c *CompressModule) deleteReceipts(hash common.Hash, num uint64) {
 	newFromAfterRewind, shouldUpdate, err := deleteReceiptsFromChunk(c.Dbm, num, hash)
 	if err != nil {
 		logger.Warn("[Receipt Compression] Failed to delete receipt", "blockNum", num, "blockHash", hash.String())
 	}
-	return newFromAfterRewind, shouldUpdate
+	c.receiptsChunkDeleted <- ChunkDelete{shouldUpdate, newFromAfterRewind}
 }
 
 func (c *CompressModule) FindHeaderFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (*types.Header, error) {

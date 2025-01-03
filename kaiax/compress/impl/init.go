@@ -39,6 +39,11 @@ type BlockChain interface {
 	CurrentBlock() *types.Block
 }
 
+type ChunkDelete struct {
+	shouldUpdate               bool
+	subsequentCompressBlockNum uint64
+}
+
 type InitOpts struct {
 	ChunkBlockSize uint64
 	ChunkCap       uint64
@@ -72,6 +77,10 @@ type CompressModule struct {
 	headerIdleStateMu   sync.RWMutex
 	bodyIdleStateMu     sync.RWMutex
 	receiptsIdleStateMu sync.RWMutex
+
+	headerChunkDeleted   chan ChunkDelete
+	bodyChunkDeleted     chan ChunkDelete
+	receiptsChunkDeleted chan ChunkDelete
 }
 
 func NewCompression() *CompressModule {
@@ -170,8 +179,11 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 		return compress.ErrInitNil
 	}
 	c.InitOpts = *opts
-	c.loopIdleTime = time.Second
+	c.loopIdleTime = 50 * time.Millisecond
 	c.terminateCompress = make(chan any, TotalCompressTypeSize)
+	c.headerChunkDeleted = make(chan ChunkDelete, 1)
+	c.bodyChunkDeleted = make(chan ChunkDelete, 1)
+	c.receiptsChunkDeleted = make(chan ChunkDelete, 1)
 	initCache(c.InitOpts.ChunkCap)
 	return nil
 }

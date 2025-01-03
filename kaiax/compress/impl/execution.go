@@ -27,14 +27,23 @@ func (c *CompressModule) RewindDelete(hash common.Hash, num uint64) {
 	if !c.Enable {
 		return
 	}
+
+	go c.deleteHeader(hash, num)
+	go c.deleteBody(hash, num)
+	go c.deleteReceipts(hash, num)
+
+	bd := <-c.bodyChunkDeleted
+	rd := <-c.receiptsChunkDeleted
+	hd := <-c.headerChunkDeleted
+
 	// Ovewrite subsequent block number to new starting number which contains compression range before
-	if newHeaderFromAfterRewind, shouldUpdate := c.deleteHeader(hash, num); shouldUpdate {
-		writeSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType, newHeaderFromAfterRewind)
+	if hd.shouldUpdate {
+		writeSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType, hd.subsequentCompressBlockNum)
 	}
-	if newBodyFromAfterRewind, shouldUpdate := c.deleteBody(hash, num); shouldUpdate {
-		writeSubsequentCompressionBlkNumber(c.Dbm, BodyCompressType, newBodyFromAfterRewind)
+	if bd.shouldUpdate {
+		writeSubsequentCompressionBlkNumber(c.Dbm, BodyCompressType, bd.subsequentCompressBlockNum)
 	}
-	if newReceiptsFromAfterRewind, shouldUpdate := c.deleteReceipts(hash, num); shouldUpdate {
-		writeSubsequentCompressionBlkNumber(c.Dbm, ReceiptCompressType, newReceiptsFromAfterRewind)
+	if rd.shouldUpdate {
+		writeSubsequentCompressionBlkNumber(c.Dbm, ReceiptCompressType, rd.subsequentCompressBlockNum)
 	}
 }
