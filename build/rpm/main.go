@@ -222,11 +222,13 @@ mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/var/log/{{ .DaemonName }}
+mkdir -p $RPM_BUILD_ROOT/etc/system/systemd
 
 cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
 %if %is_daemon
 cp build/rpm/etc/init.d/{{ .DaemonName }} $RPM_BUILD_ROOT/etc/init.d/{{ .DaemonName }}
 cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+cp build/rpm/etc/systemd/system/{{ .DaemonName}}.service $RPM_BUILD_ROOT/etc/systemd/system/{{ .DaemonName}}.service
 %endif
 
 %files
