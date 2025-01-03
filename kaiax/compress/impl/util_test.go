@@ -498,6 +498,7 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 	)
 	assert.Nil(t, err)
 	dbm.SetCompressModule(mCompress)
+	mCompress.loopIdleTime = 0
 	headers, bodies, receipts := readOriginData(t, dbm, nBlocks)
 	mCompress.setCompressChunk(10)
 	mCompress.Start()
@@ -690,6 +691,7 @@ func testRewind(t *testing.T, tt *rewindTest) {
 		})
 	)
 	assert.Nil(t, err)
+	mCompress.loopIdleTime = 0
 
 	chain.RegisterRewindableModule(mCompress)
 

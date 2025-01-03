@@ -128,6 +128,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			from = subsequentBlkNumber
+			time.Sleep(c.loopIdleTime) // unconditional 1s idle
 		}
 	}
 }

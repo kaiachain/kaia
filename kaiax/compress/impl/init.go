@@ -55,6 +55,8 @@ type IdleState struct {
 type CompressModule struct {
 	InitOpts
 
+	loopIdleTime time.Duration
+
 	terminateCompress chan any
 	wg                sync.WaitGroup
 
@@ -166,6 +168,7 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 		return compress.ErrInitNil
 	}
 	c.InitOpts = *opts
+	c.loopIdleTime = time.Second
 	c.terminateCompress = make(chan any, TotalCompressTypeSize)
 	initCache(c.InitOpts.ChunkCap)
 	return nil

@@ -83,6 +83,7 @@ func TestRetention(t *testing.T) {
 		})
 	)
 	assert.Nil(t, err)
+	mCompress.loopIdleTime = 0
 	dbm.SetCompressModule(mCompress)
 	mCompress.setCompressChunk(10)
 	mCompress.setCompressRetention(uint64(nBlocks))
@@ -120,6 +121,7 @@ func TestCache(t *testing.T) {
 		})
 	)
 	assert.Nil(t, err)
+	mCompress.loopIdleTime = 0
 	mCompress.Start()
 	waitCompression(mCompress)
 	targetNum := uint64(30)
