@@ -85,6 +85,7 @@ func TestRetention(t *testing.T) {
 			Chain:          chain,
 			Dbm:            dbm,
 			Enable:         true,
+			ForceLogging:   true,
 		})
 	)
 	assert.Nil(t, err)
@@ -117,6 +118,7 @@ func TestCache(t *testing.T) {
 			Chain:          chain,
 			Dbm:            dbm,
 			Enable:         true,
+			ForceLogging:   true,
 		})
 	)
 	assert.Nil(t, err)

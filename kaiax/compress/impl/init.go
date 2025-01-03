@@ -44,6 +44,7 @@ type InitOpts struct {
 	ChunkCap       uint64
 	Retention      uint64
 	Enable         bool
+	ForceLogging   bool
 	Chain          BlockChain
 	Dbm            database.DBManager
 }

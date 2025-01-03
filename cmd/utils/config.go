@@ -590,6 +590,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.DynamoDBConfig.ReadOnly = ctx.Bool(DynamoDBReadOnlyFlag.Name)
 
 	cfg.Compress = ctx.Bool(CompressFlag.Name)
+	cfg.CompressLog = ctx.Bool(CompressLogFlag.Name)
 	cfg.CompressRetention = ctx.Uint64(CompressRetentionFlag.Name)
 	if cfg.CompressRetention < blockchain.MinCompressRetention {
 		cfg.CompressRetention = blockchain.MinCompressRetention

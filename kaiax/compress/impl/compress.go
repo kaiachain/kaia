@@ -73,6 +73,10 @@ func (c *CompressModule) idle(compressTyp CompressionType, nBlocks, curBlkNum ui
 
 func (c *CompressModule) compress(compressTyp CompressionType, compressFn CompressFn) {
 	defer c.wg.Done()
+	log := logger.Trace
+	if c.ForceLogging {
+		log = logger.Info
+	}
 	totalChunks := 0
 	for {
 		select {
@@ -121,7 +125,7 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			if compressedSize != 0 {
-				logger.Info("[Compression] chunk compressed", "type", compressTyp.String(), "originFrom", originFrom, "startFrom", from, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
+				log("[Compression] chunk compressed", "type", compressTyp.String(), "originFrom", originFrom, "startFrom", from, "subsequentBlkNumber", subsequentBlkNumber, "curBlknum", curBlkNum, "originSize", common.StorageSize(originSize), "compressedSize", common.StorageSize(compressedSize), "totalChunks", totalChunks)
 				totalChunks++
 			}
 			if subsequentBlkNumber >= curBlkNum {

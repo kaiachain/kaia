@@ -115,6 +115,7 @@ var FlagGroups = []FlagGroup{
 			SenderTxHashIndexingFlag,
 			DBNoPerformanceMetricsFlag,
 			CompressFlag,
+			CompressLogFlag,
 			CompressRetentionFlag,
 			TxPruningFlag,
 			TxPruningRetentionFlag,

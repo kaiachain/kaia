@@ -502,6 +502,7 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 			Chain:          chain,
 			Dbm:            dbm,
 			Enable:         true,
+			ForceLogging:   true,
 		})
 	)
 	assert.Nil(t, err)
@@ -697,6 +698,7 @@ func testRewind(t *testing.T, tt *rewindTest) {
 			Chain:          chain,
 			Dbm:            db,
 			Enable:         true,
+			ForceLogging:   true,
 		})
 	)
 	assert.Nil(t, err)

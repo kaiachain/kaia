@@ -495,6 +495,13 @@ var (
 		EnvVars:  []string{"KLAYTN_COMPRESS", "KAIA_COMPRESS"},
 		Category: "DATABASE",
 	}
+	CompressLogFlag = &cli.BoolFlag{
+		Name:     "database.compress-log",
+		Usage:    "Press verbosity level and force to enable compression log",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_COMPRESS_LOG", "KAIA_COMPRESS_LOG"},
+		Category: "DATABASE",
+	}
 	CompressRetentionFlag = &cli.Uint64Flag{
 		Name:     "database.compress-retention",
 		Usage:    "Number of blocks from the latest block where compression should not be performed",
