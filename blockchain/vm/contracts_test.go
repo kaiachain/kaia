@@ -510,7 +510,7 @@ func TestConsoleLog(t *testing.T) {
 				default:
 					// Handle fixed byte types (Bytes1Ty through Bytes32Ty)
 					if len(paramType) > 5 && paramType[:5] == "Bytes" {
-						size, _ := strconv.Atoi(paramType[5:])
+						size, _ := strconv.Atoi(string(paramType[5:]))
 						b := make([]byte, size)
 						for i := 0; i < size; i++ {
 							b[i] = byte(i)
@@ -540,7 +540,7 @@ func TestConsoleLog(t *testing.T) {
 			arguments := abi.Arguments{}
 			for _, paramType := range paramTypes {
 				// when parsing paramType to abi.Type, convert to lowercase (e.g., "Uint256" -> "uint256")
-				typ, _ := abi.NewType(strings.ToLower(paramType), "", nil)
+				typ, _ := abi.NewType(strings.ToLower(string(paramType)), "", nil)
 				arguments = append(arguments, abi.Argument{
 					Type: typ,
 				})

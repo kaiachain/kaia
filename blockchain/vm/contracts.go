@@ -1423,7 +1423,7 @@ func (c *consoleLog) toLogString(input []byte) (string, error) {
 var registerSize = 32
 
 // decode decodes the input into a list of string according to the provided types
-func (c *consoleLog) decode(params []byte, types []string) ([]string, error) {
+func (c *consoleLog) decode(params []byte, types []common.ConsoleLogType) ([]string, error) {
 	var res []string
 	for i, t := range types {
 		pos := i * registerSize
@@ -1479,7 +1479,7 @@ func (c *consoleLog) decode(params []byte, types []string) ([]string, error) {
 			}
 			res = append(res, common.Bytes2Hex(params[start+registerSize:start+size+registerSize]))
 		case common.Bytes1Ty, common.Bytes2Ty, common.Bytes3Ty, common.Bytes4Ty, common.Bytes5Ty, common.Bytes6Ty, common.Bytes7Ty, common.Bytes8Ty, common.Bytes9Ty, common.Bytes10Ty, common.Bytes11Ty, common.Bytes12Ty, common.Bytes13Ty, common.Bytes14Ty, common.Bytes15Ty, common.Bytes16Ty, common.Bytes17Ty, common.Bytes18Ty, common.Bytes19Ty, common.Bytes20Ty, common.Bytes21Ty, common.Bytes22Ty, common.Bytes23Ty, common.Bytes24Ty, common.Bytes25Ty, common.Bytes26Ty, common.Bytes27Ty, common.Bytes28Ty, common.Bytes29Ty, common.Bytes30Ty, common.Bytes31Ty, common.Bytes32Ty:
-			size, _ := strconv.Atoi(t[5:])
+			size, _ := strconv.Atoi(string(t[5:]))
 			if len(params) < pos+size {
 				return nil, errors.New("input too short")
 			}
