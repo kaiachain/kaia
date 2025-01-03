@@ -576,6 +576,7 @@ func (s *CN) SetupKaiaxModules() error {
 			ChunkBlockSize: blockchain.DefaultChunkBlockSize,
 			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Retention:      s.config.CompressRetention,
+			Enable:         s.config.Compress && !s.blockchain.IsArchiveMode(),
 		}),
 	)
 	if err != nil {

@@ -1104,7 +1104,7 @@ func (bc *BlockChain) Stop() {
 		bc.snaps.Release()
 	}
 	triedb := bc.stateCache.TrieDB()
-	if !bc.isArchiveMode() {
+	if !bc.IsArchiveMode() {
 		number := bc.CurrentBlock().NumberU64()
 		recent := bc.GetBlockByNumber(number)
 		if recent == nil {
@@ -1380,7 +1380,7 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 	trieDB.UpdateMetricNodes()
 
 	// If we're running an archive node, always flush
-	if bc.isArchiveMode() {
+	if bc.IsArchiveMode() {
 		if err := trieDB.Commit(root, false, block.NumberU64()); err != nil {
 			return err
 		}
@@ -2726,7 +2726,7 @@ func (bc *BlockChain) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscript
 
 // isArchiveMode returns whether current blockchain is in archiving mode or not.
 // cacheConfig.ArchiveMode means trie caching is disabled.
-func (bc *BlockChain) isArchiveMode() bool {
+func (bc *BlockChain) IsArchiveMode() bool {
 	return bc.cacheConfig.ArchiveMode
 }
 

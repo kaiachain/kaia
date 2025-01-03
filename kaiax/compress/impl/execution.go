@@ -24,6 +24,9 @@ import (
 func (c *CompressModule) RewindTo(newBlock *types.Block) {}
 
 func (c *CompressModule) RewindDelete(hash common.Hash, num uint64) {
+	if !c.Enable {
+		return
+	}
 	// Ovewrite subsequent block number to new starting number which contains compression range before
 	if newHeaderFromAfterRewind, shouldUpdate := c.deleteHeader(hash, num); shouldUpdate {
 		writeSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType, newHeaderFromAfterRewind)

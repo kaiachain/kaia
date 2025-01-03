@@ -18,8 +18,12 @@ package compress
 
 import (
 	"testing"
+	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	blockchain_mock "github.com/kaiachain/kaia/kaiax/compress/impl/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -80,6 +84,7 @@ func TestRetention(t *testing.T) {
 			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Chain:          chain,
 			Dbm:            dbm,
+			Enable:         true,
 		})
 	)
 	assert.Nil(t, err)
@@ -90,21 +95,14 @@ func TestRetention(t *testing.T) {
 	mCompress.Start()
 	waitCompression(mCompress)
 
-	// compression is not performed by retention
-	for _, compressTyp := range allCompressTypes {
-		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
-		assert.Equal(t, nextCompressionNumber, uint64(0))
-	}
+	assertNextCompressNum(t, dbm, uint64(0))
 	mCompress.Stop()
 
 	// compress work by reset retention
 	mCompress.setCompressRetention(0)
 	mCompress.Start()
 	waitCompression(mCompress)
-	for _, compressTyp := range allCompressTypes {
-		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
-		assert.Equal(t, int(nextCompressionNumber), nBlocks-1)
-	}
+	assertNextCompressNum(t, dbm, uint64(nBlocks-1))
 }
 
 func TestCache(t *testing.T) {
@@ -118,6 +116,7 @@ func TestCache(t *testing.T) {
 			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Chain:          chain,
 			Dbm:            dbm,
+			Enable:         true,
 		})
 	)
 	assert.Nil(t, err)
@@ -168,4 +167,62 @@ func TestRewind(t *testing.T) {
 		expHeadFastBlock:   setHeadBlock1,
 		expHeadBlock:       setHeadBlock1,
 	})
+}
+
+func TestEnableFlag(t *testing.T) {
+	var (
+		nBlocks                                   = 100
+		mCompress, dbm, headers, bodies, receipts = runCompress(t, nBlocks)
+	)
+	checkCompressedIntegrity(t, dbm, 0, nBlocks-1, headers, bodies, receipts, false)
+
+	// further insertion 100 blocks
+	lastHeader1 := genBlocks(dbm, nBlocks, nBlocks)
+
+	chain := blockchain_mock.NewMockBlockChain(gomock.NewController(t))
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(lastHeader1)).AnyTimes()
+	mCompress.Chain = chain
+	assertNextCompressNum(t, dbm, uint64(nBlocks-1))
+
+	mCompress.Stop()
+	mCompress.Enable = false
+	mCompress.Start()
+	time.Sleep(time.Second * 2)
+	assertNextCompressNum(t, dbm, uint64(nBlocks-1))
+
+	mCompress.Stop()
+	mCompress.Enable = true
+	mCompress.Start()
+	time.Sleep(time.Second * 2)
+	assertNextCompressNum(t, dbm, lastHeader1.Number.Uint64())
+
+	// further insertion 100 blocks
+	lastHeader2 := genBlocks(dbm, nBlocks*2, nBlocks)
+	chain = blockchain_mock.NewMockBlockChain(gomock.NewController(t))
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(lastHeader2)).AnyTimes()
+	mCompress.Chain = chain
+
+	mCompress.Stop()
+	mCompress.Enable = false
+	mCompress.Start()
+	time.Sleep(time.Second * 2)
+	assertNextCompressNum(t, dbm, lastHeader1.Number.Uint64())
+
+	mCompress.Stop()
+	mCompress.Enable = true
+	mCompress.Start()
+	time.Sleep(time.Second * 2)
+	assertNextCompressNum(t, dbm, lastHeader2.Number.Uint64())
+
+	// The query remains accessible even if the module is stopped or disabled.
+	mCompress.Stop()
+	mCompress.Enable = false
+	clearCache()
+	for i := 0; i < int(lastHeader2.Number.Uint64()); i++ {
+		hn := uint64(i)
+		hh := dbm.ReadCanonicalHash(hn)
+		dbm.ReadHeader(hh, hn)
+		dbm.ReadBody(hh, hn)
+		dbm.ReadReceipts(hh, hn)
+	}
 }

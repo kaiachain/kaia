@@ -43,6 +43,7 @@ type InitOpts struct {
 	ChunkBlockSize uint64
 	ChunkCap       uint64
 	Retention      uint64
+	Enable         bool
 	Chain          BlockChain
 	Dbm            database.DBManager
 }
@@ -175,12 +176,19 @@ func (c *CompressModule) Init(opts *InitOpts) error {
 }
 
 func (c *CompressModule) Start() error {
+	if !c.Enable {
+		logger.Info("[Compression] Compression disabled")
+		return nil
+	}
 	logger.Info("[Compression] Compression started")
 	c.Compress()
 	return nil
 }
 
 func (c *CompressModule) Stop() {
+	if !c.Enable {
+		return
+	}
 	c.stopCompress()
 	clearCache()
 	logger.Info("[Compression] Compression Stopped")

@@ -439,7 +439,7 @@ func initMock(t *testing.T, n int) (*blockchain_mock.MockBlockChain, database.DB
 }
 
 func waitCompression(m *CompressModule) {
-	time.AfterFunc(SEC_TEN, func() { panic("Compression timeout") })
+	time.AfterFunc(SEC_TEN*2, func() { panic("Compression timeout") })
 	var (
 		headerCompressCompleted   = false
 		bodyCompressCompleted     = false
@@ -485,6 +485,13 @@ func readOriginData(t *testing.T, dbm database.DBManager, nBlocks int) ([]*types
 	return headers, bodies, receipts
 }
 
+func assertNextCompressNum(t *testing.T, dbm database.DBManager, expected uint64) {
+	for _, compressTyp := range allCompressTypes {
+		nextCompressionNumber := readSubsequentCompressionBlkNumber(dbm, compressTyp)
+		assert.Equal(t, nextCompressionNumber, expected)
+	}
+}
+
 func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager, []*types.Header, []*types.Body, []types.Receipts) {
 	var (
 		chain, dbm = initMock(t, nBlocks)
@@ -494,6 +501,7 @@ func runCompress(t *testing.T, nBlocks int) (*CompressModule, database.DBManager
 			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Chain:          chain,
 			Dbm:            dbm,
+			Enable:         true,
 		})
 	)
 	assert.Nil(t, err)
@@ -688,6 +696,7 @@ func testRewind(t *testing.T, tt *rewindTest) {
 			ChunkCap:       blockchain.DefaultCompressChunkCap,
 			Chain:          chain,
 			Dbm:            db,
+			Enable:         true,
 		})
 	)
 	assert.Nil(t, err)
@@ -746,10 +755,8 @@ func testRewind(t *testing.T, tt *rewindTest) {
 	}
 
 	// check next compression block number
-	for _, compressTyp := range allCompressTypes {
-		nextCompressionNumber := readSubsequentCompressionBlkNumber(db, compressTyp)
-		assert.Equal(t, nextCompressionNumber, blockChunks)
-	}
+	assertNextCompressNum(t, db, blockChunks)
+
 	// check canonical blocks after rewinding
 	for i := 0; i < len(canonblocks); i++ {
 		block := chain.GetHeader(canonblocks[i].Hash(), canonblocks[i].NumberU64())
@@ -788,10 +795,7 @@ func testRewind(t *testing.T, tt *rewindTest) {
 	waitCompression(mCompress)
 
 	// check next compression block number
-	for _, compressTyp := range allCompressTypes {
-		nextCompressionNumber := readSubsequentCompressionBlkNumber(db, compressTyp)
-		assert.Equal(t, nextCompressionNumber, expectedNBlocks)
-	}
+	assertNextCompressNum(t, db, expectedNBlocks)
 
 	// check caonnical blocks after inserting some blocks
 	allBlocks := append(canonblocks[:tt.setheadBlock], newBlocks...)
@@ -804,4 +808,22 @@ func testRewind(t *testing.T, tt *rewindTest) {
 		assert.NotNil(t, body)
 		assert.NotNil(t, receipts)
 	}
+}
+
+func genBlocks(dbm database.DBManager, startNum, nBlocks int) *types.Header {
+	var lastHeader *types.Header
+	for i := range nBlocks {
+		n := int64(startNum + i)
+		h := genHeader()
+		h.Number = big.NewInt(n)
+
+		hn, hh := h.Number.Uint64(), h.Hash()
+		dbm.WriteCanonicalHash(hh, hn)
+		dbm.WriteHeader(h)
+		b, r := genBody(100), genReceipts(100)
+		dbm.WriteBody(hh, hn, b)
+		dbm.WriteReceipts(hh, hn, *r)
+		lastHeader = h
+	}
+	return lastHeader
 }

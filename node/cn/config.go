@@ -134,6 +134,7 @@ type Config struct {
 	TxPruningRetention      uint64
 	ReceiptPruning          bool
 	ReceiptPruningRetention uint64
+	Compress                bool
 	CompressRetention       uint64
 	SenderTxHashIndexing    bool
 	ParallelDBWrite         bool
