@@ -221,8 +221,11 @@ func TestEnableFlag(t *testing.T) {
 	for i := 0; i < int(lastHeader2.Number.Uint64()); i++ {
 		hn := uint64(i)
 		hh := dbm.ReadCanonicalHash(hn)
-		dbm.ReadHeader(hh, hn)
-		dbm.ReadBody(hh, hn)
-		dbm.ReadReceipts(hh, hn)
+		h := dbm.ReadHeader(hh, hn)
+		b := dbm.ReadBody(hh, hn)
+		r := dbm.ReadReceipts(hh, hn)
+		assert.NotNil(t, h)
+		assert.NotNil(t, b)
+		assert.NotNil(t, r)
 	}
 }
