@@ -768,20 +768,23 @@ func TestUnpackTuple(t *testing.T) {
 	buff.Write(common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")) // ret[b] = -1
 
 	// If the result is single tuple, use struct as return value container directly.
-	v := struct {
+	type v struct {
 		A *big.Int
 		B *big.Int
-	}{new(big.Int), new(big.Int)}
-
-	err = abi.UnpackIntoInterface(&v, "tuple", buff.Bytes())
+	}
+	type r struct {
+		Result v
+	}
+	ret0 := new(r)
+	err = abi.UnpackIntoInterface(ret0, "tuple", buff.Bytes())
 	if err != nil {
 		t.Error(err)
 	} else {
-		if v.A.Cmp(big.NewInt(1)) != 0 {
-			t.Errorf("unexpected value unpacked: want %x, got %x", 1, v.A)
+		if ret0.Result.A.Cmp(big.NewInt(1)) != 0 {
+			t.Errorf("unexpected value unpacked: want %x, got %x", 1, ret0.Result.A)
 		}
-		if v.B.Cmp(big.NewInt(-1)) != 0 {
-			t.Errorf("unexpected value unpacked: want %x, got %x", -1, v.B)
+		if ret0.Result.B.Cmp(big.NewInt(-1)) != 0 {
+			t.Errorf("unexpected value unpacked: want %x, got %x", -1, ret0.Result.B)
 		}
 	}
 
