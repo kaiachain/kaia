@@ -81,6 +81,10 @@ type CompressModule struct {
 	headerChunkDeleted   chan ChunkDelete
 	bodyChunkDeleted     chan ChunkDelete
 	receiptsChunkDeleted chan ChunkDelete
+
+	lastHeaderRewindNum   uint64
+	lastBodyRewindNum     uint64
+	lastReceiptsRewindNum uint64
 }
 
 func NewCompression() *CompressModule {
@@ -204,5 +208,6 @@ func (c *CompressModule) Stop() {
 	}
 	c.stopCompress()
 	clearCache()
+	c.clearRewindHistory()
 	logger.Info("[Compression] Compression Stopped")
 }

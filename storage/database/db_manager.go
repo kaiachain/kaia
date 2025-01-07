@@ -75,6 +75,9 @@ type DBManager interface {
 	GetCompressHeaderDB() Database
 	GetCompressBodyDB() Database
 	GetCompressReceiptsDB() Database
+	GetHeaderDBEntryType() DBEntryType
+	GetBodyDBEntryType() DBEntryType
+	GetReceiptsDBEntryType() DBEntryType
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -100,7 +103,7 @@ type DBManager interface {
 	ReadHeader(hash common.Hash, number uint64) *types.Header
 	ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue
 	WriteHeader(header *types.Header)
-	PutHeaderToBatch(batch Batch, hash common.Hash, number uint64, header *types.Header)
+	PutHeaderToBatch(batch Batch, header *types.Header)
 	DeleteHeader(hash common.Hash, number uint64)
 	DeleteHeaderOnly(hash common.Hash, number uint64)
 	ReadHeaderNumber(hash common.Hash) *uint64
@@ -897,6 +900,18 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
 }
 
+func (dbm *databaseManager) GetHeaderDBEntryType() DBEntryType {
+	return headerDB
+}
+
+func (dbm *databaseManager) GetBodyDBEntryType() DBEntryType {
+	return BodyDB
+}
+
+func (dbm *databaseManager) GetReceiptsDBEntryType() DBEntryType {
+	return ReceiptsDB
+}
+
 func (dbm *databaseManager) GetMiscDB() Database {
 	return dbm.dbs[MiscDB]
 }
@@ -1249,7 +1264,11 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	dbm.cm.writeBlockNumberCache(hash, number)
 }
 
-func (dbm *databaseManager) PutHeaderToBatch(batch Batch, hash common.Hash, number uint64, header *types.Header) {
+func (dbm *databaseManager) PutHeaderToBatch(batch Batch, header *types.Header) {
+	var (
+		hash   = header.Hash()
+		number = header.Number.Uint64()
+	)
 	data, err := rlp.EncodeToBytes(header)
 	if err != nil {
 		logger.Crit("Failed to RLP encode header", "err", err)

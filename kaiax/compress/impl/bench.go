@@ -40,7 +40,7 @@ func testCopyOriginData(c *CompressModule, compressTyp CompressionType, copyTest
 		switch compressTyp {
 		case HeaderCompressType:
 			originHeader := c.Dbm.ReadHeader(hash, i)
-			c.Dbm.PutHeaderToBatch(copyTestDB, hash, i, originHeader)
+			c.Dbm.PutHeaderToBatch(copyTestDB, originHeader)
 		case BodyCompressType:
 			originBody := c.Dbm.ReadBody(hash, i)
 			c.Dbm.PutBodyToBatch(copyTestDB, hash, i, originBody)

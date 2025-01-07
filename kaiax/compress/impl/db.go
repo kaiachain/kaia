@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-// ///////////// Compresssion ///////////////
 func readSubsequentCompressionBlkNumber(dbm database.DBManager, compressTyp CompressionType) uint64 {
 	var (
 		prefix  = getCompressPrefix(compressTyp)
@@ -81,8 +80,6 @@ func removeOriginAfterCompress(dbm database.DBManager, compressions []any) {
 	for _, compressed := range compressions {
 		switch c := compressed.(type) {
 		case *HeaderCompression:
-			// TODO-hyunsooda: Remove me
-			// dbm.DeleteHeader(c.BlkHash, c.BlkNumber)
 			dbm.DeleteHeaderOnly(c.BlkHash, c.BlkNumber)
 		case *BodyCompression:
 			dbm.DeleteBody(c.BlkHash, c.BlkNumber)
@@ -301,35 +298,44 @@ func decompressReceipts(dbm database.DBManager, from, to uint64) ([]*ReceiptComp
 	return decompressed.([]*ReceiptCompression), nil
 }
 
-func migrateHeaderChunkToOriginDB(dbm database.DBManager, compressions any) {
+func migrateHeaderChunkToOriginDB(dbm database.DBManager, compressions any) error {
 	headerCompressions := compressions.([]*HeaderCompression)
+	batch := dbm.NewBatch(dbm.GetHeaderDBEntryType())
 	for _, c := range headerCompressions {
 		if !dbm.HasHeaderInDisk(c.BlkHash, c.BlkNumber) {
-			dbm.WriteHeader(c.Header)
+			dbm.PutHeaderToBatch(batch, c.Header)
 		}
 	}
+	_, err := database.WriteBatches(batch)
+	return err
 }
 
-func migrateBodyChunkToOriginDB(dbm database.DBManager, compressions any) {
+func migrateBodyChunkToOriginDB(dbm database.DBManager, compressions any) error {
 	bodyCompressions := compressions.([]*BodyCompression)
+	batch := dbm.NewBatch(dbm.GetBodyDBEntryType())
 	for _, c := range bodyCompressions {
 		if !dbm.HasBody(c.BlkHash, c.BlkNumber) {
-			dbm.WriteBody(c.BlkHash, c.BlkNumber, c.Body)
+			dbm.PutBodyToBatch(batch, c.BlkHash, c.BlkNumber, c.Body)
 		}
 	}
+	_, err := database.WriteBatches(batch)
+	return err
 }
 
-func migrateReceiptChunkToOriginDB(dbm database.DBManager, compressions any) {
+func migrateReceiptChunkToOriginDB(dbm database.DBManager, compressions any) error {
 	receiptsCompressions := compressions.([]*ReceiptCompression)
+	batch := dbm.NewBatch(dbm.GetReceiptsDBEntryType())
 	for _, c := range receiptsCompressions {
 		if !dbm.HasReceipts(c.BlkHash, c.BlkNumber) {
 			receipts := make([]*types.Receipt, len(c.StorageReceipts))
 			for i, r := range c.StorageReceipts {
 				receipts[i] = (*types.Receipt)(r)
 			}
-			dbm.WriteReceipts(c.BlkHash, c.BlkNumber, types.Receipts(receipts))
+			dbm.PutReceiptsToBatch(batch, c.BlkHash, c.BlkNumber, types.Receipts(receipts))
 		}
 	}
+	_, err := database.WriteBatches(batch)
+	return err
 }
 
 func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, number uint64, blkHash common.Hash) (uint64, bool, error) {
@@ -359,11 +365,14 @@ func deleteDataFromChunk(dbm database.DBManager, compressTyp CompressionType, nu
 			// 2. Store decompressed chunk to origin database
 			switch compressTyp {
 			case HeaderCompressType:
-				migrateHeaderChunkToOriginDB(dbm, compressions)
+				err = migrateHeaderChunkToOriginDB(dbm, compressions)
 			case BodyCompressType:
-				migrateBodyChunkToOriginDB(dbm, compressions)
+				err = migrateBodyChunkToOriginDB(dbm, compressions)
 			case ReceiptCompressType:
-				migrateReceiptChunkToOriginDB(dbm, compressions)
+				err = migrateReceiptChunkToOriginDB(dbm, compressions)
+			}
+			if err != nil {
+				logger.Crit("[Compression] failed to reverse migrate", "compressTyp", compressTyp.String(), "from", from, "to", to)
 			}
 			// delete compression and return the starting number so that the compression moduel can start work from there
 			if err := db.Delete(it.Key()); err != nil {
