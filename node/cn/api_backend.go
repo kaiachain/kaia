@@ -365,6 +365,10 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
 }
 
+func (b *CNAPIBackend) IsConsoleLogEnabled() bool {
+	return b.cn.config.UseConsoleLog
+}
+
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
 }

@@ -273,6 +273,11 @@ func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 	return s.b.IsSenderTxHashIndexingEnabled()
 }
 
+// IsConsoleLogEnabled returns if console log is enabled or not.
+func (s *PublicBlockChainAPI) IsConsoleLogEnabled() bool {
+	return s.b.IsConsoleLogEnabled()
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From                 common.Address  `json:"from"`
@@ -387,7 +392,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
 	}
-	result, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, s.b.RPCEVMTimeout(), gasCap)
+	result, _, err := DoCall(ctx, s.b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite, UseConsoleLog: s.b.IsConsoleLogEnabled()}, s.b.RPCEVMTimeout(), gasCap)
 	if err != nil {
 		return nil, err
 	}

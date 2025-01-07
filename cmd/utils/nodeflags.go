@@ -272,6 +272,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(APIFilterGetLogsMaxItemsFlag),
 	altsrc.NewDurationFlag(APIFilterGetLogsDeadlineFlag),
 	altsrc.NewUint64Flag(OpcodeComputationCostLimitFlag),
+	altsrc.NewBoolFlag(UseConsoleLogFlag),
 	altsrc.NewBoolFlag(SnapshotFlag),
 	altsrc.NewIntFlag(SnapshotCacheSizeFlag),
 	altsrc.NewBoolFlag(SnapshotAsyncGen),
