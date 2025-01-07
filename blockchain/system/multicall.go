@@ -49,6 +49,7 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 	gasPrice := big.NewInt(0) // execute call regardless of the balance of the sender
 	gasLimit := uint64(1e8)   // enough gas limit to execute multicall contract functions
 	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
+	dataTokens := uint64(0)   // read operation has no calldata
 
 	// call.From: zero address will be assigned if nothing is specified
 	// call.To: the target contract address will be assigned by `BoundContract`
@@ -63,7 +64,7 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 	}
 
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
-		call.Value, gasLimit, gasPrice, nil, nil, call.Data, false, intrinsicGas, nil, nil)
+		call.Value, gasLimit, gasPrice, nil, nil, call.Data, false, intrinsicGas, dataTokens, nil, nil)
 
 	blockContext := blockchain.NewEVMBlockContext(caller.header, caller.chain, nil)
 	txContext := blockchain.NewEVMTxContext(msg, caller.header, caller.chain.Config())

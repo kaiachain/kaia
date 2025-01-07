@@ -156,13 +156,13 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
+	intrinsicGas, tokens, err := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}
 
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, nil, nil, call.Data,
-		false, intrinsicGas, accessList, nil)
+		false, intrinsicGas, tokens, accessList, nil)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
