@@ -530,10 +530,7 @@ func TestConsoleLog(t *testing.T) {
 
 			// Encode the selector and parameters
 			sig := make([]byte, 4)
-			sig[0] = byte(selector >> 24)
-			sig[1] = byte(selector >> 16)
-			sig[2] = byte(selector >> 8)
-			sig[3] = byte(selector)
+			binary.BigEndian.PutUint32(sig, selector)
 
 			// Pack parameters using abi encoding
 			// Parse the parameter types dynamically
