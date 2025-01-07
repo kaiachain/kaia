@@ -197,7 +197,13 @@ func (c *CompressModule) Start() error {
 		logger.Info("[Compression] Compression disabled")
 		return nil
 	}
-	logger.Info("[Compression] Compression started")
+	nextHeaderCompressionBlkNum := readSubsequentCompressionBlkNumber(c.Dbm, HeaderCompressType)
+	nextBodyCompressionBlkNum := readSubsequentCompressionBlkNumber(c.Dbm, BodyCompressType)
+	nextReceiptsCompressionBlkNum := readSubsequentCompressionBlkNumber(c.Dbm, ReceiptCompressType)
+	logger.Info("[Compression] Compression started",
+		"nextHeaderCompressBlk", nextHeaderCompressionBlkNum,
+		"nextBodyCompressBlk", nextBodyCompressionBlkNum,
+		"nextReceiptCompressBlk", nextReceiptsCompressionBlkNum)
 	c.Compress()
 	return nil
 }
