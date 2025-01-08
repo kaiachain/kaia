@@ -417,7 +417,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, vm.ErrTotalTimeLimitReached
 	}
 
-	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsPrague {
+	if rules.IsPrague {
 		// After EIP-7623: Data-heavy transactions pay the floor gas.
 		// Overflow error has already been checked and can be ignored here.
 		floorGas, _ := FloorDataGas(validatedGas.Tokens)
