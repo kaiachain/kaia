@@ -70,6 +70,9 @@ type DBManager interface {
 	FinishStateMigration(succeed bool) chan struct{}
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
+	GetHeaderDB() Database
+	GetBodyDB() Database
+	GetReceiptsDB() Database
 	GetMiscDB() Database
 	GetSnapshotDB() Database
 	GetCompressHeaderDB() Database
@@ -912,6 +915,27 @@ func (dbm *databaseManager) GetReceiptsDBEntryType() DBEntryType {
 	return ReceiptsDB
 }
 
+func (dbm *databaseManager) GetHeaderDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
+	return dbm.dbs[headerDB]
+}
+
+func (dbm *databaseManager) GetBodyDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
+	return dbm.dbs[BodyDB]
+}
+
+func (dbm *databaseManager) GetReceiptsDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
+	return dbm.dbs[ReceiptsDB]
+}
+
 func (dbm *databaseManager) GetMiscDB() Database {
 	return dbm.dbs[MiscDB]
 }
@@ -921,14 +945,23 @@ func (dbm *databaseManager) GetSnapshotDB() Database {
 }
 
 func (dbm *databaseManager) GetCompressHeaderDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
 	return dbm.dbs[CompressHeaderDB]
 }
 
 func (dbm *databaseManager) GetCompressBodyDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
 	return dbm.dbs[CompressBodyDB]
 }
 
 func (dbm *databaseManager) GetCompressReceiptsDB() Database {
+	if len(dbm.dbs) != int(databaseEntryTypeSize) {
+		return nil
+	}
 	return dbm.dbs[CompressReceiptsDB]
 }
 
@@ -1185,7 +1218,7 @@ func (dbm *databaseManager) HasHeader(hash common.Hash, number uint64) bool {
 	}
 
 	db := dbm.getDatabase(headerDB)
-	if has, err := db.Has(headerKey(number, hash)); !has || err != nil {
+	if has, err := db.Has(HeaderKey(number, hash)); !has || err != nil {
 		return false
 	}
 	return true
@@ -1193,7 +1226,7 @@ func (dbm *databaseManager) HasHeader(hash common.Hash, number uint64) bool {
 
 func (dbm *databaseManager) HasHeaderInDisk(hash common.Hash, number uint64) bool {
 	db := dbm.getDatabase(headerDB)
-	if has, err := db.Has(headerKey(number, hash)); !has || err != nil {
+	if has, err := db.Has(HeaderKey(number, hash)); !has || err != nil {
 		return false
 	}
 	return true
@@ -1231,7 +1264,7 @@ func (dbm *databaseManager) ReadHeader(hash common.Hash, number uint64) *types.H
 // ReadHeaderRLP retrieves a block header in its raw RLP database encoding.
 func (dbm *databaseManager) ReadHeaderRLP(hash common.Hash, number uint64) rlp.RawValue {
 	db := dbm.getDatabase(headerDB)
-	data, _ := db.Get(headerKey(number, hash))
+	data, _ := db.Get(HeaderKey(number, hash))
 	return data
 }
 
@@ -1254,7 +1287,7 @@ func (dbm *databaseManager) WriteHeader(header *types.Header) {
 	if err != nil {
 		logger.Crit("Failed to RLP encode header", "err", err)
 	}
-	key = headerKey(number, hash)
+	key = HeaderKey(number, hash)
 	if err := db.Put(key, data); err != nil {
 		logger.Crit("Failed to store header", "err", err)
 	}
@@ -1273,7 +1306,7 @@ func (dbm *databaseManager) PutHeaderToBatch(batch Batch, header *types.Header) 
 	if err != nil {
 		logger.Crit("Failed to RLP encode header", "err", err)
 	}
-	if err := batch.Put(headerKey(number, hash), data); err != nil {
+	if err := batch.Put(HeaderKey(number, hash), data); err != nil {
 		logger.Crit("Failed to store block header", "err", err)
 	}
 }
@@ -1281,7 +1314,7 @@ func (dbm *databaseManager) PutHeaderToBatch(batch Batch, header *types.Header) 
 // DeleteHeader removes all block header data associated with a hash.
 func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(headerDB)
-	if err := db.Delete(headerKey(number, hash)); err != nil {
+	if err := db.Delete(HeaderKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete header", "err", err)
 	}
 	if err := db.Delete(headerNumberKey(hash)); err != nil {
@@ -1296,7 +1329,7 @@ func (dbm *databaseManager) DeleteHeader(hash common.Hash, number uint64) {
 // DeleteHeaderOnly removes only block header data associated with a hash.
 func (dbm *databaseManager) DeleteHeaderOnly(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(headerDB)
-	if err := db.Delete(headerKey(number, hash)); err != nil {
+	if err := db.Delete(HeaderKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete header", "err", err)
 	}
 
@@ -1328,7 +1361,7 @@ func (dbm *databaseManager) ReadHeaderNumber(hash common.Hash) *uint64 {
 // HasBody verifies the existence of a block body corresponding to the hash.
 func (dbm *databaseManager) HasBody(hash common.Hash, number uint64) bool {
 	db := dbm.getDatabase(BodyDB)
-	if has, err := db.Has(blockBodyKey(number, hash)); !has || err != nil {
+	if has, err := db.Has(BlockBodyKey(number, hash)); !has || err != nil {
 		return false
 	}
 	return true
@@ -1386,7 +1419,7 @@ func (dbm *databaseManager) ReadBodyRLP(hash common.Hash, number uint64) rlp.Raw
 
 	// not found in cache, find body in database
 	db := dbm.getDatabase(BodyDB)
-	data, _ := db.Get(blockBodyKey(number, hash))
+	data, _ := db.Get(BlockBodyKey(number, hash))
 
 	// Write to cache at the end of successful read.
 	dbm.cm.writeBodyRLPCache(hash, data)
@@ -1415,7 +1448,7 @@ func (dbm *databaseManager) ReadBodyRLPByHash(hash common.Hash) rlp.RawValue {
 	}
 
 	db := dbm.getDatabase(BodyDB)
-	data, _ := db.Get(blockBodyKey(*number, hash))
+	data, _ := db.Get(BlockBodyKey(*number, hash))
 
 	// Fallback: if body is not found from `body` directory, detour to compression directory
 	if len(data) == 0 {
@@ -1456,7 +1489,7 @@ func (dbm *databaseManager) PutBodyToBatch(batch Batch, hash common.Hash, number
 		logger.Crit("Failed to RLP encode body", "err", err)
 	}
 
-	if err := batch.Put(blockBodyKey(number, hash), data); err != nil {
+	if err := batch.Put(BlockBodyKey(number, hash), data); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
 	}
 }
@@ -1466,7 +1499,7 @@ func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rl
 	dbm.cm.writeBodyRLPCache(hash, rlp)
 
 	db := dbm.getDatabase(BodyDB)
-	if err := db.Put(blockBodyKey(number, hash), rlp); err != nil {
+	if err := db.Put(BlockBodyKey(number, hash), rlp); err != nil {
 		logger.Crit("Failed to store block body", "err", err)
 	}
 }
@@ -1474,7 +1507,7 @@ func (dbm *databaseManager) WriteBodyRLP(hash common.Hash, number uint64, rlp rl
 // DeleteBody removes all block body data associated with a hash.
 func (dbm *databaseManager) DeleteBody(hash common.Hash, number uint64) {
 	db := dbm.getDatabase(BodyDB)
-	if err := db.Delete(blockBodyKey(number, hash)); err != nil {
+	if err := db.Delete(BlockBodyKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block body", "err", err)
 	}
 	dbm.cm.deleteBodyCache(hash)
@@ -1531,7 +1564,7 @@ func (dbm *databaseManager) DeleteTd(hash common.Hash, number uint64) {
 // HashReceipts verifies the existence of a block receipts
 func (dbm *databaseManager) HasReceipts(hash common.Hash, number uint64) bool {
 	db := dbm.getDatabase(BodyDB)
-	if has, err := db.Has(blockReceiptsKey(number, hash)); !has || err != nil {
+	if has, err := db.Has(BlockReceiptsKey(number, hash)); !has || err != nil {
 		return false
 	}
 	return true
@@ -1556,7 +1589,7 @@ func (dbm *databaseManager) ReadReceipt(txHash common.Hash) (*types.Receipt, com
 func (dbm *databaseManager) ReadReceipts(blockHash common.Hash, number uint64) types.Receipts {
 	db := dbm.getDatabase(ReceiptsDB)
 	// Retrieve the flattened receipt slice
-	data, _ := db.Get(blockReceiptsKey(number, blockHash))
+	data, _ := db.Get(BlockReceiptsKey(number, blockHash))
 	if len(data) == 0 {
 		if dbm.compressModule == nil {
 			return nil
@@ -1623,7 +1656,7 @@ func (dbm *databaseManager) putReceiptsToPutter(putter KeyValueWriter, hash comm
 		logger.Crit("Failed to encode block receipts", "err", err)
 	}
 	// Store the flattened receipt slice
-	if err := putter.Put(blockReceiptsKey(number, hash), bytes); err != nil {
+	if err := putter.Put(BlockReceiptsKey(number, hash), bytes); err != nil {
 		logger.Crit("Failed to store block receipts", "err", err)
 	}
 }
@@ -1633,7 +1666,7 @@ func (dbm *databaseManager) DeleteReceipts(hash common.Hash, number uint64) {
 	receipts := dbm.ReadReceipts(hash, number)
 
 	db := dbm.getDatabase(ReceiptsDB)
-	if err := db.Delete(blockReceiptsKey(number, hash)); err != nil {
+	if err := db.Delete(BlockReceiptsKey(number, hash)); err != nil {
 		logger.Crit("Failed to delete block receipts", "err", err)
 	}
 

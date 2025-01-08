@@ -18,6 +18,7 @@ package compress
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -85,6 +86,9 @@ type CompressModule struct {
 	lastHeaderRewindNum   uint64
 	lastBodyRewindNum     uint64
 	lastReceiptsRewindNum uint64
+
+	isCompacting int32
+	stopped      int32
 }
 
 func NewCompression() *CompressModule {
@@ -204,6 +208,10 @@ func (c *CompressModule) Start() error {
 		"nextHeaderCompressBlk", nextHeaderCompressionBlkNum,
 		"nextBodyCompressBlk", nextBodyCompressionBlkNum,
 		"nextReceiptCompressBlk", nextReceiptsCompressionBlkNum)
+	if atomic.LoadInt32(&c.stopped) == 1 {
+		go c.compact(true)
+		atomic.StoreInt32(&c.stopped, 0)
+	}
 	c.Compress()
 	return nil
 }
@@ -215,5 +223,6 @@ func (c *CompressModule) Stop() {
 	c.stopCompress()
 	clearCache()
 	c.clearRewindHistory()
+	atomic.StoreInt32(&c.stopped, 1)
 	logger.Info("[Compression] Compression Stopped")
 }

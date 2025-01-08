@@ -146,14 +146,14 @@ type TxLookupEntry struct {
 	Index      uint64
 }
 
-// headerKey = headerPrefix + num (uint64 big endian) + hash
-func headerKey(number uint64, hash common.Hash) []byte {
+// HeaderKey = headerPrefix + num (uint64 big endian) + hash
+func HeaderKey(number uint64, hash common.Hash) []byte {
 	return append(append(headerPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 
 // headerTDKey = headerPrefix + num (uint64 big endian) + hash + headerTDSuffix
 func headerTDKey(number uint64, hash common.Hash) []byte {
-	return append(headerKey(number, hash), headerTDSuffix...)
+	return append(HeaderKey(number, hash), headerTDSuffix...)
 }
 
 // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
@@ -166,13 +166,13 @@ func headerNumberKey(hash common.Hash) []byte {
 	return append(headerNumberPrefix, hash.Bytes()...)
 }
 
-// blockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash
-func blockBodyKey(number uint64, hash common.Hash) []byte {
+// BlockBodyKey = blockBodyPrefix + num (uint64 big endian) + hash
+func BlockBodyKey(number uint64, hash common.Hash) []byte {
 	return append(append(blockBodyPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 
-// blockReceiptsKey = blockReceiptsPrefix + num (uint64 big endian) + hash
-func blockReceiptsKey(number uint64, hash common.Hash) []byte {
+// BlockReceiptsKey = blockReceiptsPrefix + num (uint64 big endian) + hash
+func BlockReceiptsKey(number uint64, hash common.Hash) []byte {
 	return append(append(blockReceiptsPrefix, common.Int64ToByteBigEndian(number)...), hash.Bytes()...)
 }
 

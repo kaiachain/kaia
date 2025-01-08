@@ -17,6 +17,7 @@
 package compress
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -24,7 +25,10 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-const SEC_TEN = time.Second * 10
+const (
+	SEC_TEN           = time.Second * 10
+	COMPACTION_PERIOD = 86400 * 14 // 2 weeks
+)
 
 func (c *CompressModule) stopCompress() {
 	for range allCompressTypes {
@@ -77,7 +81,10 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 	if c.ForceLogging {
 		log = logger.Info
 	}
-	totalChunks := 0
+	var (
+		totalChunks    = 0
+		compactBaseNum = c.Chain.CurrentBlock().NumberU64()
+	)
 	for {
 		select {
 		case <-c.terminateCompress:
@@ -132,6 +139,10 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			from = subsequentBlkNumber
+			if curBlkNum-compactBaseNum > COMPACTION_PERIOD {
+				go c.compact(false)
+				compactBaseNum = curBlkNum
+			}
 			time.Sleep(c.loopIdleTime) // unconditional 50ms idle
 		}
 	}
@@ -171,4 +182,44 @@ func (c *CompressModule) FindBodyFromChunkWithBlkHash(dbm database.DBManager, nu
 
 func (c *CompressModule) FindReceiptsFromChunkWithBlkHash(dbm database.DBManager, number uint64, hash common.Hash) (types.Receipts, error) {
 	return findReceiptsFromChunkWithBlkHash(dbm, number, hash)
+}
+
+func (c *CompressModule) compact(compactCompression bool) {
+	// if header, body, and receipts DB does not exist (i.e., unit test)
+	if c.Dbm.GetDBConfig().DBType == database.BadgerDB {
+		return
+	}
+	if atomic.LoadInt32(&c.isCompacting) != 0 {
+		return
+	}
+	atomic.StoreInt32(&c.isCompacting, 1)
+	defer atomic.StoreInt32(&c.isCompacting, 0)
+
+	var (
+		headerDB    = c.Dbm.GetHeaderDB()
+		bodyDB      = c.Dbm.GetBodyDB()
+		receiptsDB  = c.Dbm.GetReceiptsDB()
+		cHeaderDB   = c.Dbm.GetCompressHeaderDB()
+		cBodyDB     = c.Dbm.GetCompressBodyDB()
+		cReceiptsDB = c.Dbm.GetCompressReceiptsDB()
+		dbs         = []struct {
+			db        database.Database
+			str       string
+			doCompact bool
+		}{
+			{headerDB, "headerDB", true},
+			{bodyDB, "bodyDB", true},
+			{receiptsDB, "receiptsDB", true},
+			{cHeaderDB, "compressionHeaderDB", compactCompression},
+			{cBodyDB, "compressionBodyDB", compactCompression},
+			{cReceiptsDB, "compressionReceiptsDB", compactCompression},
+		}
+	)
+	for _, db := range dbs {
+		logger.Info("[Compression] start database compaction", "type", db.str)
+		if db.db != nil && db.doCompact {
+			err := db.db.Compact(nil, nil)
+			logger.Info("[Compression] end database compaction", "type", db.str, "err", err)
+		}
+	}
 }
