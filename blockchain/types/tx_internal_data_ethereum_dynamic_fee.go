@@ -288,7 +288,7 @@ func (t *TxInternalDataEthereumDynamicFee) RecoverPubkey(txhash common.Hash, hom
 	return []*ecdsa.PublicKey{pk}, nil
 }
 
-func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 

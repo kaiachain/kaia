@@ -452,7 +452,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 		authorizationList := types.AuthorizationList{*auth}
 
 		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
-			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), nil, authorizationList)
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), uint64(0), nil, authorizationList)
 		tx.ChainId().Set(bcdata.bc.Config().ChainID)
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)

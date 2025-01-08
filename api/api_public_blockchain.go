@@ -332,7 +332,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	// this makes sure resources are cleaned up.
 	defer cancel()
 
-	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, dataTokens, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -344,7 +344,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	msg, err := args.ToMessage(globalGasCap.Uint64(), baseFee, intrinsicGas)
+	msg, err := args.ToMessage(globalGasCap.Uint64(), baseFee, intrinsicGas, dataTokens)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -694,7 +694,7 @@ func newRPCTransactionFromBlockHash(b *types.Block, hash common.Hash, config *pa
 	return nil
 }
 
-func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64) (*types.Transaction, error) {
+func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsicGas uint64, dataTokens uint64) (*types.Transaction, error) {
 	if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
 		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	} else if args.MaxFeePerGas != nil && args.MaxPriorityFeePerGas != nil {
@@ -742,5 +742,5 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, dataTokens, accessList, nil), nil
 }

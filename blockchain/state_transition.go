@@ -25,6 +25,7 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -83,7 +84,7 @@ type Message interface {
 
 	// ValidatedIntrinsicGas returns the intrinsic gas of the transaction.
 	// The returned intrinsic gas should be derived by calling AsMessageAccountKeyPicker().
-	ValidatedIntrinsicGas() uint64
+	ValidatedIntrinsicGas() *types.ValidatedIntrinsicGas
 
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
@@ -111,7 +112,7 @@ type Message interface {
 
 	// IntrinsicGas returns `intrinsic gas` based on the tx type.
 	// This value is used to differentiate tx fee based on the tx type.
-	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
+	IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error)
 
 	// Type returns the transaction type of the message.
 	Type() types.TxType
@@ -345,18 +346,26 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	amount := msg.ValidatedIntrinsicGas()
-	if st.gas < amount {
+	validatedGas := msg.ValidatedIntrinsicGas()
+	if st.gas < validatedGas.Gas {
 		return nil, ErrIntrinsicGas
 	}
-	st.gas -= amount
+	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+	if rules.IsPrague {
+		floorGas, err := FloorDataGas(validatedGas.Tokens)
+		if err != nil {
+			return nil, err
+		}
+		if st.gas < floorGas {
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrDataFloorGas, st.gas, floorGas)
+		}
+	}
+	st.gas -= validatedGas.Gas
 
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
 		return nil, vm.ErrInsufficientBalance
 	}
-
-	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 
 	// Verify authorization list is not empty.
 	if msg.AuthorizationList() != nil && len(msg.AuthorizationList()) == 0 {
@@ -406,6 +415,15 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// block proposer's total execution time of txs for a candidate block reached the predefined limit.
 	if vmerr == vm.ErrTotalTimeLimitReached {
 		return nil, vm.ErrTotalTimeLimitReached
+	}
+
+	if rules.IsPrague {
+		// After EIP-7623: Data-heavy transactions pay the floor gas.
+		// Overflow error has already been checked and can be ignored here.
+		floorGas, _ := FloorDataGas(validatedGas.Tokens)
+		if st.gasUsed() < floorGas {
+			st.gas = st.initialGas - floorGas
+		}
 	}
 
 	if rules.IsKore {
@@ -581,4 +599,14 @@ func (st *StateTransition) processAuthorizationList(authList types.Authorization
 			st.state.AddAddressToAccessList(auth.Address)
 		}
 	}
+}
+
+// FloorDataGas calculates the minimum gas required for a transaction
+// based on its data tokens (EIP-7623).
+func FloorDataGas(tokens uint64) (uint64, error) {
+	// Check for overflow
+	if (math.MaxUint64-params.TxGas)/params.CostFloorPerToken7623 < tokens {
+		return 0, types.ErrGasUintOverflow
+	}
+	return params.TxGas + tokens*params.CostFloorPerToken7623, nil
 }

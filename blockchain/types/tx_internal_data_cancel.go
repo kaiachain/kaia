@@ -191,8 +191,8 @@ func (t *TxInternalDataCancel) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataCancel) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return params.TxGasCancel, nil
+func (t *TxInternalDataCancel) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+	return params.TxGasCancel, 0, nil
 }
 
 func (t *TxInternalDataCancel) SerializeForSignToBytes() []byte {

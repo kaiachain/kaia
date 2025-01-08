@@ -364,10 +364,10 @@ func (t *TxInternalDataAccountCreation) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	gas := params.TxGasAccountCreation + gasKey
@@ -375,7 +375,7 @@ func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) 
 		gas += params.TxGasHumanReadable
 	}
 
-	return gas, nil
+	return gas, 0, nil
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSignToBytes() []byte {

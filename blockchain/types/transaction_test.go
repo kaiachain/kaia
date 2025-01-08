@@ -627,27 +627,28 @@ func TestIntrinsicGas(t *testing.T) {
 		data, err = hex.DecodeString(tc.inputString) // decode input string to hex data
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: false})
+		// TODO-Kaia: Add test for EIP-7623
+		gas, _, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas1, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true})
+		gas, _, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true})
 		assert.Equal(t, tc.expectGas2, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+		gas, _, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 		assert.Equal(t, tc.expectGas3, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: false})
+		gas, _, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas4, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true})
+		gas, _, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true})
 		assert.Equal(t, tc.expectGas5, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+		gas, _, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 		assert.Equal(t, tc.expectGas6, gas)
 		assert.Equal(t, nil, err)
 	}
