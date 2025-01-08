@@ -82,8 +82,8 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 		log = logger.Info
 	}
 	var (
-		totalChunks    = 0
-		compactBaseNum = c.Chain.CurrentBlock().NumberU64()
+		totalChunks           = 0
+		baseCompressionBlkNum = readSubsequentCompressionBlkNumber(c.Dbm, compressTyp)
 	)
 	for {
 		select {
@@ -139,9 +139,10 @@ func (c *CompressModule) compress(compressTyp CompressionType, compressFn Compre
 				break
 			}
 			from = subsequentBlkNumber
-			if curBlkNum-compactBaseNum > COMPACTION_PERIOD {
+			if subsequentBlkNumber-baseCompressionBlkNum > COMPACTION_PERIOD {
+				// Compaction executed if distance of compression block numer is larger than amount of 2 weeks of blocks
 				go c.compact(false)
-				compactBaseNum = curBlkNum
+				baseCompressionBlkNum = subsequentBlkNumber
 			}
 			time.Sleep(c.loopIdleTime) // unconditional 50ms idle
 		}
