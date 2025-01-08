@@ -49,7 +49,7 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 	gasPrice := big.NewInt(0) // execute call regardless of the balance of the sender
 	gasLimit := uint64(1e8)   // enough gas limit to execute multicall contract functions
 	intrinsicGas := uint64(0) // read operation doesn't require intrinsicGas
-	dataTokens := uint64(0)   // read operation has no calldata
+	dataTokens := uint64(0)   // read operation doesn't require intrinsicGas
 
 	// call.From: zero address will be assigned if nothing is specified
 	// call.To: the target contract address will be assigned by `BoundContract`
