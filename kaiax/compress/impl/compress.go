@@ -217,8 +217,8 @@ func (c *CompressModule) compact(compactCompression bool) {
 		}
 	)
 	for _, db := range dbs {
-		logger.Info("[Compression] start database compaction", "type", db.str)
 		if db.db != nil && db.doCompact {
+			logger.Info("[Compression] start database compaction", "type", db.str)
 			err := db.db.Compact(nil, nil)
 			logger.Info("[Compression] end database compaction", "type", db.str, "err", err)
 		}
