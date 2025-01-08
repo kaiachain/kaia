@@ -350,7 +350,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if st.gas < validatedGas.Gas {
 		return nil, ErrIntrinsicGas
 	}
-	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsPrague {
+	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+	if rules.IsPrague {
 		floorGas, err := FloorDataGas(validatedGas.Tokens)
 		if err != nil {
 			return nil, err
@@ -365,8 +366,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
 		return nil, vm.ErrInsufficientBalance
 	}
-
-	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 
 	// Verify authorization list is not empty.
 	if msg.AuthorizationList() != nil && len(msg.AuthorizationList()) == 0 {
