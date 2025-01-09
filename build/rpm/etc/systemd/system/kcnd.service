@@ -1,0 +1,10 @@
+[Unit]
+Description= kcnd Service
+
+[Service]
+Type=forking
+ExecStart=/etc/init.d/kcnd start
+ExecStop=/etc/init.d/kcnd stop
+
+[Install]
+WantedBy=multi-user.target
