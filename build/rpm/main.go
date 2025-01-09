@@ -222,7 +222,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/var/log/{{ .DaemonName }}
-mkdir -p $RPM_BUILD_ROOT/etc/system/systemd
+mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
 
 cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
 %if %is_daemon
@@ -235,6 +235,7 @@ cp build/rpm/etc/systemd/system/{{ .DaemonName}}.service $RPM_BUILD_ROOT/etc/sys
 %attr(755, -, -) /usr/bin/{{ .ProgramName }}
 %if %is_daemon
 %config(noreplace) %attr(644, -, -) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+%config(noreplace) %attr(644, -, -) /etc/systemd/system/{{ .DaemonName}}.service
 %attr(754, -, -) /etc/init.d/{{ .DaemonName }}
 %endif
 %exclude /usr/local/var/lib/rpm/*
