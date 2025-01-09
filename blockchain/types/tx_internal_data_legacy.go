@@ -235,7 +235,7 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 	return []*ecdsa.PublicKey{pk}, nil
 }
 
-func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	return IntrinsicGas(t.Payload, nil, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 

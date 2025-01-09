@@ -257,8 +257,8 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return params.TxGasValueTransfer + params.TxGasFeeDelegated, nil
+func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+	return params.TxGasValueTransfer + params.TxGasFeeDelegated, 0, nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSignToBytes() []byte {

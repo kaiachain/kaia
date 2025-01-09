@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
@@ -1303,4 +1304,111 @@ func (c *bls12381MapG2) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 
 	// Encode the G2 point to 256 bytes
 	return encodePointG2(&r), nil
+}
+
+// consoleLog implements solidity console.log for local networks.
+type consoleLog struct{}
+
+func (c *consoleLog) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return 0, 0
+}
+
+func (c *consoleLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	decoded, _ := c.toLogString(input)
+	if decoded != "" {
+		logger.Debug(decoded)
+	}
+	return nil, nil
+}
+
+// Hardhat console.log accepts format string, however we don't support it.
+// Instead, we just join all the parameters with a space.
+func (c *consoleLog) toLogString(input []byte) (string, error) {
+	if len(input) < 4 {
+		return "", errors.New("input too short")
+	}
+	selector := binary.BigEndian.Uint32(input[:4])
+	params := input[4:]
+
+	types, ok := common.ConsoleLogSignatures[selector]
+	if !ok {
+		return "", errors.New("unknown selector")
+	}
+	decoded, err := c.decode(params, types)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Join(decoded, " "), nil
+}
+
+var registerSize = 32
+
+// decode decodes the input into a list of string according to the provided types
+func (c *consoleLog) decode(params []byte, types []common.ConsoleLogType) ([]string, error) {
+	var res []string
+	for i, t := range types {
+		pos := i * registerSize
+		switch t {
+		case common.Uint256Ty:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, strconv.FormatUint(big.NewInt(0).SetBytes(params[pos:pos+registerSize]).Uint64(), 10))
+		case common.Int256Ty:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, strconv.FormatInt(big.NewInt(0).SetBytes(params[pos:pos+registerSize]).Int64(), 10))
+		case common.BoolTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			if params[pos+registerSize-1] != 0 {
+				res = append(res, "true")
+			} else {
+				res = append(res, "false")
+			}
+		case common.StringTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			start := int(big.NewInt(0).SetBytes(params[pos : pos+registerSize]).Int64())
+			if len(params) < start+registerSize {
+				return nil, errors.New("input too short")
+			}
+			size := int(big.NewInt(0).SetBytes(params[start : start+registerSize]).Int64())
+			if len(params) < start+size+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, string(params[start+registerSize:start+size+registerSize]))
+		case common.AddressTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.BytesToAddress(params[pos+12:pos+registerSize]).Hex())
+		case common.BytesTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			start := int(big.NewInt(0).SetBytes(params[pos : pos+registerSize]).Int64())
+			if len(params) < start+registerSize {
+				return nil, errors.New("input too short")
+			}
+			size := int(big.NewInt(0).SetBytes(params[start : start+registerSize]).Int64())
+			if len(params) < start+size+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.Bytes2Hex(params[start+registerSize:start+size+registerSize]))
+		case common.Bytes1Ty, common.Bytes2Ty, common.Bytes3Ty, common.Bytes4Ty, common.Bytes5Ty, common.Bytes6Ty, common.Bytes7Ty, common.Bytes8Ty, common.Bytes9Ty, common.Bytes10Ty, common.Bytes11Ty, common.Bytes12Ty, common.Bytes13Ty, common.Bytes14Ty, common.Bytes15Ty, common.Bytes16Ty, common.Bytes17Ty, common.Bytes18Ty, common.Bytes19Ty, common.Bytes20Ty, common.Bytes21Ty, common.Bytes22Ty, common.Bytes23Ty, common.Bytes24Ty, common.Bytes25Ty, common.Bytes26Ty, common.Bytes27Ty, common.Bytes28Ty, common.Bytes29Ty, common.Bytes30Ty, common.Bytes31Ty, common.Bytes32Ty:
+			size, _ := strconv.Atoi(string(t[5:]))
+			if len(params) < pos+size {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.Bytes2Hex(params[pos:pos+size]))
+		default:
+			return nil, errors.New("unknown type")
+		}
+	}
+	return res, nil
 }

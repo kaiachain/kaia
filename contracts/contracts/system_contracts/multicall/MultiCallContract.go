@@ -45,8 +45,8 @@ var IAddressBookABI = IAddressBookMetaData.ABI
 // IAddressBookBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IAddressBookBinRuntime = ``
 
-// IAddressBookFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IAddressBookMetaData.Sigs instead.
+// IAddressBookFuncSigs maps the 4-byte function signature to its string representation.
 var IAddressBookFuncSigs = IAddressBookMetaData.Sigs
 
 // IAddressBook is an auto generated Go binding around a Kaia contract.
@@ -197,8 +197,7 @@ func (_IAddressBook *IAddressBookTransactorRaw) Transact(opts *bind.TransactOpts
 func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddress")
 
@@ -206,10 +205,15 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 		TypeList    []uint8
 		AddressList []common.Address
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.TypeList = *abi.ConvertType(out[0], new([]uint8)).(*[]uint8)
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
+
 	return *outstruct, err
+
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -218,8 +222,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -229,8 +232,7 @@ func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -240,6 +242,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isActivated")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -247,6 +250,7 @@ func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -278,8 +282,8 @@ var ICLRegistryABI = ICLRegistryMetaData.ABI
 // ICLRegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ICLRegistryBinRuntime = ``
 
-// ICLRegistryFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use ICLRegistryMetaData.Sigs instead.
+// ICLRegistryFuncSigs maps the 4-byte function signature to its string representation.
 var ICLRegistryFuncSigs = ICLRegistryMetaData.Sigs
 
 // ICLRegistry is an auto generated Go binding around a Kaia contract.
@@ -430,6 +434,7 @@ func (_ICLRegistry *ICLRegistryTransactorRaw) Transact(opts *bind.TransactOpts, 
 func (_ICLRegistry *ICLRegistryCaller) GetAllCLs(opts *bind.CallOpts) ([]common.Address, []*big.Int, []common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _ICLRegistry.contract.Call(opts, &out, "getAllCLs")
+
 	if err != nil {
 		return *new([]common.Address), *new([]*big.Int), *new([]common.Address), *new([]common.Address), err
 	}
@@ -440,6 +445,7 @@ func (_ICLRegistry *ICLRegistryCaller) GetAllCLs(opts *bind.CallOpts) ([]common.
 	out3 := *abi.ConvertType(out[3], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, out2, out3, err
+
 }
 
 // GetAllCLs is a free data retrieval call binding the contract method 0x90599c07.
@@ -473,8 +479,8 @@ var ICnStakingABI = ICnStakingMetaData.ABI
 // ICnStakingBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const ICnStakingBinRuntime = ``
 
-// ICnStakingFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use ICnStakingMetaData.Sigs instead.
+// ICnStakingFuncSigs maps the 4-byte function signature to its string representation.
 var ICnStakingFuncSigs = ICnStakingMetaData.Sigs
 
 // ICnStaking is an auto generated Go binding around a Kaia contract.
@@ -625,6 +631,7 @@ func (_ICnStaking *ICnStakingTransactorRaw) Transact(opts *bind.TransactOpts, me
 func (_ICnStaking *ICnStakingCaller) VERSION(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ICnStaking.contract.Call(opts, &out, "VERSION")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -632,6 +639,7 @@ func (_ICnStaking *ICnStakingCaller) VERSION(opts *bind.CallOpts) (*big.Int, err
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // VERSION is a free data retrieval call binding the contract method 0xffa1ad74.
@@ -654,6 +662,7 @@ func (_ICnStaking *ICnStakingCallerSession) VERSION() (*big.Int, error) {
 func (_ICnStaking *ICnStakingCaller) Staking(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ICnStaking.contract.Call(opts, &out, "staking")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -661,6 +670,7 @@ func (_ICnStaking *ICnStakingCaller) Staking(opts *bind.CallOpts) (*big.Int, err
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // Staking is a free data retrieval call binding the contract method 0x4cf088d9.
@@ -683,6 +693,7 @@ func (_ICnStaking *ICnStakingCallerSession) Staking() (*big.Int, error) {
 func (_ICnStaking *ICnStakingCaller) Unstaking(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ICnStaking.contract.Call(opts, &out, "unstaking")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -690,6 +701,7 @@ func (_ICnStaking *ICnStakingCaller) Unstaking(opts *bind.CallOpts) (*big.Int, e
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // Unstaking is a free data retrieval call binding the contract method 0x630b1146.
@@ -721,8 +733,8 @@ var IERC20ABI = IERC20MetaData.ABI
 // IERC20BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC20BinRuntime = ``
 
-// IERC20FuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IERC20MetaData.Sigs instead.
+// IERC20FuncSigs maps the 4-byte function signature to its string representation.
 var IERC20FuncSigs = IERC20MetaData.Sigs
 
 // IERC20 is an auto generated Go binding around a Kaia contract.
@@ -873,6 +885,7 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "balanceOf", account)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -880,6 +893,7 @@ func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, account common.Addre
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -911,8 +925,8 @@ var IRegistryABI = IRegistryMetaData.ABI
 // IRegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IRegistryBinRuntime = ``
 
-// IRegistryFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IRegistryMetaData.Sigs instead.
+// IRegistryFuncSigs maps the 4-byte function signature to its string representation.
 var IRegistryFuncSigs = IRegistryMetaData.Sigs
 
 // IRegistry is an auto generated Go binding around a Kaia contract.
@@ -1063,6 +1077,7 @@ func (_IRegistry *IRegistryTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_IRegistry *IRegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "getActiveAddr", name)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1070,6 +1085,7 @@ func (_IRegistry *IRegistryCaller) GetActiveAddr(opts *bind.CallOpts, name strin
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
@@ -1103,8 +1119,8 @@ var MultiCallContractABI = MultiCallContractMetaData.ABI
 // MultiCallContractBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const MultiCallContractBinRuntime = `608060405234801561001057600080fd5b50600436106100365760003560e01c80636082579d1461003b578063adde19c61461005c575b600080fd5b610043610073565b604051610053949392919061052b565b60405180910390f35b610064610338565b60405161005393929190610583565b60405163e2693e3f60e01b815260206004820152600a602482015269434c526567697374727960b01b60448201526060908190819081906000906104019063e2693e3f90606401602060405180830381865afa1580156100d7573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906100fb919061060e565b60405163e2693e3f60e01b815260206004820152600b60248201526a577261707065644b61696160a81b60448201529091506000906104019063e2693e3f90606401602060405180830381865afa15801561015a573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061017e919061060e565b90506001600160a01b038216610195575050610332565b816001600160a01b03166390599c076040518163ffffffff1660e01b8152600401600060405180830381865afa1580156101d3573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f191682016040526101fb919081019061070d565b8151939950909750955081905067ffffffffffffffff81111561022057610220610630565b604051908082528060200260200182016040528015610249578160200160208202803683370190505b5093506001600160a01b0382161561032e578160005b8281101561032b57816001600160a01b03166370a082318983815181106102885761028861080f565b60200260200101516040518263ffffffff1660e01b81526004016102bb91906001600160a01b0391909116815260200190565b602060405180830381865afa1580156102d8573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906102fc9190610825565b86828151811061030e5761030e61080f565b60209081029190910101528061032381610854565b91505061025f565b50505b5050505b90919293565b606080606060006104009050806001600160a01b031663715b208b6040518163ffffffff1660e01b8152600401600060405180830381865afa158015610382573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f191682016040526103aa919081019061086d565b80519195509350600511156103bf5750909192565b6000600284516103cf9190610939565b90506103dc600382610968565b156103e8575050909192565b6103f360038261097c565b67ffffffffffffffff81111561040b5761040b610630565b604051908082528060200260200182016040528015610434578160200160208202803683370190505b50925060005b818110156104af5761047685610451836001610990565b815181106104615761046161080f565b60200260200101516001600160a01b03163190565b8461048260038461097c565b815181106104925761049261080f565b60209081029190910101526104a8600382610990565b905061043a565b505050909192565b600081518084526020808501945080840160005b838110156104f05781516001600160a01b0316875295820195908201906001016104cb565b509495945050505050565b600081518084526020808501945080840160005b838110156104f05781518752958201959082019060010161050f565b60808152600061053e60808301876104b7565b828103602084015261055081876104b7565b9050828103604084015261056481866104b7565b9050828103606084015261057881856104fb565b979650505050505050565b606080825284519082018190526000906020906080840190828801845b828110156105bf57815160ff16845292840192908401906001016105a0565b505050838103828501526105d381876104b7565b91505082810360408401526105e881856104fb565b9695505050505050565b80516001600160a01b038116811461060957600080fd5b919050565b60006020828403121561062057600080fd5b610629826105f2565b9392505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561066f5761066f610630565b604052919050565b600067ffffffffffffffff82111561069157610691610630565b5060051b60200190565b600082601f8301126106ac57600080fd5b815160206106c16106bc83610677565b610646565b82815260059290921b840181019181810190868411156106e057600080fd5b8286015b84811015610702576106f5816105f2565b83529183019183016106e4565b509695505050505050565b6000806000806080858703121561072357600080fd5b845167ffffffffffffffff8082111561073b57600080fd5b6107478883890161069b565b955060209150818701518181111561075e57600080fd5b8701601f8101891361076f57600080fd5b805161077d6106bc82610677565b81815260059190911b8201840190848101908b83111561079c57600080fd5b928501925b828410156107ba578351825292850192908501906107a1565b60408b01519098509450505050808211156107d457600080fd5b6107e08883890161069b565b935060608701519150808211156107f657600080fd5b506108038782880161069b565b91505092959194509250565b634e487b7160e01b600052603260045260246000fd5b60006020828403121561083757600080fd5b5051919050565b634e487b7160e01b600052601160045260246000fd5b6000600182016108665761086661083e565b5060010190565b6000806040838503121561088057600080fd5b825167ffffffffffffffff8082111561089857600080fd5b818501915085601f8301126108ac57600080fd5b815160206108bc6106bc83610677565b82815260059290921b840181019181810190898411156108db57600080fd5b948201945b8386101561090957855160ff811681146108fa5760008081fd5b825294820194908201906108e0565b9188015191965090935050508082111561092257600080fd5b5061092f8582860161069b565b9150509250929050565b8181038181111561094c5761094c61083e565b92915050565b634e487b7160e01b600052601260045260246000fd5b60008261097757610977610952565b500690565b60008261098b5761098b610952565b500490565b8082018082111561094c5761094c61083e56fea2646970667358221220f2777d2f144f3b75748af5d8c1431536882b8844df9f7077c25c6a7720f1e49a64736f6c63430008130033`
 
-// MultiCallContractFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use MultiCallContractMetaData.Sigs instead.
+// MultiCallContractFuncSigs maps the 4-byte function signature to its string representation.
 var MultiCallContractFuncSigs = MultiCallContractMetaData.Sigs
 
 // MultiCallContractBin is the compiled bytecode used for deploying new contracts.
@@ -1278,8 +1294,7 @@ func (_MultiCallContract *MultiCallContractCaller) MultiCallDPStakingInfo(opts *
 	ClPools        []common.Address
 	ClStakings     []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _MultiCallContract.contract.Call(opts, &out, "multiCallDPStakingInfo")
 
@@ -1289,12 +1304,17 @@ func (_MultiCallContract *MultiCallContractCaller) MultiCallDPStakingInfo(opts *
 		ClStakings     []common.Address
 		StakingAmounts []*big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.NodeIds = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.ClPools = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	outstruct.ClStakings = *abi.ConvertType(out[2], new([]common.Address)).(*[]common.Address)
 	outstruct.StakingAmounts = *abi.ConvertType(out[3], new([]*big.Int)).(*[]*big.Int)
+
 	return *outstruct, err
+
 }
 
 // MultiCallDPStakingInfo is a free data retrieval call binding the contract method 0x6082579d.
@@ -1305,8 +1325,7 @@ func (_MultiCallContract *MultiCallContractSession) MultiCallDPStakingInfo() (st
 	ClPools        []common.Address
 	ClStakings     []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContract.Contract.MultiCallDPStakingInfo(&_MultiCallContract.CallOpts)
 }
 
@@ -1318,8 +1337,7 @@ func (_MultiCallContract *MultiCallContractCallerSession) MultiCallDPStakingInfo
 	ClPools        []common.Address
 	ClStakings     []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContract.Contract.MultiCallDPStakingInfo(&_MultiCallContract.CallOpts)
 }
 
@@ -1330,8 +1348,7 @@ func (_MultiCallContract *MultiCallContractCaller) MultiCallStakingInfo(opts *bi
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _MultiCallContract.contract.Call(opts, &out, "multiCallStakingInfo")
 
@@ -1340,11 +1357,16 @@ func (_MultiCallContract *MultiCallContractCaller) MultiCallStakingInfo(opts *bi
 		AddressList    []common.Address
 		StakingAmounts []*big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.TypeList = *abi.ConvertType(out[0], new([]uint8)).(*[]uint8)
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	outstruct.StakingAmounts = *abi.ConvertType(out[2], new([]*big.Int)).(*[]*big.Int)
+
 	return *outstruct, err
+
 }
 
 // MultiCallStakingInfo is a free data retrieval call binding the contract method 0xadde19c6.
@@ -1354,8 +1376,7 @@ func (_MultiCallContract *MultiCallContractSession) MultiCallStakingInfo() (stru
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContract.Contract.MultiCallStakingInfo(&_MultiCallContract.CallOpts)
 }
 
@@ -1366,7 +1387,6 @@ func (_MultiCallContract *MultiCallContractCallerSession) MultiCallStakingInfo()
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContract.Contract.MultiCallStakingInfo(&_MultiCallContract.CallOpts)
 }

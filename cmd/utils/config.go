@@ -698,6 +698,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
 		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
 	}
+	cfg.UseConsoleLog = ctx.Bool(UseConsoleLogFlag.Name)
+	if cfg.UseConsoleLog && !ctx.IsSet(NetworkIdFlag.Name) {
+		logger.Crit("Use of --use-console-log is only supported for private network, however --networkid is not set.")
+	}
 
 	if ctx.IsSet(SnapshotFlag.Name) {
 		cfg.SnapshotCacheSize = ctx.Int(SnapshotCacheSizeFlag.Name)

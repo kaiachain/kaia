@@ -86,6 +86,10 @@ var (
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
 
+	// ErrDataFloorGas is returned if the transaction is specified to use less gas
+	// than required for the data floor cost.
+	ErrDataFloorGas = errors.New("insufficient gas for data floor cost")
+
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
 	// maximum allowance of the current block.
 	ErrGasLimit = errors.New("exceeds block gas limit")

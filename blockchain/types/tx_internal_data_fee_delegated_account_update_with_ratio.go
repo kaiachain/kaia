@@ -376,13 +376,13 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) RecoverFeePayerPubkey
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio, nil
+	return params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio, 0, nil
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSignToBytes() []byte {
