@@ -1,0 +1,10 @@
+[Unit]
+Description= kbnd Service
+
+[Service]
+Type=forking
+ExecStart=/etc/init.d/kbnd start
+ExecStop=/etc/init.d/kbnd stop
+
+[Install]
+WantedBy=multi-user.target
