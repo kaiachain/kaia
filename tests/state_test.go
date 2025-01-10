@@ -93,11 +93,9 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
 	// not yet supported EIPs
-	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
 	// temporary skip failing frontier tests
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
-	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
 
 	// tests to skip
 	// unsupported EIPs
