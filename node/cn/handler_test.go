@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/mocks"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	workmocks "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,8 +64,6 @@ var (
 )
 
 var hash1 common.Hash
-
-var signer types.Signer
 
 func init() {
 	addrs = make([]common.Address, numVals)
@@ -122,39 +119,11 @@ func newBlock(blockNum int) *types.Block {
 	return block
 }
 
-func newBlockWithParentHash(blockNum int, parentHash common.Hash) *types.Block {
-	header := &types.Header{
-		Number:     big.NewInt(int64(blockNum)),
-		BlockScore: big.NewInt(int64(1)),
-		Extra:      addrs[0][:],
-		Governance: addrs[0][:],
-		Vote:       addrs[0][:],
-		ParentHash: parentHash,
-	}
-	header.Hash()
-	block := types.NewBlockWithHeader(header)
-	block = block.WithBody(types.Transactions{})
-	block.Hash()
-	block.Size()
-	block.BlockScore()
-	return block
-}
-
 func newReceipt(gasUsed int) *types.Receipt {
 	rct := types.NewReceipt(uint(gasUsed), common.Hash{}, uint64(gasUsed))
 	rct.Logs = []*types.Log{}
 	rct.Bloom = types.Bloom{}
 	return rct
-}
-
-func newStakingInfo(blockNumber uint64) *reward.StakingInfo {
-	return &reward.StakingInfo{
-		BlockNum:              blockNumber,
-		CouncilNodeAddrs:      []common.Address{{0x1}, {0x1}},
-		CouncilStakingAddrs:   []common.Address{{0x2}, {0x2}},
-		CouncilRewardAddrs:    []common.Address{{0x3}, {0x3}},
-		CouncilStakingAmounts: []uint64{2, 5, 6},
-	}
 }
 
 func TestNewProtocolManager(t *testing.T) {

@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"math/big"
-	"strings"
 	"testing"
 	"time"
 
@@ -41,24 +40,9 @@ import (
 )
 
 var (
-	testCommitteeSize = uint64(21)
-	testSigningData   = []byte("dummy data")
-	maxBlockNum       = int64(100)
+	testSigningData = []byte("dummy data")
+	maxBlockNum     = int64(100)
 )
-
-type keys []*ecdsa.PrivateKey
-
-func (slice keys) Len() int {
-	return len(slice)
-}
-
-func (slice keys) Less(i, j int) bool {
-	return strings.Compare(crypto.PubkeyToAddress(slice[i].PublicKey).String(), crypto.PubkeyToAddress(slice[j].PublicKey).String()) < 0
-}
-
-func (slice keys) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
 
 func getTestConfig() *params.ChainConfig {
 	config := params.TestChainConfig.Copy()

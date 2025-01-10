@@ -48,7 +48,6 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -1054,19 +1053,19 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			continue
 		}
 		number := header.Number.Uint64()
-		var result *reward.StakingInfo
+		var result *staking.P2PStakingInfo
 		if pm.chainconfig.IsKaiaForkEnabled(header.Number) {
 			st, err := pm.stakingModule.GetStakingInfo(number)
 			if st == nil || err != nil {
 				continue
 			}
-			result = reward.FromKaiaxWithGini(st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
+			result = staking.FromStakingInfoWithGini(st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		} else {
 			st := pm.stakingModule.GetStakingInfoFromDB(number)
 			if st == nil {
 				continue
 			}
-			result = reward.FromKaiaxWithGini(st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
+			result = staking.FromStakingInfoWithGini(st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		}
 
 		// If known, encode and queue for response packet
@@ -1088,7 +1087,7 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	// A batch of stakingInfos arrived to one of our previous requests
-	var stakingInfos []*reward.StakingInfo
+	var stakingInfos []*staking.P2PStakingInfo
 	if err := msg.Decode(&stakingInfos); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
