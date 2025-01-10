@@ -45,7 +45,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -106,19 +105,19 @@ type downloadTester struct {
 	stateDb database.DBManager // Database used by the tester for syncing from peers
 	peerDb  database.DBManager // Database of the peers containing all data
 
-	ownHashes      []common.Hash                       // Hash chain belonging to the tester
-	ownHeaders     map[common.Hash]*types.Header       // Headers belonging to the tester
-	ownBlocks      map[common.Hash]*types.Block        // Blocks belonging to the tester
-	ownReceipts    map[common.Hash]types.Receipts      // Receipts belonging to the tester
-	ownStakingInfo map[common.Hash]*reward.StakingInfo // Staking info belonging to the tester
-	ownChainTd     map[common.Hash]*big.Int            // Total difficulties of the blocks in the local chain
+	ownHashes      []common.Hash                           // Hash chain belonging to the tester
+	ownHeaders     map[common.Hash]*types.Header           // Headers belonging to the tester
+	ownBlocks      map[common.Hash]*types.Block            // Blocks belonging to the tester
+	ownReceipts    map[common.Hash]types.Receipts          // Receipts belonging to the tester
+	ownStakingInfo map[common.Hash]*staking.P2PStakingInfo // Staking info belonging to the tester
+	ownChainTd     map[common.Hash]*big.Int                // Total difficulties of the blocks in the local chain
 
-	peerHashes       map[string][]common.Hash                       // Hash chain belonging to different test peers
-	peerHeaders      map[string]map[common.Hash]*types.Header       // Headers belonging to different test peers
-	peerBlocks       map[string]map[common.Hash]*types.Block        // Blocks belonging to different test peers
-	peerReceipts     map[string]map[common.Hash]types.Receipts      // Receipts belonging to different test peers
-	peerStakingInfos map[string]map[common.Hash]*reward.StakingInfo // StakingInfo belonging to different test peers
-	peerChainTds     map[string]map[common.Hash]*big.Int            // Total difficulties of the blocks in the peer chains
+	peerHashes       map[string][]common.Hash                           // Hash chain belonging to different test peers
+	peerHeaders      map[string]map[common.Hash]*types.Header           // Headers belonging to different test peers
+	peerBlocks       map[string]map[common.Hash]*types.Block            // Blocks belonging to different test peers
+	peerReceipts     map[string]map[common.Hash]types.Receipts          // Receipts belonging to different test peers
+	peerStakingInfos map[string]map[common.Hash]*staking.P2PStakingInfo // StakingInfo belonging to different test peers
+	peerChainTds     map[string]map[common.Hash]*big.Int                // Total difficulties of the blocks in the peer chains
 
 	peerMissingStates map[string]map[common.Hash]bool // State entries that fast sync should not return
 
@@ -141,13 +140,13 @@ func newTester(t *testing.T) *downloadTester {
 		ownHeaders:        map[common.Hash]*types.Header{genesis.Hash(): genesis.Header()},
 		ownBlocks:         map[common.Hash]*types.Block{genesis.Hash(): genesis},
 		ownReceipts:       map[common.Hash]types.Receipts{genesis.Hash(): nil},
-		ownStakingInfo:    map[common.Hash]*reward.StakingInfo{},
+		ownStakingInfo:    map[common.Hash]*staking.P2PStakingInfo{},
 		ownChainTd:        map[common.Hash]*big.Int{genesis.Hash(): genesis.BlockScore()},
 		peerHashes:        make(map[string][]common.Hash),
 		peerHeaders:       make(map[string]map[common.Hash]*types.Header),
 		peerBlocks:        make(map[string]map[common.Hash]*types.Block),
 		peerReceipts:      make(map[string]map[common.Hash]types.Receipts),
-		peerStakingInfos:  make(map[string]map[common.Hash]*reward.StakingInfo),
+		peerStakingInfos:  make(map[string]map[common.Hash]*staking.P2PStakingInfo),
 		peerChainTds:      make(map[string]map[common.Hash]*big.Int),
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
@@ -168,10 +167,10 @@ func newTester(t *testing.T) *downloadTester {
 	return tester
 }
 
-func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.StakingInfo, []byte) {
+func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PStakingInfo, []byte) {
 	k, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(k.PublicKey)
-	si := &reward.StakingInfo{
+	si := &staking.P2PStakingInfo{
 		BlockNum: blockNumber,
 		KEFAddr:  addr, // assign KEF in order to put unique staking information
 	}
@@ -184,8 +183,8 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*reward.Staki
 // contains a transaction to allow testing correct block reassembly.
 // On every 4th block, staking information is updated to allow testing staking info
 // downloading as well.
-func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]*reward.StakingInfo) {
-	stakingUpdatedBlocks := make(map[uint64]*reward.StakingInfo)
+func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]*staking.P2PStakingInfo) {
+	stakingUpdatedBlocks := make(map[uint64]*staking.P2PStakingInfo)
 	// Generate the block chain
 	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
@@ -207,7 +206,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 		if blockNum%testStakingUpdateInterval == 0 {
 			si, _ := dl.makeStakingInfoData(blockNum)
 			stakingUpdatedBlocks[blockNum] = si
-			staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), blockNum, reward.ToKaiax(si))
+			staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), blockNum, staking.ToStakingInfo(si))
 		}
 	})
 	// Convert the block-chain into a hash-chain and header/block maps
@@ -223,11 +222,11 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 	receiptm := make(map[common.Hash]types.Receipts, n+1)
 	receiptm[parent.Hash()] = parentReceipts
 
-	stakingInfom := make(map[common.Hash]*reward.StakingInfo)
+	stakingInfom := make(map[common.Hash]*staking.P2PStakingInfo)
 	if parent.NumberU64()%testStakingUpdateInterval == 0 {
 		si, _ := dl.makeStakingInfoData(parent.NumberU64())
 		stakingInfom[parent.Hash()] = si
-		staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), parent.NumberU64(), reward.ToKaiax(si))
+		staking_impl.WriteStakingInfo(dl.peerDb.GetMiscDB(), parent.NumberU64(), staking.ToStakingInfo(si))
 	}
 
 	for i, b := range blocks {
@@ -244,7 +243,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 
 // makeChainFork creates two chains of length n, such that h1[:f] and
 // h2[:f] are different but have a common suffix of length n-f.
-func (dl *downloadTester) makeChainFork(n, f int, parent *types.Block, parentReceipts types.Receipts, balanced bool) ([]common.Hash, []common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]types.Receipts, map[common.Hash]*reward.StakingInfo, map[common.Hash]*reward.StakingInfo) {
+func (dl *downloadTester) makeChainFork(n, f int, parent *types.Block, parentReceipts types.Receipts, balanced bool) ([]common.Hash, []common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]types.Receipts, map[common.Hash]*staking.P2PStakingInfo, map[common.Hash]*staking.P2PStakingInfo) {
 	// Create the common suffix
 	hashes, headers, blocks, receipts, stakingInfos := dl.makeChain(n-f, 0, parent, parentReceipts, false)
 
@@ -478,7 +477,7 @@ func (dl *downloadTester) InsertReceiptChain(blocks types.Blocks, receipts []typ
 
 		si := staking_impl.ReadStakingInfo(dl.peerDb.GetMiscDB(), blocks[i].NumberU64())
 		if si != nil {
-			dl.ownStakingInfo[blocks[i].Hash()] = reward.FromKaiax(si)
+			dl.ownStakingInfo[blocks[i].Hash()] = staking.FromStakingInfo(si)
 		}
 	}
 	return len(blocks), nil
@@ -507,14 +506,14 @@ func (dl *downloadTester) Rollback(hashes []common.Hash) {
 }
 
 // newPeer registers a new block download source into the downloader.
-func (dl *downloadTester) newPeer(id string, version int, hashes []common.Hash, headers map[common.Hash]*types.Header, blocks map[common.Hash]*types.Block, receipts map[common.Hash]types.Receipts, stakingInfos map[common.Hash]*reward.StakingInfo) error {
+func (dl *downloadTester) newPeer(id string, version int, hashes []common.Hash, headers map[common.Hash]*types.Header, blocks map[common.Hash]*types.Block, receipts map[common.Hash]types.Receipts, stakingInfos map[common.Hash]*staking.P2PStakingInfo) error {
 	return dl.newSlowPeer(id, version, hashes, headers, blocks, receipts, stakingInfos, 0)
 }
 
 // newSlowPeer registers a new block download source into the downloader, with a
 // specific delay time on processing the network packets sent to it, simulating
 // potentially slow network IO.
-func (dl *downloadTester) newSlowPeer(id string, version int, hashes []common.Hash, headers map[common.Hash]*types.Header, blocks map[common.Hash]*types.Block, receipts map[common.Hash]types.Receipts, stakingInfos map[common.Hash]*reward.StakingInfo, delay time.Duration) error {
+func (dl *downloadTester) newSlowPeer(id string, version int, hashes []common.Hash, headers map[common.Hash]*types.Header, blocks map[common.Hash]*types.Block, receipts map[common.Hash]types.Receipts, stakingInfos map[common.Hash]*staking.P2PStakingInfo, delay time.Duration) error {
 	dl.lock.Lock()
 	defer dl.lock.Unlock()
 
@@ -527,7 +526,7 @@ func (dl *downloadTester) newSlowPeer(id string, version int, hashes []common.Ha
 		dl.peerHeaders[id] = make(map[common.Hash]*types.Header)
 		dl.peerBlocks[id] = make(map[common.Hash]*types.Block)
 		dl.peerReceipts[id] = make(map[common.Hash]types.Receipts)
-		dl.peerStakingInfos[id] = make(map[common.Hash]*reward.StakingInfo)
+		dl.peerStakingInfos[id] = make(map[common.Hash]*staking.P2PStakingInfo)
 		dl.peerChainTds[id] = make(map[common.Hash]*big.Int)
 		dl.peerMissingStates[id] = make(map[common.Hash]bool)
 
@@ -726,7 +725,7 @@ func (dlp *downloadTesterPeer) RequestStakingInfo(hashes []common.Hash) error {
 
 	stakingInfos := dlp.dl.peerStakingInfos[dlp.id]
 
-	results := []*reward.StakingInfo{}
+	results := []*staking.P2PStakingInfo{}
 
 	for _, hash := range hashes {
 		if stakingInfo, ok := stakingInfos[hash]; ok {
@@ -1951,7 +1950,7 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	time.Sleep(3 * time.Second)
 
 	for _, stakingInfo := range stakingInfos {
-		expected, _ := json.Marshal(reward.ToKaiax(stakingInfo))
+		expected, _ := json.Marshal(staking.ToStakingInfo(stakingInfo))
 		si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), stakingInfo.BlockNum)
 		if si == nil {
 			t.Errorf("failed to read stakingInfo")

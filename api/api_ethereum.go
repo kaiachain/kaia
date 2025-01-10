@@ -1413,11 +1413,11 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, dataTokens, err := types.IntrinsicGas(args.data(), args.GetAccessList(), nil, args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
-	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
+	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas, dataTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -1432,7 +1432,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if msg.Gas() < intrinsicGas {
 		return nil, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite, UseConsoleLog: b.IsConsoleLogEnabled()})
 	if err != nil {
 		return nil, err
 	}
@@ -1570,11 +1570,11 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	precompiles := vm.ActivePrecompiles(rules)
 
 	toMsg := func() (*types.Transaction, error) {
-		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, rules)
+		intrinsicGas, dataTokens, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, rules)
 		if err != nil {
 			return nil, err
 		}
-		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas)
+		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas, dataTokens)
 	}
 
 	if args.Gas == nil {

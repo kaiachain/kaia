@@ -201,6 +201,9 @@ type Config struct {
 	// Disable option for unsafe debug APIs
 	DisableUnsafeDebug         bool          `toml:",omitempty"`
 	StateRegenerationTimeLimit time.Duration `toml:",omitempty"`
+
+	// Use console.log in solidity for local network
+	UseConsoleLog bool
 }
 
 type configMarshaling struct {
@@ -212,5 +215,6 @@ func (c *Config) getVMConfig() vm.Config {
 		EnablePreimageRecording: c.EnablePreimageRecording,
 		EnableInternalTxTracing: c.EnableInternalTxTracing,
 		EnableOpDebug:           c.EnableOpDebug,
+		UseConsoleLog:           c.UseConsoleLog,
 	}
 }

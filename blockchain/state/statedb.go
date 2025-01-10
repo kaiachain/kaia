@@ -291,6 +291,14 @@ func (s *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
+func (s *StateDB) GetStorageRoot(addr common.Address) common.Hash {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.Root()
+	}
+	return common.Hash{}
+}
+
 func (s *StateDB) GetAccount(addr common.Address) account.Account {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {

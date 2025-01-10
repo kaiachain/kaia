@@ -64,10 +64,10 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
-	// State() retrieves statedb
+	// State retrieves statedb
 	State() (*state.StateDB, error)
 
-	// StateAt() retrieves statedb on a particular point in time
+	// StateAt retrieves statedb on a particular point in time
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
@@ -128,18 +128,10 @@ type Engine interface {
 	// Protocol returns the protocol for this consensus
 	Protocol() Protocol
 
-	// TODO-kaiax-valset: delete CreateSnapshot which is called after post insert block
-	//  e.g. insertChain, worker.wait, New()
-	// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time.
-	CreateSnapshot(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) error
-
-	// GetKaiaHeadersForSnapshotApply returns the headers need to be applied to calculate snapshot for the given block number.
-	GetKaiaHeadersForSnapshotApply(chain ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error)
-
 	// GetConsensusInfo returns consensus information regarding the given block number.
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 
-	InitSnapshot()
+	PurgeCache()
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -177,9 +169,6 @@ type Istanbul interface {
 
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
-
-	// UpdateParam updates the governance parameter
-	UpdateParam(num uint64) error
 
 	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule)
 

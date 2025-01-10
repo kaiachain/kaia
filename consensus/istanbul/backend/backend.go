@@ -36,7 +36,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
@@ -67,7 +66,6 @@ type BackendOpts struct {
 }
 
 func New(opts *BackendOpts) consensus.Istanbul {
-	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
@@ -79,7 +77,6 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		logger:            logger.NewWith(),
 		db:                opts.DB,
 		commitCh:          make(chan *types.Result, 1),
-		recents:           recents,
 		candidates:        make(map[common.Address]bool),
 		coreStarted:       false,
 		recentMessages:    recentMessages,
@@ -127,8 +124,6 @@ type backend struct {
 	candidates map[common.Address]bool
 	// Protects the signer fields
 	candidatesLock sync.RWMutex
-	// Snapshots for recent block to speed up reorgs
-	recents *lru.ARCCache // TODO-kaiax: Remove snapshot cache
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -383,32 +378,6 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
-// ParentValidators implements istanbul.Backend.GetParentValidators
-func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	if block, ok := proposal.(*types.Block); ok {
-		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
-	}
-
-	// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
-	return validator.NewValidatorSet(nil, nil,
-		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
-		sb.chain.Config().Istanbul.SubGroupSize,
-		sb.chain)
-}
-
-func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
-	snap, err := sb.snapshot(sb.chain, number, hash, nil, false)
-	if err != nil {
-		logger.Error("Snapshot not found.", "err", err)
-		// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
-		return validator.NewValidatorSet(nil, nil,
-			istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
-			sb.chain.Config().Istanbul.SubGroupSize,
-			sb.chain)
-	}
-	return snap.ValSet
-}
-
 func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	block := sb.currentBlock()
 
@@ -431,4 +400,70 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
+}
+
+func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
+	council, err := sb.valsetModule.GetCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+
+	demoted, err := sb.valsetModule.GetDemotedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+
+	return istanbul.NewBlockValSet(council, demoted), nil
+}
+
+func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
+	header := sb.chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, errUnknownBlock
+	}
+
+	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
+}
+
+func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
+	blockValSet, err := sb.GetValidatorSet(num)
+	if err != nil {
+		return nil, err
+	}
+
+	committee, err := sb.valsetModule.GetCommittee(num, round)
+	if err != nil {
+		return nil, err
+	}
+
+	proposer, err := sb.valsetModule.GetProposer(num, round)
+	if err != nil {
+		return nil, err
+	}
+
+	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
+	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
+}
+
+// GetProposer implements istanbul.Backend.GetProposer
+func (sb *backend) GetProposer(number uint64) common.Address {
+	if h := sb.chain.GetHeaderByNumber(number); h != nil {
+		a, _ := sb.Author(h)
+		return a
+	}
+	return common.Address{}
+}
+
+func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
+	sInfo, err := sb.stakingModule.GetStakingInfo(num)
+	if err != nil {
+		return common.Address{}
+	}
+
+	for idx, id := range sInfo.NodeIds {
+		if id == nodeId {
+			return sInfo.RewardAddrs[idx]
+		}
+	}
+	return common.Address{}
 }

@@ -137,7 +137,7 @@ func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker 
 
 		// TODO-Kaia: This gas fee calculation is correct only if the transaction is a value transfer transaction.
 		// Calculate the correct transaction fee by checking the corresponding receipt.
-		intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
+		intrinsicGas, _, err := tx.IntrinsicGas(currentBlockNumber)
 		if err != nil {
 			return err
 		}

@@ -100,7 +100,7 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 // Efficiently read addresses and balances from the AddressBook in one EVM call.
 // Works by temporarily injecting the MultiCallContract to a copied state.
 func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateDB) (*staking.StakingInfo, error) {
-	isPrague := s.ChainConfig.IsPragueForkEnabled(header.Number)
+	isForPrague := s.ChainConfig.IsPragueForkEnabled(new(big.Int).Add(header.Number, common.Big1))
 	num := header.Number.Uint64()
 
 	// Bail out if AddressBook is not installed.
@@ -123,11 +123,14 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		return nil, staking.ErrAddressBookCall(err)
 	}
 
-	// Get CL registry info if Prague fork is enabled
+	// Get CL registry info if staking info is for Prague block
 	var clRes clRegistryResult
-	if isPrague {
+	if isForPrague {
 		// If Registry is not installed, do not handle CL staking info.
-		if statedb.GetCode(system.RegistryAddr) == nil {
+		// In private network, Randao and Prague hardfork can be activated at the same block.
+		// It leads to staking info inconsistency between block processing and rpc query since the Registry hasn't been installed when finalizing the header.
+		// Note that Randao can't be activated after Prague according to fork ordering (Randao <= Kaia <= Prague).
+		if statedb.GetCode(system.RegistryAddr) == nil || s.ChainConfig.IsRandaoForkBlockParent(header.Number) {
 			logger.Trace("Registry not installed", "sourceNum", num)
 		} else {
 			// Note that if CLRegistry is not registered in Registry,

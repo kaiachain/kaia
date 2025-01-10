@@ -33,8 +33,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/node/cn/snap"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -131,7 +131,7 @@ type ProtocolManagerDownloader interface {
 	DeliverHeaders(id string, headers []*types.Header) error
 	DeliverNodeData(id string, data [][]byte) error
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
-	DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error
+	DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error
 	DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error
 
 	Terminate()

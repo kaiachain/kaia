@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
@@ -52,14 +51,8 @@ import (
 )
 
 const (
-	// CheckpointInterval = 1024 // Number of blocks after which to save the vote snapshot to the database
-	// inmemorySnapshots  = 128  // Number of recent vote snapshots to keep in memory
-	// inmemoryPeers      = 40
-	// inmemoryMessages   = 1024
-
-	inmemorySnapshots = 496 // Number of recent vote snapshots to keep in memory
-	inmemoryPeers     = 200
-	inmemoryMessages  = 4096
+	inmemoryPeers    = 200
+	inmemoryMessages = 4096
 
 	allowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
 )
@@ -329,6 +322,9 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 
 	// Retrieve the snapshot needed to verify this header and cache it
 	valSet, err := sb.GetValidatorSet(number)
+	if err != nil {
+		return err
+	}
 
 	// resolve the authorization key and check against signers
 	signer, err := ecrecover(header)
@@ -742,64 +738,6 @@ func (sb *backend) Stop() error {
 	return nil
 }
 
-// UpdateParam implements consensus.Istanbul.UpdateParam and it updates the governance parameters
-func (sb *backend) UpdateParam(number uint64) error {
-	return nil
-}
-
-// initSnapshot initializes and stores a new Snapshot.
-func (sb *backend) initSnapshot(chain consensus.ChainReader) (*Snapshot, error) {
-	genesis := chain.GetHeaderByNumber(0)
-	if err := sb.VerifyHeader(chain, genesis, false); err != nil {
-		return nil, err
-	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
-	if err != nil {
-		return nil, err
-	}
-
-	pset := sb.govModule.GetParamSet(0)
-	valSet := validator.NewValidatorSet(istanbulExtra.Validators, nil,
-		istanbul.ProposerPolicy(pset.ProposerPolicy),
-		pset.CommitteeSize, chain)
-	valSet.SetMixHash(genesis.MixHash)
-	snap := newSnapshot(sb.govModule, 0, genesis.Hash(), valSet, chain.Config())
-
-	if err := snap.store(sb.db); err != nil {
-		return nil, err
-	}
-	logger.Trace("Stored genesis voting snapshot to disk")
-	return snap, nil
-}
-
-// getPrevHeaderAndUpdateParents returns previous header to find stored Snapshot object and drops the last element of the parents parameter.
-func getPrevHeaderAndUpdateParents(chain consensus.ChainReader, number uint64, hash common.Hash, parents *[]*types.Header) *types.Header {
-	var header *types.Header
-	if len(*parents) > 0 {
-		// If we have explicit parents, pick from there (enforced)
-		header = (*parents)[len(*parents)-1]
-		if header.Hash() != hash || header.Number.Uint64() != number {
-			return nil
-		}
-		*parents = (*parents)[:len(*parents)-1]
-	} else {
-		// No explicit parents (or no more left), reach out to the database
-		header = chain.GetHeader(hash, number)
-		if header == nil {
-			return nil
-		}
-	}
-	return header
-}
-
-// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
-func (sb *backend) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	if _, err := sb.snapshot(chain, number, hash, parents, true); err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetConsensusInfo returns consensus information regarding the given block number.
 func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	blockNumber := block.NumberU64()
@@ -861,8 +799,7 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	return cInfo, nil
 }
 
-func (sb *backend) InitSnapshot() {
-	sb.recents.Purge()
+func (sb *backend) PurgeCache() {
 	sb.blsPubkeyProvider.ResetBlsCache()
 }
 

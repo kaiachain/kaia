@@ -365,6 +365,20 @@ func (mr *MockStateDBMockRecorder) GetState(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockStateDB)(nil).GetState), arg0, arg1)
 }
 
+// GetStorageRoot mocks base method.
+func (m *MockStateDB) GetStorageRoot(arg0 common.Address) common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStorageRoot", arg0)
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetStorageRoot indicates an expected call of GetStorageRoot.
+func (mr *MockStateDBMockRecorder) GetStorageRoot(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStorageRoot", reflect.TypeOf((*MockStateDB)(nil).GetStorageRoot), arg0)
+}
+
 // GetTransientState mocks base method.
 func (m *MockStateDB) GetTransientState(addr common.Address, key common.Hash) common.Hash {
 	m.ctrl.T.Helper()

@@ -2040,6 +2040,13 @@ var (
 		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT", "KAIA_OPCODE_COMPUTATION_COST_LIMIT"},
 		Category: "KAIA",
 	}
+	UseConsoleLogFlag = &cli.BoolFlag{
+		Name:     "use-console-log",
+		Usage:    "",
+		Value:    false,
+		EnvVars:  []string{"KLAYTN_USE_CONSOLE_LOG", "KAIA_USE_CONSOLE_LOG"},
+		Category: "KAIA",
+	}
 
 	// Gas price oracle settings
 	GpoBlocksFlag = &cli.IntFlag{

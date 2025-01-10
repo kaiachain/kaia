@@ -836,13 +836,23 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
-	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
+	intrGas, dataTokens, err := tx.IntrinsicGas(pool.currentBlockNumber)
 	intrGas += gasFrom + gasFeePayer
 	if err != nil {
 		return err
 	}
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
+	}
+	// Ensure the transaction can cover floor data gas.
+	if pool.rules.IsPrague {
+		floorGas, err := FloorDataGas(dataTokens)
+		if err != nil {
+			return err
+		}
+		if tx.Gas() < floorGas {
+			return fmt.Errorf("%w: gas %v, minimum needed %v", ErrDataFloorGas, tx.Gas(), floorGas)
+		}
 	}
 
 	// "tx.Validate()" conducts additional validation for each new txType.

@@ -588,6 +588,13 @@ func (s *stateObject) Nonce() uint64 {
 	return s.account.GetNonce()
 }
 
+func (s *stateObject) Root() common.Hash {
+	if acc := account.GetProgramAccount(s.account); acc != nil {
+		return acc.GetStorageRoot().Unextend()
+	}
+	return common.Hash{}
+}
+
 // Never called, but must be present to allow stateObject to be used
 // as a vm.Account interface that also satisfies the vm.ContractRef
 // interface. Interfaces are awesome.
