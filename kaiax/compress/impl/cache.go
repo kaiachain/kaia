@@ -30,7 +30,7 @@ func initCache(capSize uint64) {
 }
 
 func getFromCache(compressTyp CompressionType, from, to uint64) (any, bool) {
-	cacheKey := getCacheKey(HeaderCompressType, from, to)
+	cacheKey := getCacheKey(compressTyp, from, to)
 	switch compressTyp {
 	case HeaderCompressType:
 		if compressHeaderCache != nil {
@@ -49,7 +49,7 @@ func getFromCache(compressTyp CompressionType, from, to uint64) (any, bool) {
 }
 
 func addCache(compressTyp CompressionType, from, to uint64, compressed any) {
-	cacheKey := getCacheKey(HeaderCompressType, from, to)
+	cacheKey := getCacheKey(compressTyp, from, to)
 	switch compressTyp {
 	case HeaderCompressType:
 		if compressHeaderCache != nil {
