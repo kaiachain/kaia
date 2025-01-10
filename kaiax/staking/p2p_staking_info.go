@@ -16,32 +16,19 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 // Modified and improved for the Kaia development.
 
-package reward
+package staking
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"math"
-	"sort"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/rlp"
 )
 
-const (
-	AddrNotFoundInCouncilNodes = -1
-	maxStakingLimit            = uint64(100000000000)
-	DefaultGiniCoefficient     = -1.0
-)
-
-var (
-	ErrAddrNotInStakingInfo = errors.New("Address is not in stakingInfo")
-)
-
-// StakingInfo contains staking information.
-type StakingInfo struct {
+// P2PStakingInfo contains staking information which is a wrapped version of StakingInfo.
+type P2PStakingInfo struct {
 	BlockNum uint64 `json:"blockNum"` // Block number where staking information of Council is fetched
 
 	// Information retrieved from AddressBook smart contract
@@ -52,15 +39,15 @@ type StakingInfo struct {
 	KEFAddr common.Address `json:"kefAddr"` // Address of KEF contract
 	KIFAddr common.Address `json:"kifAddr"` // Address of KIF contract
 
-	UseGini bool    `json:"useGini"`
-	Gini    float64 `json:"gini"` // gini coefficient
+	UseGini bool    `json:"useGini"` // configure whether Gini is used or not
+	Gini    float64 `json:"gini"`    // gini coefficient
 
 	// Derived from CouncilStakingAddrs
 	CouncilStakingAmounts []uint64 `json:"councilStakingAmounts"` // Staking amounts of Council
 }
 
-func FromKaiax(si *staking.StakingInfo) *StakingInfo {
-	return &StakingInfo{
+func FromStakingInfo(si *StakingInfo) *P2PStakingInfo {
+	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,
 		CouncilNodeAddrs:      si.NodeIds,
 		CouncilStakingAddrs:   si.StakingContracts,
@@ -71,8 +58,8 @@ func FromKaiax(si *staking.StakingInfo) *StakingInfo {
 	}
 }
 
-func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *StakingInfo {
-	return &StakingInfo{
+func FromStakingInfoWithGini(si *StakingInfo, useGini bool, minStake uint64) *P2PStakingInfo {
+	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,
 		CouncilNodeAddrs:      si.NodeIds,
 		CouncilStakingAddrs:   si.StakingContracts,
@@ -85,8 +72,8 @@ func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *
 	}
 }
 
-func ToKaiax(si *StakingInfo) *staking.StakingInfo {
-	return &staking.StakingInfo{
+func ToStakingInfo(si *P2PStakingInfo) *StakingInfo {
+	return &StakingInfo{
 		SourceBlockNum:   si.BlockNum,
 		NodeIds:          si.CouncilNodeAddrs,
 		StakingContracts: si.CouncilStakingAddrs,
@@ -97,9 +84,9 @@ func ToKaiax(si *StakingInfo) *staking.StakingInfo {
 	}
 }
 
-// MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
+// MarshalJSON supports json marshalling for both P2PStakingInfo and StakingInfo
 // TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC, KCF/KFF is not needed
-func (st StakingInfo) MarshalJSON() ([]byte, error) {
+func (st P2PStakingInfo) MarshalJSON() ([]byte, error) {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
@@ -138,8 +125,8 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&ext)
 }
 
-// UnmarshalJSON supports json unmarshalling for both oldStakingInfo and StakingInfo
-func (st *StakingInfo) UnmarshalJSON(input []byte) error {
+// UnmarshalJSON supports json unmarshalling for both P2PStakingInfo and StakingInfo
+func (st *P2PStakingInfo) UnmarshalJSON(input []byte) error {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
@@ -191,35 +178,7 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-// Refined staking information suitable for proposer selection.
-// Sometimes a node would register multiple NodeAddrs
-// in which each entry has different StakingAddr and same RewardAddr.
-// We treat those entries with common RewardAddr as one node.
-//
-// For example,
-//
-//	NodeAddrs      = [N1, N2, N3]
-//	StakingAddrs   = [S1, S2, S3]
-//	RewardAddrs    = [R1, R1, R3]
-//	StakingAmounts = [A1, A2, A3]
-//
-// can be consolidated into
-//
-//	CN1 = {[N1,N2], [S1,S2], R1, A1+A2}
-//	CN3 = {[N3],    [S3],    R3, A3}
-type consolidatedNode struct {
-	NodeAddrs     []common.Address
-	StakingAddrs  []common.Address
-	RewardAddr    common.Address // common reward address
-	StakingAmount uint64         // sum of staking amounts
-}
-
-type ConsolidatedStakingInfo struct {
-	nodes     []consolidatedNode
-	nodeIndex map[common.Address]int // nodeAddr -> index in []nodes
-}
-
-type stakingInfoRLP struct {
+type p2pStakingInfoRLP struct {
 	BlockNum              uint64
 	CouncilNodeAddrs      []common.Address
 	CouncilStakingAddrs   []common.Address
@@ -231,39 +190,7 @@ type stakingInfoRLP struct {
 	CouncilStakingAmounts []uint64
 }
 
-func newEmptyStakingInfo(blockNum uint64) *StakingInfo {
-	stakingInfo := &StakingInfo{
-		BlockNum:              blockNum,
-		CouncilNodeAddrs:      make([]common.Address, 0, 0),
-		CouncilStakingAddrs:   make([]common.Address, 0, 0),
-		CouncilRewardAddrs:    make([]common.Address, 0, 0),
-		KEFAddr:               common.Address{},
-		KIFAddr:               common.Address{},
-		CouncilStakingAmounts: make([]uint64, 0, 0),
-		Gini:                  DefaultGiniCoefficient,
-		UseGini:               false,
-	}
-	return stakingInfo
-}
-
-func (s *StakingInfo) GetIndexByNodeAddress(nodeAddress common.Address) (int, error) {
-	for i, addr := range s.CouncilNodeAddrs {
-		if addr == nodeAddress {
-			return i, nil
-		}
-	}
-	return AddrNotFoundInCouncilNodes, ErrAddrNotInStakingInfo
-}
-
-func (s *StakingInfo) GetStakingAmountByNodeId(nodeAddress common.Address) (uint64, error) {
-	i, err := s.GetIndexByNodeAddress(nodeAddress)
-	if err != nil {
-		return 0, err
-	}
-	return s.CouncilStakingAmounts[i], nil
-}
-
-func (s *StakingInfo) String() string {
+func (s *P2PStakingInfo) String() string {
 	j, err := json.Marshal(s)
 	if err != nil {
 		return err.Error()
@@ -271,13 +198,13 @@ func (s *StakingInfo) String() string {
 	return string(j)
 }
 
-func (s *StakingInfo) EncodeRLP(w io.Writer) error {
+func (s *P2PStakingInfo) EncodeRLP(w io.Writer) error {
 	// float64 is not rlp serializable, so it converts to bytes
-	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
+	return rlp.Encode(w, &p2pStakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
 }
 
-func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
-	var dec stakingInfoRLP
+func (s *P2PStakingInfo) DecodeRLP(st *rlp.Stream) error {
+	var dec p2pStakingInfoRLP
 	if err := st.Decode(&dec); err != nil {
 		return err
 	}
@@ -286,99 +213,4 @@ func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
 	s.KEFAddr, s.KIFAddr, s.UseGini, s.Gini = dec.KEFAddr, dec.KIFAddr, dec.UseGini, math.Float64frombits(dec.Gini)
 	s.CouncilStakingAmounts = dec.CouncilStakingAmounts
 	return nil
-}
-
-func (s *StakingInfo) GetConsolidatedStakingInfo() *ConsolidatedStakingInfo {
-	c := &ConsolidatedStakingInfo{
-		nodes:     make([]consolidatedNode, 0),
-		nodeIndex: make(map[common.Address]int),
-	}
-
-	rewardIndex := make(map[common.Address]int) // temporarily map rewardAddr -> index in []nodes
-
-	for j := 0; j < len(s.CouncilNodeAddrs); j++ {
-		var (
-			nodeAddr      = s.CouncilNodeAddrs[j]
-			stakingAddr   = s.CouncilStakingAddrs[j]
-			rewardAddr    = s.CouncilRewardAddrs[j]
-			stakingAmount = s.CouncilStakingAmounts[j]
-		)
-		if idx, ok := rewardIndex[rewardAddr]; !ok {
-			c.nodes = append(c.nodes, consolidatedNode{
-				NodeAddrs:     []common.Address{nodeAddr},
-				StakingAddrs:  []common.Address{stakingAddr},
-				RewardAddr:    rewardAddr,
-				StakingAmount: stakingAmount,
-			})
-			c.nodeIndex[nodeAddr] = len(c.nodes) - 1 // point to new element
-			rewardIndex[rewardAddr] = len(c.nodes) - 1
-		} else {
-			c.nodes[idx].NodeAddrs = append(c.nodes[idx].NodeAddrs, nodeAddr)
-			c.nodes[idx].StakingAddrs = append(c.nodes[idx].StakingAddrs, stakingAddr)
-			c.nodes[idx].StakingAmount += stakingAmount
-			c.nodeIndex[nodeAddr] = idx // point to existing element
-		}
-	}
-	return c
-}
-
-func (c *ConsolidatedStakingInfo) GetAllNodes() []consolidatedNode {
-	return c.nodes
-}
-
-func (c *ConsolidatedStakingInfo) GetConsolidatedNode(nodeAddr common.Address) *consolidatedNode {
-	if idx, ok := c.nodeIndex[nodeAddr]; ok {
-		return &c.nodes[idx]
-	}
-	return nil
-}
-
-// Calculate Gini coefficient of the StakingAmounts.
-// Only amounts greater or equal to `minStake` are included in the calculation.
-// Set `minStake` to 0 to calculate Gini coefficient of all amounts.
-func (c *ConsolidatedStakingInfo) CalcGiniCoefficientMinStake(minStake uint64) float64 {
-	var amounts []float64
-	for _, node := range c.nodes {
-		if node.StakingAmount >= minStake {
-			amounts = append(amounts, float64(node.StakingAmount))
-		}
-	}
-
-	if len(amounts) == 0 {
-		return DefaultGiniCoefficient
-	}
-	return CalcGiniCoefficient(amounts)
-}
-
-func (c *ConsolidatedStakingInfo) String() string {
-	j, err := json.Marshal(c.nodes)
-	if err != nil {
-		return err.Error()
-	}
-	return string(j)
-}
-
-type float64Slice []float64
-
-func (p float64Slice) Len() int           { return len(p) }
-func (p float64Slice) Less(i, j int) bool { return p[i] < p[j] }
-func (p float64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-func CalcGiniCoefficient(stakingAmount float64Slice) float64 {
-	sort.Sort(stakingAmount)
-
-	// calculate gini coefficient
-	sumOfAbsoluteDifferences := float64(0)
-	subSum := float64(0)
-
-	for i, x := range stakingAmount {
-		temp := x*float64(i) - subSum
-		sumOfAbsoluteDifferences = sumOfAbsoluteDifferences + temp
-		subSum = subSum + x
-	}
-
-	result := sumOfAbsoluteDifferences / subSum / float64(len(stakingAmount))
-	result = math.Round(result*100) / 100
-
-	return result
 }

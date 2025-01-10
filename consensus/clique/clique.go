@@ -375,17 +375,6 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	return c.verifySeal(chain, header, parents)
 }
 
-// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
-func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	_, err := c.snapshot(chain, number, hash, parents)
-	return err
-}
-
-// GetKaiaHeadersForSnapshotApply is not used for Clique engine
-func (c *Clique) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
-	return nil, nil
-}
-
 // snapshot retrieves the authorization snapshot at a given point in time.
 func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
@@ -593,7 +582,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
-func (c *Clique) InitSnapshot() {}
+func (c *Clique) PurgeCache() {}
 
 func (c *Clique) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 }

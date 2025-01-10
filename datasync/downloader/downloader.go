@@ -38,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/snap"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -105,7 +104,7 @@ type Downloader struct {
 
 	isStakingInfoRecovery     bool
 	stakingInfoRecoveryTotal  int
-	stakingInfoRecoveryCh     chan []*reward.StakingInfo
+	stakingInfoRecoveryCh     chan []*staking.P2PStakingInfo
 	stakingInfoRecoveryBlocks []uint64
 
 	queue *queue   // Scheduler for selecting the hashes to download
@@ -635,7 +634,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 
 	d.stakingInfoRecoveryBlocks = blockNums
 	d.stakingInfoRecoveryTotal = len(blockNums)
-	d.stakingInfoRecoveryCh = make(chan []*reward.StakingInfo, 1)
+	d.stakingInfoRecoveryCh = make(chan []*staking.P2PStakingInfo, 1)
 
 	go func() {
 		defer func() {
@@ -671,7 +670,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
 						return
 					}
-					d.stakingModule.PutStakingInfoToDB(stakingInfo.BlockNum, reward.ToKaiax(stakingInfo))
+					d.stakingModule.PutStakingInfoToDB(stakingInfo.BlockNum, staking.ToStakingInfo(stakingInfo))
 					fixed++
 					d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[1:]
 				}
@@ -1881,7 +1880,7 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 		receipts[i] = result.Receipts
 		if result.StakingInfo != nil {
-			d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, reward.ToKaiax(result.StakingInfo))
+			d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
 			logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
 		}
 	}
@@ -1896,7 +1895,7 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 	logger.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if result.StakingInfo != nil {
-		d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, reward.ToKaiax(result.StakingInfo))
+		d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
 		logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
 	}
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
@@ -1935,7 +1934,7 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 }
 
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
-func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
 	if d.isStakingInfoRecovery {
 		d.stakingInfoRecoveryCh <- stakingInfos
 	}

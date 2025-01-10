@@ -47,27 +47,6 @@ type API struct {
 	istanbul *backend
 }
 
-// GetSnapshot retrieves the state snapshot at a given block.
-// TODO-kaia-valset: consider deprecation of GetSnapshot
-func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
-	// Retrieve the requested block number (or current if none requested)
-	header, err := headerByRpcNumber(api.chain, number)
-	if err != nil {
-		return nil, err
-	}
-	return checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
-}
-
-// GetSnapshotAtHash retrieves the state snapshot at a given block.
-// TODO-kaia-valset: consider deprecation of GetSnapshotAtHash
-func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
-	header := api.chain.GetHeaderByHash(hash)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-	return checkStatesAndGetSnapshot(api.chain, api.istanbul, header.Number.Uint64(), header.Hash())
-}
-
 // GetValidators retrieves the list of qualified validators with the given block number.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	header, err := headerByRpcNumber(api.chain, number)
@@ -286,13 +265,6 @@ func (api *APIExtension) GetBlockWithConsensusInfoByNumber(number *rpc.BlockNumb
 	}
 	blockHash := block.Hash()
 
-	if blockNumber > 0 {
-		err := checkStatesForSnapshot(api.chain, api.istanbul, blockNumber-1, block.ParentHash())
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	cInfo, err := api.istanbul.GetConsensusInfo(block)
 	if err != nil {
 		logger.Error("Getting the proposer and validators failed.", "blockHash", blockHash, "err", err)
@@ -367,13 +339,6 @@ func (api *APIExtension) GetBlockWithConsensusInfoByHash(blockHash common.Hash) 
 	if block == nil {
 		logger.Trace("Finding a block failed.", "blockHash", blockHash)
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
-	}
-
-	if block.NumberU64() > 0 {
-		err := checkStatesForSnapshot(api.chain, api.istanbul, block.NumberU64()-1, block.ParentHash())
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	cInfo, err := api.istanbul.GetConsensusInfo(block)
@@ -488,29 +453,4 @@ func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*t
 		return nil, errUnknownBlock
 	}
 	return header, nil
-}
-
-// Checks the all states for snapshot creation at the given block number
-func checkStatesForSnapshot(chain consensus.ChainReader, istBackend *backend, number uint64, hash common.Hash) error {
-	headers, err := istBackend.GetKaiaHeadersForSnapshotApply(chain, number, hash, nil)
-	if err != nil {
-		return err
-	}
-
-	for _, header := range headers {
-		if _, err := chain.StateAt(header.Root); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Checks the all states for snapshot creation at the given block number and returns the snapshot if all states exist
-func checkStatesAndGetSnapshot(chain consensus.ChainReader, istBackend *backend, number uint64, hash common.Hash) (*Snapshot, error) {
-	err := checkStatesForSnapshot(chain, istBackend, number, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return istBackend.snapshot(chain, number, hash, nil, false)
 }
