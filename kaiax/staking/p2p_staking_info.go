@@ -16,7 +16,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 // Modified and improved for the Kaia development.
 
-package reward
+package staking
 
 import (
 	"encoding/json"
@@ -24,16 +24,11 @@ import (
 	"math"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// StakingInfo contains staking information. The implementation of the Kaia reward system
-// is located within the kaiax/reward module. A new implementation of StakingInfo has been introduced
-// in the kaiax/staking module.
-// For further details, please refer to the README.md of both kaiax/reward and kaiax/staking modules.
-// Token Economy - https://docs.kaia.io/docs/learn/token-economy/
-type StakingInfo struct {
+// P2PStakingInfo contains staking information which is a wrapped version of StakingInfo.
+type P2PStakingInfo struct {
 	BlockNum uint64 `json:"blockNum"` // Block number where staking information of Council is fetched
 
 	// Information retrieved from AddressBook smart contract
@@ -51,8 +46,8 @@ type StakingInfo struct {
 	CouncilStakingAmounts []uint64 `json:"councilStakingAmounts"` // Staking amounts of Council
 }
 
-func FromKaiax(si *staking.StakingInfo) *StakingInfo {
-	return &StakingInfo{
+func FromStakingInfo(si *StakingInfo) *P2PStakingInfo {
+	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,
 		CouncilNodeAddrs:      si.NodeIds,
 		CouncilStakingAddrs:   si.StakingContracts,
@@ -63,8 +58,8 @@ func FromKaiax(si *staking.StakingInfo) *StakingInfo {
 	}
 }
 
-func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *StakingInfo {
-	return &StakingInfo{
+func FromStakingInfoWithGini(si *StakingInfo, useGini bool, minStake uint64) *P2PStakingInfo {
+	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,
 		CouncilNodeAddrs:      si.NodeIds,
 		CouncilStakingAddrs:   si.StakingContracts,
@@ -77,8 +72,8 @@ func FromKaiaxWithGini(si *staking.StakingInfo, useGini bool, minStake uint64) *
 	}
 }
 
-func ToKaiax(si *StakingInfo) *staking.StakingInfo {
-	return &staking.StakingInfo{
+func ToStakingInfo(si *P2PStakingInfo) *StakingInfo {
+	return &StakingInfo{
 		SourceBlockNum:   si.BlockNum,
 		NodeIds:          si.CouncilNodeAddrs,
 		StakingContracts: si.CouncilStakingAddrs,
@@ -89,9 +84,9 @@ func ToKaiax(si *StakingInfo) *staking.StakingInfo {
 	}
 }
 
-// MarshalJSON supports json marshalling for both oldStakingInfo and StakingInfo
+// MarshalJSON supports json marshalling for both P2PStakingInfo and StakingInfo
 // TODO-Kaia-Mantle: remove this marshal function when backward-compatibility for KIR/PoC, KCF/KFF is not needed
-func (st StakingInfo) MarshalJSON() ([]byte, error) {
+func (st P2PStakingInfo) MarshalJSON() ([]byte, error) {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
@@ -130,8 +125,8 @@ func (st StakingInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&ext)
 }
 
-// UnmarshalJSON supports json unmarshalling for both oldStakingInfo and StakingInfo
-func (st *StakingInfo) UnmarshalJSON(input []byte) error {
+// UnmarshalJSON supports json unmarshalling for both P2PStakingInfo and StakingInfo
+func (st *P2PStakingInfo) UnmarshalJSON(input []byte) error {
 	type extendedSt struct {
 		BlockNum              uint64           `json:"blockNum"`
 		CouncilNodeAddrs      []common.Address `json:"councilNodeAddrs"`
@@ -183,7 +178,7 @@ func (st *StakingInfo) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-type stakingInfoRLP struct {
+type p2pStakingInfoRLP struct {
 	BlockNum              uint64
 	CouncilNodeAddrs      []common.Address
 	CouncilStakingAddrs   []common.Address
@@ -195,7 +190,7 @@ type stakingInfoRLP struct {
 	CouncilStakingAmounts []uint64
 }
 
-func (s *StakingInfo) String() string {
+func (s *P2PStakingInfo) String() string {
 	j, err := json.Marshal(s)
 	if err != nil {
 		return err.Error()
@@ -203,13 +198,13 @@ func (s *StakingInfo) String() string {
 	return string(j)
 }
 
-func (s *StakingInfo) EncodeRLP(w io.Writer) error {
+func (s *P2PStakingInfo) EncodeRLP(w io.Writer) error {
 	// float64 is not rlp serializable, so it converts to bytes
-	return rlp.Encode(w, &stakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
+	return rlp.Encode(w, &p2pStakingInfoRLP{s.BlockNum, s.CouncilNodeAddrs, s.CouncilStakingAddrs, s.CouncilRewardAddrs, s.KEFAddr, s.KIFAddr, s.UseGini, math.Float64bits(s.Gini), s.CouncilStakingAmounts})
 }
 
-func (s *StakingInfo) DecodeRLP(st *rlp.Stream) error {
-	var dec stakingInfoRLP
+func (s *P2PStakingInfo) DecodeRLP(st *rlp.Stream) error {
+	var dec p2pStakingInfoRLP
 	if err := st.Decode(&dec); err != nil {
 		return err
 	}

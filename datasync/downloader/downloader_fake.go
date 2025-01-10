@@ -24,9 +24,9 @@ import (
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/node/cn/snap"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 )
 
 // fakeDownloader do nothing
@@ -46,7 +46,7 @@ func (*FakeDownloader) DeliverBodies(id string, transactions [][]*types.Transact
 func (*FakeDownloader) DeliverHeaders(id string, headers []*types.Header) error      { return nil }
 func (*FakeDownloader) DeliverNodeData(id string, data [][]byte) error               { return nil }
 func (*FakeDownloader) DeliverReceipts(id string, receipts [][]*types.Receipt) error { return nil }
-func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
 	return nil
 }
 
