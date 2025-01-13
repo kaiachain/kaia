@@ -600,7 +600,7 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 	}
 
 	rules := config.Rules(b.Number())
-	if rules.IsEthTxType {
+	if rules.IsMagma {
 		if head.BaseFee == nil {
 			fields["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
