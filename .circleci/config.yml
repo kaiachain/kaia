@@ -175,6 +175,32 @@ commands:
             done
       - when:
           condition:
+              equal: [ true, << parameters.is-test >>]
+          steps:
+          - run:
+              name: "upload << parameters.package-type >>-<<parameters.os-network >> packages to test S3 repo"
+              command: |
+                source ~/.bashrc
+                KAIA_VERSION=$(go run build/rpm/main.go version)
+                PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+                         
+                for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+                  if [[ << parameters.package-type >> = "tar" ]]; then
+                    aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET_TEST/packages/kaia/$KAIA_VERSION/
+                  elif [[ << parameters.package-type >> = "rpm" ]]; then
+                    BINARY=$item
+                    KAIROS=""
+                    if [[ $BINARY = *-kairos ]]; then
+                      BINARY="${BINARY%-kairos}"
+                      KAIROS="-kairos"
+                    fi
+                    TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+                    aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET_TEST/packages/rhel/9-stream/kaia/
+                    aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET_TEST/packages/kaia/$KAIA_VERSION/
+                  fi
+                done
+      - when:
+          condition:
             not: << parameters.is-test >>
           steps:
           - run:
@@ -485,6 +511,13 @@ jobs:
           os-network: "linux-amd64"
           package-type: "rpm"
           is-test: false
+  rpm-linux-amd64-packaging-test:
+    executor: rpm-linux-amd64-executor
+    steps:
+      - packaging-and-upload:
+          os-network: "linux-amd64"
+          package-type: "rpm"
+          is-test: true       
 #      - store_artifacts:
 #          path: /go/src/github.com/kaiachain/kaia/ken-linux-x86_64/rpmbuild/RPMS/x86_64/kend-v2.0.0-0.el9.x86_64.rpm
 #          destination: kend-v2.0.0-0.el9.x86_64.rpm
@@ -640,6 +673,15 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]/
             branches:
               ignore: /.*/
+      - deploy-rpm-test:
+          requires:
+            - rpm-linux-amd64-packaging-test
+          filters:
+            tags:
+              only: is-test
+            branches:
+              ignore: /.*/
+      
       - release-PR:
           requires:
             - rpm-linux-amd64-packaging
