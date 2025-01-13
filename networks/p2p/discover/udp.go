@@ -775,6 +775,10 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
 func findnodeRetrieveSize(nType NodeType) int {
+	// Returning too small value will make CNs unable to find each other.
+	if nType == NodeTypeCN {
+		return 100
+	}
 	// Return at most 2 PNs.
 	// 1. Under current CN-PN-EN 3-tier operating practices, findnode(type=PN) packet originates only from EN.
 	//    CNs only connect to other CNs via CNBN. PNs are connected to PNs and CNs via static-nodes.json.
