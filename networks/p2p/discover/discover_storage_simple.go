@@ -222,8 +222,11 @@ func (s *simpleStorage) closest(target common.Hash, nresults int) *nodesByDistan
 	// in the SimpleStorage. Change it
 	cNodes := &nodesByDistance{target: target}
 	nodes := s.shuffle(s.nodes)
-	if len(nodes) > s.max {
-		cNodes.entries = nodes[:s.max]
+	// TODO-Kaia We should cap the number of nodes with nresults, however we cannot estimate the side effect.
+	// As s.nodes can be longer than s.max, we cap the number of nodes returned with min(nresults, s.max).
+	cap := min(nresults, s.max)
+	if len(nodes) > cap {
+		cNodes.entries = nodes[:cap]
 	} else {
 		cNodes.entries = nodes
 	}
@@ -252,7 +255,10 @@ func (s *simpleStorage) bumpOrAdd(n *Node) bool {
 	}
 
 	s.localLogger.Trace("Add(New)", "StorageName", s.name(), "node", n)
-	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64) // TODO-Kaia-Node Change Max value for more reasonable one.
+	// TODO-Kaia-Node Change Max value for more reasonable one.
+	// As we cannot estimate the side effect, we leave s.nodes to be longer than s.max.
+	// s.max has been used to cap the number of nodes returned by `closest` function.
+	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64)
 	n.addedAt = time.Now()
 	if s.tab.nodeAddedHook != nil {
 		s.tab.nodeAddedHook(n)
