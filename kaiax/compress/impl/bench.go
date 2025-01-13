@@ -17,9 +17,12 @@
 package compress
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sync"
@@ -27,10 +30,13 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/client"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testCopyOriginData(c *CompressModule, compressTyp CompressionType, copyTestDB database.Batch, from, to uint64) {
@@ -285,4 +291,81 @@ func TestCompressFinder(t *testing.T, setup func(t *testing.T) (*blockchain.Bloc
 	fmt.Println("avg origin header elapsed:", originHeaderElapsed/time.Duration(n))
 	fmt.Println("avg origin body elapsed:", originBodyElapsed/time.Duration(n))
 	fmt.Println("avg origin receipts elapsed:", originReceiptsElapsed/time.Duration(n))
+}
+
+func TestCompressQuery(t *testing.T, setup func(t *testing.T) (*blockchain.BlockChain, database.DBManager, error)) {
+	url := os.Getenv("TEST_COMPRESS_ENDPOINT_URL")
+	if url == "" {
+		fmt.Println("Endpoint URL is empty (Set thorugh `TEST_COMPRESS_ENDPOINT_URL`")
+		return
+	}
+	mCompress, chainDB := testInit(t, setup)
+	if mCompress == nil || chainDB == nil {
+		return
+	}
+	defer chainDB.Close()
+
+	rand.Seed(time.Now().UnixNano())
+
+	var (
+		c, err          = client.Dial(url)
+		nextNum         = uint64(0)
+		dist            = uint64(10000)
+		latestBlockHash = chainDB.ReadHeadBlockHash()
+		latestBlockNum  = *chainDB.ReadHeaderNumber(latestBlockHash)
+		maxNum          = latestBlockNum - (dist * 10)
+		queryCnt        = 0
+		headerElapsed   time.Duration
+		bodyElapsed     time.Duration
+		receiptsElapsed time.Duration
+	)
+	require.Nil(t, err)
+
+	for {
+		clearCache()
+		r := nextNum + (rand.Uint64() % dist)
+		if r > maxNum {
+			break
+		}
+		// header verification
+		chStart := time.Now()
+		oh, err := c.HeaderByNumber(context.Background(), big.NewInt(int64(r)))
+		chEnd := time.Since(chStart)
+		require.Nil(t, err)
+		ohHash := oh.Hash()
+		headerStart := time.Now()
+		ch := chainDB.ReadHeader(ohHash, oh.Number.Uint64())
+		headerElapsed = time.Since(headerStart)
+		require.Equal(t, ohHash, ch.Hash())
+
+		// body and receipts verification
+		cbStart := time.Now()
+		ob, err := c.BlockByNumber(context.Background(), big.NewInt(int64(r)))
+		cbEnd := time.Since(cbStart)
+		require.Nil(t, err)
+		txs := ob.Transactions()
+		if len(txs) > 0 {
+			bodyStart := time.Now()
+			compressedBody := chainDB.ReadBody(ohHash, r)
+			bodyElapsed = time.Since(bodyStart)
+			receiptsStart := time.Now()
+			compressedReceipts := chainDB.ReadReceipts(ohHash, r)
+			receiptsElapsed = time.Since(receiptsStart)
+			for idx, originTx := range txs {
+				require.True(t, originTx.Equal(compressedBody.Transactions[idx]))
+
+				or, err := c.TransactionReceipt(context.Background(), originTx.Hash())
+				require.Nil(t, err)
+				if compressedReceipts[idx].Status != types.ReceiptStatusSuccessful {
+					compressedReceipts[idx].Status = types.ReceiptStatusFailed
+				}
+				require.True(t, reflect.DeepEqual(or, compressedReceipts[idx]))
+			}
+		}
+		fmt.Printf("[%10d] queryNum=%10d, headerElapsed=%s, bodyElapsed=%s, receiptsElapsed=%s, queryHeaderElapsed=%s, queryBlockElapsed=%s, progress=%5f%%, txs=%d\n",
+			queryCnt, r, headerElapsed.String(), bodyElapsed.String(), receiptsElapsed.String(), chEnd.String(), cbEnd.String(), float64(r)/float64(maxNum)*100.0, len(txs))
+		nextNum += dist
+		queryCnt++
+	}
+	fmt.Println("DONE")
 }

@@ -98,3 +98,7 @@ func TestCompressFunction(t *testing.T) {
 func TestCompressFinder(t *testing.T) {
 	compress_impl.TestCompressFinder(t, setup)
 }
+
+func TestCompressQuery(t *testing.T) {
+	compress_impl.TestCompressQuery(t, setup)
+}
