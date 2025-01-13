@@ -111,6 +111,8 @@ func findDataFromChunk(dbm database.DBManager, compressTyp CompressionType, find
 			}
 			if decompressed != nil {
 				return decompressed, nil
+			} else {
+				return nil, notFoundErr
 			}
 		}
 	}
