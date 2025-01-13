@@ -206,6 +206,8 @@ URL:                https://kaia.io
 Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
+%global debug_package %{nil}
+
 %description
   {{ .Description }}
 
