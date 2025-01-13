@@ -135,7 +135,7 @@ func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*typ
 	if header := b.cn.blockchain.GetHeaderByHash(hash); header != nil {
 		return header, nil
 	}
-	return nil, fmt.Errorf("the header does not exist (hash: %d)", hash)
+	return nil, fmt.Errorf("the header does not exist (hash: %s)", hash.String())
 }
 
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
