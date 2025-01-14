@@ -242,7 +242,7 @@ func TestVoteSerialization(t *testing.T) {
 		{serializedVoteData: "0xf85994f39fd6e51aad88f6f4ce6ab8827279cfffb922669a676f7665726e616e63652e72656d6f766576616c696461746f72a83c44cdddb6a900fa2b585dd299e03d12fa4293bc90f79bf6eb2c4f870365e785982e1f101e93b906", blockNum: 123123, voteData: NewVoteData(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), "governance.removevalidator", "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc,0x90f79bf6eb2c4f870365e785982e1f101e93b906")},
 
 		// Real mainnet validator vote data with hex-encoded address (for backward compatibility). Deserialize test only.
-		{serializedVoteData: "0xf85b9452d41ca72af615a1ac3301b0a93efa222ecc75419a676f7665726e616e63652e72656d6f766576616c696461746f72aa307831366331393235383561306162323462353532373833623462663764386463396636383535633335", blockNum: 90915008, voteData: NewVoteData(v1, "governance.removevalidator", "0x16c192585a0ab24b552783b4bf7d8dc9f6855c35"), noSerialize: true},
+		{serializedVoteData: "0xf85b9452d41ca72af615a1ac3301b0a93efa222ecc75419a676f7665726e616e63652e72656d6f766576616c696461746f72aa307831366331393235383561306162323462353532373833623462663764386463396636383535633335", blockNum: 90915008, voteData: NewVoteData(v1, "governance.removevalidator", "0x3833623462663764386463396636383535633335"), noSerialize: true},
 	}
 
 	for _, tc := range tcs {
