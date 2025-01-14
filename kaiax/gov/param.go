@@ -60,7 +60,7 @@ var (
 			// Type2. Multiple addresses, [20*n]byte.
 			// Type3. Single address, [42]byte (hex-encoded bytes). See Mainnet block 90915008.
 
-			// Type1, Type3
+			// Type1
 			if len(v) == common.AddressLength {
 				return []common.Address{common.BytesToAddress(v)}, nil
 			}
