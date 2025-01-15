@@ -35,9 +35,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -67,7 +67,7 @@ func makeChain(n int, seed byte, parent *types.Block, empty bool) ([]*types.Bloc
 
 type chainData struct {
 	blocks       []*types.Block
-	stakingInfos []*reward.StakingInfo
+	stakingInfos []*staking.P2PStakingInfo
 	offset       int
 }
 
@@ -81,9 +81,9 @@ func init() {
 	// Create a chain of blocks to import. 128 blocks are created and a transaction is contained on every 2nd block
 	targetBlocks := 128
 
-	var stakingInfos []*reward.StakingInfo
+	var stakingInfos []*staking.P2PStakingInfo
 	for i := 4; i <= 128; i += 4 {
-		stakingInfos = append(stakingInfos, &reward.StakingInfo{BlockNum: uint64(i)})
+		stakingInfos = append(stakingInfos, &staking.P2PStakingInfo{BlockNum: uint64(i)})
 	}
 
 	blocks, _ := makeChain(targetBlocks, 0, genesis, false)

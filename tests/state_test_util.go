@@ -434,17 +434,18 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	}
 
 	var intrinsicGas uint64
+	var dataTokens uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = useEthIntrinsicGas(data, accessList, authorizationList, to == nil, r)
+		intrinsicGas, dataTokens, err = useEthIntrinsicGas(data, accessList, authorizationList, to == nil, r)
 	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
+		intrinsicGas, dataTokens, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, authorizationList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, dataTokens, accessList, authorizationList)
 	return msg, nil
 }
 
@@ -496,7 +497,7 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList types.AuthorizationList, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList types.AuthorizationList, contractCreation bool, r params.Rules) (uint64, uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}

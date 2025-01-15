@@ -200,6 +200,27 @@ func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
 			useGini:      false,
 			expectedFreq: []int{1, 1, 1, 99}, // at least 1 slot is guaranteed for each validator.
 		},
+		{
+			desc:         "identical stakingAmounts",
+			qualified:    numsToAddrs(0, 1, 2),
+			amounts:      []uint64{aM, aM, aM},
+			useGini:      true,
+			expectedFreq: []int{33, 33, 33},
+		},
+		{
+			desc:         "multiple of minimum staking",
+			qualified:    numsToAddrs(0, 1, 2, 3),
+			amounts:      []uint64{aM, 2 * aM, aM, aM},
+			useGini:      true,
+			expectedFreq: []int{21, 38, 21, 21},
+		},
+		{
+			desc:         "non-multiple of minimum staking",
+			qualified:    numsToAddrs(0, 1, 2, 3, 4),
+			amounts:      []uint64{324946, 560845, 771786, 967997, 1153934},
+			useGini:      true,
+			expectedFreq: []int{10, 16, 21, 25, 29},
+		},
 	}
 	for _, tc := range testcases {
 		qualified := valset.NewAddressSet(tc.qualified)

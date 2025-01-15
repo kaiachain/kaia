@@ -19,7 +19,6 @@
 package cn
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -32,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/gxhash"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -789,14 +787,6 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 		t.Fatalf("Failed to import canonical chain start: %v", err)
 	}
 
-	// Store snapshot
-	snap := backend.Snapshot{Number: params.CheckpointInterval, Hash: chain.GetHeaderByNumber(params.CheckpointInterval).Hash()}
-	blob, err := json.Marshal(snap)
-	assert.Nil(t, err)
-	db.WriteIstanbulSnapshot(snap.Hash, blob)
-	_, err = db.ReadIstanbulSnapshot(snap.Hash)
-	assert.Nil(t, err)
-
 	// Before setHead
 	assert.Equal(t, newMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
 
@@ -816,10 +806,6 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	// After setHead
 	// governance db and cachelookup
 	assert.Equal(t, oldMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
-
-	// snapshot db lookup
-	_, err = db.ReadIstanbulSnapshot(snap.Hash)
-	assert.Equal(t, err.Error(), "data is not found with the given key")
 
 	for _, b := range canonblocks[tt.expCanonicalBlocks:] {
 		if _, err := chain.InsertChain(types.Blocks{b}); err != nil {

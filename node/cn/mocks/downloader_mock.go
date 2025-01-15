@@ -13,8 +13,8 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	downloader "github.com/kaiachain/kaia/datasync/downloader"
+	staking "github.com/kaiachain/kaia/kaiax/staking"
 	snap "github.com/kaiachain/kaia/node/cn/snap"
-	reward "github.com/kaiachain/kaia/reward"
 )
 
 // MockProtocolManagerDownloader is a mock of ProtocolManagerDownloader interface.
@@ -123,7 +123,7 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverSnapPacket(arg0, arg
 }
 
 // DeliverStakingInfos mocks base method.
-func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []*reward.StakingInfo) error {
+func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []*staking.P2PStakingInfo) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeliverStakingInfos", arg0, arg1)
 	ret0, _ := ret[0].(error)

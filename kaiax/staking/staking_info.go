@@ -29,6 +29,7 @@ import (
 var EmptyGini float64 = -1.0
 
 // StakingInfo is the staking info to be used for block processing.
+// Token Economy - https://docs.kaia.io/docs/learn/token-economy/
 type StakingInfo struct {
 	// The source block number where the staking info is captured.
 	SourceBlockNum uint64 `json:"blockNum"`

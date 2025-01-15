@@ -222,11 +222,11 @@ func (t *TxInternalDataValueTransfer) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	// TxInternalDataValueTransfer does not have payload, and it
 	// is not account creation. Hence, its intrinsic gas is determined by
 	// params.TxGas. Refer to types.IntrinsicGas().
-	return params.TxGasValueTransfer, nil
+	return params.TxGasValueTransfer, 0, nil
 }
 
 func (t *TxInternalDataValueTransfer) SerializeForSignToBytes() []byte {

@@ -82,6 +82,7 @@ type Backend interface {
 	IsParallelDBWrite() bool
 
 	IsSenderTxHashIndexingEnabled() bool
+	IsConsoleLogEnabled() bool
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error
