@@ -230,8 +230,8 @@ var (
 	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")
 
 	// EIP-2935 - Serve historical block hashes from state
-	HistoryStorageAddress = common.HexToAddress("0x0aae40965e6800cd9b1f4b05ff21581047e3f91e")
-	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe1460575767ffffffffffffffff5f3511605357600143035f3511604b575f35612000014311604b57611fff5f3516545f5260205ff35b5f5f5260205ff35b5f5ffd5b5f35611fff60014303165500")
+	HistoryStorageAddress = common.HexToAddress("0x0F792be4B0c0cb4DAE440Ef133E90C0eCD48CCCC")
+	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500")
 )
 
 // Parameters for execution time limit
