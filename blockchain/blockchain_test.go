@@ -2325,6 +2325,10 @@ func TestEIP7702(t *testing.T) {
 	gspec.Config.PragueCompatibleBlock = common.Big0
 
 	// Sign authorization tuples.
+	// The way the auths are combined, it becomes
+	// 1. tx -> addr1 which is delegated to 0xaaaa
+	// 2. addr1:0xaaaa calls into addr2:0xbbbb
+	// 3. addr2:0xbbbb  writes to storage
 	auth1, _ := types.SignAuth(&types.Authorization{
 		ChainID: gspec.Config.ChainID.Uint64(),
 		Address: aa,
