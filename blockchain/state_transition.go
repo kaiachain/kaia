@@ -558,7 +558,7 @@ func (st *StateTransition) applyAuthorization(auth *types.Authorization, to comm
 
 	// If the account already exists in state, refund the new account cost
 	// charged in the initrinsic calculation.
-	if exists := st.state.Exist(authority); exists {
+	if st.state.Exist(authority) {
 		// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
 		accountKeyType := st.state.GetKey(authority).Type()
 		if !accountKeyType.IsLegacyAccountKey() {
@@ -567,6 +567,7 @@ func (st *StateTransition) applyAuthorization(auth *types.Authorization, to comm
 		st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
 	}
 
+	// Update nonce and account code.
 	st.state.IncNonce(authority)
 	delegation := types.AddressToDelegation(auth.Address)
 	if common.EmptyAddress(auth.Address) {
