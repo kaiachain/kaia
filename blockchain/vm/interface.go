@@ -55,9 +55,6 @@ type StateDB interface {
 	GetVmVersion(common.Address) (params.VmVersion, bool)
 	GetStorageRoot(common.Address) common.Hash
 
-	ResolveCodeHash(common.Address) common.Hash
-	ResolveCode(common.Address) []byte
-
 	AddRefund(uint64)
 	SubRefund(uint64)
 	GetRefund() uint64
