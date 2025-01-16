@@ -577,15 +577,8 @@ type Authorization struct {
 
 // SignAuth signs the provided authorization.
 func SignAuth(auth Authorization, prv *ecdsa.PrivateKey) (Authorization, error) {
-	h := prefixedRlpHash(
-		0x05,
-		[]interface{}{
-			auth.ChainID,
-			auth.Address,
-			auth.Nonce,
-		})
-
-	sig, err := crypto.Sign(h[:], prv)
+	sighash := auth.sigHash()
+	sig, err := crypto.Sign(sighash[:], prv)
 	if err != nil {
 		return Authorization{}, err
 	}
@@ -606,15 +599,17 @@ func (a Authorization) WithSignature(sig []byte) Authorization {
 	}
 }
 
-func (a Authorization) Authority() (common.Address, error) {
-	sighash := prefixedRlpHash(
-		0x05,
-		[]interface{}{
-			a.ChainID,
-			a.Address,
-			a.Nonce,
-		})
+func (a *Authorization) sigHash() common.Hash {
+	return prefixedRlpHash(0x05, []any{
+		a.ChainID,
+		a.Address,
+		a.Nonce,
+	})
+}
 
+// Authority recovers the the authorizing account of an authorization.
+func (a *Authorization) Authority() (common.Address, error) {
+	sighash := a.sigHash()
 	if !crypto.ValidateSignatureValues(a.V, a.R, a.S, true) {
 		return common.Address{}, ErrInvalidSig
 	}
