@@ -1085,6 +1085,10 @@ func (s *Stream) readFull(buf []byte) (err error) {
 	return err
 }
 
+func (s *Stream) ReadByte() (byte, error) {
+	return s.readByte()
+}
+
 // readByte reads a single byte from the underlying stream.
 func (s *Stream) readByte() (byte, error) {
 	if err := s.willRead(1); err != nil {
