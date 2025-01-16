@@ -100,21 +100,21 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		makeAuthList      func() types.AuthorizationList
+		makeAuthList      func() []types.Authorization
 		msg               Message
 		expectedMockCalls func(m *mock_vm.MockStateDB)
 	}{
 		// Cases: success to set code
 		{
 			name: "success (minimum)",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -128,14 +128,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "success (case of refund)",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -151,14 +151,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "success (address 0x0000000000000000000000000000000000000000)",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: zeroAddress,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -172,14 +172,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "success (to == authority)",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAuthorityTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -194,8 +194,8 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "success (don't ecrecover authority)",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -204,7 +204,7 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 
 				// The msg is tampered with so a different pubkey is ecrecovered.
 				auth.Address = bb
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -220,14 +220,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		// Cases: fail to set code
 		{
 			name: "invalid chainId",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: uint64(10),
 					Address: aa,
 					Nonce:   1,
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -236,14 +236,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "nonce is uint64 max value",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(18446744073709551615),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -252,15 +252,15 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "error in Authority",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
 				auth.V = uint8(10)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAuthorityTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -269,14 +269,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "exist some code",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -286,14 +286,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "invalid nonce",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(10),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {
@@ -304,14 +304,14 @@ func TestStateTransition_processAuthorizationList(t *testing.T) {
 		},
 		{
 			name: "signer's key was updated",
-			makeAuthList: func() types.AuthorizationList {
-				auth, err := types.SignAuth(&types.Authorization{
+			makeAuthList: func() []types.Authorization {
+				auth, err := types.SignAuth(types.Authorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
 				}, authorityKey)
 				assert.NoError(t, err)
-				return types.AuthorizationList{*auth}
+				return []types.Authorization{auth}
 			},
 			msg: toAddrTx,
 			expectedMockCalls: func(m *mock_vm.MockStateDB) {

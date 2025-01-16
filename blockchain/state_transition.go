@@ -124,7 +124,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
-	AuthList() types.AuthorizationList
+	AuthList() []types.Authorization
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -546,7 +546,7 @@ func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
 }
 
-func (st *StateTransition) processAuthorizationList(authList types.AuthorizationList, to common.Address, rules params.Rules) {
+func (st *StateTransition) processAuthorizationList(authList []types.Authorization, to common.Address, rules params.Rules) {
 	for _, auth := range authList {
 		// Verify chain ID is 0 or equal to current chain ID.
 		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {

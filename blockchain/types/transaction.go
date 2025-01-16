@@ -338,7 +338,7 @@ func (tx *Transaction) AccessList() AccessList {
 	return nil
 }
 
-func (tx *Transaction) AuthList() AuthorizationList {
+func (tx *Transaction) AuthList() []Authorization {
 	if tx.Type() == TxTypeEthereumSetCode {
 		te := tx.GetTxInternalData().(*TxInternalDataEthereumSetCode)
 		return te.GetAuthorizationList()
@@ -1084,7 +1084,7 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, auth AuthorizationList) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, auth []Authorization) *Transaction {
 	transaction := &Transaction{
 		validatedIntrinsicGas: &ValidatedIntrinsicGas{Gas: intrinsicGas, Tokens: dataTokens},
 		validatedFeePayer:     from,

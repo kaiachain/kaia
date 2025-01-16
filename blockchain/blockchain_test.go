@@ -2329,13 +2329,13 @@ func TestEIP7702(t *testing.T) {
 	// 1. tx -> addr1 which is delegated to 0xaaaa
 	// 2. addr1:0xaaaa calls into addr2:0xbbbb
 	// 3. addr2:0xbbbb  writes to storage
-	auth1, _ := types.SignAuth(&types.Authorization{
+	auth1, _ := types.SignAuth(types.Authorization{
 		ChainID: gspec.Config.ChainID.Uint64(),
 		Address: aa,
 		Nonce:   1,
 	}, key1)
 
-	auth2, _ := types.SignAuth(&types.Authorization{
+	auth2, _ := types.SignAuth(types.Authorization{
 		ChainID: uint64(0),
 		Address: bb,
 		Nonce:   0,
@@ -2348,7 +2348,7 @@ func TestEIP7702(t *testing.T) {
 	blocks, _ := GenerateChain(gspec.Config, genesis, engine, testdb, 1, func(i int, b *BlockGen) {
 		b.SetRewardbase(common.Address{1})
 
-		authorizationList := []types.Authorization{*auth1, *auth2}
+		authorizationList := []types.Authorization{auth1, auth2}
 		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
@@ -2423,13 +2423,13 @@ func TestEIP7702(t *testing.T) {
 
 	// Set 0x0000000000000000000000000000000000000000000 test
 	{
-		authForEmpty, _ := types.SignAuth(&types.Authorization{
+		authForEmpty, _ := types.SignAuth(types.Authorization{
 			ChainID: gspec.Config.ChainID.Uint64(),
 			Address: common.Address{},
 			Nonce:   state.GetNonce(addr1) + 1,
 		}, key1)
 
-		authorizationList := []types.Authorization{*authForEmpty}
+		authorizationList := []types.Authorization{authForEmpty}
 		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)

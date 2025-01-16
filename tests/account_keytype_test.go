@@ -151,7 +151,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	values := map[types.TxValueKeyType]interface{}{}
 
 	// Default authorization list
-	authorizationList := types.AuthorizationList{{ChainID: uint64(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []types.Authorization{{ChainID: uint64(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
 	switch txType {
 	case types.TxTypeValueTransfer:

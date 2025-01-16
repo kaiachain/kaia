@@ -136,7 +136,7 @@ type SendTxArgs struct {
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
-	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
+	AuthorizationList []types.Authorization `json:"authorizationList,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -327,7 +327,7 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 		values[types.TxValueKeyAccessList] = *args.AccessList
 	}
 	if args.AuthorizationList != nil {
-		values[types.TxValueKeyAuthorizationList] = *args.AuthorizationList
+		values[types.TxValueKeyAuthorizationList] = args.AuthorizationList
 	}
 	if args.MaxPriorityFeePerGas != nil {
 		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
@@ -564,7 +564,7 @@ type EthTransactionArgs struct {
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
 	// For SetCodeTxType
-	AuthList *types.AuthorizationList `json:"authList"`
+	AuthList []types.Authorization `json:"authList"`
 }
 
 // from retrieves the transaction sender address.
@@ -606,9 +606,9 @@ func (args *EthTransactionArgs) GetAccessList() types.AccessList {
 	}
 }
 
-func (args *EthTransactionArgs) GetAuthorizationList() types.AuthorizationList {
+func (args *EthTransactionArgs) GetAuthorizationList() []types.Authorization {
 	if args.AuthList != nil {
-		return *args.AuthList
+		return args.AuthList
 	} else {
 		return nil
 	}
@@ -794,9 +794,9 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		accessList = *args.AccessList
 	}
 
-	var authList types.AuthorizationList
+	var authList []types.Authorization
 	if args.AuthList != nil {
-		authList = *args.AuthList
+		authList = args.AuthList
 	}
 	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, dataTokens, accessList, authList), nil
 }
@@ -821,7 +821,7 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 			Amount:            (*big.Int)(args.Value),
 			Payload:           args.data(),
 			AccessList:        al,
-			AuthorizationList: *args.AuthList,
+			AuthorizationList: args.AuthList,
 		})
 	case args.MaxFeePerGas != nil:
 		al := types.AccessList{}
