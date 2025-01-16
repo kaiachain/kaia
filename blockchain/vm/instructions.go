@@ -26,6 +26,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
 )
@@ -346,9 +347,16 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 	return nil, nil
 }
 
-func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+// opExtCodeSizeEIP7702 implements the EIP-7702 variation of opExtCodeSize.
+func opExtCodeSizeEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
 	slot.SetUint64(uint64(len(interpreter.evm.StateDB.ResolveCode(slot.Bytes20()))))
+	return nil, nil
+}
+
+func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	slot := scope.Stack.peek()
+	slot.SetUint64(uint64(interpreter.evm.StateDB.GetCodeSize(slot.Bytes20())))
 	return nil, nil
 }
 
@@ -375,6 +383,27 @@ func opCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 	return nil, nil
 }
 
+// opExtCodeCopyEIP7702 implements the EIP-7702 variation of opExtCodeCopy.
+func opExtCodeCopyEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	var (
+		stack      = scope.Stack
+		a          = stack.pop()
+		memOffset  = stack.pop()
+		codeOffset = stack.pop()
+		length     = stack.pop()
+	)
+	uint64CodeOffset, overflow := codeOffset.Uint64WithOverflow()
+	if overflow {
+		uint64CodeOffset = math.MaxUint64
+	}
+	addr := common.Address(a.Bytes20())
+	code := interpreter.evm.StateDB.ResolveCode(addr)
+	codeCopy := getData(code, uint64CodeOffset, length.Uint64())
+	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
+
+	return nil, nil
+}
+
 func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		stack      = scope.Stack
@@ -388,15 +417,27 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 		uint64CodeOffset = 0xffffffffffffffff
 	}
 	addr := common.Address(a.Bytes20())
-	codeCopy := getData(interpreter.evm.StateDB.ResolveCode(addr), uint64CodeOffset, length.Uint64())
+	codeCopy := getData(interpreter.evm.StateDB.GetCode(addr), uint64CodeOffset, length.Uint64())
 	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
 	return nil, nil
 }
 
+// opExtCodeHashEIP7702 implements the EIP-7702 variation of opExtCodeHash.
+func opExtCodeHashEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	slot := scope.Stack.peek()
+	address := common.Address(slot.Bytes20())
+	if interpreter.evm.StateDB.Empty(address) {
+		slot.Clear()
+	} else {
+		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+	}
+	return nil, nil
+}
+
 // opExtCodeHash returns the code hash of a specified account.
 // There are several cases when the function is called, while we can relay everything
-// to `state.ResolveCodeHash` function to ensure the correctness.
+// to `state.GetCodeHash` function to ensure the correctness.
 //
 //  1. Caller tries to get the code hash of a normal contract account, state
 //     should return the relative code hash and set it as the result.
@@ -426,7 +467,7 @@ func opExtCodeHash1052(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCont
 	if interpreter.evm.StateDB.Empty(address) {
 		slot.Clear()
 	} else {
-		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+		slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(address).Bytes())
 	}
 	return nil, nil
 }
@@ -439,7 +480,7 @@ func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 	if interpreter.evm.StateDB.Empty(address) {
 		slot.SetBytes(emptyCodeHash[:]) // for empty account before Cancun
 	} else {
-		slot.SetBytes(interpreter.evm.StateDB.ResolveCodeHash(address).Bytes())
+		slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(address).Bytes())
 	}
 	return nil, nil
 }
