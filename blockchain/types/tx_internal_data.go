@@ -571,6 +571,8 @@ func toWordSize(size uint64) uint64 {
 	return (size + 31) / 32
 }
 
+var ForTestIsPrague bool
+
 // Klaytn-TxTypes since genesis, and EthTxTypes since istanbul use this.
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, uint64, error) {
 	var tokens uint64
@@ -591,7 +593,7 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 		// Since the genesis block, a flat 100 gas is paid
 		// regardless of whether the value is zero or non-zero.
 		nonZeroGas, zeroGas := params.TxDataGas, params.TxDataGas
-		if rules.IsPrague {
+		if rules.IsPrague || ForTestIsPrague {
 			nonZeroGas = params.TxDataNonZeroGasEIP2028
 			zeroGas = params.TxDataZeroGas
 		}

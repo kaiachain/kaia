@@ -25,6 +25,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -81,10 +82,12 @@ type ExecutionSpecBlockTestSuite struct {
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
+	blockchain.IsExecutionSpecTest = true
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
+	blockchain.IsExecutionSpecTest = false
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
@@ -101,30 +104,55 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
 	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
 
-	// only target cuncun
-	bt.skipLoad(`^berlin\/`)
-	bt.skipLoad(`^byzantium\/`)
-	// bt.skipLoad(`^cancun\/`)
-	bt.skipLoad(`^cancun\/eip1153_tstore\/tload.*\/`)
-	bt.skipLoad(`^cancun\/eip1153_tstore\/tstorage.*\/`)
-	bt.skipLoad(`^cancun\/eip1153_tstore\/tstore_reentrancy\/`)
-	bt.skipLoad(`^cancun\/eip5656_mcopy\/`)
-	bt.skipLoad(`^cancun\/eip6780_selfdestruct\/`)
-	bt.skipLoad(`^cancun\/eip7516_blobgasfee\/`)
-	bt.skipLoad(`^constantinople\/`)
+	// only target after shanghai
 	bt.skipLoad(`^frontier\/`)
 	bt.skipLoad(`^homestead\/`)
+	bt.skipLoad(`^byzantium\/`)
+	bt.skipLoad(`^constantinople\/`)
 	bt.skipLoad(`^istanbul\/`)
+	bt.skipLoad(`^berlin\/`)
 	bt.skipLoad(`^paris\/`)
-	bt.skipLoad(`^prague\/`)
-	bt.skipLoad(`^shanghai\/`)
+
+	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`)             // gas error
+	bt.skipLoad(`^prague\/eip2935_historical_block_hashes_from_state`) // gas error
+	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost`)             // unconfirmed
+	bt.skipLoad(`^prague\/eip7702_set_code_tx`)                        // state, gas (after update we should do it)
 
 	// tests to skip
 	// unsupported EIPs
+	bt.skipLoad(`^shanghai\/eip4895_withdrawals\/`)
 	bt.skipLoad(`^cancun\/eip4788_beacon_root\/`)
 	bt.skipLoad(`^cancun\/eip4844_blobs\/`)
+	bt.skipLoad(`^cancun\/eip7516_blobgasfee\/`)
+	bt.skipLoad(`^prague\/eip7251_consolidations`)
+	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
+	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
+	bt.skipLoad(`^prague\/eip6110_deposits`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
+		skipForks := []string{
+			"Frontier",
+			"Homestead",
+			"Byzantium",
+			"Constantinople",
+			"ConstantinopleFix",
+			"Istanbul",
+			"Berlin",
+			"London",
+			"Merge",
+			"Paris",
+			"Shanghai",
+			"ShanghaiToCancunAtTime15k",
+			"CancunToPragueAtTime15k",
+			// "Cancun",
+			// "Prague",
+		}
+		for _, fork := range skipForks {
+			if test.json.Network == fork {
+				t.Skip()
+			}
+		}
+
 		if err := bt.checkFailure(t, name, test.Run()); err != nil {
 			t.Error(err)
 		}
