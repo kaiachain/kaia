@@ -133,9 +133,10 @@ type SendTxArgs struct {
 
 	Key *hexutil.Bytes `json:"key"`
 
-	AccessList        *types.AccessList        `json:"accessList,omitempty"`
+	AccessList *types.AccessList `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+
 	AuthorizationList *types.AuthorizationList `json:"authorizationList,omitempty"`
-	ChainID           *hexutil.Big             `json:"chainId,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`

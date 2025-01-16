@@ -338,7 +338,7 @@ func (tx *Transaction) AccessList() AccessList {
 	return nil
 }
 
-func (tx *Transaction) AuthorizationList() AuthorizationList {
+func (tx *Transaction) AuthList() AuthorizationList {
 	if tx.Type() == TxTypeEthereumSetCode {
 		te := tx.GetTxInternalData().(*TxInternalDataEthereumSetCode)
 		return te.GetAuthorizationList()

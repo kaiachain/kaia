@@ -124,7 +124,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
-	AuthorizationList() types.AuthorizationList
+	AuthList() types.AuthorizationList
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -295,7 +295,7 @@ func (st *StateTransition) preCheck() error {
 	}
 
 	// Check that EIP-7702 authorization list signatures are well formed.
-	for i, auth := range st.msg.AuthorizationList() {
+	for i, auth := range st.msg.AuthList() {
 		switch {
 		case auth.R.BitLen() > 256:
 			return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
@@ -368,7 +368,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Verify authorization list is not empty.
-	if msg.AuthorizationList() != nil && len(msg.AuthorizationList()) == 0 {
+	if msg.AuthList() != nil && len(msg.AuthList()) == 0 {
 		return nil, fmt.Errorf("%w: address %v", ErrEmptyAuthList, msg.ValidatedSender())
 	}
 
@@ -383,8 +383,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check authorization list validity and set code.
-	if msg.AuthorizationList() != nil {
-		st.processAuthorizationList(msg.AuthorizationList(), *msg.To(), rules)
+	if msg.AuthList() != nil {
+		st.processAuthorizationList(msg.AuthList(), *msg.To(), rules)
 	}
 
 	// Check whether the init code size has been exceeded.
