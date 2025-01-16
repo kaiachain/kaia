@@ -382,9 +382,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.IncNonce(msg.ValidatedSender())
 	}
 
-	// Check authorization list validity and set code.
+	// Apply EIP-7702 authorizations.
 	if msg.AuthList() != nil {
-		st.processAuthorizationList(msg.AuthList(), *msg.To(), rules)
+		for _, auth := range msg.AuthList() {
+			// Note errors are ignored, we simply skip invalid authorizations here.
+			err := st.applyAuthorization(&auth, *msg.To(), rules)
+			fmt.Println("err:", err)
+		}
 	}
 
 	// Check whether the init code size has been exceeded.
@@ -516,6 +520,75 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 }
 
+func (st *StateTransition) validateAuthorization(auth *types.Authorization) (authority common.Address, err error) {
+	// Verify chain ID is 0 or equal to current chain ID.
+	if auth.ChainID != 0 && st.evm.ChainConfig().ChainID.Uint64() != auth.ChainID {
+		return authority, ErrAuthorizationWrongChainID
+	}
+	// Limit nonce to 2^64-1 per EIP-2681.
+	if auth.Nonce+1 < auth.Nonce {
+		return authority, ErrAuthorizationNonceOverflow
+	}
+	// Validate signature values and recover authority.
+	authority, err = auth.Authority()
+	if err != nil {
+		return authority, fmt.Errorf("%w: %v", ErrAuthorizationInvalidSignature, err)
+	}
+	// Check the authority account
+	//  1) doesn't have code or has exisiting delegation
+	//  2) matches the auth's nonce
+	//
+	// Note it is added to the access list even if the authorization is invalid.
+	st.state.AddAddressToAccessList(authority)
+	code := st.state.GetCode(authority)
+	if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
+		return authority, ErrAuthorizationDestinationHasCode
+	}
+	if have := st.state.GetNonce(authority); have != auth.Nonce {
+		return authority, ErrAuthorizationNonceMismatch
+	}
+	return authority, nil
+}
+
+func (st *StateTransition) applyAuthorization(auth *types.Authorization, to common.Address, rules params.Rules) (err error) {
+	authority, err := st.validateAuthorization(auth)
+	if err != nil {
+		return err
+	}
+
+	// If the account already exists in state, refund the new account cost
+	// charged in the initrinsic calculation.
+	if exists := st.state.Exist(authority); exists {
+		// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
+		accountKeyType := st.state.GetKey(authority).Type()
+		if !accountKeyType.IsLegacyAccountKey() {
+			return fmt.Errorf("%w: %v", ErrAuthorizationNotAllowAccountKeyType, accountKeyType)
+		}
+		st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
+	}
+
+	st.state.IncNonce(authority)
+	delegation := types.AddressToDelegation(auth.Address)
+	if common.EmptyAddress(auth.Address) {
+		// If the delegation is for the zero address, completely clear all
+		// delegations from the account.
+		delegation = []byte{}
+	}
+
+	// We treat EOA and SCA as separate objects and therefore need to use
+	// distinct methods.
+	st.state.SetCodeToEOA(authority, delegation, rules)
+
+	// Usually the transaction destination and delegation target are added to
+	// the access list in statedb.Prepare(..), however if the delegation is in
+	// the same transaction we need add here as Prepare already happened.
+	if to == authority {
+		st.state.AddAddressToAccessList(auth.Address)
+	}
+
+	return nil
+}
+
 func (st *StateTransition) refundGas(refundQuotient uint64) {
 	// Apply refund counter, capped a refund quotient
 	refund := st.gasUsed() / refundQuotient
@@ -544,61 +617,6 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
-}
-
-func (st *StateTransition) processAuthorizationList(authList []types.Authorization, to common.Address, rules params.Rules) {
-	for _, auth := range authList {
-		// Verify chain ID is 0 or equal to current chain ID.
-		if auth.ChainID != uint64(0) && auth.ChainID != st.evm.ChainConfig().ChainID.Uint64() {
-			continue
-		}
-		// Limit nonce to 2^64-1 per EIP-2681.
-		if auth.Nonce+1 < auth.Nonce {
-			continue
-		}
-		// Validate signature values and recover authority.
-		authority, err := auth.Authority()
-		if err != nil {
-			continue
-		}
-		// Check the authority account 1) doesn't have code or has exisiting
-		// delegation 2) matches the auth's nonce
-		st.state.AddAddressToAccessList(authority)
-		code := st.state.GetCode(authority)
-		if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
-			continue
-		}
-		if have := st.state.GetNonce(authority); have != auth.Nonce {
-			continue
-		}
-		// If the account already exists in state, refund the new account cost
-		// charged in the initrinsic calculation.
-		if exists := st.state.Exist(authority); exists {
-			// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
-			if !st.state.GetKey(authority).Type().IsLegacyAccountKey() {
-				continue
-			}
-			st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
-		}
-		st.state.IncNonce(authority)
-		delegation := types.AddressToDelegation(auth.Address)
-		if common.EmptyAddress(auth.Address) {
-			// If the delegation is for the zero address, completely clear all
-			// delegations from the account.
-			delegation = []byte{}
-		}
-
-		// We treat EOA and SCA as separate objects and therefore need to use
-		// distinct methods.
-		st.state.SetCodeToEOA(authority, delegation, rules)
-
-		// Usually the transaction destination and delegation target are added to
-		// the access list in statedb.Prepare(..), however if the delegation is in
-		// the same transaction we need add here as Prepare already happened.
-		if to == authority {
-			st.state.AddAddressToAccessList(auth.Address)
-		}
-	}
 }
 
 // FloorDataGas calculates the minimum gas required for a transaction
