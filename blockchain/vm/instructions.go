@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
 )
@@ -350,7 +351,11 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 // opExtCodeSizeEIP7702 implements the EIP-7702 variation of opExtCodeSize.
 func opExtCodeSizeEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
-	slot.SetUint64(uint64(len(interpreter.evm.resolveCode(slot.Bytes20()))))
+	code := interpreter.evm.StateDB.GetCode(common.Address(slot.Bytes20()))
+	if _, ok := types.ParseDelegation(code); ok {
+		code = types.DelegationPrefix[:2]
+	}
+	slot.SetUint64(uint64(len(code)))
 	return nil, nil
 }
 
@@ -396,8 +401,10 @@ func opExtCodeCopyEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 	if overflow {
 		uint64CodeOffset = math.MaxUint64
 	}
-	addr := common.Address(a.Bytes20())
-	code := interpreter.evm.resolveCode(addr)
+	code := interpreter.evm.StateDB.GetCode(common.Address(a.Bytes20()))
+	if _, ok := types.ParseDelegation(code); ok {
+		code = types.DelegationPrefix[:2]
+	}
 	codeCopy := getData(code, uint64CodeOffset, length.Uint64())
 	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
@@ -426,11 +433,18 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 // opExtCodeHashEIP7702 implements the EIP-7702 variation of opExtCodeHash.
 func opExtCodeHashEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
-	address := common.Address(slot.Bytes20())
-	if interpreter.evm.StateDB.Empty(address) {
+	addr := common.Address(slot.Bytes20())
+	if interpreter.evm.StateDB.Empty(addr) {
 		slot.Clear()
+		return nil, nil
+	}
+	code := interpreter.evm.StateDB.GetCode(addr)
+	if _, ok := types.ParseDelegation(code); ok {
+		// If the code is a delegation, return the prefix without version.
+		slot.SetBytes(crypto.Keccak256(types.DelegationPrefix[:2]))
 	} else {
-		slot.SetBytes(interpreter.evm.resolveCodeHash(address).Bytes())
+		// Otherwise, return normal code hash.
+		slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(addr).Bytes())
 	}
 	return nil, nil
 }
