@@ -379,6 +379,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// SetCode sender nonce increment should be done before set code process.
 	if msg.Type() == types.TxTypeEthereumSetCode {
+		// Increment the nonce for the next transaction.
+		// Note: EIP-7702 authorizations can also modify the nonce. We perform
+		// this update first to ensure correct validation of authorization nonces.
 		st.state.IncNonce(msg.ValidatedSender())
 	}
 
