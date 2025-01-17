@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -54,25 +55,6 @@ func TestBlockchain(t *testing.T) {
 	//})
 }
 
-// func execBlockTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
-// 	for _, subtest := range test.Subtests() {
-// 		subtest := subtest
-// 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
-// 		name := name + "/" + key
-// 		t.Run(key, func(t *testing.T) {
-// 			for _, skip := range skipForks {
-// 				if skip == subtest.Fork {
-// 					t.Skipf("%s not supported yet", subtest.Fork)
-// 				}
-// 			}
-// 			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-// 				err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
-// 				return st.checkFailure(t, name, err)
-// 			})
-// 		})
-// 	}
-// }
-
 // TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
 type ExecutionSpecBlockTestSuite struct {
 	suite.Suite
@@ -82,12 +64,15 @@ type ExecutionSpecBlockTestSuite struct {
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
-	blockchain.IsExecutionSpecTest = true
+	blockchain.UseKaiaCancunExtCodeHashFee = true
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
+	// Reset global variables for test
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
-	blockchain.IsExecutionSpecTest = false
+	blockchain.UseKaiaCancunExtCodeHashFee = false
+	blockchain.GasLimitInExecutionSpecTest = 0
+	types.IsPragueInExecutionSpecTest = false
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
@@ -100,9 +85,9 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 
 	// TODO-Kaia: should remove these skip
 	// json format error
-	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
-	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
-	// bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
 
 	// only target after shanghai
 	bt.skipLoad(`^frontier\/`)

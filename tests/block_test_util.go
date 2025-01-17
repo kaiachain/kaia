@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -131,11 +132,6 @@ func (t *BlockTest) Run() error {
 		return err
 	}
 
-	// Our header fields are not compatible with Eth, so you can skip this.
-	// if gblock.Hash() != t.json.Genesis.Hash {
-	// 	return fmt.Errorf("genesis block hash doesn't match test: computed=%x, test=%x", gblock.Hash().Bytes()[:6], t.json.Genesis.Hash[:6])
-	// }
-
 	st := MakePreState(db, t.json.Pre, true, config.Rules(gblock.Number()))
 	simulatedRoot, err := useEthStateRoot(st)
 	if err != nil {
@@ -153,17 +149,10 @@ func (t *BlockTest) Run() error {
 	}
 	defer chain.Stop()
 
-	// validBlocks, err := t.insertBlocks(chain, gblock)
 	_, rewardMap, senderMap, err := t.insertBlocksFromTx(chain, gblock, db, tracer)
 	if err != nil {
 		return err
 	}
-
-	// no need
-	// cmlast := chain.CurrentBlock().Hash()
-	// if common.Hash(t.json.BestBlock) != cmlast {
-	// 	return fmt.Errorf("last block hash validation mismatch: want: %x, have: %x", t.json.BestBlock, cmlast)
-	// }
 
 	newDB, err := chain.State()
 	if err != nil {
@@ -173,7 +162,6 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("post state validation failed: %v", err)
 	}
 
-	// return t.validateImportedHeaders(chain, validBlocks)
 	return nil
 }
 
@@ -263,13 +251,12 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *type
 		// RLP decoding worked, try to insert into chain:
 		kaiaReward := common.Big0
 		ethReward := common.Big0
-		var ethGasUsedForBlock uint64 = 0
 
 		// The intrinsic gas calculation affects gas used, so we need to make some changes to the main code.
 		if bc.Config().IsIstanbulForkEnabled(bc.CurrentHeader().Number) {
-			types.ForTestIsPrague = true
+			types.IsPragueInExecutionSpecTest = true
 		}
-		blockchain.ForTestGasLimit = header.GasLimit
+		blockchain.GasLimitInExecutionSpecTest = header.GasLimit
 
 		// var maxFeePerGas *big.Int
 		blocks, receiptsList := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
@@ -304,12 +291,10 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *type
 				kaiaReward = new(big.Int).Add(kaiaReward, new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), kaiaGasPrice))
 
 				// Record eth's reward.
-				fmt.Printf("KaiaGasUsed: %v, EthGasUsedForBlock: %v, ExpectedGasUsed: %v\n", blocks[0].GasUsed(), ethGasUsedForBlock, header.GasUsed)
-
 				ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), header.BaseFee,
 					receipt.GasUsed, bc.Config().Rules(blocks[0].Header().Number)))
 
-				// because it is a eth test, we don't have to think about fee payer
+				// Because it is a eth test, we don't have to think about fee payer
 				// Because the baseFee is set to 0, Kaia's gas fee may be 0 if the transaction has a dynamic fee.
 				senderMap[tx.ValidatedSender()] = new(big.Int).Sub(
 					new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), kaiaGasPrice),
@@ -327,13 +312,6 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *type
 		}
 
 		i, err := bc.InsertChain(blocks)
-
-		// logging exectuted data
-		// Keep this for future debugging.
-		// for _, structLog := range tracer.StructLogs() {
-		// 	fmt.Printf("%+v\n", structLog)
-		// }
-
 		if err != nil {
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
@@ -342,7 +320,7 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *type
 			}
 		}
 		if b.BlockHeader == nil {
-			return nil, nil, nil, fmt.Errorf("Block insertion should have failed")
+			return nil, nil, nil, errors.New("Block insertion should have failed")
 		}
 
 		validBlocks = append(validBlocks, b)
@@ -429,16 +407,6 @@ func (t *BlockTest) validateImportedHeaders(cm *blockchain.BlockChain, validBloc
 	}
 	return nil
 }
-
-// func (bb *btBlock) decode() (*types.Block, error) {
-// 	data, err := hexutil.Decode(bb.Rlp)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var b types.Block
-// 	err = rlp.DecodeBytes(data, &b)
-// 	return &b, err
-// }
 
 type TestHeader struct {
 	ParentHash       common.Hash
