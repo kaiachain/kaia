@@ -396,6 +396,17 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		}
 	}
 
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		if addr, ok := types.ParseDelegation(st.state.GetCode(*msg.To())); ok {
+			// Perform convenience warming of sender's delegation target. Although the
+			// sender is already warmed in Prepare(..), it's possible a delegation to
+			// the account was deployed during this transaction. To handle correctly,
+			// wait until the final state of delegations is determined before
+			// performing the resolution and warming.
+			st.state.AddAddressToAccessList(addr)
+		}
+	}
+
 	// Check whether the init code size has been exceeded.
 	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
 		return nil, fmt.Errorf("%w: code size %v limit %v", ErrMaxInitCodeSizeExceeded, len(st.data), params.MaxInitCodeSize)
@@ -586,16 +597,6 @@ func (st *StateTransition) applyAuthorization(auth *types.Authorization, to comm
 	// distinct methods.
 	st.state.SetCodeToEOA(authority, delegation, rules)
 
-	// If an account has a code delegation to another account, that account will be added to
-	// the access list in statedb.Prepare(..).
-	//
-	// However if the destination address of the transaction (msg) gains a new delegation
-	// in this same transaction, we need to explicitly warm the delegation address here,
-	// since Prepare has already happened. The intention here is to behave as if the
-	// delegation was already present before calling Prepare.
-	if to == authority {
-		st.state.AddAddressToAccessList(auth.Address)
-	}
 	return nil
 }
 

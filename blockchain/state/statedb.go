@@ -1211,10 +1211,6 @@ func (s *StateDB) Prepare(rules params.Rules, sender, feepayer, coinbase common.
 		}
 		if dst != nil {
 			s.AddAddressToAccessList(*dst)
-			// If the dst has a delegation, also warm its target.
-			if addr, ok := types.ParseDelegation(s.GetCode(*dst)); ok {
-				s.AddAddressToAccessList(addr)
-			}
 			// If it's a create-tx, the destination will be added inside evm.create
 		}
 		for _, addr := range precompiles {

@@ -256,7 +256,6 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		aa              = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
 		bb              = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
 		zeroAddress     = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		toAuthorityTx   = types.NewTransaction(uint64(0), authority, nil, 0, nil, nil)
 		toAddrTx        = types.NewTransaction(uint64(0), addr, nil, 0, nil, nil)
 	)
 
@@ -331,28 +330,6 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
 				m.EXPECT().SetCodeToEOA(authority, []byte{}, params.TestRules)
-			},
-		},
-		{
-			name: "success (to == authority)",
-			makeAuthorization: func() types.Authorization {
-				auth, err := types.SignAuth(types.Authorization{
-					ChainID: params.TestChainConfig.ChainID.Uint64(),
-					Address: aa,
-					Nonce:   uint64(1),
-				}, authorityKey)
-				assert.NoError(t, err)
-				return auth
-			},
-			msg: toAuthorityTx,
-			expectedMockCalls: func(m *mock_vm.MockStateDB) {
-				m.EXPECT().AddAddressToAccessList(authority)
-				m.EXPECT().GetCode(authority).Return(nil)
-				m.EXPECT().GetNonce(authority).Return(uint64(1))
-				m.EXPECT().Exist(authority).Return(false)
-				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
-				m.EXPECT().AddAddressToAccessList(aa)
 			},
 		},
 		{
