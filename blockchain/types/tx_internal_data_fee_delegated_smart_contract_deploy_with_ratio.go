@@ -415,7 +415,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateD
 	} else {
 		to = crypto.CreateAddress(t.From, t.AccountNonce)
 	}
-	if common.IsPrecompiledContractAddress(to) {
+	if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	if t.HumanReadable {

@@ -45,6 +45,7 @@ var (
 	vmTestDir                 = filepath.Join(baseDir, "VMTests")
 	rlpTestDir                = filepath.Join(baseDir, "RLPTests")
 	executionSpecStateTestDir = filepath.Join(".", "spec-tests", "fixtures", "state_tests")
+	executionSpecBlockTestDir = filepath.Join(".", "spec-tests", "fixtures", "blockchain_tests")
 )
 
 func readJSON(reader io.Reader, value interface{}) error {
@@ -223,7 +224,7 @@ func (tm *testMatcher) runTestFile(t *testing.T, path, name string, runTest inte
 			t.Skip("Skipped by whitelist")
 		}
 	}
-	t.Parallel()
+	// t.Parallel()
 
 	// Load the file as map[string]<testType>.
 	m := makeMapFromTestFunc(runTest)

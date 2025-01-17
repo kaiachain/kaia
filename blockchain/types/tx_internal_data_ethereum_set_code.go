@@ -407,7 +407,7 @@ func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNu
 	if t.Recipient == (common.Address{}) {
 		return kerrors.ErrEmptyRecipient
 	} else {
-		if common.IsPrecompiledContractAddress(t.Recipient) {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
 	}

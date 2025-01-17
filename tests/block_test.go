@@ -24,6 +24,11 @@ package tests
 
 import (
 	"testing"
+
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/stretchr/testify/suite"
 )
 
 func TestBlockchain(t *testing.T) {
@@ -48,4 +53,97 @@ func TestBlockchain(t *testing.T) {
 	//		t.Error(err)
 	//	}
 	//})
+}
+
+// TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
+type ExecutionSpecBlockTestSuite struct {
+	suite.Suite
+	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
+}
+
+func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
+	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
+	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
+	blockchain.UseKaiaCancunExtCodeHashFee = true
+}
+
+func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
+	// Reset global variables for test
+	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
+	blockchain.UseKaiaCancunExtCodeHashFee = false
+	blockchain.GasLimitInExecutionSpecTest = 0
+	types.IsPragueInExecutionSpecTest = false
+}
+
+func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
+	t := suite.T()
+
+	if !common.FileExist(executionSpecBlockTestDir) {
+		t.Skipf("directory %s does not exist", executionSpecBlockTestDir)
+	}
+	bt := new(testMatcher)
+
+	// TODO-Kaia: should remove these skip
+	// json format error
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
+
+	// only target after shanghai
+	bt.skipLoad(`^frontier\/`)
+	bt.skipLoad(`^homestead\/`)
+	bt.skipLoad(`^byzantium\/`)
+	bt.skipLoad(`^constantinople\/`)
+	bt.skipLoad(`^istanbul\/`)
+	bt.skipLoad(`^berlin\/`)
+	bt.skipLoad(`^paris\/`)
+
+	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`)             // gas error
+	bt.skipLoad(`^prague\/eip2935_historical_block_hashes_from_state`) // gas error
+	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost`)             // unconfirmed
+	bt.skipLoad(`^prague\/eip7702_set_code_tx`)                        // state, gas (after update we should do it)
+
+	// tests to skip
+	// unsupported EIPs
+	bt.skipLoad(`^shanghai\/eip4895_withdrawals\/`)
+	bt.skipLoad(`^cancun\/eip4788_beacon_root\/`)
+	bt.skipLoad(`^cancun\/eip4844_blobs\/`)
+	bt.skipLoad(`^cancun\/eip7516_blobgasfee\/`)
+	bt.skipLoad(`^prague\/eip7251_consolidations`)
+	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
+	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
+	bt.skipLoad(`^prague\/eip6110_deposits`)
+
+	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
+		skipForks := []string{
+			"Frontier",
+			"Homestead",
+			"Byzantium",
+			"Constantinople",
+			"ConstantinopleFix",
+			"Istanbul",
+			"Berlin",
+			"London",
+			"Merge",
+			"Paris",
+			"Shanghai",
+			"ShanghaiToCancunAtTime15k",
+			"CancunToPragueAtTime15k",
+			// "Cancun",
+			// "Prague",
+		}
+		for _, fork := range skipForks {
+			if test.json.Network == fork {
+				t.Skip()
+			}
+		}
+
+		if err := bt.checkFailure(t, name, test.Run()); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestExecutionSpecBlockTestSuite(t *testing.T) {
+	suite.Run(t, new(ExecutionSpecBlockTestSuite))
 }

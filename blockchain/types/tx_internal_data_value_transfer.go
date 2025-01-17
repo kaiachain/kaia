@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -284,7 +285,7 @@ func (t *TxInternalDataValueTransfer) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient) {
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)

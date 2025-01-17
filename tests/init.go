@@ -23,9 +23,12 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -120,4 +123,23 @@ type UnsupportedForkError struct {
 
 func (e UnsupportedForkError) Error() string {
 	return fmt.Sprintf("unsupported fork %q", e.Name)
+}
+
+// IsPrecompiledContractAddressForEthTest returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
+func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface{}) bool {
+	r, ok := rules.(params.Rules)
+	if !ok {
+		panic("unexpected type of rules")
+	}
+	activePrecompiles := vm.ActivePrecompiles(r)
+	for _, pre := range activePrecompiles {
+		// skip 0x0a and 0x0b if before Prague
+		if !r.IsPrague && (bytes.Compare(pre.Bytes(), []byte{10}) == 0 || bytes.Compare(pre.Bytes(), []byte{11}) == 0) {
+			continue
+		}
+		if bytes.Compare(pre.Bytes(), addr.Bytes()) == 0 {
+			return true
+		}
+	}
+	return false
 }

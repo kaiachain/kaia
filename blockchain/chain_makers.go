@@ -102,6 +102,17 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.receipts = append(b.receipts, receipt)
 }
 
+func (b *BlockGen) AddTxWithChainWithError(bc *BlockChain, tx *types.Transaction) error {
+	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
+	receipt, _, err := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
+	if err != nil {
+		return err
+	}
+	b.txs = append(b.txs, tx)
+	b.receipts = append(b.receipts, receipt)
+	return nil
+}
+
 // AddUncheckedTx forcefully adds a transaction to the block without any
 // validation.
 //

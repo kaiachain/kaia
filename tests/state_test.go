@@ -69,14 +69,16 @@ func TestKaiaSpecState(t *testing.T) {
 
 type ExecutionSpecStateTestSuite struct {
 	suite.Suite
+	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
 }
 
 func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
-	vm.RelaxPrecompileRangeForTest(true)
+	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
+	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 }
 
 func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
-	vm.RelaxPrecompileRangeForTest(false)
+	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 }
 
 func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
