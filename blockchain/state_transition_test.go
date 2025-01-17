@@ -109,7 +109,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "valid Authorization",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -130,7 +130,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "wrong ChainID",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: uint64(10),
 					Address: aa,
 					Nonce:   1,
@@ -148,7 +148,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "nonce overflow by uint64 max value",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(18446744073709551615),
@@ -166,7 +166,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "invalid Signature in Authority",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -186,7 +186,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "destination has code",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -205,7 +205,7 @@ func TestStateTransition_validateAuthorization(t *testing.T) {
 		{
 			name: "nonce mismatch",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(10),
@@ -270,7 +270,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "success (minimum)",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -291,7 +291,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "success (case of refund)",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   1,
@@ -314,7 +314,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "success (empty address 0x0000000000000000000000000000000000000000)",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: zeroAddress,
 					Nonce:   uint64(1),
@@ -335,7 +335,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "success (don't ecrecover authority)",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),
@@ -361,7 +361,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "invalid validateAuthorization",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: uint64(10),
 					Address: aa,
 					Nonce:   1,
@@ -378,7 +378,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		{
 			name: "don't allow account key type: signer's key was updated",
 			makeAuthorization: func() types.SetCodeAuthorization {
-				auth, err := types.SignAuthorization(authorityKey, types.SetCodeAuthorization{
+				auth, err := types.SignSetCode(authorityKey, types.SetCodeAuthorization{
 					ChainID: params.TestChainConfig.ChainID.Uint64(),
 					Address: aa,
 					Nonce:   uint64(1),

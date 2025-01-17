@@ -575,8 +575,8 @@ type SetCodeAuthorization struct {
 	S       *big.Int       `json:"s"`
 }
 
-// SignAuthorization signs the provided authorization.
-func SignAuthorization(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAuthorization, error) {
+// SignSetCode creates a signed the SetCode authorization.
+func SignSetCode(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAuthorization, error) {
 	sighash := auth.sigHash()
 	sig, err := crypto.Sign(sighash[:], prv)
 	if err != nil {

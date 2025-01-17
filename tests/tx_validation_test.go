@@ -442,7 +442,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 	// set code for contract execution tx type
 	{
-		auth, err := types.SignAuthorization(eoaWithCode.Keys[0], types.SetCodeAuthorization{
+		auth, err := types.SignSetCode(eoaWithCode.Keys[0], types.SetCodeAuthorization{
 			ChainID: bcdata.bc.Config().ChainID.Uint64(),
 			Address: contract.Addr,
 			Nonce:   uint64(0),
