@@ -295,12 +295,20 @@ func (st *StateTransition) preCheck() error {
 	}
 
 	// Check that EIP-7702 authorization list signatures are well formed.
-	for i, auth := range st.msg.AuthList() {
-		switch {
-		case auth.R.BitLen() > 256:
-			return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
-		case auth.S.BitLen() > 256:
-			return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
+	if st.msg.AuthList() != nil {
+		if st.msg.To() == nil {
+			return fmt.Errorf("%w (sender %v)", ErrSetCodeTxCreate, st.msg.ValidatedSender())
+		}
+		if len(st.msg.AuthList()) == 0 {
+			return fmt.Errorf("%w (sender %v)", ErrEmptyAuthList, st.msg.ValidatedSender())
+		}
+		for i, auth := range st.msg.AuthList() {
+			switch {
+			case auth.R.BitLen() > 256:
+				return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
+			case auth.S.BitLen() > 256:
+				return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
+			}
 		}
 	}
 	return st.buyGas()
@@ -365,11 +373,6 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
 		return nil, vm.ErrInsufficientBalance
-	}
-
-	// Verify authorization list is not empty.
-	if msg.AuthList() != nil && len(msg.AuthList()) == 0 {
-		return nil, fmt.Errorf("%w: address %v", ErrEmptyAuthList, msg.ValidatedSender())
 	}
 
 	// Execute the preparatory steps for state transition which includes:
