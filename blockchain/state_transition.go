@@ -389,8 +389,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if msg.AuthList() != nil {
 		for _, auth := range msg.AuthList() {
 			// Note errors are ignored, we simply skip invalid authorizations here.
-			err := st.applyAuthorization(&auth, *msg.To(), rules)
-			fmt.Println("err:", err)
+			st.applyAuthorization(&auth, *msg.To(), rules)
 		}
 	}
 
