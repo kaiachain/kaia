@@ -576,22 +576,23 @@ func (st *StateTransition) applyAuthorization(auth *types.Authorization, to comm
 	st.state.IncNonce(authority)
 	delegation := types.AddressToDelegation(auth.Address)
 	if common.EmptyAddress(auth.Address) {
-		// If the delegation is for the zero address, completely clear all
-		// delegations from the account.
-		delegation = []byte{}
+		// Delegation to zero address means clear.
+		st.state.SetCodeToEOA(authority, []byte{}, rules)
+		return nil
 	}
 
+	// Otherwise install delegation to auth.Address.
 	// We treat EOA and SCA as separate objects and therefore need to use
 	// distinct methods.
 	st.state.SetCodeToEOA(authority, delegation, rules)
 
-	// Usually the transaction destination and delegation target are added to
-	// the access list in statedb.Prepare(..), however if the delegation is in
-	// the same transaction we need add here as Prepare already happened.
+	// Usually the delegation target is added to the access list in statedb.Prepare(..).
+	// However if the destination address of the transaction is an EOA, and the EOA gains
+	// a new delegation in the same transaction, we need to explicitly add the delegation
+	// address here since Prepare has already happened.
 	if to == authority {
 		st.state.AddAddressToAccessList(auth.Address)
 	}
-
 	return nil
 }
 
