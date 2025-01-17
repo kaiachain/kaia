@@ -302,14 +302,6 @@ func (st *StateTransition) preCheck() error {
 		if len(st.msg.AuthList()) == 0 {
 			return fmt.Errorf("%w (sender %v)", ErrEmptyAuthList, st.msg.ValidatedSender())
 		}
-		for i, auth := range st.msg.AuthList() {
-			switch {
-			case auth.R.BitLen() > 256:
-				return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
-			case auth.S.BitLen() > 256:
-				return fmt.Errorf("%w: address %v, authorization %d", ErrAuthSignatureVeryHigh, st.msg.ValidatedSender(), i)
-			}
-		}
 	}
 	return st.buyGas()
 }
