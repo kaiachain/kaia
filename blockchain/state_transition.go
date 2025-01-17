@@ -124,7 +124,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
-	AuthList() []types.Authorization
+	AuthList() []types.SetCodeAuthorization
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -528,7 +528,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 }
 
-func (st *StateTransition) validateAuthorization(auth *types.Authorization) (authority common.Address, err error) {
+func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {
 	// Verify chain ID is 0 or equal to current chain ID.
 	if auth.ChainID != 0 && st.evm.ChainConfig().ChainID.Uint64() != auth.ChainID {
 		return authority, ErrAuthorizationWrongChainID
@@ -558,7 +558,7 @@ func (st *StateTransition) validateAuthorization(auth *types.Authorization) (aut
 	return authority, nil
 }
 
-func (st *StateTransition) applyAuthorization(auth *types.Authorization, to common.Address, rules params.Rules) (err error) {
+func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, to common.Address, rules params.Rules) (err error) {
 	authority, err := st.validateAuthorization(auth)
 	if err != nil {
 		return err

@@ -418,11 +418,11 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 
-	var authorizationList []types.Authorization
+	var authorizationList []types.SetCodeAuthorization
 	if tx.AuthorizationList != nil {
-		authorizationList = make([]types.Authorization, 0)
+		authorizationList = make([]types.SetCodeAuthorization, 0)
 		for _, auth := range tx.AuthorizationList {
-			authorizationList = append(authorizationList, types.Authorization{
+			authorizationList = append(authorizationList, types.SetCodeAuthorization{
 				ChainID: auth.ChainID,
 				Address: auth.Address,
 				Nonce:   auth.Nonce,
@@ -497,7 +497,7 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList []types.Authorization, contractCreation bool, r params.Rules) (uint64, uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList []types.SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}

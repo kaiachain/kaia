@@ -442,14 +442,14 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 	// set code for contract execution tx type
 	{
-		auth, err := types.SignAuth(types.Authorization{
+		auth, err := types.SignAuth(types.SetCodeAuthorization{
 			ChainID: bcdata.bc.Config().ChainID.Uint64(),
 			Address: contract.Addr,
 			Nonce:   uint64(0),
 		}, eoaWithCode.Keys[0])
 		assert.Equal(t, nil, err)
 
-		authorizationList := []types.Authorization{auth}
+		authorizationList := []types.SetCodeAuthorization{auth}
 
 		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
 			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), uint64(0), nil, authorizationList)

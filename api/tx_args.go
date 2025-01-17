@@ -136,7 +136,7 @@ type SendTxArgs struct {
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
-	AuthorizationList []types.Authorization `json:"authorizationList,omitempty"`
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
 
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
@@ -564,7 +564,7 @@ type EthTransactionArgs struct {
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
 	// For SetCodeTxType
-	AuthorizationList []types.Authorization `json:"authorizationList"`
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList"`
 }
 
 // from retrieves the transaction sender address.
@@ -606,7 +606,7 @@ func (args *EthTransactionArgs) GetAccessList() types.AccessList {
 	}
 }
 
-func (args *EthTransactionArgs) GetAuthorizationList() []types.Authorization {
+func (args *EthTransactionArgs) GetAuthorizationList() []types.SetCodeAuthorization {
 	if args.AuthorizationList != nil {
 		return args.AuthorizationList
 	} else {
@@ -794,7 +794,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		accessList = *args.AccessList
 	}
 
-	var AuthorizationList []types.Authorization
+	var AuthorizationList []types.SetCodeAuthorization
 	if args.AuthorizationList != nil {
 		AuthorizationList = args.AuthorizationList
 	}
