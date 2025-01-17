@@ -564,7 +564,7 @@ type EthTransactionArgs struct {
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
 	// For SetCodeTxType
-	AuthList []types.Authorization `json:"authList"`
+	AuthorizationList []types.Authorization `json:"authorizationList"`
 }
 
 // from retrieves the transaction sender address.
@@ -607,8 +607,8 @@ func (args *EthTransactionArgs) GetAccessList() types.AccessList {
 }
 
 func (args *EthTransactionArgs) GetAuthorizationList() []types.Authorization {
-	if args.AuthList != nil {
-		return args.AuthList
+	if args.AuthorizationList != nil {
+		return args.AuthorizationList
 	} else {
 		return nil
 	}
@@ -720,7 +720,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 			Value:                args.Value,
 			Data:                 (*hexutil.Bytes)(&data),
 			AccessList:           args.AccessList,
-			AuthList:             args.AuthList,
+			AuthorizationList:    args.AuthorizationList,
 		}
 		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
 		gasCap := uint64(0)
@@ -794,11 +794,11 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		accessList = *args.AccessList
 	}
 
-	var authList []types.Authorization
-	if args.AuthList != nil {
-		authList = args.AuthList
+	var AuthorizationList []types.Authorization
+	if args.AuthorizationList != nil {
+		AuthorizationList = args.AuthorizationList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, dataTokens, accessList, authList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, dataTokens, accessList, AuthorizationList), nil
 }
 
 // toTransaction converts the arguments to a transaction.
@@ -806,7 +806,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 	var tx *types.Transaction
 	switch {
-	case args.AuthList != nil:
+	case args.AuthorizationList != nil:
 		al := types.AccessList{}
 		if args.AccessList != nil {
 			al = *args.AccessList
@@ -821,7 +821,7 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 			Amount:            (*big.Int)(args.Value),
 			Payload:           args.data(),
 			AccessList:        al,
-			AuthorizationList: args.AuthList,
+			AuthorizationList: args.AuthorizationList,
 		})
 	case args.MaxFeePerGas != nil:
 		al := types.AccessList{}
