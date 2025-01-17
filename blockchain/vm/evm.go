@@ -522,7 +522,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// - the nonce is nonzero
 	// - the code is non-empty
 	// - the storage is non-empty
-	contractHash := evm.resolveCodeHash(address)
+	contractHash := evm.StateDB.GetCodeHash(address)
 	storageRoot := evm.StateDB.GetStorageRoot(address)
 
 	// The early Kaia design tried to support the account creation with a user selected address,
