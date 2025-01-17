@@ -155,6 +155,7 @@ var (
 	// -- EIP-7702 errors --
 
 	// Message validation errors:
+	// Note these are just informational, and do not cause tx execution abort.
 	ErrEmptyAuthList         = errors.New("EIP-7702 transaction with empty auth list")
 	ErrSetCodeTxCreate       = errors.New("EIP-7702 transaction cannot be used to create contract")
 	ErrAuthSignatureVeryHigh = errors.New("EIP-7702 authorization with R or S value greater than 2^256 - 1")
