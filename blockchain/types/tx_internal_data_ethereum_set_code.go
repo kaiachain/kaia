@@ -575,28 +575,22 @@ type SetCodeAuthorization struct {
 	S       *big.Int       `json:"s"`
 }
 
-// SignAuth signs the provided authorization.
-func SignAuth(auth SetCodeAuthorization, prv *ecdsa.PrivateKey) (SetCodeAuthorization, error) {
+// SignAuthorization signs the provided authorization.
+func SignAuthorization(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAuthorization, error) {
 	sighash := auth.sigHash()
 	sig, err := crypto.Sign(sighash[:], prv)
 	if err != nil {
 		return SetCodeAuthorization{}, err
 	}
-	return auth.WithSignature(sig), nil
-}
-
-// WithSignature updates the signature of an Authorization to be equal the
-// decoded signature provided in sig.
-func (a SetCodeAuthorization) WithSignature(sig []byte) SetCodeAuthorization {
 	r, s, _ := decodeSignature(sig)
 	return SetCodeAuthorization{
-		ChainID: a.ChainID,
-		Address: a.Address,
-		Nonce:   a.Nonce,
+		ChainID: auth.ChainID,
+		Address: auth.Address,
+		Nonce:   auth.Nonce,
 		V:       sig[crypto.RecoveryIDOffset],
 		R:       r,
 		S:       s,
-	}
+	}, nil
 }
 
 func (a *SetCodeAuthorization) sigHash() common.Hash {
