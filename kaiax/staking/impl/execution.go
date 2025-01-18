@@ -34,7 +34,8 @@ func (s *StakingModule) PostInsertBlock(block *types.Block) error {
 }
 
 func (s *StakingModule) RewindTo(newBlock *types.Block) {
-	// Nothing to do
+	// Purge the staking info cache.
+	s.stakingInfoCache.Purge()
 }
 
 func (s *StakingModule) RewindDelete(hash common.Hash, num uint64) {
