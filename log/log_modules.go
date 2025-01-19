@@ -135,6 +135,7 @@ const (
 	// 61~70
 	KaiaxGov
 	KaiaxValset
+	KaiaxCompress
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -219,4 +220,5 @@ var moduleNames = [ModuleNameLen]string{
 	// 61~70
 	"kaiax/gov",
 	"kaiax/valset",
+	"kaiax/compress",
 }

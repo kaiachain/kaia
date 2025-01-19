@@ -623,6 +623,20 @@ func (mr *MockBlockChainMockRecorder) InsertReceiptChain(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertReceiptChain", reflect.TypeOf((*MockBlockChain)(nil).InsertReceiptChain), arg0, arg1)
 }
 
+// IsArchiveMode mocks base method.
+func (m *MockBlockChain) IsArchiveMode() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsArchiveMode")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsArchiveMode indicates an expected call of IsArchiveMode.
+func (mr *MockBlockChainMockRecorder) IsArchiveMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsArchiveMode", reflect.TypeOf((*MockBlockChain)(nil).IsArchiveMode))
+}
+
 // IsParallelDBWrite mocks base method.
 func (m *MockBlockChain) IsParallelDBWrite() bool {
 	m.ctrl.T.Helper()

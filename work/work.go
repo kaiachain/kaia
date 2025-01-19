@@ -278,6 +278,7 @@ type BlockChain interface {
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 	IsParallelDBWrite() bool
 	IsSenderTxHashIndexingEnabled() bool
+	IsArchiveMode() bool
 
 	Processor() blockchain.Processor
 	BadBlocks() ([]blockchain.BadBlockArgs, error)

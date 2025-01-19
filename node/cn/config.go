@@ -134,6 +134,9 @@ type Config struct {
 	TxPruningRetention      uint64
 	ReceiptPruning          bool
 	ReceiptPruningRetention uint64
+	Compress                bool
+	CompressLog             bool
+	CompressRetention       uint64
 	SenderTxHashIndexing    bool
 	ParallelDBWrite         bool
 	TrieNodeCacheConfig     statedb.TrieNodeCacheConfig

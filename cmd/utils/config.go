@@ -589,6 +589,13 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.DynamoDBConfig.WriteCapacityUnits = ctx.Int64(DynamoDBWriteCapacityFlag.Name)
 	cfg.DynamoDBConfig.ReadOnly = ctx.Bool(DynamoDBReadOnlyFlag.Name)
 
+	cfg.Compress = ctx.Bool(CompressFlag.Name)
+	cfg.CompressLog = ctx.Bool(CompressLogFlag.Name)
+	cfg.CompressRetention = ctx.Uint64(CompressRetentionFlag.Name)
+	if cfg.CompressRetention < blockchain.MinCompressRetention {
+		cfg.CompressRetention = blockchain.MinCompressRetention
+	}
+
 	if gcmode := ctx.String(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		log.Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
