@@ -29,10 +29,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
@@ -394,11 +392,11 @@ func (gxhash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header)
 	return nil
 }
 
+var CustomInitialize func(chain consensus.ChainReader, header *types.Header, state *state.StateDB)
+
 func (gxhash *Gxhash) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	if chain.Config().IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+	if CustomInitialize != nil {
+		CustomInitialize(chain, header, state)
 	}
 }
 

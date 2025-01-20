@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -143,6 +144,13 @@ func (t *BlockTest) Run() error {
 
 	// TODO-Kaia: Replace gxhash with istanbul
 	tracer := vm.NewStructLogger(nil)
+	gxhash.CustomInitialize = func(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+		if chain.Config().IsPragueForkEnabled(header.Number) {
+			context := blockchain.NewEVMBlockContext(header, chain, nil)
+			vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+			blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+		}
+	}
 	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{Debug: true, Tracer: tracer})
 	if err != nil {
 		return err
