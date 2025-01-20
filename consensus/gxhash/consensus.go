@@ -392,7 +392,12 @@ func (gxhash *Gxhash) Prepare(chain consensus.ChainReader, header *types.Header)
 	return nil
 }
 
+var CustomInitialize func(chain consensus.ChainReader, header *types.Header, state *state.StateDB)
+
 func (gxhash *Gxhash) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+	if CustomInitialize != nil {
+		CustomInitialize(chain, header, state)
+	}
 }
 
 // Finalize implements consensus.Engine, accumulating the block rewards,
