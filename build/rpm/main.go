@@ -229,6 +229,11 @@ cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
 cp build/rpm/etc/init.d/{{ .DaemonName }} $RPM_BUILD_ROOT/etc/init.d/{{ .DaemonName }}
 cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
 cp build/rpm/etc/systemd/system/{{ .DaemonName}}.service $RPM_BUILD_ROOT/etc/systemd/system/{{ .DaemonName}}.service
+
+if [ ! -e /etc/init.d/functions ]; then
+  ln -s /etc/rc.d/init.d/functions /etc/init.d/functions
+fi
+
 %endif
 
 %files
