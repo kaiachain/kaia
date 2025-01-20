@@ -98,10 +98,9 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^berlin\/`)
 	bt.skipLoad(`^paris\/`)
 
-	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`)             // gas error
-	bt.skipLoad(`^prague\/eip2935_historical_block_hashes_from_state`) // gas error
-	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost`)             // unconfirmed
-	bt.skipLoad(`^prague\/eip7702_set_code_tx`)                        // state, gas (after update we should do it)
+	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`) // gas error
+	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost`) // unconfirmed
+	bt.skipLoad(`^prague\/eip7702_set_code_tx`)            // state, gas (after update we should do it)
 
 	// tests to skip
 	// unsupported EIPs

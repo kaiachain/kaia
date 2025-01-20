@@ -149,7 +149,7 @@ func (t *BlockTest) Run() error {
 	}
 	defer chain.Stop()
 
-	_, rewardMap, senderMap, err := t.insertBlocksFromTx(chain, gblock, db, tracer)
+	_, rewardMap, senderMap, err := t.insertBlocksFromTx(chain, *gblock, db, tracer)
 	if err != nil {
 		return err
 	}
@@ -234,10 +234,12 @@ type rewardList struct {
 	ethReward  *big.Int
 }
 
-func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, map[common.Address]rewardList, map[common.Address]*big.Int, error) {
+func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, map[common.Address]rewardList, map[common.Address]*big.Int, error) {
 	validBlocks := make([]btBlock, 0)
 	rewardMap := map[common.Address]rewardList{}
 	senderMap := map[common.Address]*big.Int{}
+	preBlock := &gBlock
+
 	// insert the test blocks, which will execute all transactions
 	for _, b := range t.json.Blocks {
 		txs, header, err := b.decodeTx()
@@ -262,9 +264,10 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, preBlock *type
 		blocks, receiptsList := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			for _, tx := range txs {
-				_ = b.AddTxWithChainWithError(nil, tx)
+				_ = b.AddTxWithChainWithError(bc, tx)
 			}
 		})
+		preBlock = blocks[0]
 
 		// The reward calculation is different for kaia and eth, and this will be deducted from the state later.
 		for _, receipt := range receiptsList[0] {
