@@ -272,7 +272,7 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 		blocks, receiptsList := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			for _, tx := range txs {
-				_ = b.AddTxWithChainWithError(bc, tx)
+				b.AddTxWithChainEvenHasError(bc, tx)
 			}
 		})
 		preBlock = blocks[0]

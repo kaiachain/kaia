@@ -98,8 +98,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^berlin\/`)
 	bt.skipLoad(`^paris\/`)
 
-	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`) // gas error
-	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost`) // unconfirmed
+  bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`) // gas error
 	bt.skipLoad(`^prague\/eip7702_set_code_tx`)            // state, gas (after update we should do it)
 
 	// tests to skip
@@ -112,6 +111,8 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
+	// type 3 tx (EIP-4844) is not supported
+	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		skipForks := []string{
