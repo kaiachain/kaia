@@ -102,14 +102,14 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.receipts = append(b.receipts, receipt)
 }
 
-func (b *BlockGen) AddTxWithChainWithError(bc *BlockChain, tx *types.Transaction) error {
+func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transaction) error {
 	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
-	if err != nil {
-		return err
-	}
+	receipt, _, _ := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
+
 	b.txs = append(b.txs, tx)
-	b.receipts = append(b.receipts, receipt)
+	if receipt != nil {
+		b.receipts = append(b.receipts, receipt)
+	}
 	return nil
 }
 
