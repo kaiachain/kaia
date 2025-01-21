@@ -74,7 +74,7 @@ func TestGasOverflow(t *testing.T) {
 }
 
 func testGasOverflowLegacyTransaction(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeLegacyTransaction)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeLegacyTransaction)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataNonZeroGasFrontier)
@@ -84,14 +84,14 @@ func testGasOverflowLegacyTransaction(t *testing.T) {
 }
 
 func testGasOverflowValueTransfer(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeValueTransfer)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeValueTransfer)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	addUint64(t, intrinsic, senderValidationGas)
 }
 
 func testGasOverflowFeeDelegatedValueTransfer(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedValueTransfer)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedValueTransfer)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -100,7 +100,7 @@ func testGasOverflowFeeDelegatedValueTransfer(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioValueTransfer(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedValueTransferWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedValueTransferWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -109,7 +109,7 @@ func testGasOverflowFeeDelegatedWithRatioValueTransfer(t *testing.T) {
 }
 
 func testGasOverflowValueTransferWithMemo(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeValueTransferMemo)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeValueTransferMemo)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
@@ -119,7 +119,7 @@ func testGasOverflowValueTransferWithMemo(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedValueTransferWithMemo(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedValueTransferMemo)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedValueTransferMemo)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -131,7 +131,7 @@ func testGasOverflowFeeDelegatedValueTransferWithMemo(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedValueTransferMemoWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedValueTransferMemoWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -143,7 +143,7 @@ func testGasOverflowFeeDelegatedWithRatioValueTransferWithMemo(t *testing.T) {
 }
 
 func testGasOverflowAccountUpdate(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeAccountUpdate)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeAccountUpdate)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	maxCreationGas := getMaxCreationKeyGas(t)
@@ -153,7 +153,7 @@ func testGasOverflowAccountUpdate(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedAccountUpdate(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedAccountUpdate)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedAccountUpdate)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -165,7 +165,7 @@ func testGasOverflowFeeDelegatedAccountUpdate(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioAccountUpdate(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedAccountUpdateWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedAccountUpdateWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -177,7 +177,7 @@ func testGasOverflowFeeDelegatedWithRatioAccountUpdate(t *testing.T) {
 }
 
 func testGasOverflowSmartContractDeploy(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeSmartContractDeploy)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeSmartContractDeploy)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
@@ -190,7 +190,7 @@ func testGasOverflowSmartContractDeploy(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedSmartContractDeploy(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedSmartContractDeploy)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedSmartContractDeploy)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -205,7 +205,7 @@ func testGasOverflowFeeDelegatedSmartContractDeploy(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioSmartContractDeploy(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedSmartContractDeployWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -220,7 +220,7 @@ func testGasOverflowFeeDelegatedWithRatioSmartContractDeploy(t *testing.T) {
 }
 
 func testGasOverflowSmartContractExecution(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeSmartContractExecution)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeSmartContractExecution)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	payloadGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
@@ -230,7 +230,7 @@ func testGasOverflowSmartContractExecution(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedSmartContractExecution(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedSmartContractExecution)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedSmartContractExecution)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -242,7 +242,7 @@ func testGasOverflowFeeDelegatedSmartContractExecution(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioSmartContractExecution(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedSmartContractExecutionWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedSmartContractExecutionWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -254,14 +254,14 @@ func testGasOverflowFeeDelegatedWithRatioSmartContractExecution(t *testing.T) {
 }
 
 func testGasOverflowCancel(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeCancel)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeCancel)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	addUint64(t, intrinsic, senderValidationGas)
 }
 
 func testGasOverflowFeeDelegatedCancel(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedCancel)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedCancel)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -270,7 +270,7 @@ func testGasOverflowFeeDelegatedCancel(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioCancel(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedCancelWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedCancelWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -279,7 +279,7 @@ func testGasOverflowFeeDelegatedWithRatioCancel(t *testing.T) {
 }
 
 func testGasOverflowChainDataAnchoring(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeChainDataAnchoring)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeChainDataAnchoring)
 	senderValidationGas := getMaxValidationKeyGas(t)
 
 	maxDataGas := mulUint64(t, blockchain.MaxTxDataSize, params.TxDataGas)
@@ -289,7 +289,7 @@ func testGasOverflowChainDataAnchoring(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedChainDataAnchoring(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedChainDataAnchoring)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedChainDataAnchoring)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 
@@ -301,7 +301,7 @@ func testGasOverflowFeeDelegatedChainDataAnchoring(t *testing.T) {
 }
 
 func testGasOverflowFeeDelegatedWithRatioChainDataAnchoring(t *testing.T) {
-	intrinsic := getIntrinsicGas(types.TxTypeFeeDelegatedChainDataAnchoringWithRatio)
+	intrinsic := types.GetTxGasForTxType(types.TxTypeFeeDelegatedChainDataAnchoringWithRatio)
 	senderValidationGas := getMaxValidationKeyGas(t)
 	payerValidationGas := getMaxValidationKeyGas(t)
 

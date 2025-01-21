@@ -837,19 +837,23 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	intrGas, dataTokens, err := tx.IntrinsicGas(pool.currentBlockNumber)
-	intrGas += gasFrom + gasFeePayer
+	sigValGas := gasFrom + gasFeePayer
 	if err != nil {
 		return err
 	}
-	if tx.Gas() < intrGas {
+	if tx.Gas() < intrGas+sigValGas {
 		return ErrIntrinsicGas
 	}
 	// Ensure the transaction can cover floor data gas.
 	if pool.rules.IsPrague {
-		floorGas, err := FloorDataGas(dataTokens)
+		floorGas, err := FloorDataGas(tx.Type(), dataTokens)
 		if err != nil {
 			return err
 		}
+		// Some of Kaia's tx type has sig validation gas.
+		// The sig validation gas is not included in the floor gas comparison,
+		// however we need to check if the gas is enough to pay the sig validation gas too.
+		floorGas += sigValGas
 		if tx.Gas() < floorGas {
 			return fmt.Errorf("%w: gas %v, minimum needed %v", ErrDataFloorGas, tx.Gas(), floorGas)
 		}

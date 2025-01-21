@@ -75,16 +75,16 @@ type StateTransition struct {
 // Message represents a message sent to a contract.
 type Message interface {
 	// ValidatedSender returns the sender of the transaction.
-	// The returned sender should be derived by calling AsMessageAccountKeyPicker().
+	// It should be set by calling AsMessageAccountKeyPicker().
 	ValidatedSender() common.Address
 
 	// ValidatedFeePayer returns the fee payer of the transaction.
-	// The returned fee payer should be derived by calling AsMessageAccountKeyPicker().
+	// It should be set by calling AsMessageAccountKeyPicker().
 	ValidatedFeePayer() common.Address
 
-	// ValidatedIntrinsicGas returns the intrinsic gas of the transaction.
-	// The returned intrinsic gas should be derived by calling AsMessageAccountKeyPicker().
-	ValidatedIntrinsicGas() *types.ValidatedIntrinsicGas
+	// ValidatedGas holds the intrinsic gas, sig validation gas, and number of data tokens for the transaction.
+	// It should be set by calling AsMessageAccountKeyPicker().
+	ValidatedGas() *types.ValidatedGas
 
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
@@ -346,21 +346,25 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	validatedGas := msg.ValidatedIntrinsicGas()
-	if st.gas < validatedGas.Gas {
+	validatedGas := msg.ValidatedGas()
+	if st.gas < validatedGas.IntrinsicGas+validatedGas.SigValidateGas {
 		return nil, ErrIntrinsicGas
 	}
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsPrague {
-		floorGas, err := FloorDataGas(validatedGas.Tokens)
+		floorGas, err := FloorDataGas(st.msg.Type(), validatedGas.Tokens)
 		if err != nil {
 			return nil, err
 		}
+		// Some of Kaia's tx type has sig validation gas.
+		// The sig validation gas is not included in the floor gas comparison,
+		// however we need to check if the gas is enough to pay the sig validation gas too.
+		floorGas += validatedGas.SigValidateGas
 		if st.gas < floorGas {
 			return nil, fmt.Errorf("%w: have %d, want %d", ErrDataFloorGas, st.gas, floorGas)
 		}
 	}
-	st.gas -= validatedGas.Gas
+	st.gas -= (validatedGas.IntrinsicGas + validatedGas.SigValidateGas)
 
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
@@ -420,7 +424,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if rules.IsPrague {
 		// After EIP-7623: Data-heavy transactions pay the floor gas.
 		// Overflow error has already been checked and can be ignored here.
-		floorGas, _ := FloorDataGas(validatedGas.Tokens)
+		floorGas, _ := FloorDataGas(st.msg.Type(), validatedGas.Tokens)
+		// Remember that the sig validation gas is included in used gas.
+		// So we need to add it to the floor gas to make sure the floor gas comparison is correct.
+		floorGas += validatedGas.SigValidateGas
 		if st.gasUsed() < floorGas {
 			st.gas = st.initialGas - floorGas
 		}
@@ -603,10 +610,13 @@ func (st *StateTransition) processAuthorizationList(authList types.Authorization
 
 // FloorDataGas calculates the minimum gas required for a transaction
 // based on its data tokens (EIP-7623).
-func FloorDataGas(tokens uint64) (uint64, error) {
+func FloorDataGas(txType types.TxType, tokens uint64) (uint64, error) {
 	// Check for overflow
-	if (math.MaxUint64-params.TxGas)/params.CostFloorPerToken7623 < tokens {
+	// Instead of using parmas.TxGas, we should consider the tx type
+	// because Kaia tx type has different tx gas (e.g., fee delegated tx).
+	txGas := types.GetTxGasForTxType(txType)
+	if (math.MaxUint64-txGas)/params.CostFloorPerToken7623 < tokens {
 		return 0, types.ErrGasUintOverflow
 	}
-	return params.TxGas + tokens*params.CostFloorPerToken7623, nil
+	return txGas + tokens*params.CostFloorPerToken7623, nil
 }
