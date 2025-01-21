@@ -58,7 +58,7 @@ type PeerSetManager interface {
 	BridgePeerSet() *bridgePeerSet
 }
 
-//go:generate mockgen -destination=bridgepeer_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgePeer
+//go:generate mockgen -destination=./bridgepeer_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgePeer
 type BridgePeer interface {
 	// Close signals the broadcast goroutine to terminate.
 	Close()

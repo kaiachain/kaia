@@ -21,7 +21,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/reward RewardModule
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/reward RewardModule
 type RewardModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule

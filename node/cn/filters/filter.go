@@ -39,7 +39,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
-//go:generate mockgen -destination=mock/backend_mock.go -package=cn github.com/kaiachain/kaia/node/cn/filters Backend
+//go:generate mockgen -destination=./mock/backend_mock.go -package=cn github.com/kaiachain/kaia/node/cn/filters Backend
 type Backend interface {
 	ChainDB() database.DBManager
 	EventMux() *event.TypeMux

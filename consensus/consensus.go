@@ -73,7 +73,7 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 //
-//go:generate mockgen -destination=consensus/mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
+//go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
 type Engine interface {
 	// Author retrieves the Kaia address of the account that minted the given
 	// block.

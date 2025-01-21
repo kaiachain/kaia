@@ -21,7 +21,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
 type ValsetModule interface {
 	kaiax.BaseModule
 	kaiax.ExecutionModule
