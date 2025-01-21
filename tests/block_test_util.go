@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -395,6 +396,60 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[comm
 		}
 		if nonce2 != acct.Nonce {
 			return fmt.Errorf("account nonce mismatch for addr: %s want: %d have: %d", addr.String(), acct.Nonce, nonce2)
+		}
+	}
+
+	err := t.validateStorage(statedb)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateStorage validates storage while considering the difference between Kana and Ethereum.
+func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
+	beaconRootsAddress := common.HexToAddress("0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02")     // EIP-4788
+	depositContractAddress := common.HexToAddress("0x00000000219ab540356cbb839cbe05303d7705fa") // EIP-6110
+
+	// check the number of account
+	accountNum := 0
+	statedb.ForEachAccount(func(addr common.Address, data account.Account) {
+		// skip test's RewardBase
+		if addr == params.AuthorAddressForTesting {
+			return
+		}
+		accountNum++
+	})
+	if accountNum != len(t.json.Post) {
+		return fmt.Errorf("the number of accounts mismatch want: %v have: %v", len(t.json.Post), accountNum)
+	}
+
+	for addr, acct := range t.json.Post {
+		// EIP-4788 and EIP-6110 aren't supported
+		if addr == beaconRootsAddress || addr == depositContractAddress {
+			continue
+		}
+
+		storageSize := 0
+		statedb.ForEachStorage(addr, func(key, value common.Hash) bool {
+			storageSize++
+			return true
+		})
+		if storageSize != len(acct.Storage) {
+			return fmt.Errorf("account storage size mismatch for addr: %s, want: %v, have: %v", addr, len(acct.Storage), storageSize)
+		}
+
+		// the size of HistoryStorageAddress is the same but the storage data is different
+		if addr == params.HistoryStorageAddress {
+			continue
+		}
+
+		for k, v := range acct.Storage {
+			v2 := statedb.GetState(addr, k)
+			if v2 != v {
+				return fmt.Errorf("account storage mismatch for addr: %s, slot: %x, want: %x, have: %x", addr, k, v, v2)
+			}
 		}
 	}
 	return nil
