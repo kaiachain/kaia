@@ -882,6 +882,19 @@ func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, bal
 	s.setStateObject(newobj)
 }
 
+func (s *StateDB) ForEachAccount(cb func(addr common.Address, data account.Account)) {
+	it := statedb.NewIterator(s.trie.NodeIterator(nil))
+	for it.Next() {
+		addr := s.trie.GetKey(it.Key)
+		serializer := account.NewAccountSerializer()
+		if err := rlp.DecodeBytes(it.Value, serializer); err != nil {
+			panic(err)
+		}
+		data := serializer.GetAccount()
+		cb(common.BytesToAddress(addr), data)
+	}
+}
+
 func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
 	so := s.getStateObject(addr)
 	if so == nil {
