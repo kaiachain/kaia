@@ -433,6 +433,16 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, vm.ErrTotalTimeLimitReached
 	}
 
+	var gasRefund uint64
+	if rules.IsKore {
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		gasRefund = st.refundAmount(params.RefundQuotientEIP3529)
+	} else {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		gasRefund = st.refundAmount(params.RefundQuotient)
+	}
+	st.gas += gasRefund
+
 	if rules.IsPrague {
 		// After EIP-7623: Data-heavy transactions pay the floor gas.
 		// Overflow error has already been checked and can be ignored here.
@@ -444,14 +454,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			st.gas = st.initialGas - floorGas
 		}
 	}
-
-	if rules.IsKore {
-		// After EIP-3529: refunds are capped to gasUsed / 5
-		st.refundGas(params.RefundQuotientEIP3529)
-	} else {
-		// Before EIP-3529: refunds were capped to gasUsed / 2
-		st.refundGas(params.RefundQuotient)
-	}
+	st.returnGas()
 
 	// Defer transferring Tx fee when DeferredTxFee is true
 	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
@@ -599,14 +602,16 @@ func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, 
 	return nil
 }
 
-func (st *StateTransition) refundGas(refundQuotient uint64) {
+func (st *StateTransition) refundAmount(refundQuotient uint64) uint64 {
 	// Apply refund counter, capped a refund quotient
 	refund := st.gasUsed() / refundQuotient
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
 	}
-	st.gas += refund
+	return refund
+}
 
+func (st *StateTransition) returnGas() {
 	// Return KAIA for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
