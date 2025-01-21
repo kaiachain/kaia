@@ -26,7 +26,7 @@ import (
 	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/reward"
+	"github.com/kaiachain/kaia/kaiax/staking"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.
@@ -83,7 +83,7 @@ func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
 
 type stakingInfoPack struct {
 	peerId       string
-	stakingInfos []*reward.StakingInfo
+	stakingInfos []*staking.P2PStakingInfo
 }
 
 func (p *stakingInfoPack) PeerId() string { return p.peerId }

@@ -35,21 +35,23 @@ var TargetGasLimit = GenesisGasLimit // The artificial target
 const (
 	// Fee schedule parameters
 
-	CallValueTransferGas  uint64 = 9000  // Paid for CALL when the value transfer is non-zero.                  // G_callvalue
-	CallNewAccountGas     uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.      // G_newaccount
-	TxGas                 uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. // G_transaction
-	TxGasContractCreation uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions. // G_transaction + G_create
-	TxDataZeroGas         uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. // G_txdatazero
-	QuadCoeffDiv          uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
-	SstoreSetGas          uint64 = 20000 // Once per SLOAD operation.                                           // G_sset
-	LogDataGas            uint64 = 8     // Per byte in a LOG* operation's data.                                // G_logdata
-	CallStipend           uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
-	Sha3Gas               uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
-	Sha3WordGas           uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
-	InitCodeWordGas       uint64 = 2     // Once per word of the init code when creating a contract.				 // G_InitCodeWord
-	SstoreResetGas        uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
-	SstoreClearGas        uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
-	SstoreRefundGas       uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
+	CallValueTransferGas    uint64 = 9000  // Paid for CALL when the value transfer is non-zero.                  // G_callvalue
+	CallNewAccountGas       uint64 = 25000 // Paid for CALL when the destination address didn't exist prior.      // G_newaccount
+	TxGas                   uint64 = 21000 // Per transaction not creating a contract. NOTE: Not payable on data of calls between transactions. // G_transaction
+	TxGasContractCreation   uint64 = 53000 // Per transaction that creates a contract. NOTE: Not payable on data of calls between transactions. // G_transaction + G_create
+	TxDataZeroGas           uint64 = 4     // Per byte of data attached to a transaction that equals zero. NOTE: Not payable on data of calls between transactions. // G_txdatazero
+	TokenPerNonZeroByte7623 uint64 = 4     // Token cost per non-zero byte as specified by EIP-7623.
+	CostFloorPerToken7623   uint64 = 10    // Cost floor per byte of data as specified by EIP-7623.
+	QuadCoeffDiv            uint64 = 512   // Divisor for the quadratic particle of the memory cost equation.
+	SstoreSetGas            uint64 = 20000 // Once per SLOAD operation.                                           // G_sset
+	LogDataGas              uint64 = 8     // Per byte in a LOG* operation's data.                                // G_logdata
+	CallStipend             uint64 = 2300  // Free gas given at beginning of call.                                // G_callstipend
+	Sha3Gas                 uint64 = 30    // Once per SHA3 operation.                                                 // G_sha3
+	Sha3WordGas             uint64 = 6     // Once per word of the SHA3 operation's data.                              // G_sha3word
+	InitCodeWordGas         uint64 = 2     // Once per word of the init code when creating a contract.				 // G_InitCodeWord
+	SstoreResetGas          uint64 = 5000  // Once per SSTORE operation if the zeroness changes from zero.             // G_sreset
+	SstoreClearGas          uint64 = 5000  // Once per SSTORE operation if the zeroness doesn't change.                // G_sreset
+	SstoreRefundGas         uint64 = 15000 // Once per SSTORE operation if the zeroness changes to zero.               // R_sclear
 
 	// gasSStoreEIP2200
 	SstoreSentryGasEIP2200            uint64 = 2300  // Minimum gas required to be present for an SSTORE call, not consumed
@@ -230,8 +232,8 @@ var (
 	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")
 
 	// EIP-2935 - Serve historical block hashes from state
-	HistoryStorageAddress = common.HexToAddress("0x0aae40965e6800cd9b1f4b05ff21581047e3f91e")
-	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe1460575767ffffffffffffffff5f3511605357600143035f3511604b575f35612000014311604b57611fff5f3516545f5260205ff35b5f5f5260205ff35b5f5ffd5b5f35611fff60014303165500")
+	HistoryStorageAddress = common.HexToAddress("0x0F792be4B0c0cb4DAE440Ef133E90C0eCD48CCCC")
+	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500")
 )
 
 // Parameters for execution time limit

@@ -238,15 +238,15 @@ func (t *TxInternalDataSmartContractExecution) String() string {
 		enc)
 }
 
-func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	gas := params.TxGasContractExecution
 
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	gasPayloadWithGas, tokens, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
-		return 0, err
+		return 0, tokens, err
 	}
 
-	return gasPayloadWithGas, nil
+	return gasPayloadWithGas, tokens, nil
 }
 
 func (t *TxInternalDataSmartContractExecution) SerializeForSignToBytes() []byte {

@@ -282,20 +282,6 @@ func (mr *MockBackendMockRecorder) GetPoolTransactions() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPoolTransactions", reflect.TypeOf((*MockBackend)(nil).GetPoolTransactions))
 }
 
-// GetTd mocks base method.
-func (m *MockBackend) GetTd(arg0 common.Hash) *big.Int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTd", arg0)
-	ret0, _ := ret[0].(*big.Int)
-	return ret0
-}
-
-// GetTd indicates an expected call of GetTd.
-func (mr *MockBackendMockRecorder) GetTd(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTd", reflect.TypeOf((*MockBackend)(nil).GetTd), arg0)
-}
-
 // GetTxAndLookupInfo mocks base method.
 func (m *MockBackend) GetTxAndLookupInfo(arg0 common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
 	m.ctrl.T.Helper()
@@ -409,6 +395,20 @@ func (m *MockBackend) HeaderByNumberOrHash(arg0 context.Context, arg1 rpc.BlockN
 func (mr *MockBackendMockRecorder) HeaderByNumberOrHash(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByNumberOrHash", reflect.TypeOf((*MockBackend)(nil).HeaderByNumberOrHash), arg0, arg1)
+}
+
+// IsConsoleLogEnabled mocks base method.
+func (m *MockBackend) IsConsoleLogEnabled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsConsoleLogEnabled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsConsoleLogEnabled indicates an expected call of IsConsoleLogEnabled.
+func (mr *MockBackendMockRecorder) IsConsoleLogEnabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConsoleLogEnabled", reflect.TypeOf((*MockBackend)(nil).IsConsoleLogEnabled))
 }
 
 // IsParallelDBWrite mocks base method.

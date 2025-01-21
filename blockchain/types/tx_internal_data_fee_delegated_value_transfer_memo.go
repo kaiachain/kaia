@@ -274,14 +274,14 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) RecoverFeePayerPubkey(txha
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
 	gas := params.TxGasValueTransfer + params.TxGasFeeDelegated
-	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	gasPayloadWithGas, tokens, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
-		return 0, err
+		return 0, tokens, err
 	}
 
-	return gasPayloadWithGas, nil
+	return gasPayloadWithGas, tokens, nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) SerializeForSignToBytes() []byte {

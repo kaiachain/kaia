@@ -24,18 +24,24 @@ package vm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
+	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -466,5 +472,91 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 		}
 
 		assert.Equal(t, tc.expectedResult, ret[12:32])
+	}
+}
+
+func TestConsoleLog(t *testing.T) {
+	// Test if the ConsoleLog.toLogString can convert the input correctly into log string
+	// Test all combinations of parameters from ConsoleLogSignatures
+	for selector, paramTypes := range common.ConsoleLogSignatures {
+		t.Run(fmt.Sprintf("selector_%x", selector), func(t *testing.T) {
+			// Generate test input values and expected output based on parameter types
+			var (
+				inputs      []interface{}
+				expectedStr []string
+			)
+
+			for _, paramType := range paramTypes {
+				switch paramType {
+				case common.Int256Ty:
+					inputs = append(inputs, big.NewInt(-123))
+					expectedStr = append(expectedStr, "-123")
+				case common.Uint256Ty:
+					inputs = append(inputs, big.NewInt(123))
+					expectedStr = append(expectedStr, "123")
+				case common.StringTy:
+					inputs = append(inputs, "test")
+					expectedStr = append(expectedStr, "test")
+				case common.BoolTy:
+					inputs = append(inputs, true)
+					expectedStr = append(expectedStr, "true")
+				case common.AddressTy:
+					addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
+					inputs = append(inputs, addr)
+					expectedStr = append(expectedStr, addr.Hex())
+				case common.BytesTy:
+					b := []byte{1, 2, 3}
+					inputs = append(inputs, b)
+					expectedStr = append(expectedStr, common.Bytes2Hex(b))
+				default:
+					// Handle fixed byte types (Bytes1Ty through Bytes32Ty)
+					if len(paramType) > 5 && paramType[:5] == "Bytes" {
+						size, _ := strconv.Atoi(string(paramType[5:]))
+						b := make([]byte, size)
+						for i := 0; i < size; i++ {
+							b[i] = byte(i)
+						}
+						arrayType := reflect.ArrayOf(size, reflect.TypeOf(byte(0)))
+						array := reflect.New(arrayType).Elem()
+						for i := 0; i < size; i++ {
+							array.Index(i).Set(reflect.ValueOf(byte(i)))
+						}
+						inputs = append(inputs, array.Interface())
+						expectedStr = append(expectedStr, common.Bytes2Hex(b))
+					}
+				}
+			}
+
+			expected := strings.Join(expectedStr, " ")
+
+			// Encode the selector and parameters
+			sig := make([]byte, 4)
+			binary.BigEndian.PutUint32(sig, selector)
+
+			// Pack parameters using abi encoding
+			// Parse the parameter types dynamically
+			arguments := abi.Arguments{}
+			for _, paramType := range paramTypes {
+				// when parsing paramType to abi.Type, convert to lowercase (e.g., "Uint256" -> "uint256")
+				typ, _ := abi.NewType(strings.ToLower(string(paramType)), "", nil)
+				arguments = append(arguments, abi.Argument{
+					Type: typ,
+				})
+			}
+
+			// Encode the parameters
+			encodedParams, err := arguments.Pack(inputs...)
+			if err != nil {
+				log.Fatalf("Failed to encode parameters: %v", err)
+			}
+
+			callData := append(sig, encodedParams...)
+
+			// Decode and verify
+			c := &consoleLog{}
+			decoded, err := c.toLogString(callData)
+			assert.NoError(t, err)
+			assert.Equal(t, expected, decoded)
+		})
 	}
 }

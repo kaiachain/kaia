@@ -34,9 +34,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -74,7 +74,7 @@ type fetchResult struct {
 	Header       *types.Header
 	Transactions types.Transactions
 	Receipts     types.Receipts
-	StakingInfo  *reward.StakingInfo
+	StakingInfo  *staking.P2PStakingInfo
 }
 
 func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, isKaiaFork bool) *fetchResult {
@@ -909,7 +909,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 // DeliverStakingInfos injects a stakinginfo retrieval response into the results queue.
 // The method returns the number of staking information accepted from the delivery
 // and also wakes any threads waiting for data delivery.
-func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*reward.StakingInfo) (int, error) {
+func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*staking.P2PStakingInfo) (int, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {

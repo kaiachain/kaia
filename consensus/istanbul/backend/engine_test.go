@@ -1801,7 +1801,7 @@ func TestGovernance_Votes(t *testing.T) {
 }
 
 func TestGovernance_GovModule(t *testing.T) {
-	// Test that ReaderEngine (CurrentParams(), GetParamSet(), UpdateParams()) works.
+	// Test that ReaderEngine (CurrentParams(), GetParamSet()) works.
 	type vote struct {
 		name  string
 		value interface{}

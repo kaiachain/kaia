@@ -84,8 +84,8 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, ta
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
-	// Initialize snapshot cache, staking info cache, and governance cache
-	cn.InitSnapshot()
+	// Initialize staking info cache, and governance cache
+	cn.PurgeCache()
 	gpo.PurgeCache()
 	return nil
 }
@@ -135,7 +135,7 @@ func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*typ
 	if header := b.cn.blockchain.GetHeaderByHash(hash); header != nil {
 		return header, nil
 	}
-	return nil, fmt.Errorf("the header does not exist (hash: %d)", hash)
+	return nil, fmt.Errorf("the header does not exist (hash: %s)", hash.String())
 }
 
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
@@ -363,6 +363,10 @@ func (b *CNAPIBackend) IsParallelDBWrite() bool {
 
 func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
+}
+
+func (b *CNAPIBackend) IsConsoleLogEnabled() bool {
+	return b.cn.config.UseConsoleLog
 }
 
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
