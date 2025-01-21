@@ -399,7 +399,7 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[comm
 		}
 	}
 
-	err := t.validateStorage(statedb)
+	err := t.validateStorage(statedb, rewardMap)
 	if err != nil {
 		return err
 	}
@@ -408,15 +408,19 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[comm
 }
 
 // validateStorage validates storage while considering the difference between Kana and Ethereum.
-func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
+func (t *BlockTest) validateStorage(statedb *state.StateDB, rewardMap map[common.Address]rewardList) error {
 	beaconRootsAddress := common.HexToAddress("0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02")     // EIP-4788
 	depositContractAddress := common.HexToAddress("0x00000000219ab540356cbb839cbe05303d7705fa") // EIP-6110
 
 	// check the number of account
 	accountNum := 0
 	statedb.ForEachAccount(func(addr common.Address, data account.Account) {
-		// skip test's RewardBase
+		// skip test's rewardbase
 		if addr == params.AuthorAddressForTesting {
+			return
+		}
+		// skip rewardbase when reward is zero
+		if reward, ok := rewardMap[addr]; ok && reward.ethReward.Cmp(big.NewInt(0)) == 0 {
 			return
 		}
 		accountNum++
