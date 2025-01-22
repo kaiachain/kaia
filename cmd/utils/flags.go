@@ -495,36 +495,6 @@ var (
 		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
 		Category: "DATABASE",
 	}
-	TxPruningFlag = &cli.BoolFlag{
-		Name:     "db.tx-pruning",
-		Usage:    "Enables tx pruning",
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING", "KAIA_DB_TX_PRUNING"},
-		Category: "DATABASE",
-	}
-	TxPruningRetentionFlag = &cli.Uint64Flag{
-		Name:     "db.tx-pruning-retention",
-		Usage:    "Number of blocks from the latest block whose transaction data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING_RETENTION", "KAIA_DB_TX_PRUNING_RETENTION"},
-		Category: "DATABASE",
-	}
-	ReceiptPruningFlag = &cli.BoolFlag{
-		Name:     "db.receipt-pruning",
-		Usage:    "Enables receipt pruning",
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING", "KAIA_DB_RECEIPT_PRUNING"},
-		Category: "DATABASE",
-	}
-	ReceiptPruningRetentionFlag = &cli.Uint64Flag{
-		Name:     "db.receipt-pruning-retention",
-		Usage:    "Number of blocks from the latest block whose receipt data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING_RETENTION", "KAIA_DB_RECEIPT_PRUNING_RETENTION"},
-		Category: "DATABASE",
-	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",
