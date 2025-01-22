@@ -27,7 +27,7 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
-//go:generate mockgen -destination=mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
+//go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
 type BlockChain interface {
 	blockchain.ChainContext
 

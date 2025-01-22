@@ -66,7 +66,7 @@ import (
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
+//go:generate mockgen -destination=./mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -76,7 +76,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
+//go:generate mockgen -destination=./mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -91,7 +91,7 @@ type Miner interface {
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
+//go:generate mockgen -destination=./protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)

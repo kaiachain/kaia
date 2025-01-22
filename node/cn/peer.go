@@ -87,7 +87,7 @@ type propEvent struct {
 	td    *big.Int
 }
 
-//go:generate mockgen -destination=node/cn/peer_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn Peer
+//go:generate mockgen -destination=./peer_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn Peer
 type Peer interface {
 	// Broadcast is a write loop that multiplexes block propagations, announcements
 	// and transaction broadcasts into the remote peer. The goal is to have an async

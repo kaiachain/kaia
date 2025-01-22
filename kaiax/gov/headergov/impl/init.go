@@ -41,7 +41,6 @@ type InitOpts struct {
 	NodeAddress common.Address
 }
 
-//go:generate mockgen -destination=mock/headergov_mock.go github.com/kaiachain/kaia/kaiax/headergov HeaderGovModule
 type headerGovModule struct {
 	ChainKv     database.Database
 	ChainConfig *params.ChainConfig
