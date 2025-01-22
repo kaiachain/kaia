@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -75,6 +76,7 @@ func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	blockchain.GasLimitInExecutionSpecTest = 0
 	blockchain.CreateContractWithCodeFormatInExecutionSpecTest = false
 	types.IsPragueInExecutionSpecTest = false
+	gxhash.CustomInitialize = nil
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
