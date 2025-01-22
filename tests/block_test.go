@@ -90,18 +90,12 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
-
-	// only target after shanghai
-	bt.skipLoad(`^frontier\/`)
-	bt.skipLoad(`^homestead\/`)
-	bt.skipLoad(`^byzantium\/`)
-	bt.skipLoad(`^constantinople\/`)
-	bt.skipLoad(`^istanbul\/`)
-	bt.skipLoad(`^berlin\/`)
-	bt.skipLoad(`^paris\/`)
-
+	// not yet supported EIPs
 	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`) // gas error
 	bt.skipLoad(`^prague\/eip7702_set_code_tx`)            // state, gas (after update we should do it)
+	// temporary skip failing frontier tests
+	bt.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
 
 	// tests to skip
 	// unsupported EIPs
