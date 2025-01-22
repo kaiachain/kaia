@@ -552,7 +552,7 @@ var (
 	LivePruningRetentionFlag = &cli.Uint64Flag{
 		Name:     "state.live-pruning-retention",
 		Usage:    "Number of blocks from the latest block whose state data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
+		Value:    blockchain.DefaultLivePruningRetention,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
