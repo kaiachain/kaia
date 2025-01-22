@@ -152,7 +152,7 @@ func (t *BlockTest) Run() error {
 			blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 		}
 	}
-	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{Debug: true, Tracer: tracer})
+	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}

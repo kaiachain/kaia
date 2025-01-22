@@ -65,6 +65,7 @@ func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 	blockchain.UseKaiaCancunExtCodeHashFee = true
+	blockchain.CreateContractWithCodeFormatInExecutionSpecTest = true
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
@@ -72,6 +73,7 @@ func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 	blockchain.UseKaiaCancunExtCodeHashFee = false
 	blockchain.GasLimitInExecutionSpecTest = 0
+	blockchain.CreateContractWithCodeFormatInExecutionSpecTest = false
 	types.IsPragueInExecutionSpecTest = false
 }
 

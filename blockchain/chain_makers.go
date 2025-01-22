@@ -104,8 +104,11 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 
 func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transaction) error {
 	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, _ := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
-
+	var vmConfig vm.Config
+	if bc != nil {
+		vmConfig = bc.vmConfig
+	}
+	receipt, _, _ := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
 	b.txs = append(b.txs, tx)
 	if receipt != nil {
 		b.receipts = append(b.receipts, receipt)

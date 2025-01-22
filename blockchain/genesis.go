@@ -299,6 +299,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	}
 }
 
+var CreateContractWithCodeFormatInExecutionSpecTest bool
+
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *types.Block {
@@ -310,6 +312,9 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	for addr, account := range g.Alloc {
 		if len(account.Code) != 0 {
 			originalCode := stateDB.GetCode(addr)
+			if CreateContractWithCodeFormatInExecutionSpecTest {
+				stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, g.Config.Rules(new(big.Int).SetUint64(g.Number)))
+			}
 			stateDB.SetCode(addr, account.Code)
 			// If originalCode is not nil,
 			// just update the code and don't change the other states
