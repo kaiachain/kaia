@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
+// TestKaiaSpecState runs the StateTests fixtures from kaia-core-tests
 func TestKaiaSpecState(t *testing.T) {
 	t.Parallel()
 
