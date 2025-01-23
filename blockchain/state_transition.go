@@ -352,14 +352,10 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsPrague {
-		floorGas, err := FloorDataGas(st.msg.Type(), validatedGas.Tokens)
+		floorGas, err := FloorDataGas(st.msg.Type(), validatedGas.Tokens, validatedGas.SigValidateGas)
 		if err != nil {
 			return nil, err
 		}
-		// Some of Kaia's tx type has sig validation gas.
-		// The sig validation gas is not included in the floor gas comparison,
-		// however we need to check if the gas is enough to pay the sig validation gas too.
-		floorGas += validatedGas.SigValidateGas
 		if st.gas < floorGas {
 			return nil, fmt.Errorf("%w: have %d, want %d", ErrDataFloorGas, st.gas, floorGas)
 		}
@@ -434,10 +430,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if rules.IsPrague {
 		// After EIP-7623: Data-heavy transactions pay the floor gas.
 		// Overflow error has already been checked and can be ignored here.
-		floorGas, _ := FloorDataGas(st.msg.Type(), validatedGas.Tokens)
-		// Remember that the sig validation gas is included in used gas.
-		// So we need to add it to the floor gas to make sure the floor gas comparison is correct.
-		floorGas += validatedGas.SigValidateGas
+		floorGas, _ := FloorDataGas(st.msg.Type(), validatedGas.Tokens, validatedGas.SigValidateGas)
 		if st.gasUsed() < floorGas {
 			st.gas = st.initialGas - floorGas
 		}
@@ -615,13 +608,16 @@ func (st *StateTransition) processAuthorizationList(authList types.Authorization
 
 // FloorDataGas calculates the minimum gas required for a transaction
 // based on its data tokens (EIP-7623).
-func FloorDataGas(txType types.TxType, tokens uint64) (uint64, error) {
+func FloorDataGas(txType types.TxType, tokens, sigValidateGas uint64) (uint64, error) {
 	// Check for overflow
 	// Instead of using parmas.TxGas, we should consider the tx type
 	// because Kaia tx type has different tx gas (e.g., fee delegated tx).
-	txGas := types.GetTxGasForTxType(txType)
+	txGas, err := types.GetTxGasForTxType(txType)
+	if err != nil {
+		return 0, err
+	}
 	if (math.MaxUint64-txGas)/params.CostFloorPerToken7623 < tokens {
 		return 0, types.ErrGasUintOverflow
 	}
-	return txGas + tokens*params.CostFloorPerToken7623, nil
+	return txGas + tokens*params.CostFloorPerToken7623 + sigValidateGas, nil
 }
