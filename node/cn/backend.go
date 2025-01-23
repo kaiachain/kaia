@@ -402,14 +402,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// Fill the staking info cache for the recent blocks.
-	currBlock := cn.blockchain.CurrentBlock()
-	if currBlock.NumberU64() > 0 {
+	if currBlock := cn.blockchain.CurrentBlock(); currBlock.NumberU64() > 0 {
 		logger.Info("Preloading staking info for the recent blocks", "blockNumber", currBlock.NumberU64())
-		parentBlock := cn.blockchain.GetBlockByNumber(currBlock.NumberU64() - 1)
-		if _, release, err := cn.stateAtBlock(parentBlock, 128, nil, true, false); err != nil {
-			logger.Error("Failed to get state at block", "err", err)
-		} else {
-			release()
+		if parentBlock := cn.blockchain.GetBlockByNumber(currBlock.NumberU64() - 1); parentBlock != nil {
+			if _, release, err := cn.stateAtBlock(parentBlock, 128, nil, true, false); err != nil {
+				logger.Error("Failed to get state at block", "err", err)
+			} else {
+				release()
+			}
 		}
 	}
 
