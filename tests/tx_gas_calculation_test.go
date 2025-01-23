@@ -288,7 +288,7 @@ func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, vali
 }
 
 func genLegacyTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
-	intrinsic := types.GetTxGasForTxType(types.TxTypeLegacyTransaction)
+	intrinsic, _ := types.GetTxGasForTxType(types.TxTypeLegacyTransaction)
 	amount := big.NewInt(100000)
 	tx := types.NewTransaction(from.GetNonce(), to.GetAddr(), amount, gasLimit, gasPrice, []byte{})
 
@@ -667,7 +667,7 @@ func genFeeDelegatedWithRatioChainDataAnchoring(t *testing.T, signer types.Signe
 
 // Generate map functions
 func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(100000)
 	data := []byte{0x11, 0x22}
 	// We have changed the gas calcuation since Prague per EIP-7623.
@@ -715,7 +715,7 @@ func getFlooredGas(data []byte, gas uint64) uint64 {
 }
 
 func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(100000)
 	data := []byte{0x11, 0x22}
 	// We have changed the gas calcuation since Prague per EIP-7623.
@@ -743,7 +743,7 @@ func genMapForAccessListTransaction(from TestAccount, to TestAccount, gasPrice *
 }
 
 func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(100000)
 	data := []byte{0x11, 0x22}
 	// We have changed the gas calcuation since Prague per EIP-7623.
@@ -771,7 +771,7 @@ func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *
 }
 
 func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(100000)
 	data := []byte{0x11, 0x22}
 	// We have changed the gas calcuation since Prague per EIP-7623.
@@ -802,7 +802,7 @@ func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big
 }
 
 func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(100000)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -817,7 +817,7 @@ func genMapForValueTransfer(from TestAccount, to TestAccount, gasPrice *big.Int,
 }
 
 func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 
 	nonZeroData := []byte{1, 2, 3, 4}
 	zeroData := []byte{0, 0, 0, 0}
@@ -843,7 +843,7 @@ func genMapForValueTransferWithMemo(from TestAccount, to TestAccount, gasPrice *
 }
 
 func genMapForCreate(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	amount := big.NewInt(0)
 
 	values := map[types.TxValueKeyType]interface{}{
@@ -860,7 +860,7 @@ func genMapForCreate(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 }
 
 func genMapForUpdate(from TestAccount, to TestAccount, gasPrice *big.Int, newKeys accountkey.AccountKey, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
@@ -886,16 +886,14 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 		types.TxValueKeyTo:            (*common.Address)(nil),
 	}
 
-	intrinsicGas := types.GetTxGasForTxType(txType)
+	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x175fd)
 
 	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, _ := blockchain.FloorDataGas(types.TxTypeSmartContractDeploy, dataTokens)
-	// Tx Gas is included in the gasPayloadWithGas, so we need to add it to the floorGas for correct comparison.
-	floorGas += types.GetTxGasForTxType(txType)
+	floorGas, _ := blockchain.FloorDataGas(txType, dataTokens, 0)
 	if gasPayloadWithGas < floorGas {
 		gasPayloadWithGas = floorGas
 	}
@@ -927,19 +925,17 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 		types.TxValueKeyData:     data,
 	}
 
-	intrinsicGas := types.GetTxGasForTxType(txType)
+	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x9ec4)
 
 	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, err := blockchain.FloorDataGas(txType, dataTokens)
+	floorGas, err := blockchain.FloorDataGas(txType, dataTokens, 0)
 	if err != nil {
 		return nil, 0
 	}
-	// Tx Gas is included in the gasPayloadWithGas, so we need to add it to the floorGas for correct comparison.
-	floorGas += types.GetTxGasForTxType(txType)
 	if gasPayloadWithGas < floorGas {
 		gasPayloadWithGas = floorGas
 	}
@@ -948,7 +944,7 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 }
 
 func genMapForCancel(from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:    from.GetNonce(),
@@ -960,7 +956,7 @@ func genMapForCancel(from TestAccount, gasPrice *big.Int, txType types.TxType) (
 }
 
 func genMapForChainDataAnchoring(from TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
-	intrinsic := types.GetTxGasForTxType(txType)
+	intrinsic, _ := types.GetTxGasForTxType(txType)
 	data := []byte{0x11, 0x22}
 	// We have changed the gas calcuation since Prague per EIP-7623.
 	gasPayload := getFlooredGas(data, getDataGas(data))

@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -697,62 +698,40 @@ func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCod
 	return gasPayloadWithGas, tokens, nil
 }
 
-func GetTxGasForTxType(txType TxType) uint64 {
-	switch txType {
-	case TxTypeLegacyTransaction:
-		return params.TxGas
-	case TxTypeValueTransfer:
-		return params.TxGasValueTransfer
-	case TxTypeFeeDelegatedValueTransfer:
-		return params.TxGasValueTransfer + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedValueTransferWithRatio:
-		return params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
-	case TxTypeValueTransferMemo:
-		return params.TxGasValueTransfer
-	case TxTypeFeeDelegatedValueTransferMemo:
-		return params.TxGasValueTransfer + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedValueTransferMemoWithRatio:
-		return params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio
-	case TxTypeAccountCreation:
-		return params.TxGasAccountCreation
-	case TxTypeAccountUpdate:
-		return params.TxGasAccountUpdate
-	case TxTypeFeeDelegatedAccountUpdate:
-		return params.TxGasAccountUpdate + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedAccountUpdateWithRatio:
-		return params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio
-	case TxTypeSmartContractDeploy:
-		return params.TxGasContractCreation
-	case TxTypeFeeDelegatedSmartContractDeploy:
-		return params.TxGasContractCreation + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedSmartContractDeployWithRatio:
-		return params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio
-	case TxTypeSmartContractExecution:
-		return params.TxGasContractExecution
-	case TxTypeFeeDelegatedSmartContractExecution:
-		return params.TxGasContractExecution + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedSmartContractExecutionWithRatio:
-		return params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio
-	case TxTypeCancel:
-		return params.TxGasCancel
-	case TxTypeFeeDelegatedCancel:
-		return params.TxGasCancel + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedCancelWithRatio:
-		return params.TxGasCancel + params.TxGasFeeDelegatedWithRatio
-	case TxTypeChainDataAnchoring:
-		return params.TxChainDataAnchoringGas
-	case TxTypeFeeDelegatedChainDataAnchoring:
-		return params.TxChainDataAnchoringGas + params.TxGasFeeDelegated
-	case TxTypeFeeDelegatedChainDataAnchoringWithRatio:
-		return params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio
-	case TxTypeEthereumAccessList:
-		return params.TxGas
-	case TxTypeEthereumDynamicFee:
-		return params.TxGas
-	case TxTypeEthereumSetCode:
-		return params.TxGas
+var txTypeToGasMap = map[TxType]uint64{
+	TxTypeLegacyTransaction:                           params.TxGas,
+	TxTypeValueTransfer:                               params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransfer:                   params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferWithRatio:          params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeValueTransferMemo:                           params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransferMemo:               params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferMemoWithRatio:      params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeAccountCreation:                             params.TxGasAccountCreation,
+	TxTypeAccountUpdate:                               params.TxGasAccountUpdate,
+	TxTypeFeeDelegatedAccountUpdate:                   params.TxGasAccountUpdate + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedAccountUpdateWithRatio:          params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractDeploy:                         params.TxGasContractCreation,
+	TxTypeFeeDelegatedSmartContractDeploy:             params.TxGasContractCreation + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractDeployWithRatio:    params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractExecution:                      params.TxGasContractExecution,
+	TxTypeFeeDelegatedSmartContractExecution:          params.TxGasContractExecution + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractExecutionWithRatio: params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio,
+	TxTypeCancel:                                  params.TxGasCancel,
+	TxTypeFeeDelegatedCancel:                      params.TxGasCancel + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedCancelWithRatio:             params.TxGasCancel + params.TxGasFeeDelegatedWithRatio,
+	TxTypeChainDataAnchoring:                      params.TxChainDataAnchoringGas,
+	TxTypeFeeDelegatedChainDataAnchoring:          params.TxChainDataAnchoringGas + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedChainDataAnchoringWithRatio: params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio,
+	TxTypeEthereumAccessList:                      params.TxGas,
+	TxTypeEthereumDynamicFee:                      params.TxGas,
+	TxTypeEthereumSetCode:                         params.TxGas,
+}
+
+func GetTxGasForTxType(txType TxType) (uint64, error) {
+	if gas, exists := txTypeToGasMap[txType]; exists {
+		return gas, nil
 	}
-	panic("unexpected tx type: " + txType.String())
+	return 0, fmt.Errorf("cannot find txGas for txType %s", txType.String())
 }
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.
