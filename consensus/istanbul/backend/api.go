@@ -88,7 +88,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 // GetDemotedValidatorsAtHash retrieves the list of demoted validators with the given block hash.
 func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
-	if header != nil {
+	if header == nil {
 		return nil, errUnknownBlock
 	}
 	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
