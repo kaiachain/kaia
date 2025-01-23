@@ -134,7 +134,7 @@ func (t *BlockTest) Run() error {
 		return err
 	}
 
-	st := MakePreState(db, t.json.Pre, true, config.Rules(gblock.Number()))
+	st, _ := state.New(gblock.Root(), state.NewDatabase(db), nil, nil)
 	simulatedRoot, err := useEthStateRoot(st)
 	if err != nil {
 		return err
