@@ -357,7 +357,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		if st.gas < floorGas {
-			return nil, fmt.Errorf("%w: have %d, want %d", ErrDataFloorGas, st.gas, floorGas)
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorGas)
 		}
 	}
 	st.gas -= (validatedGas.IntrinsicGas + validatedGas.SigValidateGas)

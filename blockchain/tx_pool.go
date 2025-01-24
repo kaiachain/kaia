@@ -851,7 +851,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			return err
 		}
 		if tx.Gas() < floorGas {
-			return fmt.Errorf("%w: gas %v, minimum needed %v", ErrDataFloorGas, tx.Gas(), floorGas)
+			return fmt.Errorf("%w: gas %v, minimum needed %v", ErrFloorDataGas, tx.Gas(), floorGas)
 		}
 	}
 
