@@ -30,6 +30,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -41,7 +42,7 @@ func TestPragueSigning(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := []SetCodeAuthorization{{ChainID: uint64(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []SetCodeAuthorization{{ChainID: *uint256.NewInt(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
 	testData := []struct {
 		name    string
@@ -66,7 +67,7 @@ func TestPragueSigning(t *testing.T) {
 			AccessList:        accessList,
 			AuthorizationList: authorizationList,
 			Recipient:         addr,
-			ChainID:           big.NewInt(10),
+			ChainID:           uint256.NewInt(10),
 		})},
 		{"WithNoBitChainID", NewTx(&TxInternalDataEthereumSetCode{
 			AccountNonce:      1,
@@ -77,7 +78,7 @@ func TestPragueSigning(t *testing.T) {
 			AccessList:        accessList,
 			AuthorizationList: authorizationList,
 			Recipient:         addr,
-			ChainID:           new(big.Int),
+			ChainID:           new(uint256.Int),
 		})},
 	}
 

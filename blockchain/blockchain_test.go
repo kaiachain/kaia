@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -2330,13 +2331,13 @@ func TestEIP7702(t *testing.T) {
 	// 2. addr1:0xaaaa calls into addr2:0xbbbb
 	// 3. addr2:0xbbbb  writes to storage
 	auth1, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
-		ChainID: gspec.Config.ChainID.Uint64(),
+		ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
 		Address: aa,
 		Nonce:   1,
 	})
 
 	auth2, _ := types.SignSetCode(key2, types.SetCodeAuthorization{
-		ChainID: uint64(0),
+		ChainID: *uint256.NewInt(0),
 		Address: bb,
 		Nonce:   0,
 	})
@@ -2424,7 +2425,7 @@ func TestEIP7702(t *testing.T) {
 	// Set 0x0000000000000000000000000000000000000000000 test
 	{
 		authForEmpty, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
-			ChainID: gspec.Config.ChainID.Uint64(),
+			ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
 			Address: common.Address{},
 			Nonce:   state.GetNonce(addr1) + 1,
 		})

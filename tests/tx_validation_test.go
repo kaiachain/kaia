@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -443,7 +444,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 	// set code for contract execution tx type
 	{
 		auth, err := types.SignSetCode(eoaWithCode.Keys[0], types.SetCodeAuthorization{
-			ChainID: bcdata.bc.Config().ChainID.Uint64(),
+			ChainID: *uint256.MustFromBig(bcdata.bc.Config().ChainID),
 			Address: contract.Addr,
 			Nonce:   uint64(0),
 		})

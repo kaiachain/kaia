@@ -530,7 +530,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 
 func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {
 	// Verify chain ID is 0 or equal to current chain ID.
-	if auth.ChainID != 0 && st.evm.ChainConfig().ChainID.Uint64() != auth.ChainID {
+	if !auth.ChainID.IsZero() && auth.ChainID.CmpBig(st.evm.ChainConfig().ChainID) != 0 {
 		return authority, ErrAuthorizationWrongChainID
 	}
 	// Limit nonce to 2^64-1 per EIP-2681.

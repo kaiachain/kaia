@@ -30,6 +30,7 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -812,7 +813,7 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 			al = *args.AccessList
 		}
 		tx = types.NewTx(&types.TxInternalDataEthereumSetCode{
-			ChainID:           (*big.Int)(args.ChainID),
+			ChainID:           uint256.MustFromBig((*big.Int)(args.ChainID)),
 			AccountNonce:      uint64(*args.Nonce),
 			GasTipCap:         (*big.Int)(args.MaxPriorityFeePerGas),
 			GasFeeCap:         (*big.Int)(args.MaxFeePerGas),

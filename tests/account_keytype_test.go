@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -151,7 +152,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	values := map[types.TxValueKeyType]interface{}{}
 
 	// Default authorization list
-	authorizationList := []types.SetCodeAuthorization{{ChainID: uint64(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []types.SetCodeAuthorization{{ChainID: *uint256.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
 
 	switch txType {
 	case types.TxTypeValueTransfer:

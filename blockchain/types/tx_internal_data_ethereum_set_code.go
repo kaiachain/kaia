@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -56,7 +57,7 @@ func AddressToDelegation(addr common.Address) []byte {
 
 // TxInternalDataEthereumSetCode represents a set code transaction.
 type TxInternalDataEthereumSetCode struct {
-	ChainID           *big.Int
+	ChainID           *uint256.Int
 	AccountNonce      uint64
 	GasTipCap         *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap         *big.Int // a.k.a. maxFeePerGas
@@ -68,9 +69,9 @@ type TxInternalDataEthereumSetCode struct {
 	AuthorizationList []SetCodeAuthorization
 
 	// Signature values
-	V *big.Int `gencodec:"required" json:"v"`
-	R *big.Int `gencodec:"required" json:"r"`
-	S *big.Int `gencodec:"required" json:"s"`
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -79,7 +80,7 @@ type TxInternalDataEthereumSetCode struct {
 type TxInternalDataEthereumSetCodeJSON struct {
 	Type                 TxType                 `json:"typeInt"`
 	TypeStr              string                 `json:"type"`
-	ChainID              *hexutil.Big           `json:"chainId"`
+	ChainID              *hexutil.U256          `json:"chainId"`
 	AccountNonce         hexutil.Uint64         `json:"nonce"`
 	MaxPriorityFeePerGas *hexutil.Big           `json:"maxPriorityFeePerGas"`
 	MaxFeePerGas         *hexutil.Big           `json:"maxFeePerGas"`
@@ -95,7 +96,7 @@ type TxInternalDataEthereumSetCodeJSON struct {
 
 func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 	return &TxInternalDataEthereumSetCode{
-		ChainID:           new(big.Int),
+		ChainID:           new(uint256.Int),
 		AccountNonce:      0,
 		GasTipCap:         new(big.Int),
 		GasFeeCap:         new(big.Int),
@@ -119,7 +120,7 @@ func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address,
 	d.GasLimit = gasLimit
 
 	if chainID != nil {
-		d.ChainID.Set(chainID)
+		d.ChainID.Set(uint256.MustFromBig(chainID))
 	}
 
 	if gasTipCap != nil {
@@ -153,7 +154,7 @@ func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface
 	d := newTxInternalDataEthereumSetCode()
 
 	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
-		d.ChainID.Set(v)
+		d.ChainID.Set(uint256.MustFromBig(v))
 		delete(values, TxValueKeyChainID)
 	} else {
 		return nil, errValueKeyChainIDInvalid
@@ -324,7 +325,7 @@ func (t *TxInternalDataEthereumSetCode) RecoverPubkey(txhash common.Hash, homest
 }
 
 func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
-	return t.ChainID
+	return t.ChainID.ToBig()
 }
 
 func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
@@ -523,7 +524,7 @@ func (t *TxInternalDataEthereumSetCode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(TxInternalDataEthereumSetCodeJSON{
 		t.Type(),
 		t.Type().String(),
-		(*hexutil.Big)(t.ChainID),
+		(*hexutil.U256)(t.ChainID),
 		(hexutil.Uint64)(t.AccountNonce),
 		(*hexutil.Big)(t.GasTipCap),
 		(*hexutil.Big)(t.GasFeeCap),
@@ -544,7 +545,7 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	t.ChainID = (*big.Int)(js.ChainID)
+	t.ChainID = (*uint256.Int)(js.ChainID)
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.GasTipCap = (*big.Int)(js.MaxPriorityFeePerGas)
 	t.GasFeeCap = (*big.Int)(js.MaxFeePerGas)
@@ -563,11 +564,11 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 }
 
 func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
+	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
 type SetCodeAuthorization struct {
-	ChainID uint64         `json:"chainId"`
+	ChainID uint256.Int    `json:"chainId"`
 	Address common.Address `json:"address"`
 	Nonce   uint64         `json:"nonce"`
 	V       uint8          `json:"v"`
