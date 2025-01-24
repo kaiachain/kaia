@@ -82,7 +82,6 @@ func ErrFeePayer(err error) error {
 type ValidatedGas struct {
 	IntrinsicGas   uint64
 	SigValidateGas uint64
-	Tokens         uint64
 }
 
 type Transaction struct {
@@ -406,7 +405,7 @@ func (tx *Transaction) ValidatedGas() *ValidatedGas {
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
-func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return tx.data.IntrinsicGas(currentBlockNumber)
 }
 
@@ -597,7 +596,7 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // XXX Rename message to something less arbitrary?
 // TODO-Kaia: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
-	intrinsicGas, dataTokens, err := tx.IntrinsicGas(currentBlockNumber)
+	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +619,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	}
 
 	tx.mu.Lock()
-	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: gasFrom + gasFeePayer, Tokens: dataTokens}
+	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: gasFrom + gasFeePayer}
 	tx.mu.Unlock()
 
 	return tx, err
@@ -1092,9 +1091,9 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, auth AuthorizationList) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, auth AuthorizationList) *Transaction {
 	transaction := &Transaction{
-		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0, Tokens: dataTokens},
+		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
 		validatedFeePayer: from,
 		validatedSender:   from,
 		checkNonce:        checkNonce,

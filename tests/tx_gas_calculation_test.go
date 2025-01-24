@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -889,14 +888,12 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, _ := blockchain.FloorDataGas(txType, dataTokens, 0)
-	if gasPayloadWithGas < floorGas {
-		gasPayloadWithGas = floorGas
-	}
+
+	gasPayloadWithGas = getFlooredGas(common.FromHex(code), gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }
@@ -928,17 +925,11 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x9ec4)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, err := blockchain.FloorDataGas(txType, dataTokens, 0)
-	if err != nil {
-		return nil, 0
-	}
-	if gasPayloadWithGas < floorGas {
-		gasPayloadWithGas = floorGas
-	}
+	gasPayloadWithGas = getFlooredGas(common.FromHex(code), gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }
