@@ -84,8 +84,10 @@
     "value": "0x0",
     "output": "0x4e487b710000000000000000000000000000000000000000000000000000000000000011",
     "error": "execution reverted",
+    "revertReason": "arithmetic underflow or overflow",
     "reverted": {
-      "contract": "0xafe64e2883b6fe56fbdddeef1536e034f2fe6c11"
+      "contract": "0xafe64e2883b6fe56fbdddeef1536e034f2fe6c11", 
+      "message":"arithmetic underflow or overflow"
     },
     "calls": [
       {
@@ -96,7 +98,10 @@
         "value": "0x0",
         "output": "0x4e487b710000000000000000000000000000000000000000000000000000000000000011",
         "error": "execution reverted",
-        "reverted": {},
+        "revertReason": "arithmetic underflow or overflow",
+        "reverted": {
+          "message":"arithmetic underflow or overflow"
+        },    
         "type": "CREATE2"
       }
     ],
