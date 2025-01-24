@@ -347,7 +347,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
 	validatedGas := msg.ValidatedGas()
-	if st.gas < validatedGas.IntrinsicGas+validatedGas.SigValidateGas {
+	if st.gas < validatedGas.IntrinsicGas {
 		return nil, ErrIntrinsicGas
 	}
 	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
@@ -360,7 +360,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorGas)
 		}
 	}
-	st.gas -= (validatedGas.IntrinsicGas + validatedGas.SigValidateGas)
+	// SigValidationGas is already inclduded in IntrinsicGas
+	st.gas -= validatedGas.IntrinsicGas
 
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {

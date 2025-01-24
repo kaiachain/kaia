@@ -73,8 +73,9 @@ func ErrFeePayer(err error) error {
 }
 
 // ValidatedGas holds the intrinsic gas, sig validation gas, and data tokens.
-//   - Intrinsic gas is the gas for the tx type + data.
+//   - Intrinsic gas is the gas for the tx type + signature validation + data.
 //     After Prague, floor gas would be used if intrinsic gas < floor gas.
+//     Note that SigValidationGas is already included in IntrinsicGas.
 //   - Sig validation gas is the gas for validating sender and feePayer.
 //     It is related to Kaia-specific tx types, so it is not part of the floor gas comparison.
 //   - Tokens is the number of tokens for the data.
@@ -619,8 +620,11 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		}
 	}
 
+	sigValidationGas := gasFrom + gasFeePayer
+	intrinsicGas = intrinsicGas + sigValidationGas
+
 	tx.mu.Lock()
-	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: gasFrom + gasFeePayer, Tokens: dataTokens}
+	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: sigValidationGas, Tokens: dataTokens}
 	tx.mu.Unlock()
 
 	return tx, err
