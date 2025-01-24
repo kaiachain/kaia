@@ -103,7 +103,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	return valueMap, gas
 }
 
-// TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
+// TestValidationPoolInsertEthTxType generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsertEthTxType(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
@@ -654,7 +654,7 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 	return values, err
 }
 
-// decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
+// decreaseGasPriceMagma changes gasPrice to 12345678 and return an error with magma policy
 func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
