@@ -113,7 +113,6 @@ type btHeaderMarshaling struct {
 
 type eestEngine struct {
 	*gxhash.Gxhash
-	baseFee *big.Int
 }
 
 var _ consensus.Engine = &eestEngine{}
