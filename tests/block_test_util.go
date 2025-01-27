@@ -113,6 +113,7 @@ type btHeaderMarshaling struct {
 
 type eestEngine struct {
 	*gxhash.Gxhash
+	baseFee *big.Int
 }
 
 var _ consensus.Engine = &eestEngine{}
@@ -123,6 +124,33 @@ func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Heade
 		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
 		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 	}
+}
+
+func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+	ethReward := common.Big0
+	for _, receipt := range receipts {
+		for _, tx := range txs {
+			if tx.Hash() != receipt.TxHash {
+				continue
+			}
+
+			ethGasPrice := tx.GasPrice()
+			if e.baseFee != nil {
+				ethGasPrice = math.BigMin(new(big.Int).Add(tx.GasTipCap(), e.baseFee), tx.GasFeeCap())
+			}
+
+			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), e.baseFee, receipt.GasUsed, chain.Config().Rules(header.Number)))
+		}
+	}
+
+	state.AddBalance(header.Rewardbase, ethReward)
+	header.Root = state.IntermediateRoot(true)
+
+	return types.NewBlock(header, txs, receipts), nil
+}
+
+func (e *eestEngine) applyHeader(h TestHeader) {
+	e.baseFee = h.BaseFee
 }
 
 func (t *BlockTest) Run() error {
@@ -138,6 +166,9 @@ func (t *BlockTest) Run() error {
 		GasTarget:                 0,
 		MaxBlockGasUsedForBaseFee: 0,
 		BaseFeeDenominator:        0,
+	}
+	config.Governance.Reward = &params.RewardConfig{
+		DeferredTxFee: true,
 	}
 	blockchain.InitDeriveSha(config)
 
@@ -164,7 +195,7 @@ func (t *BlockTest) Run() error {
 	}
 	defer chain.Stop()
 
-	_, rewardMap, senderMap, err := t.insertBlocksFromTx(chain, *gblock, db, tracer)
+	_, senderMap, err := t.insertBlocksFromTx(chain, *gblock, db, tracer)
 	if err != nil {
 		return err
 	}
@@ -173,7 +204,7 @@ func (t *BlockTest) Run() error {
 	if err != nil {
 		return err
 	}
-	if err = t.validatePostState(newDB, rewardMap, senderMap); err != nil {
+	if err = t.validatePostState(newDB, senderMap); err != nil {
 		return fmt.Errorf("post state validation failed: %v", err)
 	}
 
@@ -249,9 +280,8 @@ type rewardList struct {
 	ethReward  *big.Int
 }
 
-func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, map[common.Address]rewardList, map[common.Address]*big.Int, error) {
+func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, map[common.Address]*big.Int, error) {
 	validBlocks := make([]btBlock, 0)
-	rewardMap := map[common.Address]rewardList{}
 	senderMap := map[common.Address]*big.Int{}
 	preBlock := &gBlock
 
@@ -262,12 +292,13 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, nil, nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
+				return nil, nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
 			}
 		}
-		// RLP decoding worked, try to insert into chain:
-		kaiaReward := common.Big0
-		ethReward := common.Big0
+
+		if e := bc.Engine().(interface{ applyHeader(TestHeader) }); e != nil {
+			e.applyHeader(header)
+		}
 
 		// The intrinsic gas calculation affects gas used, so we need to make some changes to the main code.
 		if bc.Config().IsIstanbulForkEnabled(bc.CurrentHeader().Number) {
@@ -305,13 +336,6 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 					ethGasPrice = math.BigMin(new(big.Int).Add(tx.GasTipCap(), header.BaseFee), tx.GasFeeCap())
 				}
 
-				// Record kaia's reward.
-				kaiaReward = new(big.Int).Add(kaiaReward, new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), kaiaGasPrice))
-
-				// Record eth's reward.
-				ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), header.BaseFee,
-					receipt.GasUsed, bc.Config().Rules(blocks[0].Header().Number)))
-
 				// Because it is a eth test, we don't have to think about fee payer
 				// Because the baseFee is set to 0, Kaia's gas fee may be 0 if the transaction has a dynamic fee.
 				senderMap[tx.ValidatedSender()] = new(big.Int).Sub(
@@ -321,12 +345,7 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 		}
 
 		if header.GasUsed != blocks[0].GasUsed() {
-			return nil, nil, nil, fmt.Errorf("Unexpected GasUsed error (Expected: %v, Actual: %v)", header.GasUsed, blocks[0].GasUsed())
-		}
-
-		rewardMap[common.Address(header.Coinbase)] = rewardList{
-			kaiaReward: kaiaReward,
-			ethReward:  ethReward,
+			return nil, nil, fmt.Errorf("Unexpected GasUsed error (Expected: %v, Actual: %v)", header.GasUsed, blocks[0].GasUsed())
 		}
 
 		i, err := bc.InsertChain(blocks)
@@ -334,16 +353,16 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, nil, nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
+				return nil, nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
 			}
 		}
 		if b.BlockHeader == nil {
-			return nil, nil, nil, errors.New("Block insertion should have failed")
+			return nil, nil, errors.New("Block insertion should have failed")
 		}
 
 		validBlocks = append(validBlocks, b)
 	}
-	return validBlocks, rewardMap, senderMap, nil
+	return validBlocks, senderMap, nil
 }
 
 func validateHeader(h *btHeader, h2 *types.Header) error {
@@ -377,15 +396,9 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	return nil
 }
 
-func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[common.Address]rewardList, senderMap map[common.Address]*big.Int) error {
+func (t *BlockTest) validatePostState(statedb *state.StateDB, senderMap map[common.Address]*big.Int) error {
 	// validate post state accounts in test file against what we have in state db
 	for addr, acct := range t.json.Post {
-		if rewardList, exist := rewardMap[addr]; exist {
-			// In the case of rewardBaseAddress, the Kaia reward will be deducted once.
-			statedb.SubBalance(addr, rewardList.kaiaReward)
-			statedb.AddBalance(addr, rewardList.ethReward)
-		}
-
 		if senderGasAdjust, exist := senderMap[addr]; exist {
 			statedb.AddBalance(addr, senderGasAdjust)
 		}
@@ -405,7 +418,7 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[comm
 		}
 	}
 
-	err := t.validateStorage(statedb, rewardMap)
+	err := t.validateStorage(statedb)
 	if err != nil {
 		return err
 	}
@@ -414,21 +427,13 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB, rewardMap map[comm
 }
 
 // validateStorage validates storage while considering the difference between Kana and Ethereum.
-func (t *BlockTest) validateStorage(statedb *state.StateDB, rewardMap map[common.Address]rewardList) error {
+func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
 	beaconRootsAddress := common.HexToAddress("0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02")     // EIP-4788
 	depositContractAddress := common.HexToAddress("0x00000000219ab540356cbb839cbe05303d7705fa") // EIP-6110
 
 	// check the number of account
 	accountNum := 0
 	statedb.ForEachAccount(func(addr common.Address, data account.Account) {
-		// skip test's rewardbase
-		if addr == params.AuthorAddressForTesting {
-			return
-		}
-		// skip rewardbase when reward is zero
-		if reward, ok := rewardMap[addr]; ok && reward.ethReward.Cmp(big.NewInt(0)) == 0 {
-			return
-		}
 		accountNum++
 	})
 	if accountNum != len(t.json.Post) {
