@@ -113,10 +113,35 @@ type btHeaderMarshaling struct {
 
 type eestEngine struct {
 	*gxhash.Gxhash
-	baseFee *big.Int
+	baseFee  *big.Int
+	gasLimit uint64
 }
 
 var _ consensus.Engine = &eestEngine{}
+
+func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
+	// Change GasLimit to the one in the eth header
+	evm.Context.GasLimit = e.gasLimit
+
+	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
+		// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
+		vm.ChangeGasCostForTest(&evm.Config.JumpTable, vm.EXTCODEHASH, params.WarmStorageReadCostEIP2929)
+	}
+
+	// When istanbul is enabled, instrinsic gas is different from eth, so enable IsPrague to make them equal
+	r := evm.ChainConfig().Rules(evm.Context.BlockNumber)
+	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsIstanbul {
+		r.IsPrague = true
+	}
+	updatedIntrinsicGas, dataTokens, _ := types.IntrinsicGas(msg.Data(), msg.AccessList(), msg.AuthorizationList(), msg.To() == nil, r)
+	from, _ := msg.From()
+	msg = types.NewMessage(from, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, dataTokens, msg.AccessList(), msg.AuthorizationList())
+
+	// Gas prices are calculated in eth
+	if e.baseFee != nil {
+		evm.GasPrice = math.BigMin(new(big.Int).Add(msg.GasTipCap(), e.baseFee), msg.GasFeeCap())
+	}
+}
 
 func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	if chain.Config().IsPragueForkEnabled(header.Number) {
@@ -151,6 +176,7 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 
 func (e *eestEngine) applyHeader(h TestHeader) {
 	e.baseFee = h.BaseFee
+	e.gasLimit = h.GasLimit
 }
 
 func (t *BlockTest) Run() error {
@@ -195,7 +221,7 @@ func (t *BlockTest) Run() error {
 	}
 	defer chain.Stop()
 
-	_, senderMap, err := t.insertBlocksFromTx(chain, *gblock, db, tracer)
+	_, err = t.insertBlocksFromTx(chain, *gblock, db, tracer)
 	if err != nil {
 		return err
 	}
@@ -204,7 +230,7 @@ func (t *BlockTest) Run() error {
 	if err != nil {
 		return err
 	}
-	if err = t.validatePostState(newDB, senderMap); err != nil {
+	if err = t.validatePostState(newDB); err != nil {
 		return fmt.Errorf("post state validation failed: %v", err)
 	}
 
@@ -280,9 +306,8 @@ type rewardList struct {
 	ethReward  *big.Int
 }
 
-func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, map[common.Address]*big.Int, error) {
+func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, error) {
 	validBlocks := make([]btBlock, 0)
-	senderMap := map[common.Address]*big.Int{}
 	preBlock := &gBlock
 
 	// insert the test blocks, which will execute all transactions
@@ -292,7 +317,7 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
+				return nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
 			}
 		}
 
@@ -300,14 +325,8 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 			e.applyHeader(header)
 		}
 
-		// The intrinsic gas calculation affects gas used, so we need to make some changes to the main code.
-		if bc.Config().IsIstanbulForkEnabled(bc.CurrentHeader().Number) {
-			types.IsPragueInExecutionSpecTest = true
-		}
-		blockchain.GasLimitInExecutionSpecTest = header.GasLimit
-
 		// var maxFeePerGas *big.Int
-		blocks, receiptsList := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			for _, tx := range txs {
 				b.AddTxWithChainEvenHasError(bc, tx)
@@ -315,37 +334,8 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 		})
 		preBlock = blocks[0]
 
-		// The reward calculation is different for kaia and eth, and this will be deducted from the state later.
-		for _, receipt := range receiptsList[0] {
-			for _, tx := range blocks[0].Body().Transactions {
-				if tx.Hash() != receipt.TxHash {
-					continue
-				}
-
-				// kaia gas price
-				var kaiaGasPrice *big.Int
-				if tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode {
-					kaiaGasPrice = tx.EffectiveGasPrice(blocks[0].Header(), bc.Config())
-				} else {
-					kaiaGasPrice = tx.GasPrice()
-				}
-
-				// eth gas price
-				ethGasPrice := tx.GasPrice()
-				if header.BaseFee != nil {
-					ethGasPrice = math.BigMin(new(big.Int).Add(tx.GasTipCap(), header.BaseFee), tx.GasFeeCap())
-				}
-
-				// Because it is a eth test, we don't have to think about fee payer
-				// Because the baseFee is set to 0, Kaia's gas fee may be 0 if the transaction has a dynamic fee.
-				senderMap[tx.ValidatedSender()] = new(big.Int).Sub(
-					new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), kaiaGasPrice),
-					new(big.Int).Mul(new(big.Int).SetUint64(receipt.GasUsed), ethGasPrice))
-			}
-		}
-
 		if header.GasUsed != blocks[0].GasUsed() {
-			return nil, nil, fmt.Errorf("Unexpected GasUsed error (Expected: %v, Actual: %v)", header.GasUsed, blocks[0].GasUsed())
+			return nil, fmt.Errorf("Unexpected GasUsed error (Expected: %v, Actual: %v)", header.GasUsed, blocks[0].GasUsed())
 		}
 
 		i, err := bc.InsertChain(blocks)
@@ -353,16 +343,16 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
+				return nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
 			}
 		}
 		if b.BlockHeader == nil {
-			return nil, nil, errors.New("Block insertion should have failed")
+			return nil, errors.New("Block insertion should have failed")
 		}
 
 		validBlocks = append(validBlocks, b)
 	}
-	return validBlocks, senderMap, nil
+	return validBlocks, nil
 }
 
 func validateHeader(h *btHeader, h2 *types.Header) error {
@@ -396,13 +386,9 @@ func validateHeader(h *btHeader, h2 *types.Header) error {
 	return nil
 }
 
-func (t *BlockTest) validatePostState(statedb *state.StateDB, senderMap map[common.Address]*big.Int) error {
+func (t *BlockTest) validatePostState(statedb *state.StateDB) error {
 	// validate post state accounts in test file against what we have in state db
 	for addr, acct := range t.json.Post {
-		if senderGasAdjust, exist := senderMap[addr]; exist {
-			statedb.AddBalance(addr, senderGasAdjust)
-		}
-
 		// address is indirectly verified by the other fields, as it's the db key
 		code2 := statedb.GetCode(addr)
 		balance2 := statedb.GetBalance(addr)
