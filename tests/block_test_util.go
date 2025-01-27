@@ -111,6 +111,21 @@ type btHeaderMarshaling struct {
 	ExcessBlobGas *math.HexOrDecimal64
 }
 
+type eestEngine struct {
+	*gxhash.Gxhash
+	baseFee *big.Int
+}
+
+var _ consensus.Engine = &eestEngine{}
+
+func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+	if chain.Config().IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+	}
+}
+
 func (t *BlockTest) Run() error {
 	config, ok := Forks[t.json.Network]
 	if !ok {
@@ -143,16 +158,8 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
 	}
 
-	// TODO-Kaia: Replace gxhash with istanbul
 	tracer := vm.NewStructLogger(nil)
-	gxhash.CustomInitialize = func(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-		if chain.Config().IsPragueForkEnabled(header.Number) {
-			context := blockchain.NewEVMBlockContext(header, chain, nil)
-			vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-			blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
-		}
-	}
-	chain, err := blockchain.NewBlockChain(db, nil, config, gxhash.NewShared(), vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Gxhash: gxhash.NewShared()}, vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}
