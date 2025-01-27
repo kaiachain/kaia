@@ -611,8 +611,49 @@ func (bb *btBlock) decodeTx() (types.Transactions, TestHeader, error) {
 
 	// Decode transactions
 	var txs types.Transactions
-	if err := s.Decode(&txs); err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to decode transactions: %v", err)
+	if _, err := s.List(); err != nil {
+		return nil, TestHeader{}, fmt.Errorf("failed to enter outer list: %v", err)
+	}
+
+	// Self decode to convert to kaia's eth tx type
+	for {
+		var tx types.Transaction
+		kind, _, err := s.Kind()
+		if err == rlp.EOL {
+			break
+		} else if err != nil {
+			return nil, TestHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
+		}
+
+		txdata, _ := s.Raw()
+		ethTxDataInKaia := []byte{}
+		switch kind {
+		case rlp.List: // case of legacy
+			ethTxDataInKaia = txdata
+		case rlp.String: // case of envelope
+			var ethTypeIndex int
+			if txdata[0] < 0xb7 {
+				ethTypeIndex = 1
+			} else {
+				ethTypeIndex = int(txdata[0] - 0xb7 + 1)
+			}
+			switch txdata[ethTypeIndex] {
+			case 1, 2, 4: // eth transaction types whick kaia support
+				ethTxDataInKaia = append([]byte{byte(types.EthereumTxTypeEnvelope)}, txdata[ethTypeIndex:]...)
+			default:
+				ethTxDataInKaia = txdata
+			}
+		default:
+			return nil, TestHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
+		}
+
+		streamForTx := rlp.NewStream(bytes.NewReader(ethTxDataInKaia), 0)
+		if err := streamForTx.Decode(&tx); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return nil, TestHeader{}, fmt.Errorf("failed to decode transaction: %v", err)
+		}
+		txs = append(txs, &tx)
 	}
 
 	return txs, header, nil

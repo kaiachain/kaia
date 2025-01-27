@@ -69,42 +69,13 @@ func (serializer *TxInternalDataSerializer) EncodeRLP(w io.Writer) error {
 func (serializer *TxInternalDataSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&serializer.txType); err != nil {
 		// fallback to the original transaction decoding.
-		kind, _, err := s.Kind()
-		switch {
-		case err != nil:
+		txd := newEmptyTxInternalDataLegacy()
+		if err := s.Decode(txd); err != nil {
 			return err
-		case kind == rlp.List:
-			// It's a legacy transaction.
-			txd := newEmptyTxInternalDataLegacy()
-			if err := s.Decode(txd); err != nil {
-				return err
-			}
-			serializer.txType = TxTypeLegacyTransaction
-			serializer.tx = txd
-			return nil
-		default:
-			// It's an EIP-2718 typed TX envelope.
-			// First read the tx payload bytes into a temporary buffer.
-			ethType, err := s.ReadByte()
-			if err != nil {
-				return err
-			}
-
-			switch ethType {
-			case 1:
-				serializer.tx = new(TxInternalDataEthereumAccessList)
-			case 2:
-				serializer.tx = new(TxInternalDataEthereumDynamicFee)
-			case 3:
-				return errUndefinedTxType
-			case 4:
-				serializer.tx = new(TxInternalDataEthereumSetCode)
-			default:
-				return errUndefinedTxType
-			}
-
-			return s.Decode(serializer.tx)
 		}
+		serializer.txType = TxTypeLegacyTransaction
+		serializer.tx = txd
+		return nil
 	}
 
 	if serializer.txType == EthereumTxTypeEnvelope {
