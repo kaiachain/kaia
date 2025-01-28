@@ -2760,7 +2760,6 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	}
 	// Create a new context to be used in the EVM environment
 	blockContext := NewEVMBlockContext(header, bc, author)
-
 	txContext := NewEVMTxContext(msg, header, chainConfig)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.

@@ -102,6 +102,8 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.receipts = append(b.receipts, receipt)
 }
 
+// AddTxWithChainEvenHasError is an AddTx that inherits the vmConfig of the received chain
+// and does not panic even if an error occurs.
 func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transaction) error {
 	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
 	var vmConfig vm.Config

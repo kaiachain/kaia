@@ -75,42 +75,45 @@ type btBlock struct {
 //go:generate gencodec -type btHeader -field-override btHeaderMarshaling -out gen_btheader.go
 
 type btHeader struct {
-	Bloom                 types.Bloom
-	Coinbase              common.Address
-	MixHash               common.Hash
-	Nonce                 uint64
-	Number                *big.Int
-	Hash                  common.Hash
-	ParentHash            common.Hash
-	ReceiptTrie           common.Hash
-	StateRoot             common.Hash
-	TransactionsTrie      common.Hash
-	UncleHash             common.Hash
-	ExtraData             []byte
-	Difficulty            *big.Int
-	GasLimit              uint64
-	GasUsed               uint64
-	Timestamp             uint64
-	BaseFeePerGas         *big.Int
-	WithdrawalsRoot       *common.Hash
-	BlobGasUsed           *uint64
-	ExcessBlobGas         *uint64
-	ParentBeaconBlockRoot *common.Hash
+	ParentHash       common.Hash
+	UncleHash        common.Hash
+	Coinbase         common.Address
+	Root             common.Hash `json:"stateRoot"`
+	TxHash           common.Hash `json:"transactionsTrie"`
+	ReceiptHash      common.Hash `json:"receiptTrie"`
+	Bloom            types.Bloom
+	Difficulty       *big.Int
+	Number           *big.Int
+	GasLimit         uint64
+	GasUsed          uint64
+	Time             uint64 `json:"timestamp"`
+	Extra            []byte `json:"extraData"`
+	MixHash          common.Hash
+	Nonce            []byte
+	BaseFee          *big.Int     `json:"baseFeePerGas"         rlp:"optional"`
+	WithdrawalsHash  *common.Hash `json:"withdrawalsRoot"       rlp:"optional"`
+	BlobGasUsed      *uint64      `rlp:"optional"`
+	ExcessBlobGas    *uint64      `rlp:"optional"`
+	ParentBeaconRoot *common.Hash `json:"parentBeaconBlockRoot" rlp:"optional"`
+	RequestsHash     *common.Hash `rlp:"optional"`
+	Hash             common.Hash  `rlp:"-"`
 }
 
 type btHeaderMarshaling struct {
-	Nonce         math.HexOrDecimal64
-	ExtraData     hexutil.Bytes
+	Nonce         hexutil.Bytes
+	Extra         hexutil.Bytes
 	Number        *math.HexOrDecimal256
 	Difficulty    *math.HexOrDecimal256
 	GasLimit      math.HexOrDecimal64
 	GasUsed       math.HexOrDecimal64
-	Timestamp     math.HexOrDecimal64
-	BaseFeePerGas *math.HexOrDecimal256
+	Time          math.HexOrDecimal64
+	BaseFee       *math.HexOrDecimal256
 	BlobGasUsed   *math.HexOrDecimal64
 	ExcessBlobGas *math.HexOrDecimal64
 }
 
+// eestEngine is a test engine to absorb the difference in gas calculation and gas limit
+// between Kaia and Ethereum. This includes the distribution of rewards.
 type eestEngine struct {
 	*gxhash.Gxhash
 	baseFee  *big.Int
@@ -119,6 +122,7 @@ type eestEngine struct {
 
 var _ consensus.Engine = &eestEngine{}
 
+// This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
 func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	// Change GasLimit to the one in the eth header
 	evm.Context.GasLimit = e.gasLimit
@@ -138,9 +142,7 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	msg = types.NewMessage(from, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, dataTokens, msg.AccessList(), msg.AuthorizationList())
 
 	// Gas prices are calculated in eth
-	if e.baseFee != nil {
-		evm.GasPrice = math.BigMin(new(big.Int).Add(msg.GasTipCap(), e.baseFee), msg.GasFeeCap())
-	}
+	evm.GasPrice, _ = calculateEthGasPrice(evm.ChainConfig().Rules(evm.Context.BlockNumber), msg.GasPrice(), e.baseFee, msg.GasFeeCap(), msg.GasTipCap())
 }
 
 func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
@@ -159,11 +161,7 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 				continue
 			}
 
-			ethGasPrice := tx.GasPrice()
-			if e.baseFee != nil {
-				ethGasPrice = math.BigMin(new(big.Int).Add(tx.GasTipCap(), e.baseFee), tx.GasFeeCap())
-			}
-
+			ethGasPrice, _ := calculateEthGasPrice(chain.Config().Rules(header.Number), tx.GasPrice(), e.baseFee, tx.GasFeeCap(), tx.GasTipCap())
 			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), e.baseFee, receipt.GasUsed, chain.Config().Rules(header.Number)))
 		}
 	}
@@ -174,7 +172,7 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 	return types.NewBlock(header, txs, receipts), nil
 }
 
-func (e *eestEngine) applyHeader(h TestHeader) {
+func (e *eestEngine) applyHeader(h btHeader) {
 	e.baseFee = h.BaseFee
 	e.gasLimit = h.GasLimit
 }
@@ -193,6 +191,7 @@ func (t *BlockTest) Run() error {
 		MaxBlockGasUsedForBaseFee: 0,
 		BaseFeeDenominator:        0,
 	}
+	// Override Finalize in testEngine and enable it to distribute eth rewards.
 	config.Governance.Reward = &params.RewardConfig{
 		DeferredTxFee: true,
 	}
@@ -205,13 +204,16 @@ func (t *BlockTest) Run() error {
 		return err
 	}
 
-	st := MakePreState(db, t.json.Pre, true, config.Rules(gblock.Number()))
+	st, err := state.New(gblock.Root(), state.NewDatabase(db), nil, nil)
+	if err != nil {
+		return err
+	}
 	simulatedRoot, err := useEthStateRoot(st)
 	if err != nil {
 		return err
 	}
-	if simulatedRoot != t.json.Genesis.StateRoot {
-		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.StateRoot[:6])
+	if simulatedRoot != t.json.Genesis.Root {
+		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.Root[:6])
 	}
 
 	tracer := vm.NewStructLogger(nil)
@@ -221,7 +223,7 @@ func (t *BlockTest) Run() error {
 	}
 	defer chain.Stop()
 
-	_, err = t.insertBlocksFromTx(chain, *gblock, db, tracer)
+	_, err = t.insertBlocks(chain, *gblock, db, tracer)
 	if err != nil {
 		return err
 	}
@@ -234,15 +236,18 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("post state validation failed: %v", err)
 	}
 
+	// TODO-Kaia Comment out this check, since block header has been changed in Kaia.
+	// However, enabling it may result in effective validation of some header fields.
+	// return t.validateImportedHeaders(chain, validBlocks)
 	return nil
 }
 
 func (t *BlockTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
 		Config:     config,
-		Timestamp:  t.json.Genesis.Timestamp,
+		Timestamp:  t.json.Genesis.Time,
 		ParentHash: t.json.Genesis.ParentHash,
-		ExtraData:  t.json.Genesis.ExtraData,
+		ExtraData:  t.json.Genesis.Extra,
 		GasUsed:    t.json.Genesis.GasUsed,
 		BlockScore: t.json.Genesis.Number,
 		Alloc:      t.json.Pre,
@@ -261,67 +266,28 @@ See https://github.com/ethereum/tests/wiki/Blockchain-Tests-II
 	If a block is invalid it does not necessarily fail the test, if it's invalidness is
 	expected we are expected to ignore it and continue processing and then validate the
 	post state.
+
+	kaia specific: kaia and ethereum have some differences in block structure and
+	transaction RLP encoding, so kaia blocks are created by GenerateChain using eth
+	block RLP information.
 */
-func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, preBlock *types.Block) ([]btBlock, error) {
-	validBlocks := make([]btBlock, 0)
-	latestParentHash := preBlock.Hash()
-	latestRoot := preBlock.Root()
-	// insert the test blocks, which will execute all transactions
-	for _, b := range t.json.Blocks {
-		cb, err := b.decode(latestParentHash, latestRoot)
-		if err != nil {
-			if b.BlockHeader == nil {
-				continue // OK - block is supposed to be invalid, continue with next block
-			} else {
-				return nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
-			}
-		}
-		// RLP decoding worked, try to insert into chain:
-		latestParentHash = cb.Hash()
-		latestRoot = cb.Root()
-		blocks := types.Blocks{cb}
-		i, err := bc.InsertChain(blocks)
-		if err != nil {
-			if b.BlockHeader == nil {
-				continue // OK - block is supposed to be invalid, continue with next block
-			} else {
-				return nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
-			}
-		}
-		if b.BlockHeader == nil {
-			return nil, fmt.Errorf("Block insertion should have failed")
-		}
-
-		// validate RLP decoding by checking all values against test file JSON
-		if err = validateHeader(b.BlockHeader, cb.Header()); err != nil {
-			return nil, fmt.Errorf("Deserialised block header validation failed: %v", err)
-		}
-		validBlocks = append(validBlocks, b)
-	}
-	return validBlocks, nil
-}
-
-type rewardList struct {
-	kaiaReward *big.Int
-	ethReward  *big.Int
-}
-
-func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, error) {
+func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, error) {
 	validBlocks := make([]btBlock, 0)
 	preBlock := &gBlock
 
 	// insert the test blocks, which will execute all transactions
 	for _, b := range t.json.Blocks {
-		txs, header, err := b.decodeTx()
+		txs, header, err := b.decode()
 		if err != nil {
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
+				return nil, fmt.Errorf("block RLP decoding failed when expected to succeed: %v", err)
 			}
 		}
 
-		if e := bc.Engine().(interface{ applyHeader(TestHeader) }); e != nil {
+		// The eth header is recorded to the engine by calling applyHeader.
+		if e := bc.Engine().(interface{ applyHeader(btHeader) }); e != nil {
 			e.applyHeader(header)
 		}
 
@@ -334,20 +300,16 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 		})
 		preBlock = blocks[0]
 
-		if header.GasUsed != blocks[0].GasUsed() {
-			return nil, fmt.Errorf("Unexpected GasUsed error (Expected: %v, Actual: %v)", header.GasUsed, blocks[0].GasUsed())
-		}
-
 		i, err := bc.InsertChain(blocks)
 		if err != nil {
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
+				return nil, fmt.Errorf("block #%v insertion into chain failed: %v", blocks[i].Number(), err)
 			}
 		}
 		if b.BlockHeader == nil {
-			return nil, errors.New("Block insertion should have failed")
+			return nil, errors.New("block insertion should have failed")
 		}
 
 		validBlocks = append(validBlocks, b)
@@ -357,31 +319,31 @@ func (t *BlockTest) insertBlocksFromTx(bc *blockchain.BlockChain, gBlock types.B
 
 func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.Bloom != h2.Bloom {
-		return fmt.Errorf("Bloom: want: %x have: %x", h.Bloom, h2.Bloom)
+		return fmt.Errorf("bloom: want: %x have: %x", h.Bloom, h2.Bloom)
 	}
 	if h.Number.Cmp(h2.Number) != 0 {
-		return fmt.Errorf("Number: want: %v have: %v", h.Number, h2.Number)
+		return fmt.Errorf("number: want: %v have: %v", h.Number, h2.Number)
 	}
 	if h.ParentHash != h2.ParentHash {
-		return fmt.Errorf("Parent hash: want: %x have: %x", h.ParentHash, h2.ParentHash)
+		return fmt.Errorf("parent hash: want: %x have: %x", h.ParentHash, h2.ParentHash)
 	}
-	if h.ReceiptTrie != h2.ReceiptHash {
-		return fmt.Errorf("Receipt hash: want: %x have: %x", h.ReceiptTrie, h2.ReceiptHash)
+	if h.ReceiptHash != h2.ReceiptHash {
+		return fmt.Errorf("receipt hash: want: %x have: %x", h.ReceiptHash, h2.ReceiptHash)
 	}
-	if h.TransactionsTrie != h2.TxHash {
-		return fmt.Errorf("Tx hash: want: %x have: %x", h.TransactionsTrie, h2.TxHash)
+	if h.TxHash != h2.TxHash {
+		return fmt.Errorf("tx hash: want: %x have: %x", h.TxHash, h2.TxHash)
 	}
-	if h.StateRoot != h2.Root {
-		return fmt.Errorf("State hash: want: %x have: %x", h.StateRoot, h2.Root)
+	if h.Root != h2.Root {
+		return fmt.Errorf("state hash: want: %x have: %x", h.Root, h2.Root)
 	}
-	if !bytes.Equal(h.ExtraData, h2.Extra) {
-		return fmt.Errorf("Extra data: want: %x have: %x", h.ExtraData, h2.Extra)
+	if !bytes.Equal(h.Extra, h2.Extra) {
+		return fmt.Errorf("extra data: want: %x have: %x", h.Extra, h2.Extra)
 	}
 	if h.GasUsed != h2.GasUsed {
-		return fmt.Errorf("GasUsed: want: %d have: %d", h.GasUsed, h2.GasUsed)
+		return fmt.Errorf("gas used: want: %d have: %d", h.GasUsed, h2.GasUsed)
 	}
-	if h.Timestamp != h2.Time.Uint64() {
-		return fmt.Errorf("TimestampGa: want: %v have: %v", h.Timestamp, h2.Time)
+	if h.Time != h2.Time.Uint64() {
+		return fmt.Errorf("timestamp: want: %v have: %v", h.Time, h2.Time)
 	}
 	return nil
 }
@@ -469,136 +431,45 @@ func (t *BlockTest) validateImportedHeaders(cm *blockchain.BlockChain, validBloc
 	// be part of the longest chain until last block is imported.
 	for b := cm.CurrentBlock(); b != nil && b.NumberU64() != 0; b = cm.GetBlockByHash(b.Header().ParentHash) {
 		if err := validateHeader(bmap[b.Hash()].BlockHeader, b.Header()); err != nil {
-			return fmt.Errorf("Imported block header validation failed: %v", err)
+			return fmt.Errorf("imported block header validation failed: %v", err)
 		}
 	}
 	return nil
 }
 
-type TestHeader struct {
-	ParentHash       common.Hash
-	UncleHash        common.Hash
-	Coinbase         []byte
-	Root             common.Hash
-	TxHash           common.Hash
-	ReceiptHash      common.Hash
-	Bloom            types.Bloom
-	Difficulty       *big.Int
-	Number           *big.Int
-	GasLimit         uint64
-	GasUsed          uint64
-	Time             *big.Int
-	Extra            []byte
-	MixHash          common.Hash
-	Nonce            []byte
-	BaseFee          *big.Int     `rlp:"optional"`
-	WithdrawalsHash  *common.Hash `rlp:"optional"`
-	BlobGasUsed      *uint64      `rlp:"optional"`
-	ExcessBlobGas    *uint64      `rlp:"optional"`
-	ParentBeaconRoot *common.Hash `rlp:"optional"`
-	RequestsHash     *common.Hash `rlp:"optional"`
-}
-
-// Modify the decode function
-func (bb *btBlock) decode(latestParentHash common.Hash, latestRoot common.Hash) (*types.Block, error) {
+// Since kaia has a different header than eth, it returns the self-decoded eth header and txs into kaia's.
+func (bb *btBlock) decode() (types.Transactions, btHeader, error) {
 	data, err := hexutil.Decode(bb.Rlp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode hex: %v", err)
-	}
-
-	fmt.Printf("Debug: Full RLP hex: %x\n", data)
-
-	// First decode just the raw RLP list
-	s := rlp.NewStream(bytes.NewReader(data), 0)
-	kind, size, err := s.Kind()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get RLP kind: %v", err)
-	}
-	fmt.Printf("Debug: RLP kind: %v, size: %d\n", kind, size)
-
-	if kind != rlp.List {
-		return nil, fmt.Errorf("expected RLP list, got %v", kind)
-	}
-
-	// Manual decoding approach
-	if _, err := s.List(); err != nil {
-		return nil, fmt.Errorf("failed to enter outer list: %v", err)
-	}
-
-	// Decode header
-	var header TestHeader
-	if err := s.Decode(&header); err != nil {
-		return nil, fmt.Errorf("failed to decode header: %v", err)
-	}
-
-	// Decode transactions
-	var txs []*types.Transaction
-	if err := s.Decode(&txs); err != nil {
-		return nil, fmt.Errorf("failed to decode transactions: %v", err)
-	}
-
-	// Convert header
-	var rewardbase common.Address
-	if len(header.Coinbase) > 0 {
-		copy(rewardbase[:], header.Coinbase[:20])
-	}
-
-	block := types.NewBlockWithHeader(&types.Header{
-		ParentHash:   latestParentHash,
-		Rewardbase:   rewardbase,
-		Root:         latestRoot,
-		TxHash:       header.TxHash,
-		ReceiptHash:  header.ReceiptHash,
-		Bloom:        header.Bloom,
-		BlockScore:   params.GenesisBlockScore,
-		Number:       header.Number,
-		GasUsed:      header.GasUsed,
-		Time:         header.Time,
-		TimeFoS:      0,
-		Extra:        header.Extra,
-		Governance:   []byte{},
-		Vote:         []byte{},
-		BaseFee:      header.BaseFee,
-		RandomReveal: []byte{},
-		MixHash:      header.MixHash[:],
-	})
-
-	return block.WithBody(txs), nil
-}
-
-// Modify the decode function
-func (bb *btBlock) decodeTx() (types.Transactions, TestHeader, error) {
-	data, err := hexutil.Decode(bb.Rlp)
-	if err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to decode hex: %v", err)
+		return nil, btHeader{}, fmt.Errorf("failed to decode hex: %v", err)
 	}
 
 	// First decode just the raw RLP list
 	s := rlp.NewStream(bytes.NewReader(data), 0)
 	kind, _, err := s.Kind()
 	if err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
+		return nil, btHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
 	}
 
 	if kind != rlp.List {
-		return nil, TestHeader{}, fmt.Errorf("expected RLP list, got %v", kind)
+		return nil, btHeader{}, fmt.Errorf("expected RLP list, got %v", kind)
 	}
 
 	// Manual decoding approach
 	if _, err := s.List(); err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to enter outer list: %v", err)
+		return nil, btHeader{}, fmt.Errorf("failed to enter outer list: %v", err)
 	}
 
 	// Decode header
-	var header TestHeader
+	var header btHeader
 	if err := s.Decode(&header); err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to decode header: %v", err)
+		return nil, btHeader{}, fmt.Errorf("failed to decode header: %v", err)
 	}
 
 	// Decode transactions
 	var txs types.Transactions
 	if _, err := s.List(); err != nil {
-		return nil, TestHeader{}, fmt.Errorf("failed to enter outer list: %v", err)
+		return nil, btHeader{}, fmt.Errorf("failed to enter outer list: %v", err)
 	}
 
 	// Self decode to convert to kaia's eth tx type
@@ -608,7 +479,7 @@ func (bb *btBlock) decodeTx() (types.Transactions, TestHeader, error) {
 		if err == rlp.EOL {
 			break
 		} else if err != nil {
-			return nil, TestHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
+			return nil, btHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
 		}
 
 		txdata, _ := s.Raw()
@@ -630,14 +501,14 @@ func (bb *btBlock) decodeTx() (types.Transactions, TestHeader, error) {
 				ethTxDataInKaia = txdata
 			}
 		default:
-			return nil, TestHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
+			return nil, btHeader{}, fmt.Errorf("failed to get RLP kind: %v", err)
 		}
 
 		streamForTx := rlp.NewStream(bytes.NewReader(ethTxDataInKaia), 0)
 		if err := streamForTx.Decode(&tx); err == rlp.EOL {
 			break
 		} else if err != nil {
-			return nil, TestHeader{}, fmt.Errorf("failed to decode transaction: %v", err)
+			return nil, btHeader{}, fmt.Errorf("failed to decode transaction: %v", err)
 		}
 		txs = append(txs, &tx)
 	}

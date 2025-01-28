@@ -336,12 +336,14 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			if _, ok := types.ParseDelegation(a.Code); ok {
-				statedb.SetCodeToEOA(addr, a.Code, rules)
-			} else {
-				if isTestExecutionSpecState {
+			if rules.IsPrague || isTestExecutionSpecState {
+				if _, ok := types.ParseDelegation(a.Code); ok {
+					statedb.SetCodeToEOA(addr, a.Code, rules)
+				} else {
 					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
+					statedb.SetCode(addr, a.Code)
 				}
+			} else {
 				statedb.SetCode(addr, a.Code)
 			}
 		}
@@ -457,10 +459,23 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 func useEthGasPrice(r params.Rules, json *stJSON) (*big.Int, error) {
+	if json.Tx.MaxFeePerGas == nil {
+		json.Tx.MaxFeePerGas = json.Tx.GasPrice
+	}
+	if json.Tx.MaxFeePerGas == nil {
+		json.Tx.MaxFeePerGas = new(big.Int)
+	}
+	if json.Tx.MaxPriorityFeePerGas == nil {
+		json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
+	}
+	return calculateEthGasPrice(r, json.Tx.GasPrice, json.Env.BaseFee, json.Tx.MaxFeePerGas, json.Tx.MaxPriorityFeePerGas)
+}
+
+func calculateEthGasPrice(r params.Rules, envGasPrice, envBaseFee, envMaxFeePerGas, envMaxPriorityFeePerGas *big.Int) (*big.Int, error) {
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
 	var baseFee *big.Int
 	if r.IsLondon {
-		baseFee = json.Env.BaseFee
+		baseFee = envBaseFee
 		if baseFee == nil {
 			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
 			// parent - 2 : 0xa as the basefee for 'this' context.
@@ -469,18 +484,9 @@ func useEthGasPrice(r params.Rules, json *stJSON) (*big.Int, error) {
 	}
 
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L402-L416
-	gasPrice := json.Tx.GasPrice
+	gasPrice := envGasPrice
 	if baseFee != nil {
-		if json.Tx.MaxFeePerGas == nil {
-			json.Tx.MaxFeePerGas = gasPrice
-		}
-		if json.Tx.MaxFeePerGas == nil {
-			json.Tx.MaxFeePerGas = new(big.Int)
-		}
-		if json.Tx.MaxPriorityFeePerGas == nil {
-			json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
-		}
-		gasPrice = math.BigMin(new(big.Int).Add(json.Tx.MaxPriorityFeePerGas, baseFee), json.Tx.MaxFeePerGas)
+		gasPrice = math.BigMin(new(big.Int).Add(envMaxPriorityFeePerGas, baseFee), envMaxFeePerGas)
 	}
 
 	if gasPrice == nil {
