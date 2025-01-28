@@ -130,6 +130,8 @@ var (
 	databaseDirPrefix  = []byte("databaseDirectory")
 	migrationStatusKey = []byte("migrationStatus")
 
+	migrationOldDBPathKey = []byte("migrationOldDBPath")
+
 	stakingInfoPrefix = []byte("stakingInfo")
 
 	supplyCheckpointPrefix        = []byte("supplyCheckpoint")
