@@ -25,7 +25,6 @@ package tests
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -63,13 +62,11 @@ type ExecutionSpecBlockTestSuite struct {
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
-	blockchain.CreateContractWithCodeFormatInExecutionSpecTest = true
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	// Reset global variables for test
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
-	blockchain.CreateContractWithCodeFormatInExecutionSpecTest = false
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {

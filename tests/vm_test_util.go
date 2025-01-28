@@ -87,7 +87,7 @@ type vmExecMarshaling struct {
 func (t *VMTest) Run(vmconfig vm.Config) error {
 	memDBManager := database.NewMemoryDBManager()
 	rules := params.MainnetChainConfig.Rules(new(big.Int).SetUint64(t.json.Env.Number))
-	statedb := MakePreState(memDBManager, t.json.Pre, false, rules)
+	statedb := MakePreState(memDBManager, t.json.Pre, rules)
 	ret, gasRemaining, err := t.exec(statedb, vmconfig)
 
 	if t.json.GasRemaining == nil {
