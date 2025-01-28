@@ -112,7 +112,7 @@ func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 	}
 }
 
-func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, authList []SetCodeAuthorization, chainID *big.Int) *TxInternalDataEthereumSetCode {
+func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, chainID *big.Int, authList []SetCodeAuthorization) *TxInternalDataEthereumSetCode {
 	d := newTxInternalDataEthereumSetCode()
 
 	d.AccountNonce = nonce
