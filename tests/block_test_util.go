@@ -236,6 +236,9 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("post state validation failed: %v", err)
 	}
 
+	// TODO-Kaia Comment out this check, since block header has been changed in Kaia.
+	// However, enabling it may result in effective validation of some header fields.
+	// return t.validateImportedHeaders(chain, validBlocks)
 	return nil
 }
 
@@ -279,7 +282,7 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, fmt.Errorf("Block RLP decoding failed when expected to succeed: %v", err)
+				return nil, fmt.Errorf("block RLP decoding failed when expected to succeed: %v", err)
 			}
 		}
 
@@ -302,11 +305,11 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			if b.BlockHeader == nil {
 				continue // OK - block is supposed to be invalid, continue with next block
 			} else {
-				return nil, fmt.Errorf("Block #%v insertion into chain failed: %v", blocks[i].Number(), err)
+				return nil, fmt.Errorf("block #%v insertion into chain failed: %v", blocks[i].Number(), err)
 			}
 		}
 		if b.BlockHeader == nil {
-			return nil, errors.New("Block insertion should have failed")
+			return nil, errors.New("block insertion should have failed")
 		}
 
 		validBlocks = append(validBlocks, b)
@@ -316,31 +319,31 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 
 func validateHeader(h *btHeader, h2 *types.Header) error {
 	if h.Bloom != h2.Bloom {
-		return fmt.Errorf("Bloom: want: %x have: %x", h.Bloom, h2.Bloom)
+		return fmt.Errorf("bloom: want: %x have: %x", h.Bloom, h2.Bloom)
 	}
 	if h.Number.Cmp(h2.Number) != 0 {
-		return fmt.Errorf("Number: want: %v have: %v", h.Number, h2.Number)
+		return fmt.Errorf("number: want: %v have: %v", h.Number, h2.Number)
 	}
 	if h.ParentHash != h2.ParentHash {
-		return fmt.Errorf("Parent hash: want: %x have: %x", h.ParentHash, h2.ParentHash)
+		return fmt.Errorf("parent hash: want: %x have: %x", h.ParentHash, h2.ParentHash)
 	}
 	if h.ReceiptHash != h2.ReceiptHash {
-		return fmt.Errorf("Receipt hash: want: %x have: %x", h.ReceiptHash, h2.ReceiptHash)
+		return fmt.Errorf("receipt hash: want: %x have: %x", h.ReceiptHash, h2.ReceiptHash)
 	}
 	if h.TxHash != h2.TxHash {
-		return fmt.Errorf("Tx hash: want: %x have: %x", h.TxHash, h2.TxHash)
+		return fmt.Errorf("tx hash: want: %x have: %x", h.TxHash, h2.TxHash)
 	}
 	if h.Root != h2.Root {
-		return fmt.Errorf("State hash: want: %x have: %x", h.Root, h2.Root)
+		return fmt.Errorf("state hash: want: %x have: %x", h.Root, h2.Root)
 	}
 	if !bytes.Equal(h.Extra, h2.Extra) {
-		return fmt.Errorf("Extra data: want: %x have: %x", h.Extra, h2.Extra)
+		return fmt.Errorf("extra data: want: %x have: %x", h.Extra, h2.Extra)
 	}
 	if h.GasUsed != h2.GasUsed {
-		return fmt.Errorf("GasUsed: want: %d have: %d", h.GasUsed, h2.GasUsed)
+		return fmt.Errorf("gas used: want: %d have: %d", h.GasUsed, h2.GasUsed)
 	}
 	if h.Time != h2.Time.Uint64() {
-		return fmt.Errorf("TimestampGa: want: %v have: %v", h.Time, h2.Time)
+		return fmt.Errorf("timestamp: want: %v have: %v", h.Time, h2.Time)
 	}
 	return nil
 }
@@ -428,7 +431,7 @@ func (t *BlockTest) validateImportedHeaders(cm *blockchain.BlockChain, validBloc
 	// be part of the longest chain until last block is imported.
 	for b := cm.CurrentBlock(); b != nil && b.NumberU64() != 0; b = cm.GetBlockByHash(b.Header().ParentHash) {
 		if err := validateHeader(bmap[b.Hash()].BlockHeader, b.Header()); err != nil {
-			return fmt.Errorf("Imported block header validation failed: %v", err)
+			return fmt.Errorf("imported block header validation failed: %v", err)
 		}
 	}
 	return nil
