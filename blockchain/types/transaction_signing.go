@@ -331,7 +331,7 @@ func (s pragueSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 
 	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
 	// because it indicates that the chain ID was not specified in the tx.
-	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
@@ -439,7 +439,7 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 
 	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
 	// because it indicates that the chain ID was not specified in the tx.
-	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
@@ -542,7 +542,7 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 
 	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
 	// because it indicates that the chain ID was not specified in the tx.
-	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
 		return nil, nil, nil, ErrInvalidChainId
 	}
 
