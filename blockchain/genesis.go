@@ -311,10 +311,14 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		if len(account.Code) != 0 {
 			originalCode := stateDB.GetCode(addr)
 			rules := g.Config.Rules(new(big.Int).SetUint64(g.Number))
-			if _, ok := types.ParseDelegation(account.Code); ok {
-				stateDB.SetCodeToEOA(addr, account.Code, rules)
+			if rules.IsPrague {
+				if _, ok := types.ParseDelegation(account.Code); ok {
+					stateDB.SetCodeToEOA(addr, account.Code, rules)
+				} else {
+					stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
+					stateDB.SetCode(addr, account.Code)
+				}
 			} else {
-				stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 				stateDB.SetCode(addr, account.Code)
 			}
 			// If originalCode is not nil,
