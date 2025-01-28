@@ -256,7 +256,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
 	rules := config.Rules(block.Number())
-	st = MakePreState(memDBManager, t.json.Pre, rules)
+	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState, rules)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
 	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
@@ -331,12 +331,12 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, rules params.Rules) *state.StateDB {
+func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool, rules params.Rules) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			if rules.IsPrague {
+			if rules.IsPrague || isTestExecutionSpecState {
 				if _, ok := types.ParseDelegation(a.Code); ok {
 					statedb.SetCodeToEOA(addr, a.Code, rules)
 				} else {
