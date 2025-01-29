@@ -651,7 +651,7 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, uint64, error) 
 
 // IntrinsicGas computes the 'intrinsic gas' and the number of tokens for EIP-7623
 // for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, authorizationList AuthorizationList, contractCreation bool, r params.Rules) (uint64, uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, uint64, error) {
 	// Set the starting gas for the raw transaction
 	var (
 		gas    uint64

@@ -387,24 +387,17 @@ func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
 
 // enable7702 the EIP-7702 changes to support delegation designators.
 func enable7702(jt *JumpTable) {
-	jt[EXTCODECOPY].constantGas = params.WarmStorageReadCostEIP2929
-	jt[EXTCODECOPY].dynamicGas = gasExtCodeCopyEIP7702
+	jt[EXTCODECOPY].execute = opExtCodeCopyEIP7702
 
-	jt[EXTCODESIZE].constantGas = params.WarmStorageReadCostEIP2929
-	jt[EXTCODESIZE].dynamicGas = gasEip7702CodeCheck
+	jt[EXTCODESIZE].execute = opExtCodeSizeEIP7702
 
-	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
-	jt[EXTCODEHASH].dynamicGas = gasEip7702CodeCheck
+	jt[EXTCODEHASH].execute = opExtCodeHashEIP7702
 
-	jt[CALL].constantGas = params.WarmStorageReadCostEIP2929
 	jt[CALL].dynamicGas = gasCallEIP7702
 
-	jt[CALLCODE].constantGas = params.WarmStorageReadCostEIP2929
 	jt[CALLCODE].dynamicGas = gasCallCodeEIP7702
 
-	jt[STATICCALL].constantGas = params.WarmStorageReadCostEIP2929
 	jt[STATICCALL].dynamicGas = gasStaticCallEIP7702
 
-	jt[DELEGATECALL].constantGas = params.WarmStorageReadCostEIP2929
 	jt[DELEGATECALL].dynamicGas = gasDelegateCallEIP7702
 }

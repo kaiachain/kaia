@@ -2442,15 +2442,19 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	chainConfig.ShanghaiCompatibleBlock = common.Big0
 	chainConfig.CancunCompatibleBlock = common.Big0
 	chainConfig.KaiaCompatibleBlock = common.Big0
+	chainConfig.PragueCompatibleBlock = common.Big0
 	var (
 		// genesis
 		account1 = common.HexToAddress("0xaaaa")
 		account2 = common.HexToAddress("0xbbbb")
 		account3 = common.HexToAddress("0xcccc")
+		account4 = common.HexToAddress("0xdddd")
+		account5 = common.HexToAddress("0xeeee")
 		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
 			account1: {Balance: big.NewInt(params.KAIA * 2)},
 			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
+			account4: {Balance: big.NewInt(params.KAIA * 2), Code: append(types.DelegationPrefix, account5.Bytes()...)},
 		}, Config: chainConfig}
 
 		// blockchain
@@ -2567,6 +2571,22 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 				To:   &account3,
 			},
 			expectErr: "execution reverted: hello",
+		},
+		{ // Should be able to send to an EIP-7702 delegated account.
+			args: EthTransactionArgs{
+				From:  &account1,
+				To:    &account4,
+				Value: (*hexutil.Big)(big.NewInt(1)),
+			},
+			expectGas: 21000,
+		},
+		{ // Should be able to send as EIP-7702 delegated account.
+			args: EthTransactionArgs{
+				From:  &account4,
+				To:    &account2,
+				Value: (*hexutil.Big)(big.NewInt(1)),
+			},
+			expectGas: 21000,
 		},
 	}
 

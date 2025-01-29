@@ -2325,17 +2325,21 @@ func TestEIP7702(t *testing.T) {
 	gspec.Config.PragueCompatibleBlock = common.Big0
 
 	// Sign authorization tuples.
-	auth1, _ := types.SignAuth(&types.Authorization{
+	// The way the auths are combined, it becomes
+	// 1. tx -> addr1 which is delegated to 0xaaaa
+	// 2. addr1:0xaaaa calls into addr2:0xbbbb
+	// 3. addr2:0xbbbb  writes to storage
+	auth1, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
 		ChainID: gspec.Config.ChainID.Uint64(),
 		Address: aa,
 		Nonce:   1,
-	}, key1)
+	})
 
-	auth2, _ := types.SignAuth(&types.Authorization{
+	auth2, _ := types.SignSetCode(key2, types.SetCodeAuthorization{
 		ChainID: uint64(0),
 		Address: bb,
 		Nonce:   0,
-	}, key2)
+	})
 
 	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
 
@@ -2344,7 +2348,7 @@ func TestEIP7702(t *testing.T) {
 	blocks, _ := GenerateChain(gspec.Config, genesis, engine, testdb, 1, func(i int, b *BlockGen) {
 		b.SetRewardbase(common.Address{1})
 
-		authorizationList := []types.Authorization{*auth1, *auth2}
+		authorizationList := []types.SetCodeAuthorization{auth1, auth2}
 		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
@@ -2419,13 +2423,13 @@ func TestEIP7702(t *testing.T) {
 
 	// Set 0x0000000000000000000000000000000000000000000 test
 	{
-		authForEmpty, _ := types.SignAuth(&types.Authorization{
+		authForEmpty, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
 			ChainID: gspec.Config.ChainID.Uint64(),
 			Address: common.Address{},
 			Nonce:   state.GetNonce(addr1) + 1,
-		}, key1)
+		})
 
-		authorizationList := []types.Authorization{*authForEmpty}
+		authorizationList := []types.SetCodeAuthorization{authForEmpty}
 		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
