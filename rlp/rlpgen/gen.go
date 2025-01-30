@@ -679,7 +679,7 @@ func (bctx *buildContext) makeOp(name *types.Named, typ types.Type, tags rlpstru
 			return bigIntOp{}, nil
 		}
 		if isUint256(typ) {
-			return uint256Op{pointer: true}, nil
+			return uint256Op{}, nil
 		}
 		if typ == bctx.rawValueType {
 			return bctx.makeRawValueOp(), nil
