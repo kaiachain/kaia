@@ -12,11 +12,7 @@ func (obj *Test) EncodeRLP(_w io.Writer) error {
 	} else {
 		w.WriteUint256(obj.Int)
 	}
-	if obj.IntNoPtr == nil {
-		w.Write(rlp.EmptyString)
-	} else {
-		w.WriteUint256(obj.IntNoPtr)
-	}
+	w.WriteUint256(&obj.IntNoPtr)
 	w.ListEnd(_tmp0)
 	return w.Flush()
 }
@@ -38,7 +34,7 @@ func (obj *Test) DecodeRLP(dec *rlp.Stream) error {
 		if err := dec.ReadUint256(&_tmp2); err != nil {
 			return err
 		}
-		_tmp0.IntNoPtr = &_tmp2
+		_tmp0.IntNoPtr = _tmp2
 		if err := dec.ListEnd(); err != nil {
 			return err
 		}
