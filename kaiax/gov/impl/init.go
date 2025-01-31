@@ -100,11 +100,11 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 	fallback := make(gov.PartialParamSet)
 
 	if chainConfig == nil {
+		logger.Info("Using empty fallback")
 		return fallback
 	}
 
-	// on private net, fallback candidates are all params.
-	candidates := maps.Keys(gov.Params)
+	var candidates []gov.ParamName
 
 	// on Mainnet/Kairos, fallback candidates are only the initial params specified in `params.{Mainnet,Kairos}ChainConfig`.
 	if chainId := chainConfig.ChainID; chainId != nil &&
@@ -116,15 +116,28 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 			gov.RewardProposerUpdateInterval, gov.RewardMinimumStake, gov.IstanbulEpoch, gov.IstanbulPolicy,
 			gov.IstanbulCommitteeSize, gov.GovernanceUnitPrice,
 		}
+		logger.Info("Using Mainnet/Kairos fallback")
+	} else {
+		// on private net, fallback candidates are all params.
+		candidates = maps.Keys(gov.Params)
+		logger.Info("Using default fallback")
 	}
 
 	for _, name := range candidates {
 		param := gov.Params[name]
 		value, err := param.ChainConfigValue(chainConfig)
-		if err == nil && !reflect.DeepEqual(value, param.DefaultValue) {
-			fallback.Add(string(name), value)
+		if err != nil {
+			logger.CritWithStack("Failed to fetch value from ChainConfig", "name", name, "error", err)
+		}
+
+		if !reflect.DeepEqual(value, param.DefaultValue) {
+			err := fallback.Add(string(name), value)
+			if err != nil {
+				logger.CritWithStack("Failed to add param to fallback", "name", name, "value", value, "error", err)
+			}
 		}
 	}
+
 	return fallback
 }
 

@@ -30,7 +30,7 @@ func (h *headerGovModule) GetPartialParamSet(blockNum uint64) gov.PartialParamSe
 	for _, num := range h.GovBlockNums() {
 		if num <= prevEpochStart {
 			for name, value := range h.governances[num].Items() {
-				ret[name] = value
+				ret.Add(string(name), value)
 			}
 		}
 	}
