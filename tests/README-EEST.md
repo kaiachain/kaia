@@ -22,7 +22,7 @@ This test can execute EEST overwriting these into the same one as Ethereum.
 
 Regarding rule of precompiled contract address, this rule is used everywhere so this test changes the rule before launching blockchain.
 
-Regarding intrinsic gas, gas price, and op code, these values are used in `ApplyMessage` so Kaia overwrites a transaction and evm before executing `ApplyMessage` to use them.
+Regarding intrinsic gas, gas price, and op code, these values are used in `ApplyMessage` so This test overwrites a transaction and EVM before executing `ApplyMessage` to use them.
 
 Regarding reward amount and state root, these
-values are used after executing all transactions so this test simply overwrite the values after retrieving executed state DB.
+values are used after executing all transactions so this test simply overwrites the values after retrieving executed state DB.
