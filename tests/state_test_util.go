@@ -385,7 +385,13 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	}
 	// Parse recipient if present.
 	var to *common.Address
-	if tx.To != "" {
+	if tx.To == "" {
+		if tx.AuthorizationList != nil {
+			// NOTE: Kaia's `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
+			// so specify an emptyAddress to generate a test message and test it.
+			to = &common.Address{}
+		}
+	} else {
 		to = new(common.Address)
 		if err := to.UnmarshalText([]byte(tx.To)); err != nil {
 			return nil, fmt.Errorf("invalid to address: %v", err)
