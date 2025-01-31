@@ -18,6 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
+
+	"github.com/holiman/uint256"
 )
 
 const (
@@ -296,11 +298,20 @@ func formatLogfmtValue(value interface{}, term bool) string {
 		return "nil"
 	}
 
-	if t, ok := value.(time.Time); ok {
+	switch v := value.(type) {
+	case time.Time:
 		// Performance optimization: No need for escaping since the provided
 		// timeFormat doesn't have any escape characters, and escaping is
 		// expensive.
-		return t.Format(timeFormat)
+		return v.Format(timeFormat)
+
+	case *uint256.Int:
+		// Uint256s get consumed by the Stringer clause, so we need to handle
+		// them earlier on.
+		if v == nil {
+			return "<nil>"
+		}
+		return formatLogfmtUint256(v)
 	}
 	if term {
 		if s, ok := value.(TerminalStringer); ok {
@@ -323,6 +334,75 @@ func formatLogfmtValue(value interface{}, term bool) string {
 	default:
 		return escapeString(fmt.Sprintf("%+v", value))
 	}
+}
+
+// FormatLogfmtUint64 formats n with thousand separators.
+func FormatLogfmtUint64(n uint64) string {
+	return formatLogfmtUint64(n, false)
+}
+
+func formatLogfmtUint64(n uint64, neg bool) string {
+	// Small numbers are fine as is
+	if n < 100000 {
+		if neg {
+			return strconv.Itoa(-int(n))
+		} else {
+			return strconv.Itoa(int(n))
+		}
+	}
+	// Large numbers should be split
+	const maxLength = 26
+
+	var (
+		out   = make([]byte, maxLength)
+		i     = maxLength - 1
+		comma = 0
+	)
+	for ; n > 0; i-- {
+		if comma == 3 {
+			comma = 0
+			out[i] = ','
+		} else {
+			comma++
+			out[i] = '0' + byte(n%10)
+			n /= 10
+		}
+	}
+	if neg {
+		out[i] = '-'
+		i--
+	}
+	return string(out[i+1:])
+}
+
+// formatLogfmtUint256 formats n with thousand separators.
+func formatLogfmtUint256(n *uint256.Int) string {
+	if n.IsUint64() {
+		return FormatLogfmtUint64(n.Uint64())
+	}
+	var (
+		text  = n.Dec()
+		buf   = make([]byte, len(text)+len(text)/3)
+		comma = 0
+		i     = len(buf) - 1
+	)
+	for j := len(text) - 1; j >= 0; j, i = j-1, i-1 {
+		c := text[j]
+
+		switch {
+		case c == '-':
+			buf[i] = c
+		case comma == 3:
+			buf[i] = ','
+			i--
+			comma = 0
+			fallthrough
+		default:
+			buf[i] = c
+			comma++
+		}
+	}
+	return string(buf[i+1:])
 }
 
 var stringBufPool = sync.Pool{
