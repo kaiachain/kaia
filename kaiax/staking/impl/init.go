@@ -79,8 +79,7 @@ func (s *StakingModule) Init(opts *InitOpts) error {
 }
 
 func (s *StakingModule) Start() error {
-	// This module may have restarted after a rewind. Purge the cache.
-	s.stakingInfoCache.Purge()
+	// If the module is restarted after a rewind, the cache is already purged by the RewindTo.
 	return nil
 }
 

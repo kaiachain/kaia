@@ -401,6 +401,18 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
+	// Fill the staking info cache for the recent blocks.
+	if currBlock := cn.blockchain.CurrentBlock(); currBlock.NumberU64() > 0 {
+		logger.Info("Preloading staking info for the recent blocks", "blockNumber", currBlock.NumberU64())
+		if parentBlock := cn.blockchain.GetBlockByNumber(currBlock.NumberU64() - 1); parentBlock != nil {
+			if _, release, err := cn.stateAtBlock(parentBlock, 128, nil, true, false); err != nil {
+				logger.Error("Failed to get state at block", "err", err)
+			} else {
+				release()
+			}
+		}
+	}
+
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
 		restartInterval := config.RestartTimeOutFlag

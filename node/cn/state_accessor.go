@@ -189,6 +189,8 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		}
 		parent = root
 	}
+	// This is required when using `stateAtBlock` to cache the staking info at the current block.
+	cn.stakingModule.PreloadFromState(preloadRef, current.Header(), statedb)
 	if report {
 		nodes, _, imgs := database.TrieDB().Size()
 		logger.Info("Historical state regenerated", "block", current.NumberU64(), "elapsed", time.Since(start), "nodes", nodes, "preimages", imgs)
