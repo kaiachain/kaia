@@ -155,9 +155,9 @@ func (p *ParamSet) ToMap() map[ParamName]any {
 		case RewardKip82Ratio:
 			ret[name] = p.Kip82Ratio
 		case RewardMintingAmount:
-			ret[name] = p.MintingAmount
+			ret[name] = p.MintingAmount.String()
 		case RewardMinimumStake:
-			ret[name] = p.MinimumStake
+			ret[name] = p.MinimumStake.String()
 		case RewardProposerUpdateInterval:
 			ret[name] = p.ProposerUpdateInterval
 		case RewardRatio:
