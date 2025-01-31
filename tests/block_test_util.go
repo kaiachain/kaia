@@ -374,7 +374,7 @@ func (t *BlockTest) validatePostState(statedb *state.StateDB) error {
 	return nil
 }
 
-// validateStorage validates storage while considering the difference between Kana and Ethereum.
+// validateStorage validates storage while considering the difference between Kaia and Ethereum.
 func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
 	beaconRootsAddress := common.HexToAddress("0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02")     // EIP-4788
 	depositContractAddress := common.HexToAddress("0x00000000219ab540356cbb839cbe05303d7705fa") // EIP-6110

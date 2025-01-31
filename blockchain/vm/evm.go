@@ -261,8 +261,8 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
-        // Because IsPrecompiledContractAddress checks for 0..0x400 and ConsoleLog address is outside of the range, we add one more condition if UseConsoleLog.
-        if common.IsPrecompiledContractAddress(addr, evm.chainRules) || (addr == consoleLogContractAddress && evm.Config.UseConsoleLog) {
+	// Because IsPrecompiledContractAddress checks for 0..0x400 and ConsoleLog address is outside of the range, we add one more condition if UseConsoleLog.
+	if common.IsPrecompiledContractAddress(addr, evm.chainRules) || (addr == consoleLogContractAddress && evm.Config.UseConsoleLog) {
 		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
