@@ -387,12 +387,6 @@ func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
 
 // enable7702 the EIP-7702 changes to support delegation designators.
 func enable7702(jt *JumpTable) {
-	jt[EXTCODECOPY].execute = opExtCodeCopyEIP7702
-
-	jt[EXTCODESIZE].execute = opExtCodeSizeEIP7702
-
-	jt[EXTCODEHASH].execute = opExtCodeHashEIP7702
-
 	jt[CALL].dynamicGas = gasCallEIP7702
 
 	jt[CALLCODE].dynamicGas = gasCallCodeEIP7702
