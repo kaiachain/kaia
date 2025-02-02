@@ -127,13 +127,14 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 		param := gov.Params[name]
 		value, err := param.ChainConfigValue(chainConfig)
 		if err != nil {
-			logger.CritWithStack("Failed to fetch value from ChainConfig", "name", name, "error", err)
+			logger.Error("Failed to fetch value from ChainConfig", "name", name, "error", err)
+			continue
 		}
 
 		if !reflect.DeepEqual(value, param.DefaultValue) {
 			err := fallback.Add(string(name), value)
 			if err != nil {
-				logger.CritWithStack("Failed to add param to fallback", "name", name, "value", value, "error", err)
+				logger.Error("Failed to add param to fallback", "name", name, "value", value, "error", err)
 			}
 		}
 	}
