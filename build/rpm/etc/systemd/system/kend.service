@@ -1,0 +1,10 @@
+[Unit]
+Description= kend Service
+
+[Service]
+Type=forking
+ExecStart=/etc/init.d/kend start
+ExecStop=/etc/init.d/kend stop
+
+[Install]
+WantedBy=multi-user.target

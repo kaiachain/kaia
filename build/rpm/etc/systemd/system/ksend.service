@@ -1,0 +1,10 @@
+[Unit]
+Description= ksend Service
+
+[Service]
+Type=forking
+ExecStart=/etc/init.d/ksend start
+ExecStop=/etc/init.d/ksend stop
+
+[Install]
+WantedBy=multi-user.target
