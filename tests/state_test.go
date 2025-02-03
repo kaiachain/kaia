@@ -96,7 +96,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
 	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
-	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/`)
 
 	// tests to skip
 	// unsupported EIPs
