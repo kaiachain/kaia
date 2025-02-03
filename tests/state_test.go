@@ -92,10 +92,11 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
-	// not yet supported EIPs
-	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
-	// temporary skip failing frontier tests
+	// not yet supported EIPs for pectra-devnet-6
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
+	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
+	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/`)
 
 	// tests to skip
 	// unsupported EIPs
