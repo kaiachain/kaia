@@ -16,7 +16,7 @@ var _ = (*stAuthorizationMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (s stAuthorization) MarshalJSON() ([]byte, error) {
 	type stAuthorization struct {
-		ChainID *math.HexOrDecimal256 `json:"chainId" gencodec:"required"`
+		ChainID *math.HexOrDecimal256 `gencodec:"required" json:"chainId"`
 		Address common.Address        `gencodec:"required" json:"address"`
 		Nonce   math.HexOrDecimal64   `gencodec:"required" json:"nonce"`
 		V       math.HexOrDecimal64   `gencodec:"required" json:"v"`
@@ -36,7 +36,7 @@ func (s stAuthorization) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (s *stAuthorization) UnmarshalJSON(input []byte) error {
 	type stAuthorization struct {
-		ChainID *math.HexOrDecimal256 `json:"chainId" gencodec:"required"`
+		ChainID *math.HexOrDecimal256 `gencodec:"required" json:"chainId"`
 		Address *common.Address       `gencodec:"required" json:"address"`
 		Nonce   *math.HexOrDecimal64  `gencodec:"required" json:"nonce"`
 		V       *math.HexOrDecimal64  `gencodec:"required" json:"v"`

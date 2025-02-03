@@ -572,8 +572,8 @@ type SetCodeAuthorization struct {
 	Address common.Address `json:"address"`
 	Nonce   uint64         `json:"nonce"`
 	V       uint8          `json:"v"`
-	R       *big.Int       `json:"r"`
-	S       *big.Int       `json:"s"`
+	R       uint256.Int    `json:"r"`
+	S       uint256.Int    `json:"s"`
 }
 
 // SignSetCode creates a signed the SetCode authorization.
@@ -589,8 +589,8 @@ func SignSetCode(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAutho
 		Address: auth.Address,
 		Nonce:   auth.Nonce,
 		V:       sig[crypto.RecoveryIDOffset],
-		R:       r,
-		S:       s,
+		R:       *uint256.MustFromBig(r),
+		S:       *uint256.MustFromBig(s),
 	}, nil
 }
 
@@ -605,17 +605,16 @@ func (a *SetCodeAuthorization) sigHash() common.Hash {
 // Authority recovers the the authorizing account of an authorization.
 func (a *SetCodeAuthorization) Authority() (common.Address, error) {
 	sighash := a.sigHash()
-	if !crypto.ValidateSignatureValues(a.V, a.R, a.S, true) {
+	if !crypto.ValidateSignatureValues(a.V, a.R.ToBig(), a.S.ToBig(), true) {
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format
-	r, s := a.R.Bytes(), a.S.Bytes()
-	sig := make([]byte, crypto.SignatureLength)
-	copy(sig[32-len(r):32], r)
-	copy(sig[64-len(s):64], s)
+	var sig [crypto.SignatureLength]byte
+	a.R.WriteToSlice(sig[:32])
+	a.S.WriteToSlice(sig[32:64])
 	sig[64] = a.V
 	// recover the public key from the signature
-	pub, err := crypto.Ecrecover(sighash[:], sig)
+	pub, err := crypto.Ecrecover(sighash[:], sig[:])
 	if err != nil {
 		return common.Address{}, err
 	}

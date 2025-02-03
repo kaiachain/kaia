@@ -42,7 +42,7 @@ func TestPragueSigning(t *testing.T) {
 	chainId := uint256.NewInt(10)
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	authorizationList := []SetCodeAuthorization{{ChainID: *chainId, Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []SetCodeAuthorization{{ChainID: *chainId, Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 
 	signer := NewPragueSigner(chainId.ToBig())
 

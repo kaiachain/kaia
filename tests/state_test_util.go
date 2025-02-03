@@ -433,8 +433,8 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 				Address: auth.Address,
 				Nonce:   auth.Nonce,
 				V:       auth.V,
-				R:       auth.R,
-				S:       auth.S,
+				R:       *uint256.MustFromBig(auth.R),
+				S:       *uint256.MustFromBig(auth.S),
 			})
 		}
 	}

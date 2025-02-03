@@ -738,7 +738,7 @@ func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big
 	data := []byte{0x11, 0x22}
 	gasPayload := uint64(len(data)) * params.TxDataGas
 	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := []types.SetCodeAuthorization{{ChainID: *uint256.NewInt(1), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: 1, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []types.SetCodeAuthorization{{ChainID: *uint256.NewInt(1), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: 1, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 	toAddress := to.GetAddr()
 
 	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
