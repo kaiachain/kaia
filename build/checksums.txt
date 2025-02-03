@@ -1,6 +1,6 @@
 # This file contains sha256 checksums of optional build dependencies.
 
-# version:spec-tests pectra-devnet-5@v1.1.0
+# version:spec-tests pectra-devnet-6@v1.0.0
 # https://github.com/ethereum/execution-spec-tests/releases
-# https://github.com/ethereum/execution-spec-tests/releases/download/pectra-devnet-5@v1.1.0
-e39f265673b217b7438b4f6f8cf5c56e7e2dca5e5d51e5d3c69a5e4a6c79a1c0  fixtures_pectra-devnet-5.tar.gz
+# https://github.com/ethereum/execution-spec-tests/releases/download/pectra-devnet-6@v1.0.0
+b69211752a3029083c020dc635fe12156ca1a6725a08559da540a0337586a77e  fixtures_pectra-devnet-6.tar.gz
