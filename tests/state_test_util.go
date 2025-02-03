@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -335,15 +336,16 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
-		if len(a.Code) != 0 {
-			if _, ok := types.ParseDelegation(a.Code); ok {
-				statedb.SetCodeToEOA(addr, a.Code, rules)
-			} else {
-				if isTestExecutionSpecState {
-					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
-				}
-				statedb.SetCode(addr, a.Code)
+		if isTestExecutionSpecState {
+			if _, ok := types.ParseDelegation(a.Code); ok || (len(a.Code) == 0 && len(a.Storage) != 0) {
+				statedb.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
+			} else if len(a.Code) != 0 {
+				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			}
+		}
+
+		if len(a.Code) != 0 {
+			statedb.SetCode(addr, a.Code)
 		}
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
