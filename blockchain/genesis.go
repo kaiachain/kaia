@@ -33,6 +33,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
@@ -307,10 +308,21 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		db = database.NewMemoryDBManager()
 	}
 	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
+	rules := params.Rules{}
+	if g.Config != nil {
+		rules = g.Config.Rules(new(big.Int).SetUint64(g.Number))
+	}
 	for addr, account := range g.Alloc {
-		if len(account.Code) != 0 {
-			originalCode := stateDB.GetCode(addr)
+		originalCode := stateDB.GetCode(addr)
+		if _, ok := types.ParseDelegation(account.Code); ok && rules.IsPrague {
+			stateDB.SetCodeToEOA(addr, account.Code, rules)
+		} else if len(account.Code) == 0 && len(account.Storage) != 0 && rules.IsPrague {
+			stateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
+		} else if len(account.Code) != 0 {
+			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			stateDB.SetCode(addr, account.Code)
+		}
+		if len(account.Code) != 0 {
 			// If originalCode is not nil,
 			// just update the code and don't change the other states
 			if originalCode != nil {

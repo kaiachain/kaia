@@ -26,16 +26,21 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestDefaultGenesisBlock tests the genesis block generation functions: DefaultGenesisBlock, DefaultKairosGenesisBlock
@@ -369,6 +374,136 @@ func TestGenesisRestoreState(t *testing.T) {
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 	ok, _ := db.HasTrieNode(root)
 	assert.True(t, ok)
+}
+
+// TestCodeInfo tests the genesis accounts
+func TestGenesisAccount(t *testing.T) {
+	// test account address
+	addr := common.HexToAddress("0x0100000000000000000000000000000000000000")
+
+	// accumulate forks from Kairos config
+	v := reflect.ValueOf(*params.KairosChainConfig.Copy())
+	forks := map[string]*big.Int{"EmptyForkCompatibleBlock": big.NewInt(0)}
+	for i := 0; i < v.NumField(); i++ {
+		if strings.HasSuffix(v.Type().Field(i).Name, "CompatibleBlock") {
+			forks[v.Type().Field(i).Name] = v.Field(i).Interface().(*big.Int)
+		}
+	}
+
+	tcs := map[string]struct {
+		account GenesisAccount
+		test    func(*testing.T, params.Rules, params.VmVersion, bool, account.Account)
+	}{
+		"simple EOA": {
+			account: GenesisAccount{
+				Balance: big.NewInt(0),
+			},
+			test: func(t *testing.T, r params.Rules, vmv params.VmVersion, ok bool, acc account.Account) {
+				require.False(t, ok)
+				require.Equal(t, params.VmVersion0, vmv)
+				require.Equal(t, account.ExternallyOwnedAccountType, acc.Type())
+			},
+		},
+		"simple SCA": {
+			account: GenesisAccount{
+				Balance: big.NewInt(0),
+				Code:    hexutil.MustDecode("0x00"),
+			},
+			test: func(t *testing.T, r params.Rules, vmv params.VmVersion, ok bool, acc account.Account) {
+				if !r.IsIstanbul {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion0, vmv)
+					require.Equal(t, account.SmartContractAccountType, acc.Type())
+				} else if r.IsIstanbul {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion1, vmv)
+					require.Equal(t, account.SmartContractAccountType, acc.Type())
+				}
+			},
+		},
+		"account with delegation code": {
+			account: GenesisAccount{
+				Balance: big.NewInt(0),
+				Code:    types.AddressToDelegation(common.HexToAddress("0x000000000000000000000000000000000000000")),
+			},
+			test: func(t *testing.T, r params.Rules, vmv params.VmVersion, ok bool, acc account.Account) {
+				if !r.IsIstanbul {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion0, vmv)
+					require.Equal(t, account.SmartContractAccountType, acc.Type())
+				} else if r.IsIstanbul && !r.IsPrague {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion1, vmv)
+					require.Equal(t, account.SmartContractAccountType, acc.Type())
+				} else {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion1, vmv)
+					require.Equal(t, account.ExternallyOwnedAccountType, acc.Type())
+				}
+			},
+		},
+		"account with empty code but non-empty storage": {
+			account: GenesisAccount{
+				Balance: big.NewInt(0),
+				Storage: map[common.Hash]common.Hash{{1}: {1}},
+			},
+			test: func(t *testing.T, r params.Rules, vmv params.VmVersion, ok bool, acc account.Account) {
+				if !r.IsPrague {
+					require.True(t, ok)
+					require.Equal(t, params.VmVersion0, vmv)
+					require.Equal(t, account.SmartContractAccountType, acc.Type())
+				} else {
+					require.False(t, ok)
+					require.Equal(t, params.VmVersion0, vmv)
+					require.Equal(t, account.ExternallyOwnedAccountType, acc.Type())
+				}
+			},
+		},
+	}
+
+	// test all cases for each fork
+	for tcn, tc := range tcs {
+		for fork, n := range forks {
+			t.Run(fmt.Sprintf("%s fork %s", tcn, fork), func(t *testing.T) {
+				genesis := &Genesis{
+					Config: &params.ChainConfig{
+						ChainID: new(big.Int).SetUint64(uint64(1))},
+					Alloc: GenesisAlloc{
+						addr: tc.account,
+					},
+				}
+
+				// make config for fork
+				for f2, n2 := range forks {
+					var n3 *big.Int
+					if n == nil {
+						n3 = big.NewInt(0)
+					} else if n2 != nil && n.Cmp(n2) >= 0 {
+						n3 = big.NewInt(0)
+					}
+					r := reflect.ValueOf(genesis.Config)
+					f := reflect.Indirect(r).FieldByName(f2)
+					if f.Kind() != reflect.Invalid {
+						f.Set(reflect.ValueOf(n3))
+					}
+				}
+
+				genesis.Config.SetDefaultsForGenesis()
+				genesis.Governance = SetGenesisGovernance(genesis)
+				InitDeriveSha(genesis.Config)
+
+				db := database.NewMemoryDBManager()
+				gblock := genesis.ToBlock(common.Hash{}, db)
+				stateDB, _ := state.New(gblock.Root(), state.NewDatabase(db), nil, nil)
+
+				rules := genesis.Config.Rules(new(big.Int).SetUint64(genesis.Number))
+				vmVersion, ok := stateDB.GetVmVersion(addr)
+				account := stateDB.GetAccount(addr)
+
+				tc.test(t, rules, vmVersion, ok, account)
+			})
+		}
+	}
 }
 
 func genMainnetGenesisBlock() *Genesis {
