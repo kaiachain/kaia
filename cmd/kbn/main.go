@@ -148,6 +148,7 @@ func bootnode(ctx *cli.Context) error {
 		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
 		NodeType:        p2p.ConvertNodeType(common.BOOTNODE),
 		AuthorizedNodes: bcfg.AuthorizedNodes,
+		DiscoverTypes:   discover.DiscoverTypesConfig{Auto: true},
 	}
 
 	tab, err := discover.ListenUDP(&cfg)

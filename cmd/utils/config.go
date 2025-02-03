@@ -193,6 +193,28 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	cfg.NoDiscovery = ctx.Bool(NoDiscoverFlag.Name)
 
+	if ctx.IsSet(DiscoverTypesFlag.Name) {
+		nodetypes := strings.Split(ctx.String(DiscoverTypesFlag.Name), ",")
+		for _, nodetype := range nodetypes {
+			switch strings.ToLower(nodetype) {
+			case "auto":
+				cfg.DiscoverTypes.Auto = true
+			case "cn":
+				cfg.DiscoverTypes.CN = true
+			case "pn":
+				cfg.DiscoverTypes.PN = true
+			case "en":
+				cfg.DiscoverTypes.EN = true
+			default:
+				logger.Crit("Invalid node type in DiscoverTypesFlag", "nodetype", nodetype, "DiscoverTypesFlag", DiscoverTypesFlag.Name)
+			}
+		}
+	} else {
+		// Default to enable all node types for backward compatibility.
+		// To disable discovery, set NoDiscoverFlag instead of setting DiscoverTypesFlag to empty.
+		cfg.DiscoverTypes.Auto = true
+	}
+
 	cfg.RWTimerConfig = p2p.RWTimerConfig{}
 	cfg.RWTimerConfig.Interval = ctx.Uint64(RWTimerIntervalFlag.Name)
 	cfg.RWTimerConfig.WaitTime = ctx.Duration(RWTimerWaitTimeFlag.Name)

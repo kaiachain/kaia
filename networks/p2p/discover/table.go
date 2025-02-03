@@ -150,17 +150,49 @@ func newTable(cfg *Config) (Discovery, error) {
 		localLogger: logger.NewWith("Discover", "Table"),
 	}
 
+	// Supported discovery types for each NodeType
+	// - CN: CN, BN
+	// - PN: PN, EN, BN
+	// - EN: PN, EN, BN
+	// - BN: CN, PN, EN, BN
+
+	// if NodeType == BN, add all types (CN, PN, EN, BN)
+	// if NodeType != BN, add:
+	// - BN: always add
+	// - not BN: add if (auto || specified) && supported
 	switch cfg.NodeType {
 	case NodeTypeCN:
-		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
+		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.CN {
+			tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
+		}
+		if cfg.DiscoverTypes.PN {
+			logger.Crit("Cannot enable PN discovery for CN")
+		}
+		if cfg.DiscoverTypes.EN {
+			logger.Crit("Cannot enable EN discovery for CN")
+		}
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypePN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 1})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
+		if cfg.DiscoverTypes.CN {
+			logger.Crit("Cannot enable CN discovery for PN")
+		}
+		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 1})
+		}
+		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
+			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
+		}
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypeEN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 2})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
+		if cfg.DiscoverTypes.CN {
+			logger.Crit("Cannot enable CN discovery for EN")
+		}
+		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 2})
+		}
+		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
+			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
+		}
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
 	case NodeTypeBN:
 		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, 100, cfg.AuthorizedNodes))

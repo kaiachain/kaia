@@ -88,6 +88,9 @@ type Config struct {
 	// Disabling is useful for protocol debugging (manual topology).
 	NoDiscovery bool
 
+	// DiscoverTypes is list of node type to enable discovery.
+	DiscoverTypes discover.DiscoverTypesConfig
+
 	// Name sets the node name of this server.
 	// Use common.MakeName to create a name that follows existing conventions.
 	Name string `toml:"-"`
@@ -356,17 +359,18 @@ func (srv *MultiChannelServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:   srv.PrivateKey,
-			AnnounceAddr: realaddr,
-			NodeDBPath:   srv.NodeDatabase,
-			NetRestrict:  srv.NetRestrict,
-			Bootnodes:    srv.BootstrapNodes,
-			Unhandled:    unhandled,
-			Conn:         conn,
-			Addr:         realaddr,
-			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			NodeType:     ConvertNodeType(srv.ConnectionType),
-			NetworkID:    srv.NetworkID,
+			PrivateKey:    srv.PrivateKey,
+			AnnounceAddr:  realaddr,
+			NodeDBPath:    srv.NodeDatabase,
+			NetRestrict:   srv.NetRestrict,
+			Bootnodes:     srv.BootstrapNodes,
+			Unhandled:     unhandled,
+			Conn:          conn,
+			Addr:          realaddr,
+			Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			NodeType:      ConvertNodeType(srv.ConnectionType),
+			NetworkID:     srv.NetworkID,
+			DiscoverTypes: srv.DiscoverTypes,
 		}
 
 		ntab, err := discover.ListenUDP(&cfg)
@@ -1261,17 +1265,18 @@ func (srv *BaseServer) Start() (err error) {
 	// node table
 	if !srv.NoDiscovery {
 		cfg := discover.Config{
-			PrivateKey:   srv.PrivateKey,
-			AnnounceAddr: realaddr,
-			NodeDBPath:   srv.NodeDatabase,
-			NetRestrict:  srv.NetRestrict,
-			Bootnodes:    srv.BootstrapNodes,
-			Unhandled:    unhandled,
-			Conn:         conn,
-			Addr:         realaddr,
-			Id:           discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			NodeType:     ConvertNodeType(srv.ConnectionType),
-			NetworkID:    srv.NetworkID,
+			PrivateKey:    srv.PrivateKey,
+			AnnounceAddr:  realaddr,
+			NodeDBPath:    srv.NodeDatabase,
+			NetRestrict:   srv.NetRestrict,
+			Bootnodes:     srv.BootstrapNodes,
+			Unhandled:     unhandled,
+			Conn:          conn,
+			Addr:          realaddr,
+			Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
+			NodeType:      ConvertNodeType(srv.ConnectionType),
+			NetworkID:     srv.NetworkID,
+			DiscoverTypes: srv.DiscoverTypes,
 		}
 
 		cfgForLog := cfg
@@ -1574,15 +1579,21 @@ func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 	switch srv.ConnectionType {
 	case common.CONSENSUSNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_CN] = typedStatic{100, 3} // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.CN {
+			tsMap[DT_CN] = typedStatic{100, 3} // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		}
 		return tsMap
 	case common.PROXYNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
+			tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		}
 		return tsMap
 	case common.ENDPOINTNODE:
 		tsMap := make(map[dialType]typedStatic)
-		tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
+			tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+		}
 		return tsMap
 	case common.BOOTNODE:
 		return nil

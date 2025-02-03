@@ -1192,6 +1192,14 @@ var (
 		EnvVars:  []string{"KLAYTN_NODISCOVER", "KAIA_NODISCOVER"},
 		Category: "NETWORK",
 	}
+	DiscoverTypesFlag = &cli.StringFlag{
+		Name:     "discover-types",
+		Usage:    "Comma-separated node type to enable discovery (auto, cn, pn, en)",
+		Value:    "auto",
+		Aliases:  []string{"p2p.discover-types"},
+		EnvVars:  []string{"KLAYTN_DISCOVER_TYPES", "KAIA_DISCOVER_TYPES"},
+		Category: "NETWORK",
+	}
 	NetrestrictFlag = &cli.StringFlag{
 		Name:     "netrestrict",
 		Usage:    "Restricts network communication to the given IP network (CIDR masks)",
