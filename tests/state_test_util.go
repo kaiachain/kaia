@@ -350,7 +350,6 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 				statedb.SetCode(addr, a.Code)
 			}
 		}
-
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
 		}
