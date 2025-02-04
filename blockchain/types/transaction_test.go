@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -853,7 +854,7 @@ func TestTransactionCoding(t *testing.T) {
 			func(i uint64) TxInternalData {
 				// Tx with non-zero access list.
 				return &TxInternalDataEthereumSetCode{
-					ChainID:           big.NewInt(1),
+					ChainID:           uint256.NewInt(1),
 					AccountNonce:      i,
 					Recipient:         recipient,
 					GasLimit:          123457,
@@ -866,7 +867,7 @@ func TestTransactionCoding(t *testing.T) {
 			func(i uint64) TxInternalData {
 				// Tx with set code.
 				return &TxInternalDataEthereumSetCode{
-					ChainID:           big.NewInt(1),
+					ChainID:           uint256.NewInt(1),
 					AccountNonce:      i,
 					Recipient:         recipient,
 					GasLimit:          123457,

@@ -26,8 +26,6 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
 )
@@ -348,17 +346,6 @@ func opReturnDataCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 	return nil, nil
 }
 
-// opExtCodeSizeEIP7702 implements the EIP-7702 variation of opExtCodeSize.
-func opExtCodeSizeEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	slot := scope.Stack.peek()
-	code := interpreter.evm.StateDB.GetCode(common.Address(slot.Bytes20()))
-	if _, ok := types.ParseDelegation(code); ok {
-		code = types.DelegationPrefix[:2]
-	}
-	slot.SetUint64(uint64(len(code)))
-	return nil, nil
-}
-
 func opExtCodeSize(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	slot := scope.Stack.peek()
 	slot.SetUint64(uint64(interpreter.evm.StateDB.GetCodeSize(slot.Bytes20())))
@@ -388,29 +375,6 @@ func opCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 	return nil, nil
 }
 
-// opExtCodeCopyEIP7702 implements the EIP-7702 variation of opExtCodeCopy.
-func opExtCodeCopyEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	var (
-		stack      = scope.Stack
-		a          = stack.pop()
-		memOffset  = stack.pop()
-		codeOffset = stack.pop()
-		length     = stack.pop()
-	)
-	uint64CodeOffset, overflow := codeOffset.Uint64WithOverflow()
-	if overflow {
-		uint64CodeOffset = math.MaxUint64
-	}
-	code := interpreter.evm.StateDB.GetCode(common.Address(a.Bytes20()))
-	if _, ok := types.ParseDelegation(code); ok {
-		code = types.DelegationPrefix[:2]
-	}
-	codeCopy := getData(code, uint64CodeOffset, length.Uint64())
-	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
-
-	return nil, nil
-}
-
 func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	var (
 		stack      = scope.Stack
@@ -427,25 +391,6 @@ func opExtCodeCopy(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 	codeCopy := getData(interpreter.evm.StateDB.GetCode(addr), uint64CodeOffset, length.Uint64())
 	scope.Memory.Set(memOffset.Uint64(), length.Uint64(), codeCopy)
 
-	return nil, nil
-}
-
-// opExtCodeHashEIP7702 implements the EIP-7702 variation of opExtCodeHash.
-func opExtCodeHashEIP7702(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	slot := scope.Stack.peek()
-	addr := common.Address(slot.Bytes20())
-	if interpreter.evm.StateDB.Empty(addr) {
-		slot.Clear()
-		return nil, nil
-	}
-	code := interpreter.evm.StateDB.GetCode(addr)
-	if _, ok := types.ParseDelegation(code); ok {
-		// If the code is a delegation, return the prefix without version.
-		slot.SetBytes(crypto.Keccak256(types.DelegationPrefix[:2]))
-	} else {
-		// Otherwise, return normal code hash.
-		slot.SetBytes(interpreter.evm.StateDB.GetCodeHash(addr).Bytes())
-	}
 	return nil, nil
 }
 

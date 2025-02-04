@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -1462,7 +1463,7 @@ func TestAccessListTx(t *testing.T) {
 
 			// One transaction to 0xAAAA
 			intrinsicGas, dataTokens, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
-			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, dataTokens, list, nil), signer, senderKey)
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, dataTokens, list, nil, nil), signer, senderKey)
 			b.AddTx(tx)
 		})
 		if n, err := chain.InsertChain(blocks); err != nil {
@@ -2330,13 +2331,13 @@ func TestEIP7702(t *testing.T) {
 	// 2. addr1:0xaaaa calls into addr2:0xbbbb
 	// 3. addr2:0xbbbb  writes to storage
 	auth1, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
-		ChainID: gspec.Config.ChainID.Uint64(),
+		ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
 		Address: aa,
 		Nonce:   1,
 	})
 
 	auth2, _ := types.SignSetCode(key2, types.SetCodeAuthorization{
-		ChainID: uint64(0),
+		ChainID: *uint256.NewInt(0),
 		Address: bb,
 		Nonce:   0,
 	})
@@ -2355,7 +2356,7 @@ func TestEIP7702(t *testing.T) {
 		}
 
 		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, uint64(0), nil, 500000, nil, newGkei(50),
-			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, authorizationList), signer, key1)
+			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, nil, authorizationList), signer, key1)
 		if err != nil {
 			t.Fatalf("failed to sign tx: %v", err)
 		}
@@ -2424,7 +2425,7 @@ func TestEIP7702(t *testing.T) {
 	// Set 0x0000000000000000000000000000000000000000000 test
 	{
 		authForEmpty, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
-			ChainID: gspec.Config.ChainID.Uint64(),
+			ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
 			Address: common.Address{},
 			Nonce:   state.GetNonce(addr1) + 1,
 		})
@@ -2436,7 +2437,7 @@ func TestEIP7702(t *testing.T) {
 		}
 
 		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, state.GetNonce(addr1), nil, 500000, nil, newGkei(50),
-			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, authorizationList), signer, key1)
+			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, nil, authorizationList), signer, key1)
 		if err != nil {
 			t.Fatalf("failed to sign tx: %v", err)
 		}

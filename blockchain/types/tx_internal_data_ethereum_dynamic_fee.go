@@ -47,9 +47,9 @@ type TxInternalDataEthereumDynamicFee struct {
 	AccessList   AccessList
 
 	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`

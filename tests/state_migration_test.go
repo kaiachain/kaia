@@ -185,6 +185,38 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 	stopNode(t, fullNode)
 }
 
+// if old db path is set on miscDB and a node is restarted, old db should be removed
+func TestMigration_RemoveOldDBOnRestart(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	fullNode, node, validator, _, workspace, _, _, _ := newSimpleBlockchain(t, 1)
+	defer os.RemoveAll(workspace)
+	miscDB := node.ChainDB().GetMiscDB()
+
+	// set old db path in miscDB
+	d, err := os.MkdirTemp("", "test_old_db_path")
+	assert.NoError(t, err)
+
+	testOldDBPath := []byte(d)
+	migrationOldDBPathKey := []byte("migrationOldDBPath")
+	err = miscDB.Put(migrationOldDBPathKey, testOldDBPath)
+	assert.NoError(t, err)
+
+	fullNode, node = restartNode(t, fullNode, node, workspace, validator)
+	miscDB = node.ChainDB().GetMiscDB()
+
+	time.Sleep(1 * time.Second)
+
+	dir, err := miscDB.Get(migrationOldDBPathKey)
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(dir))
+
+	_, err = os.Stat(d)
+	assert.True(t, os.IsNotExist(err))
+
+	stopNode(t, fullNode)
+}
+
 func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *TestAccountType, *big.Int, string, *TestAccountType, []*TestAccountType, []*TestAccountType) {
 	t.Log("=========== create blockchain ==============")
 	fullNode, node, validator, chainID, workspace := newBlockchain(t, nil, nil)
