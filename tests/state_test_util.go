@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -132,7 +133,7 @@ type stTransactionMarshaling struct {
 // Authorization is an authorization from an account to deploy code at it's
 // address.
 type stAuthorization struct {
-	ChainID uint64
+	ChainID *big.Int       `gencodec:"required" json:"chainId"`
 	Address common.Address `gencodec:"required" json:"address"`
 	Nonce   uint64         `gencodec:"required" json:"nonce"`
 	V       uint8          `gencodec:"required" json:"v"`
@@ -142,7 +143,7 @@ type stAuthorization struct {
 
 // field type overrides for gencodec
 type stAuthorizationMarshaling struct {
-	ChainID math.HexOrDecimal64
+	ChainID *math.HexOrDecimal256
 	Nonce   math.HexOrDecimal64
 	V       math.HexOrDecimal64
 	R       *math.HexOrDecimal256
@@ -384,7 +385,13 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	}
 	// Parse recipient if present.
 	var to *common.Address
-	if tx.To != "" {
+	if tx.To == "" {
+		if tx.AuthorizationList != nil {
+			// NOTE: Kaia's `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
+			// so specify an emptyAddress to generate a test message and test it.
+			to = &common.Address{}
+		}
+	} else {
 		to = new(common.Address)
 		if err := to.UnmarshalText([]byte(tx.To)); err != nil {
 			return nil, fmt.Errorf("invalid to address: %v", err)
@@ -428,12 +435,12 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		authorizationList = make([]types.SetCodeAuthorization, 0)
 		for _, auth := range tx.AuthorizationList {
 			authorizationList = append(authorizationList, types.SetCodeAuthorization{
-				ChainID: auth.ChainID,
+				ChainID: *uint256.MustFromBig(auth.ChainID),
 				Address: auth.Address,
 				Nonce:   auth.Nonce,
 				V:       auth.V,
-				R:       auth.R,
-				S:       auth.S,
+				R:       *uint256.MustFromBig(auth.R),
+				S:       *uint256.MustFromBig(auth.S),
 			})
 		}
 	}
@@ -450,7 +457,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, dataTokens, accessList, authorizationList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, dataTokens, accessList, nil, authorizationList)
 	return msg, nil
 }
 

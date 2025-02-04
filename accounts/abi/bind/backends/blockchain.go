@@ -162,7 +162,7 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	}
 
 	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, nil, nil, call.Data,
-		false, intrinsicGas, dataTokens, accessList, nil)
+		false, intrinsicGas, dataTokens, accessList, nil, nil)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
