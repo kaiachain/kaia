@@ -132,6 +132,7 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 		dataTokens,
 		nil,
 		nil,
+		nil,
 	)
 
 	vmenv.Reset(NewEVMTxContext(msg, header, vmenv.ChainConfig()), statedb)

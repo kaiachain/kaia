@@ -1096,7 +1096,7 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, auth []SetCodeAuthorization) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
 		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0, Tokens: dataTokens},
 		validatedFeePayer: from,
@@ -1106,10 +1106,10 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 
 	// Call supports EthereumAccessList, EthereumSetCode and Legacy txTypes only.
 	if auth != nil {
-		internalData := newTxInternalDataEthereumSetCodeWithValues(nonce, *to, amount, gasLimit, gasFeeCap, gasTipCap, data, list, auth, nil)
+		internalData := newTxInternalDataEthereumSetCodeWithValues(nonce, *to, amount, gasLimit, gasFeeCap, gasTipCap, data, list, chainId, auth)
 		transaction.setDecoded(internalData, 0)
 	} else if list != nil {
-		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, nil)
+		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, chainId)
 		transaction.setDecoded(internalData, 0)
 	} else {
 		internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)

@@ -19,13 +19,101 @@ package types
 import (
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	mock_types "github.com/kaiachain/kaia/blockchain/types/mocks"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"gotest.tools/assert"
 )
+
+func TestPrefixedRlpHash7702(t *testing.T) {
+	var (
+		config  = *params.TestChainConfig
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
+	)
+	// auth1
+	auth1 := SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(config.ChainID),
+		Address: addr1,
+		Nonce:   uint64(1),
+	}
+	rlpHash1 := prefixedRlpHash(0x05, []any{
+		auth1.ChainID,
+		auth1.Address,
+		auth1.Nonce,
+	})
+	// auth2
+	auth2 := SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(config.ChainID),
+		Address: addr2,
+		Nonce:   uint64(1),
+	}
+	rlpHash2 := prefixedRlpHash(0x05, []any{
+		auth2.ChainID,
+		auth2.Address,
+		auth2.Nonce,
+	})
+	require.NotEqual(t, rlpHash1, rlpHash2)
+}
+
+func TestSignSetCodeAndAuthority7702(t *testing.T) {
+	var (
+		config  = *params.TestChainConfig
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
+	)
+
+	// auth1
+	auth1 := SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(config.ChainID),
+		Address: addr1,
+		Nonce:   uint64(1),
+	}
+	// auth1: SignSetCode and Authority
+	actualAuth1, err := SignSetCode(key1, auth1)
+	require.NoError(t, err)
+	require.Equal(t, auth1.ChainID, actualAuth1.ChainID)
+	require.Equal(t, auth1.Address, actualAuth1.Address)
+	require.Equal(t, auth1.Nonce, actualAuth1.Nonce)
+	actualAuthority1, err := actualAuth1.Authority()
+	require.NoError(t, err)
+	require.Equal(t, addr1, actualAuthority1)
+
+	// auth2
+	auth2 := SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(config.ChainID),
+		Address: addr2,
+		Nonce:   uint64(1),
+	}
+	// auth2: SignSetCode and Authority
+	actualAuth2, err := SignSetCode(key2, auth2)
+	require.NoError(t, err)
+	require.Equal(t, auth2.ChainID, actualAuth2.ChainID)
+	require.Equal(t, auth2.Address, actualAuth2.Address)
+	require.Equal(t, auth2.Nonce, actualAuth2.Nonce)
+	actualAuthority2, err := actualAuth2.Authority()
+	require.NoError(t, err)
+	require.Equal(t, addr2, actualAuthority2)
+
+	// set addr2 to auth1
+	{
+		actualAuth1.Address = addr2
+		actualAuthority, err := actualAuth1.Authority()
+		require.NoError(t, err)
+		require.NotEqual(t, addr1, actualAuthority)
+		require.NotEqual(t, addr2, actualAuthority)
+	}
+}
 
 // Coverage is detected by calling functions that modify state.
 func TestValidate7702(t *testing.T) {

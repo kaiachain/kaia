@@ -30,6 +30,7 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -798,7 +799,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if args.AuthorizationList != nil {
 		AuthorizationList = args.AuthorizationList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, dataTokens, accessList, AuthorizationList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, dataTokens, accessList, nil, AuthorizationList), nil
 }
 
 // toTransaction converts the arguments to a transaction.
@@ -812,7 +813,7 @@ func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 			al = *args.AccessList
 		}
 		tx = types.NewTx(&types.TxInternalDataEthereumSetCode{
-			ChainID:           (*big.Int)(args.ChainID),
+			ChainID:           uint256.MustFromBig((*big.Int)(args.ChainID)),
 			AccountNonce:      uint64(*args.Nonce),
 			GasTipCap:         (*big.Int)(args.MaxPriorityFeePerGas),
 			GasFeeCap:         (*big.Int)(args.MaxFeePerGas),

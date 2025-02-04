@@ -55,12 +55,16 @@ type DBManager interface {
 	IsSingle() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
+	MigrationOldDBPath() string
 	getStateTrieMigrationInfo() uint64
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	getDBDir(dbEntry DBEntryType) string
 	setDBDir(dbEntry DBEntryType, newDBDir string)
+	getMigrationOldDBPath() string
+	setMigrationOldDBPath(newDBDir string)
+	RemoveOldDB(dbPath string, endCheck chan struct{})
 	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
@@ -428,6 +432,7 @@ type databaseManager struct {
 	lockInMigration      sync.RWMutex
 	inMigration          bool
 	migrationBlockNumber uint64
+	migrationOldDBPath   string
 }
 
 func NewMemoryDBManager() DBManager {
@@ -601,6 +606,7 @@ func NewDBManager(dbc *DBConfig) DBManager {
 				dbm.migrationBlockNumber = migrationBlockNum
 			}
 		}
+		dbm.migrationOldDBPath = dbm.getMigrationOldDBPath()
 		return dbm
 	}
 	logger.Crit("Must not reach here!")
@@ -624,6 +630,10 @@ func (dbm *databaseManager) InMigration() bool {
 
 func (dbm *databaseManager) MigrationBlockNumber() uint64 {
 	return dbm.migrationBlockNumber
+}
+
+func (dbm *databaseManager) MigrationOldDBPath() string {
+	return dbm.migrationOldDBPath
 }
 
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
@@ -729,6 +739,22 @@ func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 	}
 }
 
+func (dbm *databaseManager) getMigrationOldDBPath() string {
+	miscDB := dbm.getDatabase(MiscDB)
+	enc, _ := miscDB.Get(migrationOldDBPathKey)
+	if len(enc) == 0 {
+		return ""
+	}
+	return string(enc)
+}
+
+func (dbm *databaseManager) setMigrationOldDBPath(dbDir string) {
+	miscDB := dbm.getDatabase(MiscDB)
+	if err := miscDB.Put(migrationOldDBPathKey, []byte(dbDir)); err != nil {
+		logger.Crit("Failed to put migration cleanup dir", "err", err)
+	}
+}
+
 func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	miscDB := dbm.getDatabase(MiscDB)
 
@@ -827,33 +853,48 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	dbDirToBeRemoved := dbm.getDBDir(dbRemoved)
 	dbDirToBeUsed := dbm.getDBDir(dbUsed)
 
+	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
+	dbToBeRemoved.Close()
+
 	// Replace StateTrieDB with new one
 	dbm.setDBDir(StateTrieDB, dbDirToBeUsed)
 	dbm.dbs[StateTrieDB] = dbToBeUsed
 
-	dbm.setDBDir(StateTrieMigrationDB, "")
+	// Set the completion mark.
+	// If the old database is not removed, it will be removed when the node is restarted.
+	dbm.setStateTrieMigrationStatus(0)
+	dbm.setMigrationOldDBPath(dbPathToBeRemoved)
 
-	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
-	dbToBeRemoved.Close()
+	dbm.setDBDir(StateTrieMigrationDB, "")
+	dbm.dbs[StateTrieMigrationDB] = nil
 
 	endCheck := make(chan struct{})
-	go dbm.removeOldDB(dbPathToBeRemoved, endCheck)
+	go dbm.RemoveOldDB(dbPathToBeRemoved, endCheck)
 
 	// Used only for testing. Closing it takes time due to the large size of the database
 	return endCheck
 }
 
-// Remove old database. This is called once migration(copy) is done.
-func (dbm *databaseManager) removeOldDB(dbPath string, endCheck chan struct{}) {
+func (dbm *databaseManager) RemoveOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
-		// Set the completion mark.
-		// The old database will be completely removed (possibly not be removed if error occurs)
-		dbm.setStateTrieMigrationStatus(0)
-		dbm.dbs[StateTrieMigrationDB] = nil
+		dbm.setMigrationOldDBPath("")
 		if endCheck != nil {
 			close(endCheck)
 		}
 	}()
+	if _, err := os.Stat(dbPath); err != nil {
+		if os.IsNotExist(err) {
+			logger.Info("Database already removed", "dir", dbPath)
+			return
+		}
+		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
+		return
+	}
+	dbm.removeOldDB(dbPath)
+}
+
+// Remove old database. This is called once migration(copy) is done.
+func (dbm *databaseManager) removeOldDB(dbPath string) {
 	if err := os.RemoveAll(dbPath); err != nil {
 		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
 		return

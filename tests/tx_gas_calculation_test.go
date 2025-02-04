@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -777,7 +778,7 @@ func genMapForSetCodeTransaction(from TestAccount, to TestAccount, gasPrice *big
 	// We have changed the gas calcuation since Prague per EIP-7623.
 	gasPayload := getDataGas(data)
 	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := []types.SetCodeAuthorization{{ChainID: uint64(1), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: 1, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []types.SetCodeAuthorization{{ChainID: *uint256.NewInt(1), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: 1, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 	toAddress := to.GetAddr()
 
 	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
