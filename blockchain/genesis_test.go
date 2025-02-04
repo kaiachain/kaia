@@ -467,7 +467,8 @@ func TestGenesisAccount(t *testing.T) {
 			t.Run(fmt.Sprintf("%s fork %s", tcn, fork), func(t *testing.T) {
 				genesis := &Genesis{
 					Config: &params.ChainConfig{
-						ChainID: new(big.Int).SetUint64(uint64(1))},
+						ChainID: new(big.Int).SetUint64(1),
+					},
 					Alloc: GenesisAlloc{
 						addr: tc.account,
 					},
