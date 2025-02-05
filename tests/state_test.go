@@ -91,7 +91,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// not yet supported EIPs for pectra-devnet-6
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
 	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
-	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/`)
 
 	// tests to skip
 	// unsupported EIPs

@@ -72,9 +72,18 @@ func ErrFeePayer(err error) error {
 	return fmt.Errorf("invalid fee payer: %s", err)
 }
 
-type ValidatedIntrinsicGas struct {
-	Gas    uint64
-	Tokens uint64
+// ValidatedGas holds the intrinsic gas, sig validation gas, and data tokens.
+//   - Intrinsic gas is the gas for the tx type + signature validation + data.
+//     After Prague, floor gas would be used if intrinsic gas < floor gas.
+//     Note that SigValidationGas is already included in IntrinsicGas.
+//   - Sig validation gas is the gas for validating sender and feePayer.
+//     It is related to Kaia-specific tx types, so it is not part of the floor gas comparison.
+//   - Tokens is the number of tokens for the data.
+//     It is used for the floor gas calculation.
+type ValidatedGas struct {
+	IntrinsicGas   uint64
+	SigValidateGas uint64
+	Tokens         uint64
 }
 
 type Transaction struct {
@@ -93,9 +102,9 @@ type Transaction struct {
 	// validatedFeePayer represents the fee payer of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
 	validatedFeePayer common.Address
-	// validatedIntrinsicGas represents intrinsic gas of the transaction to be used for ApplyTransaction().
+	// validatedGas holds intrinsic gas, sig validation gas, and number of tokens for the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
-	validatedIntrinsicGas *ValidatedIntrinsicGas
+	validatedGas *ValidatedGas
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
@@ -390,10 +399,10 @@ func (tx *Transaction) ValidatedFeePayer() common.Address {
 	return tx.validatedFeePayer
 }
 
-func (tx *Transaction) ValidatedIntrinsicGas() *ValidatedIntrinsicGas {
+func (tx *Transaction) ValidatedGas() *ValidatedGas {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
-	return tx.validatedIntrinsicGas
+	return tx.validatedGas
 }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
@@ -611,8 +620,11 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		}
 	}
 
+	sigValidationGas := gasFrom + gasFeePayer
+	intrinsicGas = intrinsicGas + sigValidationGas
+
 	tx.mu.Lock()
-	tx.validatedIntrinsicGas = &ValidatedIntrinsicGas{Gas: intrinsicGas + gasFrom + gasFeePayer, Tokens: dataTokens}
+	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: sigValidationGas, Tokens: dataTokens}
 	tx.mu.Unlock()
 
 	return tx, err
@@ -1086,10 +1098,10 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 // NewMessage returns a `*Transaction` object with the given arguments.
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
-		validatedIntrinsicGas: &ValidatedIntrinsicGas{Gas: intrinsicGas, Tokens: dataTokens},
-		validatedFeePayer:     from,
-		validatedSender:       from,
-		checkNonce:            checkNonce,
+		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0, Tokens: dataTokens},
+		validatedFeePayer: from,
+		validatedSender:   from,
+		checkNonce:        checkNonce,
 	}
 
 	// Call supports EthereumAccessList, EthereumSetCode and Legacy txTypes only.

@@ -19,6 +19,7 @@
 package blockchain
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -32,6 +33,7 @@ import (
 	mock_vm "github.com/kaiachain/kaia/blockchain/vm/mocks"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -418,4 +420,92 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 			require.Equal(t, tt.expectedError, actual)
 		})
 	}
+}
+
+func TestStateTransition_EIP7623(t *testing.T) {
+	// Prague fork block at 10
+	config := params.TestChainConfig.Copy()
+	config.IstanbulCompatibleBlock = common.Big0
+	config.LondonCompatibleBlock = common.Big0
+	config.EthTxTypeCompatibleBlock = common.Big0
+	config.MagmaCompatibleBlock = common.Big0
+	config.KoreCompatibleBlock = common.Big0
+	config.ShanghaiCompatibleBlock = common.Big0
+	config.CancunCompatibleBlock = common.Big0
+	config.KaiaCompatibleBlock = common.Big0
+	config.PragueCompatibleBlock = big.NewInt(10)
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Governance.KIP71.LowerBoundBaseFee = 0
+	// Apply chain config to fork
+	fork.SetHardForkBlockNumberConfig(config)
+
+	var (
+		key, _    = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		addr      = crypto.PubkeyToAddress(key.PublicKey)
+		amount    = big.NewInt(1000)
+		data      = []byte{1, 2, 3, 4, 0, 0, 0, 0} // 4 non-zero bytes, 4 zero bytes
+		signer    = types.LatestSigner(config)
+		gaslimit1 = uint64(21800) // 21000 + 100 * 8 (100 per byte)
+		gaslimit2 = uint64(21200) // 21000 + 10*4*4 + 10*4 (10 per token, 4 tokens per non-zero byte, 1 token per zero byte)
+	)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockStateDB := mock_vm.NewMockStateDB(mockCtrl)
+	mockStateDB.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(params.KAIA)).AnyTimes()
+	mockStateDB.EXPECT().SubBalance(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	mockStateDB.EXPECT().GetKey(gomock.Any()).Return(accountkey.NewAccountKeyLegacy()).AnyTimes()
+	mockStateDB.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)).AnyTimes()
+	mockStateDB.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	mockStateDB.EXPECT().IncNonce(gomock.Any()).Return().AnyTimes()
+	mockStateDB.EXPECT().Snapshot().Return(1).AnyTimes()
+	mockStateDB.EXPECT().Exist(gomock.Any()).Return(false).AnyTimes()
+	mockStateDB.EXPECT().GetRefund().Return(uint64(0)).AnyTimes()
+	mockStateDB.EXPECT().AddBalance(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	mockStateDB.EXPECT().CreateEOA(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+	mockStateDB.EXPECT().GetVmVersion(gomock.Any()).Return(params.VmVersion0, false).AnyTimes()
+	mockStateDB.EXPECT().IsProgramAccount(gomock.Any()).Return(false).AnyTimes()
+
+	var (
+		header       *types.Header
+		blockContext vm.BlockContext
+		txContext    vm.TxContext
+		evm          *vm.EVM
+		res          *ExecutionResult
+		err          error
+		tx           *types.Transaction
+	)
+
+	// Generate tx before Prague
+	tx = types.NewTransaction(0, addr, amount, gaslimit1, big.NewInt(1), data)
+	err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{key})
+	assert.NoError(t, err)
+	tx, err = tx.AsMessageWithAccountKeyPicker(signer, mockStateDB, 0)
+	assert.NoError(t, err)
+
+	header = &types.Header{Number: big.NewInt(0), Time: big.NewInt(0), BlockScore: big.NewInt(0)}
+	blockContext = NewEVMBlockContext(header, nil, &common.Address{})
+	txContext = NewEVMTxContext(tx, header, config)
+	evm = vm.NewEVM(blockContext, txContext, mockStateDB, config, &vm.Config{})
+
+	res, err = NewStateTransition(evm, tx).TransitionDb()
+	assert.NoError(t, err)
+	assert.Equal(t, gaslimit1, res.UsedGas)
+
+	// Generate tx after Prague
+	tx = types.NewTransaction(0, addr, amount, gaslimit2, big.NewInt(1), data)
+	err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{key})
+	assert.NoError(t, err)
+	tx, err = tx.AsMessageWithAccountKeyPicker(signer, mockStateDB, 20)
+	assert.NoError(t, err)
+
+	header = &types.Header{Number: big.NewInt(20), Time: big.NewInt(0), BlockScore: big.NewInt(0)}
+	blockContext = NewEVMBlockContext(header, nil, &common.Address{})
+	txContext = NewEVMTxContext(tx, header, config)
+	evm = vm.NewEVM(blockContext, txContext, mockStateDB, config, &vm.Config{})
+
+	res, err = NewStateTransition(evm, tx).TransitionDb()
+	assert.NoError(t, err)
+	assert.Equal(t, gaslimit2, res.UsedGas)
 }
