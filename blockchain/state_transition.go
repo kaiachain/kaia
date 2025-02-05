@@ -638,7 +638,7 @@ func FloorDataGas(txType types.TxType, tokens, sigValidateGas uint64) (uint64, e
 	if err != nil {
 		return 0, err
 	}
-	if (math.MaxUint64-txGas)/params.CostFloorPerToken7623 < tokens {
+	if (math.MaxUint64-txGas-sigValidateGas)/params.CostFloorPerToken7623 < tokens {
 		return 0, types.ErrGasUintOverflow
 	}
 	return txGas + tokens*params.CostFloorPerToken7623 + sigValidateGas, nil
