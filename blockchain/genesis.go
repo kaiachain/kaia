@@ -322,13 +322,11 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			stateDB.SetCode(addr, account.Code)
 		}
-		if len(account.Code) != 0 {
-			// If originalCode is not nil,
-			// just update the code and don't change the other states
-			if originalCode != nil {
-				logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
-				continue
-			}
+		// If account.Code is nil and originalCode is not nil,
+		// just update the code and don't change the other states
+		if len(account.Code) != 0 && originalCode != nil {
+			logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
+			continue
 		}
 		for key, value := range account.Storage {
 			stateDB.SetState(addr, key, value)
