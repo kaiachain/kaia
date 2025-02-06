@@ -33,6 +33,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
@@ -307,16 +308,33 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		db = database.NewMemoryDBManager()
 	}
 	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
+	rules := params.Rules{}
+	if g.Config != nil {
+		rules = g.Config.Rules(new(big.Int).SetUint64(g.Number))
+	}
 	for addr, account := range g.Alloc {
-		if len(account.Code) != 0 {
-			originalCode := stateDB.GetCode(addr)
+		originalCode := stateDB.GetCode(addr)
+		_, ok := types.ParseDelegation(account.Code)
+		isEOAWithCode := ok && rules.IsPrague
+		isEOAWithoutCode := len(account.Code) == 0 && len(account.Storage) != 0 && rules.IsPrague
+		isSCAWithCode := !isEOAWithCode && len(account.Code) != 0
+		switch {
+		case isEOAWithCode:
+			// EOA with code. Usually SetCodeTx creates it. Unit tests may create it here in the genesis.
+			stateDB.SetCodeToEOA(addr, account.Code, rules)
+		case isEOAWithoutCode:
+			// Represents an EOA that had code then nullified with another SetCodeTx. Unit tests may create it here in the genesis.
+			stateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
+		case isSCAWithCode:
+			// Regular genesis smart contract account.
+			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			stateDB.SetCode(addr, account.Code)
-			// If originalCode is not nil,
-			// just update the code and don't change the other states
-			if originalCode != nil {
-				logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
-				continue
-			}
+		}
+		// If account.Code is nil and originalCode is not nil,
+		// just update the code and don't change the other states
+		if len(account.Code) != 0 && originalCode != nil {
+			logger.Warn("this address already has a not nil code, now the code of this address has been changed", "addr", addr.String())
+			continue
 		}
 		for key, value := range account.Storage {
 			stateDB.SetState(addr, key, value)
