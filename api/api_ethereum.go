@@ -1411,11 +1411,11 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, dataTokens, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.GetAuthorizationList(), args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.GetAuthorizationList(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
-	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas, dataTokens)
+	msg, err := args.ToMessage(globalGasCap, baseFee, intrinsicGas)
 	if err != nil {
 		return nil, err
 	}
@@ -1568,11 +1568,11 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	precompiles := vm.ActivePrecompiles(rules)
 
 	toMsg := func() (*types.Transaction, error) {
-		intrinsicGas, dataTokens, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, rules)
+		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, rules)
 		if err != nil {
 			return nil, err
 		}
-		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas, dataTokens)
+		return args.ToMessage(gasCap, header.BaseFee, intrinsicGas)
 	}
 
 	if args.Gas == nil {

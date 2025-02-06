@@ -1462,8 +1462,8 @@ func TestAccessListTx(t *testing.T) {
 			b.SetRewardbase(common.Address{1})
 
 			// One transaction to 0xAAAA
-			intrinsicGas, dataTokens, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
-			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, dataTokens, list, nil, nil), signer, senderKey)
+			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, list, nil, nil), signer, senderKey)
 			b.AddTx(tx)
 		})
 		if n, err := chain.InsertChain(blocks); err != nil {
@@ -2350,13 +2350,13 @@ func TestEIP7702(t *testing.T) {
 		b.SetRewardbase(common.Address{1})
 
 		authorizationList := []types.SetCodeAuthorization{auth1, auth2}
-		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
 		}
 
 		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, uint64(0), nil, 500000, nil, newGkei(50),
-			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, nil, authorizationList), signer, key1)
+			big.NewInt(20), nil, false, intrinsicGas, nil, nil, authorizationList), signer, key1)
 		if err != nil {
 			t.Fatalf("failed to sign tx: %v", err)
 		}
@@ -2431,13 +2431,13 @@ func TestEIP7702(t *testing.T) {
 		})
 
 		authorizationList := []types.SetCodeAuthorization{authForEmpty}
-		intrinsicGas, dataTokens, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
 		}
 
 		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, state.GetNonce(addr1), nil, 500000, nil, newGkei(50),
-			big.NewInt(20), nil, false, intrinsicGas, dataTokens, nil, nil, authorizationList), signer, key1)
+			big.NewInt(20), nil, false, intrinsicGas, nil, nil, authorizationList), signer, key1)
 		if err != nil {
 			t.Fatalf("failed to sign tx: %v", err)
 		}

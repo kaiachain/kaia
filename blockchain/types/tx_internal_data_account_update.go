@@ -305,13 +305,13 @@ func (t *TxInternalDataAccountUpdate) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+func (t *TxInternalDataAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
 	if err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 
-	return params.TxGasAccountUpdate + gasKey, 0, nil
+	return params.TxGasAccountUpdate + gasKey, nil
 }
 
 func (t *TxInternalDataAccountUpdate) SerializeForSignToBytes() []byte {

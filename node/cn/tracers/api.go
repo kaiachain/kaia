@@ -895,7 +895,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	defer release()
 
 	// Execute the trace
-	intrinsicGas, dataTokens, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}
@@ -907,7 +907,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	if rpcGasCap := api.backend.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
 	}
-	msg, err := args.ToMessage(gasCap, basefee, intrinsicGas, dataTokens)
+	msg, err := args.ToMessage(gasCap, basefee, intrinsicGas)
 	if err != nil {
 		return nil, err
 	}

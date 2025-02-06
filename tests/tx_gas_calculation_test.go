@@ -21,6 +21,7 @@ package tests
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -707,8 +708,8 @@ func getDataGas(data []byte) uint64 {
 func getFlooredGas(data []byte, gas uint64) uint64 {
 	z := uint64(bytes.Count(data, []byte{0}))
 	nz := uint64(len(data)) - z
-	tokens := nz*params.TokenPerNonZeroByte7623 + z
-	floorGas := tokens * params.CostFloorPerToken7623
+	tokens := nz*params.TxTokenPerNonZeroByte + z
+	floorGas := tokens * params.TxCostFloorPerToken
 	if gas < floorGas {
 		return floorGas
 	}
@@ -890,11 +891,11 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, _ := blockchain.FloorDataGas(txType, dataTokens, 0)
+	floorGas, _ := blockchain.FloorDataGas(txType, common.FromHex(code), 0)
 	if gasPayloadWithGas < floorGas {
 		gasPayloadWithGas = floorGas
 	}
@@ -929,15 +930,16 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x9ec4)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, err := blockchain.FloorDataGas(txType, dataTokens, 0)
+	floorGas, err := blockchain.FloorDataGas(txType, data, 0)
 	if err != nil {
 		return nil, 0
 	}
 	if gasPayloadWithGas < floorGas {
+		fmt.Printf("floorGas: %d\n", floorGas)
 		gasPayloadWithGas = floorGas
 	}
 

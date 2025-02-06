@@ -78,12 +78,9 @@ func ErrFeePayer(err error) error {
 //     Note that SigValidationGas is already included in IntrinsicGas.
 //   - Sig validation gas is the gas for validating sender and feePayer.
 //     It is related to Kaia-specific tx types, so it is not part of the floor gas comparison.
-//   - Tokens is the number of tokens for the data.
-//     It is used for the floor gas calculation.
 type ValidatedGas struct {
 	IntrinsicGas   uint64
 	SigValidateGas uint64
-	Tokens         uint64
 }
 
 type Transaction struct {
@@ -407,7 +404,7 @@ func (tx *Transaction) ValidatedGas() *ValidatedGas {
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
 
-func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return tx.data.IntrinsicGas(currentBlockNumber)
 }
 
@@ -598,7 +595,7 @@ func (tx *Transaction) Execute(vm VM, stateDB StateDB, currentBlockNumber uint64
 // XXX Rename message to something less arbitrary?
 // TODO-Kaia: Message is removed and this function will return *Transaction.
 func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKeyPicker, currentBlockNumber uint64) (*Transaction, error) {
-	intrinsicGas, dataTokens, err := tx.IntrinsicGas(currentBlockNumber)
+	intrinsicGas, err := tx.IntrinsicGas(currentBlockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -624,7 +621,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 	intrinsicGas = intrinsicGas + sigValidationGas
 
 	tx.mu.Lock()
-	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: sigValidationGas, Tokens: dataTokens}
+	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: sigValidationGas}
 	tx.mu.Unlock()
 
 	return tx, err
@@ -1096,9 +1093,9 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, dataTokens uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
-		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0, Tokens: dataTokens},
+		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
 		validatedFeePayer: from,
 		validatedSender:   from,
 		checkNonce:        checkNonce,
