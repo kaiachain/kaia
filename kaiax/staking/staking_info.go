@@ -260,7 +260,7 @@ func (sl *StakingInfoLegacy) ToStakingInfo() *StakingInfo {
 
 // Convert to API response
 func (si *StakingInfo) ToResponse(useGini bool, minStake uint64) *StakingInfoResponse {
-	return &StakingInfoResponse{
+	res := &StakingInfoResponse{
 		StakingInfoLegacy: StakingInfoLegacy{
 			StakingInfo: *si,
 			KIRAddr:     si.KEFAddr,
@@ -271,4 +271,17 @@ func (si *StakingInfo) ToResponse(useGini bool, minStake uint64) *StakingInfoRes
 		UseGini: useGini,
 		Gini:    si.Gini(minStake),
 	}
+	if res.NodeIds == nil {
+		si.NodeIds = make([]common.Address, 0)
+	}
+	if res.RewardAddrs == nil {
+		si.RewardAddrs = make([]common.Address, 0)
+	}
+	if res.StakingContracts == nil {
+		si.StakingContracts = make([]common.Address, 0)
+	}
+	if res.StakingAmounts == nil {
+		si.StakingAmounts = make([]uint64, 0)
+	}
+	return res
 }
