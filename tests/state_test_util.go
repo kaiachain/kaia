@@ -336,14 +336,12 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
 		if len(a.Code) != 0 {
-			if rules.IsPrague || isTestExecutionSpecState {
-				if _, ok := types.ParseDelegation(a.Code); ok {
-					statedb.SetCodeToEOA(addr, a.Code, rules)
-				} else {
-					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
-					statedb.SetCode(addr, a.Code)
-				}
+			if _, ok := types.ParseDelegation(a.Code); ok {
+				statedb.SetCodeToEOA(addr, a.Code, rules)
 			} else {
+				if isTestExecutionSpecState {
+					statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
+				}
 				statedb.SetCode(addr, a.Code)
 			}
 		}
