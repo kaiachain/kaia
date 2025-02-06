@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -226,7 +225,7 @@ func (t *TxInternalDataValueTransfer) IntrinsicGas(currentBlockNumber uint64) (u
 	// TxInternalDataValueTransfer does not have payload, and it
 	// is not account creation. Hence, its intrinsic gas is determined by
 	// params.TxGas. Refer to types.IntrinsicGas().
-	return params.TxGasValueTransfer, nil
+	return GetTxGasForTxType(t.Type())
 }
 
 func (t *TxInternalDataValueTransfer) SerializeForSignToBytes() []byte {

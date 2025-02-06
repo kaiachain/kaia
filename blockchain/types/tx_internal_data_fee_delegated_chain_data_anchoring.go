@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -296,7 +295,10 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) RecoverFeePayerPubkey(txh
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxChainDataAnchoringGas + params.TxGasFeeDelegated
+	gas, err := GetTxGasForTxType(t.Type())
+	if err != nil {
+		return 0, err
+	}
 
 	// ChainDataAnchoring does not have Recipient, but it is not contract deployment transaction type.
 	// So, isContractCreation is explicitly set as false.

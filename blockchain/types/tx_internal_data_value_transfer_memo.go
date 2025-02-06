@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -240,7 +239,11 @@ func (t *TxInternalDataValueTransferMemo) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGasValueTransfer
+	gas, err := GetTxGasForTxType(t.Type())
+	if err != nil {
+		return 0, err
+	}
+
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
 		return 0, err

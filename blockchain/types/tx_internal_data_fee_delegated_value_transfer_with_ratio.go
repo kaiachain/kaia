@@ -29,7 +29,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -276,7 +275,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) String() string {
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio, nil
+	return GetTxGasForTxType(t.Type())
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSignToBytes() []byte {

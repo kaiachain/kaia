@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -294,7 +293,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) String() str
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio
+	gas, err := GetTxGasForTxType(t.Type())
+	if err != nil {
+		return 0, err
+	}
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {

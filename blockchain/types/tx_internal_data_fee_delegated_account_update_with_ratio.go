@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -377,12 +376,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) RecoverFeePayerPubkey
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
-	if err != nil {
-		return 0, err
-	}
-
-	return params.TxGasAccountUpdate + gasKey + params.TxGasFeeDelegatedWithRatio, nil
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), t.Key, currentBlockNumber, false)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSignToBytes() []byte {

@@ -324,10 +324,9 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio
-
-	if t.HumanReadable {
-		gas += params.TxGasHumanReadable
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, t.HumanReadable)
+	if err != nil {
+		return 0, err
 	}
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, true, *fork.Rules(big.NewInt(int64(currentBlockNumber))))

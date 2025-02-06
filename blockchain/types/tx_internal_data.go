@@ -715,6 +715,25 @@ func GetTxGasForTxType(txType TxType) (uint64, error) {
 	return 0, fmt.Errorf("cannot find txGas for txType %s", txType.String())
 }
 
+func GetTxGasForTxTypeWithAccountKey(txType TxType, accountKey accountkey.AccountKey, currentBlockNumber uint64, humanReadable bool) (uint64, error) {
+	gas, err := GetTxGasForTxType(txType)
+	if err != nil {
+		return 0, err
+	}
+	var gasKey uint64
+	if accountKey != nil {
+		gasKey, err = accountKey.AccountCreationGas(currentBlockNumber)
+		if err != nil {
+			return 0, err
+		}
+	}
+	gas += gasKey
+	if humanReadable {
+		gas += params.TxGasHumanReadable
+	}
+	return gas, nil
+}
+
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.
 // For example, if fee = 100 and feeRatio = 30, feePayer = 30 and feeSender = 70.
 func CalcFeeWithRatio(feeRatio FeeRatio, fee *big.Int) (*big.Int, *big.Int) {
