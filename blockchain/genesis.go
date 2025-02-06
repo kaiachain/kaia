@@ -317,7 +317,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		_, ok := types.ParseDelegation(account.Code)
 		isEOAWithCode := ok && rules.IsPrague
 		isEOAWithoutCode := len(account.Code) == 0 && len(account.Storage) != 0 && rules.IsPrague
-		isAccountWithCode := len(account.Code) != 0
+		isSCAWithCode := !isEOAWithCode && len(account.Code) != 0
 		switch {
 		case isEOAWithCode:
 			// EOA with code. Usually SetCodeTx creates it. Unit tests may create it here in the genesis.
@@ -325,7 +325,7 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		case isEOAWithoutCode:
 			// Represents an EOA that had code then nullified with another SetCodeTx. Unit tests may create it here in the genesis.
 			stateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
-		case isAccountWithCode:
+		case isSCAWithCode:
 			// Regular genesis smart contract account.
 			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			stateDB.SetCode(addr, account.Code)
