@@ -18,6 +18,7 @@ package reward
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -117,8 +118,8 @@ type RewardResponse = RewardSpec
 // AccumulatedRewardsResponse is the response type for the governance_getRewardsAccumulated API.
 // TODO-kaiax: AccumulatedRewardsResponse to use hexutil.Big for time (as timestamp) and big.Int fields.
 type AccumulatedRewardsResponse struct {
-	FirstBlockTime string   `json:"firstBlockTime"`
-	LastBlockTime  string   `json:"lastBlockTime"`
+	FirstBlockTime int64    `json:"firstBlockTime"`
+	LastBlockTime  int64    `json:"lastBlockTime"`
 	FirstBlock     *big.Int `json:"firstBlock"`
 	LastBlock      *big.Int `json:"lastBlock"`
 
@@ -135,8 +136,8 @@ type AccumulatedRewardsResponse struct {
 
 func (spec RewardSpec) ToAccumulatedResponse(firstHeader, lastHeader *types.Header) *AccumulatedRewardsResponse {
 	return &AccumulatedRewardsResponse{
-		FirstBlockTime: firstHeader.Time.String(),
-		LastBlockTime:  lastHeader.Time.String(),
+		FirstBlockTime: time.Unix(firstHeader.Time.Int64(), 0).Unix(),
+		LastBlockTime:  time.Unix(lastHeader.Time.Int64(), 0).Unix(),
 		FirstBlock:     new(big.Int).SetUint64(firstHeader.Number.Uint64()),
 		LastBlock:      new(big.Int).SetUint64(lastHeader.Number.Uint64()),
 
