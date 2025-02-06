@@ -20,7 +20,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-//go:generate mockgen -destination=mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/supply SupplyModule
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/supply SupplyModule
 type SupplyModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule

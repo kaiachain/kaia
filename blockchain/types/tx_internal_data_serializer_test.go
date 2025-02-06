@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -42,7 +43,7 @@ var (
 	gasTipCap      = big.NewInt(25)
 	gasFeeCap      = big.NewInt(25)
 	accesses       = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizations = AuthorizationList{{ChainID: uint64(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizations = []SetCodeAuthorization{{ChainID: *uint256.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData

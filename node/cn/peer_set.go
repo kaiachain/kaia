@@ -46,7 +46,7 @@ var (
 	errSnapWithoutIstanbul = errors.New("peer connected on snap without compatible istanbul support")
 )
 
-//go:generate mockgen -destination=node/cn/peer_set_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn PeerSet
+//go:generate mockgen -destination=./peer_set_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn PeerSet
 type PeerSet interface {
 	Register(p Peer, ext *snap.Peer) error
 	Unregister(id string) error

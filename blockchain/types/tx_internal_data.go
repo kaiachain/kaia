@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -651,7 +652,7 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, uint64, error) 
 
 // IntrinsicGas computes the 'intrinsic gas' and the number of tokens for EIP-7623
 // for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, authorizationList AuthorizationList, contractCreation bool, r params.Rules) (uint64, uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, uint64, error) {
 	// Set the starting gas for the raw transaction
 	var (
 		gas    uint64
@@ -695,6 +696,42 @@ func IntrinsicGas(data []byte, accessList AccessList, authorizationList Authoriz
 	}
 
 	return gasPayloadWithGas, tokens, nil
+}
+
+var txTypeToGasMap = map[TxType]uint64{
+	TxTypeLegacyTransaction:                           params.TxGas,
+	TxTypeValueTransfer:                               params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransfer:                   params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferWithRatio:          params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeValueTransferMemo:                           params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransferMemo:               params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferMemoWithRatio:      params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeAccountCreation:                             params.TxGasAccountCreation,
+	TxTypeAccountUpdate:                               params.TxGasAccountUpdate,
+	TxTypeFeeDelegatedAccountUpdate:                   params.TxGasAccountUpdate + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedAccountUpdateWithRatio:          params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractDeploy:                         params.TxGasContractCreation,
+	TxTypeFeeDelegatedSmartContractDeploy:             params.TxGasContractCreation + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractDeployWithRatio:    params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractExecution:                      params.TxGasContractExecution,
+	TxTypeFeeDelegatedSmartContractExecution:          params.TxGasContractExecution + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractExecutionWithRatio: params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio,
+	TxTypeCancel:                                  params.TxGasCancel,
+	TxTypeFeeDelegatedCancel:                      params.TxGasCancel + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedCancelWithRatio:             params.TxGasCancel + params.TxGasFeeDelegatedWithRatio,
+	TxTypeChainDataAnchoring:                      params.TxChainDataAnchoringGas,
+	TxTypeFeeDelegatedChainDataAnchoring:          params.TxChainDataAnchoringGas + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedChainDataAnchoringWithRatio: params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio,
+	TxTypeEthereumAccessList:                      params.TxGas,
+	TxTypeEthereumDynamicFee:                      params.TxGas,
+	TxTypeEthereumSetCode:                         params.TxGas,
+}
+
+func GetTxGasForTxType(txType TxType) (uint64, error) {
+	if gas, exists := txTypeToGasMap[txType]; exists {
+		return gas, nil
+	}
+	return 0, fmt.Errorf("cannot find txGas for txType %s", txType.String())
 }
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.

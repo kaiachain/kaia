@@ -308,6 +308,10 @@ func (bc *BlockChain) restartStateMigration() {
 			bc.migrateState(root)
 			bc.wg.Done()
 		}()
+	} else if dbPath := bc.db.MigrationOldDBPath(); dbPath != "" {
+		// Remove the old database if it exists.
+		// This can happen when the node is stopped while removing the old database.
+		go bc.db.RemoveOldDB(dbPath, nil)
 	}
 }
 

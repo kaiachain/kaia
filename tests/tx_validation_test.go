@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -103,7 +104,7 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 	return valueMap, gas
 }
 
-// TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
+// TestValidationPoolInsertEthTxType generates invalid txs which will be invalidated during txPool insert process.
 func TestValidationPoolInsertEthTxType(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
@@ -442,18 +443,17 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 	// set code for contract execution tx type
 	{
-		auth, err := types.SignAuth(&types.Authorization{
-			ChainID: bcdata.bc.Config().ChainID.Uint64(),
+		auth, err := types.SignSetCode(eoaWithCode.Keys[0], types.SetCodeAuthorization{
+			ChainID: *uint256.MustFromBig(bcdata.bc.Config().ChainID),
 			Address: contract.Addr,
 			Nonce:   uint64(0),
-		}, eoaWithCode.Keys[0])
+		})
 		assert.Equal(t, nil, err)
 
-		authorizationList := types.AuthorizationList{*auth}
+		authorizationList := []types.SetCodeAuthorization{auth}
 
 		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
-			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), uint64(0), nil, authorizationList)
-		tx.ChainId().Set(bcdata.bc.Config().ChainID)
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), uint64(0), nil, bcdata.bc.Config().ChainID, authorizationList)
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
@@ -654,7 +654,7 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 	return values, err
 }
 
-// decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
+// decreaseGasPriceMagma changes gasPrice to 12345678 and return an error with magma policy
 func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {

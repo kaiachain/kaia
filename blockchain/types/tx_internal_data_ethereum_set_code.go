@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -56,7 +57,7 @@ func AddressToDelegation(addr common.Address) []byte {
 
 // TxInternalDataEthereumSetCode represents a set code transaction.
 type TxInternalDataEthereumSetCode struct {
-	ChainID           *big.Int
+	ChainID           *uint256.Int
 	AccountNonce      uint64
 	GasTipCap         *big.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap         *big.Int // a.k.a. maxFeePerGas
@@ -65,37 +66,37 @@ type TxInternalDataEthereumSetCode struct {
 	Amount            *big.Int
 	Payload           []byte
 	AccessList        AccessList
-	AuthorizationList AuthorizationList
+	AuthorizationList []SetCodeAuthorization
 
 	// Signature values
-	V *big.Int `gencodec:"required" json:"v"`
-	R *big.Int `gencodec:"required" json:"r"`
-	S *big.Int `gencodec:"required" json:"s"`
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
 type TxInternalDataEthereumSetCodeJSON struct {
-	Type                 TxType            `json:"typeInt"`
-	TypeStr              string            `json:"type"`
-	ChainID              *hexutil.Big      `json:"chainId"`
-	AccountNonce         hexutil.Uint64    `json:"nonce"`
-	MaxPriorityFeePerGas *hexutil.Big      `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas         *hexutil.Big      `json:"maxFeePerGas"`
-	GasLimit             hexutil.Uint64    `json:"gas"`
-	Recipient            common.Address    `json:"to"`
-	Amount               *hexutil.Big      `json:"value"`
-	Payload              hexutil.Bytes     `json:"input"`
-	AccessList           AccessList        `json:"accessList"`
-	AuthorizationList    AuthorizationList `json:"authorizationList"`
-	TxSignatures         TxSignaturesJSON  `json:"signatures"`
-	Hash                 *common.Hash      `json:"hash"`
+	Type                 TxType                 `json:"typeInt"`
+	TypeStr              string                 `json:"type"`
+	ChainID              *hexutil.U256          `json:"chainId"`
+	AccountNonce         hexutil.Uint64         `json:"nonce"`
+	MaxPriorityFeePerGas *hexutil.Big           `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas         *hexutil.Big           `json:"maxFeePerGas"`
+	GasLimit             hexutil.Uint64         `json:"gas"`
+	Recipient            common.Address         `json:"to"`
+	Amount               *hexutil.Big           `json:"value"`
+	Payload              hexutil.Bytes          `json:"input"`
+	AccessList           AccessList             `json:"accessList"`
+	AuthorizationList    []SetCodeAuthorization `json:"authorizationList"`
+	TxSignatures         TxSignaturesJSON       `json:"signatures"`
+	Hash                 *common.Hash           `json:"hash"`
 }
 
 func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 	return &TxInternalDataEthereumSetCode{
-		ChainID:           new(big.Int),
+		ChainID:           new(uint256.Int),
 		AccountNonce:      0,
 		GasTipCap:         new(big.Int),
 		GasFeeCap:         new(big.Int),
@@ -104,14 +105,14 @@ func newTxInternalDataEthereumSetCode() *TxInternalDataEthereumSetCode {
 		Amount:            new(big.Int),
 		Payload:           []byte{},
 		AccessList:        AccessList{},
-		AuthorizationList: AuthorizationList{},
+		AuthorizationList: []SetCodeAuthorization{},
 		V:                 new(big.Int),
 		R:                 new(big.Int),
 		S:                 new(big.Int),
 	}
 }
 
-func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, authList AuthorizationList, chainID *big.Int) *TxInternalDataEthereumSetCode {
+func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasFeeCap, gasTipCap *big.Int, data []byte, accessList AccessList, chainID *big.Int, authList []SetCodeAuthorization) *TxInternalDataEthereumSetCode {
 	d := newTxInternalDataEthereumSetCode()
 
 	d.AccountNonce = nonce
@@ -119,7 +120,7 @@ func newTxInternalDataEthereumSetCodeWithValues(nonce uint64, to common.Address,
 	d.GasLimit = gasLimit
 
 	if chainID != nil {
-		d.ChainID.Set(chainID)
+		d.ChainID.Set(uint256.MustFromBig(chainID))
 	}
 
 	if gasTipCap != nil {
@@ -153,7 +154,7 @@ func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface
 	d := newTxInternalDataEthereumSetCode()
 
 	if v, ok := values[TxValueKeyChainID].(*big.Int); ok {
-		d.ChainID.Set(v)
+		d.ChainID.Set(uint256.MustFromBig(v))
 		delete(values, TxValueKeyChainID)
 	} else {
 		return nil, errValueKeyChainIDInvalid
@@ -213,8 +214,8 @@ func newTxInternalDataEthereumSetCodeWithMap(values map[TxValueKeyType]interface
 	} else {
 		return nil, errValueKeyAccessListInvalid
 	}
-	if v, ok := values[TxValueKeyAuthorizationList].(AuthorizationList); ok {
-		d.AuthorizationList = make(AuthorizationList, len(v))
+	if v, ok := values[TxValueKeyAuthorizationList].([]SetCodeAuthorization); ok {
+		d.AuthorizationList = make([]SetCodeAuthorization, len(v))
 		copy(d.AuthorizationList, v)
 		delete(values, TxValueKeyAuthorizationList)
 	} else {
@@ -268,7 +269,7 @@ func (t *TxInternalDataEthereumSetCode) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (tx *TxInternalDataEthereumSetCode) GetAuthorizationList() AuthorizationList {
+func (tx *TxInternalDataEthereumSetCode) GetAuthorizationList() []SetCodeAuthorization {
 	return tx.AuthorizationList
 }
 
@@ -324,7 +325,7 @@ func (t *TxInternalDataEthereumSetCode) RecoverPubkey(txhash common.Hash, homest
 }
 
 func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
-	return t.ChainID
+	return t.ChainID.ToBig()
 }
 
 func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
@@ -523,7 +524,7 @@ func (t *TxInternalDataEthereumSetCode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(TxInternalDataEthereumSetCodeJSON{
 		t.Type(),
 		t.Type().String(),
-		(*hexutil.Big)(t.ChainID),
+		(*hexutil.U256)(t.ChainID),
 		(hexutil.Uint64)(t.AccountNonce),
 		(*hexutil.Big)(t.GasTipCap),
 		(*hexutil.Big)(t.GasFeeCap),
@@ -544,7 +545,7 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	t.ChainID = (*big.Int)(js.ChainID)
+	t.ChainID = (*uint256.Int)(js.ChainID)
 	t.AccountNonce = uint64(js.AccountNonce)
 	t.GasTipCap = (*big.Int)(js.MaxPriorityFeePerGas)
 	t.GasFeeCap = (*big.Int)(js.MaxFeePerGas)
@@ -563,73 +564,57 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 }
 
 func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
+	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
-// ------------- Authorization -------------
-type AuthorizationList []Authorization
-
-type Authorization struct {
-	ChainID uint64         `json:"chainId"`
+type SetCodeAuthorization struct {
+	ChainID uint256.Int    `json:"chainId"`
 	Address common.Address `json:"address"`
 	Nonce   uint64         `json:"nonce"`
 	V       uint8          `json:"v"`
-	R       *big.Int       `json:"r"`
-	S       *big.Int       `json:"s"`
+	R       uint256.Int    `json:"r"`
+	S       uint256.Int    `json:"s"`
 }
 
-// SignAuth signs the provided authorization.
-func SignAuth(auth *Authorization, prv *ecdsa.PrivateKey) (*Authorization, error) {
-	h := prefixedRlpHash(
-		0x05,
-		[]interface{}{
-			auth.ChainID,
-			auth.Address,
-			auth.Nonce,
-		})
-
-	sig, err := crypto.Sign(h[:], prv)
+// SignSetCode creates a signed the SetCode authorization.
+func SignSetCode(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAuthorization, error) {
+	sighash := auth.sigHash()
+	sig, err := crypto.Sign(sighash[:], prv)
 	if err != nil {
-		return nil, err
+		return SetCodeAuthorization{}, err
 	}
-	return auth.WithSignature(sig), nil
-}
-
-// WithSignature updates the signature of an Authorization to be equal the
-// decoded signature provided in sig.
-func (a *Authorization) WithSignature(sig []byte) *Authorization {
 	r, s, _ := decodeSignature(sig)
-	cpy := Authorization{
-		ChainID: a.ChainID,
-		Address: a.Address,
-		Nonce:   a.Nonce,
+	return SetCodeAuthorization{
+		ChainID: auth.ChainID,
+		Address: auth.Address,
+		Nonce:   auth.Nonce,
 		V:       sig[crypto.RecoveryIDOffset],
-		R:       r,
-		S:       s,
-	}
-	return &cpy
+		R:       *uint256.MustFromBig(r),
+		S:       *uint256.MustFromBig(s),
+	}, nil
 }
 
-func (a Authorization) Authority() (common.Address, error) {
-	sighash := prefixedRlpHash(
-		0x05,
-		[]interface{}{
-			a.ChainID,
-			a.Address,
-			a.Nonce,
-		})
+func (a *SetCodeAuthorization) sigHash() common.Hash {
+	return prefixedRlpHash(0x05, []any{
+		a.ChainID,
+		a.Address,
+		a.Nonce,
+	})
+}
 
-	if !crypto.ValidateSignatureValues(a.V, a.R, a.S, true) {
+// Authority recovers the the authorizing account of an authorization.
+func (a *SetCodeAuthorization) Authority() (common.Address, error) {
+	sighash := a.sigHash()
+	if !crypto.ValidateSignatureValues(a.V, a.R.ToBig(), a.S.ToBig(), true) {
 		return common.Address{}, ErrInvalidSig
 	}
 	// encode the signature in uncompressed format
-	r, s := a.R.Bytes(), a.S.Bytes()
-	sig := make([]byte, crypto.SignatureLength)
-	copy(sig[32-len(r):32], r)
-	copy(sig[64-len(s):64], s)
+	var sig [crypto.SignatureLength]byte
+	a.R.WriteToSlice(sig[:32])
+	a.S.WriteToSlice(sig[32:64])
 	sig[64] = a.V
 	// recover the public key from the signature
-	pub, err := crypto.Ecrecover(sighash[:], sig)
+	pub, err := crypto.Ecrecover(sighash[:], sig[:])
 	if err != nil {
 		return common.Address{}, err
 	}

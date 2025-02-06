@@ -62,8 +62,7 @@ func (m *Memory) Set32(offset uint64, val *uint256.Int) {
 		panic("invalid memory: store empty")
 	}
 	// Fill in relevant bits
-	b32 := val.Bytes32()
-	copy(m.store[offset:], b32[:])
+	val.PutUint256(m.store[offset:])
 }
 
 // Increase increases the memory with size bytes

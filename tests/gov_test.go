@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"math/big"
 	"os"
 	"testing"
 
@@ -70,11 +69,6 @@ func TestMainnetGenesisGovernance(t *testing.T) {
 	for name, val := range genesisParamsMap {
 		govVal, exists := govParamsMap[gov.ParamName(name)]
 		assert.True(t, exists, "Key %s missing from GovModule params", name)
-		switch name {
-		case string(gov.RewardMintingAmount), string(gov.RewardMinimumStake):
-			assert.Equal(t, val, govVal.(*big.Int).String())
-		default:
-			assert.Equal(t, val, govVal, "Key %s mismatch", name)
-		}
+		assert.Equal(t, val, govVal, "Key %s mismatch", name)
 	}
 }

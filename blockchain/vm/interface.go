@@ -33,6 +33,8 @@ import (
 )
 
 // StateDB is an EVM database for full state querying.
+//
+//go:generate mockgen -destination=./mocks/statedb_mock.go -package=mock_vm github.com/kaiachain/kaia/blockchain/vm StateDB
 type StateDB interface {
 	CreateAccount(common.Address)
 	CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules)
@@ -54,9 +56,6 @@ type StateDB interface {
 	GetCodeSize(common.Address) int
 	GetVmVersion(common.Address) (params.VmVersion, bool)
 	GetStorageRoot(common.Address) common.Hash
-
-	ResolveCodeHash(common.Address) common.Hash
-	ResolveCode(common.Address) []byte
 
 	AddRefund(uint64)
 	SubRefund(uint64)

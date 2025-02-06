@@ -88,7 +88,7 @@ type SubBridgeInfo struct {
 	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
-//go:generate mockgen -destination=bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
+//go:generate mockgen -destination=./bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
 type BridgeTxPool interface {
 	GetMaxTxNonce(from *common.Address) uint64
 	AddLocal(tx *types.Transaction) error

@@ -66,7 +66,7 @@ import (
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
+//go:generate mockgen -destination=./mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -76,7 +76,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
+//go:generate mockgen -destination=./mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -91,7 +91,7 @@ type Miner interface {
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
+//go:generate mockgen -destination=./protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -401,6 +401,18 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
+	// Fill the staking info cache for the recent blocks.
+	if currBlock := cn.blockchain.CurrentBlock(); currBlock.NumberU64() > 0 {
+		logger.Info("Preloading staking info for the recent blocks", "blockNumber", currBlock.NumberU64())
+		if parentBlock := cn.blockchain.GetBlockByNumber(currBlock.NumberU64() - 1); parentBlock != nil {
+			if _, release, err := cn.stateAtBlock(parentBlock, 128, nil, true, false); err != nil {
+				logger.Error("Failed to get state at block", "err", err)
+			} else {
+				release()
+			}
+		}
+	}
+
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
 		restartInterval := config.RestartTimeOutFlag
@@ -523,7 +535,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset)
 	s.blockchain.RegisterExecutionModule(mSupply, mGov, mValset)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {

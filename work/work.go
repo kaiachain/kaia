@@ -50,7 +50,7 @@ var logger = log.NewModuleLogger(log.Work)
 
 // TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
 //
-//go:generate mockgen -destination=mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
+//go:generate mockgen -destination=./mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -231,7 +231,7 @@ func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 //
-//go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
 type BlockChain interface {
 	Genesis() *types.Block
 

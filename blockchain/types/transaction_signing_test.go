@@ -30,6 +30,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -38,52 +39,69 @@ import (
 )
 
 func TestPragueSigning(t *testing.T) {
+	chainId := uint256.NewInt(10)
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	accessList := AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
-	authorizationList := AuthorizationList{{ChainID: uint64(10), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: big.NewInt(0), S: big.NewInt(0)}}
+	authorizationList := []SetCodeAuthorization{{ChainID: *chainId, Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
+
+	signer := NewPragueSigner(chainId.ToBig())
 
 	testData := []struct {
 		name    string
+		isPanic bool
 		inputTx *Transaction
 	}{
-		{"WithoutChainID", NewTx(&TxInternalDataEthereumSetCode{
+		{"WithChainID", false, NewTx(&TxInternalDataEthereumSetCode{
 			AccountNonce:      1,
 			Amount:            big.NewInt(10),
 			GasFeeCap:         big.NewInt(10),
 			GasTipCap:         big.NewInt(10),
 			GasLimit:          100,
-			AccessList:        accessList,
 			AuthorizationList: authorizationList,
 			Recipient:         addr,
+			ChainID:           chainId,
 		})},
-		{"WithChainID", NewTx(&TxInternalDataEthereumSetCode{
+		{"WithChainID_Zero", false, NewTx(&TxInternalDataEthereumSetCode{
 			AccountNonce:      1,
 			Amount:            big.NewInt(10),
 			GasFeeCap:         big.NewInt(10),
 			GasTipCap:         big.NewInt(10),
 			GasLimit:          100,
-			AccessList:        accessList,
 			AuthorizationList: authorizationList,
 			Recipient:         addr,
-			ChainID:           big.NewInt(10),
+			ChainID:           uint256.NewInt(0),
 		})},
-		{"WithNoBitChainID", NewTx(&TxInternalDataEthereumSetCode{
+		{"WithNoBitChainID", false, NewTx(&TxInternalDataEthereumSetCode{
 			AccountNonce:      1,
 			Amount:            big.NewInt(10),
 			GasFeeCap:         big.NewInt(10),
 			GasTipCap:         big.NewInt(10),
 			GasLimit:          100,
-			AccessList:        accessList,
 			AuthorizationList: authorizationList,
 			Recipient:         addr,
-			ChainID:           new(big.Int),
+			ChainID:           new(uint256.Int), // = uint256.NewInt(0)
+		})},
+		{"WithoutChainID_expected_panic", true, NewTx(&TxInternalDataEthereumSetCode{
+			AccountNonce:      1,
+			Amount:            big.NewInt(10),
+			GasFeeCap:         big.NewInt(10),
+			GasTipCap:         big.NewInt(10),
+			GasLimit:          100,
+			AuthorizationList: authorizationList,
+			Recipient:         addr,
 		})},
 	}
 
-	signer := NewPragueSigner(big.NewInt(10))
 	for _, tc := range testData {
 		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					if !tc.isPanic {
+						t.Errorf("unexpected panic:%x", r)
+					}
+				}
+			}()
+
 			tx, err := SignTx(tc.inputTx, signer, key)
 			if err != nil {
 				t.Fatal(err)

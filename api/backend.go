@@ -44,7 +44,7 @@ import (
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 //
-//go:generate mockgen -destination=mocks/backend_mock.go github.com/kaiachain/kaia/api Backend
+//go:generate mockgen -destination=./mocks/backend_mock.go -package=mock_api github.com/kaiachain/kaia/api Backend
 type Backend interface {
 	// General Kaia API
 	Progress() kaia.SyncProgress

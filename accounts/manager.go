@@ -46,7 +46,7 @@ type Manager struct {
 
 // AccountManager is an interface of accounts.Manager struct.
 //
-//go:generate mockgen -destination=accounts/mocks/account_manager_mock.go github.com/kaiachain/kaia/accounts AccountManager
+//go:generate mockgen -destination=./mocks/account_manager_mock.go -package=mock_accounts github.com/kaiachain/kaia/accounts AccountManager
 type AccountManager interface {
 	Wallet(url string) (Wallet, error)
 	Wallets() []Wallet

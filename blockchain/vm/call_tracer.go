@@ -30,7 +30,7 @@ import (
 
 var _ Tracer = (*CallTracer)(nil)
 
-//go:generate go run github.com/fjl/gencodec -type CallFrame -field-override callFrameMarshaling -out gen_callframe_json.go
+//go:generate gencodec -type CallFrame -field-override callFrameMarshaling -out gen_callframe_json.go
 type CallFrame struct {
 	Type         OpCode          `json:"-"` // e.g. CALL, DELEGATECALL, CREATE
 	From         common.Address  `json:"from"`
