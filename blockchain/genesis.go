@@ -315,10 +315,13 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 	for addr, account := range g.Alloc {
 		originalCode := stateDB.GetCode(addr)
 		if _, ok := types.ParseDelegation(account.Code); ok && rules.IsPrague {
+			// EOA with code. Usually SetCodeTx creates it. Unit tests may create it here in the genesis.
 			stateDB.SetCodeToEOA(addr, account.Code, rules)
 		} else if len(account.Code) == 0 && len(account.Storage) != 0 && rules.IsPrague {
+			// Represents an EOA that had code then nullified with another SetCodeTx. Unit tests may create it here in the genesis.
 			stateDB.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
 		} else if len(account.Code) != 0 {
+			// Regular genesis smart contract account.
 			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
 			stateDB.SetCode(addr, account.Code)
 		}
