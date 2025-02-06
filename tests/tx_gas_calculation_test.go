@@ -21,7 +21,6 @@ package tests
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -29,7 +28,6 @@ import (
 
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -686,23 +684,10 @@ func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.
 	return values, intrinsic + gasPayload
 }
 
-func getDataGasNoFloor(data []byte) uint64 {
-	z := uint64(bytes.Count(data, []byte{0}))
-	nz := uint64(len(data)) - z
-	return nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-}
-
 func getDataGas(data []byte) uint64 {
 	z := uint64(bytes.Count(data, []byte{0}))
 	nz := uint64(len(data)) - z
 	return nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-	/*
-		tokens := nz*params.TokenPerNonZeroByte7623 + z
-		gas := nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-		if gas < tokens*params.CostFloorPerToken7623 {
-			return tokens * params.CostFloorPerToken7623
-		}
-		return gas*/
 }
 
 func getFlooredGas(data []byte, gas uint64) uint64 {
@@ -895,10 +880,7 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, _ := blockchain.FloorDataGas(txType, common.FromHex(code), 0)
-	if gasPayloadWithGas < floorGas {
-		gasPayloadWithGas = floorGas
-	}
+	gasPayloadWithGas = getFlooredGas(common.FromHex(code), gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }
@@ -934,14 +916,7 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, err := blockchain.FloorDataGas(txType, data, 0)
-	if err != nil {
-		return nil, 0
-	}
-	if gasPayloadWithGas < floorGas {
-		fmt.Printf("floorGas: %d\n", floorGas)
-		gasPayloadWithGas = floorGas
-	}
+	gasPayloadWithGas = getFlooredGas(data, gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }
