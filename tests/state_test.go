@@ -88,16 +88,18 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st := new(testMatcher)
 
 	// TODO-Kaia: should remove these skip
-	// not yet supported EIPs for pectra-devnet-6
+	// executing precompiled contracts with value transferring is not permitted
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
-	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
 
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
-	// calculate the different consumed gas because 0x0a and 0x0b contract is set to access list by ActivePrecompiles in Cancun
-	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork`)
+	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-31_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-32_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-empty_calldata\]`)
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_CancunToPragueAtTime15k-state_test--G1ADD\]`)
 	// type 3 tx (EIP-4844) is not supported
 	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 
