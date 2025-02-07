@@ -239,7 +239,7 @@ func (t *TxInternalDataValueTransferMemo) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas, err := GetTxGasForTxType(t.Type())
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 	if err != nil {
 		return 0, err
 	}

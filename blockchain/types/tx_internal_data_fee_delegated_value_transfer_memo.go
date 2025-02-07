@@ -274,7 +274,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) RecoverFeePayerPubkey(txha
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas, err := GetTxGasForTxType(t.Type())
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 	if err != nil {
 		return 0, err
 	}

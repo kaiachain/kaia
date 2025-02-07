@@ -246,7 +246,7 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetSignature(s TxSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return GetTxGasForTxType(t.Type())
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSignToBytes() []byte {

@@ -260,7 +260,7 @@ func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas, err := GetTxGasForTxType(t.Type())
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 	if err != nil {
 		return 0, err
 	}
