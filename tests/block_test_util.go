@@ -137,9 +137,9 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsIstanbul {
 		r.IsPrague = true
 	}
-	updatedIntrinsicGas, dataTokens, _ := types.IntrinsicGas(msg.Data(), msg.AccessList(), msg.AuthorizationList(), msg.To() == nil, r)
+	updatedIntrinsicGas, dataTokens, _ := types.IntrinsicGas(msg.Data(), msg.AccessList(), msg.AuthList(), msg.To() == nil, r)
 	from, _ := msg.From()
-	msg = types.NewMessage(from, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, dataTokens, msg.AccessList(), msg.AuthorizationList())
+	msg = types.NewMessage(from, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, dataTokens, msg.AccessList(), r.ChainID, msg.AuthList())
 
 	// Gas prices are calculated in eth
 	evm.GasPrice, _ = calculateEthGasPrice(evm.ChainConfig().Rules(evm.Context.BlockNumber), msg.GasPrice(), e.baseFee, msg.GasFeeCap(), msg.GasTipCap())
