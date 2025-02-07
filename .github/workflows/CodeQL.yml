@@ -5,8 +5,7 @@ on:
     branches: [dev, main]
     types: [opened, synchronize]
   push:
-    branches:
-      - ft/check-codeql
+    branches: [dev, main]
 
 jobs:
   CodeQL-Build:
