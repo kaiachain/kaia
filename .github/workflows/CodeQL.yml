@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [dev, main]
     types: [opened, synchronize]
+  push:
+    branches:
+      - ft/check-codeql
 
 jobs:
   CodeQL-Build:
