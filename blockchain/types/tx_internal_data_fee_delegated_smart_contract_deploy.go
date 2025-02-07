@@ -303,19 +303,18 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
-	gas := params.TxGasContractCreation + params.TxGasFeeDelegated
-
-	if t.HumanReadable {
-		gas += params.TxGasHumanReadable
-	}
-
-	gasPayloadWithGas, tokens, err := IntrinsicGasPayload(gas, t.Payload, true, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, t.HumanReadable)
 	if err != nil {
-		return 0, tokens, err
+		return 0, err
 	}
 
-	return gasPayloadWithGas, tokens, nil
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, true, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	if err != nil {
+		return 0, err
+	}
+
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSignToBytes() []byte {

@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -246,8 +245,8 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetSignature(s TxSignatures)
 	t.TxSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
-	return params.TxGasCancel + params.TxGasFeeDelegatedWithRatio, 0, nil
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSignToBytes() []byte {

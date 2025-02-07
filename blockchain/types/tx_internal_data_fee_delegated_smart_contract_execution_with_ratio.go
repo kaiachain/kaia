@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -293,15 +292,18 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) String() str
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
-	gas := params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio
-
-	gasPayloadWithGas, tokens, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 	if err != nil {
-		return 0, tokens, err
+		return 0, err
 	}
 
-	return gasPayloadWithGas, tokens, nil
+	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	if err != nil {
+		return 0, err
+	}
+
+	return gasPayloadWithGas, nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SerializeForSignToBytes() []byte {

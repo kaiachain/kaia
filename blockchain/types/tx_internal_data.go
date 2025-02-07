@@ -327,7 +327,7 @@ type TxInternalData interface {
 	Equal(t TxInternalData) bool
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
-	IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error)
+	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
@@ -573,21 +573,13 @@ func toWordSize(size uint64) uint64 {
 }
 
 // Klaytn-TxTypes since genesis, and EthTxTypes since istanbul use this.
-func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, uint64, error) {
-	var tokens uint64
+func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
 	if length > 0 {
 		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-
-		z := length - nz
-		tokens = nz*params.TokenPerNonZeroByte7623 + z
+		z := uint64(bytes.Count(data, []byte{0}))
+		nz := length - z
 
 		// Since the genesis block, a flat 100 gas is paid
 		// regardless of whether the value is zero or non-zero.
@@ -598,12 +590,12 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 		}
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/nonZeroGas < nz {
-			return 0, tokens, ErrGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		gas += nz * nonZeroGas
 
 		if (math.MaxUint64-gas)/zeroGas < z {
-			return 0, tokens, ErrGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		gas += z * zeroGas
 	}
@@ -611,53 +603,42 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 	if isContractCreation && rules.IsShanghai {
 		lenWords := toWordSize(length)
 		if (math.MaxUint64-gas)/params.InitCodeWordGas < lenWords {
-			return 0, tokens, ErrGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		gas += lenWords * params.InitCodeWordGas
 	}
-	return gas, tokens, nil
+	return gas, nil
 }
 
 // Eth-TxTypes before istanbul use this. Only 0 tx type exists before Istanbul (No dynamic and access list types correspond to)
 // Calculate gas cost for type 0 transactions:
 // 68 gas for each non-zero byte and 16 gas for each zero byte in the data field.
-func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, uint64, error) {
-	var tokens uint64
+func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 	length := uint64(len(data))
 	if length > 0 {
 		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
-		z := length - nz
-		tokens = nz*params.TokenPerNonZeroByte7623 + z
+		z := uint64(bytes.Count(data, []byte{0}))
+		nz := length - z
 
 		// Make sure we don't exceed uint64 for all data combinations
 		if (math.MaxUint64-gas)/params.TxDataNonZeroGasFrontier < nz {
-			return 0, tokens, ErrGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		gas += nz * params.TxDataNonZeroGasFrontier
 
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, tokens, ErrGasUintOverflow
+			return 0, ErrGasUintOverflow
 		}
 		gas += z * params.TxDataZeroGas
 	}
 
-	return gas, tokens, nil
+	return gas, nil
 }
 
-// IntrinsicGas computes the 'intrinsic gas' and the number of tokens for EIP-7623
-// for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, uint64, error) {
+// IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
-	var (
-		gas    uint64
-		tokens uint64
-	)
+	var gas uint64
 
 	if contractCreation {
 		gas = params.TxGasContractCreation
@@ -670,14 +651,14 @@ func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCod
 	if r.IsIstanbul {
 		// tx types 1,2 only exist after istanbul; so they take this path.
 		// tx types 8+ take this path as well.
-		gasPayloadWithGas, tokens, err = IntrinsicGasPayload(gas, data, contractCreation, r)
+		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
 	} else {
 		// only for tx type 0 before istanbul.
-		gasPayloadWithGas, tokens, err = IntrinsicGasPayloadLegacy(gas, data)
+		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
 
 	if err != nil {
-		return 0, tokens, err
+		return 0, err
 	}
 
 	// We charge additional gas for the accessList:
@@ -695,7 +676,7 @@ func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCod
 		gasPayloadWithGas += uint64(len(authorizationList)) * params.CallNewAccountGas
 	}
 
-	return gasPayloadWithGas, tokens, nil
+	return gasPayloadWithGas, nil
 }
 
 var txTypeToGasMap = map[TxType]uint64{
@@ -732,6 +713,25 @@ func GetTxGasForTxType(txType TxType) (uint64, error) {
 		return gas, nil
 	}
 	return 0, fmt.Errorf("cannot find txGas for txType %s", txType.String())
+}
+
+func GetTxGasForTxTypeWithAccountKey(txType TxType, accountKey accountkey.AccountKey, currentBlockNumber uint64, humanReadable bool) (uint64, error) {
+	gas, err := GetTxGasForTxType(txType)
+	if err != nil {
+		return 0, err
+	}
+	var gasKey uint64
+	if accountKey != nil {
+		gasKey, err = accountKey.AccountCreationGas(currentBlockNumber)
+		if err != nil {
+			return 0, err
+		}
+	}
+	gas += gasKey
+	if humanReadable {
+		gas += params.TxGasHumanReadable
+	}
+	return gas, nil
 }
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.

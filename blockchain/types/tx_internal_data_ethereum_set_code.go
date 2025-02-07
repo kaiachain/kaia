@@ -348,7 +348,7 @@ func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
 		t.S.Cmp(ta.S) == 0
 }
 
-func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error) {
+func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 

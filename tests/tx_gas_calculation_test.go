@@ -28,7 +28,6 @@ import (
 
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -685,30 +684,17 @@ func genMapForLegacyTransaction(from TestAccount, to TestAccount, gasPrice *big.
 	return values, intrinsic + gasPayload
 }
 
-func getDataGasNoFloor(data []byte) uint64 {
-	z := uint64(bytes.Count(data, []byte{0}))
-	nz := uint64(len(data)) - z
-	return nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-}
-
 func getDataGas(data []byte) uint64 {
 	z := uint64(bytes.Count(data, []byte{0}))
 	nz := uint64(len(data)) - z
 	return nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-	/*
-		tokens := nz*params.TokenPerNonZeroByte7623 + z
-		gas := nz*params.TxDataNonZeroGasEIP2028 + z*params.TxDataZeroGas
-		if gas < tokens*params.CostFloorPerToken7623 {
-			return tokens * params.CostFloorPerToken7623
-		}
-		return gas*/
 }
 
 func getFlooredGas(data []byte, gas uint64) uint64 {
 	z := uint64(bytes.Count(data, []byte{0}))
 	nz := uint64(len(data)) - z
-	tokens := nz*params.TokenPerNonZeroByte7623 + z
-	floorGas := tokens * params.CostFloorPerToken7623
+	tokens := nz*params.TxTokenPerNonZeroByte + z
+	floorGas := tokens * params.TxCostFloorPerToken
 	if gas < floorGas {
 		return floorGas
 	}
@@ -890,14 +876,11 @@ func genMapForDeploy(from TestAccount, to TestAccount, gasPrice *big.Int, txType
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x175fd)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, common.FromHex(code), true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, _ := blockchain.FloorDataGas(txType, dataTokens, 0)
-	if gasPayloadWithGas < floorGas {
-		gasPayloadWithGas = floorGas
-	}
+	gasPayloadWithGas = getFlooredGas(common.FromHex(code), gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }
@@ -929,17 +912,11 @@ func genMapForExecution(from TestAccount, to TestAccount, gasPrice *big.Int, txT
 	intrinsicGas, _ := types.GetTxGasForTxType(txType)
 	intrinsicGas += uint64(0x9ec4)
 
-	gasPayloadWithGas, dataTokens, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
+	gasPayloadWithGas, err := types.IntrinsicGasPayload(intrinsicGas, data, false, params.Rules{IsShanghai: false, IsPrague: true})
 	if err != nil {
 		return nil, 0
 	}
-	floorGas, err := blockchain.FloorDataGas(txType, dataTokens, 0)
-	if err != nil {
-		return nil, 0
-	}
-	if gasPayloadWithGas < floorGas {
-		gasPayloadWithGas = floorGas
-	}
+	gasPayloadWithGas = getFlooredGas(data, gasPayloadWithGas)
 
 	return values, gasPayloadWithGas
 }

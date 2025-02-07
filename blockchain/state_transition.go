@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -112,7 +113,7 @@ type Message interface {
 
 	// IntrinsicGas returns `intrinsic gas` based on the tx type.
 	// This value is used to differentiate tx fee based on the tx type.
-	IntrinsicGas(currentBlockNumber uint64) (uint64, uint64, error)
+	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
 	// Type returns the transaction type of the message.
 	Type() types.TxType
@@ -336,7 +337,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, err
 	}
 
-	msg := st.msg
+	var (
+		msg          = st.msg
+		rules        = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+		floorDataGas uint64
+		err          error
+	)
 
 	if st.evm.Config.Debug {
 		st.evm.Config.Tracer.CaptureTxStart(st.initialGas)
@@ -350,14 +356,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	if st.gas < validatedGas.IntrinsicGas {
 		return nil, ErrIntrinsicGas
 	}
-	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 	if rules.IsPrague {
-		floorGas, err := FloorDataGas(st.msg.Type(), validatedGas.Tokens, validatedGas.SigValidateGas)
+		floorDataGas, err = FloorDataGas(msg.Type(), msg.Data(), validatedGas.SigValidateGas)
 		if err != nil {
 			return nil, err
 		}
-		if st.gas < floorGas {
-			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorGas)
+		if msg.Gas() < floorDataGas {
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorDataGas)
 		}
 	}
 	// SigValidationGas is already inclduded in IntrinsicGas
@@ -430,22 +435,13 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, vm.ErrTotalTimeLimitReached
 	}
 
-	var gasRefund uint64
-	if rules.IsKore {
-		// After EIP-3529: refunds are capped to gasUsed / 5
-		gasRefund = st.refundAmount(params.RefundQuotientEIP3529)
-	} else {
-		// Before EIP-3529: refunds were capped to gasUsed / 2
-		gasRefund = st.refundAmount(params.RefundQuotient)
-	}
+	// Compute refund
+	gasRefund := st.calcRefund()
 	st.gas += gasRefund
-
 	if rules.IsPrague {
 		// After EIP-7623: Data-heavy transactions pay the floor gas.
-		// Overflow error has already been checked and can be ignored here.
-		floorGas, _ := FloorDataGas(st.msg.Type(), validatedGas.Tokens, validatedGas.SigValidateGas)
-		if st.gasUsed() < floorGas {
-			st.gas = st.initialGas - floorGas
+		if st.gasUsed() < floorDataGas {
+			st.gas = st.initialGas - floorDataGas
 		}
 	}
 	st.returnGas()
@@ -596,17 +592,24 @@ func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, 
 	return nil
 }
 
-func (st *StateTransition) refundAmount(refundQuotient uint64) uint64 {
-	// Apply refund counter, capped a refund quotient
-	refund := st.gasUsed() / refundQuotient
-	if refund > st.state.GetRefund() {
-		refund = st.state.GetRefund()
+// calcRefund computes refund counter, capped to a refund quotient.
+func (st *StateTransition) calcRefund() uint64 {
+	var gasRefund uint64
+	if !st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsKore {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		gasRefund = st.gasUsed() / params.RefundQuotient
+	} else {
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		gasRefund = st.gasUsed() / params.RefundQuotientEIP3529
 	}
-	return refund
+	if gasRefund > st.state.GetRefund() {
+		gasRefund = st.state.GetRefund()
+	}
+	return gasRefund
 }
 
+// returnGas returns KAIA for remaining gas, exchanged at the original rate.
 func (st *StateTransition) returnGas() {
-	// Return KAIA for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -630,7 +633,12 @@ func (st *StateTransition) gasUsed() uint64 {
 
 // FloorDataGas calculates the minimum gas required for a transaction
 // based on its data tokens (EIP-7623).
-func FloorDataGas(txType types.TxType, tokens, sigValidateGas uint64) (uint64, error) {
+func FloorDataGas(txType types.TxType, data []byte, sigValidateGas uint64) (uint64, error) {
+	var (
+		z      = uint64(bytes.Count(data, []byte{0}))
+		nz     = uint64(len(data)) - z
+		tokens = nz*params.TxTokenPerNonZeroByte + z
+	)
 	// Check for overflow
 	// Instead of using parmas.TxGas, we should consider the tx type
 	// because Kaia tx type has different tx gas (e.g., fee delegated tx).
@@ -638,8 +646,9 @@ func FloorDataGas(txType types.TxType, tokens, sigValidateGas uint64) (uint64, e
 	if err != nil {
 		return 0, err
 	}
-	if (math.MaxUint64-txGas-sigValidateGas)/params.CostFloorPerToken7623 < tokens {
+	if (math.MaxUint64-txGas-sigValidateGas)/params.TxCostFloorPerToken < tokens {
 		return 0, types.ErrGasUintOverflow
 	}
-	return txGas + tokens*params.CostFloorPerToken7623 + sigValidateGas, nil
+	// We add up sig validate gas too, as it's the final floor gas
+	return txGas + tokens*params.TxCostFloorPerToken + sigValidateGas, nil
 }
