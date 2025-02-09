@@ -34,7 +34,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
+	"github.com/kaiachain/kaia/datasync/downloader"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
@@ -167,15 +169,15 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	}
 
 	mGov := gov_impl.NewGovModule()
+	mRandao := randao_impl.NewRandaoModule()
 	engine := New(&BackendOpts{
-		IstanbulConfig:    istanbulConfig,
-		Rewardbase:        common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
-		PrivateKey:        nodeKeys[0],
-		BlsSecretKey:      nodeBlsKeys[0],
-		DB:                dbm,
-		GovModule:         mGov,
-		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
-		NodeType:          common.CONSENSUSNODE,
+		IstanbulConfig: istanbulConfig,
+		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
+		PrivateKey:     nodeKeys[0],
+		BlsSecretKey:   nodeBlsKeys[0],
+		DB:             dbm,
+		GovModule:      mGov,
+		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 
 	// Create blockchain
@@ -193,6 +195,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 	mStaking := staking_impl.NewStakingModule()
 	mValset := valset_impl.NewValsetModule()
+	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
 			Chain:       chain,
@@ -210,10 +213,15 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			Chain:         chain,
 			StakingModule: mStaking,
 			GovModule:     mGov,
+		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: config,
+			Chain:       chain,
+			Downloader:  fakeDownloader,
 		})); err != nil {
 		panic(err)
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
 		panic(err)

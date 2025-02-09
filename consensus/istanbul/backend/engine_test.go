@@ -42,9 +42,11 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -244,10 +246,12 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	mGov := gov_impl.NewGovModule()
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
+	mRandao := randao_impl.NewRandaoModule()
 	if mStaking == nil {
 		mStaking = staking_impl.NewStakingModule()
 	}
 
+	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
 			Chain:       bc,
@@ -268,11 +272,16 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: bc.Config(),
+			Chain:       bc,
+			Downloader:  fakeDownloader,
+		}),
 	); err != nil {
 		panic(err)
 	}
 
-	b.RegisterKaiaxModules(mGov, mStaking, mValset)
+	b.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	b.RegisterConsensusModule(mReward, mGov)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock) != nil {

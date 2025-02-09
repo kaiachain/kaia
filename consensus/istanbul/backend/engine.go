@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -674,10 +675,11 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 }
 
 // RegisterKaiaxModules sets kaiax modules of the Istanbul backend
-func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule) {
+func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule) {
 	sb.govModule = mGov
 	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
+	sb.randaoModule = mRandao
 }
 
 func (sb *backend) RegisterStakingModule(module staking.StakingModule) {
@@ -800,7 +802,7 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 }
 
 func (sb *backend) PurgeCache() {
-	sb.blsPubkeyProvider.ResetBlsCache()
+	// TODO-kaiax: Implement this
 }
 
 // FIXME: Need to update this for Istanbul
