@@ -81,6 +81,7 @@ var (
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 
 	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
+	Kip113MockThreeCNCode    = hexutil.MustDecode("0x" + testcontract.KIP113MockThreeCNBinRuntime)
 
 	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)

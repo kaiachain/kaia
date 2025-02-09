@@ -54,7 +54,8 @@ func (*FakeDownloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) er
 	return nil
 }
 
-func (*FakeDownloader) Terminate() {}
+func (*FakeDownloader) Terminate()          {}
+func (*FakeDownloader) Synchronising() bool { return false }
 func (*FakeDownloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	return nil
 }

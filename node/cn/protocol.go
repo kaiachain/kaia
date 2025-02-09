@@ -136,6 +136,7 @@ type ProtocolManagerDownloader interface {
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
+	Synchronising() bool
 	Progress() kaia.SyncProgress
 	Cancel()
 
