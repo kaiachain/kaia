@@ -536,7 +536,7 @@ func (s *CN) SetupKaiaxModules() error {
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset)
-	s.blockchain.RegisterExecutionModule(mSupply, mGov, mValset)
+	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(mGov, mStaking, mValset)
