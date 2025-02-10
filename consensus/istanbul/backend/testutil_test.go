@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
@@ -68,7 +68,6 @@ func init() {
 	testRandaoConfig.ShanghaiCompatibleBlock = common.Big0
 	testRandaoConfig.CancunCompatibleBlock = common.Big0
 	testRandaoConfig.RandaoCompatibleBlock = common.Big0
-	testRandaoConfig.RandaoRegistry = &params.RegistryConfig{}
 }
 
 type testOverrides struct {
@@ -77,29 +76,6 @@ type testOverrides struct {
 	blockPeriod    *uint64           // Override block period. If not set, 1 second is used.
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
-
-// Mock BlsPubkeyProvider that replaces KIP-113 contract query.
-type mockBlsPubkeyProvider struct {
-	infos map[common.Address]bls.PublicKey
-}
-
-func newMockBlsPubkeyProvider(addrs []common.Address, blsKeys []bls.SecretKey) *mockBlsPubkeyProvider {
-	infos := make(map[common.Address]bls.PublicKey)
-	for i := 0; i < len(addrs); i++ {
-		infos[addrs[i]] = blsKeys[i].PublicKey()
-	}
-	return &mockBlsPubkeyProvider{infos}
-}
-
-func (m *mockBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
-	if pub, ok := m.infos[proposer]; ok {
-		return pub, nil
-	} else {
-		return nil, errNoBlsPub
-	}
-}
-
-func (m *mockBlsPubkeyProvider) ResetBlsCache() {}
 
 type testContext struct {
 	config      *params.ChainConfig
@@ -157,6 +133,38 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	genesis.Config = config
 	genesis.ExtraData = makeGenesisExtra(nodeAddrs)
 	genesis.Timestamp = uint64(time.Now().Unix())
+	if config.IsRandaoForkEnabled(big.NewInt(0)) {
+		allocRegistryStorage := system.AllocRegistry(&params.RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": system.Kip113LogicAddrMock,
+			},
+			Owner: common.HexToAddress("0xffff"),
+		})
+		infos := make(map[common.Address]system.BlsPublicKeyInfo)
+		for i, addr := range nodeAddrs {
+			infos[addr] = system.BlsPublicKeyInfo{
+				PublicKey: nodeBlsKeys[i].PublicKey().Marshal(),
+				Pop:       bls.PopProve(nodeBlsKeys[i]).Marshal(),
+			}
+		}
+		allocKip113Storage := system.AllocKip113Proxy(system.AllocKip113Init{
+			Infos: infos,
+			Owner: common.HexToAddress("0xffff"),
+		})
+		alloc := blockchain.GenesisAlloc{
+			system.RegistryAddr: {
+				Code:    system.RegistryMockCode,
+				Balance: big.NewInt(0),
+				Storage: allocRegistryStorage,
+			},
+			system.Kip113LogicAddrMock: {
+				Code:    system.Kip113MockCode,
+				Balance: big.NewInt(0),
+				Storage: allocKip113Storage,
+			},
+		}
+		genesis.Alloc = alloc
+	}
 	genesis.MustCommit(dbm)
 
 	// Create istanbul engine
