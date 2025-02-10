@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	types0 "github.com/kaiachain/kaia/crypto/bls/types"
+	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
 // MockRandaoModule is a mock of RandaoModule interface.
@@ -35,6 +36,20 @@ func NewMockRandaoModule(ctrl *gomock.Controller) *MockRandaoModule {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRandaoModule) EXPECT() *MockRandaoModuleMockRecorder {
 	return m.recorder
+}
+
+// APIs mocks base method.
+func (m *MockRandaoModule) APIs() []rpc.API {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "APIs")
+	ret0, _ := ret[0].([]rpc.API)
+	return ret0
+}
+
+// APIs indicates an expected call of APIs.
+func (mr *MockRandaoModuleMockRecorder) APIs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockRandaoModule)(nil).APIs))
 }
 
 // GetBlsPubkey mocks base method.

@@ -541,7 +541,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mRandao)
-	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
+	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)

@@ -65,27 +65,32 @@ func testRandaoForkChainConfig(forkNum *big.Int) *params.ChainConfig {
 	return config
 }
 
+func testAllocStorage() blockchain.GenesisAlloc {
+	allocStorage := system.AllocRegistry(&params.RegistryConfig{
+		Records: map[string]common.Address{
+			"KIP113": system.Kip113LogicAddrMock,
+		},
+		Owner: common.HexToAddress("0xffff"),
+	})
+	alloc := blockchain.GenesisAlloc{
+		system.RegistryAddr: {
+			Code:    system.RegistryMockCode,
+			Balance: big.NewInt(0),
+			Storage: allocStorage,
+		},
+		system.Kip113LogicAddrMock: {
+			Code:    system.Kip113MockThreeCNCode,
+			Balance: big.NewInt(0),
+		},
+	}
+	return alloc
+}
+
 func TestGetBlsPubKey(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		db           = database.NewMemoryDBManager()
-		allocStorage = system.AllocRegistry(&params.RegistryConfig{
-			Records: map[string]common.Address{
-				"KIP113": system.Kip113LogicAddrMock,
-			},
-			Owner: common.HexToAddress("0xffff"),
-		})
-		alloc = blockchain.GenesisAlloc{
-			system.RegistryAddr: {
-				Code:    system.RegistryMockCode,
-				Balance: big.NewInt(0),
-				Storage: allocStorage,
-			},
-			system.Kip113LogicAddrMock: {
-				Code:    system.Kip113MockThreeCNCode,
-				Balance: big.NewInt(0),
-			},
-		}
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
 		config = testRandaoForkChainConfig(big.NewInt(0))
 
 		pubKey1, _ = bls.PublicKeyFromBytes(hexutil.MustDecode("0x" + "b716443d8d1b3c1230d1d186b1db0db80f79f72805646ba8135b98242df276bdbfb5dea0201c0258d6b60f30724f28e3"))
