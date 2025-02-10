@@ -34,6 +34,8 @@ This module does not have any background threads.
 
 This module caches the BLS public key for the next block.
 
+During synchronization, when blocks are processed rapidly in succession, the module skips the caching of future block BLS keys to avoid memory bloat. (And not effective as there's no enough interval between `PostInsertBlock`.) The cache is only filled once the node catches up to the network.
+
 ### Rewind
 
 Upon rewind, this module purges the in-memory cache.
