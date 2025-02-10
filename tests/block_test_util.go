@@ -404,7 +404,7 @@ func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
 			return true
 		})
 		if storageSize != len(acct.Storage) {
-			return fmt.Errorf("account storage size mismatch for addr: %s, want: %v, have: %v", addr, len(acct.Storage), storageSize)
+			return fmt.Errorf("account storage size mismatch for addr: %s, want: %v, have: %v", addr.String(), len(acct.Storage), storageSize)
 		}
 
 		// the size of HistoryStorageAddress is the same but the storage data is different
@@ -415,7 +415,7 @@ func (t *BlockTest) validateStorage(statedb *state.StateDB) error {
 		for k, v := range acct.Storage {
 			v2 := statedb.GetState(addr, k)
 			if v2 != v {
-				return fmt.Errorf("account storage mismatch for addr: %s, slot: %x, want: %x, have: %x", addr, k, v, v2)
+				return fmt.Errorf("account storage mismatch for addr: %s, slot: %x, want: %x, have: %x", addr.String(), k, v, v2)
 			}
 		}
 	}

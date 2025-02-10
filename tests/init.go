@@ -131,13 +131,19 @@ func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface
 	if !ok {
 		panic("unexpected type of rules")
 	}
-	activePrecompiles := vm.ActivePrecompiles(r)
+	var activePrecompiles []common.Address
+	switch {
+	case r.IsPrague:
+		activePrecompiles = vm.PrecompiledAddressPrague
+	case r.IsCancun:
+		activePrecompiles = vm.PrecompiledAddressCancun
+	case r.IsIstanbul:
+		activePrecompiles = vm.PrecompiledAddressIstanbul
+	default:
+		activePrecompiles = vm.PrecompiledAddressesByzantium
+	}
 	for _, pre := range activePrecompiles {
-		// skip 0x0a and 0x0b if before Prague
-		if !r.IsPrague && (bytes.Compare(pre.Bytes(), []byte{10}) == 0 || bytes.Compare(pre.Bytes(), []byte{11}) == 0) {
-			continue
-		}
-		if bytes.Compare(pre.Bytes(), addr.Bytes()) == 0 {
+		if bytes.Equal(pre.Bytes(), addr.Bytes()) {
 			return true
 		}
 	}
