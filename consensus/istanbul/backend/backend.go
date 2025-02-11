@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
@@ -55,39 +56,34 @@ const (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 type BackendOpts struct {
-	IstanbulConfig    *istanbul.Config // Istanbul consensus core config
-	Rewardbase        common.Address
-	PrivateKey        *ecdsa.PrivateKey // Consensus message signing key
-	BlsSecretKey      bls.SecretKey     // Randao signing key. Required since Randao fork
-	DB                database.DBManager
-	GovModule         gov.GovModule
-	BlsPubkeyProvider BlsPubkeyProvider // If not nil, override the default BLS public key provider
-	NodeType          common.ConnType
+	IstanbulConfig *istanbul.Config // Istanbul consensus core config
+	Rewardbase     common.Address
+	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
+	BlsSecretKey   bls.SecretKey     // Randao signing key. Required since Randao fork
+	DB             database.DBManager
+	GovModule      gov.GovModule
+	NodeType       common.ConnType
 }
 
 func New(opts *BackendOpts) consensus.Istanbul {
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:            opts.IstanbulConfig,
-		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        opts.PrivateKey,
-		address:           crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
-		blsSecretKey:      opts.BlsSecretKey,
-		logger:            logger.NewWith(),
-		db:                opts.DB,
-		commitCh:          make(chan *types.Result, 1),
-		candidates:        make(map[common.Address]bool),
-		coreStarted:       false,
-		recentMessages:    recentMessages,
-		knownMessages:     knownMessages,
-		rewardbase:        opts.Rewardbase,
-		govModule:         opts.GovModule,
-		blsPubkeyProvider: opts.BlsPubkeyProvider,
-		nodetype:          opts.NodeType,
-	}
-	if backend.blsPubkeyProvider == nil {
-		backend.blsPubkeyProvider = newChainBlsPubkeyProvider()
+		config:           opts.IstanbulConfig,
+		istanbulEventMux: new(event.TypeMux),
+		privateKey:       opts.PrivateKey,
+		address:          crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
+		blsSecretKey:     opts.BlsSecretKey,
+		logger:           logger.NewWith(),
+		db:               opts.DB,
+		commitCh:         make(chan *types.Result, 1),
+		candidates:       make(map[common.Address]bool),
+		coreStarted:      false,
+		recentMessages:   recentMessages,
+		knownMessages:    knownMessages,
+		rewardbase:       opts.Rewardbase,
+		govModule:        opts.GovModule,
+		nodetype:         opts.NodeType,
 	}
 
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
@@ -137,8 +133,7 @@ type backend struct {
 	// Reference to the governance.Engine
 	govModule gov.GovModule
 
-	// Reference to BlsPubkeyProvider
-	blsPubkeyProvider BlsPubkeyProvider
+	randaoModule randao.RandaoModule
 
 	// Node type
 	nodetype common.ConnType

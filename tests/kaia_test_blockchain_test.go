@@ -40,8 +40,10 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
@@ -137,6 +139,8 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
+	mRandao := randao_impl.NewRandaoModule()
+	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: genesis.Config,
@@ -157,11 +161,16 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: genesis.Config,
+			Chain:       bc,
+			Downloader:  fakeDownloader,
+		}),
 	)
 	if err != nil {
 		return nil, err
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	engine.RegisterConsensusModule(mReward)
 	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock); err != nil {
 		return nil, err

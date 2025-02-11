@@ -47,6 +47,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -492,6 +493,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mSupply  = supply_impl.NewSupplyModule()
 		mGov     = gov_impl.NewGovModule()
 		mValset  = valset_impl.NewValsetModule()
+		mRandao  = randao_impl.NewRandaoModule()
 	)
 
 	// Initialize modules
@@ -526,6 +528,11 @@ func (s *CN) SetupKaiaxModules() error {
 			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Downloader:  s.protocolManager.Downloader(),
+		}),
 	)
 	if err != nil {
 		return err
@@ -533,13 +540,13 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset)
-	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov)
-	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset)
-	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset)
+	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mRandao)
+	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao)
+	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
+	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
+	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(mGov, mStaking, mValset)
+		engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 		engine.RegisterConsensusModule(mReward, mGov)
 	}
 	s.protocolManager.RegisterStakingModule(mStaking)

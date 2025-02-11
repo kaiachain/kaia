@@ -17,12 +17,8 @@ package backend
 
 import (
 	"bytes"
-	"errors"
 	"math/big"
 
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -31,98 +27,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/params"
 )
-
-// For testing without KIP-113 contract setup
-type BlsPubkeyProvider interface {
-	// num should be the header number of the block to be verified.
-	// Thus, since the state of num does not exist, the state of num-1 must be used.
-	GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error)
-	ResetBlsCache()
-}
-
-type ChainBlsPubkeyProvider struct {
-	cache *lru.ARCCache // Cached BlsPublicKeyInfos
-}
-
-func newChainBlsPubkeyProvider() *ChainBlsPubkeyProvider {
-	cache, _ := lru.NewARC(128)
-	return &ChainBlsPubkeyProvider{
-		cache: cache,
-	}
-}
-
-// The default implementation for BlsPubkeyFunc.
-// Queries KIP-113 contract and verifies the PoP.
-func (p *ChainBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
-	infos, err := p.getAllCached(chain, num)
-	if err != nil {
-		return nil, err
-	}
-
-	info, ok := infos[proposer]
-	if !ok {
-		return nil, errNoBlsPub
-	}
-	if info.VerifyErr != nil {
-		return nil, info.VerifyErr
-	}
-	return bls.PublicKeyFromBytes(info.PublicKey)
-}
-
-func (p *ChainBlsPubkeyProvider) getAllCached(chain consensus.ChainReader, num *big.Int) (system.BlsPublicKeyInfos, error) {
-	if item, ok := p.cache.Get(num.Uint64()); ok {
-		logger.Trace("BlsPublicKeyInfos cache hit", "number", num.Uint64())
-		return item.(system.BlsPublicKeyInfos), nil
-	}
-
-	backend := backends.NewBlockchainContractBackend(chain, nil, nil)
-	if common.Big0.Cmp(num) == 0 {
-		return nil, errors.New("num cannot be zero")
-	}
-	parentNum := new(big.Int).Sub(num, common.Big1)
-
-	var kip113Addr common.Address
-	// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
-	// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
-	// Hence the ChainConfig fallback.
-	if chain.Config().IsRandaoForkBlock(num) {
-		var ok bool
-		kip113Addr, ok = chain.Config().RandaoRegistry.Records[system.Kip113Name]
-		if !ok {
-			return nil, errors.New("KIP113 address not set in ChainConfig")
-		}
-	} else if chain.Config().IsRandaoForkEnabled(num) {
-		// If no state exist at block number `parentNum`,
-		// return the error `consensus.ErrPrunedAncestor`
-		pHeader := chain.GetHeaderByNumber(parentNum.Uint64())
-		if pHeader == nil {
-			return nil, consensus.ErrUnknownAncestor
-		}
-		_, err := chain.StateAt(pHeader.Root)
-		if err != nil {
-			return nil, consensus.ErrPrunedAncestor
-		}
-		kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, errors.New("Cannot read KIP113 address from registry before Randao fork")
-	}
-
-	infos, err := system.ReadKip113All(backend, kip113Addr, parentNum)
-	if err != nil {
-		return nil, err
-	}
-	logger.Trace("BlsPublicKeyInfos cache miss", "number", num.Uint64())
-	p.cache.Add(num.Uint64(), infos)
-
-	return infos, nil
-}
-
-func (p *ChainBlsPubkeyProvider) ResetBlsCache() {
-	p.cache.Purge()
-}
 
 // Calculate KIP-114 Randao header fields
 // https://github.com/klaytn/kips/blob/kip114/KIPs/kip-114.md
@@ -159,7 +63,7 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 
 	// [proposerPubkey, proposerPop] = get_proposer_pubkey_pop()
 	// if not pop_verify(proposerPubkey, proposerPop): return False
-	proposerPub, err := sb.blsPubkeyProvider.GetBlsPubkey(chain, proposer, header.Number)
+	proposerPub, err := sb.randaoModule.GetBlsPubkey(proposer, header.Number)
 	if err != nil {
 		return err
 	}
