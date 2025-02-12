@@ -21,6 +21,9 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
+// TODO-kaiax: move it to kaiax/builder.
+type TxGenerator func(nonce uint64) (*types.Transaction, error)
+
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/gasless GaslessModule
 type GaslessModule interface {
 	kaiax.BaseModule
@@ -37,7 +40,6 @@ type GaslessModule interface {
 	// A (ApproveTx, SwapTx) pair or a (SwapTx) is executable even if sender's balance is insufficient.
 	IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool
 
-	// GetMakeLendTxFunc returns a function that creates a signed lend transaction that can fund the given approve and swap transactions.
-	// TODO: define makeTxFunc type elsewhere (e.g. bundling module)
-	GetMakeLendTxFunc(approveTxOrNil, swapTx *types.Transaction) func(nonce uint64) (*types.Transaction, error)
+	// GetLendTxGenerator returns a function that creates a signed lend transaction that can fund the given approve and swap transactions.
+	GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) TxGenerator
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -211,7 +212,7 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 // L2. LendTx.from = proposer
 // L3. LendTx.to = SwapTx.from
 // L4. LendTx.value = LendAmount(approveTxOrNil, swapTx)
-func (g *GaslessModule) GetMakeLendTxFunc(approveTxOrNil, swapTx *types.Transaction) func(nonce uint64) (*types.Transaction, error) {
+func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) gasless.TxGenerator {
 	return func(nonce uint64) (*types.Transaction, error) {
 		var (
 			to      = swapTx.ValidatedSender()

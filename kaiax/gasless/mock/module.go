@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	gasless "github.com/kaiachain/kaia/kaiax/gasless"
 )
 
 // MockGaslessModule is a mock of GaslessModule interface.
@@ -34,18 +35,18 @@ func (m *MockGaslessModule) EXPECT() *MockGaslessModuleMockRecorder {
 	return m.recorder
 }
 
-// GetMakeLendTxFunc mocks base method.
-func (m *MockGaslessModule) GetMakeLendTxFunc(arg0, arg1 *types.Transaction) func(uint64) (*types.Transaction, error) {
+// GetLendTxGenerator mocks base method.
+func (m *MockGaslessModule) GetLendTxGenerator(arg0, arg1 *types.Transaction) gasless.TxGenerator {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMakeLendTxFunc", arg0, arg1)
-	ret0, _ := ret[0].(func(uint64) (*types.Transaction, error))
+	ret := m.ctrl.Call(m, "GetLendTxGenerator", arg0, arg1)
+	ret0, _ := ret[0].(gasless.TxGenerator)
 	return ret0
 }
 
-// GetMakeLendTxFunc indicates an expected call of GetMakeLendTxFunc.
-func (mr *MockGaslessModuleMockRecorder) GetMakeLendTxFunc(arg0, arg1 interface{}) *gomock.Call {
+// GetLendTxGenerator indicates an expected call of GetLendTxGenerator.
+func (mr *MockGaslessModuleMockRecorder) GetLendTxGenerator(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMakeLendTxFunc", reflect.TypeOf((*MockGaslessModule)(nil).GetMakeLendTxFunc), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLendTxGenerator", reflect.TypeOf((*MockGaslessModule)(nil).GetLendTxGenerator), arg0, arg1)
 }
 
 // IsApproveTx mocks base method.
