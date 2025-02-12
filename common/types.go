@@ -354,6 +354,8 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
 // IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
+// This function receive rules as an argument for eest test function.
+// https://github.com/kaiachain/kaia/pull/238/files#diff-fc3a0d4efca344c1d9a8581260642d9faf747b2c71cf74f8294c4296a1463623R129
 var IsPrecompiledContractAddress func(addr Address, rules interface{}) bool = func(addr Address, rules interface{}) bool {
 	if bytes.Compare(addr.Bytes(), lastPrecompiledContractAddressHex) > 0 || addr == (Address{}) {
 		return false
