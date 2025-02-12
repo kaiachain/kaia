@@ -2764,6 +2764,16 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
+
+	// change evm and msg for eest
+	if bc != nil {
+		if e, hasMethod := bc.Engine().(interface {
+			BeforeApplyMessage(*vm.EVM, *types.Transaction)
+		}); hasMethod {
+			e.BeforeApplyMessage(vmenv, msg)
+		}
+	}
+
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg)
 	if err != nil {

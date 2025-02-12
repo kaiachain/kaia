@@ -443,7 +443,7 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNu
 	//if t.HumanReadable {
 	//	return kerrors.ErrHumanReadableNotSupported
 	//}
-	//if common.IsPrecompiledContractAddress(t.Recipient) {
+	//if common.IsPrecompiledContractAddress(t.Recipient, fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 	//	return kerrors.ErrPrecompiledContractAddress
 	//}
 	//if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
