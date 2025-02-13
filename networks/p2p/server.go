@@ -55,6 +55,9 @@ const (
 
 	// Maximum amount of time allowed for writing a complete message.
 	frameWriteTimeout = 20 * time.Second
+
+	// Maximum number of times to retry typed static node discovery.
+	typedStaticRetry = 3
 )
 
 var errServerStopped = errors.New("server stopped")
@@ -1580,19 +1583,19 @@ func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 	case common.CONSENSUSNODE:
 		tsMap := make(map[dialType]typedStatic)
 		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.CN {
-			tsMap[DT_CN] = typedStatic{100, 3} // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+			tsMap[DT_CN] = typedStatic{discover.MaxCNCNCount, typedStaticRetry}
 		}
 		return tsMap
 	case common.PROXYNODE:
 		tsMap := make(map[dialType]typedStatic)
 		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{1, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+			tsMap[DT_PN] = typedStatic{discover.MaxPNPNCount, typedStaticRetry}
 		}
 		return tsMap
 	case common.ENDPOINTNODE:
 		tsMap := make(map[dialType]typedStatic)
 		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{2, 3} // // TODO-Kaia-Node Change to literal to constant (maxNodeCount, MaxTry)
+			tsMap[DT_PN] = typedStatic{discover.MaxENPNCount, typedStaticRetry}
 		}
 		return tsMap
 	case common.BOOTNODE:

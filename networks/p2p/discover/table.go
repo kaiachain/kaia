@@ -55,6 +55,23 @@ const (
 	seedMaxAge = 5 * 24 * time.Hour
 )
 
+const (
+	// Below configuration reflects the Mainnet's size and network structure.
+	// Note that PNEN and ENEN connections are discovered with the Kademlia algorithm which doesn't accept a max argument.
+
+	// CN connects to each other in a mesh structure. Assuming up to 100 validators.
+	MaxCNCNCount = 100
+	// PN connects to one neighboring PN. In production, PN connections are usually specified via static nodes to make up a certain network structure, in which case this number is ignored.
+	MaxPNPNCount = 1
+	// EN connects to up to 2 PNs for high availability.
+	MaxENPNCount = 2
+	// BN connects to every CN and PN
+	MaxBNCNCount = 100
+	MaxBNPNCount = 100
+	// All nodes try to discover up to 3 BNs
+	MaxBNConn = 3
+)
+
 type DiscoveryType uint8
 
 type Discovery interface {
@@ -163,7 +180,7 @@ func newTable(cfg *Config) (Discovery, error) {
 	switch cfg.NodeType {
 	case NodeTypeCN:
 		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.CN {
-			tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
+			tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: MaxCNCNCount})
 		}
 		if cfg.DiscoverTypes.PN {
 			logger.Crit("Cannot enable PN discovery for CN")
@@ -171,32 +188,32 @@ func newTable(cfg *Config) (Discovery, error) {
 		if cfg.DiscoverTypes.EN {
 			logger.Crit("Cannot enable EN discovery for CN")
 		}
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypePN:
 		if cfg.DiscoverTypes.CN {
 			logger.Crit("Cannot enable CN discovery for PN")
 		}
 		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
-			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 1})
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxPNPNCount})
 		}
 		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
 			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
 		}
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypeEN:
 		if cfg.DiscoverTypes.CN {
 			logger.Crit("Cannot enable CN discovery for EN")
 		}
 		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
-			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 2})
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxENPNCount})
 		}
 		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
 			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
 		}
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypeBN:
-		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, 100, cfg.AuthorizedNodes))
-		tab.addStorage(NodeTypePN, NewSimpleStorage(NodeTypePN, true, 100, cfg.AuthorizedNodes))
+		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, MaxBNCNCount, cfg.AuthorizedNodes))
+		tab.addStorage(NodeTypePN, NewSimpleStorage(NodeTypePN, true, MaxBNPNCount, cfg.AuthorizedNodes))
 		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, max: 3})
 	}
