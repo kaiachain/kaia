@@ -141,10 +141,9 @@ type (
 	NodeType uint8
 
 	DiscoverTypesConfig struct {
-		Auto bool
-		CN   bool
-		PN   bool
-		EN   bool
+		CN bool
+		PN bool
+		EN bool
 	}
 )
 

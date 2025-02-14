@@ -179,7 +179,7 @@ func newTable(cfg *Config) (Discovery, error) {
 	// - Add xN if (Auto || DiscoverTypes.xN) && xN is supported by self.NodeType
 	switch cfg.NodeType {
 	case NodeTypeCN:
-		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.CN {
+		if cfg.DiscoverTypes.CN {
 			tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: MaxCNCNCount})
 		}
 		if cfg.DiscoverTypes.PN {
@@ -193,10 +193,10 @@ func newTable(cfg *Config) (Discovery, error) {
 		if cfg.DiscoverTypes.CN {
 			logger.Crit("Cannot enable CN discovery for PN")
 		}
-		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
+		if cfg.DiscoverTypes.PN {
 			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxPNPNCount})
 		}
-		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
+		if cfg.DiscoverTypes.EN {
 			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
 		}
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
@@ -204,10 +204,10 @@ func newTable(cfg *Config) (Discovery, error) {
 		if cfg.DiscoverTypes.CN {
 			logger.Crit("Cannot enable CN discovery for EN")
 		}
-		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.PN {
+		if cfg.DiscoverTypes.PN {
 			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxENPNCount})
 		}
-		if cfg.DiscoverTypes.Auto || cfg.DiscoverTypes.EN {
+		if cfg.DiscoverTypes.EN {
 			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
 		}
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})

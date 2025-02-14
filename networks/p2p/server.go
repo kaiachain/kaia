@@ -1582,19 +1582,19 @@ func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 	switch srv.ConnectionType {
 	case common.CONSENSUSNODE:
 		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.CN {
+		if srv.DiscoverTypes.CN {
 			tsMap[DT_CN] = typedStatic{discover.MaxCNCNCount, typedStaticRetry}
 		}
 		return tsMap
 	case common.PROXYNODE:
 		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
+		if srv.DiscoverTypes.PN {
 			tsMap[DT_PN] = typedStatic{discover.MaxPNPNCount, typedStaticRetry}
 		}
 		return tsMap
 	case common.ENDPOINTNODE:
 		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.Auto || srv.DiscoverTypes.PN {
+		if srv.DiscoverTypes.PN {
 			tsMap[DT_PN] = typedStatic{discover.MaxENPNCount, typedStaticRetry}
 		}
 		return tsMap
