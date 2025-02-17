@@ -107,6 +107,8 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
+			// Even if we skip fork levels, old EIPs are still retrospectively tested against Cancun or later forks.
+			// The EEST framework was added when Kaia was at Cancun hardfork. Previous forks will be, and continue to be tested with kaia-core-tests.
 			"Frontier",
 			"Homestead",
 			"Byzantium",

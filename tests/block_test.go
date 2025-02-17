@@ -80,6 +80,8 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		skipForks := []string{
+			// Even if we skip fork levels, old EIPs are still retrospectively tested against Cancun or later forks.
+			// The EEST framework was added when Kaia was at Cancun hardfork.
 			"Frontier",
 			"Homestead",
 			"Byzantium",
