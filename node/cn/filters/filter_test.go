@@ -24,8 +24,10 @@ package filters
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
@@ -100,10 +102,10 @@ func TestFilter_Logs(t *testing.T) {
 	ctx := context.Background()
 	{
 		mockCtrl, mockBackend, newFilter := genFilter(t)
-		mockBackend.EXPECT().HeaderByNumber(ctx, rpc.LatestBlockNumber).Times(1).Return(nil, nil)
+		mockBackend.EXPECT().HeaderByNumber(ctx, rpc.LatestBlockNumber).Times(1).Return(nil, errors.New("latest header not found"))
 		logs, err := newFilter.Logs(ctx)
 		assert.Nil(t, logs)
-		assert.NoError(t, err)
+		assert.Error(t, err)
 		mockCtrl.Finish()
 	}
 }
@@ -304,58 +306,85 @@ func TestFilters(t *testing.T) {
 		db.WriteReceipts(block.Hash(), block.NumberU64(), receipts[i])
 	}
 
-	filter := NewRangeFilter(backend, 0, -1, []common.Address{addr}, [][]common.Hash{{hash1, hash2, hash3, hash4}})
-
-	logs, _ := filter.Logs(context.Background())
-	if len(logs) != 4 {
-		t.Error("expected 4 log, got", len(logs))
+	for i, tc := range []struct {
+		f    *Filter
+		want string
+		err  string
+	}{
+		{
+			f:    NewRangeFilter(backend, 0, int64(rpc.LatestBlockNumber), []common.Address{addr}, [][]common.Hash{{hash1, hash2, hash3, hash4}}),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696331"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false},{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696332"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false},{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696333"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false},{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696334"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f:    NewRangeFilter(backend, 900, 999, []common.Address{addr}, [][]common.Hash{{hash3}}),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696333"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f:    NewRangeFilter(backend, 990, int64(rpc.LatestBlockNumber), []common.Address{addr}, [][]common.Hash{{hash3}}),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696333"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f:    NewRangeFilter(backend, 1, 10, []common.Address{addr}, [][]common.Hash{{hash1, hash2}}),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696331"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false},{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696332"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f:    NewRangeFilter(backend, 1, 10, nil, [][]common.Hash{{hash1, hash2}}),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696331"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false},{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696332"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f: NewRangeFilter(backend, 0, int64(rpc.LatestBlockNumber), nil, [][]common.Hash{{common.BytesToHash([]byte("fail"))}}),
+		},
+		{
+			f: NewRangeFilter(backend, 0, int64(rpc.LatestBlockNumber), []common.Address{common.BytesToAddress([]byte("failmenow"))}, nil),
+		},
+		{
+			f: NewRangeFilter(backend, 0, int64(rpc.LatestBlockNumber), nil, [][]common.Hash{{common.BytesToHash([]byte("fail"))}, {hash1}}),
+		},
+		{
+			f:    NewRangeFilter(backend, int64(rpc.LatestBlockNumber), int64(rpc.LatestBlockNumber), nil, nil),
+			want: `[{"address":"0x71562b71999873db5b286df957af199ec94617f7","topics":["0x0000000000000000000000000000000000000000000000000000746f70696334"],"data":"0x","blockNumber":"0x0","transactionHash":"0x0000000000000000000000000000000000000000000000000000000000000000","transactionIndex":"0x0","blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","logIndex":"0x0","removed":false}]`,
+		},
+		{
+			f:   NewRangeFilter(backend, int64(rpc.PendingBlockNumber), int64(rpc.PendingBlockNumber), nil, nil),
+			err: errPendingLogsUnsupported.Error(),
+		},
+		{
+			f:   NewRangeFilter(backend, int64(rpc.LatestBlockNumber), int64(rpc.PendingBlockNumber), nil, nil),
+			err: errPendingLogsUnsupported.Error(),
+		},
+		{
+			f:   NewRangeFilter(backend, int64(rpc.PendingBlockNumber), int64(rpc.LatestBlockNumber), nil, nil),
+			err: errPendingLogsUnsupported.Error(),
+		},
+	} {
+		logs, err := tc.f.Logs(context.Background())
+		if err == nil && tc.err != "" {
+			t.Fatalf("test %d, expected error %q, got nil", i, tc.err)
+		} else if err != nil && err.Error() != tc.err {
+			t.Fatalf("test %d, expected error %q, got %q", i, tc.err, err.Error())
+		}
+		if tc.want == "" && len(logs) == 0 {
+			continue
+		}
+		have, err := json.Marshal(logs)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(have) != tc.want {
+			t.Fatalf("test %d, have:\n%s\nwant:\n%s", i, have, tc.want)
+		}
 	}
 
-	filter = NewRangeFilter(backend, 900, 999, []common.Address{addr}, [][]common.Hash{{hash3}})
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 1 {
-		t.Error("expected 1 log, got", len(logs))
-	}
-	if len(logs) > 0 && logs[0].Topics[0] != hash3 {
-		t.Errorf("expected log[0].Topics[0] to be %x, got %x", hash3, logs[0].Topics[0])
-	}
-
-	filter = NewRangeFilter(backend, 990, -1, []common.Address{addr}, [][]common.Hash{{hash3}})
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 1 {
-		t.Error("expected 1 log, got", len(logs))
-	}
-	if len(logs) > 0 && logs[0].Topics[0] != hash3 {
-		t.Errorf("expected log[0].Topics[0] to be %x, got %x", hash3, logs[0].Topics[0])
-	}
-
-	filter = NewRangeFilter(backend, 1, 10, nil, [][]common.Hash{{hash1, hash2}})
-
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 2 {
-		t.Error("expected 2 log, got", len(logs))
-	}
-
-	failHash := common.BytesToHash([]byte("fail"))
-	filter = NewRangeFilter(backend, 0, -1, nil, [][]common.Hash{{failHash}})
-
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 0 {
-		t.Error("expected 0 log, got", len(logs))
-	}
-
-	failAddr := common.BytesToAddress([]byte("failmenow"))
-	filter = NewRangeFilter(backend, 0, -1, []common.Address{failAddr}, nil)
-
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 0 {
-		t.Error("expected 0 log, got", len(logs))
-	}
-
-	filter = NewRangeFilter(backend, 0, -1, nil, [][]common.Hash{{failHash}, {hash1}})
-
-	logs, _ = filter.Logs(context.Background())
-	if len(logs) != 0 {
-		t.Error("expected 0 log, got", len(logs))
-	}
+	t.Run("timeout", func(t *testing.T) {
+		f := NewRangeFilter(backend, 0, rpc.LatestBlockNumber.Int64(), nil, nil)
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Hour))
+		defer cancel()
+		_, err := f.Logs(ctx)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if err.Error() != errors.New("query timeout exceeded").Error() {
+			t.Fatalf("expected context.DeadlineExceeded, got %v", err)
+		}
+	})
 }

@@ -85,7 +85,7 @@ func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockcha
 		database:   database,
 		blockchain: blockchain,
 		config:     genesis.Config,
-		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{database, blockchain}, false),
+		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{database, blockchain}),
 	}
 	backend.rollback()
 	return backend

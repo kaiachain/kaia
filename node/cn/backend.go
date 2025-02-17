@@ -670,7 +670,7 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
+	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
