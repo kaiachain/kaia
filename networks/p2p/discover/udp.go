@@ -139,6 +139,12 @@ type (
 
 	// TODO-Kaia Change private type
 	NodeType uint8
+
+	DiscoverTypesConfig struct {
+		CN bool
+		PN bool
+		EN bool
+	}
 )
 
 func makeEndpoint(addr *net.UDPAddr, tcpPort uint16, nType NodeType) rpcEndpoint {
@@ -281,6 +287,9 @@ type Config struct {
 	// These settings are required for discovery packet control
 	MaxNeighborsNode uint
 	AuthorizedNodes  []*Node
+
+	// DiscoverNodetype is list of node type to enable discovery.
+	DiscoverTypes DiscoverTypesConfig
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
