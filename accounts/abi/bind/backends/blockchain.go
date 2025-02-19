@@ -301,7 +301,7 @@ func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.F
 	if !ok {
 		return nil, errors.New("BlockChainForCaller is not blockchain.BlockChain")
 	}
-	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), bc}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), bc, nil}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {

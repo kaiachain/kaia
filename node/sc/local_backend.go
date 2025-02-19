@@ -28,6 +28,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
@@ -82,6 +83,11 @@ func (fb *filterLocalBackend) GetBlockReceipts(ctx context.Context, hash common.
 		return nil
 	}
 	return fb.subbridge.blockchain.GetReceiptsByBlockHash(hash)
+}
+
+func (fb *filterLocalBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	// Not supported
+	return nil, nil, nil
 }
 
 func (fb *filterLocalBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {

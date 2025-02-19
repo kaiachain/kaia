@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
@@ -45,6 +46,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	HeaderByHash(ctx context.Context, blockHash common.Hash) (*types.Header, error)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
 

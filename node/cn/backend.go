@@ -85,7 +85,7 @@ type Miner interface {
 	Mining() bool
 	HashRate() (tot int64)
 	SetExtra(extra []byte) error
-	Pending() (*types.Block, *state.StateDB)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
 	kaiax.ExecutionModuleHost // Because miner executes blocks, inject ExecutionModule.
 }
