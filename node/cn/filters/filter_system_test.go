@@ -180,7 +180,9 @@ func (b *testBackend) notifyPending(logs []*types.Log) {
 	genesis := &blockchain.Genesis{
 		Config: params.TestChainConfig,
 	}
-	_, blocks, _ := blockchain.GenerateChainWithGenesis(genesis, gxhash.NewFaker(), 2, func(i int, b *blockchain.BlockGen) {})
+	db := database.NewMemoryDBManager()
+	genesisBlock := genesis.MustCommit(db)
+	blocks, _ := blockchain.GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 2, func(i int, b *blockchain.BlockGen) {})
 	b.setPending(blocks[1], []*types.Receipt{{Logs: logs}})
 	b.chainFeed.Send(blockchain.ChainEvent{Block: blocks[0]})
 }
