@@ -947,12 +947,21 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
-	return api.publicTransactionPoolAPI.GetTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
+	if err != nil {
+		return nil
+	}
+
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
-	return api.publicTransactionPoolAPI.GetTransactionByBlockHashAndIndex(ctx, blockHash, index)
+	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
+	if err != nil || block == nil {
+		return nil
+	}
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
