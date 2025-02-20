@@ -18,7 +18,6 @@ package impl
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -37,23 +36,10 @@ func (b *BuilderModule) Arrayify(heap []*types.TransactionsByPriceAndNonce) []*t
 
 // IsConflict checks if new bundles conflict with previous bundles
 func (b *BuilderModule) IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) bool {
-	// collect all tx hashes from previous bundles
-	prevTxHashes := make(map[common.Hash]struct{})
-	for _, bundle := range prevBundles {
-		for _, txOrGen := range bundle.BundleTxs {
-			if tx, ok := txOrGen.(*types.Transaction); ok {
-				prevTxHashes[tx.Hash()] = struct{}{}
-			}
-		}
-	}
-
-	// check if any new bundle tx exists in previous bundles
-	for _, bundle := range newBundles {
-		for _, txOrGen := range bundle.BundleTxs {
-			if tx, ok := txOrGen.(*types.Transaction); ok {
-				if _, exists := prevTxHashes[tx.Hash()]; exists {
-					return true
-				}
+	for _, newBundle := range newBundles {
+		for _, prevBundle := range prevBundles {
+			if prevBundle.IsConflict(newBundle) {
+				return true
 			}
 		}
 	}

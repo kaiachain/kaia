@@ -29,6 +29,7 @@ type Bundle struct {
 	TargetTxHash common.Hash
 }
 
+// IsConflict checks if newBundle conflicts with current bundle.
 func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 	// 1. Check for same target tx hash
 	if b.TargetTxHash == newBundle.TargetTxHash {

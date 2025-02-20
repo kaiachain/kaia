@@ -18,19 +18,10 @@ package builder
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
 type TxGenerator func(nonce uint64) (*types.Transaction, error)
-
-type Bundle struct {
-	// each element can be either *types.Transaction, or TxGenerator
-	BundleTxs []interface{}
-
-	// BundleTxs is placed AFTER the target tx. If empty hash, it is placed at the very front.
-	TargetTxHash common.Hash
-}
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/builder BuilderModule
 type BuilderModule interface {

@@ -1,3 +1,19 @@
+// Copyright 2024 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
+
 package impl
 
 import (
@@ -6,22 +22,21 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/assert"
 )
 
-func makeBundle(nonces []uint64) *builder.Bundle {
-	bundleTxs := make([]interface{}, len(nonces))
-	to := common.Address{}
-	for i, nonce := range nonces {
-		bundleTxs[i] = types.NewTransaction(nonce, to, common.Big0, 0, common.Big0, nil)
+func TestIsConflict(t *testing.T) {
+	txs := make([]*types.Transaction, 4)
+	for i := range txs {
+		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
-	return &builder.Bundle{
-		BundleTxs:    bundleTxs,
+
+	b0 := &builder.Bundle{
+		BundleTxs:    []interface{}{txs[0], txs[1]},
 		TargetTxHash: common.Hash{},
 	}
-}
+	defaultTargetHash := txs[1].Hash() // make TargetTxHash checks pass
 
-func TestIsConflict(t *testing.T) {
 	testcases := []struct {
 		name        string
 		prevBundles []*builder.Bundle
@@ -29,28 +44,34 @@ func TestIsConflict(t *testing.T) {
 		expected    bool
 	}{
 		{
-			name:        "Non-overlapping txs",
-			prevBundles: []*builder.Bundle{makeBundle([]uint64{1, 2})},
-			newBundles:  []*builder.Bundle{makeBundle([]uint64{3, 4})},
+			name:        "Same TargetTxHash",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{[]interface{}{}, common.Hash{}}},
+			expected:    true,
+		},
+		{
+			name:        "TargetTxHash divides a bundle",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{[]interface{}{}, txs[0].Hash()}},
+			expected:    true,
+		},
+		{
+			name:        "Overlapping BundleTxs 1",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{[]interface{}{txs[0], txs[2]}, defaultTargetHash}},
+			expected:    true,
+		},
+		{
+			name:        "Overlapping BundleTxs 2",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{[]interface{}{txs[1], txs[2], txs[3]}, defaultTargetHash}},
+			expected:    true,
+		},
+		{
+			name:        "Non-overlapping BundleTxs",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{[]interface{}{txs[2], txs[3]}, defaultTargetHash}},
 			expected:    false,
-		},
-		{
-			name:        "Overlapping tx 1",
-			prevBundles: []*builder.Bundle{makeBundle([]uint64{1, 2})},
-			newBundles:  []*builder.Bundle{makeBundle([]uint64{1, 3})},
-			expected:    true,
-		},
-		{
-			name:        "Overlapping tx 2",
-			prevBundles: []*builder.Bundle{makeBundle([]uint64{1, 2})},
-			newBundles:  []*builder.Bundle{makeBundle([]uint64{2, 3, 4})},
-			expected:    true,
-		},
-		{
-			name:        "Overlapping tx 3",
-			prevBundles: []*builder.Bundle{makeBundle([]uint64{1, 2}), makeBundle([]uint64{3, 4})},
-			newBundles:  []*builder.Bundle{makeBundle([]uint64{3})},
-			expected:    true,
 		},
 	}
 
@@ -58,7 +79,7 @@ func TestIsConflict(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			gotConflict := b.IsConflict(tc.prevBundles, tc.newBundles)
-			require.Equal(t, tc.expected, gotConflict)
+			assert.Equal(t, tc.expected, gotConflict)
 		})
 	}
 }

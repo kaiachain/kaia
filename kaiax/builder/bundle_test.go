@@ -30,6 +30,12 @@ func TestBundle_IsConflict(t *testing.T) {
 		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
 
+	b0 := &Bundle{
+		BundleTxs:    []interface{}{txs[0], txs[1]},
+		TargetTxHash: common.Hash{},
+	}
+	defaultTargetHash := txs[1].Hash()
+
 	testcases := []struct {
 		name      string
 		bundle    *Bundle
@@ -37,11 +43,17 @@ func TestBundle_IsConflict(t *testing.T) {
 		expected  bool
 	}{
 		{
-			name: "Same target tx hash",
-			bundle: &Bundle{
+			name:   "Same TargetTxHash",
+			bundle: b0,
+			newBundle: &Bundle{
 				BundleTxs:    []interface{}{},
-				TargetTxHash: txs[0].Hash(),
+				TargetTxHash: common.Hash{},
 			},
+			expected: true,
+		},
+		{
+			name:   "TargetTxHash divides a bundle",
+			bundle: b0,
 			newBundle: &Bundle{
 				BundleTxs:    []interface{}{},
 				TargetTxHash: txs[0].Hash(),
@@ -49,50 +61,20 @@ func TestBundle_IsConflict(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "Target tx hash breaks bundle",
-			bundle: &Bundle{
-				BundleTxs:    []interface{}{txs[1], txs[2]},
-				TargetTxHash: txs[0].Hash(),
-			},
-			newBundle: &Bundle{
-				BundleTxs:    []interface{}{},
-				TargetTxHash: txs[1].Hash(),
-			},
-			expected: true,
-		},
-		{
-			name: "Target tx hash equals last tx (no conflict)",
-			bundle: &Bundle{
-				BundleTxs:    []interface{}{txs[1], txs[2]},
-				TargetTxHash: txs[0].Hash(),
-			},
-			newBundle: &Bundle{
-				BundleTxs:    []interface{}{},
-				TargetTxHash: txs[2].Hash(),
-			},
-			expected: false,
-		},
-		{
-			name: "Overlapping transactions",
-			bundle: &Bundle{
-				BundleTxs:    []interface{}{txs[0], txs[1]},
-				TargetTxHash: txs[0].Hash(),
-			},
+			name:   "Overlapping BundleTxs",
+			bundle: b0,
 			newBundle: &Bundle{
 				BundleTxs:    []interface{}{txs[0]},
-				TargetTxHash: txs[1].Hash(),
+				TargetTxHash: defaultTargetHash,
 			},
 			expected: true,
 		},
 		{
-			name: "Non-overlapping transactions",
-			bundle: &Bundle{
-				BundleTxs:    []interface{}{txs[0], txs[1]},
-				TargetTxHash: txs[0].Hash(),
-			},
+			name:   "Non-overlapping BundleTxs",
+			bundle: b0,
 			newBundle: &Bundle{
 				BundleTxs:    []interface{}{txs[2], txs[3]},
-				TargetTxHash: txs[1].Hash(),
+				TargetTxHash: defaultTargetHash,
 			},
 			expected: false,
 		},
