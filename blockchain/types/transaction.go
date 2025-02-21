@@ -1093,6 +1093,7 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
+// We need to be careful that a panic occurs when we intend to create a SetCodeTx.
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
 		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},

@@ -249,12 +249,7 @@ func (t *TxInternalDataEthereumSetCode) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataEthereumSetCode) GetRecipient() *common.Address {
-	if t.Recipient == (common.Address{}) {
-		return nil
-	}
-
-	to := common.Address(t.Recipient)
-	return &to
+	return &t.Recipient
 }
 
 func (t *TxInternalDataEthereumSetCode) GetAmount() *big.Int {
@@ -405,12 +400,8 @@ func (t *TxInternalDataEthereumSetCode) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient == (common.Address{}) {
-		return kerrors.ErrEmptyRecipient
-	} else {
-		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
-		}
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
@@ -443,16 +434,11 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
-		to = "[contract creation]"
-	} else {
-		to = hex.EncodeToString(t.GetRecipient().Bytes())
-	}
+	to = hex.EncodeToString(t.GetRecipient().Bytes())
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
 		TX(%x)
-		Contract: %v
-		Chaind:   %#x
+		ChainId:   %#x
 		From:     %s
 		To:       %s
 		Nonce:    %v
@@ -469,7 +455,6 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		Hex:      %x
 	`,
 		tx.Hash(),
-		t.GetRecipient() == nil,
 		t.ChainId(),
 		from,
 		to,
