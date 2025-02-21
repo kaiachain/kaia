@@ -17,13 +17,45 @@
 package impl
 
 import (
+	"crypto/ecdsa"
+	"math/big"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"gotest.tools/assert"
 )
+
+func TestArrayify(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 25)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+
+	signer := types.LatestSignerForChainID(common.Big1)
+	// Generate a batch of transactions with overlapping values, but shifted nonces
+	groups := map[common.Address]types.Transactions{}
+	hashes := map[common.Hash]bool{}
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		for i := 0; i < 25; i++ {
+			tx, _ := types.SignTx(types.NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
+			groups[addr] = append(groups[addr], tx)
+			hashes[tx.Hash()] = true
+		}
+	}
+
+	heap := types.NewTransactionsByPriceAndNonce(signer, groups, nil)
+	b := NewBuilderModule()
+	txs := b.Arrayify(heap)
+	assert.Equal(t, len(txs), 25)
+	for i := range txs {
+		assert.Equal(t, hashes[txs[i].Hash()], true)
+	}
+}
 
 func TestIsConflict(t *testing.T) {
 	txs := make([]*types.Transaction, 4)

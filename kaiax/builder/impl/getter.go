@@ -28,10 +28,14 @@ func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []
 }
 
 // Arrayify flattens transaction heaps into a single array
-func (b *BuilderModule) Arrayify(heap []*types.TransactionsByPriceAndNonce) []*types.Transaction {
-	// TODO: implement
-	result := make([]*types.Transaction, 0)
-	return result
+func (b *BuilderModule) Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
+	// TODO: deep copy heap
+	ret := make([]*types.Transaction, 0)
+	for !heap.Empty() {
+		ret = append(ret, heap.Peek())
+		heap.Pop()
+	}
+	return ret
 }
 
 // IsConflict checks if new bundles conflict with previous bundles

@@ -32,7 +32,7 @@ type BuilderModule interface {
 	IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) []*types.Transaction
 
 	// Arrayify flattens txs in heap into an array
-	Arrayify(heap []*types.TransactionsByPriceAndNonce) []*types.Transaction
+	Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction
 
 	// IsConflict checks if the new bundles conflict with the previous bundles
 	IsConflict(prevBundles []*Bundle, newBundles []*Bundle) bool
