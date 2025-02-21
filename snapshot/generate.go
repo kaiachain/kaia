@@ -648,15 +648,12 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 		if err := checkAndFlush(marker); err != nil {
 			return err
 		}
-		// If the iterated account is the contract, create a further loop to
-		// verify or regenerate the contract storage.
-		contractAcc, ok := acc.(*account.SmartContractAccount)
-		if !ok {
+		// If the iterated account is the ProgramAccount, create a further loop to
+		// verify or regenerate the ProgramAccount storage.
+		programAcc := account.GetProgramAccount(acc)
+		if programAcc == nil {
 			// If the root is empty, we still need to ensure that any previous snapshot
 			// storage values are cleared
-			// TODO: investigate if this can be avoided, this will be very costly since it
-			// affects every single EOA account
-			//  - Perhaps we can avoid if where codeHash is emptyCode
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength
 			if err := wipeKeyRange(dl.diskdb, "storage", prefix, nil, nil, keyLen, snapWipedStorageMeter, false); err != nil {
@@ -668,7 +665,7 @@ func (dl *diskLayer) generate(stats *generatorStats) {
 			return nil
 		}
 
-		rootHash := contractAcc.GetStorageRoot().Unextend()
+		rootHash := programAcc.GetStorageRoot().Unextend()
 		if rootHash == types.EmptyRootHash {
 			prefix := append(database.SnapshotStoragePrefix, accountHash.Bytes()...)
 			keyLen := len(database.SnapshotStoragePrefix) + 2*common.HashLength

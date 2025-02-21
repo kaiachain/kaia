@@ -1093,6 +1093,8 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
+// Care must be taken when creating SetCodeTx because if you assign nil to `to`,
+// a panic will occur because `newTxInternalDataEthereumSetCodeWithValues` reference the pointer of `to`.
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
 		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
