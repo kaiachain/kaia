@@ -757,7 +757,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 
 	// EIP7702's SetCodeTx inherits the Blob transaction specifications and does not allow a nil to.
 	if args.AuthorizationList != nil && args.To == nil {
-		return nil, errors.New("SetCodeTx does not allow a nil to")
+		return nil, errors.New("SetCodeTx must have a non-nil recipient address")
 	}
 
 	// Set default gas & gas price if none were set
