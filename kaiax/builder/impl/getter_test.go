@@ -25,7 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestArrayify(t *testing.T) {
@@ -55,6 +55,7 @@ func TestArrayify(t *testing.T) {
 	for i := range txs {
 		assert.Equal(t, hashes[txs[i].Hash()], true)
 	}
+	assert.False(t, heap.Empty()) // don't modify the original heap
 }
 
 func TestIsConflict(t *testing.T) {
