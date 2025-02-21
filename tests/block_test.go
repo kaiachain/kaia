@@ -70,7 +70,9 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
 	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-31_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-32_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-empty_calldata\]`)
 	// type 3 tx (EIP-4844) is not supported
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test\]`)
