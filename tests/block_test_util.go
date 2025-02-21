@@ -212,12 +212,12 @@ func (t *BlockTest) Run() error {
 	if err != nil {
 		return err
 	}
-	simulatedRoot, err := useEthStateRoot(st)
+	simulatedRoot, err := useEthGenesisState(st)
 	if err != nil {
 		return err
 	}
 	if simulatedRoot != t.json.Genesis.Root {
-		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", gblock.Root().Bytes()[:6], t.json.Genesis.Root[:6])
+		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", simulatedRoot.Bytes()[:6], t.json.Genesis.Root[:6])
 	}
 
 	tracer := vm.NewStructLogger(nil)
