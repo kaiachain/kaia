@@ -41,6 +41,8 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
@@ -71,6 +73,7 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
+	modules            []kaiax.TxPoolModule
 }
 
 var (
@@ -140,6 +143,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mGasless := gasless_impl.NewGaslessModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -166,6 +170,10 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 			Chain:       bc,
 			Downloader:  fakeDownloader,
 		}),
+		mGasless.Init(&gasless_impl.InitOpts{
+			ChainConfig: genesis.Config,
+			NodeKey:     validatorPrivKeys[0],
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -180,6 +188,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
 		validatorPrivKeys, engine, genesis, mGov,
+		[]kaiax.TxPoolModule{mGasless},
 	}, nil
 }
 

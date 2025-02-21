@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -27,6 +28,7 @@ import (
 
 var (
 	_ gasless.GaslessModule = (*GaslessModule)(nil)
+	_ kaiax.TxPoolModule    = (*GaslessModule)(nil)
 
 	logger = log.NewModuleLogger(log.KaiaxGasless)
 )

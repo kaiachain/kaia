@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
@@ -281,7 +282,7 @@ func TestBlockChainSendTransaction(t *testing.T) {
 	state, err := bc.State()
 	txPoolConfig := blockchain.DefaultTxPoolConfig
 	txPoolConfig.Journal = "/dev/null" // disable journaling to file
-	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()})
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()}, []kaiax.TxPoolModule{})
 	defer txPool.Stop()
 	assert.Nil(t, err)
 	c := NewBlockchainContractBackend(bc, txPool, nil)
@@ -365,7 +366,7 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 	any := gomock.Any()
 	txPoolConfig := blockchain.DefaultTxPoolConfig
 	txPoolConfig.Journal = "/dev/null" // disable journaling to file
-	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()})
+	txPool := blockchain.NewTxPool(txPoolConfig, bc.Config(), bc, &dummyGovModule{chainConfig: bc.Config()}, []kaiax.TxPoolModule{})
 	subscribeNewTxsEvent := func(ch chan<- blockchain.NewTxsEvent) kaia.Subscription {
 		return txPool.SubscribeNewTxsEvent(ch)
 	}

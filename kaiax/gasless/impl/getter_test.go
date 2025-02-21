@@ -53,3 +53,62 @@ func TestIsApproveTx(t *testing.T) {
 		require.Equal(t, tc.ok, ok)
 	}
 }
+
+func TestIsSwapTx(t *testing.T) {
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	testcases := []struct {
+		tx *types.Transaction
+		ok bool
+	}{
+		{ // Legacy TestRouter.swapForGas(Token, 10, 100, 2021000)
+			types.NewTransaction(0, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
+				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688")),
+			true,
+		},
+	}
+
+	g := NewGaslessModule()
+	key, _ := crypto.GenerateKey()
+	g.Init(&InitOpts{
+		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		NodeKey:     key,
+	})
+	for _, tc := range testcases {
+		ok := g.IsSwapTx(tc.tx)
+		require.Equal(t, tc.ok, ok)
+	}
+}
+
+func TestIsExecutable(t *testing.T) {
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	testcases := []struct {
+		approve *types.Transaction
+		swap    *types.Transaction
+		ok      bool
+	}{
+		{
+			types.NewTransaction(0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1),
+				hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240")),
+			types.NewTransaction(1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
+				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688")),
+			true,
+		},
+		{
+			nil,
+			types.NewTransaction(1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
+				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000f9448")),
+			true,
+		},
+	}
+
+	g := NewGaslessModule()
+	key, _ := crypto.GenerateKey()
+	g.Init(&InitOpts{
+		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		NodeKey:     key,
+	})
+	for _, tc := range testcases {
+		ok := g.IsExecutable(tc.approve, tc.swap)
+		require.Equal(t, tc.ok, ok)
+	}
+}

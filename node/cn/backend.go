@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
@@ -344,7 +345,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
+
+	mGasless := gasless_impl.NewGaslessModule()
+	mGasless.Init(&gasless_impl.InitOpts{
+		ChainConfig: cn.chainConfig,
+		NodeKey:     ctx.NodeKey(),
+	})
+
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov, []kaiax.TxPoolModule{mGasless})
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB

@@ -197,9 +197,13 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		if approveArgs.Amount.Cmp(swapArgs.AmountIn) < 0 {
 			return false
 		}
+		// SP3.
+		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
+			return false
+		}
 	}
 
-	// SP3.
+	// SP4.
 	if swapArgs.AmountRepay.Cmp(repayAmount(approveTxOrNil, swapTx)) != 0 {
 		return false
 	}
@@ -222,13 +226,15 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 		)
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:     nonce,
-			types.TxValueKeyTo:        &to,
-			types.TxValueKeyAmount:    lendAmount(approveTxOrNil, swapTx),
-			types.TxValueKeyGasLimit:  params.TxGas,
-			types.TxValueKeyGasFeeCap: swapTx.GasFeeCap(),
-			types.TxValueKeyGasTipCap: swapTx.GasTipCap(),
-			types.TxValueKeyChainID:   chainId,
+			types.TxValueKeyNonce:      nonce,
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
+			types.TxValueKeyData:       common.Hex2Bytes("0x"),
+			types.TxValueKeyGasLimit:   params.TxGas,
+			types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
+			types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
+			types.TxValueKeyAccessList: types.AccessList{},
+			types.TxValueKeyChainID:    chainId,
 		})
 		if err != nil {
 			return nil, err

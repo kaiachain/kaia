@@ -205,7 +205,7 @@ func (m *txSortedMap) Ready(start uint64) types.Transactions {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
+func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *TxPool) types.Transactions {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		return nil
@@ -216,6 +216,18 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Tr
 		if m.items[next].GasPrice().Cmp(baseFee) < 0 {
 			break
 		}
+
+		rejectByModule := false
+		for _, module := range pool.modules {
+			if module.IsModuleTx(pool, m.items[next]) && !module.IsReady(pool, m.items, next, ready) {
+				rejectByModule = true
+				break
+			}
+		}
+		if rejectByModule {
+			break
+		}
+
 		ready = append(ready, m.items[next])
 		delete(m.items, next)
 		heap.Pop(m.index)
@@ -380,6 +392,16 @@ func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions
 				return senderBalance.Cmp(tx.Value()) < 0 || feePayerBalance.Cmp(tx.Fee()) < 0
 			}
 		}
+
+		// balance check for module transaction
+		for _, module := range pool.modules {
+			if module.IsModuleTx(pool, tx) {
+				if checkBalance := module.GetCheckBalance(); checkBalance != nil {
+					return checkBalance(pool, tx) != nil
+				}
+			}
+		}
+
 		// For other transactions, all tx cost should be payable by the sender.
 		return senderBalance.Cmp(tx.Cost()) < 0
 	})
@@ -465,8 +487,8 @@ func (l *txList) Ready(start uint64) types.Transactions {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int) types.Transactions {
-	return l.txs.ReadyWithGasPrice(start, baseFee)
+func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *TxPool) types.Transactions {
+	return l.txs.ReadyWithGasPrice(start, baseFee, pool)
 }
 
 // Len returns the length of the transaction list.
