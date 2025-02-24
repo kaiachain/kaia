@@ -112,20 +112,17 @@ func makeTestStakingInfo(stakingAmounts []uint64, isPrague bool) *staking.Stakin
 		clStakingInfos = staking.CLStakingInfos{
 			&staking.CLStakingInfo{
 				CLNodeId:        common.HexToAddress("0xa01"), // For Node1
-				CLPoolAddr:      common.HexToAddress("0xd01"),
-				CLRewardAddr:    common.HexToAddress("0xe01"),
+				CLPoolAddr:      common.HexToAddress("0xe01"),
 				CLStakingAmount: 999_999, // Total staking amount = 5_000_001 + 999_999 = 6_000_000
 			},
 			&staking.CLStakingInfo{
 				CLNodeId:        common.HexToAddress("0xa02"), // For Node2
-				CLPoolAddr:      common.HexToAddress("0xd02"),
-				CLRewardAddr:    common.HexToAddress("0xe02"),
+				CLPoolAddr:      common.HexToAddress("0xe02"),
 				CLStakingAmount: 1_999_998, // Total staking amount = 5_000_002 + 1_999_998 = 7_000_000
 			},
 			&staking.CLStakingInfo{
 				CLNodeId:        common.HexToAddress("0xa03"), // For Node3
-				CLPoolAddr:      common.HexToAddress("0xd03"),
-				CLRewardAddr:    common.HexToAddress("0xe03"),
+				CLPoolAddr:      common.HexToAddress("0xe03"),
 				CLStakingAmount: 2_999_997, // Total staking amount = 5_000_003 + 2_999_997 = 8_000_000
 			},
 		}

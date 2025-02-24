@@ -394,7 +394,7 @@ func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, s
 					// The remaining amount will be added to the cnAmount.
 					cnAmount, clAmount := cn.Split(reward)
 					alloc[cn.RewardAddr] = cnAmount
-					alloc[cn.CLStakingInfo.CLRewardAddr] = clAmount
+					alloc[cn.CLStakingInfo.CLPoolAddr] = clAmount
 				} else {
 					alloc[cn.RewardAddr] = reward
 				}
@@ -447,7 +447,7 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 		cnAmount, clAmount := cn.Split(proposer)
 
 		newSpec.IncRecipient(cn.RewardAddr, cnAmount)
-		newSpec.IncRecipient(cn.CLStakingInfo.CLRewardAddr, clAmount)
+		newSpec.IncRecipient(cn.CLStakingInfo.CLPoolAddr, clAmount)
 		return newSpec
 	}
 
