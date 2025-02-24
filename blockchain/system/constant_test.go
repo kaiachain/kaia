@@ -37,6 +37,6 @@ func TestRuntimeCodeRegression(t *testing.T) {
 
 	for _, tc := range tcs {
 		codeHash := crypto.Keccak256Hash(tc.code)
-		assert.Equal(t, codeHash.Hex(), tc.hash)
+		assert.Equal(t, tc.hash, codeHash.Hex())
 	}
 }
