@@ -141,7 +141,7 @@ Upon rewind, this module deletes the related persistent data and flushes the in-
 
 ### kaia_getStakingInfo, governance_getStakingInfo
 
-Query the StakingInfo to be used for the block `num`.
+Query the StakingInfo to be used for the block `num`. If the block number is before the Prague hardfork or there's no consensus liquidity, the `clStakingInfos` field will be null.
 
 - Parameters
   - `num`: block number or hash
@@ -160,6 +160,15 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   "id": 1,
   "result": {
     "blockNum": 165145974,
+    "clStakingInfos": [{
+      "clNodeId": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+      "clPoolAddr": "0x106b8d39ec9d669e8f8a2aef5f06b3fcdaf074fb",
+      "clStakingAmount": 5000000
+    }, {
+      "clNodeId": "0x571e53df607be97431a5bbefca1dffe5aef56f4d",
+      "clPoolAddr": "0xaf7fb5d4bfe3126d7024eccc5ab18e887eff7979",
+      "clStakingAmount": 10000000
+    }],
     "councilNodeAddrs": [
       "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
       "0x571e53df607be97431a5bbefca1dffe5aef56f4d",
