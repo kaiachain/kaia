@@ -40,7 +40,6 @@ const ( // Numeric Type IDs used by AddressBook.getAllAddress(), and in turn by 
 type clRegistryResult struct {
 	NodeIds        []common.Address
 	ClPools        []common.Address
-	ClStakings     []common.Address
 	StakingAmounts []*big.Int
 }
 
@@ -156,8 +155,8 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		logger.Error("length of type list and address list differ", "sourceNum", num, "typeLen", len(types), "addrLen", len(addrs))
 		return nil, staking.ErrAddressBookResult
 	}
-	if len(clRes.NodeIds) != len(clRes.ClPools) || len(clRes.NodeIds) != len(clRes.ClStakings) || len(clRes.NodeIds) != len(clRes.StakingAmounts) {
-		logger.Error("length of CL registry result fields differ", "sourceNum", num, "nodeLen", len(clRes.NodeIds), "poolLen", len(clRes.ClPools), "stakingLen", len(clRes.ClStakings), "amountLen", len(clRes.StakingAmounts))
+	if len(clRes.NodeIds) != len(clRes.ClPools) || len(clRes.NodeIds) != len(clRes.StakingAmounts) {
+		logger.Error("length of CL registry result fields differ", "sourceNum", num, "nodeLen", len(clRes.NodeIds), "poolLen", len(clRes.ClPools), "amountLen", len(clRes.StakingAmounts))
 		return nil, staking.ErrCLRegistryResult
 	}
 
@@ -202,7 +201,6 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 			clStakingInfos[i] = &staking.CLStakingInfo{
 				CLNodeId:        clRes.NodeIds[i],
 				CLPoolAddr:      clRes.ClPools[i],
-				CLRewardAddr:    clRes.ClStakings[i],
 				CLStakingAmount: big.NewInt(0).Div(clRes.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
 			}
 		}

@@ -59,7 +59,6 @@ type StakingInfo struct {
 type CLStakingInfo struct {
 	CLNodeId        common.Address `json:"clNodeId"`
 	CLPoolAddr      common.Address `json:"clPoolAddr"`
-	CLRewardAddr    common.Address `json:"clRewardAddr"`
 	CLStakingAmount uint64         `json:"clStakingAmount"`
 }
 

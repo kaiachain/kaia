@@ -32,7 +32,7 @@ func TestRuntimeCodeRegression(t *testing.T) {
 		{RegistryCode, "0xfd3c2152828579b98068570231554ed4bacf528f50ff1bf9fce6300ec023f720"},
 		{Kip113Code, "0x236841ea654b0f18e83e934ba0f69b4ab215f0b6ffbeee288797ce67c89aea25"},
 		{ERC1967ProxyCode, "0x7bd49b148f3b1ffd97fb2ef2fdc773271822fa8306d3bcba626fbd412ed21c12"},
-		{MultiCallCode, "0x01b07efdd04480be88e21e7665bd03fb210ecbc70e890a080276f1b41b0624c7"},
+		{MultiCallCode, "0xbaffb5af414cb713ca54e7e041388c0696c21535d66b0f4020602c89f6f3be05"},
 	}
 
 	for _, tc := range tcs {

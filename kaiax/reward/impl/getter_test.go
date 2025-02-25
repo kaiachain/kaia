@@ -1009,8 +1009,7 @@ func TestSpecWithProposerAndFundsPrague(t *testing.T) {
 		si := &staking.StakingInfo{NodeIds: []common.Address{common.HexToAddress("0xa01")}, StakingContracts: []common.Address{common.HexToAddress("0xd01")}, RewardAddrs: []common.Address{rewardbase}, StakingAmounts: []uint64{1000}, KIFAddr: tc.kifAddr, KEFAddr: tc.kefAddr, CLStakingInfos: staking.CLStakingInfos{
 			&staking.CLStakingInfo{
 				CLNodeId:        common.HexToAddress("0xa01"),
-				CLRewardAddr:    clRewardbase,
-				CLPoolAddr:      common.HexToAddress("0xd01"),
+				CLPoolAddr:      clRewardbase,
 				CLStakingAmount: 1000,
 			},
 		}}

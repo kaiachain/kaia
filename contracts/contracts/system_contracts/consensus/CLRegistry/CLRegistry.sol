@@ -43,10 +43,16 @@ contract CLRegistry is ICLRegistry, Ownable {
     function addCLPair(CLInfo[] calldata list) external onlyOwner {
         for (uint i = 0; i < list.length; i++) {
             uint256 gcId = list[i].gcId;
-            require(_validateCLPairInput(list[i]), "CLRegistry::addCLPair: Invalid pair input");
-            require(!_isExistPair(gcId), "CLRegistry::addCLPair: GC ID does exist");
+            require(
+                _validateCLPairInput(list[i]),
+                "CLRegistry::addCLPair: Invalid pair input"
+            );
+            require(
+                !_isExistPair(gcId),
+                "CLRegistry::addCLPair: GC ID does exist"
+            );
             clPoolList[gcId] = list[i];
-            emit RegisterPair(list[i].nodeId, list[i].gcId, list[i].clPool, list[i].clStaking);
+            emit RegisterPair(list[i].nodeId, list[i].gcId, list[i].clPool);
             _addGCId(gcId);
         }
     }
@@ -54,13 +60,15 @@ contract CLRegistry is ICLRegistry, Ownable {
     /// @dev See {ICLRegistry-removeCLPair}
     function removeCLPair(uint256 gcId) external onlyOwner {
         require(gcId != 0, "CLRegistry::removeCLPair: Invalid GC ID");
-        require(_isExistPair(gcId), "CLRegistry::removeCLPair: GC ID does not exist");
+        require(
+            _isExistPair(gcId),
+            "CLRegistry::removeCLPair: GC ID does not exist"
+        );
 
         emit RetirePair(
             clPoolList[gcId].nodeId,
             clPoolList[gcId].gcId,
-            clPoolList[gcId].clPool,
-            clPoolList[gcId].clStaking
+            clPoolList[gcId].clPool
         );
         delete clPoolList[gcId];
         _removeGCId(gcId);
@@ -70,10 +78,16 @@ contract CLRegistry is ICLRegistry, Ownable {
     function updateCLPair(CLInfo[] calldata list) external onlyOwner {
         for (uint i = 0; i < list.length; i++) {
             uint256 gcId = list[i].gcId;
-            require(_validateCLPairInput(list[i]), "CLRegistry::updateCLPair: Invalid pair input");
-            require(_isExistPair(gcId), "CLRegistry::updateCLPair: GC ID does not exist");
+            require(
+                _validateCLPairInput(list[i]),
+                "CLRegistry::updateCLPair: Invalid pair input"
+            );
+            require(
+                _isExistPair(gcId),
+                "CLRegistry::updateCLPair: GC ID does not exist"
+            );
             clPoolList[gcId] = list[i];
-            emit UpdatePair(list[i].nodeId, list[i].gcId, list[i].clPool, list[i].clStaking);
+            emit UpdatePair(list[i].nodeId, list[i].gcId, list[i].clPool);
         }
     }
 
@@ -81,22 +95,20 @@ contract CLRegistry is ICLRegistry, Ownable {
     function getAllCLs()
         external
         view
-        returns (address[] memory, uint256[] memory, address[] memory, address[] memory)
+        returns (address[] memory, uint256[] memory, address[] memory)
     {
         uint256 len = _gcIds.length();
         address[] memory nodeIds = new address[](len);
         uint256[] memory gcIds = new uint256[](len);
         address[] memory clPools = new address[](len);
-        address[] memory clStakings = new address[](len);
 
         for (uint i = 0; i < len; i++) {
             CLInfo storage clInfo = clPoolList[_gcIds.at(i)];
             nodeIds[i] = clInfo.nodeId;
             gcIds[i] = clInfo.gcId;
             clPools[i] = clInfo.clPool;
-            clStakings[i] = clInfo.clStaking;
         }
-        return (nodeIds, gcIds, clPools, clStakings);
+        return (nodeIds, gcIds, clPools);
     }
 
     // @dev Return all GC IDs
@@ -105,12 +117,13 @@ contract CLRegistry is ICLRegistry, Ownable {
     }
 
     /// @dev Validate property values of `CLInfo`
-    function _validateCLPairInput(CLInfo calldata pairInput) internal pure returns (bool) {
+    function _validateCLPairInput(
+        CLInfo calldata pairInput
+    ) internal pure returns (bool) {
         return
             pairInput.gcId != 0 &&
             pairInput.nodeId != ZERO_ADDRESS &&
-            pairInput.clPool != ZERO_ADDRESS &&
-            pairInput.clStaking != ZERO_ADDRESS;
+            pairInput.clPool != ZERO_ADDRESS;
     }
 
     /// @dev Return true if a pair exists with given `gcId`
