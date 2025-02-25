@@ -27,15 +27,13 @@ var (
 )
 
 type BuilderModule struct {
-	txBundlingModules []builder.TxBundlingModule
 }
 
 func NewBuilderModule() *BuilderModule {
 	return &BuilderModule{}
 }
 
-func (b *BuilderModule) Init(txBundlingModules []builder.TxBundlingModule) error {
-	b.txBundlingModules = txBundlingModules
+func (b *BuilderModule) Init() error {
 	return nil
 }
 
