@@ -18,6 +18,7 @@ package impl
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -25,6 +26,46 @@ import (
 func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) []*types.Transaction {
 	// TODO: implement
 	return nil
+}
+
+func (b *BuilderModule) incorporate(txs []interface{}, bundle *builder.Bundle) []interface{} {
+	ret := make([]interface{}, 0)
+
+	// 1. collect txs that are not in bundle
+	for _, txOrGen := range txs {
+		switch tx := txOrGen.(type) {
+		case *types.Transaction:
+			if !bundle.Has(tx.Hash()) {
+				ret = append(ret, tx)
+			}
+		case builder.TxGenerator:
+			// append generator unconditionally
+			ret = append(ret, tx)
+		}
+	}
+
+	// 2. place bundle before TargetTxHash
+	if bundle.TargetTxHash == (common.Hash{}) {
+		ret = append(bundle.BundleTxs, ret...)
+		return ret
+	}
+
+	for i, txOrGen := range ret {
+		tx, ok := txOrGen.(*types.Transaction)
+		if !ok {
+			continue
+		}
+		if tx.Hash() == bundle.TargetTxHash {
+			tmp := ret[i+1:]
+			ret = append(ret[:i+1], bundle.BundleTxs...)
+			ret = append(ret, tmp...)
+			return ret
+		}
+	}
+
+	// must not reach here
+	logger.Crit("failed to incorporate bundle")
+	return ret
 }
 
 // Arrayify flattens transaction heaps into a single array

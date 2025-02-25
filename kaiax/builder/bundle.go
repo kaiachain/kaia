@@ -29,6 +29,22 @@ type Bundle struct {
 	TargetTxHash common.Hash
 }
 
+// Has checks if the bundle contains a tx with the given hash.
+func (b *Bundle) Has(hash common.Hash) bool {
+	for _, txOrGen := range b.BundleTxs {
+		switch tx := txOrGen.(type) {
+		case *types.Transaction:
+			if tx.Hash() == hash {
+				return true
+			}
+		default:
+			continue
+		}
+	}
+
+	return false
+}
+
 // IsConflict checks if newBundle conflicts with current bundle.
 func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 	// 1. Check for same target tx hash

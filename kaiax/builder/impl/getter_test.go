@@ -28,6 +28,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIncorporate(t *testing.T) {
+	// Create test transactions
+	txs := []*types.Transaction{
+		types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	}
+	txOrGenList := []interface{}{txs[0], txs[1], txs[2]}
+	b := NewBuilderModule()
+
+	testCases := []struct {
+		name     string
+		bundle   *builder.Bundle
+		expected []interface{}
+	}{
+		{
+			name:     "incorporate first two transactions",
+			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[0], txs[1]}, TargetTxHash: common.Hash{}},
+			expected: []interface{}{txs[0], txs[1], txs[2]},
+		},
+		{
+			name:     "incorporate last two transactions",
+			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[1], txs[2]}, TargetTxHash: common.Hash{}},
+			expected: []interface{}{txs[1], txs[2], txs[0]},
+		},
+		{
+			name:     "incorporate with target hash",
+			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[0]}, TargetTxHash: txs[2].Hash()},
+			expected: []interface{}{txs[1], txs[2], txs[0]},
+		},
+		{
+			name:     "incorporate single transaction",
+			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[2]}, TargetTxHash: common.Hash{}},
+			expected: []interface{}{txs[2], txs[0], txs[1]},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ret := b.incorporate(txOrGenList, tc.bundle)
+			assert.Equal(t, tc.expected, ret)
+		})
+	}
+}
+
 func TestArrayify(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keyLen := 10
@@ -55,7 +100,7 @@ func TestArrayify(t *testing.T) {
 	txs := b.Arrayify(heap)
 	assert.Equal(t, keyLen*txLen, len(txs))
 	for i := range txs {
-		assert.Equal(t, hashes[txs[i].Hash()], true)
+		assert.Equal(t, true, hashes[txs[i].Hash()])
 	}
 	assert.False(t, heap.Empty()) // don't modify the original heap
 }
