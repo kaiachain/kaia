@@ -28,6 +28,95 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIncorporateBundleTx(t *testing.T) {
+	// Create test transactions
+	txs := []*types.Transaction{
+		types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	}
+
+	b := NewBuilderModule()
+
+	testCases := []struct {
+		name     string
+		bundles  []*builder.Bundle
+		expected []interface{}
+	}{
+		{
+			name: "incorporate multiple bundles",
+			bundles: []*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{txs[0], txs[1]},
+					TargetTxHash: common.Hash{},
+				},
+				{
+					BundleTxs:    []interface{}{txs[2]},
+					TargetTxHash: txs[1].Hash(),
+				},
+			},
+			expected: []interface{}{txs[0], txs[1], txs[2], txs[3]},
+		},
+		{
+			name:     "incorporate empty bundles",
+			bundles:  []*builder.Bundle{},
+			expected: []interface{}{txs[0], txs[1], txs[2], txs[3]},
+		},
+		{
+			name: "incorporate bundle with generator",
+			bundles: []*builder.Bundle{
+				{
+					BundleTxs: []interface{}{
+						txs[0],
+						func(nonce uint64) (*types.Transaction, error) {
+							return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+						},
+					},
+					TargetTxHash: common.Hash{},
+				},
+			},
+			expected: []interface{}{
+				txs[0],
+				func(nonce uint64) (*types.Transaction, error) {
+					return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+				},
+				txs[1],
+				txs[2],
+				txs[3],
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ret := b.IncorporateBundleTx(txs, tc.bundles)
+
+			// For cases with TxGenerator, we need to compare length and types
+			assert.Equal(t, len(tc.expected), len(ret))
+			for i, txOrGen := range tc.expected {
+				switch txOrGen := txOrGen.(type) {
+				case *types.Transaction:
+					t.Logf("expected txs[%d]=hash %s", i, txOrGen.Hash().Hex())
+					t.Logf("actual txs[%d]=hash %s", i, ret[i].(*types.Transaction).Hash().Hex())
+				}
+			}
+
+			for i := range ret {
+				switch v := ret[i].(type) {
+				case *types.Transaction:
+					expected, ok := tc.expected[i].(*types.Transaction)
+					assert.True(t, ok, "tx %d", i)
+					assert.Equal(t, expected.Hash(), v.Hash(), "tx %d", i, "nonce", v.Nonce)
+				case builder.TxGenerator:
+					_, ok := tc.expected[i].(builder.TxGenerator)
+					assert.True(t, ok, "tx %d", i)
+				}
+			}
+		})
+	}
+}
+
 func TestIncorporate(t *testing.T) {
 	// Create test transactions
 	txs := []*types.Transaction{
@@ -36,8 +125,6 @@ func TestIncorporate(t *testing.T) {
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}
 	txOrGenList := []interface{}{txs[0], txs[1], txs[2]}
-	b := NewBuilderModule()
-
 	testCases := []struct {
 		name     string
 		bundle   *builder.Bundle
@@ -67,7 +154,7 @@ func TestIncorporate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret := b.incorporate(txOrGenList, tc.bundle)
+			ret := incorporate(txOrGenList, tc.bundle)
 			assert.Equal(t, tc.expected, ret)
 		})
 	}
