@@ -15,3 +15,9 @@
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
 package impl
+
+import "errors"
+
+var (
+	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
+)

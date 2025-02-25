@@ -24,19 +24,23 @@ import (
 
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
 // Caller must ensure that there is no conflict between bundles.
-func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) []interface{} {
+func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]interface{}, error) {
 	ret := make([]interface{}, len(txs))
 	for i := range txs {
 		ret[i] = txs[i]
 	}
 
 	for _, bundle := range bundles {
-		ret = incorporate(ret, bundle)
+		var err error
+		ret, err = incorporate(ret, bundle)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return ret
+	return ret, nil
 }
 
-func incorporate(txs []interface{}, bundle *builder.Bundle) []interface{} {
+func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, error) {
 	ret := make([]interface{}, 0)
 
 	// 1. collect txs that are not in bundle
@@ -55,7 +59,7 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) []interface{} {
 	// 2. place bundle after TargetTxHash
 	if bundle.TargetTxHash == (common.Hash{}) {
 		ret = append(bundle.BundleTxs, ret...)
-		return ret
+		return ret, nil
 	}
 
 	for i, txOrGen := range ret {
@@ -69,13 +73,12 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) []interface{} {
 			copy(ret[:i+1], tmp[:i+1])
 			copy(ret[i+1:], bundle.BundleTxs)
 			copy(ret[i+1+len(bundle.BundleTxs):], tmp[i+1:])
-			return ret
+			return ret, nil
 		}
 	}
 
 	// must not reach here
-	logger.Crit("failed to incorporate bundle")
-	return ret
+	return nil, ErrFailedToIncorporateBundle
 }
 
 // Arrayify flattens transaction heaps into a single array
