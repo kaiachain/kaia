@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -26,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIncorporateBundleTx(t *testing.T) {
@@ -35,6 +37,9 @@ func TestIncorporateBundleTx(t *testing.T) {
 		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	}
+	var g builder.TxGenerator = func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
 
 	b := NewBuilderModule()
@@ -47,14 +52,8 @@ func TestIncorporateBundleTx(t *testing.T) {
 		{
 			name: "incorporate multiple bundles",
 			bundles: []*builder.Bundle{
-				{
-					BundleTxs:    []interface{}{txs[0], txs[1]},
-					TargetTxHash: common.Hash{},
-				},
-				{
-					BundleTxs:    []interface{}{txs[2]},
-					TargetTxHash: txs[1].Hash(),
-				},
+				{BundleTxs: []interface{}{txs[0], txs[1]}, TargetTxHash: common.Hash{}},
+				{BundleTxs: []interface{}{txs[2]}, TargetTxHash: txs[1].Hash()},
 			},
 			expected: []interface{}{txs[0], txs[1], txs[2], txs[3]},
 		},
@@ -66,45 +65,30 @@ func TestIncorporateBundleTx(t *testing.T) {
 		{
 			name: "incorporate bundle with generator",
 			bundles: []*builder.Bundle{
-				{
-					BundleTxs: []interface{}{
-						txs[0],
-						func(nonce uint64) (*types.Transaction, error) {
-							return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
-						},
-					},
-					TargetTxHash: common.Hash{},
-				},
+				{BundleTxs: []interface{}{txs[0], g}, TargetTxHash: common.Hash{}},
 			},
-			expected: []interface{}{
-				txs[0],
-				func(nonce uint64) (*types.Transaction, error) {
-					return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
-				},
-				txs[1],
-				txs[2],
-				txs[3],
+			expected: []interface{}{txs[0], g, txs[1], txs[2], txs[3]},
+		},
+		{
+			name: "incorporate bundle with generator 2",
+			bundles: []*builder.Bundle{
+				{BundleTxs: []interface{}{g, txs[0]}, TargetTxHash: common.Hash{}},
+				{BundleTxs: []interface{}{g, txs[1]}, TargetTxHash: txs[0].Hash()},
 			},
+			expected: []interface{}{g, txs[0], g, txs[1], txs[2], txs[3]},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ret := b.IncorporateBundleTx(txs, tc.bundles)
-
-			// For cases with TxGenerator, we need to compare length and types
-			assert.Equal(t, len(tc.expected), len(ret))
-			for i, txOrGen := range tc.expected {
-				switch txOrGen := txOrGen.(type) {
-				case *types.Transaction:
-					t.Logf("expected txs[%d]=hash %s", i, txOrGen.Hash().Hex())
-					t.Logf("actual txs[%d]=hash %s", i, ret[i].(*types.Transaction).Hash().Hex())
-				}
-			}
-
+			require.Equal(t, len(tc.expected), len(ret))
 			for i := range ret {
+				require.Equal(t, reflect.TypeOf(tc.expected[i]), reflect.TypeOf(ret[i]), "type at ret[%d] is different", i)
 				switch v := ret[i].(type) {
 				case *types.Transaction:
+					t.Logf("expected txs[%d]=hash %s", i, tc.expected[i].(*types.Transaction).Hash().Hex())
+					t.Logf("actual txs[%d]=hash %s", i, v.Hash().Hex())
 					expected, ok := tc.expected[i].(*types.Transaction)
 					assert.True(t, ok, "tx %d", i)
 					assert.Equal(t, expected.Hash(), v.Hash(), "tx %d", i, "nonce", v.Nonce)

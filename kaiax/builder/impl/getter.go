@@ -22,7 +22,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
-// IncorporateBundleTx incorporates bundle transactions into the transaction list
+// IncorporateBundleTx incorporates bundle transactions into the transaction list.
+// Caller must ensure that there is no conflict between bundles.
 func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) []interface{} {
 	ret := make([]interface{}, len(txs))
 	for i := range txs {
@@ -51,7 +52,7 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) []interface{} {
 		}
 	}
 
-	// 2. place bundle before TargetTxHash
+	// 2. place bundle after TargetTxHash
 	if bundle.TargetTxHash == (common.Hash{}) {
 		ret = append(bundle.BundleTxs, ret...)
 		return ret
