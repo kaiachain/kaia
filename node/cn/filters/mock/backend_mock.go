@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/kaiachain/kaia/blockchain"
 	bloombits "github.com/kaiachain/kaia/blockchain/bloombits"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	event "github.com/kaiachain/kaia/event"
@@ -156,6 +157,22 @@ func (m *MockBackend) HeaderByNumber(arg0 context.Context, arg1 rpc.BlockNumber)
 func (mr *MockBackendMockRecorder) HeaderByNumber(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByNumber", reflect.TypeOf((*MockBackend)(nil).HeaderByNumber), arg0, arg1)
+}
+
+// Pending mocks base method.
+func (m *MockBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pending")
+	ret0, _ := ret[0].(*types.Block)
+	ret1, _ := ret[1].(types.Receipts)
+	ret2, _ := ret[2].(*state.StateDB)
+	return ret0, ret1, ret2
+}
+
+// Pending indicates an expected call of Pending.
+func (mr *MockBackendMockRecorder) Pending() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockBackend)(nil).Pending))
 }
 
 // ServiceFilter mocks base method.

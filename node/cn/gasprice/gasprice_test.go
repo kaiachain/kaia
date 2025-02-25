@@ -26,6 +26,7 @@ import (
 	"github.com/golang/mock/gomock"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -45,7 +46,8 @@ import (
 const testHead = 32
 
 type testBackend struct {
-	chain *blockchain.BlockChain
+	chain   *blockchain.BlockChain
+	pending bool // pending block available
 }
 
 func (b *testBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
@@ -54,6 +56,13 @@ func (b *testBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber
 	}
 	if number == rpc.LatestBlockNumber {
 		number = testHead
+	}
+	if number == rpc.PendingBlockNumber {
+		if b.pending {
+			number = testHead + 1
+		} else {
+			return nil, nil
+		}
 	}
 	return b.chain.GetHeaderByNumber(uint64(number)), nil
 }
@@ -65,11 +74,27 @@ func (b *testBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber)
 	if number == rpc.LatestBlockNumber {
 		number = testHead
 	}
+	if number == rpc.PendingBlockNumber {
+		if b.pending {
+			number = testHead + 1
+		} else {
+			return nil, nil
+		}
+	}
 	return b.chain.GetBlockByNumber(uint64(number)), nil
 }
 
 func (b *testBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts {
 	return b.chain.GetReceiptsByBlockHash(hash)
+}
+
+func (b *testBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	if b.pending {
+		block := b.chain.GetBlockByNumber(testHead + 1)
+		state, _ := b.chain.StateAt(block.Root())
+		return block, b.chain.GetReceiptsByBlockHash(block.Hash()), state
+	}
+	return nil, nil, nil
 }
 
 func (b *testBackend) ChainConfig() *params.ChainConfig {
@@ -86,7 +111,7 @@ func (b *testBackend) teardown() {
 
 // newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
 // after use, otherwise the blockchain instance will mem-leak via goroutines.
-func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend, gov.GovModule) {
+func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) (*testBackend, gov.GovModule) {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -157,7 +182,7 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend,
 
 	chain.InsertChain(blocks)
 
-	return &testBackend{chain: chain}, govModule
+	return &testBackend{chain: chain, pending: pending}, govModule
 }
 
 func TestGasPrice_NewOracle(t *testing.T) {
@@ -217,7 +242,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	testBackend, _ := newTestBackend(t, nil, nil)
+	testBackend, _ := newTestBackend(t, nil, nil, false)
 	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
 	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
@@ -284,7 +309,7 @@ func TestSuggestTipCap(t *testing.T) {
 		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in the future
 	}
 	for _, c := range cases {
-		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
+		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock, false)
 		chainConfig := testBackend.ChainConfig()
 		if c.isBusy {
 			mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))

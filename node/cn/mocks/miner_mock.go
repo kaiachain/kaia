@@ -66,12 +66,13 @@ func (mr *MockMinerMockRecorder) Mining() *gomock.Call {
 }
 
 // Pending mocks base method.
-func (m *MockMiner) Pending() (*types.Block, *state.StateDB) {
+func (m *MockMiner) Pending() (*types.Block, types.Receipts, *state.StateDB) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pending")
 	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(*state.StateDB)
-	return ret0, ret1
+	ret1, _ := ret[1].(types.Receipts)
+	ret2, _ := ret[2].(*state.StateDB)
+	return ret0, ret1, ret2
 }
 
 // Pending indicates an expected call of Pending.

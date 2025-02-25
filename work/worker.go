@@ -160,9 +160,10 @@ type worker struct {
 	current    *Task
 	rewardbase common.Address
 
-	snapshotMu    sync.RWMutex
-	snapshotBlock *types.Block
-	snapshotState *state.StateDB
+	snapshotMu       sync.RWMutex // The lock used to protect the block snapshot and state snapshot
+	snapshotBlock    *types.Block
+	snapshotReceipts types.Receipts
+	snapshotState    *state.StateDB
 
 	// atomic status counters
 	mining int32
@@ -207,22 +208,22 @@ func (self *worker) setExtra(extra []byte) {
 	self.extra = extra
 }
 
-func (self *worker) pending() (*types.Block, *state.StateDB) {
+func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
 	if atomic.LoadInt32(&self.mining) == 0 {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
 		if self.snapshotState == nil {
-			return nil, nil
+			return nil, nil, nil
 		}
-		return self.snapshotBlock, self.snapshotState.Copy()
+		return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
 	}
 
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
-	return self.current.Block, self.current.state.Copy()
+	return self.current.Block, self.current.receipts, self.current.state.Copy()
 }
 
 func (self *worker) pendingBlock() *types.Block {
@@ -640,6 +641,7 @@ func (self *worker) updateSnapshot() {
 		self.current.txs,
 		self.current.receipts,
 	)
+	self.snapshotReceipts = self.current.receipts
 	self.snapshotState = self.current.state.Copy()
 }
 

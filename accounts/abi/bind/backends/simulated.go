@@ -65,9 +65,10 @@ type SimulatedBackend struct {
 	database   database.DBManager     // In memory database to store our testing data
 	blockchain *blockchain.BlockChain // Kaia blockchain to handle the consensus
 
-	mu           sync.Mutex
-	pendingBlock *types.Block   // Currently pending block that will be imported on request
-	pendingState *state.StateDB // Currently pending state that will be the active on request
+	mu              sync.Mutex
+	pendingBlock    *types.Block   // Currently pending block that will be imported on request
+	pendingState    *state.StateDB // Currently pending state that will be the active on request
+	pendingReceipts types.Receipts // Currently receipts for the pending block
 
 	events *filters.EventSystem // Event system for filtering log events live
 
@@ -85,8 +86,8 @@ func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockcha
 		database:   database,
 		blockchain: blockchain,
 		config:     genesis.Config,
-		events:     filters.NewEventSystem(new(event.TypeMux), &filterBackend{database, blockchain}, false),
 	}
+	backend.events = filters.NewEventSystem(new(event.TypeMux), &filterBackend{database, blockchain, backend})
 	backend.rollback()
 	return backend
 }
@@ -132,11 +133,12 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(int, *blockchain.BlockGen) {})
+	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(int, *blockchain.BlockGen) {})
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
+	b.pendingReceipts = receipts[0]
 }
 
 // stateByBlockNumber retrieves a state by a given blocknumber.
@@ -531,7 +533,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	}
 
 	// Include tx in chain.
-	blocks, _ := blockchain.GenerateChain(b.config, block, gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(b.config, block, gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}
@@ -541,6 +543,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
+	b.pendingReceipts = receipts[0]
 	return nil
 }
 
@@ -559,7 +562,7 @@ func (b *SimulatedBackend) FilterLogs(ctx context.Context, query kaia.FilterQuer
 		to = query.ToBlock.Int64()
 	}
 	// Construct and execute the filter
-	filter := filters.NewRangeFilter(&filterBackend{b.database, b.blockchain}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterBackend{b.database, b.blockchain, b}, from, to, query.Addresses, query.Topics)
 
 	// Run the filter and return all the logs
 	logs, err := filter.Logs(ctx)
@@ -654,13 +657,14 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 		return errors.New("Could not adjust time on non-empty block")
 	}
 
-	blocks, _ := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		block.OffsetTime(int64(adjustment.Seconds()))
 	})
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
 	b.pendingState, _ = state.New(b.pendingBlock.Root(), stateDB.Database(), nil, nil)
+	b.pendingReceipts = receipts[0]
 
 	return nil
 }
@@ -677,8 +681,9 @@ func (b *SimulatedBackend) PendingBlock() *types.Block {
 // filterBackend implements filters.Backend to support filtering for logs without
 // taking bloom-bits acceleration structures into account.
 type filterBackend struct {
-	db database.DBManager
-	bc *blockchain.BlockChain
+	db      database.DBManager
+	bc      *blockchain.BlockChain
+	backend *SimulatedBackend
 }
 
 func (fb *filterBackend) ChainDB() database.DBManager { return fb.db }
@@ -693,6 +698,10 @@ func (fb *filterBackend) HeaderByNumber(_ context.Context, block rpc.BlockNumber
 		return fb.bc.CurrentHeader(), nil
 	}
 	return fb.bc.GetHeaderByNumber(uint64(block.Int64())), nil
+}
+
+func (fb *filterBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	return fb.backend.pendingBlock, fb.backend.pendingReceipts, fb.backend.pendingState.Copy()
 }
 
 func (fb *filterBackend) GetBlockReceipts(_ context.Context, hash common.Hash) types.Receipts {

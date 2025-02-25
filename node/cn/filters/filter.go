@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
@@ -45,6 +46,7 @@ type Backend interface {
 	EventMux() *event.TypeMux
 	HeaderByHash(ctx context.Context, blockHash common.Hash) (*types.Header, error)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
 
@@ -139,18 +141,23 @@ func (f *Filter) Logs(ctx context.Context) ([]*types.Log, error) {
 		return f.blockLogs(ctx, header)
 	}
 
+	// Disallow pending logs.
+	if f.begin == rpc.PendingBlockNumber.Int64() || f.end == rpc.PendingBlockNumber.Int64() {
+		return nil, errPendingLogsUnsupported
+	}
+
 	// Figure out the limits of the filter range
 	header, _ := f.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if header == nil {
-		return nil, nil
+		return nil, errors.New("latest header not found")
 	}
 	head := header.Number.Uint64()
 
-	if f.begin == -1 {
+	if f.begin == rpc.LatestBlockNumber.Int64() {
 		f.begin = int64(head)
 	}
 	end := uint64(f.end)
-	if f.end == -1 {
+	if f.end == rpc.LatestBlockNumber.Int64() {
 		end = head
 	}
 	// Gather all indexed logs, and finish with non indexed ones

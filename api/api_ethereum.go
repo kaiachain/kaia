@@ -707,14 +707,12 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
 func (api *EthereumAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
-	return transactionCount
+	return api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
-	return transactionCount
+	return api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
 }
 
 // EthRPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -968,8 +966,8 @@ func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
-	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
-	if rawTx == nil || err != nil {
+	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+	if rawTx == nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -980,8 +978,8 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
-	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
-	if rawTx == nil || err != nil {
+	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
+	if rawTx == nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
