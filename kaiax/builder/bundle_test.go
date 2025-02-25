@@ -52,6 +52,15 @@ func TestBundle_IsConflict(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:   "Empty TargetTxHash",
+			bundle: b0,
+			newBundle: &Bundle{
+				BundleTxs:    []interface{}{},
+				TargetTxHash: txs[0].Hash(),
+			},
+			expected: true,
+		},
+		{
 			name:   "TargetTxHash divides a bundle",
 			bundle: b0,
 			newBundle: &Bundle{

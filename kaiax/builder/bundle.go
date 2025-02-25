@@ -49,7 +49,12 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 		return true
 	}
 
-	// 2-1. Build a map of TxHash -> IndexInBundle
+	// 2-1. Empty bundleTxs does not conflict with other transactions
+	if len(b.BundleTxs) == 0 {
+		return false
+	}
+
+	// 2-2. Build a map of TxHash -> IndexInBundle
 	hashes := make(map[common.Hash]int)
 	for i, txOrGen := range b.BundleTxs {
 		tx, ok := txOrGen.(*types.Transaction)
@@ -59,14 +64,14 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 		hashes[tx.Hash()] = i
 	}
 
-	// 2-2. Check for TargetTxHash breaking current bundle.
+	// 2-3. Check for TargetTxHash breaking current bundle.
 	// If newBundle.TargetTxHash is equal to the last tx of current bundle, it is NOT a conflict.
 	// e.g.) b.txs = [0x1, 0x2] and newBundle's TargetTxHash is 0x2.
 	if idx, ok := hashes[newBundle.TargetTxHash]; ok && idx != len(b.BundleTxs)-1 {
 		return true
 	}
 
-	// 2-3. Check for overlapping txs
+	// 2-4. Check for overlapping txs
 	for _, txOrGen := range newBundle.BundleTxs {
 		if tx, ok := txOrGen.(*types.Transaction); ok {
 			if _, has := hashes[tx.Hash()]; has {
