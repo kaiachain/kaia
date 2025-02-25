@@ -32,13 +32,10 @@ type Bundle struct {
 // Has checks if the bundle contains a tx with the given hash.
 func (b *Bundle) Has(hash common.Hash) bool {
 	for _, txOrGen := range b.BundleTxs {
-		switch tx := txOrGen.(type) {
-		case *types.Transaction:
+		if tx, ok := txOrGen.(*types.Transaction); ok {
 			if tx.Hash() == hash {
 				return true
 			}
-		default:
-			continue
 		}
 	}
 
