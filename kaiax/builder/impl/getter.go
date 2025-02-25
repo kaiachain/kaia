@@ -33,7 +33,7 @@ func (b *BuilderModule) Arrayify(heap *types.TransactionsByPriceAndNonce) []*typ
 	copied := heap.Copy()
 	for !copied.Empty() {
 		ret = append(ret, copied.Peek())
-		copied.Pop()
+		copied.Shift()
 	}
 	return ret
 }

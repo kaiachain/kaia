@@ -30,7 +30,9 @@ import (
 
 func TestArrayify(t *testing.T) {
 	// Generate a batch of accounts to start with
-	keys := make([]*ecdsa.PrivateKey, 25)
+	keyLen := 10
+	txLen := 30
+	keys := make([]*ecdsa.PrivateKey, keyLen)
 	for i := 0; i < len(keys); i++ {
 		keys[i], _ = crypto.GenerateKey()
 	}
@@ -41,7 +43,7 @@ func TestArrayify(t *testing.T) {
 	hashes := map[common.Hash]bool{}
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for i := 0; i < 25; i++ {
+		for i := 0; i < txLen; i++ {
 			tx, _ := types.SignTx(types.NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
 			groups[addr] = append(groups[addr], tx)
 			hashes[tx.Hash()] = true
@@ -51,7 +53,7 @@ func TestArrayify(t *testing.T) {
 	heap := types.NewTransactionsByPriceAndNonce(signer, groups, nil)
 	b := NewBuilderModule()
 	txs := b.Arrayify(heap)
-	assert.Equal(t, len(txs), 25)
+	assert.Equal(t, keyLen*txLen, len(txs))
 	for i := range txs {
 		assert.Equal(t, hashes[txs[i].Hash()], true)
 	}
