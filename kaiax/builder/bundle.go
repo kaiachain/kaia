@@ -68,13 +68,10 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 
 	// 2-3. Check for overlapping txs
 	for _, txOrGen := range newBundle.BundleTxs {
-		tx, ok := txOrGen.(*types.Transaction)
-		if !ok {
-			continue
-		}
-
-		if _, ok := hashes[tx.Hash()]; ok {
-			return true
+		if tx, ok := txOrGen.(*types.Transaction); ok {
+			if _, has := hashes[tx.Hash()]; has {
+				return true
+			}
 		}
 	}
 
