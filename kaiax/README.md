@@ -34,7 +34,3 @@ A non-kaiax component (such as BlockChain, CN, consensus.Engine) may implement `
 blockChain.RegisterExecutionModule(mGov)
 ```
 
-## Modules list
-
-- [staking](./staking): responsible for tracking validator staking amounts and their address configurations.
-
