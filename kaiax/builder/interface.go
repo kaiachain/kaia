@@ -29,7 +29,7 @@ type BuilderModule interface {
 	kaiax.JsonRpcModule
 
 	// IncorporateBundleTx does the followings:
-	IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) []interface{}
+	IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) ([]interface{}, error)
 
 	// Arrayify flattens txs in heap into an array
 	Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction

@@ -81,7 +81,8 @@ func TestIncorporateBundleTx(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret := b.IncorporateBundleTx(txs, tc.bundles)
+			ret, err := b.IncorporateBundleTx(txs, tc.bundles)
+			require.Nil(t, err)
 			require.Equal(t, len(tc.expected), len(ret))
 			for i := range ret {
 				require.Equal(t, reflect.TypeOf(tc.expected[i]), reflect.TypeOf(ret[i]), "type at ret[%d] is different", i)
@@ -138,7 +139,8 @@ func TestIncorporate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret := incorporate(txOrGenList, tc.bundle)
+			ret, err := incorporate(txOrGenList, tc.bundle)
+			require.Nil(t, err)
 			assert.Equal(t, tc.expected, ret)
 		})
 	}
