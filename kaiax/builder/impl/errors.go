@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -18,6 +18,4 @@ package impl
 
 import "errors"
 
-var (
-	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
-)
+var ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
