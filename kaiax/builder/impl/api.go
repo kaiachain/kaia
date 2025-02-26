@@ -39,4 +39,4 @@ func NewBuilderAPI(b *BuilderModule) *BuilderAPI {
 	return &BuilderAPI{b}
 }
 
-// TODO: implement SendRawTransactionBundle
+// TODO: implement SendRawTransactions
