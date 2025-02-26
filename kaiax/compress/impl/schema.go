@@ -18,6 +18,7 @@ package impl
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/storage/database"
@@ -99,6 +100,25 @@ func deleteUncompressedBatch(schema ItemSchema, items []ChunkItem) {
 	if err := batch.Write(); err != nil {
 		logger.Crit("Failed to write uncompressed data", "schema", schema.name(), "err", err)
 	}
+}
+
+func compactUncompressed(schema ItemSchema) {
+	uDb := schema.uncompressedDb()
+	logger.Warn("Compacting uncompressed database started", "schema", schema.name())
+	for i := 0; i < 256; i++ {
+		var (
+			start = []byte{byte(i)}
+			end   = []byte{byte(i + 1)}
+		)
+		if i == 255 {
+			end = nil
+		}
+		logger.Info("Compacting uncompressed database", "schema", schema.name(), "range", fmt.Sprintf("%d/256", i+1))
+		if err := uDb.Compact(start, end); err != nil {
+			logger.Crit("Failed to compact uncompressed database", "schema", schema.name(), "err", err)
+		}
+	}
+	logger.Warn("Compacting uncompressed database completed", "schema", schema.name())
 }
 
 // Read the chunk that contains the block number `num`.

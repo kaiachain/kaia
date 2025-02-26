@@ -37,8 +37,10 @@ import (
 
 func TestInitialCompression(t *testing.T) {
 	compressLogInterval = 500
+	compressCompactionPeriod = 800
 	defer func() {
 		compressLogInterval = 102400
+		compressCompactionPeriod = 86400 * 30
 	}()
 	var (
 		c, answers = makeTestModule(t)
@@ -52,9 +54,12 @@ func TestInitialCompression(t *testing.T) {
 	}
 
 	// Start compression threads and wait for completion.
+	sizeBefore := dirSize(t, c.DBM.(database.DBManager).GetDBConfig().Dir)
 	c.Start()
 	waitCompletion(t, c, endNum)
 	c.Stop()
+	sizeAfter := dirSize(t, c.DBM.(database.DBManager).GetDBConfig().Dir)
+	assert.Less(t, sizeAfter, sizeBefore) // compression & compaction must reduce the size
 
 	for _, schema := range c.schemas {
 		// 2. The nextNum must be updated.

@@ -45,6 +45,7 @@ type compressContext struct {
 	currNum    uint64 // the number to be compressed at this step
 	chunk      []ChunkItem
 	chunkBytes int // sum of byte sizes of uncompressed items
+	compacting atomic.Int32
 }
 
 func newChunkContext(dbm blockHashReader, schema ItemSchema, codec Codec, chunkItemCap, chunkByteCap int, fromNum uint64) *compressContext {
@@ -61,6 +62,18 @@ func newChunkContext(dbm blockHashReader, schema ItemSchema, codec Codec, chunkI
 
 func (c *compressContext) chunkCapReached() bool {
 	return len(c.chunk) >= c.chunkItemCap || c.chunkBytes >= c.chunkByteCap
+}
+
+func (c *compressContext) shouldCompact() bool {
+	return c.currNum%compressCompactionPeriod == 0 && c.compacting.Load() == 0
+}
+
+func (c *compressContext) compactDetached() {
+	go func() {
+		c.compacting.Store(1)
+		defer c.compacting.Store(0)
+		compactUncompressed(c.schema)
+	}()
 }
 
 // step appends one item to the context. If the capping condition is met, write the compressed chunk.
@@ -92,6 +105,10 @@ func (c *compressContext) step() error {
 		c.fromNum = c.currNum
 	} else {
 		c.currNum++
+	}
+
+	if c.shouldCompact() {
+		c.compactDetached()
 	}
 	return nil
 }
