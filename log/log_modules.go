@@ -224,4 +224,5 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax/valset",
 	"kaiax/randao",
 	"kaiax/gasless",
+	"kaiax/builder",
 }
