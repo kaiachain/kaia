@@ -47,7 +47,7 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 	for _, txOrGen := range txs {
 		switch tx := txOrGen.(type) {
 		case *types.Transaction:
-			if !bundle.Has(tx.Hash()) {
+			if !bundle.Has(tx.Hash(), 0) {
 				ret = append(ret, tx)
 			}
 		case builder.TxGenerator:

@@ -30,10 +30,16 @@ type Bundle struct {
 }
 
 // Has checks if the bundle contains a tx with the given hash.
-func (b *Bundle) Has(hash common.Hash) bool {
+// Nonce is optionally used for TxGenerator, where transaction is generated with the given nonce.
+func (b *Bundle) Has(hash common.Hash, nonce uint64) bool {
 	for _, txOrGen := range b.BundleTxs {
-		if tx, ok := txOrGen.(*types.Transaction); ok {
-			if tx.Hash() == hash {
+		switch v := txOrGen.(type) {
+		case *types.Transaction:
+			if v.Hash() == hash {
+				return true
+			}
+		case TxGenerator:
+			if tx, err := v(nonce); err != nil && tx.Hash() == hash {
 				return true
 			}
 		}
