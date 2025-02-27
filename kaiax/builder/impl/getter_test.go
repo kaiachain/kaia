@@ -199,31 +199,31 @@ func TestIsConflict(t *testing.T) {
 		{
 			name:        "Same TargetTxHash",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{[]interface{}{}, common.Hash{}}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{}, TargetTxHash: common.Hash{}}},
 			expected:    true,
 		},
 		{
 			name:        "TargetTxHash divides a bundle",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{[]interface{}{}, txs[0].Hash()}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{}, TargetTxHash: txs[0].Hash()}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 1",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{[]interface{}{txs[0], txs[2]}, defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[0], txs[2]}, TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 2",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{[]interface{}{txs[1], txs[2], txs[3]}, defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[1], txs[2], txs[3]}, TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Non-overlapping BundleTxs",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{[]interface{}{txs[2], txs[3]}, defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[2], txs[3]}, TargetTxHash: defaultTargetHash}},
 			expected:    false,
 		},
 	}
