@@ -176,7 +176,7 @@ func newTable(cfg *Config) (Discovery, error) {
 	// if self.NodeType == BN, add all types (CN, PN, EN, BN)
 	// if self.NodeType != BN,
 	// - Always add BN
-	// - Add xN if (Auto || DiscoverTypes.xN) && xN is supported by self.NodeType
+	// - Add xN if DiscoverTypes.xN && xN is supported by self.NodeType
 	switch cfg.NodeType {
 	case NodeTypeCN:
 		if cfg.DiscoverTypes.CN {
