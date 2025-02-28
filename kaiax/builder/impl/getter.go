@@ -40,45 +40,41 @@ func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []
 	return ret, nil
 }
 
+// incorporate assumes that `txs` does not contain any bundle transactions.
 func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, error) {
-	ret := make([]interface{}, 0)
+	ret := make([]interface{}, 0, len(txs)+len(bundle.BundleTxs))
+	targetFound := false
 
-	// 1. collect txs that are not in bundle
-	for _, txOrGen := range txs {
-		switch tx := txOrGen.(type) {
-		case *types.Transaction:
-			if !bundle.Has(tx.Hash(), 0) {
-				ret = append(ret, tx)
-			}
-		case builder.TxGenerator:
-			// append generator unconditionally
-			ret = append(ret, tx)
-		}
+	// 1. place bundle at the beginning
+	if bundle.TargetTxHash == (common.Hash{}) {
+		ret = append(ret, bundle.BundleTxs...)
+		targetFound = true
 	}
 
 	// 2. place bundle after TargetTxHash
-	if bundle.TargetTxHash == (common.Hash{}) {
-		ret = append(bundle.BundleTxs, ret...)
-		return ret, nil
-	}
-
-	for i, txOrGen := range ret {
-		tx, ok := txOrGen.(*types.Transaction)
-		if !ok {
-			continue
-		}
-		if tx.Hash() == bundle.TargetTxHash {
-			tmp := ret
-			ret = make([]interface{}, len(ret)+len(bundle.BundleTxs))
-			copy(ret[:i+1], tmp[:i+1])
-			copy(ret[i+1:], bundle.BundleTxs)
-			copy(ret[i+1+len(bundle.BundleTxs):], tmp[i+1:])
-			return ret, nil
+	for _, txOrGen := range txs {
+		switch tx := txOrGen.(type) {
+		case *types.Transaction:
+			// if tx-in-bundle, the tx will be appended when target is found.
+			if bundle.Has(tx.Hash(), 0) {
+				continue
+			}
+			// Because bundle.TargetTxHash cannot be in the bundle, we only check tx-not-in-bundle case.
+			ret = append(ret, tx)
+			if tx.Hash() == bundle.TargetTxHash {
+				targetFound = true
+				ret = append(ret, bundle.BundleTxs...)
+			}
+		default: // if tx is TxGenerator, unconditionally append
+			ret = append(ret, txOrGen)
 		}
 	}
 
-	// must not reach here
-	return nil, ErrFailedToIncorporateBundle
+	if !targetFound {
+		return nil, ErrFailedToIncorporateBundle
+	}
+
+	return ret, nil
 }
 
 // Arrayify flattens transaction heaps into a single array
