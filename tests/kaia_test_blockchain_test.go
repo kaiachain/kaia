@@ -275,7 +275,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	// Apply the set of transactions
 	start = time.Now()
 	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
-	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase, nil, nil)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
@@ -344,7 +344,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	start = time.Now()
 	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
-	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase, nil, nil)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))

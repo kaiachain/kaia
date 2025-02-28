@@ -45,3 +45,8 @@ type TxBundlingModule interface {
 	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
 }
+
+// Any component or module that accomodate tx bundling modules.
+type TxBundlingModuleHost interface {
+	RegisterTxBundlingModule(modules ...TxBundlingModule)
+}

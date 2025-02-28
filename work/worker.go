@@ -23,6 +23,7 @@
 package work
 
 import (
+	"bytes"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -37,6 +38,8 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	builderImpl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -147,12 +150,14 @@ type worker struct {
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	backend          Backend
-	chain            BlockChain
-	proc             blockchain.Validator
-	chainDB          database.DBManager
-	govModule        gov.GovModule
-	executionModules []kaiax.ExecutionModule
+	backend           Backend
+	chain             BlockChain
+	proc              blockchain.Validator
+	chainDB           database.DBManager
+	govModule         gov.GovModule
+	builderModule     builder.BuilderModule
+	executionModules  []kaiax.ExecutionModule
+	txBundlingModules []builder.TxBundlingModule
 
 	extra []byte
 
@@ -173,21 +178,22 @@ type worker struct {
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
 	worker := &worker{
-		config:      config,
-		engine:      engine,
-		backend:     backend,
-		mux:         mux,
-		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:     backend.ChainDB(),
-		recv:        make(chan *Result, resultQueueSize),
-		chain:       backend.BlockChain(),
-		proc:        backend.BlockChain().Validator(),
-		agents:      make(map[Agent]struct{}),
-		nodetype:    nodetype,
-		rewardbase:  rewardbase,
-		govModule:   govModule,
+		config:        config,
+		engine:        engine,
+		backend:       backend,
+		mux:           mux,
+		txsCh:         make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh:   make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh:   make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:       backend.ChainDB(),
+		recv:          make(chan *Result, resultQueueSize),
+		chain:         backend.BlockChain(),
+		proc:          backend.BlockChain().Validator(),
+		agents:        make(map[Agent]struct{}),
+		nodetype:      nodetype,
+		rewardbase:    rewardbase,
+		govModule:     govModule,
+		builderModule: builderImpl.NewBuilderModule(), // TODO-KAIA: It needs to be initialized.
 	}
 
 	// Subscribe NewTxsEvent for tx pool
@@ -578,7 +584,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
-		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
+		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase, self.txBundlingModules, self.builderModule)
 		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
@@ -647,8 +653,12 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.executionModules = append(self.executionModules, modules...)
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
-	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
+func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+	self.txBundlingModules = append(self.txBundlingModules, modules...)
+}
+
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) {
+	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase, txBundlingModules, builderModule)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -670,7 +680,102 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
+func (env *Task) commitBundleTransaction(tx *types.Transaction, bundle *builder.Bundle, txIndexInBundle int, lastSnapshot *state.StateDB, executedTxsInBundle *[]*types.Transaction, receiptsInBundle *[]*types.Receipt, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
+	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	if err != nil {
+		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+			tx.MarkUnexecutable(true)
+			for _, executedTx := range *executedTxsInBundle {
+				executedTx.MarkUnexecutable(true)
+			}
+		}
+		*env.state = *lastSnapshot
+
+		for _, receipt := range *receiptsInBundle {
+			env.header.GasUsed -= receipt.GasUsed
+		}
+		*executedTxsInBundle = []*types.Transaction{}
+		*receiptsInBundle = []*types.Receipt{}
+		return err, nil
+	}
+
+	if len(bundle.BundleTxs) == 0 { // If the tx is not included in the bundle, just add it to env.txs.
+		env.txs = append(env.txs, tx)
+		env.receipts = append(env.receipts, receipt)
+	} else if len(bundle.BundleTxs)-1 == txIndexInBundle { // For txs included in a bundle, if the tx is the last in the bundle, it will be added all at once.
+		*executedTxsInBundle = append(*executedTxsInBundle, tx)
+		*receiptsInBundle = append(*receiptsInBundle, receipt)
+		env.txs = append(env.txs, *executedTxsInBundle...)
+		env.receipts = append(env.receipts, *receiptsInBundle...)
+		*executedTxsInBundle = []*types.Transaction{}
+		*receiptsInBundle = []*types.Receipt{}
+	} else { // If the tx is included in a bundle and is not the last tx in the bundle, the result is retained.
+		*executedTxsInBundle = append(*executedTxsInBundle, tx)
+		*receiptsInBundle = append(*receiptsInBundle, receipt)
+	}
+	return nil, receipt.Logs
+}
+
+func (env *Task) popForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address) {
+	env.nextTxs(incorporatedTxs, targetTx, targetBundle, remainTxsInBundle, rewardbase, true)
+}
+
+func (env *Task) shiftForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address) {
+	env.nextTxs(incorporatedTxs, targetTx, targetBundle, remainTxsInBundle, rewardbase, false)
+}
+
+func (env *Task) nextTxs(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address, shouldPop bool) {
+	*incorporatedTxs = (*incorporatedTxs)[1:]
+	if len(targetBundle.BundleTxs) != 0 {
+		for i := 0; i < remainTxsInBundle; i++ {
+			*incorporatedTxs = (*incorporatedTxs)[1:]
+		}
+	}
+	if shouldPop {
+		env.removeAllTxFromSameSender(incorporatedTxs, targetTx, rewardbase)
+	}
+}
+
+func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targetTx *types.Transaction, rewardbase common.Address) {
+	var updatedTxs []interface{}
+	for _, txInterface := range *incorporatedTxs {
+		var futureTx *types.Transaction
+		switch txInterface.(type) {
+		case *types.Transaction:
+			futureTx = txInterface.(*types.Transaction)
+		case builder.TxGenerator:
+			txGen := txInterface.(builder.TxGenerator)
+			nodeNonce := env.state.GetNonce(rewardbase)
+			var err error
+			futureTx, err = txGen(nodeNonce)
+			if futureTx == nil {
+				logger.Warn("TxGenerator returned a nil tx", "error", err)
+			}
+		}
+		if bytes.Equal(targetTx.ValidatedSender().Bytes(), futureTx.ValidatedSender().Bytes()) {
+			continue
+		}
+		updatedTxs = append(updatedTxs, txInterface)
+	}
+	incorporatedTxs = &updatedTxs
+}
+
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) []*types.Log {
+	// Detect bundles and add them to bundles
+	arrayTxs := builderModule.Arrayify(txs)
+	bundles := []*builder.Bundle{}
+	for _, txBundlingModule := range txBundlingModules {
+		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
+		if builderModule.IsConflict(bundles, newBundles) {
+			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
+			continue
+		}
+		bundles = append(bundles, newBundles...)
+	}
+
+	// Incorporate into txs
+	incorporatedTxs, _ := builderModule.IncorporateBundleTx(arrayTxs, bundles)
+
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -719,16 +824,33 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
+	var lastSnapshot *state.StateDB
+	var executedTxsInBundle []*types.Transaction
+	var receiptsInBundle []*types.Receipt
+	var logsInBundle []*types.Log
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
-		tx := txs.Peek()
-		if tx == nil {
+		if len(incorporatedTxs) == 0 {
 			// To indicate that it does not have enough transactions for params.BlockGenerationTimeLimit.
 			if numTxsChecked > 0 {
 				usedAllTxsCounter.Inc(1)
 			}
 			break
+		}
+		txOrGen := incorporatedTxs[0]
+		var tx *types.Transaction
+		switch txOrGen.(type) {
+		case *types.Transaction:
+			tx = txOrGen.(*types.Transaction)
+		case builder.TxGenerator:
+			txGen := txOrGen.(builder.TxGenerator)
+			nodeNonce := env.state.GetNonce(rewardbase)
+			var err error
+			tx, err = txGen(nodeNonce)
+			if tx == nil {
+				logger.Warn("TxGenerator returned a nil tx", "error", err)
+			}
 		}
 		numTxsChecked++
 		// Error may be ignored here. The error has already been checked
@@ -750,25 +872,42 @@ CommitTransactionLoop:
 		// Start executing the transaction
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 
-		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
+		// Verify that tx is included in the bundle
+		var targetBundle *builder.Bundle
+		var txIndexInBundle int
+		remainTxsInBundle := 0
+		for _, bundle := range bundles {
+			if i, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
+				targetBundle = bundle
+				txIndexInBundle = i
+				remainTxsInBundle = len(bundle.BundleTxs) - i
+			}
+		}
+
+		// Take a snap if the bundle does not exist, or if it does exist, take the snap if it is the first tx in the bundle.
+		if len(targetBundle.BundleTxs) == 0 || (len(targetBundle.BundleTxs) != 0 && txIndexInBundle == 0) {
+			lastSnapshot = env.state.Copy()
+		}
+		err, logs := env.commitBundleTransaction(tx, targetBundle, txIndexInBundle, lastSnapshot, &executedTxsInBundle, &receiptsInBundle, bc, rewardbase, vmConfig)
+		// err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			txs.Pop()
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			txs.Shift()
+			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			txs.Pop()
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -783,20 +922,31 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			txs.Pop()
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
-			coalescedLogs = append(coalescedLogs, logs...)
-			env.tcount++
-			txs.Shift()
+			if len(targetBundle.BundleTxs) != 0 {
+				if remainTxsInBundle == 0 {
+					coalescedLogs = append(coalescedLogs, logsInBundle...)
+					for i := 0; i < len(targetBundle.BundleTxs); i++ {
+						env.tcount++
+					}
+				} else {
+					logsInBundle = append(logsInBundle, logs...)
+				}
+			} else {
+				coalescedLogs = append(coalescedLogs, logs...)
+				env.tcount++
+			}
+			incorporatedTxs = incorporatedTxs[1:]
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			txs.Shift()
+			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
 		}
 	}
 
