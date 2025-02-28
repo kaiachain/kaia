@@ -12,11 +12,6 @@ import "./IWKAIA.sol";
 contract GaslessSwapRouter is IKIP247, Ownable {
     IWKAIA public immutable WKAIA;
 
-    struct DEXInfo {
-        address factory;
-        address router;
-    }
-
     mapping(address => DEXInfo) private _dexInfos;
     address[] private _supportedTokens;
 
