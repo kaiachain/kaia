@@ -6,45 +6,32 @@ import routerArtifact from "@uniswap/v2-periphery/build/UniswapV2Router02.json";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 export async function gaslessSwapRouterFixture() {
-  let [deployer, testUser, thirdUser] = await ethers.getSigners();
-  let INITIAL_LIQUIDITY = parseEther("1000");
+  const [deployer, testUser, thirdUser] = await ethers.getSigners();
+  const INITIAL_LIQUIDITY = parseEther("1000");
 
   // Deploy TestToken
   const TestToken = await ethers.getContractFactory("TestToken");
-  let testToken = await TestToken.deploy(testUser.address);
+  const testToken = await TestToken.deploy(testUser.address);
   await testToken.deployed();
 
   // Deploy WKAIA
   const WKAIA = await ethers.getContractFactory("WKAIA");
-  let wkaia = await WKAIA.deploy();
+  const wkaia = await WKAIA.deploy();
   await wkaia.deployed();
 
   // Deploy UniswapV2Factory
-  const Factory = new ethers.ContractFactory(
-    factoryArtifact.abi,
-    factoryArtifact.bytecode,
-    deployer
-  );
-  let uniswapFactory = await Factory.deploy(deployer.address);
+  const Factory = new ethers.ContractFactory(factoryArtifact.abi, factoryArtifact.bytecode, deployer);
+  const uniswapFactory = await Factory.deploy(deployer.address);
   await uniswapFactory.deployed();
 
   // Deploy UniswapV2Router02
-  const Router = new ethers.ContractFactory(
-    routerArtifact.abi,
-    routerArtifact.bytecode,
-    deployer
-  );
-  let uniswapRouter = await Router.deploy(
-    uniswapFactory.address,
-    wkaia.address
-  );
+  const Router = new ethers.ContractFactory(routerArtifact.abi, routerArtifact.bytecode, deployer);
+  const uniswapRouter = await Router.deploy(uniswapFactory.address, wkaia.address);
   await uniswapRouter.deployed();
 
   // Deploy GaslessSwapRouter
-  const GaslessSwapRouter = await ethers.getContractFactory(
-    "GaslessSwapRouter"
-  );
-  let gaslessRouter = await GaslessSwapRouter.deploy(wkaia.address);
+  const GaslessSwapRouter = await ethers.getContractFactory("GaslessSwapRouter");
+  const gaslessRouter = await GaslessSwapRouter.deploy(wkaia.address);
   await gaslessRouter.deployed();
 
   // Create Uniswap pair and add liquidity
@@ -52,12 +39,8 @@ export async function gaslessSwapRouterFixture() {
 
   // Setup liquidity for testing
   await wkaia.connect(testUser).deposit({ value: INITIAL_LIQUIDITY });
-  await testToken
-    .connect(testUser)
-    .approve(uniswapRouter.address, INITIAL_LIQUIDITY);
-  await wkaia
-    .connect(testUser)
-    .approve(uniswapRouter.address, INITIAL_LIQUIDITY);
+  await testToken.connect(testUser).approve(uniswapRouter.address, INITIAL_LIQUIDITY);
+  await wkaia.connect(testUser).approve(uniswapRouter.address, INITIAL_LIQUIDITY);
   const currentBlock = await ethers.provider.getBlock("latest");
   const deadline = currentBlock.timestamp + 3600;
   await uniswapRouter
@@ -70,7 +53,7 @@ export async function gaslessSwapRouterFixture() {
       0,
       0,
       testUser.address,
-      deadline
+      deadline,
     );
 
   return {
@@ -87,7 +70,7 @@ export async function gaslessSwapRouterFixture() {
 }
 
 export async function gaslessSwapRouterAddTokenFixture() {
-  let {
+  const {
     INITIAL_LIQUIDITY,
     deployer,
     gaslessRouter,
@@ -99,11 +82,7 @@ export async function gaslessSwapRouterAddTokenFixture() {
     wkaia,
   } = await loadFixture(gaslessSwapRouterFixture);
 
-  await gaslessRouter.addToken(
-    testToken.address,
-    uniswapFactory.address,
-    uniswapRouter.address
-  );
+  await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
 
   return {
     INITIAL_LIQUIDITY,
@@ -119,40 +98,32 @@ export async function gaslessSwapRouterAddTokenFixture() {
 }
 
 export async function gaslessSwapRouterMultiTokenFixture() {
-  let liquidityAmount = parseEther("1000");
-  let [deployer, testUser] = await ethers.getSigners();
+  const liquidityAmount = parseEther("1000");
+  const [deployer, testUser] = await ethers.getSigners();
 
   // Deploy WKAIA
   const WKAIA = await ethers.getContractFactory("WKAIA");
-  let wkaia = await WKAIA.deploy();
+  const wkaia = await WKAIA.deploy();
   await wkaia.deployed();
 
   // Deploy two separate factories
-  const Factory = new ethers.ContractFactory(
-    factoryArtifact.abi,
-    factoryArtifact.bytecode,
-    deployer
-  );
-  let factoryA = await Factory.deploy(deployer.address);
-  let factoryB = await Factory.deploy(deployer.address);
+  const Factory = new ethers.ContractFactory(factoryArtifact.abi, factoryArtifact.bytecode, deployer);
+  const factoryA = await Factory.deploy(deployer.address);
+  const factoryB = await Factory.deploy(deployer.address);
   await factoryA.deployed();
   await factoryB.deployed();
 
   // Deploy two separate routers
-  const Router = new ethers.ContractFactory(
-    routerArtifact.abi,
-    routerArtifact.bytecode,
-    deployer
-  );
-  let routerA = await Router.deploy(factoryA.address, wkaia.address);
-  let routerB = await Router.deploy(factoryB.address, wkaia.address);
+  const Router = new ethers.ContractFactory(routerArtifact.abi, routerArtifact.bytecode, deployer);
+  const routerA = await Router.deploy(factoryA.address, wkaia.address);
+  const routerB = await Router.deploy(factoryB.address, wkaia.address);
   await routerA.deployed();
   await routerB.deployed();
 
   // Deploy two test tokens
   const TestToken = await ethers.getContractFactory("TestToken");
-  let tokenA = await TestToken.deploy(testUser.address);
-  let tokenB = await TestToken.deploy(testUser.address);
+  const tokenA = await TestToken.deploy(testUser.address);
+  const tokenB = await TestToken.deploy(testUser.address);
   await tokenA.deployed();
   await tokenB.deployed();
 
@@ -173,36 +144,16 @@ export async function gaslessSwapRouterMultiTokenFixture() {
   // Add liquidity to pair in Factory A
   await routerA
     .connect(testUser)
-    .addLiquidity(
-      tokenA.address,
-      wkaia.address,
-      liquidityAmount,
-      liquidityAmount,
-      0,
-      0,
-      testUser.address,
-      deadline
-    );
+    .addLiquidity(tokenA.address, wkaia.address, liquidityAmount, liquidityAmount, 0, 0, testUser.address, deadline);
 
   // Add liquidity to pair in Factory B
   await routerB
     .connect(testUser)
-    .addLiquidity(
-      tokenB.address,
-      wkaia.address,
-      liquidityAmount,
-      liquidityAmount,
-      0,
-      0,
-      testUser.address,
-      deadline
-    );
+    .addLiquidity(tokenB.address, wkaia.address, liquidityAmount, liquidityAmount, 0, 0, testUser.address, deadline);
 
   // Deploy GaslessSwapRouter
-  const GaslessSwapRouter = await ethers.getContractFactory(
-    "GaslessSwapRouter"
-  );
-  let gaslessRouter = await GaslessSwapRouter.deploy(wkaia.address);
+  const GaslessSwapRouter = await ethers.getContractFactory("GaslessSwapRouter");
+  const gaslessRouter = await GaslessSwapRouter.deploy(wkaia.address);
   await gaslessRouter.deployed();
 
   return {
@@ -210,12 +161,12 @@ export async function gaslessSwapRouterMultiTokenFixture() {
     factoryA,
     factoryB,
     gaslessRouter,
-    liquidityAmount,  
+    liquidityAmount,
     routerA,
     routerB,
     testUser,
     tokenA,
     tokenB,
     wkaia,
-  }
+  };
 }
