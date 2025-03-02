@@ -52,6 +52,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -233,7 +234,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// latest values will be applied to chainConfig after NewMixedEngine call
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
-	mGov := gov_impl.NewGovModule()
+	var (
+		mGov     = gov_impl.NewGovModule()
+		mValset  = valset_impl.NewValsetModule()
+		mStaking = staking_impl.NewStakingModule()
+	)
 	cn := &CN{
 		config:            config,
 		chainDB:           chainDB,
@@ -247,6 +252,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		closeBloomHandler: make(chan struct{}),
 		govModule:         mGov,
+		stakingModule:     mStaking,
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
@@ -304,13 +310,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 
-	err = mGov.Init(&gov_impl.InitOpts{
-		ChainKv:     chainDB.GetMiscDB(),
-		ChainConfig: cn.chainConfig,
-		Chain:       cn.blockchain,
-		NodeAddress: cn.nodeAddress,
-	})
-	if err != nil {
+	if cn.InitGovModule(mStaking, mGov, mValset) != nil {
 		return nil, err
 	}
 
@@ -398,7 +398,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(); err != nil {
+	if err := cn.SetupKaiaxModules(mValset); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
@@ -484,36 +484,14 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-func (s *CN) SetupKaiaxModules() error {
-	// Declare modules
-
-	var (
-		mStaking = staking_impl.NewStakingModule()
-		mReward  = reward_impl.NewRewardModule()
-		mSupply  = supply_impl.NewSupplyModule()
-		mGov     = gov_impl.NewGovModule()
-		mValset  = valset_impl.NewValsetModule()
-		mRandao  = randao_impl.NewRandaoModule()
-	)
-
+func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule,
+) error {
 	// Initialize modules
-	err := errors.Join(
+	return errors.Join(
 		mStaking.Init(&staking_impl.InitOpts{
 			ChainKv:     s.chainDB.GetMiscDB(),
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
-		}),
-		mReward.Init(&reward_impl.InitOpts{
-			ChainConfig:   s.chainConfig,
-			Chain:         s.blockchain,
-			GovModule:     mGov,
-			StakingModule: mStaking,
-		}),
-		mSupply.Init(&supply_impl.InitOpts{
-			ChainKv:      s.chainDB.GetMiscDB(),
-			ChainConfig:  s.chainConfig,
-			Chain:        s.blockchain,
-			RewardModule: mReward,
 		}),
 		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: s.chainConfig,
@@ -528,6 +506,28 @@ func (s *CN) SetupKaiaxModules() error {
 			GovModule:     mGov,
 			StakingModule: mStaking,
 		}),
+	)
+}
+
+func (s *CN) SetupKaiaxModules(mValset valset.ValsetModule) error {
+	var (
+		mRandao = randao_impl.NewRandaoModule()
+		mReward = reward_impl.NewRewardModule()
+		mSupply = supply_impl.NewSupplyModule()
+	)
+	err := errors.Join(
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			Chain:         s.blockchain,
+			GovModule:     s.govModule,
+			StakingModule: s.stakingModule,
+		}),
+		mSupply.Init(&supply_impl.InitOpts{
+			ChainKv:      s.chainDB.GetMiscDB(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			RewardModule: mReward,
+		}),
 		mRandao.Init(&randao_impl.InitOpts{
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
@@ -540,18 +540,17 @@ func (s *CN) SetupKaiaxModules() error {
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mRandao)
-	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao)
-	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
-	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
-	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)
+	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao)
+	s.miner.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.blockchain.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
-		engine.RegisterConsensusModule(mReward, mGov)
+		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
+		engine.RegisterConsensusModule(mReward, s.govModule)
 	}
-	s.protocolManager.RegisterStakingModule(mStaking)
+	s.protocolManager.RegisterStakingModule(s.stakingModule)
 
-	s.stakingModule = mStaking
 	return nil
 }
 
