@@ -23,6 +23,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
+var _ kaiax.TxPoolModule = (*GaslessModule)(nil)
+
 func (g *GaslessModule) PreAddLocal(tx *types.Transaction) error {
 	return nil
 }

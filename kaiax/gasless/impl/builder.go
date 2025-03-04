@@ -22,8 +22,10 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
+var _ builder.TxBundlingModule = (*GaslessModule)(nil)
+
 func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle {
-	// there are only at most two gasless transactions in pending
+	// there are only at most two gasless transactions in pending for a sender
 	bundles := []*builder.Bundle{}
 	approveTxs := map[common.Address]*types.Transaction{}
 	targetTxHash := common.Hash{}

@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -40,6 +41,8 @@ var (
 	erc20ApproveFunc = mustParseAbi(erc20AbiJson, "approve")
 	routerSwapFunc   = mustParseAbi(routerAbiJson, "swapForGas")
 )
+
+var _ gasless.GaslessModule = (*GaslessModule)(nil)
 
 type ApproveArgs struct {
 	Sender  common.Address // tx.from
