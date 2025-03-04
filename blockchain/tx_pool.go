@@ -784,11 +784,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// balance check for module transaction if module have check balance function
-	checkedBalance := false
+	moduleCheckedBalance := false
 	for _, module := range pool.modules {
 		if module.IsModuleTx(pool, tx) {
 			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
-				checkedBalance = true
+				moduleCheckedBalance = true
 				err := checkBalance(pool, tx)
 				if err != nil {
 					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
@@ -849,9 +849,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
 		}
-	} else if checkedBalance {
-		// skip balance check
-	} else {
+	} else if !moduleCheckedBalance {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
