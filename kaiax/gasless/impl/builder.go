@@ -26,7 +26,8 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	// there are only at most two gasless transactions in pending
 	bundles := []*Bundle{}
 	approveTxs := map[common.Address]*types.Transaction{}
-	for i, tx := range txs {
+	targetTxHash := common.Hash{}
+	for _, tx := range txs {
 		addr := tx.ValidatedSender()
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx
@@ -37,19 +38,20 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 			if approveTxs[addr] != nil {
 				b.BundleTxs = append(b.BundleTxs, approveTxs[addr])
 			}
-			if i > 0 {
-				b.TargetTxHash = txs[i-1].Hash()
-			}
+			b.TargetTxHash = targetTxHash
 			b.BundleTxs = append(b.BundleTxs, tx)
 			conflict := false
 			for _, prev := range prevBundles {
-				if prev.IsConflict(b) {
-					conflict = true
+				conflict = prev.IsConflict(b)
+				if conflict {
+					break
 				}
 			}
 			if !conflict {
 				bundles = append(bundles, b)
 			}
+		} else {
+			targetTxHash = tx.Hash()
 		}
 	}
 	return bundles

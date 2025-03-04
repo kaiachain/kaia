@@ -69,7 +69,7 @@ func TestExtractTxBundles(t *testing.T) {
 			[]*Bundle{
 				{
 					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					A1.Hash(),
+					common.Hash{},
 				},
 			},
 		},
@@ -87,7 +87,7 @@ func TestExtractTxBundles(t *testing.T) {
 			[]*Bundle{
 				{
 					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					A1.Hash(),
+					common.Hash{},
 				},
 				{
 					[]interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
@@ -100,11 +100,11 @@ func TestExtractTxBundles(t *testing.T) {
 			[]*Bundle{
 				{
 					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					A2.Hash(),
+					common.Hash{},
 				},
 				{
 					[]interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
-					S1.Hash(),
+					common.Hash{},
 				},
 			},
 		},
