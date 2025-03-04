@@ -19,14 +19,13 @@ package gasless
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
 )
-
-// TODO-kaiax: move it to kaiax/builder.
-type TxGenerator func(nonce uint64) (*types.Transaction, error)
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/gasless GaslessModule
 type GaslessModule interface {
 	kaiax.BaseModule
+	builder.TxBundlingModule
 
 	// IsApproveTx checks if the transaction is a GaslessApproveTx, i.e. a transaction that approves an whitelisted ERC20 token to the SwapRouter contract.
 	// An ApproveTx can be inserted to txpool.queue even if sender's balance is insufficient.
@@ -41,5 +40,5 @@ type GaslessModule interface {
 	IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool
 
 	// GetLendTxGenerator returns a function that creates a signed lend transaction that can fund the given approve and swap transactions.
-	GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) TxGenerator
+	GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) builder.TxGenerator
 }

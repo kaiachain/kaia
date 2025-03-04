@@ -9,7 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
-	gasless "github.com/kaiachain/kaia/kaiax/gasless"
+	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
 // MockGaslessModule is a mock of GaslessModule interface.
@@ -35,11 +35,25 @@ func (m *MockGaslessModule) EXPECT() *MockGaslessModuleMockRecorder {
 	return m.recorder
 }
 
+// ExtractTxBundles mocks base method.
+func (m *MockGaslessModule) ExtractTxBundles(arg0 []*types.Transaction, arg1 []*builder.Bundle) []*builder.Bundle {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractTxBundles", arg0, arg1)
+	ret0, _ := ret[0].([]*builder.Bundle)
+	return ret0
+}
+
+// ExtractTxBundles indicates an expected call of ExtractTxBundles.
+func (mr *MockGaslessModuleMockRecorder) ExtractTxBundles(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockGaslessModule)(nil).ExtractTxBundles), arg0, arg1)
+}
+
 // GetLendTxGenerator mocks base method.
-func (m *MockGaslessModule) GetLendTxGenerator(arg0, arg1 *types.Transaction) gasless.TxGenerator {
+func (m *MockGaslessModule) GetLendTxGenerator(arg0, arg1 *types.Transaction) builder.TxGenerator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLendTxGenerator", arg0, arg1)
-	ret0, _ := ret[0].(gasless.TxGenerator)
+	ret0, _ := ret[0].(builder.TxGenerator)
 	return ret0
 }
 
