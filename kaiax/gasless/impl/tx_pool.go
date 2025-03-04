@@ -43,12 +43,16 @@ func (g *GaslessModule) GetCheckBalance() func(tx *types.Transaction) error {
 
 func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
 	tx := txs[i]
-	isApproveTx := g.IsApproveTx(tx)
-	isSwapTx := g.IsSwapTx(tx)
 	addr := tx.ValidatedSender()
 	nonce := g.StateDB.GetNonce(addr)
 
-	// double check
+	if i > nonce+1 {
+		return false
+	}
+
+	isApproveTx := g.IsApproveTx(tx)
+	isSwapTx := g.IsSwapTx(tx)
+
 	if isApproveTx && i == nonce && i+1 < uint64(math.MaxUint64) {
 		if next := txs[i+1]; next != nil && g.IsSwapTx(next) {
 			return g.IsExecutable(tx, next)
