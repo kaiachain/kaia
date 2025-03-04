@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 )
 
 // nonceHeap is a heap.Interface implementation over 64bit unsigned integers for
@@ -205,7 +206,7 @@ func (m *txSortedMap) Ready(start uint64) types.Transactions {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *TxPool) types.Transactions {
+func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules []kaiax.TxPoolModule) types.Transactions {
 	// Short circuit if no transactions are available
 	if m.index.Len() == 0 || (*m.index)[0] > start {
 		return nil
@@ -218,7 +219,7 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *Tx
 		}
 
 		rejectByModule := false
-		for _, module := range pool.modules {
+		for _, module := range modules {
 			if module.IsModuleTx(m.items[next]) {
 				if !module.IsReady(m.items, next, ready) {
 					rejectByModule = true
@@ -490,8 +491,8 @@ func (l *txList) Ready(start uint64) types.Transactions {
 // Note, all transactions with nonces lower than start will also be returned to
 // prevent getting into and invalid state. This is not something that should ever
 // happen but better to be self correcting than failing!
-func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *TxPool) types.Transactions {
-	return l.txs.ReadyWithGasPrice(start, baseFee, pool)
+func (l *txList) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules []kaiax.TxPoolModule) types.Transactions {
+	return l.txs.ReadyWithGasPrice(start, baseFee, modules)
 }
 
 // Len returns the length of the transaction list.

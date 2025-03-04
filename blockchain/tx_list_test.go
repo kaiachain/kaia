@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,7 +86,7 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
-	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, &TxPool{})
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, []kaiax.TxPoolModule{})
 
 	if ready.Len() != nTxs {
 		t.Error("expected number of filtered txs", nTxs, "got", ready.Len())
@@ -144,7 +145,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
-	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, &TxPool{})
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, []kaiax.TxPoolModule{})
 
 	if ready.Len() != 7 {
 		t.Error("expected filtered txs length", 7, "got", ready.Len())
