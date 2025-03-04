@@ -18,7 +18,7 @@ package impl
 
 import (
 	"crypto/ecdsa"
-	"fmt"
+	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -391,8 +391,8 @@ func makeApproveTx(privKey *ecdsa.PrivateKey, nonce uint64, approveArgs ApproveA
 	}
 
 	data := append([]byte{}, common.Hex2Bytes("095ea7b3")...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", approveArgs.Spender.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", approveArgs.Amount.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Spender.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Amount.Bytes()), 32)...)
 	approveTx, err := makeTx(privKey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), data)
 	if err != nil {
 		return nil, err
@@ -411,10 +411,10 @@ func makeSwapTx(privKey *ecdsa.PrivateKey, nonce uint64, swapArgs SwapArgs) (*ty
 	}
 
 	data := append([]byte{}, common.Hex2Bytes("43bab9f7")...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", swapArgs.Token.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", swapArgs.AmountIn.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", swapArgs.MinAmountOut.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(fmt.Sprintf("%x", swapArgs.AmountRepay.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.Token.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountIn.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.MinAmountOut.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountRepay.Bytes()), 32)...)
 	swapTx, err := makeTx(privKey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), data)
 	if err != nil {
 		return nil, err

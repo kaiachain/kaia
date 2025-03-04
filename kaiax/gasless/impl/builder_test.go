@@ -18,7 +18,7 @@ package impl
 
 import (
 	"crypto/ecdsa"
-	"fmt"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -185,7 +185,7 @@ func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
 			nodeNonce += 1
 		} else if tx, ok = txi.(*types.Transaction); ok {
 		} else {
-			err = fmt.Errorf("unsupported bundle tx")
+			err = errors.New("unsupported bundle tx")
 		}
 		if err != nil {
 			return nil, err
