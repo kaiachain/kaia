@@ -1694,11 +1694,6 @@ func (pool *TxPool) demoteUnexecutables() {
 	}
 }
 
-// GetNonce returns the nonce of the account.
-func (pool *TxPool) GetNonce(addr common.Address) uint64 {
-	return pool.getNonce(addr)
-}
-
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
 func (pool *TxPool) getNonce(addr common.Address) uint64 {
 	return pool.currentState.GetNonce(addr)
