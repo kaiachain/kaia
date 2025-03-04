@@ -246,11 +246,6 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	}
 }
 
-func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle {
-	// TODO: implement me
-	return nil
-}
-
 func lendAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 	r := new(big.Int)
 

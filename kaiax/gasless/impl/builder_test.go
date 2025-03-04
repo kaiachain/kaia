@@ -27,7 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/gasless"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/require"
@@ -62,49 +62,49 @@ func TestExtractTxBundles(t *testing.T) {
 
 	testcases := []struct {
 		pending  []*types.Transaction
-		expected []*Bundle
+		expected []*builder.Bundle
 	}{
 		{
 			[]*types.Transaction{A1, S1, T1, T2},
-			[]*Bundle{
+			[]*builder.Bundle{
 				{
-					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					common.Hash{},
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: common.Hash{},
 				},
 			},
 		},
 		{
 			[]*types.Transaction{A1, T1, S1, T2},
-			[]*Bundle{
+			[]*builder.Bundle{
 				{
-					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					T1.Hash(),
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: T1.Hash(),
 				},
 			},
 		},
 		{
 			[]*types.Transaction{A1, S1, A2, T1, S2},
-			[]*Bundle{
+			[]*builder.Bundle{
 				{
-					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					common.Hash{},
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: common.Hash{},
 				},
 				{
-					[]interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
-					T1.Hash(),
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					TargetTxHash: T1.Hash(),
 				},
 			},
 		},
 		{
 			[]*types.Transaction{A1, A2, S1, S2},
-			[]*Bundle{
+			[]*builder.Bundle{
 				{
-					[]interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					common.Hash{},
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: common.Hash{},
 				},
 				{
-					[]interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
-					common.Hash{},
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					TargetTxHash: common.Hash{},
 				},
 			},
 		},
@@ -177,7 +177,7 @@ func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
 	for _, txi := range txs {
 		var tx *types.Transaction
 		var err error
-		if genLendTx, ok := txi.(gasless.TxGenerator); ok {
+		if genLendTx, ok := txi.(builder.TxGenerator); ok {
 			tx, err = genLendTx(nodeNonce)
 			if err != nil {
 				return nil, err
