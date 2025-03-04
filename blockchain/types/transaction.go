@@ -1092,6 +1092,24 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 	t.heads, t.txs = nil, nil
 }
 
+// Copy the current object.
+func (t *TransactionsByPriceAndNonce) Copy() *TransactionsByPriceAndNonce {
+	txsCopy := make(map[common.Address]Transactions)
+	for addr, txList := range t.txs {
+		txsCopy[addr] = txList
+	}
+
+	headsCopy := make(txByPriceAndTime, len(t.heads))
+	copy(headsCopy, t.heads)
+
+	return &TransactionsByPriceAndNonce{
+		txs:     txsCopy, // shift changes it.
+		heads:   t.heads, // pop, shift changes it.
+		signer:  t.signer,
+		baseFee: t.baseFee, // read-only
+	}
+}
+
 // NewMessage returns a `*Transaction` object with the given arguments.
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
