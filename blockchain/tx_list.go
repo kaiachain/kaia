@@ -227,6 +227,7 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules 
 				break
 			}
 		}
+		// break if this is rejected because this has to return sequential txs
 		if rejectByModule {
 			break
 		}
