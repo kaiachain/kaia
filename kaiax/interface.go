@@ -144,24 +144,20 @@ type TxPoolModule interface {
 	PreAddRemote(*types.Transaction) error
 
 	// Additional checks to check if a given transaction should be handled by module.
-	IsModuleTx(pool TxPool, tx *types.Transaction) bool
+	IsModuleTx(tx *types.Transaction) bool
 
 	// Optional actions to check if sender balance is valid for module transaction.
 	// This is mainly used on checking if module transaction be appended to queue.
 	// If nil is returned, existing check perform, otherwise returned fuction perform instead of it.
-	GetCheckBalance() func(pool TxPool, tx *types.Transaction) error
+	GetCheckBalance() func(tx *types.Transaction) error
 
 	// Additional actions to check if a module transaction should be appended to pending
-	IsReady(pool TxPool, txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
+	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
 }
 
 // Any component or module that accomodate txpool modules.
 type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)
-}
-
-type TxPool interface {
-	GetNonce(addr common.Address) uint64
 }
 
 // A module can freely add more methods.

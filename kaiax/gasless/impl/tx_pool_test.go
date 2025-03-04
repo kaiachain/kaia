@@ -63,27 +63,31 @@ func TestIsModuleTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		StateDB:     statedb,
 	})
 	for _, tc := range testcases {
-		ok := g.IsModuleTx(nil, tc.tx)
+		ok := g.IsModuleTx(tc.tx)
 		require.Equal(t, tc.ok, ok)
 	}
 }
 
 func TestIsReady(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
-	txPool := &TxPoolForTest{}
+
+	privkey, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(privkey.PublicKey)
 
 	nodeKey, _ := crypto.GenerateKey()
-	privkey, _ := crypto.GenerateKey()
-
 	g := NewGaslessModule()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
+		StateDB:     statedb,
 	})
 	approveTx := func(nonce uint64) *types.Transaction {
 		tx, err := makeTx(privkey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240"))
@@ -147,8 +151,8 @@ func TestIsReady(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		txPool.setNonce(tc.nonce)
-		ok := g.IsReady(txPool, tc.queue, tc.i, tc.ready)
+		g.StateDB.SetNonce(addr, tc.nonce)
+		ok := g.IsReady(tc.queue, tc.i, tc.ready)
 		require.Equal(t, tc.expected, ok)
 	}
 }
@@ -279,6 +283,7 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 
 	for _, tc := range testcases {
 		sdb := statedb.Copy()
+		g.StateDB = sdb
 		if tc.balance {
 			// set some token
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
@@ -328,18 +333,6 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 }
 
 // helper
-
-type TxPoolForTest struct {
-	nonce uint64
-}
-
-func (p *TxPoolForTest) GetNonce(addr common.Address) uint64 {
-	return p.nonce
-}
-
-func (p *TxPoolForTest) setNonce(nonce uint64) {
-	p.nonce = nonce
-}
 
 type testBlockChain struct {
 	statedb       *state.StateDB

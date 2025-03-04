@@ -786,10 +786,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// balance check for module transaction if module have check balance function
 	moduleCheckedBalance := false
 	for _, module := range pool.modules {
-		if module.IsModuleTx(pool, tx) {
+		if module.IsModuleTx(tx) {
 			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
 				moduleCheckedBalance = true
-				err := checkBalance(pool, tx)
+				err := checkBalance(tx)
 				if err != nil {
 					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
 					return err

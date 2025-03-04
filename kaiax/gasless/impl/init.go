@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -29,6 +30,7 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
+	StateDB     *state.StateDB
 }
 
 type GaslessModule struct {

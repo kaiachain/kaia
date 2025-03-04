@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -30,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,9 +40,11 @@ func TestExtractTxBundles(t *testing.T) {
 
 	g := NewGaslessModule()
 	nodeKey, _ := crypto.GenerateKey()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
+		StateDB:     statedb,
 	})
 
 	key1, _ := crypto.GenerateKey()

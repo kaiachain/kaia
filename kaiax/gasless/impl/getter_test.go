@@ -20,12 +20,14 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,9 +46,11 @@ func TestIsApproveTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		StateDB:     statedb,
 	})
 	for _, tc := range testcases {
 		ok := g.IsApproveTx(tc.tx)
@@ -69,9 +73,11 @@ func TestIsSwapTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		StateDB:     statedb,
 	})
 	for _, tc := range testcases {
 		ok := g.IsSwapTx(tc.tx)
@@ -95,7 +101,7 @@ func TestIsExecutable(t *testing.T) {
 		},
 		{
 			nil,
-			types.NewTransaction(1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
+			types.NewTransaction(0, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
 				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000f9448")),
 			true,
 		},
@@ -103,9 +109,11 @@ func TestIsExecutable(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		StateDB:     statedb,
 	})
 	for _, tc := range testcases {
 		ok := g.IsExecutable(tc.approve, tc.swap)

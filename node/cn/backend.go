@@ -347,9 +347,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 
 	mGasless := gasless_impl.NewGaslessModule()
+	statedb, err := bc.State()
+	if err != nil {
+		return nil, err
+	}
 	mGasless.Init(&gasless_impl.InitOpts{
 		ChainConfig: cn.chainConfig,
 		NodeKey:     ctx.NodeKey(),
+		StateDB:     statedb,
 	})
 
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov, []kaiax.TxPoolModule{mGasless})

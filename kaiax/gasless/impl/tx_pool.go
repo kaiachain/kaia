@@ -33,21 +33,22 @@ func (g *GaslessModule) PreAddRemote(tx *types.Transaction) error {
 	return nil
 }
 
-func (g *GaslessModule) IsModuleTx(_ kaiax.TxPool, tx *types.Transaction) bool {
+func (g *GaslessModule) IsModuleTx(tx *types.Transaction) bool {
 	return g.IsApproveTx(tx) || g.IsSwapTx(tx)
 }
 
-func (g *GaslessModule) GetCheckBalance() func(pool kaiax.TxPool, tx *types.Transaction) error {
-	return func(kaiax.TxPool, *types.Transaction) error { return nil }
+func (g *GaslessModule) GetCheckBalance() func(tx *types.Transaction) error {
+	return func(*types.Transaction) error { return nil }
 }
 
-func (g *GaslessModule) IsReady(pool kaiax.TxPool, txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
+func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
 	tx := txs[i]
 	isApproveTx := g.IsApproveTx(tx)
 	isSwapTx := g.IsSwapTx(tx)
 	addr := tx.ValidatedSender()
-	nonce := pool.GetNonce(addr)
+	nonce := g.StateDB.GetNonce(addr)
 
+	// double check
 	if isApproveTx && i == nonce && i+1 < uint64(math.MaxUint64) {
 		if next := txs[i+1]; next != nil && g.IsSwapTx(next) {
 			return g.IsExecutable(tx, next)

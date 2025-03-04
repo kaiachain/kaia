@@ -173,7 +173,7 @@ func decodeFunctionCall(tx *types.Transaction, method abi.Method) (common.Addres
 // AP1. ApproveTx.from == SwapTx.from
 // SP1. ApproveTx.to == SwapTx.token
 // SP2. ApproveTx.amount >= SwapTx.amountIn
-// SP3. ApproveTx.nonce+1 == SwapTx.nonce
+// SP3. ApproveTx.nonce+1 == SwapTx.nonce and Gasless transactions are head for nonce
 // SP4. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
 func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool {
 	// Sx.
@@ -203,6 +203,14 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		}
 		// SP3.
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
+			return false
+		}
+		if nonce := g.StateDB.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+			return false
+		}
+	} else {
+		// SP3.
+		if nonce := g.StateDB.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
 			return false
 		}
 	}

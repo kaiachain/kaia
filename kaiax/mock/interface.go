@@ -521,10 +521,10 @@ func (m *MockTxPoolModule) EXPECT() *MockTxPoolModuleMockRecorder {
 }
 
 // GetCheckBalance mocks base method.
-func (m *MockTxPoolModule) GetCheckBalance() func(kaiax.TxPool, *types.Transaction) error {
+func (m *MockTxPoolModule) GetCheckBalance() func(*types.Transaction) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCheckBalance")
-	ret0, _ := ret[0].(func(kaiax.TxPool, *types.Transaction) error)
+	ret0, _ := ret[0].(func(*types.Transaction) error)
 	return ret0
 }
 
@@ -535,31 +535,31 @@ func (mr *MockTxPoolModuleMockRecorder) GetCheckBalance() *gomock.Call {
 }
 
 // IsModuleTx mocks base method.
-func (m *MockTxPoolModule) IsModuleTx(pool kaiax.TxPool, tx *types.Transaction) bool {
+func (m *MockTxPoolModule) IsModuleTx(tx *types.Transaction) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsModuleTx", pool, tx)
+	ret := m.ctrl.Call(m, "IsModuleTx", tx)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsModuleTx indicates an expected call of IsModuleTx.
-func (mr *MockTxPoolModuleMockRecorder) IsModuleTx(pool, tx interface{}) *gomock.Call {
+func (mr *MockTxPoolModuleMockRecorder) IsModuleTx(tx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsModuleTx", reflect.TypeOf((*MockTxPoolModule)(nil).IsModuleTx), pool, tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsModuleTx", reflect.TypeOf((*MockTxPoolModule)(nil).IsModuleTx), tx)
 }
 
 // IsReady mocks base method.
-func (m *MockTxPoolModule) IsReady(pool kaiax.TxPool, txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
+func (m *MockTxPoolModule) IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsReady", pool, txs, next, ready)
+	ret := m.ctrl.Call(m, "IsReady", txs, next, ready)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsReady indicates an expected call of IsReady.
-func (mr *MockTxPoolModuleMockRecorder) IsReady(pool, txs, next, ready interface{}) *gomock.Call {
+func (mr *MockTxPoolModuleMockRecorder) IsReady(txs, next, ready interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockTxPoolModule)(nil).IsReady), pool, txs, next, ready)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockTxPoolModule)(nil).IsReady), txs, next, ready)
 }
 
 // PreAddLocal mocks base method.
@@ -627,41 +627,4 @@ func (m *MockTxPoolModuleHost) RegisterTxPoolModule(modules ...kaiax.TxPoolModul
 func (mr *MockTxPoolModuleHostMockRecorder) RegisterTxPoolModule(modules ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTxPoolModule", reflect.TypeOf((*MockTxPoolModuleHost)(nil).RegisterTxPoolModule), modules...)
-}
-
-// MockTxPool is a mock of TxPool interface.
-type MockTxPool struct {
-	ctrl     *gomock.Controller
-	recorder *MockTxPoolMockRecorder
-}
-
-// MockTxPoolMockRecorder is the mock recorder for MockTxPool.
-type MockTxPoolMockRecorder struct {
-	mock *MockTxPool
-}
-
-// NewMockTxPool creates a new mock instance.
-func NewMockTxPool(ctrl *gomock.Controller) *MockTxPool {
-	mock := &MockTxPool{ctrl: ctrl}
-	mock.recorder = &MockTxPoolMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTxPool) EXPECT() *MockTxPoolMockRecorder {
-	return m.recorder
-}
-
-// GetNonce mocks base method.
-func (m *MockTxPool) GetNonce(addr common.Address) uint64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNonce", addr)
-	ret0, _ := ret[0].(uint64)
-	return ret0
-}
-
-// GetNonce indicates an expected call of GetNonce.
-func (mr *MockTxPoolMockRecorder) GetNonce(addr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonce", reflect.TypeOf((*MockTxPool)(nil).GetNonce), addr)
 }

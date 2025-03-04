@@ -219,8 +219,8 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, pool *Tx
 
 		rejectByModule := false
 		for _, module := range pool.modules {
-			if module.IsModuleTx(pool, m.items[next]) {
-				if !module.IsReady(pool, m.items, next, ready) {
+			if module.IsModuleTx(m.items[next]) {
+				if !module.IsReady(m.items, next, ready) {
 					rejectByModule = true
 				}
 				break
@@ -397,9 +397,9 @@ func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions
 
 		// balance check for module transaction
 		for _, module := range pool.modules {
-			if module.IsModuleTx(pool, tx) {
+			if module.IsModuleTx(tx) {
 				if checkBalance := module.GetCheckBalance(); checkBalance != nil {
-					return checkBalance(pool, tx) != nil
+					return checkBalance(tx) != nil
 				}
 				break
 			}
