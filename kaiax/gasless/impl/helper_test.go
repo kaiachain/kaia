@@ -81,6 +81,13 @@ func (a *AccountKeyPickerForTest) Exist(addr common.Address) bool {
 }
 
 func makeTx(privKey *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) (*types.Transaction, error) {
+	if privKey == nil {
+		var err error
+		privKey, err = crypto.GenerateKey()
+		if err != nil {
+			return nil, err
+		}
+	}
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	p := &AccountKeyPickerForTest{
 		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),

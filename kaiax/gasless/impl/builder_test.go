@@ -23,7 +23,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
@@ -46,19 +45,23 @@ func TestExtractTxBundles(t *testing.T) {
 
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()
-	key3, _ := crypto.GenerateKey()
 
-	A1, err := makeTx(key1, 0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240"))
+	A1, err := makeApproveTx(key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	require.NoError(t, err)
-	S1, err := makeTx(key1, 1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688"))
+	S1, err := makeSwapTx(key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 	require.NoError(t, err)
-	A2, err := makeTx(key2, 0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240"))
+
+	A2, err := makeApproveTx(key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	require.NoError(t, err)
-	S2, err := makeTx(key2, 1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688"))
+	S2, err := makeSwapTx(key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 	require.NoError(t, err)
-	T1, err := makeTx(key3, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
+
+	S3, err := makeSwapTx(nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 	require.NoError(t, err)
-	T2, err := makeTx(key3, 0, common.HexToAddress("0xBBBB"), big.NewInt(0), 1000000, big.NewInt(0), nil)
+
+	T1, err := makeTx(nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
+	require.NoError(t, err)
+	T2, err := makeTx(nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
 	require.NoError(t, err)
 
 	testcases := []struct {
@@ -105,11 +108,49 @@ func TestExtractTxBundles(t *testing.T) {
 				},
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
-					TargetTxHash: common.Hash{},
+					TargetTxHash: S1.Hash(),
 				},
 			},
 		},
-		// GASLESS_TODO: conflict test
+		{
+			[]*types.Transaction{A1, S1, A2, S2},
+			[]*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: common.Hash{},
+				},
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					TargetTxHash: S1.Hash(),
+				},
+			},
+		},
+		{
+			[]*types.Transaction{A1, A2, S2, S1},
+			[]*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					TargetTxHash: common.Hash{},
+				},
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: S2.Hash(),
+				},
+			},
+		},
+		{
+			[]*types.Transaction{A1, S1, S3},
+			[]*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: common.Hash{},
+				},
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(nil, S3), S3},
+					TargetTxHash: S1.Hash(),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testcases {
