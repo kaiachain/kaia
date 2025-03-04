@@ -170,7 +170,8 @@ func decodeFunctionCall(tx *types.Transaction, method abi.Method) (common.Addres
 // AP1. ApproveTx.from == SwapTx.from
 // SP1. ApproveTx.to == SwapTx.token
 // SP2. ApproveTx.amount >= SwapTx.amountIn
-// SP3. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
+// SP3. ApproveTx.nonce+1 == SwapTx.nonce
+// SP4. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
 func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool {
 	// Sx.
 	swapArgs, ok := decodeSwapTx(swapTx)
