@@ -799,10 +799,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
+	// Transactor should have enough funds to cover the costs
+	// cost == V + GP * GL
 	if tx.IsFeeDelegatedTransaction() {
-		// Transactor should have enough funds to cover the costs
-		// cost == V + GP * GL
-
 		// balance check for fee-delegated tx
 		gasFeePayer, err = tx.ValidateFeePayer(pool.signer, pool.currentState, pool.currentBlockNumber)
 		if err != nil {
