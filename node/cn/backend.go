@@ -310,7 +310,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 
-	if cn.InitGovModule(mStaking, mGov, mValset) != nil {
+	if err := cn.InitGovModule(mStaking, mGov, mValset); err != nil {
 		return nil, err
 	}
 
