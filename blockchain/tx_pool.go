@@ -794,8 +794,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
 					return err
 				}
-				break
 			}
+			break
 		}
 	}
 
