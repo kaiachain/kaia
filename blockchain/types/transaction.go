@@ -352,6 +352,28 @@ func (tx *Transaction) AuthList() []SetCodeAuthorization {
 	return nil
 }
 
+// SetCodeAuthorities returns a list of unique authorities from the
+// authorization list.
+func (tx *Transaction) SetCodeAuthorities() []common.Address {
+	if tx.Type() != TxTypeEthereumSetCode {
+		return nil
+	}
+	var (
+		marks = make(map[common.Address]bool)
+		auths = make([]common.Address, 0, len(tx.AuthList()))
+	)
+	for _, auth := range tx.AuthList() {
+		if addr, err := auth.Authority(); err == nil {
+			if marks[addr] {
+				continue
+			}
+			marks[addr] = true
+			auths = append(auths, addr)
+		}
+	}
+	return auths
+}
+
 func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
 func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
 func (tx *Transaction) CheckNonce() bool {
