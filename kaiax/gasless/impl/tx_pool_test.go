@@ -35,14 +35,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var chainConfig = params.TestChainConfig.Copy()
+
 func init() {
-	conf := params.TestChainConfig.Copy()
-	conf.IstanbulCompatibleBlock = big.NewInt(0)
-	conf.LondonCompatibleBlock = big.NewInt(0)
-	conf.EthTxTypeCompatibleBlock = big.NewInt(0)
-	conf.MagmaCompatibleBlock = big.NewInt(0)
-	fork.SetHardForkBlockNumberConfig(conf)
-	blockchain.InitDeriveSha(conf)
+	chainConfig.IstanbulCompatibleBlock = big.NewInt(0)
+	chainConfig.LondonCompatibleBlock = big.NewInt(0)
+	chainConfig.EthTxTypeCompatibleBlock = big.NewInt(0)
+	chainConfig.MagmaCompatibleBlock = big.NewInt(0)
+	fork.SetHardForkBlockNumberConfig(chainConfig)
+	blockchain.InitDeriveSha(chainConfig)
 }
 
 func TestIsModuleTx(t *testing.T) {
@@ -106,66 +107,100 @@ func TestIsReady(t *testing.T) {
 		return makeTx(t, privkey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 	}
 
-	testcases := []struct {
+	testcases := map[string]struct {
 		queue    map[uint64]*types.Transaction
 		ready    types.Transactions
 		i        uint64
 		nonce    uint64
 		expected bool
 	}{
-		{
-			map[uint64]*types.Transaction{1: singleSwapTx(1)},
+		// single swap test
+		"correct single swap tx": {
+			map[uint64]*types.Transaction{1: singleSwapTx(1), 2: other(2)},
 			types.Transactions{},
 			1,
 			1,
 			true,
 		},
-		{
-			map[uint64]*types.Transaction{1: approveTx(1), 2: swapTx(2), 3: other(3), 4: other(4)},
+		"single swap tx with non-head nonce": {
+			map[uint64]*types.Transaction{1: singleSwapTx(1), 2: other(2)},
+			types.Transactions{other(0)},
+			1,
+			0,
+			false,
+		},
+		// approve tx test
+		"correct approve tx": {
+			map[uint64]*types.Transaction{1: approveTx(1), 2: swapTx(2), 3: other(3)},
 			types.Transactions{},
 			1,
 			1,
 			true,
 		},
-		{
-			map[uint64]*types.Transaction{2: swapTx(2), 3: other(3), 4: other(4)},
-			types.Transactions{1: approveTx(1)},
+		"approve tx without swap tx": {
+			map[uint64]*types.Transaction{1: approveTx(1)},
+			types.Transactions{},
+			1,
+			1,
+			false,
+		},
+		"approve tx with non-sequentail swap tx": {
+			map[uint64]*types.Transaction{1: approveTx(1), 2: other(2), 3: swapTx(3)},
+			types.Transactions{},
+			1,
+			1,
+			false,
+		},
+		"apporve tx with non-head nonce": {
+			map[uint64]*types.Transaction{1: approveTx(1), 2: swapTx(2), 3: other(3)},
+			types.Transactions{other(0)},
+			1,
+			0,
+			false,
+		},
+		// swap test
+		"correct swap tx": {
+			map[uint64]*types.Transaction{2: swapTx(2), 3: other(3)},
+			types.Transactions{approveTx(1)},
 			2,
 			1,
 			true,
 		},
-		{
-			map[uint64]*types.Transaction{2: swapTx(2), 3: other(3), 4: other(4)},
+		" swap tx without approve tx": {
+			map[uint64]*types.Transaction{2: swapTx(2), 3: other(3)},
 			types.Transactions{},
 			2,
 			1,
 			false,
 		},
+		"gasless tx with non-sequential approve tx": {
+			map[uint64]*types.Transaction{3: swapTx(3)},
+			types.Transactions{approveTx(1), other(2)},
+			3,
+			1,
+			false,
+		},
 	}
 
-	for _, tc := range testcases {
-		g.StateDB.SetNonce(addr, tc.nonce)
-		ok := g.IsReady(tc.queue, tc.i, tc.ready)
-		require.Equal(t, tc.expected, ok)
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			g.StateDB.SetNonce(addr, tc.nonce)
+			ok := g.IsReady(tc.queue, tc.i, tc.ready)
+			require.Equal(t, tc.expected, ok)
+		})
 	}
 }
 
 func TestPromoteGaslessTransactions(t *testing.T) {
 	t.Parallel()
 
-	type TxTypeTest int
+	type txTypeTest int
 	const (
-		T       TxTypeTest = iota // regular tx
+		T       txTypeTest = iota // regular tx
 		A                         // approve tx
 		SwithA                    // swap tx with approe tx
 		SingleS                   // single swap tx
 	)
-
-	conf := params.TestChainConfig.Copy()
-	conf.IstanbulCompatibleBlock = big.NewInt(0)
-	conf.LondonCompatibleBlock = big.NewInt(0)
-	conf.EthTxTypeCompatibleBlock = big.NewInt(0)
-	conf.MagmaCompatibleBlock = big.NewInt(0)
 
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
@@ -184,93 +219,93 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 
 	testcases := []struct {
 		balance bool
-		txs     []TxTypeTest
-		pending []TxTypeTest
-		queued  []TxTypeTest
+		txs     []txTypeTest
+		pending []txTypeTest
+		queued  []txTypeTest
 	}{
 		{
 			false,
-			[]TxTypeTest{T, A, SwithA, SingleS},
-			[]TxTypeTest{},
-			[]TxTypeTest{A, SwithA, SingleS},
+			[]txTypeTest{A, T, SwithA, SingleS},
+			[]txTypeTest{},
+			[]txTypeTest{A, SwithA, SingleS},
 		},
 		{
 			true,
-			[]TxTypeTest{T, A, SwithA, SingleS},
-			[]TxTypeTest{T},
-			[]TxTypeTest{A, SwithA, SingleS},
+			[]txTypeTest{A, T, SwithA, SingleS},
+			[]txTypeTest{},
+			[]txTypeTest{A, T, SwithA, SingleS},
 		},
 		{
 			false,
-			[]TxTypeTest{T, SingleS, A, SwithA},
-			[]TxTypeTest{},
-			[]TxTypeTest{SingleS, A, SwithA},
+			[]txTypeTest{A, SwithA, T, SingleS},
+			[]txTypeTest{A, SwithA},
+			[]txTypeTest{SingleS},
 		},
 		{
 			true,
-			[]TxTypeTest{T, SingleS, A, SwithA},
-			[]TxTypeTest{T},
-			[]TxTypeTest{SingleS, A, SwithA},
+			[]txTypeTest{A, SwithA, T, SingleS},
+			[]txTypeTest{A, SwithA, T},
+			[]txTypeTest{SingleS},
 		},
 		{
 			false,
-			[]TxTypeTest{A, T, SwithA, SingleS},
-			[]TxTypeTest{},
-			[]TxTypeTest{A, SwithA, SingleS},
+			[]txTypeTest{A, SwithA, SingleS, T},
+			[]txTypeTest{A, SwithA},
+			[]txTypeTest{SingleS},
 		},
 		{
 			true,
-			[]TxTypeTest{A, T, SwithA, SingleS},
-			[]TxTypeTest{},
-			[]TxTypeTest{A, T, SwithA, SingleS},
+			[]txTypeTest{A, SwithA, SingleS, T},
+			[]txTypeTest{A, SwithA},
+			[]txTypeTest{SingleS, T},
 		},
 		{
 			false,
-			[]TxTypeTest{A, SwithA, T, SingleS},
-			[]TxTypeTest{A, SwithA},
-			[]TxTypeTest{SingleS},
+			[]txTypeTest{SingleS, A, SwithA, T},
+			[]txTypeTest{SingleS},
+			[]txTypeTest{A, SwithA},
 		},
 		{
 			true,
-			[]TxTypeTest{A, SwithA, T, SingleS},
-			[]TxTypeTest{A, SwithA, T},
-			[]TxTypeTest{SingleS},
+			[]txTypeTest{SingleS, A, SwithA, T},
+			[]txTypeTest{SingleS},
+			[]txTypeTest{A, SwithA, T},
 		},
 		{
 			false,
-			[]TxTypeTest{A, SwithA, SingleS, T},
-			[]TxTypeTest{A, SwithA},
-			[]TxTypeTest{SingleS},
+			[]txTypeTest{SingleS, T, A, SwithA},
+			[]txTypeTest{SingleS},
+			[]txTypeTest{A, SwithA},
 		},
 		{
 			true,
-			[]TxTypeTest{A, SwithA, SingleS, T},
-			[]TxTypeTest{A, SwithA},
-			[]TxTypeTest{SingleS, T},
+			[]txTypeTest{SingleS, T, A, SwithA},
+			[]txTypeTest{SingleS, T},
+			[]txTypeTest{A, SwithA},
 		},
 		{
 			false,
-			[]TxTypeTest{SingleS, A, SwithA, T},
-			[]TxTypeTest{SingleS},
-			[]TxTypeTest{A, SwithA},
+			[]txTypeTest{T, A, SwithA, SingleS},
+			[]txTypeTest{},
+			[]txTypeTest{A, SwithA, SingleS},
 		},
 		{
 			true,
-			[]TxTypeTest{SingleS, A, SwithA, T},
-			[]TxTypeTest{SingleS},
-			[]TxTypeTest{A, SwithA, T},
+			[]txTypeTest{T, A, SwithA, SingleS},
+			[]txTypeTest{T},
+			[]txTypeTest{A, SwithA, SingleS},
 		},
 		{
 			false,
-			[]TxTypeTest{SingleS, T, A, SwithA},
-			[]TxTypeTest{SingleS},
-			[]TxTypeTest{A, SwithA},
+			[]txTypeTest{T, SingleS, A, SwithA},
+			[]txTypeTest{},
+			[]txTypeTest{SingleS, A, SwithA},
 		},
 		{
 			true,
-			[]TxTypeTest{SingleS, T, A, SwithA},
-			[]TxTypeTest{SingleS, T},
-			[]TxTypeTest{A, SwithA},
+			[]txTypeTest{T, SingleS, A, SwithA},
+			[]txTypeTest{T},
+			[]txTypeTest{SingleS, A, SwithA},
 		},
 	}
 
@@ -282,9 +317,9 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
 		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
-		pool := blockchain.NewTxPool(testTxPoolConfig, conf, bc, &dummyGovModule{chainConfig: conf}, []kaiax.TxPoolModule{g})
+		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig}, []kaiax.TxPoolModule{g})
 
-		txMap := map[TxTypeTest]*types.Transaction{}
+		txMap := map[txTypeTest]*types.Transaction{}
 
 		for i, ttype := range tc.txs {
 			nonce := uint64(i)
