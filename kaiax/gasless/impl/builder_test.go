@@ -17,14 +17,11 @@
 package impl
 
 import (
-	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
@@ -134,67 +131,4 @@ func TestExtractTxBundles(t *testing.T) {
 			}
 		}
 	}
-}
-
-// helper
-
-type AccountKeyPickerForTest struct {
-	AddrKeyMap map[common.Address]accountkey.AccountKey
-}
-
-func (a *AccountKeyPickerForTest) GetKey(addr common.Address) accountkey.AccountKey {
-	return a.AddrKeyMap[addr]
-}
-
-func (a *AccountKeyPickerForTest) SetKey(addr common.Address, key accountkey.AccountKey) {
-	a.AddrKeyMap[addr] = key
-}
-
-func (a *AccountKeyPickerForTest) Exist(addr common.Address) bool {
-	return a.AddrKeyMap[addr] != nil
-}
-
-func makeTx(privKey *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) (*types.Transaction, error) {
-	addr := crypto.PubkeyToAddress(privKey.PublicKey)
-	p := &AccountKeyPickerForTest{
-		AddrKeyMap: make(map[common.Address]accountkey.AccountKey),
-	}
-	p.SetKey(addr, accountkey.NewAccountKeyLegacy())
-
-	signer := types.LatestSignerForChainID(big.NewInt(1))
-	tx := types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data)
-	tx, err := types.SignTx(tx, signer, privKey)
-	if err != nil {
-		return nil, err
-	}
-	_, err = tx.ValidateSender(signer, p, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
-	nodeNonce := uint64(0)
-	hashes := []common.Hash{}
-	for _, txi := range txs {
-		var tx *types.Transaction
-		var err error
-		if genLendTx, ok := txi.(builder.TxGenerator); ok {
-			tx, err = genLendTx(nodeNonce)
-			if err != nil {
-				return nil, err
-			}
-			nodeNonce += 1
-		} else if tx, ok = txi.(*types.Transaction); ok {
-		} else {
-			err = errors.New("unsupported bundle tx")
-		}
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, tx.Hash())
-	}
-	return hashes, nil
 }

@@ -17,8 +17,6 @@
 package impl
 
 import (
-	"crypto/ecdsa"
-	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -31,7 +29,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -330,88 +327,4 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 
 		pool.Stop()
 	}
-}
-
-// helper
-
-type testBlockChain struct {
-	statedb       *state.StateDB
-	gasLimit      uint64
-	chainHeadFeed *event.Feed
-}
-
-func (bc *testBlockChain) CurrentBlock() *types.Block {
-	return types.NewBlock(&types.Header{Number: big.NewInt(0)}, nil, nil)
-}
-
-func (bc *testBlockChain) GetBlock(hash common.Hash, number uint64) *types.Block {
-	return bc.CurrentBlock()
-}
-
-func (bc *testBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
-	return bc.statedb, nil
-}
-
-func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
-	return bc.chainHeadFeed.Subscribe(ch)
-}
-
-type dummyGovModule struct {
-	chainConfig *params.ChainConfig
-}
-
-func (d *dummyGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
-	return gov.ParamSet{UnitPrice: d.chainConfig.UnitPrice}
-}
-
-func flattenPoolTxs(structured map[common.Address]types.Transactions) map[common.Hash]bool {
-	flattened := map[common.Hash]bool{}
-	for _, txs := range structured {
-		for _, tx := range txs {
-			flattened[tx.Hash()] = true
-		}
-	}
-	return flattened
-}
-
-func makeApproveTx(privKey *ecdsa.PrivateKey, nonce uint64, approveArgs ApproveArgs) (*types.Transaction, error) {
-	var err error
-	if privKey == nil {
-		privKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	data := append([]byte{}, common.Hex2Bytes("095ea7b3")...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Spender.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Amount.Bytes()), 32)...)
-	approveTx, err := makeTx(privKey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), data)
-	if err != nil {
-		return nil, err
-	}
-
-	return approveTx, nil
-}
-
-func makeSwapTx(privKey *ecdsa.PrivateKey, nonce uint64, swapArgs SwapArgs) (*types.Transaction, error) {
-	var err error
-	if privKey == nil {
-		privKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	data := append([]byte{}, common.Hex2Bytes("43bab9f7")...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.Token.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountIn.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.MinAmountOut.Bytes()), 32)...)
-	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountRepay.Bytes()), 32)...)
-	swapTx, err := makeTx(privKey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), data)
-	if err != nil {
-		return nil, err
-	}
-
-	return swapTx, nil
 }
