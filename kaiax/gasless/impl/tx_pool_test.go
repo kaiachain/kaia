@@ -47,13 +47,17 @@ func init() {
 
 func TestIsModuleTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
 	testcases := []struct {
 		tx *types.Transaction
 		ok bool
 	}{
 		{
-			types.NewTransaction(0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1),
-				hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240")),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			true,
+		},
+		{
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
 			true,
 		},
 	}
@@ -87,27 +91,19 @@ func TestIsReady(t *testing.T) {
 		StateDB:     statedb,
 	})
 	approveTx := func(nonce uint64) *types.Transaction {
-		tx, err := makeTx(privkey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240"))
-		require.NoError(t, err)
-		return tx
+		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	}
 
 	swapTx := func(nonce uint64) *types.Transaction {
-		tx, err := makeTx(privkey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688"))
-		require.NoError(t, err)
-		return tx
+		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 	}
 
-	swapTx2 := func(nonce uint64) *types.Transaction {
-		tx, err := makeTx(privkey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000f9448"))
-		require.NoError(t, err)
-		return tx
+	singleSwapTx := func(nonce uint64) *types.Transaction {
+		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 	}
 
 	other := func(nonce uint64) *types.Transaction {
-		tx, err := makeTx(privkey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
-		require.NoError(t, err)
-		return tx
+		return makeTx(t, privkey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 	}
 
 	testcases := []struct {
@@ -118,7 +114,7 @@ func TestIsReady(t *testing.T) {
 		expected bool
 	}{
 		{
-			map[uint64]*types.Transaction{1: swapTx2(1)},
+			map[uint64]*types.Transaction{1: singleSwapTx(1)},
 			types.Transactions{},
 			1,
 			1,
@@ -295,15 +291,14 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 			var tx *types.Transaction
 			switch ttype {
 			case T:
-				tx, err = makeTx(userKey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x"))
+				tx = makeTx(t, userKey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x"))
 			case A:
-				tx, err = makeApproveTx(userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+				tx = makeApproveTx(t, userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 			case SwithA:
-				tx, err = makeSwapTx(userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 			case SingleS:
-				tx, err = makeSwapTx(userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 			}
-			require.NoError(t, err)
 			txMap[ttype] = tx
 			pool.AddLocal(tx)
 		}

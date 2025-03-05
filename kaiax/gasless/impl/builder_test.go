@@ -46,23 +46,16 @@ func TestExtractTxBundles(t *testing.T) {
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()
 
-	A1, err := makeApproveTx(key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
-	require.NoError(t, err)
-	S1, err := makeSwapTx(key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
-	require.NoError(t, err)
+	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 
-	A2, err := makeApproveTx(key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
-	require.NoError(t, err)
-	S2, err := makeSwapTx(key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
-	require.NoError(t, err)
+	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 
-	S3, err := makeSwapTx(nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
-	require.NoError(t, err)
+	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 
-	T1, err := makeTx(nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
-	require.NoError(t, err)
-	T2, err := makeTx(nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
-	require.NoError(t, err)
+	T1 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
+	T2 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
 
 	testcases := []struct {
 		pending  []*types.Transaction

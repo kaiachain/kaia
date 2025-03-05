@@ -23,7 +23,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -33,14 +32,28 @@ import (
 
 func TestIsApproveTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
+	// Legacy TestToken.approve(SwapRouter, 1000000)
+	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	testcases := []struct {
 		tx *types.Transaction
 		ok bool
 	}{
-		{ // Legacy TestToken.approve(SwapRouter, 1000000)
-			types.NewTransaction(0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(0),
-				hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240")),
+		{
+			correct,
 			true,
+		},
+		{ // wrong Token
+			makeTx(t, privkey, 0, common.HexToAddress("0xffff"), big.NewInt(0), 1000000, big.NewInt(1), correct.Data()),
+			false,
+		},
+		{ // wrong spender
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0xffff"), Amount: big.NewInt(1000000)}),
+			false,
+		},
+		{ // wrong amount
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(0)}),
+			false,
 		},
 	}
 
@@ -60,14 +73,24 @@ func TestIsApproveTx(t *testing.T) {
 
 func TestIsSwapTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
+	// Legacy TestRouter.swapForGas(Token, 10, 100, 2021000)
+	correct := makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 	testcases := []struct {
 		tx *types.Transaction
 		ok bool
 	}{
-		{ // Legacy TestRouter.swapForGas(Token, 10, 100, 2021000)
-			types.NewTransaction(0, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
-				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688")),
+		{
+			correct,
 			true,
+		},
+		{ // wrong swap router
+			makeTx(t, privkey, 0, common.HexToAddress("0xffff"), big.NewInt(0), 1000000, big.NewInt(1), correct.Data()),
+			false,
+		},
+		{ // wrong token
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xffff"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
 		},
 	}
 
@@ -87,23 +110,56 @@ func TestIsSwapTx(t *testing.T) {
 
 func TestIsExecutable(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
 	testcases := []struct {
 		approve *types.Transaction
 		swap    *types.Transaction
 		ok      bool
 	}{
-		{
-			types.NewTransaction(0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1),
-				hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240")),
-			types.NewTransaction(1, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
-				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000001ed688")),
+		{ // gasless tx pair
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
 			true,
 		},
-		{
+		{ // single swap tx
 			nil,
-			types.NewTransaction(0, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1),
-				hexutil.MustDecode("0x43bab9f7000000000000000000000000000000000000000000000000000000000000abcd000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000f9448")),
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)}),
 			true,
+		},
+		{ // gasless tx pair, wrong sender
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, nil, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		{ // gasless tx pair, wrong token
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xffff"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		{ // gasless tx pair, wrong amount in
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(1000001), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		{ // gasless tx pair, not sequential nonce
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		{ // gasless tx pair, wrong nonce
+			makeApproveTx(t, privkey, 1, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		{ // single swap tx, wrong nonce
+			nil,
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1)}),
+			false,
+		},
+		{ // single swap tx, wrong repay amount
+			nil,
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1)}),
+			false,
 		},
 	}
 

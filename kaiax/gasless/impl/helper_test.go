@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"testing"
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -32,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/require"
 )
 
 type testBlockChain struct {
@@ -80,13 +82,11 @@ func (a *AccountKeyPickerForTest) Exist(addr common.Address) bool {
 	return a.AddrKeyMap[addr] != nil
 }
 
-func makeTx(privKey *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) (*types.Transaction, error) {
+func makeTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Transaction {
 	if privKey == nil {
 		var err error
 		privKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 	}
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	p := &AccountKeyPickerForTest{
@@ -97,44 +97,33 @@ func makeTx(privKey *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *
 	signer := types.LatestSignerForChainID(big.NewInt(1))
 	tx := types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data)
 	tx, err := types.SignTx(tx, signer, privKey)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 	_, err = tx.ValidateSender(signer, p, 0)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
-	return tx, nil
+	return tx
 }
 
-func makeApproveTx(privKey *ecdsa.PrivateKey, nonce uint64, approveArgs ApproveArgs) (*types.Transaction, error) {
+func makeApproveTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, approveArgs ApproveArgs) *types.Transaction {
 	var err error
 	if privKey == nil {
 		privKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 	}
 
 	data := append([]byte{}, common.Hex2Bytes("095ea7b3")...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Spender.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(approveArgs.Amount.Bytes()), 32)...)
-	approveTx, err := makeTx(privKey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), data)
-	if err != nil {
-		return nil, err
-	}
+	approveTx := makeTx(t, privKey, nonce, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(1), data)
 
-	return approveTx, nil
+	return approveTx
 }
 
-func makeSwapTx(privKey *ecdsa.PrivateKey, nonce uint64, swapArgs SwapArgs) (*types.Transaction, error) {
+func makeSwapTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, swapArgs SwapArgs) *types.Transaction {
 	var err error
 	if privKey == nil {
 		privKey, err = crypto.GenerateKey()
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 	}
 
 	data := append([]byte{}, common.Hex2Bytes("43bab9f7")...)
@@ -142,12 +131,9 @@ func makeSwapTx(privKey *ecdsa.PrivateKey, nonce uint64, swapArgs SwapArgs) (*ty
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountIn.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.MinAmountOut.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountRepay.Bytes()), 32)...)
-	swapTx, err := makeTx(privKey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), data)
-	if err != nil {
-		return nil, err
-	}
+	swapTx := makeTx(t, privKey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), data)
 
-	return swapTx, nil
+	return swapTx
 }
 
 func flattenPoolTxs(structured map[common.Address]types.Transactions) map[common.Hash]bool {
