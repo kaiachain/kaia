@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -43,7 +43,7 @@ func TestIsApproveTx(t *testing.T) {
 			correct,
 			true,
 		},
-		{ // wrong Token
+		{ // wrong token
 			makeTx(t, privkey, 0, common.HexToAddress("0xffff"), big.NewInt(0), 1000000, big.NewInt(1), correct.Data()),
 			false,
 		},
