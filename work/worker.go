@@ -684,31 +684,38 @@ func (env *Task) commitBundleTransaction(tx *types.Transaction, bundle *builder.
 	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-			tx.MarkUnexecutable(true)
-			for _, executedTx := range *executedTxsInBundle {
-				executedTx.MarkUnexecutable(true)
+			// Mark all tx in the bundle as Unexecutable
+			// In the case of TxGenerator, there is no tx in the pool, so there is no need to execute MarkUnexecutable.
+			for _, txInBundle := range bundle.BundleTxs {
+				switch v := txInBundle.(type) {
+				case *types.Transaction:
+					v.MarkUnexecutable(true)
+				}
 			}
 		}
+		// Restore the copy of statedb
 		*env.state = *lastSnapshot
 
+		// The GasUsed in the header remains incremented, so this is also reverted.
 		for _, receipt := range *receiptsInBundle {
 			env.header.GasUsed -= receipt.GasUsed
 		}
-		*executedTxsInBundle = []*types.Transaction{}
-		*receiptsInBundle = []*types.Receipt{}
+		// Delete the txs information in bundle
+		*executedTxsInBundle = (*executedTxsInBundle)[:0]
+		*receiptsInBundle = (*receiptsInBundle)[:0]
 		return err, nil
 	}
 
-	if len(bundle.BundleTxs) == 0 { // If the tx is not included in the bundle, just add it to env.txs.
-		env.txs = append(env.txs, tx)
-		env.receipts = append(env.receipts, receipt)
-	} else if len(bundle.BundleTxs)-1 == txIndexInBundle { // For txs included in a bundle, if the tx is the last in the bundle, it will be added all at once.
+	if len(bundle.BundleTxs)-1 == txIndexInBundle { // For txs included in a bundle, if the tx is the last in the bundle, it will be added all at once.
+		// The latest tx information is stored as bundle information
 		*executedTxsInBundle = append(*executedTxsInBundle, tx)
 		*receiptsInBundle = append(*receiptsInBundle, receipt)
+		// Add all tx information in the bundle to env
 		env.txs = append(env.txs, *executedTxsInBundle...)
 		env.receipts = append(env.receipts, *receiptsInBundle...)
-		*executedTxsInBundle = []*types.Transaction{}
-		*receiptsInBundle = []*types.Receipt{}
+		// Delete the txs information in bundle
+		*executedTxsInBundle = (*executedTxsInBundle)[:0]
+		*receiptsInBundle = (*receiptsInBundle)[:0]
 	} else { // If the tx is included in a bundle and is not the last tx in the bundle, the result is retained.
 		*executedTxsInBundle = append(*executedTxsInBundle, tx)
 		*receiptsInBundle = append(*receiptsInBundle, receipt)
@@ -716,18 +723,22 @@ func (env *Task) commitBundleTransaction(tx *types.Transaction, bundle *builder.
 	return nil, receipt.Logs
 }
 
-func (env *Task) popForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address) {
-	env.nextTxs(incorporatedTxs, targetTx, targetBundle, remainTxsInBundle, rewardbase, true)
+func (env *Task) popForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address) {
+	env.nextTxs(incorporatedTxs, targetTx, targetBundle, numRemainTxsInBundle, rewardbase, true)
 }
 
-func (env *Task) shiftForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address) {
-	env.nextTxs(incorporatedTxs, targetTx, targetBundle, remainTxsInBundle, rewardbase, false)
+func (env *Task) shiftForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address) {
+	env.nextTxs(incorporatedTxs, targetTx, targetBundle, numRemainTxsInBundle, rewardbase, false)
 }
 
-func (env *Task) nextTxs(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, remainTxsInBundle int, rewardbase common.Address, shouldPop bool) {
+func (env *Task) nextTxs(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address, shouldPop bool) {
+	if len(*incorporatedTxs) <= 1 {
+		*incorporatedTxs = (*incorporatedTxs)[:0]
+		return
+	}
 	*incorporatedTxs = (*incorporatedTxs)[1:]
 	if len(targetBundle.BundleTxs) != 0 {
-		for i := 0; i < remainTxsInBundle; i++ {
+		for i := 0; i < numRemainTxsInBundle; i++ {
 			*incorporatedTxs = (*incorporatedTxs)[1:]
 		}
 	}
@@ -762,19 +773,35 @@ func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targe
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) []*types.Log {
 	// Detect bundles and add them to bundles
-	arrayTxs := builderModule.Arrayify(txs)
-	bundles := []*builder.Bundle{}
-	for _, txBundlingModule := range txBundlingModules {
-		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
-		if builderModule.IsConflict(bundles, newBundles) {
-			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
-			continue
-		}
-		bundles = append(bundles, newBundles...)
+	var bundles []*builder.Bundle
+	var incorporatedTxs []interface{}
+	// When TxBundlingModule is not given, incorporatedTxs is just the flattened txs.
+	arrayTxs := builderImpl.Arrayify(txs)
+	for _, tx := range arrayTxs {
+		var itx interface{} = tx
+		incorporatedTxs = append(incorporatedTxs, itx)
 	}
 
-	// Incorporate into txs
-	incorporatedTxs, _ := builderModule.IncorporateBundleTx(arrayTxs, bundles)
+	// Bundle processing when TxBundlingModule is given
+	if txBundlingModules != nil && builderModule != nil {
+		tmpBundles := []*builder.Bundle{}
+		for _, txBundlingModule := range txBundlingModules {
+			newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, tmpBundles)
+			if builderModule.IsConflict(tmpBundles, newBundles) {
+				logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
+				continue
+			}
+			tmpBundles = append(tmpBundles, newBundles...)
+		}
+
+		// Incorporate into txs
+		tmpIncorporatedTxs, err := builderModule.IncorporateBundleTx(arrayTxs, bundles)
+		if err == nil {
+			// Update incorporatedTxs only if no error occurs.
+			incorporatedTxs = tmpIncorporatedTxs
+			bundles = tmpBundles
+		}
+	}
 
 	var coalescedLogs []*types.Log
 
@@ -873,41 +900,47 @@ CommitTransactionLoop:
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 
 		// Verify that tx is included in the bundle
-		var targetBundle *builder.Bundle
 		var txIndexInBundle int
-		remainTxsInBundle := 0
+		targetBundle := &builder.Bundle{}
+		numRemainTxsInBundle := 0
 		for _, bundle := range bundles {
 			if i, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
 				targetBundle = bundle
 				txIndexInBundle = i
-				remainTxsInBundle = len(bundle.BundleTxs) - i
+				numRemainTxsInBundle = len(bundle.BundleTxs) - i - 1
 			}
 		}
 
-		// Take a snap if the bundle does not exist, or if it does exist, take the snap if it is the first tx in the bundle.
-		if len(targetBundle.BundleTxs) == 0 || (len(targetBundle.BundleTxs) != 0 && txIndexInBundle == 0) {
-			lastSnapshot = env.state.Copy()
+		var err error
+		var logs []*types.Log
+		if len(targetBundle.BundleTxs) != 0 {
+			// Take the snap if it is the first tx in the bundle.
+			if txIndexInBundle == 0 {
+				lastSnapshot = env.state.Copy()
+			}
+			err, logs = env.commitBundleTransaction(tx, targetBundle, txIndexInBundle, lastSnapshot, &executedTxsInBundle, &receiptsInBundle, bc, rewardbase, vmConfig)
+		} else {
+			err, logs = env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		}
-		err, logs := env.commitBundleTransaction(tx, targetBundle, txIndexInBundle, lastSnapshot, &executedTxsInBundle, &receiptsInBundle, bc, rewardbase, vmConfig)
-		// err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
+
 		switch err {
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
+			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -922,12 +955,12 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
+			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			if len(targetBundle.BundleTxs) != 0 {
-				if remainTxsInBundle == 0 {
+				if numRemainTxsInBundle == 0 {
 					coalescedLogs = append(coalescedLogs, logsInBundle...)
 					for i := 0; i < len(targetBundle.BundleTxs); i++ {
 						env.tcount++
@@ -939,14 +972,18 @@ CommitTransactionLoop:
 				coalescedLogs = append(coalescedLogs, logs...)
 				env.tcount++
 			}
-			incorporatedTxs = incorporatedTxs[1:]
+			if len(incorporatedTxs) <= 1 {
+				incorporatedTxs = incorporatedTxs[:0]
+			} else {
+				incorporatedTxs = incorporatedTxs[1:]
+			}
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, remainTxsInBundle, rewardbase)
+			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 		}
 	}
 

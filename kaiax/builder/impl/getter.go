@@ -79,6 +79,11 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 
 // Arrayify flattens transaction heaps into a single array
 func (b *BuilderModule) Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
+	return Arrayify(heap)
+}
+
+// Arrayify flattens transaction heaps into a single array
+func Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
 	ret := make([]*types.Transaction, 0)
 	copied := heap.Copy()
 	for !copied.Empty() {
