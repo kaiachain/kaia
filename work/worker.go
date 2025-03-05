@@ -806,8 +806,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0       // To break the below commitTransaction for loop when timed out
-	chDone := make(chan bool) // To stop the goroutine below when processing txs is completed
+	var abort int32 = 0          // To break the below commitTransaction for loop when timed out
+	var executingBundleTxs int32 // To wait for abort while the bundle is running
+	chDone := make(chan bool)    // To stop the goroutine below when processing txs is completed
 
 	// chEVM is used to notify the below goroutine of the running EVM so it can call evm.Cancel
 	// when timed out.  We use a buffered channel to prevent the main EVM execution routine
@@ -822,6 +823,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		for {
 			select {
 			case <-blockTimer.C:
+				// If a bundled tx is running, the abort will wait until all tx in the bundle have been executed.
+				for atomic.LoadInt32(&executingBundleTxs) == 1 {
+				}
 				timeout = true
 				atomic.StoreInt32(&abort, 1)
 
@@ -916,6 +920,8 @@ CommitTransactionLoop:
 		if len(targetBundle.BundleTxs) != 0 {
 			// Take the snap if it is the first tx in the bundle.
 			if txIndexInBundle == 0 {
+				// Set executingBundleTxs to 1 when the first tx in the bundle begins.
+				atomic.StoreInt32(&executingBundleTxs, 1)
 				lastSnapshot = env.state.Copy()
 			}
 			err, logs = env.commitBundleTransaction(tx, targetBundle, txIndexInBundle, lastSnapshot, &executedTxsInBundle, &receiptsInBundle, bc, rewardbase, vmConfig)
@@ -984,6 +990,10 @@ CommitTransactionLoop:
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
 			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+		}
+		if len(targetBundle.BundleTxs) != 0 && len(targetBundle.BundleTxs)-1 == txIndexInBundle {
+			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
+			atomic.StoreInt32(&executingBundleTxs, 0)
 		}
 	}
 
