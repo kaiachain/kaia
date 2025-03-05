@@ -456,7 +456,6 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 	// Mine a block!
 	start = time.Now()
 	b, receipts, err := bcdata.MineABlock(transactions, signer, prof, txBundlingModules, builderModule)
-
 	if err != nil {
 		return err
 	}

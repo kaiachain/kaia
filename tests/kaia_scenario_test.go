@@ -1896,10 +1896,11 @@ func TestValidateSender(t *testing.T) {
 }
 
 // TestTxBundleAndRevert tests a following scenario:
-// 1. Transfer (reservoir1 -> anon) using a legacy transaction four times. 
-//    Create a mock TxBundlingModule and create a bundle for each two tx.
-//    At that point, tx4 fails with nonceTooHigh and tx3 is reverted.
-// 2. Transfer (reservoir2 -> anon) using a legacy transaction two times.
+//  1. Transfer (reservoir1 -> anon) using a legacy transaction four times.
+//     Create a mock TxBundlingModule and create a bundle for each two tx.
+//     At that point, tx4 fails with nonceTooHigh and tx3 is reverted.
+//  2. Transfer (reservoir2 -> anon) using a legacy transaction two times.
+//
 // Therefore, the expected txs for a block are [tx0, tx1, tx4, tx5].
 func TestTxBundleAndRevert(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)

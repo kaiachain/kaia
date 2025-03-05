@@ -748,7 +748,7 @@ func (env *Task) nextTxs(incorporatedTxs *[]interface{}, targetTx *types.Transac
 }
 
 func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targetTx *types.Transaction, rewardbase common.Address) {
-	var updatedTxs []interface{}
+	updatedTxs := make([]interface{}, len(*incorporatedTxs))
 	for _, txInterface := range *incorporatedTxs {
 		var futureTx *types.Transaction
 		switch txInterface.(type) {
@@ -774,7 +774,7 @@ func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targe
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) []*types.Log {
 	// Detect bundles and add them to bundles
 	var bundles []*builder.Bundle
-	var incorporatedTxs []interface{}
+	incorporatedTxs := []interface{}{}
 	// When TxBundlingModule is not given, incorporatedTxs is just the flattened txs.
 	arrayTxs := builderImpl.Arrayify(txs)
 	for _, tx := range arrayTxs {
