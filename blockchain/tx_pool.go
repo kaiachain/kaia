@@ -1929,8 +1929,7 @@ func (t *txLookup) addAuthorities(tx *types.Transaction) {
 			// Don't add duplicates.
 			continue
 		}
-		list = append(list, tx.Hash())
-		t.auths[addr] = list
+		t.auths[addr] = append(list, tx.Hash())
 	}
 }
 
