@@ -178,22 +178,21 @@ type worker struct {
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
 	worker := &worker{
-		config:        config,
-		engine:        engine,
-		backend:       backend,
-		mux:           mux,
-		txsCh:         make(chan blockchain.NewTxsEvent, txChanSize),
-		chainHeadCh:   make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:   make(chan blockchain.ChainSideEvent, chainSideChanSize),
-		chainDB:       backend.ChainDB(),
-		recv:          make(chan *Result, resultQueueSize),
-		chain:         backend.BlockChain(),
-		proc:          backend.BlockChain().Validator(),
-		agents:        make(map[Agent]struct{}),
-		nodetype:      nodetype,
-		rewardbase:    rewardbase,
-		govModule:     govModule,
-		builderModule: builderImpl.NewBuilderModule(), // TODO-KAIA: It needs to be initialized.
+		config:      config,
+		engine:      engine,
+		backend:     backend,
+		mux:         mux,
+		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
+		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		chainDB:     backend.ChainDB(),
+		recv:        make(chan *Result, resultQueueSize),
+		chain:       backend.BlockChain(),
+		proc:        backend.BlockChain().Validator(),
+		agents:      make(map[Agent]struct{}),
+		nodetype:    nodetype,
+		rewardbase:  rewardbase,
+		govModule:   govModule,
 	}
 
 	// Subscribe NewTxsEvent for tx pool
@@ -584,7 +583,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
-		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase, self.txBundlingModules, self.builderModule)
+		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase, self.txBundlingModules)
 		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
@@ -657,8 +656,8 @@ func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) {
-	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase, txBundlingModules, builderModule)
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) {
+	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -771,7 +770,7 @@ func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targe
 	incorporatedTxs = &updatedTxs
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
 	// Detect bundles and add them to bundles
 	var bundles []*builder.Bundle
 	incorporatedTxs := []interface{}{}
@@ -783,11 +782,11 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	}
 
 	// Bundle processing when TxBundlingModule is given
-	if txBundlingModules != nil && builderModule != nil {
+	if txBundlingModules != nil {
 		tmpBundles := []*builder.Bundle{}
 		for _, txBundlingModule := range txBundlingModules {
 			newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, tmpBundles)
-			if builderModule.IsConflict(tmpBundles, newBundles) {
+			if builderImpl.IsConflict(tmpBundles, newBundles) {
 				logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
 				continue
 			}
@@ -795,7 +794,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		}
 
 		// Incorporate into txs
-		tmpIncorporatedTxs, err := builderModule.IncorporateBundleTx(arrayTxs, bundles)
+		tmpIncorporatedTxs, err := builderImpl.IncorporateBundleTx(arrayTxs, bundles)
 		if err == nil {
 			// Update incorporatedTxs only if no error occurs.
 			incorporatedTxs = tmpIncorporatedTxs

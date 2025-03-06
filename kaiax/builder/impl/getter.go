@@ -24,7 +24,7 @@ import (
 
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
 // Caller must ensure that there is no conflict between bundles.
-func (b *BuilderModule) IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]interface{}, error) {
+func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]interface{}, error) {
 	ret := make([]interface{}, len(txs))
 	for i := range txs {
 		ret[i] = txs[i]
@@ -78,11 +78,6 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 }
 
 // Arrayify flattens transaction heaps into a single array
-func (b *BuilderModule) Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
-	return Arrayify(heap)
-}
-
-// Arrayify flattens transaction heaps into a single array
 func Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
 	ret := make([]*types.Transaction, 0)
 	copied := heap.Copy()
@@ -94,7 +89,7 @@ func Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
 }
 
 // IsConflict checks if new bundles conflict with previous bundles
-func (b *BuilderModule) IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) bool {
+func IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) bool {
 	for _, newBundle := range newBundles {
 		for _, prevBundle := range prevBundles {
 			if prevBundle.IsConflict(newBundle) {

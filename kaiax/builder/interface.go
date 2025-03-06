@@ -27,15 +27,6 @@ type TxGenerator func(nonce uint64) (*types.Transaction, error)
 type BuilderModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-
-	// IncorporateBundleTx does the followings:
-	IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) ([]interface{}, error)
-
-	// Arrayify flattens txs in heap into an array
-	Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction
-
-	// IsConflict checks if the new bundles conflict with the previous bundles
-	IsConflict(prevBundles []*Bundle, newBundles []*Bundle) bool
 }
 
 type TxBundlingModule interface {

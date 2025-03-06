@@ -42,8 +42,6 @@ func TestIncorporateBundleTx(t *testing.T) {
 		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
 
-	b := NewBuilderModule()
-
 	testCases := []struct {
 		name     string
 		bundles  []*builder.Bundle
@@ -81,7 +79,7 @@ func TestIncorporateBundleTx(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret, err := b.IncorporateBundleTx(txs, tc.bundles)
+			ret, err := IncorporateBundleTx(txs, tc.bundles)
 			require.Nil(t, err)
 			require.Equal(t, len(tc.expected), len(ret))
 			for i := range ret {
@@ -169,8 +167,7 @@ func TestArrayify(t *testing.T) {
 	}
 
 	heap := types.NewTransactionsByPriceAndNonce(signer, groups, nil)
-	b := NewBuilderModule()
-	txs := b.Arrayify(heap)
+	txs := Arrayify(heap)
 	assert.Equal(t, keyLen*txLen, len(txs))
 	for i := range txs {
 		assert.Equal(t, true, hashes[txs[i].Hash()])
@@ -228,10 +225,9 @@ func TestIsConflict(t *testing.T) {
 		},
 	}
 
-	b := NewBuilderModule()
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotConflict := b.IsConflict(tc.prevBundles, tc.newBundles)
+			gotConflict := IsConflict(tc.prevBundles, tc.newBundles)
 			assert.Equal(t, tc.expected, gotConflict)
 		})
 	}
