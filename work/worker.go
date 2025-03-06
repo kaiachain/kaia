@@ -683,9 +683,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0          // To break the below commitTransaction for loop when timed out
-	var executingBundleTxs int32 // To wait for abort while the bundle is running
-	chDone := make(chan bool)    // To stop the goroutine below when processing txs is completed
+	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
+	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
+	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
 
 	// chEVM is used to notify the below goroutine of the running EVM so it can call evm.Cancel
 	// when timed out.  We use a buffered channel to prevent the main EVM execution routine
@@ -701,6 +701,13 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 			select {
 			case <-blockTimer.C:
 				// If a bundled tx is running, the abort will wait until all tx in the bundle have been executed.
+				// We must not use a spinlock because `chEVM` channel must be processed below.
+				// Otherwise, a deadlock can occur due to the race condition between `NewEVM()` (`vmConfig.RunningEVM <- evm`).
+				if atomic.LoadInt32(&isExecutingBundleTxs) == 1 {
+					// retry again after some time
+					blockTimer.Reset(5 * time.Millisecond)
+					continue
+				}
 				timeout = true
 				atomic.StoreInt32(&abort, 1)
 
@@ -788,7 +795,7 @@ CommitTransactionLoop:
 		}
 
 		if len(targetBundle.BundleTxs) != 0 {
-			atomic.StoreInt32(&executingBundleTxs, 1)
+			atomic.StoreInt32(&isExecutingBundleTxs, 1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
 			if err != nil {
 				// override sender to error tx
@@ -854,7 +861,7 @@ CommitTransactionLoop:
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
-			atomic.StoreInt32(&executingBundleTxs, 0)
+			atomic.StoreInt32(&isExecutingBundleTxs, 0)
 		}
 	}
 
