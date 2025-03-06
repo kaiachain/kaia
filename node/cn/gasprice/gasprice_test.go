@@ -296,6 +296,7 @@ func TestSuggestTipCap(t *testing.T) {
 			testGov = mockGov
 		}
 		mockGasless := mock_gasless.NewMockGaslessModule(gomock.NewController(t))
+		mockGasless.EXPECT().Reset(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, testGov, []kaiax.TxPoolModule{mockGasless})
 		oracle := NewOracle(testBackend, config, txPool, testGov)
 
