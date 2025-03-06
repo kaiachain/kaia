@@ -48,8 +48,12 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 		return g.isApproveTxReady(tx, txs[i+1])
 	}
 
-	if g.IsSwapTx(tx) && len(ready) > 0 {
-		return g.isSwapTxReady(tx, ready[len(ready)-1])
+	if g.IsSwapTx(tx) {
+		var prevTx *types.Transaction
+		if len(ready) > 0 {
+			prevTx = ready[len(ready)-1]
+		}
+		return g.isSwapTxReady(tx, prevTx)
 	}
 
 	return false
