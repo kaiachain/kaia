@@ -121,15 +121,15 @@ func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.
 }
 
 // Reset mocks base method.
-func (m *MockGaslessModule) Reset(arg0 kaiax.TxPoolForCaller) {
+func (m *MockGaslessModule) Reset(arg0 kaiax.TxPoolForCaller, arg1, arg2 *types.Header) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Reset", arg0)
+	m.ctrl.Call(m, "Reset", arg0, arg1, arg2)
 }
 
 // Reset indicates an expected call of Reset.
-func (mr *MockGaslessModuleMockRecorder) Reset(arg0 interface{}) *gomock.Call {
+func (mr *MockGaslessModuleMockRecorder) Reset(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockGaslessModule)(nil).Reset), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockGaslessModule)(nil).Reset), arg0, arg1, arg2)
 }
 
 // Start mocks base method.
