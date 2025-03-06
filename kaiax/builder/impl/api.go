@@ -19,6 +19,7 @@ package impl
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -55,10 +56,10 @@ func (s *BuilderAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.B
 		return hash, errors.New("Empty input")
 	}
 
-	for _, input := range inputs {
+	for i, input := range inputs {
 		if len(input) == 0 {
 			hash = append(hash, common.Hash{})
-			errs = append(errs, errors.New("Empty input"))
+			errs = append(errs, fmt.Errorf("Index %d: empty input", i))
 			break
 		}
 		if 0 < input[0] && input[0] < 0x7f {
@@ -67,12 +68,13 @@ func (s *BuilderAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.B
 		tx := new(types.Transaction)
 		if err := rlp.DecodeBytes(input, tx); err != nil {
 			hash = append(hash, common.Hash{})
-			errs = append(errs, err)
+			err.Error()
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
 			break
 		}
 		if err := s.b.Backend.SendTx(ctx, tx); err != nil {
 			hash = append(hash, common.Hash{})
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
 			break
 		}
 		hash = append(hash, tx.Hash())
