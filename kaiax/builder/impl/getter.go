@@ -22,6 +22,96 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
+type Pair struct {
+	u, v int
+}
+
+// two txs with same sender has an edge
+// two txs in the same bundle has an edge
+func BuildGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) ([][]int, error) {
+	edges := make([][]int, len(txs))
+	for i := range edges {
+		edges[i] = make([]int, len(txs))
+	}
+
+	// Group txs by sender
+	senderToIndices := make(map[common.Address][]int)
+	for i, txOrGen := range txs {
+		if tx, ok := txOrGen.(*types.Transaction); ok {
+			from, err := types.Sender(signer, tx)
+			if err != nil {
+				return nil, err
+			}
+			senderToIndices[from] = append(senderToIndices[from], i)
+		}
+	}
+
+	// Add edges between txs with same sender
+	for _, indices := range senderToIndices {
+		for _, u := range indices {
+			for _, v := range indices {
+				edges[u][v] = 1
+			}
+		}
+	}
+
+	for _, bundle := range bundles {
+		indices := make([]int, 0)
+		for i, txOrGen := range txs {
+			if tx, ok := txOrGen.(*types.Transaction); ok {
+				if bundle.Has(tx.Hash(), 0) {
+					indices = append(indices, i)
+				}
+			}
+		}
+
+		// Add edges between all txs in bundle
+		for _, u := range indices {
+			for _, v := range indices {
+				edges[u][v] = 1
+			}
+		}
+	}
+
+	return edges, nil
+}
+
+func Bfs(edges [][]int, indices []int) map[int]bool {
+	// Initialize visited array
+	visited := make([]bool, len(edges))
+	for _, i := range indices {
+		visited[i] = true
+	}
+
+	// Initialize queue with starting indices
+	queue := make([]int, len(indices))
+	copy(queue, indices)
+
+	// Result slice to store nodes in BFS order
+	result := make(map[int]bool)
+	for _, i := range indices {
+		result[i] = true
+	}
+
+	// BFS
+	for len(queue) > 0 {
+		// Dequeue
+		current := queue[0]
+		queue = queue[1:]
+
+		// Check all neighbors
+		for neighbor := 0; neighbor < len(edges[current]); neighbor++ {
+			if edges[current][neighbor] == 1 && !visited[neighbor] {
+				visited[neighbor] = true
+				queue = append(queue, neighbor)
+				result[neighbor] = true
+			}
+		}
+	}
+
+	return result
+}
+
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
 // Caller must ensure that there is no conflict between bundles.
 func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]interface{}, error) {
