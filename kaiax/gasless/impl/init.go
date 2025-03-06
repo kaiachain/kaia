@@ -30,7 +30,6 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
-	Chain       BlockChain
 }
 
 type BlockChain interface {
@@ -39,7 +38,7 @@ type BlockChain interface {
 
 type GaslessModule struct {
 	InitOpts
-
+	currentState  *state.StateDB
 	swapRouters   map[common.Address]bool
 	allowedTokens map[common.Address]bool
 }

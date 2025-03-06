@@ -65,11 +65,9 @@ func TestIsModuleTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
-		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	for _, tc := range testcases {
 		ok := g.IsModuleTx(tc.tx)
@@ -85,11 +83,9 @@ func TestIsReady(t *testing.T) {
 
 	nodeKey, _ := crypto.GenerateKey()
 	g := NewGaslessModule()
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
-		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	approveTx := func(nonce uint64) *types.Transaction {
 		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
@@ -184,7 +180,8 @@ func TestIsReady(t *testing.T) {
 
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			statedb.SetNonce(addr, tc.nonce)
+			g.currentState, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			g.currentState.SetNonce(addr, tc.nonce)
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
@@ -312,7 +309,6 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 	for _, tc := range testcases {
 		sdb := statedb.Copy()
 		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
-		g.Chain = bc
 		if tc.balance {
 			// set some token
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))

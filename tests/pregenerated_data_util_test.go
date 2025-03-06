@@ -413,7 +413,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	err = mGasless.Init(&gasless_impl.InitOpts{
 		ChainConfig: genesis.Config,
 		NodeKey:     validatorPrivKeys[0],
-		Chain:       bc,
 	})
 	if err != nil {
 		return nil, err

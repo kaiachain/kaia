@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -117,6 +118,18 @@ func (m *MockGaslessModule) PreAddRemote(arg0 *types.Transaction) error {
 func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
+}
+
+// Reset mocks base method.
+func (m *MockGaslessModule) Reset(arg0 kaiax.TxPoolForCaller) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Reset", arg0)
+}
+
+// Reset indicates an expected call of Reset.
+func (mr *MockGaslessModuleMockRecorder) Reset(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockGaslessModule)(nil).Reset), arg0)
 }
 
 // Start mocks base method.

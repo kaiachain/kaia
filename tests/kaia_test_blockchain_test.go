@@ -173,7 +173,6 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig: genesis.Config,
 			NodeKey:     validatorPrivKeys[0],
-			Chain:       bc,
 		}),
 	)
 	if err != nil {

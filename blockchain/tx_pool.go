@@ -509,6 +509,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
+
+	for _, module := range pool.modules {
+		module.Reset(pool, oldHead, newHead)
+	}
 }
 
 // Stop terminates the transaction pool.
@@ -1691,6 +1695,11 @@ func (pool *TxPool) demoteUnexecutables() {
 			delete(pool.pending, addr)
 		}
 	}
+}
+
+// GetCurrentState returns the current stateDB.
+func (pool *TxPool) GetCurrentState() *state.StateDB {
+	return pool.currentState
 }
 
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.

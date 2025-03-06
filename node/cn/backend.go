@@ -351,7 +351,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	mGasless.Init(&gasless_impl.InitOpts{
 		ChainConfig: cn.chainConfig,
 		NodeKey:     ctx.NodeKey(),
-		Chain:       bc,
 	})
 
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov, []kaiax.TxPoolModule{mGasless})
