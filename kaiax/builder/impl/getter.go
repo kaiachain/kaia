@@ -29,6 +29,7 @@ type Pair struct {
 // BuildDependencyGraph builds a dependency graph of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
+// TxGenerator is not connected to any other txs.
 func BuildDependencyGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) ([][]int, error) {
 	edges := make([][]int, len(txs))
 	for i := range edges {
@@ -60,7 +61,7 @@ func BuildDependencyGraph(txs []interface{}, bundles []*builder.Bundle, signer t
 		indices := make([]int, 0)
 		for i, txOrGen := range txs {
 			if tx, ok := txOrGen.(*types.Transaction); ok {
-				if bundle.Has(tx.Hash(), 0) {
+				if bundle.Has(tx.Hash()) {
 					indices = append(indices, i)
 				}
 			}
@@ -77,21 +78,20 @@ func BuildDependencyGraph(txs []interface{}, bundles []*builder.Bundle, signer t
 	return edges, nil
 }
 
-// FindDependentNodes finds all nodes reachable from `indices` via BFS.
-func FindDependentNodes(edges [][]int, indices []int) map[int]bool {
+// FindDependentNodes finds all nodes reachable from `starts` via BFS.
+func FindDependentNodes(edges [][]int, starts []int) map[int]bool {
 	// Initialize visited array
 	visited := make([]bool, len(edges))
-	for _, i := range indices {
+	for _, i := range starts {
 		visited[i] = true
 	}
 
-	// Initialize queue with starting indices
-	queue := make([]int, len(indices))
-	copy(queue, indices)
+	// Initialize queue with starts
+	queue := make([]int, len(starts))
+	copy(queue, starts)
 
-	// Result slice to store nodes in BFS order
 	result := make(map[int]bool)
-	for _, i := range indices {
+	for _, i := range starts {
 		result[i] = true
 	}
 
@@ -148,7 +148,7 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 		switch tx := txOrGen.(type) {
 		case *types.Transaction:
 			// if tx-in-bundle, the tx will be appended when target is found.
-			if bundle.Has(tx.Hash(), 0) {
+			if bundle.Has(tx.Hash()) {
 				continue
 			}
 			// Because bundle.TargetTxHash cannot be in the bundle, we only check tx-not-in-bundle case.
@@ -206,7 +206,7 @@ func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
 
 func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
 	for i, bundle := range bundles {
-		if bundle.Has(tx.Hash(), tx.Nonce()) {
+		if bundle.Has(tx.Hash()) {
 			return i
 		}
 	}

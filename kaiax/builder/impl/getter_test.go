@@ -234,42 +234,39 @@ func TestIsConflict(t *testing.T) {
 }
 
 func TestPopTxs(t *testing.T) {
-	key1, _ := crypto.GenerateKey()
-	key2, _ := crypto.GenerateKey()
-	key3, _ := crypto.GenerateKey()
-	key4, _ := crypto.GenerateKey()
-	addr1 := crypto.PubkeyToAddress(key1.PublicKey)
-	addr2 := crypto.PubkeyToAddress(key2.PublicKey)
-	addr3 := crypto.PubkeyToAddress(key3.PublicKey)
-	addr4 := crypto.PubkeyToAddress(key4.PublicKey)
-	signer := types.NewEIP155Signer(big.NewInt(1))
+	var (
+		signer = types.LatestSignerForChainID(big.NewInt(1))
+		keys   = make([]*ecdsa.PrivateKey, 4)
+		addrs  = make([]common.Address, 4)
+		txs    = make([]*types.Transaction, 7)
+	)
+	var g builder.TxGenerator = func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	}
 
-	// Create test transactions
-	tx1 := types.NewTransaction(0, addr1, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx1, _ = types.SignTx(tx1, signer, key1)
-	tx2 := types.NewTransaction(1, addr1, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx2, _ = types.SignTx(tx2, signer, key1)
-	tx3 := types.NewTransaction(2, addr2, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx3, _ = types.SignTx(tx3, signer, key2)
-	tx4 := types.NewTransaction(3, addr2, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx4, _ = types.SignTx(tx4, signer, key2)
-	tx5 := types.NewTransaction(4, addr3, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx5, _ = types.SignTx(tx5, signer, key3)
-	tx6 := types.NewTransaction(5, addr3, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx6, _ = types.SignTx(tx6, signer, key3)
-	tx7 := types.NewTransaction(6, addr4, big.NewInt(1), 21000, big.NewInt(1), nil)
-	tx7, _ = types.SignTx(tx7, signer, key4)
+	for i := range keys {
+		keys[i], _ = crypto.GenerateKey()
+		addrs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+	}
 
-	a3, _ := types.Sender(signer, tx3)
-	t.Log(a3.Hex())
+	for i := range txs {
+		addr, key := addrs[i/2], keys[i/2]
+		txs[i], _ = types.SignTx(types.NewTransaction(uint64(i), addr, big.NewInt(1), 21000, big.NewInt(1), nil), signer, key)
+	}
 
 	// Create test bundles
-	bundle1 := &builder.Bundle{
-		BundleTxs: []interface{}{tx2, tx3},
-	}
-	bundle2 := &builder.Bundle{
-		BundleTxs:    []interface{}{tx4, tx5},
-		TargetTxHash: tx3.Hash(),
+	bundles := []*builder.Bundle{
+		{
+			BundleTxs: []interface{}{txs[1], txs[2]},
+		},
+		{
+			BundleTxs:    []interface{}{txs[3], txs[4]},
+			TargetTxHash: txs[2].Hash(),
+		},
+		{
+			BundleTxs:    []interface{}{g, txs[5]},
+			TargetTxHash: txs[4].Hash(),
+		},
 	}
 
 	testCases := []struct {
@@ -280,42 +277,54 @@ func TestPopTxs(t *testing.T) {
 		expectedTxs     []interface{}
 	}{
 		{
-			name:            "Pop transaction with dependencies",
-			incorporatedTxs: []interface{}{tx2, tx3, tx4, tx5, tx6},
+			name:            "Without any dependencies",
+			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5]},
+			numToPop:        1,
+			bundles:         []*builder.Bundle{},
+			expectedTxs:     []interface{}{txs[2], txs[3], txs[4], txs[5]},
+		},
+		{
+			name:            "No bundles, tx0 and tx1 dependency (same sender)",
+			incorporatedTxs: []interface{}{txs[0], txs[1], txs[2], txs[3], txs[4]},
+			numToPop:        1,
+			bundles:         []*builder.Bundle{},
+			expectedTxs:     []interface{}{txs[2], txs[3], txs[4]},
+		},
+		{
+			name:            "Two bundles - chaining dependency",
+			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5]},
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundle1, bundle2},
+			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
 			expectedTxs:     []interface{}{},
 		},
 		{
-			name:            "Pop transaction with dependencies",
-			incorporatedTxs: []interface{}{tx2, tx3, tx4, tx5, tx7, tx6},
+			name:            "Two bundles - one independent tx (tx6)",
+			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundle1, bundle2},
-			expectedTxs:     []interface{}{tx7},
+			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
+			expectedTxs:     []interface{}{txs[6]},
 		},
-		/*
-			{
-				name:            "Pop transaction from bundle",
-				incorporatedTxs: []interface{}{tx1, tx2, tx3, tx4},
-				numToPop:        1,
-				bundles:         []*builder.Bundle{bundle1},
-				expectedTxs:     []interface{}{tx3, tx4},
-			},
-			{
-				name:            "Pop multiple transactions with multiple bundles",
-				incorporatedTxs: []interface{}{tx1, tx2, tx3, tx4},
-				numToPop:        2,
-				bundles:         []*builder.Bundle{bundle1, bundle2},
-				expectedTxs:     []interface{}{},
-			},
-			{
-				name:            "Pop zero transactions",
-				incorporatedTxs: []interface{}{tx1, tx2, tx3},
-				numToPop:        0,
-				bundles:         []*builder.Bundle{bundle1},
-				expectedTxs:     []interface{}{tx1, tx2, tx3},
-			},
-		*/
+		{
+			name:            "Two bundles - change order",
+			incorporatedTxs: []interface{}{txs[2], txs[3], txs[4], txs[6], txs[5]}, // 6 is before 5
+			numToPop:        2,
+			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
+			expectedTxs:     []interface{}{txs[6]},
+		},
+		{
+			name:            "Two bundles - one independent tx (tx6) with one generator",
+			incorporatedTxs: []interface{}{g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			numToPop:        2,
+			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
+			expectedTxs:     []interface{}{txs[6]},
+		},
+		{
+			name:            "Two bundles - two generators",
+			incorporatedTxs: []interface{}{g, g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			numToPop:        2,
+			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
+			expectedTxs:     []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -324,6 +333,11 @@ func TestPopTxs(t *testing.T) {
 
 			if len(tc.incorporatedTxs) != len(tc.expectedTxs) {
 				t.Errorf("Expected %d transactions, got %d", len(tc.expectedTxs), len(tc.incorporatedTxs))
+			}
+			for i := range tc.expectedTxs {
+				if expectedTx, ok := tc.expectedTxs[i].(*types.Transaction); ok {
+					assert.Equal(t, expectedTx.Hash(), tc.incorporatedTxs[i].(*types.Transaction).Hash())
+				}
 			}
 		})
 	}

@@ -30,26 +30,21 @@ type Bundle struct {
 }
 
 // Has checks if the bundle contains a tx with the given hash.
-func (b *Bundle) Has(hash common.Hash, nonce uint64) bool {
-	_, has := b.Index(hash, nonce)
-	return has
+func (b *Bundle) Has(hash common.Hash) bool {
+	return b.FindIdx(hash) != -1
 }
 
-// Index returns if the bundle contains a tx with the given hash and its index in bundle.
-func (b *Bundle) Index(hash common.Hash, nonce uint64) (int, bool) {
+// FindIdx returns if the bundle contains a tx with the given hash and its index in bundle.
+func (b *Bundle) FindIdx(hash common.Hash) int {
 	for i, txOrGen := range b.BundleTxs {
 		switch v := txOrGen.(type) {
 		case *types.Transaction:
 			if v.Hash() == hash {
-				return i, true
-			}
-		case TxGenerator:
-			if tx, err := v(nonce); err != nil && tx.Hash() == hash {
-				return i, true
+				return i
 			}
 		}
 	}
-	return 0, false
+	return -1
 }
 
 // IsConflict checks if newBundle conflicts with current bundle.
