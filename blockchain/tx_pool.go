@@ -922,11 +922,9 @@ func (pool *TxPool) validateAuth(tx *types.Transaction) error {
 		}
 	}
 	// Authorities cannot conflict with any pending or queued transactions.
-	if auths := tx.SetCodeAuthorities(); len(auths) > 0 {
-		for _, auth := range auths {
-			if pool.pending[auth] != nil || pool.queue[auth] != nil {
-				return ErrAuthorityReserved
-			}
+	for _, auth := range tx.SetCodeAuthorities() {
+		if pool.pending[auth] != nil || pool.queue[auth] != nil {
+			return ErrAuthorityReserved
 		}
 	}
 	return nil
