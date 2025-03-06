@@ -43,37 +43,57 @@ func (g *GaslessModule) GetCheckBalance() func(tx *types.Transaction) error {
 
 func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
 	tx := txs[i]
-	addr := tx.ValidatedSender()
+
+	if g.IsApproveTx(tx) && i < uint64(math.MaxUint64) {
+		return g.isApproveTxReady(tx, txs[i+1])
+	}
+
+	if g.IsSwapTx(tx) && len(ready) > 0 {
+		return g.isSwapTxReady(tx, ready[len(ready)-1])
+	}
+
+	return false
+}
+
+// isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
+func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
+	addr := approveTx.ValidatedSender()
 	sdb, err := g.Chain.State()
 	if err != nil {
 		return false
 	}
 	nonce := sdb.GetNonce(addr)
 
-	if i > nonce+1 {
+	if approveTx.Nonce() != nonce {
+		return false
+	}
+	if nextTx == nil || !g.IsSwapTx(nextTx) {
 		return false
 	}
 
-	isApproveTx := g.IsApproveTx(tx)
-	isSwapTx := g.IsSwapTx(tx)
+	return g.IsExecutable(approveTx, nextTx)
+}
 
-	if isApproveTx && i == nonce && i+1 < uint64(math.MaxUint64) {
-		if next := txs[i+1]; next != nil && g.IsSwapTx(next) {
-			return g.IsExecutable(tx, next)
+// isSwapTxReady assumes that the caller checked `g.IsSwapTx(swapTx)`
+func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
+	addr := swapTx.ValidatedSender()
+	sdb, err := g.Chain.State()
+	if err != nil {
+		return false
+	}
+	nonce := sdb.GetNonce(addr)
+
+	var approveTx *types.Transaction
+	if swapTx.Nonce() == nonce {
+		approveTx = nil
+	} else if swapTx.Nonce() == nonce+1 {
+		if prevTx == nil || !g.IsApproveTx(prevTx) {
+			return false
 		}
+		approveTx = prevTx
+	} else {
+		return false
 	}
 
-	if isSwapTx {
-		if i == nonce {
-			return g.IsExecutable(nil, tx)
-		}
-
-		if i == nonce+1 && len(ready) > 0 {
-			if prev := ready[len(ready)-1]; prev != nil && g.IsApproveTx(prev) {
-				return g.IsExecutable(prev, tx)
-			}
-		}
-	}
-
-	return false
+	return g.IsExecutable(approveTx, swapTx)
 }
