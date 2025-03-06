@@ -23,7 +23,6 @@
 package work
 
 import (
-	"bytes"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -679,52 +678,97 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) popForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address) {
-	env.nextTxs(incorporatedTxs, targetTx, targetBundle, numRemainTxsInBundle, rewardbase, true)
+func shiftTxs(incorporatedTxs *[]interface{}, num int) {
+	*incorporatedTxs = (*incorporatedTxs)[num:]
 }
 
-func (env *Task) shiftForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address) {
-	env.nextTxs(incorporatedTxs, targetTx, targetBundle, numRemainTxsInBundle, rewardbase, false)
-}
-
-func (env *Task) nextTxs(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address, shouldPop bool) {
-	if len(*incorporatedTxs) <= 1 {
-		*incorporatedTxs = (*incorporatedTxs)[:0]
-		return
-	}
-	*incorporatedTxs = (*incorporatedTxs)[1:]
-	if len(targetBundle.BundleTxs) != 0 {
-		for i := 0; i < numRemainTxsInBundle; i++ {
-			*incorporatedTxs = (*incorporatedTxs)[1:]
+func popTxs(incorporatedTxs *[]interface{}, num int, bundles []*builder.Bundle) {
+	popXXXX(incorporatedTxs, num)
+	for {
+		incompleteBundles := checkBundlesComplete(*incorporatedTxs, bundles)
+		if len(incompleteBundles) == 0 {
+			break
 		}
-	}
-	if shouldPop {
-		env.removeAllTxFromSameSender(incorporatedTxs, targetTx, rewardbase)
+		removeIncompleteBundle(incorporatedTxs, incompleteBundles)
 	}
 }
 
-func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targetTx *types.Transaction, rewardbase common.Address) {
-	updatedTxs := make([]interface{}, len(*incorporatedTxs))
-	for _, txInterface := range *incorporatedTxs {
-		var futureTx *types.Transaction
-		switch txInterface.(type) {
-		case *types.Transaction:
-			futureTx = txInterface.(*types.Transaction)
-		case builder.TxGenerator:
-			txGen := txInterface.(builder.TxGenerator)
-			nodeNonce := env.state.GetNonce(rewardbase)
-			var err error
-			futureTx, err = txGen(nodeNonce)
-			if futureTx == nil {
-				logger.Warn("TxGenerator returned a nil tx", "error", err)
+func checkBundlesComplete(incorporatedTxs []interface{}, bundles []*builder.Bundle) []*builder.Bundle {
+	retBundles := make([]*builder.Bundle, 0)
+	for _, bundle := range bundles {
+		bundleIncomplete := false
+		for _, txOrGen := range incorporatedTxs {
+			if tx, ok := txOrGen.(*types.Transaction); ok {
+				if !bundle.Has(tx.Hash(), tx.Nonce()) {
+					bundleIncomplete = true
+					break
+				}
 			}
 		}
-		if bytes.Equal(targetTx.ValidatedSender().Bytes(), futureTx.ValidatedSender().Bytes()) {
-			continue
+		if bundleIncomplete {
+			retBundles = append(retBundles, bundle)
 		}
-		updatedTxs = append(updatedTxs, txInterface)
 	}
-	incorporatedTxs = &updatedTxs
+	return retBundles
+}
+
+func removeIncompleteBundle(incorporatedTxs *[]interface{}, incompleteBundles []*builder.Bundle) {
+	tmp := make([]interface{}, 0)
+	for _, txOrGen := range *incorporatedTxs {
+		safe := true
+		// if tx belongs to any incomplete bundle, it's not safe so it should be removed
+		if tx, ok := txOrGen.(*types.Transaction); ok {
+			for _, bundle := range incompleteBundles {
+				if bundle.Has(tx.Hash(), tx.Nonce()) {
+					safe = false
+					break
+				}
+			}
+		}
+		if safe {
+			tmp = append(tmp, txOrGen)
+		}
+	}
+	*incorporatedTxs = tmp
+}
+
+func popXXXX(incorporatedTxs *[]interface{}, num int) {
+	poppedTxs := (*incorporatedTxs)[:num]
+	removeSet := make(map[common.Address]bool)
+	var rewardbase common.Address
+
+	// find addresses to be removed
+	for _, txOrGen := range poppedTxs {
+		switch txOrGen.(type) {
+		case *types.Transaction:
+			tx := txOrGen.(*types.Transaction)
+			from := tx.ValidatedSender()
+			removeSet[from] = true
+		case builder.TxGenerator:
+			if rewardbase == (common.Address{}) {
+				txGen := txOrGen.(builder.TxGenerator)
+				tx, _ := txGen(0)
+				rewardbase = tx.ValidatedSender()
+				removeSet[rewardbase] = true
+			}
+		}
+	}
+
+	*incorporatedTxs = (*incorporatedTxs)[num:]
+	tmp := make([]interface{}, 0)
+	for _, txOrGen := range *incorporatedTxs {
+		// TxGenerator is not removed
+		switch txOrGen.(type) {
+		case *types.Transaction:
+			tx := txOrGen.(*types.Transaction)
+			if _, ok := removeSet[tx.ValidatedSender()]; !ok {
+				tmp = append(tmp, txOrGen)
+			}
+		case builder.TxGenerator:
+			tmp = append(tmp, txOrGen)
+		}
+	}
+	*incorporatedTxs = tmp
 }
 
 func extractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
@@ -857,11 +901,11 @@ CommitTransactionLoop:
 
 		// Verify that tx is included in the bundle
 		targetBundle := &builder.Bundle{}
-		numRemainTxsInBundle := 0
+		numRemainTxsInBundle := 1
 		for _, bundle := range bundles {
-			if i, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
+			if _, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
 				targetBundle = bundle
-				numRemainTxsInBundle = len(bundle.BundleTxs) - i - 1
+				numRemainTxsInBundle = len(bundle.BundleTxs)
 			}
 		}
 
@@ -882,19 +926,19 @@ CommitTransactionLoop:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+			shiftTxs(&incorporatedTxs, numRemainTxsInBundle)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -909,7 +953,7 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			env.popForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
@@ -937,7 +981,7 @@ CommitTransactionLoop:
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
+			shiftTxs(&incorporatedTxs, numRemainTxsInBundle)
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
