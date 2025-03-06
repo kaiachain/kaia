@@ -700,14 +700,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		for {
 			select {
 			case <-blockTimer.C:
-				// If a bundled tx is running, the abort will wait until all tx in the bundle have been executed.
-				// We must not use a spinlock because `chEVM` channel must be processed below.
-				// Otherwise, a deadlock can occur due to the race condition between `NewEVM()` (`vmConfig.RunningEVM <- evm`).
-				if atomic.LoadInt32(&isExecutingBundleTxs) == 1 {
-					// retry again after some time
-					blockTimer.Reset(5 * time.Millisecond)
-					continue
-				}
 				timeout = true
 				atomic.StoreInt32(&abort, 1)
 
@@ -720,7 +712,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 
 			if timeout && evm != nil {
 				// Allow the first transaction to complete although it exceeds the time limit.
-				if env.tcount > 0 {
+				// Even in this case, the evm will not be canceled if the bundle is running.
+				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
 				}
