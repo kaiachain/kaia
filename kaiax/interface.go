@@ -148,7 +148,7 @@ type TxPoolModule interface {
 
 	// Optional actions to check if sender balance is valid for module transaction.
 	// This is mainly used on checking if module transaction be appended to queue.
-	// If nil is returned, existing check perform, otherwise returned fuction perform instead of it.
+	// If nil is returned, default check (balance > txFee) is performed. Otherwise, the returned function overrides default check.
 	GetCheckBalance() func(tx *types.Transaction) error
 
 	// Additional actions to check if a module transaction should be appended to pending
