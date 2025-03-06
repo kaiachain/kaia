@@ -19,7 +19,6 @@ package impl
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -53,13 +52,13 @@ func (s *BuilderAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.B
 
 	if len(inputs) == 0 {
 		hash = append(hash, common.Hash{})
-		return hash, fmt.Errorf("Empty input")
+		return hash, errors.New("Empty input")
 	}
 
 	for _, input := range inputs {
 		if len(input) == 0 {
 			hash = append(hash, common.Hash{})
-			errs = append(errs, fmt.Errorf("Empty input"))
+			errs = append(errs, errors.New("Empty input"))
 			break
 		}
 		if 0 < input[0] && input[0] < 0x7f {
