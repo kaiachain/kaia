@@ -222,9 +222,9 @@ func ShiftTxs(txs *[]interface{}, num int) {
 }
 
 func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	allNodes := make([]int, 0)
-	for i := 0; i < num; i++ {
-		allNodes = append(allNodes, i)
+	initialNodes := make([]int, 0)
+	for i := 0; i < min(num, len(*txs)); i++ {
+		initialNodes = append(initialNodes, i)
 	}
 
 	edges, err := BuildDependencyGraph(*txs, *bundles, signer)
@@ -235,7 +235,7 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 		return
 	}
 
-	txIdxToRemove := FindDependentNodes(edges, allNodes)
+	txIdxToRemove := FindDependentNodes(edges, initialNodes)
 	newTxs := Filter(txs, txIdxToRemove)
 
 	bundleIdxToRemove := map[int]bool{}
