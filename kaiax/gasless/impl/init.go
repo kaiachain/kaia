@@ -32,10 +32,6 @@ type InitOpts struct {
 	NodeKey     *ecdsa.PrivateKey
 }
 
-type BlockChain interface {
-	State() (*state.StateDB, error)
-}
-
 type GaslessModule struct {
 	InitOpts
 	currentState  *state.StateDB
