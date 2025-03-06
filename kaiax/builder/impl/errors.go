@@ -18,4 +18,7 @@ package impl
 
 import "errors"
 
-var ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
+var (
+	ErrInitUnexpectedNil         = errors.New("unexpected nil during module init")
+	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
+)

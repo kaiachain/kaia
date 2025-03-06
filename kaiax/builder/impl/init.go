@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -26,13 +27,23 @@ var (
 	logger                       = log.NewModuleLogger(log.KaiaxBuilder)
 )
 
-type BuilderModule struct{}
+type InitOpts struct {
+	Backend api.Backend
+}
+
+type BuilderModule struct {
+	InitOpts
+}
 
 func NewBuilderModule() *BuilderModule {
 	return &BuilderModule{}
 }
 
-func (b *BuilderModule) Init() error {
+func (b *BuilderModule) Init(opts *InitOpts) error {
+	if opts == nil || opts.Backend == nil {
+		return ErrInitUnexpectedNil
+	}
+	b.InitOpts = *opts
 	return nil
 }
 
