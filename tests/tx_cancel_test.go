@@ -59,7 +59,7 @@ func TestTxCancel(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -210,7 +210,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -369,7 +369,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 	prof.Profile("main_init_accountMap", time.Now().Sub(start))
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)

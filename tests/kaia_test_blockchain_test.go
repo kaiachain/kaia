@@ -73,7 +73,7 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
-	modules            []kaiax.TxPoolModule
+	txPoolModules      []kaiax.TxPoolModule
 }
 
 var (

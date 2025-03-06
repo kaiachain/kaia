@@ -697,7 +697,7 @@ func TestAccountUpdateMultiSigKeyMaxKey(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// update key to a multiSig account with 11 different private keys (more than 10 -> failed)
 	{
@@ -811,7 +811,7 @@ func TestAccountUpdateMultiSigKeyBigThreshold(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// update key to a multisig key with a threshold (10) and the total weight (6). (failed case)
 	{
@@ -922,7 +922,7 @@ func TestAccountUpdateMultiSigKeyDupPrvKeys(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 2. Update to a multisig key which has two same private keys.
 	{
@@ -1038,7 +1038,7 @@ func TestAccountUpdateMultiSigKeyWeightOverflow(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 2. update toc a multisig key with a threshold, uint(MAX), and the total weight, uint(MAX/2)*3. (failed case)
 	{
@@ -1137,7 +1137,7 @@ func TestAccountUpdateRoleBasedKeyInvalidNumKey(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 2. update to a RoleBased key which contains 4 sub-keys.
 	{
@@ -1282,7 +1282,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 1. a RoleBased key contains an AccountKeyNil type sub-key as a first sub-key. (fail)
 	{
@@ -1577,7 +1577,7 @@ func TestAccountUpdateRoleBasedKey(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 1. try to update the account with a RoleTransaction key. (fail)
 	{
@@ -1764,7 +1764,7 @@ func TestAccountUpdateRoleBasedKeyNested(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// 2. Update an accountKey with a nested RoleBasedKey.
 	{
@@ -1939,7 +1939,7 @@ func TestRoleBasedKeySendTx(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// test fee delegation txs for each role of role-based key.
 	// only RoleFeePayer type can generate valid signature as a fee payer.
@@ -2144,7 +2144,7 @@ func TestRoleBasedKeyFeeDelegation(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	// test fee delegation txs for each role of role-based key.
 	// only RoleFeePayer type can generate valid signature as a fee payer.

@@ -757,5 +757,5 @@ func makeTxPool(bcdata *BCData, txPoolSize int) *blockchain.TxPool {
 	txpoolconfig.NonExecSlotsAccount = uint64(txPoolSize)
 	txpoolconfig.ExecSlotsAll = 2 * uint64(txPoolSize)
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(txPoolSize)
-	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 }

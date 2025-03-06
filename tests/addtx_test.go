@@ -124,7 +124,7 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 
 		Lifetime: 5 * time.Minute,
 	}
-	txpool := blockchain.NewTxPool(poolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.modules)
+	txpool := blockchain.NewTxPool(poolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule, bcdata.txPoolModules)
 
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentBlock().Number())
 
