@@ -693,23 +693,39 @@ func popTxs(incorporatedTxs *[]interface{}, num int, bundles []*builder.Bundle) 
 	}
 }
 
+func has(incorporatedTxs []interface{}, tx *types.Transaction) bool {
+	for _, txOrGen := range incorporatedTxs {
+		if t, ok := txOrGen.(*types.Transaction); ok {
+			if t.Hash() == tx.Hash() {
+				return true
+			}
+		} else if gen, ok := txOrGen.(builder.TxGenerator); ok {
+			tx, _ := gen(tx.Nonce())
+			if tx.Hash() == tx.Hash() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func checkBundlesComplete(incorporatedTxs []interface{}, bundles []*builder.Bundle) []*builder.Bundle {
-	retBundles := make([]*builder.Bundle, 0)
+	incompleteBundles := make([]*builder.Bundle, 0)
 	for _, bundle := range bundles {
 		bundleIncomplete := false
-		for _, txOrGen := range incorporatedTxs {
+		for _, txOrGen := range bundle.BundleTxs {
 			if tx, ok := txOrGen.(*types.Transaction); ok {
-				if !bundle.Has(tx.Hash(), tx.Nonce()) {
+				if !has(incorporatedTxs, tx) {
 					bundleIncomplete = true
 					break
 				}
 			}
 		}
 		if bundleIncomplete {
-			retBundles = append(retBundles, bundle)
+			incompleteBundles = append(incompleteBundles, bundle)
 		}
 	}
-	return retBundles
+	return incompleteBundles
 }
 
 func removeIncompleteBundle(incorporatedTxs *[]interface{}, incompleteBundles []*builder.Bundle) {
