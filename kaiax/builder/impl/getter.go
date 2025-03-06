@@ -26,9 +26,10 @@ type Pair struct {
 	u, v int
 }
 
-// two txs with same sender has an edge
-// two txs in the same bundle has an edge
-func BuildGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) ([][]int, error) {
+// BuildDependencyGraph builds a dependency graph of txs.
+// Two txs with the same sender has an edge.
+// Two txs in the same bundle has an edge.
+func BuildDependencyGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) ([][]int, error) {
 	edges := make([][]int, len(txs))
 	for i := range edges {
 		edges[i] = make([]int, len(txs))
@@ -76,7 +77,8 @@ func BuildGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signe
 	return edges, nil
 }
 
-func Bfs(edges [][]int, indices []int) map[int]bool {
+// FindDependentNodes finds all nodes reachable from `indices` via BFS.
+func FindDependentNodes(edges [][]int, indices []int) map[int]bool {
 	// Initialize visited array
 	visited := make([]bool, len(edges))
 	for _, i := range indices {
@@ -191,6 +193,7 @@ func IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) boo
 	return false
 }
 
+// Filter removes elements at indices specified in `toRemove`.
 func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
 	ret := make([]T, 0)
 	for i := 0; i < len(*slice); i++ {
@@ -219,12 +222,12 @@ func ShiftTxs(txs *[]interface{}, num int) {
 }
 
 func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	nodes := make([]int, 0)
+	allNodes := make([]int, 0)
 	for i := 0; i < num; i++ {
-		nodes = append(nodes, i)
+		allNodes = append(allNodes, i)
 	}
 
-	edges, err := BuildGraph(*txs, *bundles, signer)
+	edges, err := BuildDependencyGraph(*txs, *bundles, signer)
 	if err != nil {
 		// fall back to shift
 		logger.Error("Failed to build graph", "err", err)
@@ -232,7 +235,7 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 		return
 	}
 
-	txIdxToRemove := Bfs(edges, nodes)
+	txIdxToRemove := FindDependentNodes(edges, allNodes)
 	newTxs := Filter(txs, txIdxToRemove)
 
 	bundleIdxToRemove := map[int]bool{}
