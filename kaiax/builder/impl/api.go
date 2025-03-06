@@ -68,7 +68,6 @@ func (s *BuilderAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.B
 		tx := new(types.Transaction)
 		if err := rlp.DecodeBytes(input, tx); err != nil {
 			hash = append(hash, common.Hash{})
-			err.Error()
 			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
 			break
 		}
