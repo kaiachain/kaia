@@ -679,92 +679,6 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func shiftTxs(incorporatedTxs *[]interface{}, num int) {
-	*incorporatedTxs = (*incorporatedTxs)[num:]
-}
-
-func filter[T any](slice *[]T, toRemove map[int]bool) []T {
-	ret := make([]T, 0)
-	for i := 0; i < len(*slice); i++ {
-		if !toRemove[i] {
-			ret = append(ret, (*slice)[i])
-		}
-	}
-	return ret
-}
-
-func findBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
-	for i, bundle := range bundles {
-		if bundle.Has(tx.Hash(), tx.Nonce()) {
-			return i
-		}
-	}
-	return -1
-}
-
-func popTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	nodes := make([]int, 0)
-	for i := 0; i < num; i++ {
-		nodes = append(nodes, i)
-	}
-
-	edges, err := impl.BuildGraph(*txs, *bundles, signer)
-	if err != nil {
-		// fall back to shift
-		logger.Error("Failed to build graph", "err", err)
-		shiftTxs(txs, num)
-		return
-	}
-
-	txIdxToRemove := builderImpl.Bfs(edges, nodes)
-	newTxs := filter(txs, txIdxToRemove)
-
-	bundleIdxToRemove := map[int]bool{}
-	for i := range txIdxToRemove {
-		if tx, ok := (*txs)[i].(*types.Transaction); ok {
-			bundlesIdx := findBundleIdx(*bundles, tx)
-			if bundlesIdx != -1 {
-				bundleIdxToRemove[bundlesIdx] = true
-			}
-		}
-	}
-
-	newBundles := filter(bundles, bundleIdxToRemove)
-
-	*txs = newTxs
-	*bundles = newBundles
-}
-
-func extractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
-	// Detect bundles and add them to bundles
-	bundles := []*builder.Bundle{}
-	flattenedTxs := []interface{}{}
-	arrayTxs := builderImpl.Arrayify(txs)
-	if txBundlingModules == nil {
-		for _, tx := range arrayTxs {
-			var itx interface{} = tx
-			flattenedTxs = append(flattenedTxs, itx)
-		}
-		return flattenedTxs, nil
-	}
-
-	for _, txBundlingModule := range txBundlingModules {
-		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
-		if builderImpl.IsConflict(bundles, newBundles) {
-			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
-			continue
-		}
-		bundles = append(bundles, newBundles...)
-	}
-
-	incorporatedTxs, err := builderImpl.IncorporateBundleTx(arrayTxs, bundles)
-	if err != nil {
-		return flattenedTxs, nil
-	}
-
-	return incorporatedTxs, bundles
-}
-
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
 	incorporatedTxs, bundles := extractBundlesAndIncorporate(txs, txBundlingModules)
 	var coalescedLogs []*types.Log
@@ -827,15 +741,20 @@ CommitTransactionLoop:
 			}
 			break
 		}
-		txOrGen := incorporatedTxs[0]
-		var tx *types.Transaction
+
+		var (
+			tx      *types.Transaction
+			err     error
+			logs    []*types.Log
+			txOrGen = incorporatedTxs[0]
+			from    common.Address
+		)
 		switch txOrGen.(type) {
 		case *types.Transaction:
 			tx = txOrGen.(*types.Transaction)
 		case builder.TxGenerator:
 			txGen := txOrGen.(builder.TxGenerator)
 			nodeNonce := env.state.GetNonce(rewardbase)
-			var err error
 			tx, err = txGen(nodeNonce)
 			if tx == nil {
 				logger.Warn("TxGenerator returned a nil tx", "error", err)
@@ -846,7 +765,7 @@ CommitTransactionLoop:
 		// during transaction acceptance is the transaction pool.
 		//
 		// We use the eip155 signer regardless of the current hf.
-		from, _ := types.Sender(env.signer, tx)
+		from, _ = types.Sender(env.signer, tx)
 
 		// NOTE-Kaia Since Kaia is always in EIP155, the below replay protection code is not needed.
 		// TODO-Kaia-RemoveLater Remove the code commented below.
@@ -863,20 +782,17 @@ CommitTransactionLoop:
 
 		// Verify that tx is included in the bundle
 		targetBundle := &builder.Bundle{}
-		numRemainTxsInBundle := 1
-		for _, bundle := range bundles {
-			if _, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
-				targetBundle = bundle
-				numRemainTxsInBundle = len(bundle.BundleTxs)
-			}
+		numShift := 1
+		if bundleIdx := findBundleIdx(bundles, tx); bundleIdx != -1 {
+			targetBundle = bundles[bundleIdx]
+			numShift = len(targetBundle.BundleTxs)
 		}
 
-		var err error
-		var logs []*types.Log
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&executingBundleTxs, 1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
 			if err != nil {
+				// override sender to error tx
 				from, _ = types.Sender(env.signer, tx)
 			}
 		} else {
@@ -888,19 +804,19 @@ CommitTransactionLoop:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, &bundles, env.signer)
+			popTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			shiftTxs(&incorporatedTxs, numRemainTxsInBundle)
+			shiftTxs(&incorporatedTxs, numShift)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, &bundles, env.signer)
+			popTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -915,7 +831,7 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, &bundles, env.signer)
+			popTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
@@ -928,22 +844,14 @@ CommitTransactionLoop:
 			}
 
 			coalescedLogs = append(coalescedLogs, logs...)
-			if len(incorporatedTxs) <= 1 {
-				incorporatedTxs = incorporatedTxs[:0]
-			} else {
-				if len(targetBundle.BundleTxs) != 0 {
-					incorporatedTxs = incorporatedTxs[len(targetBundle.BundleTxs):]
-				} else {
-					incorporatedTxs = incorporatedTxs[1:]
-				}
-			}
+			shiftTxs(&incorporatedTxs, numShift)
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			shiftTxs(&incorporatedTxs, numRemainTxsInBundle)
+			shiftTxs(&incorporatedTxs, numShift)
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
@@ -1046,3 +954,93 @@ func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.Sta
 
 func (env *Task) Transactions() []*types.Transaction { return env.txs }
 func (env *Task) Receipts() []*types.Receipt         { return env.receipts }
+
+func filter[T any](slice *[]T, toRemove map[int]bool) []T {
+	ret := make([]T, 0)
+	for i := 0; i < len(*slice); i++ {
+		if !toRemove[i] {
+			ret = append(ret, (*slice)[i])
+		}
+	}
+	return ret
+}
+
+func findBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
+	for i, bundle := range bundles {
+		if bundle.Has(tx.Hash(), tx.Nonce()) {
+			return i
+		}
+	}
+	return -1
+}
+
+func shiftTxs(txs *[]interface{}, num int) {
+	if len(*txs) <= num {
+		*txs = (*txs)[:0]
+		return
+	}
+	*txs = (*txs)[num:]
+}
+
+func popTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+	nodes := make([]int, 0)
+	for i := 0; i < num; i++ {
+		nodes = append(nodes, i)
+	}
+
+	edges, err := impl.BuildGraph(*txs, *bundles, signer)
+	if err != nil {
+		// fall back to shift
+		logger.Error("Failed to build graph", "err", err)
+		shiftTxs(txs, num)
+		return
+	}
+
+	txIdxToRemove := builderImpl.Bfs(edges, nodes)
+	newTxs := filter(txs, txIdxToRemove)
+
+	bundleIdxToRemove := map[int]bool{}
+	for i := range txIdxToRemove {
+		if tx, ok := (*txs)[i].(*types.Transaction); ok {
+			bundlesIdx := findBundleIdx(*bundles, tx)
+			if bundlesIdx != -1 {
+				bundleIdxToRemove[bundlesIdx] = true
+			}
+		}
+	}
+
+	newBundles := filter(bundles, bundleIdxToRemove)
+
+	*txs = newTxs
+	*bundles = newBundles
+}
+
+func extractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
+	// Detect bundles and add them to bundles
+	bundles := []*builder.Bundle{}
+	flattenedTxs := []interface{}{}
+	arrayTxs := builderImpl.Arrayify(txs)
+	if txBundlingModules == nil {
+		for _, tx := range arrayTxs {
+			var itx interface{} = tx
+			flattenedTxs = append(flattenedTxs, itx)
+		}
+		return flattenedTxs, nil
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
+		if builderImpl.IsConflict(bundles, newBundles) {
+			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
+			continue
+		}
+		bundles = append(bundles, newBundles...)
+	}
+
+	incorporatedTxs, err := builderImpl.IncorporateBundleTx(arrayTxs, bundles)
+	if err != nil {
+		return flattenedTxs, nil
+	}
+
+	return incorporatedTxs, bundles
+}
