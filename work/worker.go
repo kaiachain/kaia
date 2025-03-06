@@ -679,49 +679,6 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) commitBundleTransaction(tx *types.Transaction, bundle *builder.Bundle, txIndexInBundle int, lastSnapshot *state.StateDB, executedTxsInBundle *[]*types.Transaction, receiptsInBundle *[]*types.Receipt, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
-	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
-	if err != nil {
-		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-			// Mark all tx in the bundle as Unexecutable
-			// In the case of TxGenerator, there is no tx in the pool, so there is no need to execute MarkUnexecutable.
-			for _, txInBundle := range bundle.BundleTxs {
-				switch v := txInBundle.(type) {
-				case *types.Transaction:
-					v.MarkUnexecutable(true)
-				}
-			}
-		}
-		// Restore the copy of statedb
-		*env.state = *lastSnapshot
-
-		// The GasUsed in the header remains incremented, so this is also reverted.
-		for _, receipt := range *receiptsInBundle {
-			env.header.GasUsed -= receipt.GasUsed
-		}
-		// Delete the txs information in bundle
-		*executedTxsInBundle = (*executedTxsInBundle)[:0]
-		*receiptsInBundle = (*receiptsInBundle)[:0]
-		return err, nil
-	}
-
-	if len(bundle.BundleTxs)-1 == txIndexInBundle { // For txs included in a bundle, if the tx is the last in the bundle, it will be added all at once.
-		// The latest tx information is stored as bundle information
-		*executedTxsInBundle = append(*executedTxsInBundle, tx)
-		*receiptsInBundle = append(*receiptsInBundle, receipt)
-		// Add all tx information in the bundle to env
-		env.txs = append(env.txs, *executedTxsInBundle...)
-		env.receipts = append(env.receipts, *receiptsInBundle...)
-		// Delete the txs information in bundle
-		*executedTxsInBundle = (*executedTxsInBundle)[:0]
-		*receiptsInBundle = (*receiptsInBundle)[:0]
-	} else { // If the tx is included in a bundle and is not the last tx in the bundle, the result is retained.
-		*executedTxsInBundle = append(*executedTxsInBundle, tx)
-		*receiptsInBundle = append(*receiptsInBundle, receipt)
-	}
-	return nil, receipt.Logs
-}
-
 func (env *Task) popForTransactions(incorporatedTxs *[]interface{}, targetTx *types.Transaction, targetBundle *builder.Bundle, numRemainTxsInBundle int, rewardbase common.Address) {
 	env.nextTxs(incorporatedTxs, targetTx, targetBundle, numRemainTxsInBundle, rewardbase, true)
 }
@@ -770,38 +727,38 @@ func (env *Task) removeAllTxFromSameSender(incorporatedTxs *[]interface{}, targe
 	incorporatedTxs = &updatedTxs
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
+func extractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
 	// Detect bundles and add them to bundles
-	var bundles []*builder.Bundle
-	incorporatedTxs := []interface{}{}
-	// When TxBundlingModule is not given, incorporatedTxs is just the flattened txs.
+	bundles := []*builder.Bundle{}
+	flattenedTxs := []interface{}{}
 	arrayTxs := builderImpl.Arrayify(txs)
-	for _, tx := range arrayTxs {
-		var itx interface{} = tx
-		incorporatedTxs = append(incorporatedTxs, itx)
+	if txBundlingModules == nil {
+		for _, tx := range arrayTxs {
+			var itx interface{} = tx
+			flattenedTxs = append(flattenedTxs, itx)
+		}
+		return flattenedTxs, nil
 	}
 
-	// Bundle processing when TxBundlingModule is given
-	if txBundlingModules != nil {
-		tmpBundles := []*builder.Bundle{}
-		for _, txBundlingModule := range txBundlingModules {
-			newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, tmpBundles)
-			if builderImpl.IsConflict(tmpBundles, newBundles) {
-				logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
-				continue
-			}
-			tmpBundles = append(tmpBundles, newBundles...)
+	for _, txBundlingModule := range txBundlingModules {
+		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
+		if builderImpl.IsConflict(bundles, newBundles) {
+			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
+			continue
 		}
-
-		// Incorporate into txs
-		tmpIncorporatedTxs, err := builderImpl.IncorporateBundleTx(arrayTxs, bundles)
-		if err == nil {
-			// Update incorporatedTxs only if no error occurs.
-			incorporatedTxs = tmpIncorporatedTxs
-			bundles = tmpBundles
-		}
+		bundles = append(bundles, newBundles...)
 	}
 
+	incorporatedTxs, err := builderImpl.IncorporateBundleTx(arrayTxs, bundles)
+	if err != nil {
+		return flattenedTxs, nil
+	}
+
+	return incorporatedTxs, bundles
+}
+
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
+	incorporatedTxs, bundles := extractBundlesAndIncorporate(txs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -854,10 +811,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
-	var lastSnapshot *state.StateDB
-	var executedTxsInBundle []*types.Transaction
-	var receiptsInBundle []*types.Receipt
-	var logsInBundle []*types.Log
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -903,13 +856,11 @@ CommitTransactionLoop:
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 
 		// Verify that tx is included in the bundle
-		var txIndexInBundle int
 		targetBundle := &builder.Bundle{}
 		numRemainTxsInBundle := 0
 		for _, bundle := range bundles {
 			if i, has := bundle.Index(tx.Hash(), tx.Nonce()); has {
 				targetBundle = bundle
-				txIndexInBundle = i
 				numRemainTxsInBundle = len(bundle.BundleTxs) - i - 1
 			}
 		}
@@ -917,13 +868,11 @@ CommitTransactionLoop:
 		var err error
 		var logs []*types.Log
 		if len(targetBundle.BundleTxs) != 0 {
-			// Take the snap if it is the first tx in the bundle.
-			if txIndexInBundle == 0 {
-				// Set executingBundleTxs to 1 when the first tx in the bundle begins.
-				atomic.StoreInt32(&executingBundleTxs, 1)
-				lastSnapshot = env.state.Copy()
+			atomic.StoreInt32(&executingBundleTxs, 1)
+			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
+			if err != nil {
+				from, _ = types.Sender(env.signer, tx)
 			}
-			err, logs = env.commitBundleTransaction(tx, targetBundle, txIndexInBundle, lastSnapshot, &executedTxsInBundle, &receiptsInBundle, bc, rewardbase, vmConfig)
 		} else {
 			err, logs = env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		}
@@ -965,22 +914,22 @@ CommitTransactionLoop:
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			if len(targetBundle.BundleTxs) != 0 {
-				if numRemainTxsInBundle == 0 {
-					coalescedLogs = append(coalescedLogs, logsInBundle...)
-					for i := 0; i < len(targetBundle.BundleTxs); i++ {
-						env.tcount++
-					}
-				} else {
-					logsInBundle = append(logsInBundle, logs...)
+				for i := 0; i < len(targetBundle.BundleTxs); i++ {
+					env.tcount++
 				}
 			} else {
-				coalescedLogs = append(coalescedLogs, logs...)
 				env.tcount++
 			}
+
+			coalescedLogs = append(coalescedLogs, logs...)
 			if len(incorporatedTxs) <= 1 {
 				incorporatedTxs = incorporatedTxs[:0]
 			} else {
-				incorporatedTxs = incorporatedTxs[1:]
+				if len(targetBundle.BundleTxs) != 0 {
+					incorporatedTxs = incorporatedTxs[len(targetBundle.BundleTxs):]
+				} else {
+					incorporatedTxs = incorporatedTxs[1:]
+				}
 			}
 
 		default:
@@ -990,7 +939,7 @@ CommitTransactionLoop:
 			strangeErrorTxsCounter.Inc(1)
 			env.shiftForTransactions(&incorporatedTxs, tx, targetBundle, numRemainTxsInBundle, rewardbase)
 		}
-		if len(targetBundle.BundleTxs) != 0 && len(targetBundle.BundleTxs)-1 == txIndexInBundle {
+		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
 			atomic.StoreInt32(&executingBundleTxs, 0)
 		}
@@ -1023,6 +972,52 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 	env.receipts = append(env.receipts, receipt)
 
 	return nil, receipt.Logs
+}
+
+func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
+	lastSnapshot := env.state.Copy()
+	gasUsedSnapshot := env.header.GasUsed
+	txs := []*types.Transaction{}
+	receipts := []*types.Receipt{}
+	logs := []*types.Log{}
+
+	for _, txOrGen := range bundle.BundleTxs {
+		var tx *types.Transaction
+		if gen, ok := txOrGen.(builder.TxGenerator); ok {
+			var err error
+			tx, err = gen(env.state.GetNonce(rewardbase) + 1)
+			if err != nil {
+				logger.Error("TxGenerator error", "error", err)
+				return err, nil, nil
+			}
+		} else {
+			tx = txOrGen.(*types.Transaction)
+		}
+
+		receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+		if err != nil {
+			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+				for _, txInBundle := range bundle.BundleTxs {
+					switch v := txInBundle.(type) {
+					case *types.Transaction:
+						v.MarkUnexecutable(true)
+					}
+				}
+			}
+			*env.state = *lastSnapshot
+			env.header.GasUsed = gasUsedSnapshot
+			return err, tx, nil
+		}
+
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+		logs = append(logs, receipt.Logs...)
+	}
+
+	env.txs = append(env.txs, txs...)
+	env.receipts = append(env.receipts, receipts...)
+
+	return nil, nil, logs
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
