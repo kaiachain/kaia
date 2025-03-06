@@ -37,9 +37,9 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	gasless_mock "github.com/kaiachain/kaia/kaiax/gasless/mock"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
-	kaiax_mock "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -102,7 +102,7 @@ func testTxPool(t *testing.T, dataDir string, bc *blockchain.BlockChain) *blockc
 	blockchain.DefaultTxPoolConfig.Journal = path.Join(dataDir, blockchain.DefaultTxPoolConfig.Journal)
 	mockGov := gov_mock.NewMockGovModule(gomock.NewController(t))
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
-	mockGasless := kaiax_mock.NewMockTxPoolModule(gomock.NewController(t))
+	mockGasless := gasless_mock.NewMockGaslessModule(gomock.NewController(t))
 	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc, mockGov, []kaiax.TxPoolModule{mockGasless})
 }
 

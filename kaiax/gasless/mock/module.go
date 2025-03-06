@@ -49,60 +49,74 @@ func (mr *MockGaslessModuleMockRecorder) ExtractTxBundles(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockGaslessModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
-// GetLendTxGenerator mocks base method.
-func (m *MockGaslessModule) GetLendTxGenerator(arg0, arg1 *types.Transaction) builder.TxGenerator {
+// GetCheckBalance mocks base method.
+func (m *MockGaslessModule) GetCheckBalance() func(*types.Transaction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLendTxGenerator", arg0, arg1)
-	ret0, _ := ret[0].(builder.TxGenerator)
+	ret := m.ctrl.Call(m, "GetCheckBalance")
+	ret0, _ := ret[0].(func(*types.Transaction) error)
 	return ret0
 }
 
-// GetLendTxGenerator indicates an expected call of GetLendTxGenerator.
-func (mr *MockGaslessModuleMockRecorder) GetLendTxGenerator(arg0, arg1 interface{}) *gomock.Call {
+// GetCheckBalance indicates an expected call of GetCheckBalance.
+func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLendTxGenerator", reflect.TypeOf((*MockGaslessModule)(nil).GetLendTxGenerator), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockGaslessModule)(nil).GetCheckBalance))
 }
 
-// IsApproveTx mocks base method.
-func (m *MockGaslessModule) IsApproveTx(arg0 *types.Transaction) bool {
+// IsModuleTx mocks base method.
+func (m *MockGaslessModule) IsModuleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsApproveTx", arg0)
+	ret := m.ctrl.Call(m, "IsModuleTx", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsApproveTx indicates an expected call of IsApproveTx.
-func (mr *MockGaslessModuleMockRecorder) IsApproveTx(arg0 interface{}) *gomock.Call {
+// IsModuleTx indicates an expected call of IsModuleTx.
+func (mr *MockGaslessModuleMockRecorder) IsModuleTx(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsApproveTx", reflect.TypeOf((*MockGaslessModule)(nil).IsApproveTx), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsModuleTx", reflect.TypeOf((*MockGaslessModule)(nil).IsModuleTx), arg0)
 }
 
-// IsExecutable mocks base method.
-func (m *MockGaslessModule) IsExecutable(arg0, arg1 *types.Transaction) bool {
+// IsReady mocks base method.
+func (m *MockGaslessModule) IsReady(arg0 map[uint64]*types.Transaction, arg1 uint64, arg2 types.Transactions) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsExecutable", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsReady", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsExecutable indicates an expected call of IsExecutable.
-func (mr *MockGaslessModuleMockRecorder) IsExecutable(arg0, arg1 interface{}) *gomock.Call {
+// IsReady indicates an expected call of IsReady.
+func (mr *MockGaslessModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsExecutable", reflect.TypeOf((*MockGaslessModule)(nil).IsExecutable), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockGaslessModule)(nil).IsReady), arg0, arg1, arg2)
 }
 
-// IsSwapTx mocks base method.
-func (m *MockGaslessModule) IsSwapTx(arg0 *types.Transaction) bool {
+// PreAddLocal mocks base method.
+func (m *MockGaslessModule) PreAddLocal(arg0 *types.Transaction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsSwapTx", arg0)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "PreAddLocal", arg0)
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// IsSwapTx indicates an expected call of IsSwapTx.
-func (mr *MockGaslessModuleMockRecorder) IsSwapTx(arg0 interface{}) *gomock.Call {
+// PreAddLocal indicates an expected call of PreAddLocal.
+func (mr *MockGaslessModuleMockRecorder) PreAddLocal(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSwapTx", reflect.TypeOf((*MockGaslessModule)(nil).IsSwapTx), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddLocal", reflect.TypeOf((*MockGaslessModule)(nil).PreAddLocal), arg0)
+}
+
+// PreAddRemote mocks base method.
+func (m *MockGaslessModule) PreAddRemote(arg0 *types.Transaction) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreAddRemote", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreAddRemote indicates an expected call of PreAddRemote.
+func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
 }
 
 // Start mocks base method.
