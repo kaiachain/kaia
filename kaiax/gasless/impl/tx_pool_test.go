@@ -69,7 +69,7 @@ func TestIsModuleTx(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	for _, tc := range testcases {
 		ok := g.IsModuleTx(tc.tx)
@@ -89,7 +89,7 @@ func TestIsReady(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	approveTx := func(nonce uint64) *types.Transaction {
 		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
@@ -184,7 +184,7 @@ func TestIsReady(t *testing.T) {
 
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			g.StateDB.SetNonce(addr, tc.nonce)
+			statedb.SetNonce(addr, tc.nonce)
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
@@ -311,12 +311,12 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 
 	for _, tc := range testcases {
 		sdb := statedb.Copy()
-		g.StateDB = sdb
+		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
+		g.Chain = bc
 		if tc.balance {
 			// set some token
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
-		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
 		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig}, []kaiax.TxPoolModule{g})
 
 		txMap := map[txTypeTest]*types.Transaction{}

@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -63,7 +64,7 @@ func TestIsApproveTx(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -102,7 +103,7 @@ func TestIsSwapTx(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -173,7 +174,7 @@ func TestIsExecutable(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {

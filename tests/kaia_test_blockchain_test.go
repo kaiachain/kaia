@@ -139,10 +139,6 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup Kaiax modules
-	statedb, err := bc.State()
-	if err != nil {
-		return nil, err
-	}
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
@@ -177,7 +173,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig: genesis.Config,
 			NodeKey:     validatorPrivKeys[0],
-			StateDB:     statedb,
+			Chain:       bc,
 		}),
 	)
 	if err != nil {

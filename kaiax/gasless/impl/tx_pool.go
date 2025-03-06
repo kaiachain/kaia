@@ -44,7 +44,11 @@ func (g *GaslessModule) GetCheckBalance() func(tx *types.Transaction) error {
 func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
 	tx := txs[i]
 	addr := tx.ValidatedSender()
-	nonce := g.StateDB.GetNonce(addr)
+	sdb, err := g.Chain.State()
+	if err != nil {
+		return false
+	}
+	nonce := sdb.GetNonce(addr)
 
 	if i > nonce+1 {
 		return false

@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -40,7 +41,7 @@ func TestExtractTxBundles(t *testing.T) {
 	g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
-		StateDB:     statedb,
+		Chain:       &testBlockChain{statedb, 10000000, new(event.Feed)},
 	})
 
 	key1, _ := crypto.GenerateKey()

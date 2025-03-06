@@ -30,7 +30,11 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
-	StateDB     *state.StateDB
+	Chain       BlockChain
+}
+
+type BlockChain interface {
+	State() (*state.StateDB, error)
 }
 
 type GaslessModule struct {

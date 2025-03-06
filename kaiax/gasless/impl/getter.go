@@ -182,6 +182,11 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		return false
 	}
 
+	sdb, err := g.Chain.State()
+	if err != nil {
+		return false
+	}
+
 	// Conditions involving ApproveTx
 	if approveTxOrNil != nil {
 		// Ax.
@@ -205,12 +210,12 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
 			return false
 		}
-		if nonce := g.StateDB.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+		if nonce := sdb.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
 			return false
 		}
 	} else {
 		// SP3.
-		if nonce := g.StateDB.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
+		if nonce := sdb.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
 			return false
 		}
 	}
