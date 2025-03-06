@@ -682,15 +682,36 @@ func shiftTxs(incorporatedTxs *[]interface{}, num int) {
 	*incorporatedTxs = (*incorporatedTxs)[num:]
 }
 
-func popTxs(incorporatedTxs *[]interface{}, num int, bundles []*builder.Bundle) {
-	popXXXX(incorporatedTxs, num)
+// popTxs
+// popXXXX
+// popTxsAndBundles
+// removeTxsFromIncompleteBundles
+// removeTxsFromSenders
+func popTxs(incorporatedTxs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+	popXXXX(incorporatedTxs, num, signer)
 	for {
-		incompleteBundles := checkBundlesComplete(*incorporatedTxs, bundles)
+		incompleteBundles := getIncompleteBundles(*incorporatedTxs, bundles)
 		if len(incompleteBundles) == 0 {
 			break
 		}
-		removeIncompleteBundle(incorporatedTxs, incompleteBundles)
+		// popTxFromBundles(incorporatedTxs, &bundles, signer)
+		// incorporatedTxs = [tx2, tx3, tx4, tx5, tx6]
+		/*
+			removeAddrs := removeTxsFromIncompleteBundles(incorporatedTxs, incompleteBundles, signer)
+			// incorporatedTxs = []
+			removeTxsFromSenders(incorporatedTxs, removeAddrs, signer)
+			// bundles = removeIncompleteBundles(bundles, incompleteBundles)
+			// bundle = []
+		*/
+		time.Sleep(1 * time.Second)
 	}
+}
+
+func popTxsAndBundles(incorporatedTxs *[]interface{}, bundles *[]*builder.Bundle, signer types.Signer) {
+	incompleteBundles := getIncompleteBundles(*incorporatedTxs, *bundles)
+	// popTxsFromSender
+	removeAddrs := removeTxsFromIncompleteBundles(incorporatedTxs, incompleteBundles, signer)
+	// popIncompleteBundles
 }
 
 func has(incorporatedTxs []interface{}, tx *types.Transaction) bool {
@@ -709,7 +730,7 @@ func has(incorporatedTxs []interface{}, tx *types.Transaction) bool {
 	return false
 }
 
-func checkBundlesComplete(incorporatedTxs []interface{}, bundles []*builder.Bundle) []*builder.Bundle {
+func getIncompleteBundles(incorporatedTxs []interface{}, bundles []*builder.Bundle) []*builder.Bundle {
 	incompleteBundles := make([]*builder.Bundle, 0)
 	for _, bundle := range bundles {
 		bundleIncomplete := false
@@ -728,56 +749,72 @@ func checkBundlesComplete(incorporatedTxs []interface{}, bundles []*builder.Bund
 	return incompleteBundles
 }
 
-func removeIncompleteBundle(incorporatedTxs *[]interface{}, incompleteBundles []*builder.Bundle) {
-	tmp := make([]interface{}, 0)
-	for _, txOrGen := range *incorporatedTxs {
-		safe := true
-		// if tx belongs to any incomplete bundle, it's not safe so it should be removed
-		if tx, ok := txOrGen.(*types.Transaction); ok {
-			for _, bundle := range incompleteBundles {
-				if bundle.Has(tx.Hash(), tx.Nonce()) {
-					safe = false
-					break
-				}
+func removeTxsFromIncompleteBundles(incorporatedTxs *[]interface{}, incompleteBundles []*builder.Bundle, signer types.Signer) map[common.Address]bool {
+	removeTxs := make(map[common.Hash]bool)
+	removeAddrs := make(map[common.Address]bool)
+	for _, bundle := range incompleteBundles {
+		for _, txOrGen := range bundle.BundleTxs {
+			if tx, ok := txOrGen.(*types.Transaction); ok {
+				removeTxs[tx.Hash()] = true
+				from, _ := types.Sender(signer, tx)
+				removeAddrs[from] = true
 			}
 		}
-		if safe {
-			tmp = append(tmp, txOrGen)
+	}
+
+	tmp := make([]interface{}, 0)
+	for _, txOrGen := range *incorporatedTxs {
+		// if tx belongs to any incomplete bundle, it's not safe so it should be removed
+		if tx, ok := txOrGen.(*types.Transaction); ok {
+			if !removeTxs[tx.Hash()] {
+				tmp = append(tmp, txOrGen)
+			}
 		}
 	}
+
 	*incorporatedTxs = tmp
+	return removeAddrs
 }
 
-func popXXXX(incorporatedTxs *[]interface{}, num int) {
+func popXXXX(incorporatedTxs *[]interface{}, num int, signer types.Signer) {
 	poppedTxs := (*incorporatedTxs)[:num]
 	removeSet := make(map[common.Address]bool)
 	var rewardbase common.Address
+
+	if num == 0 {
+		return
+	}
 
 	// find addresses to be removed
 	for _, txOrGen := range poppedTxs {
 		switch txOrGen.(type) {
 		case *types.Transaction:
 			tx := txOrGen.(*types.Transaction)
-			from := tx.ValidatedSender()
+			from, _ := types.Sender(signer, tx)
 			removeSet[from] = true
 		case builder.TxGenerator:
 			if rewardbase == (common.Address{}) {
 				txGen := txOrGen.(builder.TxGenerator)
 				tx, _ := txGen(0)
-				rewardbase = tx.ValidatedSender()
-				removeSet[rewardbase] = true
+				from, _ := types.Sender(signer, tx)
+				removeSet[from] = true
+				rewardbase = from
 			}
 		}
 	}
 
-	*incorporatedTxs = (*incorporatedTxs)[num:]
+	removeTxsFromSenders(incorporatedTxs, removeSet, signer)
+}
+
+func removeTxsFromSenders(incorporatedTxs *[]interface{}, removeAddrs map[common.Address]bool, signer types.Signer) {
 	tmp := make([]interface{}, 0)
 	for _, txOrGen := range *incorporatedTxs {
 		// TxGenerator is not removed
 		switch txOrGen.(type) {
 		case *types.Transaction:
 			tx := txOrGen.(*types.Transaction)
-			if _, ok := removeSet[tx.ValidatedSender()]; !ok {
+			from, _ := types.Sender(signer, tx)
+			if _, ok := removeAddrs[from]; !ok {
 				tmp = append(tmp, txOrGen)
 			}
 		case builder.TxGenerator:
@@ -840,8 +877,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 			select {
 			case <-blockTimer.C:
 				// If a bundled tx is running, the abort will wait until all tx in the bundle have been executed.
-				for atomic.LoadInt32(&executingBundleTxs) == 1 {
-				}
 				timeout = true
 				atomic.StoreInt32(&abort, 1)
 
@@ -942,7 +977,7 @@ CommitTransactionLoop:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles, env.signer)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
@@ -954,7 +989,7 @@ CommitTransactionLoop:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -969,7 +1004,7 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles)
+			popTxs(&incorporatedTxs, numRemainTxsInBundle, bundles, env.signer)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
@@ -1047,7 +1082,15 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			var err error
 			tx, err = gen(env.state.GetNonce(rewardbase) + 1)
 			if err != nil {
+				for _, txInBundle := range bundle.BundleTxs {
+					switch v := txInBundle.(type) {
+					case *types.Transaction:
+						v.MarkUnexecutable(true)
+					}
+				}
 				logger.Error("TxGenerator error", "error", err)
+				*env.state = *lastSnapshot
+				env.header.GasUsed = gasUsedSnapshot
 				return err, nil, nil
 			}
 		} else {
