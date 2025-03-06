@@ -225,6 +225,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 0}).Times(1)
 	mockGasless := mock_gasless.NewMockGaslessModule(gomock.NewController(t))
+	mockGasless.EXPECT().Reset(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov, []kaiax.TxPoolModule{mockGasless})
 
 	oracle := NewOracle(mockBackend, params, txPoolWith0, mockGov)

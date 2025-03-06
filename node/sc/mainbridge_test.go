@@ -103,6 +103,7 @@ func testTxPool(t *testing.T, dataDir string, bc *blockchain.BlockChain) *blockc
 	mockGov := gov_mock.NewMockGovModule(gomock.NewController(t))
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
 	mockGasless := gasless_mock.NewMockGaslessModule(gomock.NewController(t))
+	mockGasless.EXPECT().Reset(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
 	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc, mockGov, []kaiax.TxPoolModule{mockGasless})
 }
 
