@@ -190,3 +190,93 @@ func IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) boo
 
 	return false
 }
+
+func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
+	ret := make([]T, 0)
+	for i := 0; i < len(*slice); i++ {
+		if !toRemove[i] {
+			ret = append(ret, (*slice)[i])
+		}
+	}
+	return ret
+}
+
+func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
+	for i, bundle := range bundles {
+		if bundle.Has(tx.Hash(), tx.Nonce()) {
+			return i
+		}
+	}
+	return -1
+}
+
+func ShiftTxs(txs *[]interface{}, num int) {
+	if len(*txs) <= num {
+		*txs = (*txs)[:0]
+		return
+	}
+	*txs = (*txs)[num:]
+}
+
+func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+	nodes := make([]int, 0)
+	for i := 0; i < num; i++ {
+		nodes = append(nodes, i)
+	}
+
+	edges, err := BuildGraph(*txs, *bundles, signer)
+	if err != nil {
+		// fall back to shift
+		logger.Error("Failed to build graph", "err", err)
+		ShiftTxs(txs, num)
+		return
+	}
+
+	txIdxToRemove := Bfs(edges, nodes)
+	newTxs := Filter(txs, txIdxToRemove)
+
+	bundleIdxToRemove := map[int]bool{}
+	for i := range txIdxToRemove {
+		if tx, ok := (*txs)[i].(*types.Transaction); ok {
+			bundlesIdx := FindBundleIdx(*bundles, tx)
+			if bundlesIdx != -1 {
+				bundleIdxToRemove[bundlesIdx] = true
+			}
+		}
+	}
+
+	newBundles := Filter(bundles, bundleIdxToRemove)
+
+	*txs = newTxs
+	*bundles = newBundles
+}
+
+func ExtractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
+	// Detect bundles and add them to bundles
+	bundles := []*builder.Bundle{}
+	flattenedTxs := []interface{}{}
+	arrayTxs := Arrayify(txs)
+	if txBundlingModules == nil {
+		for _, tx := range arrayTxs {
+			var itx interface{} = tx
+			flattenedTxs = append(flattenedTxs, itx)
+		}
+		return flattenedTxs, nil
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
+		if IsConflict(bundles, newBundles) {
+			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
+			continue
+		}
+		bundles = append(bundles, newBundles...)
+	}
+
+	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
+	if err != nil {
+		return flattenedTxs, nil
+	}
+
+	return incorporatedTxs, bundles
+}
