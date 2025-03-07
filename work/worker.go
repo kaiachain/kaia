@@ -909,7 +909,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 				logger.Error("TxGenerator error", "error", err)
 				*env.state = *lastSnapshot
 				env.header.GasUsed = gasUsedSnapshot
-				return err, nil, nil
+				return err, &types.Transaction{}, nil
 			}
 		} else {
 			tx = txOrGen.(*types.Transaction)
@@ -938,7 +938,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
 
-	return nil, nil, logs
+	return nil, &types.Transaction{}, logs
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {

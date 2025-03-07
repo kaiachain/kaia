@@ -24,10 +24,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
-type Pair struct {
-	u, v int
-}
-
 // BuildDependencyGraph builds a dependency graph of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
