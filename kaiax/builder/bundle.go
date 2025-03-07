@@ -37,11 +37,8 @@ func (b *Bundle) Has(hash common.Hash) bool {
 // FindIdx returns if the bundle contains a tx with the given hash and its index in bundle.
 func (b *Bundle) FindIdx(hash common.Hash) int {
 	for i, txOrGen := range b.BundleTxs {
-		switch v := txOrGen.(type) {
-		case *types.Transaction:
-			if v.Hash() == hash {
-				return i
-			}
+		if tx, ok := txOrGen.(*types.Transaction); ok && tx.Hash() == hash {
+			return i
 		}
 	}
 	return -1
