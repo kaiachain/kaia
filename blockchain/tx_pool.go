@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -72,9 +73,24 @@ var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
-	txPoolIsFullErr = fmt.Errorf("txpool is full")
-
 	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
+
+	// ErrTxPoolOverflow is returned if the transaction pool is full and can't accept
+	// another remote transaction.
+	ErrTxPoolOverflow = errors.New("txpool is full")
+
+	// ErrInflightTxLimitReached is returned when the maximum number of in-flight
+	// transactions is reached for specific accounts.
+	ErrInflightTxLimitReached = errors.New("in-flight transaction limit reached for delegated accounts")
+
+	// ErrAuthorityReserved is returned if a transaction has an authorization
+	// signed by an address which already has in-flight transactions known to the
+	// pool.
+	ErrAuthorityReserved = errors.New("authority already reserved")
+
+	// ErrFutureReplacePending is returned if a future transaction replaces a pending
+	// one. Future transactions should only be able to replace other future transactions.
+	ErrFutureReplacePending = errors.New("future transaction tries to replace pending")
 )
 
 var (
@@ -855,6 +871,16 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
+	if tx.Type() == types.TxTypeEthereumSetCode {
+		if len(tx.AuthList()) == 0 {
+			return errors.New("set code tx must have at least one authorization tuple")
+		}
+	}
+
+	if err := pool.validateAuth(tx); err != nil {
+		return err
+	}
+
 	// "tx.Validate()" conducts additional validation for each new txType.
 	// Validate humanReadable address when this tx has "true" in the humanReadable field.
 	// Validate accountKey when the this create or update an account
@@ -864,6 +890,43 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return err
 	}
 
+	return nil
+}
+
+// validateAuth verifies that the transaction complies with code authorization
+// restrictions brought by SetCode transaction type.
+func (pool *TxPool) validateAuth(tx *types.Transaction) error {
+	from, _ := types.Sender(pool.signer, tx) // validated
+
+	// Allow at most one in-flight tx for delegated accounts or those with a
+	// pending authorization.
+	if pool.currentState.GetCodeHash(from) != types.EmptyCodeHash || len(pool.all.auths[from]) != 0 {
+		var (
+			count  int
+			exists bool
+		)
+		pending := pool.pending[from]
+		if pending != nil {
+			count += pending.Len()
+			exists = pending.Contains(tx.Nonce())
+		}
+		queue := pool.queue[from]
+		if queue != nil {
+			count += queue.Len()
+			exists = exists || queue.Contains(tx.Nonce())
+		}
+		// Replace the existing in-flight transaction for delegated accounts
+		// are still supported
+		if count >= 1 && !exists {
+			return ErrInflightTxLimitReached
+		}
+	}
+	// Authorities cannot conflict with any pending or queued transactions.
+	for _, auth := range tx.SetCodeAuthorities() {
+		if pool.pending[auth] != nil || pool.queue[auth] != nil {
+			return ErrAuthorityReserved
+		}
+	}
 	return nil
 }
 
@@ -1269,7 +1332,7 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 
 	if poolCapacity < numTxs {
 		for i := 0; i < numTxs-poolCapacity; i++ {
-			errs = append(errs, txPoolIsFullErr)
+			errs = append(errs, ErrTxPoolOverflow)
 		}
 	}
 
@@ -1772,16 +1835,19 @@ func (as *accountSet) add(addr common.Address) {
 // peeking into the pool in TxPool.Get without having to acquire the widely scoped
 // TxPool.mu mutex.
 type txLookup struct {
-	all   map[common.Hash]*types.Transaction
 	slots int
 	lock  sync.RWMutex
+	txs   map[common.Hash]*types.Transaction
+
+	auths map[common.Address][]common.Hash // All accounts with a pooled authorization
 }
 
 // newTxLookup returns a new txLookup structure.
 func newTxLookup() *txLookup {
 	slotsGauge.Update(int64(0))
 	return &txLookup{
-		all: make(map[common.Hash]*types.Transaction),
+		txs:   make(map[common.Hash]*types.Transaction),
+		auths: make(map[common.Address][]common.Hash),
 	}
 }
 
@@ -1798,7 +1864,7 @@ func (t *txLookup) Range(f func(hash common.Hash, tx *types.Transaction) bool) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	for key, value := range t.all {
+	for key, value := range t.txs {
 		if !f(key, value) {
 			break
 		}
@@ -1810,7 +1876,7 @@ func (t *txLookup) Get(hash common.Hash) *types.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	return t.all[hash]
+	return t.txs[hash]
 }
 
 // Count returns the current number of items in the lookup.
@@ -1818,7 +1884,7 @@ func (t *txLookup) Count() int {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	return len(t.all)
+	return len(t.txs)
 }
 
 // Add adds a transaction to the lookup.
@@ -1829,7 +1895,8 @@ func (t *txLookup) Add(tx *types.Transaction) {
 	t.slots += numSlots(tx)
 	slotsGauge.Update(int64(t.slots))
 
-	t.all[tx.Hash()] = tx
+	t.txs[tx.Hash()] = tx
+	t.addAuthorities(tx)
 }
 
 // Remove removes a transaction from the lookup.
@@ -1837,13 +1904,69 @@ func (t *txLookup) Remove(hash common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.slots -= numSlots(t.all[hash])
+	tx, ok := t.txs[hash]
+	if !ok {
+		logger.Error("No transaction found to be deleted", "hash", hash)
+		return
+	}
+
+	t.removeAuthorities(tx)
+	t.slots -= numSlots(tx)
 	slotsGauge.Update(int64(t.slots))
 
-	delete(t.all, hash)
+	delete(t.txs, hash)
+}
+
+// addAuthorities tracks the supplied tx in relation to each authority it
+// specifies.
+func (t *txLookup) addAuthorities(tx *types.Transaction) {
+	for _, addr := range tx.SetCodeAuthorities() {
+		list, ok := t.auths[addr]
+		if !ok {
+			list = []common.Hash{}
+		}
+		if slices.Contains(list, tx.Hash()) {
+			// Don't add duplicates.
+			continue
+		}
+		t.auths[addr] = append(list, tx.Hash())
+	}
+}
+
+// removeAuthorities stops tracking the supplied tx in relation to its
+// authorities.
+func (t *txLookup) removeAuthorities(tx *types.Transaction) {
+	hash := tx.Hash()
+	for _, addr := range tx.SetCodeAuthorities() {
+		list := t.auths[addr]
+		// Remove tx from tracker.
+		if i := slices.Index(list, hash); i >= 0 {
+			list = append(list[:i], list[i+1:]...)
+		} else {
+			logger.Error("Authority with untracked tx", "addr", addr, "hash", hash)
+		}
+		if len(list) == 0 {
+			// If list is newly empty, delete it entirely.
+			delete(t.auths, addr)
+			continue
+		}
+		t.auths[addr] = list
+	}
 }
 
 // numSlots calculates the number of slots needed for a single transaction.
 func numSlots(tx *types.Transaction) int {
 	return int((tx.Size() + txSlotSize - 1) / txSlotSize)
+}
+
+// Clear implements removing all tracked txs from the pool
+func (pool *TxPool) Clear() {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.all = newTxLookup()
+	pool.priced = newTxPricedList(pool.all)
+	pool.pending = make(map[common.Address]*txList)
+	pool.queue = make(map[common.Address]*txList)
+	pool.pendingNonce = make(map[common.Address]uint64)
 }
