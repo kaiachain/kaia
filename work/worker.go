@@ -918,7 +918,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		}
 
 		receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
-		if err != nil {
+		// Bundled tx will be rejected with any receipt.Status other than success.
+		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
+		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
 			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 				for _, txInBundle := range bundle.BundleTxs {
 					switch v := txInBundle.(type) {
