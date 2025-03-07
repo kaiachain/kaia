@@ -305,10 +305,18 @@ func ExtractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBund
 
 	for _, txBundlingModule := range txBundlingModules {
 		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
-		if IsConflict(bundles, newBundles) {
-			continue
+		prevBundles := bundles
+		for _, newBundle := range newBundles {
+			isConflict := false
+			// Check for conflicts with all previous bundles
+			for _, prevBundle := range prevBundles {
+				isConflict = prevBundle.IsConflict(newBundle)
+			}
+			if isConflict {
+				continue
+			}
+			bundles = append(bundles, newBundle)
 		}
-		bundles = append(bundles, newBundles...)
 	}
 
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
