@@ -4,7 +4,7 @@ This module is responsible for compressing parts of the blockchain database to r
 
 ## Concepts
 
-This module compresses header, (transaction) body, and receipts databases. These data has repetitive fields (e.g. extraData, calldata, event logs) that are worth compressing. But compressing each item individually is not efficient, so this module compresses the data in chunks.
+This module compresses header, (transaction) body, and receipts databases. These data has repetitive fields (e.g. extraData, calldata, event logs) that are worth compressing. But compressing each item individually is not efficient, so this module compresses the data in chunks. Find more details in [KIP-237](https://github.com/kaiachain/kips/blob/main/KIPs/kip-237.md).
 
 This module will
 1. Scan from the genesis to current block, collect items into chunks and compress them, delete the uncompressed data.
@@ -36,26 +36,6 @@ For efficiency and observability, compressed data will be stored other separate 
 | Headers   | `header`   | `header_compressed`  |
 | Bodies    | `body`     | `body_compressed`    |
 | Receipts  | `receipts` | `receipts_compressed`|
-
-Below is an example of the chaindata directory before and after compression.
-
-```
-# kaia-kairos-chaindata-20241231011212 (before compression)
-$ du -hs * | sort -h
-696K	./snapshot
-740K	./bridgeservice
-12G		./txlookup
-17G		./misc
-78G		./body
-141G	./receipts
-154G	./statetrie_migrated_168866418
-167G	./header
-566G	.
-
-# kaia-kairos-chaindata-20241231011212 (after compression)
-
-TBU
-```
 
 ### Data retrieval
 
