@@ -1978,7 +1978,7 @@ func TestTxBundleAndRevert(t *testing.T) {
 		})
 	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
 	builderModule := builderImpl.NewBuilderModule()
-	builderModule.Init()
+	builderModule.Init(nil)
 
 	{
 		var txs types.Transactions
@@ -2092,7 +2092,7 @@ func TestTxBundleTimeOut(t *testing.T) {
 		})
 	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
 	builderModule := builderImpl.NewBuilderModule()
-	builderModule.Init()
+	builderModule.Init(nil)
 
 	{
 		var txs types.Transactions

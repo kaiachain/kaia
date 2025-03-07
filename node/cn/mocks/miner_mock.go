@@ -11,6 +11,7 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	kaiax "github.com/kaiachain/kaia/kaiax"
+	builder "github.com/kaiachain/kaia/kaiax/builder"
 	work "github.com/kaiachain/kaia/work"
 )
 
@@ -120,6 +121,22 @@ func (m *MockMiner) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
 func (mr *MockMinerMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockMiner)(nil).RegisterExecutionModule), arg0...)
+}
+
+// RegisterTxBundlingModule mocks base method.
+func (m *MockMiner) RegisterTxBundlingModule(arg0 ...builder.TxBundlingModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterTxBundlingModule", varargs...)
+}
+
+// RegisterTxBundlingModule indicates an expected call of RegisterTxBundlingModule.
+func (mr *MockMinerMockRecorder) RegisterTxBundlingModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTxBundlingModule", reflect.TypeOf((*MockMiner)(nil).RegisterTxBundlingModule), arg0...)
 }
 
 // SetExtra mocks base method.
