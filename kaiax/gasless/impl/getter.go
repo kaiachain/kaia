@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -40,6 +41,8 @@ var (
 	erc20ApproveFunc = mustParseAbi(erc20AbiJson, "approve")
 	routerSwapFunc   = mustParseAbi(routerAbiJson, "swapForGas")
 )
+
+var _ gasless.GaslessModule = (*GaslessModule)(nil)
 
 type ApproveArgs struct {
 	Sender  common.Address // tx.from
@@ -170,7 +173,8 @@ func decodeFunctionCall(tx *types.Transaction, method abi.Method) (common.Addres
 // AP1. ApproveTx.from == SwapTx.from
 // SP1. ApproveTx.to == SwapTx.token
 // SP2. ApproveTx.amount >= SwapTx.amountIn
-// SP3. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
+// SP3. ApproveTx.nonce+1 == SwapTx.nonce and Gasless transactions are head for nonce
+// SP4. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
 func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool {
 	// Sx.
 	swapArgs, ok := decodeSwapTx(swapTx)
@@ -197,9 +201,21 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		if approveArgs.Amount.Cmp(swapArgs.AmountIn) < 0 {
 			return false
 		}
+		// SP3.
+		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
+			return false
+		}
+		if nonce := g.currentState.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+			return false
+		}
+	} else {
+		// SP3.
+		if nonce := g.currentState.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
+			return false
+		}
 	}
 
-	// SP3.
+	// SP4.
 	if swapArgs.AmountRepay.Cmp(repayAmount(approveTxOrNil, swapTx)) != 0 {
 		return false
 	}
@@ -222,13 +238,15 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 		)
 
 		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:     nonce,
-			types.TxValueKeyTo:        &to,
-			types.TxValueKeyAmount:    lendAmount(approveTxOrNil, swapTx),
-			types.TxValueKeyGasLimit:  params.TxGas,
-			types.TxValueKeyGasFeeCap: swapTx.GasFeeCap(),
-			types.TxValueKeyGasTipCap: swapTx.GasTipCap(),
-			types.TxValueKeyChainID:   chainId,
+			types.TxValueKeyNonce:      nonce,
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
+			types.TxValueKeyData:       common.Hex2Bytes("0x"),
+			types.TxValueKeyGasLimit:   params.TxGas,
+			types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
+			types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
+			types.TxValueKeyAccessList: types.AccessList{},
+			types.TxValueKeyChainID:    chainId,
 		})
 		if err != nil {
 			return nil, err
@@ -237,11 +255,6 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 		err = tx.Sign(signer, key)
 		return tx, err
 	}
-}
-
-func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle {
-	// TODO: implement me
-	return nil
 }
 
 func lendAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {

@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -20,25 +20,40 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIsApproveTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
-	testcases := []struct {
+	privkey, _ := crypto.GenerateKey()
+	// Legacy TestToken.approve(SwapRouter, 1000000)
+	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	testcases := map[string]struct {
 		tx *types.Transaction
 		ok bool
 	}{
-		{ // Legacy TestToken.approve(SwapRouter, 1000000)
-			types.NewTransaction(0, common.HexToAddress("0xabcd"), big.NewInt(0), 1000000, big.NewInt(0),
-				hexutil.MustDecode("0x095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f4240")),
+		"correct": {
+			correct,
 			true,
+		},
+		"invalid token address": {
+			makeTx(t, privkey, 0, common.HexToAddress("0xffff"), big.NewInt(0), 1000000, big.NewInt(1), correct.Data()),
+			false,
+		},
+		"invalid spender address": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0xffff"), Amount: big.NewInt(1000000)}),
+			false,
+		},
+		"invalid amount": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(0)}),
+			false,
 		},
 	}
 
@@ -48,8 +63,117 @@ func TestIsApproveTx(t *testing.T) {
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
 	})
-	for _, tc := range testcases {
-		ok := g.IsApproveTx(tc.tx)
-		require.Equal(t, tc.ok, ok)
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			ok := g.IsApproveTx(tc.tx)
+			require.Equal(t, tc.ok, ok)
+		})
+	}
+}
+
+func TestIsSwapTx(t *testing.T) {
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
+	// Legacy TestRouter.swapForGas(Token, 10, 100, 2021000)
+	correct := makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+	testcases := map[string]struct {
+		tx *types.Transaction
+		ok bool
+	}{
+		"correct": {
+			correct,
+			true,
+		},
+		"invalid swap router address": {
+			makeTx(t, privkey, 0, common.HexToAddress("0xffff"), big.NewInt(0), 1000000, big.NewInt(1), correct.Data()),
+			false,
+		},
+		"invalid token address": {
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xffff"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+	}
+
+	g := NewGaslessModule()
+	key, _ := crypto.GenerateKey()
+	g.Init(&InitOpts{
+		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		NodeKey:     key,
+	})
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			ok := g.IsSwapTx(tc.tx)
+			require.Equal(t, tc.ok, ok)
+		})
+	}
+}
+
+func TestIsExecutable(t *testing.T) {
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
+	testcases := map[string]struct {
+		approve *types.Transaction
+		swap    *types.Transaction
+		ok      bool
+	}{
+		"correct gasless tx pair": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			true,
+		},
+		"correct single swap tx": {
+			nil,
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)}),
+			true,
+		},
+		"gasless tx pair with different sender address": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, nil, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		"gasless tx pair with different token address": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xffff"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		"gasless tx pair with invalid amount in": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(1000001), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		"gasless tx pair with non sequential nonce": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		"gasless tx pair with non head nonce": {
+			makeApproveTx(t, privkey, 1, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			false,
+		},
+		"single swap tx with non head nonce": {
+			nil,
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1)}),
+			false,
+		},
+		"single swap tx with invalid repay amount": {
+			nil,
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1)}),
+			false,
+		},
+	}
+
+	g := NewGaslessModule()
+	key, _ := crypto.GenerateKey()
+	g.Init(&InitOpts{
+		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		NodeKey:     key,
+	})
+	g.currentState, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			ok := g.IsExecutable(tc.approve, tc.swap)
+			require.Equal(t, tc.ok, ok)
+		})
 	}
 }

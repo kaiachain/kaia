@@ -17,7 +17,15 @@
 package impl
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 func (b *BuilderModule) APIs() []rpc.API {
@@ -39,4 +47,37 @@ func NewBuilderAPI(b *BuilderModule) *BuilderAPI {
 	return &BuilderAPI{b}
 }
 
-// TODO: implement SendRawTransactions
+func (s *BuilderAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.Bytes) ([]common.Hash, error) {
+	hash := []common.Hash{}
+	errs := []error{}
+
+	if len(inputs) == 0 {
+		hash = append(hash, common.Hash{})
+		return hash, errors.New("Empty input")
+	}
+
+	for i, input := range inputs {
+		if len(input) == 0 {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: empty input", i))
+			break
+		}
+		if 0 < input[0] && input[0] < 0x7f {
+			input = append([]byte{byte(types.EthereumTxTypeEnvelope)}, input...)
+		}
+		tx := new(types.Transaction)
+		if err := rlp.DecodeBytes(input, tx); err != nil {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
+			break
+		}
+		if err := s.b.Backend.SendTx(ctx, tx); err != nil {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
+			break
+		}
+		hash = append(hash, tx.Hash())
+	}
+
+	return hash, errors.Join(errs...)
+}

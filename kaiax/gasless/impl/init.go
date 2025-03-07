@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -19,17 +19,13 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
 
-var (
-	_ gasless.GaslessModule = (*GaslessModule)(nil)
-
-	logger = log.NewModuleLogger(log.KaiaxGasless)
-)
+var logger = log.NewModuleLogger(log.KaiaxGasless)
 
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
@@ -38,7 +34,7 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
-
+	currentState  *state.StateDB
 	swapRouters   map[common.Address]bool
 	allowedTokens map[common.Address]bool
 }

@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -225,11 +226,13 @@ type TxPool struct {
 	rules params.Rules // Fork indicator
 
 	govModule GovModule
+
+	modules []kaiax.TxPoolModule
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule, modules []kaiax.TxPoolModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
@@ -251,6 +254,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 		txFeedCh:     make(chan types.Transactions, txFeedChSize),
 		govModule:    govModule,
+		modules:      modules,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -504,6 +508,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if pool.rules.IsMagma {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
+	}
+
+	for _, module := range pool.modules {
+		module.Reset(pool, oldHead, newHead)
 	}
 }
 
@@ -779,6 +787,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNonceTooLow
 	}
 
+	// If module recognizes the tx, run an alternative balance check and then skip the default balance check later.
+	shouldSkipBalanceCheck := false
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
+				shouldSkipBalanceCheck = true
+				err := checkBalance(tx)
+				if err != nil {
+					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
+					return err
+				}
+			}
+			break
+		}
+	}
+
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if tx.IsFeeDelegatedTransaction() {
@@ -828,7 +852,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
 		}
-	} else {
+	} else if !shouldSkipBalanceCheck {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
@@ -1451,7 +1475,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Gather all executable transactions and promote them
 		var readyTxs types.Transactions
 		if pool.rules.IsMagma {
-			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice, pool.modules)
 		} else {
 			readyTxs = list.Ready(pool.getPendingNonce(addr))
 		}
@@ -1671,6 +1695,11 @@ func (pool *TxPool) demoteUnexecutables() {
 			delete(pool.pending, addr)
 		}
 	}
+}
+
+// GetCurrentState returns the current stateDB.
+func (pool *TxPool) GetCurrentState() *state.StateDB {
+	return pool.currentState
 }
 
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.

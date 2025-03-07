@@ -142,6 +142,24 @@ type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
 	PreAddLocal(*types.Transaction) error
 	PreAddRemote(*types.Transaction) error
+
+	// Additional checks to check if a given transaction should be handled by module.
+	IsModuleTx(tx *types.Transaction) bool
+
+	// Optional actions to check if sender balance is valid for module transaction.
+	// This is mainly used on checking if module transaction be appended to queue.
+	// If nil is returned, default check (balance > txFee) is performed. Otherwise, the returned function overrides default check.
+	GetCheckBalance() func(tx *types.Transaction) error
+
+	// Additional actions to check if a module transaction should be appended to pending
+	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
+
+	// Additional actions to perform after resetting tx pool.
+	Reset(pool TxPoolForCaller, oldHead, newHead *types.Header)
+}
+
+type TxPoolForCaller interface {
+	GetCurrentState() *state.StateDB
 }
 
 // Any component or module that accomodate txpool modules.

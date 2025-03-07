@@ -32,6 +32,8 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
+	mock_gasless "github.com/kaiachain/kaia/kaiax/gasless/mock"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
@@ -222,7 +224,9 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	chainConfig := testBackend.ChainConfig()
 	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 0}).Times(1)
-	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
+	mockGasless := mock_gasless.NewMockGaslessModule(gomock.NewController(t))
+	mockGasless.EXPECT().Reset(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov, []kaiax.TxPoolModule{mockGasless})
 
 	oracle := NewOracle(mockBackend, params, txPoolWith0, mockGov)
 
@@ -237,7 +241,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	params = Config{}
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 25}).Times(1)
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
-	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
+	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov, []kaiax.TxPoolModule{mockGasless})
 	oracle = NewOracle(mockBackend, params, txPoolWith25, mockGov)
 
 	price, err = oracle.SuggestPrice(nil)
@@ -291,7 +295,9 @@ func TestSuggestTipCap(t *testing.T) {
 			mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: testBackend.ChainConfig().UnitPrice, LowerBoundBaseFee: math.MaxUint64}).AnyTimes()
 			testGov = mockGov
 		}
-		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, testGov)
+		mockGasless := mock_gasless.NewMockGaslessModule(gomock.NewController(t))
+		mockGasless.EXPECT().Reset(gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, testGov, []kaiax.TxPoolModule{mockGasless})
 		oracle := NewOracle(testBackend, config, txPool, testGov)
 
 		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G

@@ -45,6 +45,8 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
@@ -344,7 +346,14 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
+
+	mGasless := gasless_impl.NewGaslessModule()
+	mGasless.Init(&gasless_impl.InitOpts{
+		ChainConfig: cn.chainConfig,
+		NodeKey:     ctx.NodeKey(),
+	})
+
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov, []kaiax.TxPoolModule{mGasless})
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -494,6 +503,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mGov     = gov_impl.NewGovModule()
 		mValset  = valset_impl.NewValsetModule()
 		mRandao  = randao_impl.NewRandaoModule()
+		mBuilder = builder_impl.NewBuilderModule()
 	)
 
 	// Initialize modules
@@ -533,6 +543,9 @@ func (s *CN) SetupKaiaxModules() error {
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
+		mBuilder.Init(&builder_impl.InitOpts{
+			Backend: s.APIBackend,
+		}),
 	)
 	if err != nil {
 		return err
@@ -541,7 +554,7 @@ func (s *CN) SetupKaiaxModules() error {
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mRandao)
-	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao)
+	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao, mBuilder)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)

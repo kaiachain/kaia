@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2025 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -17,7 +17,6 @@
 package gasless
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
@@ -25,20 +24,6 @@ import (
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/gasless GaslessModule
 type GaslessModule interface {
 	kaiax.BaseModule
+	kaiax.TxPoolModule
 	builder.TxBundlingModule
-
-	// IsApproveTx checks if the transaction is a GaslessApproveTx, i.e. a transaction that approves an whitelisted ERC20 token to the SwapRouter contract.
-	// An ApproveTx can be inserted to txpool.queue even if sender's balance is insufficient.
-	IsApproveTx(tx *types.Transaction) bool
-
-	// IsSwapTx checks if the transaction is a GaslessSwapTx, i.e. a transaction that invokes the SwapRouter contract.
-	// An SwapTx can be inserted to txpool.queue even if sender's balance is insufficient.
-	IsSwapTx(tx *types.Transaction) bool
-
-	// IsExecutable checks if the given approve and swap transactions are ready to be executed.
-	// A (ApproveTx, SwapTx) pair or a (SwapTx) is executable even if sender's balance is insufficient.
-	IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool
-
-	// GetLendTxGenerator returns a function that creates a signed lend transaction that can fund the given approve and swap transactions.
-	GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) builder.TxGenerator
 }
