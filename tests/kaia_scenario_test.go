@@ -2007,7 +2007,6 @@ func TestTxBundleAndRevert(t *testing.T) {
 
 		// 2. Transfer (reservoir2 -> anon) using a legacy transaction two times.
 		for i := 0; i < 2; i++ {
-			fmt.Println(reservoir2.Nonce)
 			amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
 			tx := types.NewTransaction(reservoir2.Nonce,
 				anon.Addr, amount, gasLimit, gasPrice, []byte{})
