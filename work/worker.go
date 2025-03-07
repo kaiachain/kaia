@@ -753,8 +753,7 @@ CommitTransactionLoop:
 			tx = txOrGen.(*types.Transaction)
 		case builder.TxGenerator:
 			txGen := txOrGen.(builder.TxGenerator)
-			nodeNonce := env.state.GetNonce(rewardbase)
-			tx, err = txGen(nodeNonce)
+			tx, err = txGen(env.state.GetNonce(rewardbase) + 1)
 			if tx == nil {
 				logger.Warn("TxGenerator returned a nil tx", "error", err)
 				continue
