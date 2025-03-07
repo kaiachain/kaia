@@ -1901,6 +1901,7 @@ func TestValidateSender(t *testing.T) {
 //     At that point, tx4 fails with nonceTooHigh and tx3 is reverted.
 //  2. Transfer (reservoir2 -> anon) using a legacy transaction two times.
 //
+// In summary, input txs are [ [tx0, tx1], [tx2, tx3], [tx4, tx5] ]. tx3 reverts.
 // Therefore, the expected txs for a block are [tx0, tx1, tx4, tx5].
 func TestTxBundleAndRevert(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
