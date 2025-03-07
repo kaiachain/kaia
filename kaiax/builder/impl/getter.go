@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"reflect"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
@@ -213,6 +215,33 @@ func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
 	return -1
 }
 
+func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []interface{}) []*builder.Bundle {
+	ret := make([]*builder.Bundle, 0)
+	for _, bundle := range bundles {
+		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
+		ret = append(ret, bundle)
+	}
+	return ret
+}
+
+func FindTargetTxHash(bundle *builder.Bundle, txs []interface{}) common.Hash {
+	// If this is never updated it is expected to return an empty hash.
+	targetTxHash := common.Hash{}
+	for i, tx := range txs {
+		// For index greater than 0, if it can be cast to *types.Transaction then record this as the TargetTxHash.
+		if i > 0 {
+			if txTarget, ok := txs[i-1].(*types.Transaction); ok {
+				targetTxHash = txTarget.Hash()
+			}
+		}
+		// If tx is the first tx in the bundle then there is no need to look further.
+		if reflect.DeepEqual(bundle.BundleTxs[0], tx) {
+			break
+		}
+	}
+	return targetTxHash
+}
+
 func ShiftTxs(txs *[]interface{}, num int) {
 	if len(*txs) <= num {
 		*txs = (*txs)[:0]
@@ -248,7 +277,7 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 		}
 	}
 
-	newBundles := Filter(bundles, bundleIdxToRemove)
+	newBundles := SetCorrectTargetTxHash(Filter(bundles, bundleIdxToRemove), newTxs)
 
 	*txs = newTxs
 	*bundles = newBundles
