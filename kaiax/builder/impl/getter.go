@@ -17,10 +17,11 @@
 package impl
 
 import (
-	"reflect"
+	"bytes"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -120,9 +121,9 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 		ret[i] = txs[i]
 	}
 
-	for _, bundle := range bundles {
+	for i, bundle := range bundles {
 		var err error
-		ret, err = incorporate(ret, bundle)
+		ret, err = incorporate(ret, bundle, i)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +132,7 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 }
 
 // incorporate assumes that `txs` does not contain any bundle transactions.
-func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, error) {
+func incorporate(txs []interface{}, bundle *builder.Bundle, bundleIdx int) ([]interface{}, error) {
 	ret := make([]interface{}, 0, len(txs)+len(bundle.BundleTxs))
 	targetFound := false
 
@@ -153,7 +154,16 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 			ret = append(ret, tx)
 			if tx.Hash() == bundle.TargetTxHash {
 				targetFound = true
-				ret = append(ret, bundle.BundleTxs...)
+				for i, txInBundleI := range bundle.BundleTxs {
+					switch txInBundle := txInBundleI.(type) {
+					case *types.Transaction:
+						ret = append(ret, txInBundleI)
+					case builder.TxGenerator:
+						txInBundle.Hash = crypto.Keccak256Hash(bundle.TargetTxHash[:], common.Int64ToByteLittleEndian(uint64(i)))
+						txInBundleI = txInBundle
+						ret = append(ret, txInBundleI)
+					}
+				}
 			}
 		default: // if tx is TxGenerator, unconditionally append
 			ret = append(ret, txOrGen)
@@ -214,12 +224,35 @@ func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
 func FindBundleIdxAsTxOrGen(bundles []*builder.Bundle, txOrGen interface{}) int {
 	for i, bundle := range bundles {
 		for _, txOrGenInBundle := range bundle.BundleTxs {
-			if reflect.DeepEqual(txOrGenInBundle, txOrGen) {
+			if EqualTxOrGen(txOrGenInBundle, txOrGen) {
 				return i
 			}
 		}
 	}
 	return -1
+}
+
+func EqualTxOrGen(txOrGenIX, txOrGenIY interface{}) bool {
+	var (
+		txOrGenXHash common.Hash
+		txOrGenYHash common.Hash
+	)
+
+	switch txOrGenX := txOrGenIX.(type) {
+	case *types.Transaction:
+		txOrGenXHash = txOrGenX.Hash()
+	case builder.TxGenerator:
+		txOrGenXHash = txOrGenX.Hash
+	}
+
+	switch txOrGenY := txOrGenIY.(type) {
+	case *types.Transaction:
+		txOrGenYHash = txOrGenY.Hash()
+	case builder.TxGenerator:
+		txOrGenYHash = txOrGenY.Hash
+	}
+
+	return bytes.Equal(txOrGenXHash.Bytes(), txOrGenYHash.Bytes())
 }
 
 func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []interface{}) []*builder.Bundle {
@@ -242,7 +275,7 @@ func FindTargetTxHash(bundle *builder.Bundle, txs []interface{}) common.Hash {
 			}
 		}
 		// If tx is the first tx in the bundle then there is no need to look further.
-		if reflect.DeepEqual(bundle.BundleTxs[0], tx) {
+		if EqualTxOrGen(bundle.BundleTxs[0], tx) {
 			break
 		}
 	}

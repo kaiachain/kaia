@@ -38,8 +38,10 @@ func TestIncorporateBundleTx(t *testing.T) {
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}
-	var g builder.TxGenerator = func(nonce uint64) (*types.Transaction, error) {
-		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	g := builder.TxGenerator{
+		Generate: func(nonce uint64) (*types.Transaction, error) {
+			return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+		},
 	}
 
 	testCases := []struct {
@@ -137,7 +139,7 @@ func TestIncorporate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret, err := incorporate(txOrGenList, tc.bundle)
+			ret, err := incorporate(txOrGenList, tc.bundle, 0)
 			require.Nil(t, err)
 			assert.Equal(t, tc.expected, ret)
 		})
@@ -240,8 +242,10 @@ func TestPopTxs(t *testing.T) {
 		addrs  = make([]common.Address, 4)
 		txs    = make([]*types.Transaction, 7)
 	)
-	var g builder.TxGenerator = func(nonce uint64) (*types.Transaction, error) {
-		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	g := builder.TxGenerator{
+		Generate: func(nonce uint64) (*types.Transaction, error) {
+			return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+		},
 	}
 
 	for i := range keys {

@@ -762,7 +762,7 @@ CommitTransactionLoop:
 			tx = txOrGen.(*types.Transaction)
 		case builder.TxGenerator:
 			txGen := txOrGen.(builder.TxGenerator)
-			tx, err = txGen(env.state.GetNonce(rewardbase) + 1)
+			tx, err = txGen.Generate(env.state.GetNonce(rewardbase) + 1)
 			if tx == nil {
 				logger.Warn("TxGenerator returned a nil tx", "error", err)
 				builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
@@ -900,7 +900,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		var tx *types.Transaction
 		if gen, ok := txOrGen.(builder.TxGenerator); ok {
 			var err error
-			tx, err = gen(env.state.GetNonce(rewardbase) + 1)
+			tx, err = gen.Generate(env.state.GetNonce(rewardbase) + 1)
 			if err != nil {
 				for _, txInBundle := range bundle.BundleTxs {
 					switch v := txInBundle.(type) {
