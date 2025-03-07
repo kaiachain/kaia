@@ -295,7 +295,6 @@ func ExtractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBund
 	for _, txBundlingModule := range txBundlingModules {
 		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
 		if IsConflict(bundles, newBundles) {
-			logger.Warn("Gas limit exceeded for current block", "", txBundlingModule)
 			continue
 		}
 		bundles = append(bundles, newBundles...)
