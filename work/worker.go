@@ -757,6 +757,7 @@ CommitTransactionLoop:
 			tx, err = txGen(nodeNonce)
 			if tx == nil {
 				logger.Warn("TxGenerator returned a nil tx", "error", err)
+				continue
 			}
 		}
 		numTxsChecked++
