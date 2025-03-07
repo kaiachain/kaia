@@ -121,9 +121,9 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 		ret[i] = txs[i]
 	}
 
-	for i, bundle := range bundles {
+	for _, bundle := range bundles {
 		var err error
-		ret, err = incorporate(ret, bundle, i)
+		ret, err = incorporate(ret, bundle)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 }
 
 // incorporate assumes that `txs` does not contain any bundle transactions.
-func incorporate(txs []interface{}, bundle *builder.Bundle, bundleIdx int) ([]interface{}, error) {
+func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, error) {
 	ret := make([]interface{}, 0, len(txs)+len(bundle.BundleTxs))
 	targetFound := false
 

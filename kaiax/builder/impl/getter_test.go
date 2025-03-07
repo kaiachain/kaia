@@ -139,7 +139,7 @@ func TestIncorporate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret, err := incorporate(txOrGenList, tc.bundle, 0)
+			ret, err := incorporate(txOrGenList, tc.bundle)
 			require.Nil(t, err)
 			assert.Equal(t, tc.expected, ret)
 		})
