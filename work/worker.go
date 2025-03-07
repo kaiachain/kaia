@@ -748,6 +748,15 @@ CommitTransactionLoop:
 			txOrGen = incorporatedTxs[0]
 			from    common.Address
 		)
+
+		// Verify that tx is included in the bundle
+		targetBundle := &builder.Bundle{}
+		numShift := 1
+		if bundleIdx := builder_impl.FindBundleIdxAsTxOrGen(bundles, txOrGen); bundleIdx != -1 {
+			targetBundle = bundles[bundleIdx]
+			numShift = len(targetBundle.BundleTxs)
+		}
+
 		switch txOrGen.(type) {
 		case *types.Transaction:
 			tx = txOrGen.(*types.Transaction)
@@ -756,6 +765,7 @@ CommitTransactionLoop:
 			tx, err = txGen(env.state.GetNonce(rewardbase) + 1)
 			if tx == nil {
 				logger.Warn("TxGenerator returned a nil tx", "error", err)
+				builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
 		}
@@ -778,14 +788,6 @@ CommitTransactionLoop:
 		//}
 		// Start executing the transaction
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-
-		// Verify that tx is included in the bundle
-		targetBundle := &builder.Bundle{}
-		numShift := 1
-		if bundleIdx := builder_impl.FindBundleIdx(bundles, tx); bundleIdx != -1 {
-			targetBundle = bundles[bundleIdx]
-			numShift = len(targetBundle.BundleTxs)
-		}
 
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&isExecutingBundleTxs, 1)

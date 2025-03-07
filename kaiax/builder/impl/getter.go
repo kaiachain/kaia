@@ -211,6 +211,17 @@ func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
 	return -1
 }
 
+func FindBundleIdxAsTxOrGen(bundles []*builder.Bundle, txOrGen interface{}) int {
+	for i, bundle := range bundles {
+		for _, txOrGenInBundle := range bundle.BundleTxs {
+			if reflect.DeepEqual(txOrGenInBundle, txOrGen) {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
 func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []interface{}) []*builder.Bundle {
 	ret := make([]*builder.Bundle, 0)
 	for _, bundle := range bundles {
