@@ -2208,11 +2208,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	t.Parallel()
 
 	// Create a temporary file for the journal
-	journal, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatalf("failed to create temporary journal: %v", err)
-	}
-	defer os.Remove(journal)
+	journal := t.TempDir()
 
 	// Clean up the temporary file, we only need the path for now
 	os.Remove(journal)
@@ -2923,11 +2919,7 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 	t.Parallel()
 
 	// Create a temporary file for the journal
-	journal, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatalf("failed to create temporary journal: %v", err)
-	}
-	defer os.Remove(journal)
+	journal := t.TempDir()
 
 	// Clean up the temporary file, we only need the path for now
 	os.Remove(journal)

@@ -2011,14 +2011,10 @@ func TestGolangBindings(t *testing.T) {
 		t.Skip("go sdk not found for testing")
 	}
 	// Create a temporary workspace for the test suite
-	ws, err := os.MkdirTemp("", "binding-test")
-	if err != nil {
-		t.Fatalf("failed to create temporary workspace: %v", err)
-	}
-	defer os.RemoveAll(ws)
+	ws := t.TempDir()
 
 	pkg := filepath.Join(ws, "bindtest")
-	if err = os.MkdirAll(pkg, 0o700); err != nil {
+	if err := os.MkdirAll(pkg, 0o700); err != nil {
 		t.Fatalf("failed to create package: %v", err)
 	}
 	// Generate the test suite for all the contracts
