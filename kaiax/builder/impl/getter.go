@@ -25,92 +25,28 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
-// BuildDependencyGraph builds a dependency graph of txs.
+// buildDependencyIndices builds a dependency indices of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
 // TxGenerator is not connected to any other txs.
-func BuildDependencyGraph(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) ([][]int, error) {
-	edges := make([][]int, len(txs))
-	for i := range edges {
-		edges[i] = make([]int, len(txs))
-	}
-
-	// Group txs by sender
+func buildDependencyIndices(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
 	senderToIndices := make(map[common.Address][]int)
+	bundleToIndices := make(map[int][]int)
+
 	for i, txOrGen := range txs {
 		if tx, ok := txOrGen.(*types.Transaction); ok {
 			from, err := types.Sender(signer, tx)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-	}
-
-	// Add edges between txs with same sender
-	for _, indices := range senderToIndices {
-		for _, u := range indices {
-			for _, v := range indices {
-				edges[u][v] = 1
-			}
+		if bundleIdx := FindBundleIdxAsTxOrGen(bundles, txOrGen); bundleIdx != -1 {
+			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
 
-	for _, bundle := range bundles {
-		indices := make([]int, 0)
-		for i, txOrGen := range txs {
-			if tx, ok := txOrGen.(*types.Transaction); ok {
-				if bundle.Has(tx.Hash()) {
-					indices = append(indices, i)
-				}
-			}
-		}
-
-		// Add edges between all txs in bundle
-		for _, u := range indices {
-			for _, v := range indices {
-				edges[u][v] = 1
-			}
-		}
-	}
-
-	return edges, nil
-}
-
-// FindDependentNodes finds all nodes reachable from `starts` via BFS.
-func FindDependentNodes(edges [][]int, starts []int) map[int]bool {
-	// Initialize visited array
-	visited := make([]bool, len(edges))
-	for _, i := range starts {
-		visited[i] = true
-	}
-
-	// Initialize queue with starts
-	queue := make([]int, len(starts))
-	copy(queue, starts)
-
-	result := make(map[int]bool)
-	for _, i := range starts {
-		result[i] = true
-	}
-
-	// BFS
-	for len(queue) > 0 {
-		// Dequeue
-		current := queue[0]
-		queue = queue[1:]
-
-		// Check all neighbors
-		for neighbor := 0; neighbor < len(edges[current]); neighbor++ {
-			if edges[current][neighbor] == 1 && !visited[neighbor] {
-				visited[neighbor] = true
-				queue = append(queue, neighbor)
-				result[neighbor] = true
-			}
-		}
-	}
-
-	return result
+	return senderToIndices, bundleToIndices, nil
 }
 
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
@@ -291,28 +227,56 @@ func ShiftTxs(txs *[]interface{}, num int) {
 }
 
 func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	initialNodes := make([]int, 0)
-	for i := 0; i < min(num, len(*txs)); i++ {
-		initialNodes = append(initialNodes, i)
+	if len(*txs) == 0 || num == 0 {
+		return
 	}
 
-	edges, err := BuildDependencyGraph(*txs, *bundles, signer)
+	senderToIndices, bundleToIndices, err := buildDependencyIndices(*txs, *bundles, signer)
 	if err != nil {
-		// fall back to shift
-		logger.Error("Failed to build graph", "err", err)
+		logger.Error("Failed to build dependency indices", "err", err)
 		ShiftTxs(txs, num)
 		return
 	}
 
-	txIdxToRemove := FindDependentNodes(edges, initialNodes)
-	newTxs := Filter(txs, txIdxToRemove)
+	toRemove := make(map[int]bool)
+	queue := make([]int, 0, num)
+
+	for i := 0; i < min(num, len(*txs)); i++ {
+		toRemove[i] = true
+		queue = append(queue, i)
+	}
+
+	for len(queue) > 0 {
+		curIdx := queue[0]
+		queue = queue[1:]
+
+		if tx, ok := (*txs)[curIdx].(*types.Transaction); ok {
+			from, _ := types.Sender(signer, tx)
+			for _, idx := range senderToIndices[from] {
+				if idx > curIdx && !toRemove[idx] {
+					toRemove[idx] = true
+					queue = append(queue, idx)
+				}
+			}
+		}
+		if bundleIdx := FindBundleIdxAsTxOrGen(*bundles, (*txs)[curIdx]); bundleIdx != -1 {
+			for _, idx := range bundleToIndices[bundleIdx] {
+				if !toRemove[idx] {
+					toRemove[idx] = true
+					queue = append(queue, idx)
+				}
+			}
+		}
+	}
+
+	newTxs := Filter(txs, toRemove)
 
 	bundleIdxToRemove := map[int]bool{}
-	for i := range txIdxToRemove {
-		if tx, ok := (*txs)[i].(*types.Transaction); ok {
-			bundlesIdx := FindBundleIdx(*bundles, tx)
-			if bundlesIdx != -1 {
-				bundleIdxToRemove[bundlesIdx] = true
+	for bundleIdx, txIndices := range bundleToIndices {
+		for _, txIdx := range txIndices {
+			if toRemove[txIdx] {
+				bundleIdxToRemove[bundleIdx] = true
+				break
 			}
 		}
 	}
