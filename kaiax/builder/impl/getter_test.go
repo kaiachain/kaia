@@ -295,6 +295,13 @@ func TestPopTxs(t *testing.T) {
 			expectedTxs:     []interface{}{txs[2], txs[3], txs[4]},
 		},
 		{
+			name:            "One bundle - first tx is generator",
+			incorporatedTxs: []interface{}{g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			numToPop:        1,
+			bundles:         []*builder.Bundle{bundles[0]},
+			expectedTxs:     []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+		},
+		{
 			name:            "Two bundles - chaining dependency",
 			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5]},
 			numToPop:        2,
