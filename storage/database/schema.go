@@ -102,6 +102,8 @@ var (
 	pruningMarkKeyLen        = len(pruningMarkPrefix) + 8 + common.ExtHashLength // prefix + num (uint64) + node hash
 	lastPrunedBlockNumberKey = []byte("lastPrunedBlockNumber")
 
+	flatkvSchemeEnabledKey = []byte("FlatKVEnabled")
+
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
 	BloomBitsIndexPrefix = []byte("iB") // BloomBitsIndexPrefix is the data table of a chain indexer to track its progress
 

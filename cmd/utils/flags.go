@@ -557,6 +557,13 @@ var (
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
 	}
+	EnableFlatKVFlag = &cli.BoolFlag{
+		Name:     "state.enable-flat-kv",
+		Usage:    "Use FlatKV scheme for state trie",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_ENABLE_FLAT_KV", "KAIA_STATE_ENABLE_FLAT_KV"},
+		Category: "STATE",
+	}
 	CacheTypeFlag = &cli.IntFlag{
 		Name:     "cache.type",
 		Usage:    "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",

@@ -187,6 +187,11 @@ type DBManager interface {
 	WriteLastPrunedBlockNumber(blockNumber uint64)
 	ReadLastPrunedBlockNumber() (uint64, error)
 
+	// Erigon scheme
+	ReadFlatKVEnabled() bool
+	WriteFlatKVEnabled()
+	DeleteFlatKVEnabled()
+
 	// from accessors_indexes.go
 	ReadTxLookupEntry(hash common.Hash) (common.Hash, uint64, uint64)
 	WriteTxLookupEntries(block *types.Block)
@@ -2123,6 +2128,26 @@ func (dbm *databaseManager) ReadLastPrunedBlockNumber() (uint64, error) {
 		return 0, err
 	}
 	return binary.LittleEndian.Uint64(lastPruned), nil
+}
+
+// ReadFlatKVEnabled reads if the FlatKV scheme flag is stored in database.
+func (dbm *databaseManager) ReadFlatKVEnabled() bool {
+	ok, _ := dbm.getDatabase(MiscDB).Has(flatkvSchemeEnabledKey)
+	return ok
+}
+
+// WriteFlatKVEnabled writes the FlatKV scheme flag to the database.
+func (dbm *databaseManager) WriteFlatKVEnabled() {
+	if err := dbm.getDatabase(MiscDB).Put(flatkvSchemeEnabledKey, []byte("42")); err != nil {
+		logger.Crit("Failed to store FlatKV scheme enabled flag", "err", err)
+	}
+}
+
+// DeleteFlatKVEnabled deletes the FlatKV scheme flag.
+func (dbm *databaseManager) DeleteFlatKVEnabled() {
+	if err := dbm.getDatabase(MiscDB).Delete(flatkvSchemeEnabledKey); err != nil {
+		logger.Crit("Failed to remove FlatKV scheme enabled flag", "err", err)
+	}
 }
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction

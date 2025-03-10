@@ -70,6 +70,7 @@ var (
 			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverwriteGenesisFlag,
 			utils.LivePruningFlag,
+			utils.EnableFlatKVFlag,
 		},
 		Category: "BLOCKCHAIN COMMANDS",
 		Description: `
@@ -138,6 +139,7 @@ func initGenesis(ctx *cli.Context) error {
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
 	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
 	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
+	enableFlatKV := ctx.Bool(utils.EnableFlatKVFlag.Name)
 
 	dbtype := database.DBType(ctx.String(utils.DbTypeFlag.Name)).ToValid()
 	if len(dbtype) == 0 {
@@ -191,6 +193,11 @@ func initGenesis(ctx *cli.Context) error {
 		if livePruning {
 			logger.Info("Writing live pruning flag to database")
 			chainDB.WritePruningEnabled()
+		}
+
+		if enableFlatKV {
+			logger.Info("Writing FlatKV scheme flag to database")
+			chainDB.WriteFlatKVEnabled()
 		}
 
 		logger.Info("Successfully wrote genesis state", "database", name, "hash", hash.String())

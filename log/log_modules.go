@@ -136,6 +136,7 @@ const (
 	KaiaxGov
 	KaiaxValset
 	KaiaxRandao
+	KaiaxFlatKV
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -221,4 +222,5 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax/gov",
 	"kaiax/valset",
 	"kaiax/randao",
+	"kaiax/flatkv",
 }
