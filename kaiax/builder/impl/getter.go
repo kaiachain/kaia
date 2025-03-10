@@ -28,7 +28,6 @@ import (
 // buildDependencyIndices builds a dependency indices of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
-// TxGenerator is not connected to any other txs.
 func buildDependencyIndices(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
 	senderToIndices := make(map[common.Address][]int)
 	bundleToIndices := make(map[int][]int)
