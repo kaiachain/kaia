@@ -73,7 +73,7 @@ var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
-	txPoolIsFullErr = fmt.Errorf("txpool is full")
+	txPoolIsFullErr = errors.New("txpool is full")
 
 	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
 )

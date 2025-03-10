@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -241,7 +242,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	return header, nil
 }
 
-func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler) (*types.Block, types.Receipts, error) {
+func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) (*types.Block, types.Receipts, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := bcdata.prepareHeader()
@@ -275,7 +276,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	// Apply the set of transactions
 	start = time.Now()
 	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
-	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase, txBundlingModules)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
@@ -344,7 +345,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	start = time.Now()
 	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
-	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase, nil)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
@@ -366,7 +367,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Update accountMap
 	start = time.Now()
-	if err := accountMap.Update(newtxs, signer, statedb, b.NumberU64()); err != nil {
+	if err := accountMap.Update(newtxs, nil, signer, statedb, b.NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
@@ -426,6 +427,18 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,
 	prof *profile.Profiler,
 ) error {
+	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, nil, prof, nil, nil)
+}
+
+func (bcdata *BCData) GenABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
+	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+) error {
+	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, txHashesExpectedFail, prof, txBundlingModules, builderModule)
+}
+
+func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
+	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
 	statedb, err := bcdata.bc.State()
@@ -435,14 +448,14 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 
 	// Update accountMap
 	start := time.Now()
-	if err := accountMap.Update(transactions, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+	if err := accountMap.Update(transactions, txHashesExpectedFail, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
 
 	// Mine a block!
 	start = time.Now()
-	b, receipts, err := bcdata.MineABlock(transactions, signer, prof)
+	b, receipts, err := bcdata.MineABlock(transactions, signer, prof, txBundlingModules, builderModule)
 	if err != nil {
 		return err
 	}

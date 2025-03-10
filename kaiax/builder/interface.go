@@ -18,24 +18,19 @@ package builder
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-type TxGenerator func(nonce uint64) (*types.Transaction, error)
+type TxGenerator struct {
+	Generate func(nonce uint64) (*types.Transaction, error)
+	Hash     common.Hash // initialized at incorporate, write-once
+}
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/builder BuilderModule
 type BuilderModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-
-	// IncorporateBundleTx does the followings:
-	IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) ([]interface{}, error)
-
-	// Arrayify flattens txs in heap into an array
-	Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction
-
-	// IsConflict checks if the new bundles conflict with the previous bundles
-	IsConflict(prevBundles []*Bundle, newBundles []*Bundle) bool
 }
 
 type TxBundlingModule interface {
@@ -44,4 +39,9 @@ type TxBundlingModule interface {
 	// returned bundles must not have conflict with `prevBundles`.
 	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+}
+
+// Any component or module that accomodate tx bundling modules.
+type TxBundlingModuleHost interface {
+	RegisterTxBundlingModule(modules ...TxBundlingModule)
 }

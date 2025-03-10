@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -106,8 +107,11 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	for _, tx := range txs {
+		if slices.Contains(txHashesExpectedFail, tx.Hash()) {
+			continue
+		}
 		to := tx.To()
 		v := tx.Value()
 

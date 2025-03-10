@@ -229,31 +229,33 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 // L3. LendTx.to = SwapTx.from
 // L4. LendTx.value = LendAmount(approveTxOrNil, swapTx)
 func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) builder.TxGenerator {
-	return func(nonce uint64) (*types.Transaction, error) {
-		var (
-			to      = swapTx.ValidatedSender()
-			chainId = g.InitOpts.ChainConfig.ChainID
-			signer  = types.LatestSignerForChainID(chainId)
-			key     = g.InitOpts.NodeKey
-		)
+	return builder.TxGenerator{
+		Generate: func(nonce uint64) (*types.Transaction, error) {
+			var (
+				to      = swapTx.ValidatedSender()
+				chainId = g.InitOpts.ChainConfig.ChainID
+				signer  = types.LatestSignerForChainID(chainId)
+				key     = g.InitOpts.NodeKey
+			)
 
-		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
-			types.TxValueKeyNonce:      nonce,
-			types.TxValueKeyTo:         &to,
-			types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
-			types.TxValueKeyData:       common.Hex2Bytes("0x"),
-			types.TxValueKeyGasLimit:   params.TxGas,
-			types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
-			types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
-			types.TxValueKeyAccessList: types.AccessList{},
-			types.TxValueKeyChainID:    chainId,
-		})
-		if err != nil {
-			return nil, err
-		}
+			tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:      nonce,
+				types.TxValueKeyTo:         &to,
+				types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
+				types.TxValueKeyData:       common.Hex2Bytes("0x"),
+				types.TxValueKeyGasLimit:   params.TxGas,
+				types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
+				types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
+				types.TxValueKeyAccessList: types.AccessList{},
+				types.TxValueKeyChainID:    chainId,
+			})
+			if err != nil {
+				return nil, err
+			}
 
-		err = tx.Sign(signer, key)
-		return tx, err
+			err = tx.Sign(signer, key)
+			return tx, err
+		},
 	}
 }
 

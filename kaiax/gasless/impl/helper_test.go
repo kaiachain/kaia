@@ -157,7 +157,7 @@ func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
 		var tx *types.Transaction
 		var err error
 		if genLendTx, ok := txi.(builder.TxGenerator); ok {
-			tx, err = genLendTx(nodeNonce)
+			tx, err = genLendTx.Generate(nodeNonce)
 			if err != nil {
 				return nil, err
 			}

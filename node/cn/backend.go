@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -89,7 +90,8 @@ type Miner interface {
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, *state.StateDB)
 	PendingBlock() *types.Block
-	kaiax.ExecutionModuleHost // Because miner executes blocks, inject ExecutionModule.
+	kaiax.ExecutionModuleHost    // Because miner executes blocks, inject ExecutionModule.
+	builder.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -407,7 +409,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(); err != nil {
+	if err := cn.SetupKaiaxModules(ctx); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
@@ -493,7 +495,7 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-func (s *CN) SetupKaiaxModules() error {
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext) error {
 	// Declare modules
 
 	var (
@@ -504,6 +506,7 @@ func (s *CN) SetupKaiaxModules() error {
 		mValset  = valset_impl.NewValsetModule()
 		mRandao  = randao_impl.NewRandaoModule()
 		mBuilder = builder_impl.NewBuilderModule()
+		mGasless = gasless_impl.NewGaslessModule()
 	)
 
 	// Initialize modules
@@ -546,6 +549,10 @@ func (s *CN) SetupKaiaxModules() error {
 		mBuilder.Init(&builder_impl.InitOpts{
 			Backend: s.APIBackend,
 		}),
+		mGasless.Init(&gasless_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			NodeKey:     ctx.NodeKey(),
+		}),
 	)
 	if err != nil {
 		return err
@@ -556,6 +563,7 @@ func (s *CN) SetupKaiaxModules() error {
 	s.RegisterBaseModules(mStaking, mReward, mSupply, mGov, mValset, mRandao)
 	s.RegisterJsonRpcModules(mStaking, mReward, mSupply, mGov, mRandao, mBuilder)
 	s.miner.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
+	s.miner.RegisterTxBundlingModule(mGasless)
 	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
