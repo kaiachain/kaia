@@ -20,10 +20,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -33,8 +35,8 @@ import (
 func TestIsApproveTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
 	privkey, _ := crypto.GenerateKey()
-	// Legacy TestToken.approve(SwapRouter, 1000000)
 	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+
 	testcases := map[string]struct {
 		tx *types.Transaction
 		ok bool
@@ -76,8 +78,8 @@ func TestIsApproveTx(t *testing.T) {
 func TestIsSwapTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
 	privkey, _ := crypto.GenerateKey()
-	// Legacy TestRouter.swapForGas(Token, 10, 100, 2021000)
 	correct := makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+
 	testcases := map[string]struct {
 		tx *types.Transaction
 		ok bool
@@ -128,7 +130,7 @@ func TestIsExecutable(t *testing.T) {
 		},
 		"correct single swap tx": {
 			nil,
-			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)}),
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000)}),
 			true,
 		},
 		"gasless tx pair with different sender address": {
@@ -182,6 +184,67 @@ func TestIsExecutable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsExecutable(tc.approve, tc.swap)
 			require.Equal(t, tc.ok, ok)
+		})
+	}
+}
+
+func TestGetLendTxGenerator(t *testing.T) {
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	privkey, _ := crypto.GenerateKey()
+	testcases := map[string]struct {
+		approve *types.Transaction
+		swap    *types.Transaction
+	}{
+		"correct gasless tx pair": {
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+		},
+		"correct single swap tx": {
+			nil,
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000)}),
+		},
+	}
+
+	testTxPoolConfig := blockchain.DefaultTxPoolConfig
+	testTxPoolConfig.Journal = ""
+
+	key, _ := crypto.GenerateKey()
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	sdb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
+
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			bc := &testBlockChain{sdb.Copy(), 10000000, new(event.Feed)}
+			pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
+			g := NewGaslessModule()
+			g.Init(&InitOpts{
+				ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+				NodeKey:     key,
+				TxPool:      pool,
+			})
+			pool.RegisterTxPoolModule(g)
+
+			ok := g.IsExecutable(tc.approve, tc.swap)
+			require.True(t, ok)
+
+			generator := g.GetLendTxGenerator(tc.approve, tc.swap)
+			tx, err := generator.Generate(0)
+			require.NoError(t, err)
+
+			// tx contents test
+			require.Equal(t, crypto.PubkeyToAddress(privkey.PublicKey).Bytes(), tx.To().Bytes())
+			lendAmount := tc.swap.Fee()
+			if tc.approve != nil {
+				lendAmount.Add(lendAmount, tc.approve.Fee())
+			}
+			require.Zero(t, lendAmount.Cmp(tx.Value()))
+
+			// pool passing test
+			pool.AddLocal(tx)
+			pending, err := pool.Pending()
+			require.NoError(t, err)
+			flatten := flattenPoolTxs(pending)
+			require.True(t, flatten[tx.Hash()])
 		})
 	}
 }

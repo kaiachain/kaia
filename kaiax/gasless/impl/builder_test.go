@@ -55,15 +55,17 @@ func TestExtractTxBundles(t *testing.T) {
 
 	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 
-	T1 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
-	T2 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(0), nil)
+	T4 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
+	T5 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 
 	testcases := []struct {
 		pending  []*types.Transaction
+		pre      []*builder.Bundle
 		expected []*builder.Bundle
 	}{
 		{
-			[]*types.Transaction{A1, S1, T1, T2},
+			[]*types.Transaction{A1, S1, T4, T5},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
@@ -72,16 +74,28 @@ func TestExtractTxBundles(t *testing.T) {
 			},
 		},
 		{
-			[]*types.Transaction{A1, T1, S1, T2},
+			[]*types.Transaction{A1, T4, S1, T5},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
-					TargetTxHash: T1.Hash(),
+					TargetTxHash: T4.Hash(),
 				},
 			},
 		},
 		{
-			[]*types.Transaction{A1, S1, A2, T1, S2},
+			[]*types.Transaction{T4, A1, S1, T5},
+			nil,
+			[]*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					TargetTxHash: T4.Hash(),
+				},
+			},
+		},
+		{
+			[]*types.Transaction{A1, S1, A2, T4, S2},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
@@ -89,12 +103,13 @@ func TestExtractTxBundles(t *testing.T) {
 				},
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
-					TargetTxHash: T1.Hash(),
+					TargetTxHash: T4.Hash(),
 				},
 			},
 		},
 		{
 			[]*types.Transaction{A1, A2, S1, S2},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
@@ -108,6 +123,7 @@ func TestExtractTxBundles(t *testing.T) {
 		},
 		{
 			[]*types.Transaction{A1, S1, A2, S2},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
@@ -121,6 +137,7 @@ func TestExtractTxBundles(t *testing.T) {
 		},
 		{
 			[]*types.Transaction{A1, A2, S2, S1},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
@@ -134,6 +151,7 @@ func TestExtractTxBundles(t *testing.T) {
 		},
 		{
 			[]*types.Transaction{A1, S1, S3},
+			nil,
 			[]*builder.Bundle{
 				{
 					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
@@ -145,10 +163,20 @@ func TestExtractTxBundles(t *testing.T) {
 				},
 			},
 		},
+		{
+			[]*types.Transaction{A1, S1, T4, T5},
+			[]*builder.Bundle{
+				{
+					BundleTxs:    []interface{}{},
+					TargetTxHash: common.Hash{},
+				},
+			},
+			[]*builder.Bundle{},
+		},
 	}
 
 	for _, tc := range testcases {
-		bundles := g.ExtractTxBundles(tc.pending, nil)
+		bundles := g.ExtractTxBundles(tc.pending, tc.pre)
 		require.Equal(t, len(tc.expected), len(bundles))
 
 		for i, e := range tc.expected {

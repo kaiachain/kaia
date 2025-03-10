@@ -18,6 +18,7 @@ package impl
 
 import (
 	"math/big"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -59,6 +60,10 @@ func TestIsModuleTx(t *testing.T) {
 		{
 			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
 			true,
+		},
+		{
+			makeTx(t, privkey, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil),
+			false,
 		},
 	}
 
@@ -160,7 +165,7 @@ func TestIsReady(t *testing.T) {
 			1,
 			true,
 		},
-		" swap tx without approve tx": {
+		"swap tx without approve tx": {
 			map[uint64]*types.Transaction{2: swapTx(2), 3: other(3)},
 			types.Transactions{},
 			2,
@@ -192,7 +197,7 @@ func TestIsReady(t *testing.T) {
 	}
 }
 
-func TestPromoteGaslessTransactions(t *testing.T) {
+func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 	t.Parallel()
 
 	type txTypeTest int
@@ -301,13 +306,24 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 			[]txTypeTest{T},
 			[]txTypeTest{SingleS, A, SwithA},
 		},
+		{
+			false,
+			[]txTypeTest{SwithA, A, SingleS, T},
+			[]txTypeTest{},
+			[]txTypeTest{SwithA, A, SingleS},
+		},
+		{
+			true,
+			[]txTypeTest{SwithA, A, SingleS, T},
+			[]txTypeTest{},
+			[]txTypeTest{SwithA, A, SingleS, T},
+		},
 	}
 
 	for _, tc := range testcases {
 		sdb := statedb.Copy()
 		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
 		if tc.balance {
-			// set some token
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
 		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
@@ -336,7 +352,10 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
 			}
 			txMap[ttype] = tx
-			pool.AddLocal(tx)
+			err = pool.AddLocal(tx)
+			if err != nil {
+				require.ErrorIs(t, err, blockchain.ErrInsufficientFundsFrom)
+			}
 		}
 
 		pending, queued := pool.Content()
@@ -353,6 +372,72 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 
 		for _, ttype := range tc.queued {
 			_, ok := queuedTxs[txMap[ttype].Hash()]
+			require.True(t, ok)
+		}
+
+		pool.Stop()
+	}
+}
+
+func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
+	t.Parallel()
+
+	testTxPoolConfig := blockchain.DefaultTxPoolConfig
+	testTxPoolConfig.Journal = ""
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	key1, _ := crypto.GenerateKey()
+	key2, _ := crypto.GenerateKey()
+	key4, _ := crypto.GenerateKey()
+
+	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+
+	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+
+	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
+
+	T4 := makeTx(t, key4, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
+
+	T5 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
+
+	statedb.SetBalance(crypto.PubkeyToAddress(key2.PublicKey), new(big.Int).SetUint64(params.KAIA))
+	statedb.SetBalance(crypto.PubkeyToAddress(key4.PublicKey), new(big.Int).SetUint64(params.KAIA))
+
+	expected := []*types.Transaction{A1, S1, A2, S2, S3, T4}
+	// sending A1, S1, A2, S2, S3, T4, and T5 in random order and then check if pending has expected txs.
+	for range make([]int, 1000) {
+		sdb := statedb.Copy()
+		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
+		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
+		g := NewGaslessModule()
+		nodeKey, _ := crypto.GenerateKey()
+		g.Init(&InitOpts{
+			ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+			NodeKey:     nodeKey,
+			TxPool:      pool,
+		})
+		pool.RegisterTxPoolModule(g)
+
+		txs := []*types.Transaction{A1, S1, A2, S2, S3, T4, T5}
+		for len(txs) != 0 {
+			r := rand.IntN(len(txs))
+			err := pool.AddLocal(txs[r])
+			if err != nil {
+				require.ErrorIs(t, err, blockchain.ErrInsufficientFundsFrom)
+			}
+			txs = append(txs[:r], txs[r+1:]...)
+		}
+
+		pending, err := pool.Pending()
+		require.NoError(t, err)
+		pendingTxs := flattenPoolTxs(pending)
+
+		require.Equal(t, len(expected), len(pendingTxs))
+		for i := range expected {
+			_, ok := pendingTxs[expected[i].Hash()]
 			require.True(t, ok)
 		}
 

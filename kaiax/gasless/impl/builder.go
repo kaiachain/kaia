@@ -49,15 +49,17 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 			targetTxHash = tx.Hash()
 
 			isConflict := false
-			for _, prev := range prevBundles {
+			for _, prev := range append(prevBundles, bundles...) {
 				isConflict = prev.IsConflict(b)
 				if isConflict {
 					break
 				}
 			}
-			if !isConflict {
-				bundles = append(bundles, b)
+			if isConflict {
+				// Gasless transactions will just fail even if they aren't bundled.
+				continue
 			}
+			bundles = append(bundles, b)
 		} else {
 			targetTxHash = tx.Hash()
 		}
