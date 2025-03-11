@@ -679,7 +679,8 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(txs, txBundlingModules)
+	arrayTxs := builder_impl.Arrayify(txs)
+	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block

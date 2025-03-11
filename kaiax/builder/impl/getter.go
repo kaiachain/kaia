@@ -286,11 +286,10 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 	*bundles = newBundles
 }
 
-func ExtractBundlesAndIncorporate(txs *types.TransactionsByPriceAndNonce, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
+func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
 	// Detect bundles and add them to bundles
 	bundles := []*builder.Bundle{}
 	flattenedTxs := []interface{}{}
-	arrayTxs := Arrayify(txs)
 	if txBundlingModules == nil {
 		for _, tx := range arrayTxs {
 			var itx interface{} = tx

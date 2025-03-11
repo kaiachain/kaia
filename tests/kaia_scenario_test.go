@@ -1895,7 +1895,7 @@ func TestValidateSender(t *testing.T) {
 	}
 }
 
-// TestTxBundleAndRevert tests a following scenario:
+// TestTxBundleRevert tests a following scenario:
 //  1. Transfer (reservoir1 -> anon) using a legacy transaction four times.
 //     Create a mock TxBundlingModule and create a bundle for each two tx.
 //     At that point, tx4 fails with nonceTooHigh and tx3 is reverted.
@@ -1903,7 +1903,7 @@ func TestValidateSender(t *testing.T) {
 //
 // In summary, input txs are [ [tx0, tx1], [tx2, tx3], [tx4, tx5] ]. tx3 reverts.
 // Therefore, the expected txs for a block are [tx0, tx1, tx4, tx5].
-func TestTxBundleAndRevert(t *testing.T) {
+func TestTxBundleRevert(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	prof := profile.NewProfiler()
 
@@ -1955,27 +1955,7 @@ func TestTxBundleAndRevert(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
-	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
-			// Bundle every two tx
-			bundles := []*builder.Bundle{}
-			tmpTx := &types.Transaction{}
-			for i, tx := range txs {
-				if i%2 == 0 {
-					tmpTx = tx
-					continue
-				}
-				b := &builder.Bundle{}
-				b.BundleTxs = append(b.BundleTxs, tmpTx)
-				b.BundleTxs = append(b.BundleTxs, tx)
-				tmpTx = &types.Transaction{}
-				bundles = append(bundles, b)
-				if i > 1 {
-					b.TargetTxHash = txs[i-2].Hash()
-				}
-			}
-			return bundles
-		})
+	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(testBundlingModule).AnyTimes()
 	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
 	builderModule := builderImpl.NewBuilderModule()
 	builderModule.Init(nil)
@@ -2021,6 +2001,273 @@ func TestTxBundleAndRevert(t *testing.T) {
 		// tx3 and tx4 are bundled, and then tx4 fails due to nonceTooHigh, so it is reverted.
 		txHashesExpectedFail := []common.Hash{txs[2].Hash(), txs[3].Hash()}
 		if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules, builderModule); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestTxBundleRevertByEvmError tests a following scenario:
+//  1. Deploy KlaytnRewardBin.
+//  2. Transfer (reservoir2 -> anon) using a legacy transaction.
+//     And Execution KlaytnRewardBin.reward.
+//     Create a mock TxBundlingModule and create a bundle for each two tx.
+//     At that point, ExecutionTx fails with OutOfGas and TransferTx is reverted.
+//     OutOfGas is an evm error and will be listed in the receipt status.
+//     This is a test to see if we should revert this.
+func TestTxBundleRevertByEvmError(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir1 account
+	reservoir1 := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// reservoir2 account
+	reservoir2 := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	// anonymous account
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoir1Addr = ", reservoir1.Addr.String())
+		fmt.Println("reservoir2Addr = ", reservoir2.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(0)
+	code := contracts.KlaytnRewardBin
+	abiStr := contracts.KlaytnRewardABI
+
+	// Generate a mock bundling module.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
+	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(testBundlingModule).AnyTimes()
+	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
+	builderModule := builderImpl.NewBuilderModule()
+	builderModule.Init(nil)
+	contractAddr := common.Address{}
+
+	// 1. Deploy contract
+	{
+		var txs types.Transactions
+		amount := new(big.Int).SetUint64(0)
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir1.Nonce,
+			types.TxValueKeyFrom:          reservoir1.Addr,
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        amount,
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      gasPrice,
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir1.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		contractAddr = crypto.CreateAddress(reservoir1.Addr, reservoir1.Nonce)
+		reservoir1.Nonce += 1
+	}
+
+	// 2.Transfer & Execution (In same bundle)
+	{
+		var txs types.Transactions
+
+		{
+			amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
+			transferTx := types.NewTransaction(reservoir1.Nonce,
+				anon.Addr, amount, gasLimit, gasPrice, []byte{})
+			reservoir1.Nonce += 1
+
+			err := transferTx.SignWithKeys(signer, reservoir1.Keys)
+			assert.Equal(t, nil, err)
+			txs = append(txs, transferTx)
+		}
+		{
+			amountToSend := new(big.Int).SetUint64(10)
+			abii, err := abi.JSON(strings.NewReader(string(abiStr)))
+			assert.Equal(t, nil, err)
+
+			data, err := abii.Pack("reward", reservoir1.Addr)
+			assert.Equal(t, nil, err)
+
+			// Set GasLimit to 21000 to trigger out of gas
+			gasLimitToTriggerOutOfGas, err := types.IntrinsicGasPayload(params.TxGasContractExecution, data, false, bcdata.bc.Config().Rules(bcdata.bc.CurrentHeader().Number))
+			assert.Equal(t, nil, err)
+
+			values := map[types.TxValueKeyType]interface{}{
+				types.TxValueKeyNonce:    reservoir1.Nonce,
+				types.TxValueKeyFrom:     reservoir1.Addr,
+				types.TxValueKeyTo:       contractAddr,
+				types.TxValueKeyAmount:   amountToSend,
+				types.TxValueKeyGasLimit: gasLimitToTriggerOutOfGas,
+				types.TxValueKeyGasPrice: gasPrice,
+				types.TxValueKeyData:     data,
+			}
+			executionTx, err := types.NewTransactionWithMap(types.TxTypeSmartContractExecution, values)
+			assert.Equal(t, nil, err)
+			reservoir1.Nonce += 1
+
+			err = executionTx.SignWithKeys(signer, reservoir1.Keys)
+			assert.Equal(t, nil, err)
+			txs = append(txs, executionTx)
+		}
+
+		// TransferTx and ExecutionTx are bundled, and then ExecutionTx fails due to OutOfGas, so it is reverted.
+		txHashesExpectedFail := []common.Hash{txs[0].Hash(), txs[1].Hash()}
+		if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules, builderModule); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if testing.Verbose() {
+		prof.PrintProfileInfo()
+	}
+}
+
+// TestTxBundleAndRevert tests a following scenario:
+//  1. Transfer (reservoir1 -> anon) using a legacy transaction four times.
+//     Create a mock TxBundlingModule and create a bundle for each two tx.
+//     At that point, tx4 fails with nonceTooHigh and tx3 is reverted.
+//  2. Transfer (reservoir2 -> anon) using a legacy transaction two times.
+//
+// In summary, input txs are [ [tx0, tx1], [tx2, tx3], [tx4, tx5] ]. tx3 reverts.
+// Therefore, the expected txs for a block are [tx0, tx1, tx4, tx5].
+func TestTxBundleAndRevertWithGenerator(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	start := time.Now()
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_blockchain", time.Now().Sub(start))
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	start = time.Now()
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+	prof.Profile("main_init_accountMap", time.Now().Sub(start))
+
+	// reservoir1 account (reward base)
+	reservoir1 := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// reservoir2 account
+	reservoir2 := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	// anonymous account
+	anon, err := createAnonymousAccount("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	assert.Equal(t, nil, err)
+
+	if testing.Verbose() {
+		fmt.Println("reservoir1Addr = ", reservoir1.Addr.String())
+		fmt.Println("reservoir2Addr = ", reservoir2.Addr.String())
+		fmt.Println("anonAddr = ", anon.Addr.String())
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+	amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
+
+	// Generate a mock bundling module.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
+	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
+			g := builder.TxGenerator{
+				Generate: func(nonce uint64) (*types.Transaction, error) {
+					tx := types.NewTransaction(reservoir1.Nonce,
+						anon.Addr, amount, gasLimit, gasPrice, []byte{})
+					err := tx.SignWithKeys(signer, reservoir1.Keys)
+					return tx, err
+				},
+			}
+			// Bundle all transaction and
+			bundles := []*builder.Bundle{}
+			b := &builder.Bundle{
+				BundleTxs:    []interface{}{g},
+				TargetTxHash: common.Hash{},
+			}
+			for _, tx := range txs {
+				b.BundleTxs = append(b.BundleTxs, tx)
+			}
+			bundles = append(bundles, b)
+			return bundles
+		}).AnyTimes()
+	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
+	builderModule := builderImpl.NewBuilderModule()
+	builderModule.Init(nil)
+
+	{
+		var txs types.Transactions
+
+		// 1. Transfer (reservoir2 -> anon) using a legacy transaction four times.
+		amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
+		tx := types.NewTransaction(reservoir2.Nonce,
+			anon.Addr, amount, gasLimit, gasPrice, []byte{})
+		reservoir2.Nonce += 1
+
+		err := tx.SignWithKeys(signer, reservoir2.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules, builderModule); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -2089,7 +2336,7 @@ func TestTxBundleTimeOut(t *testing.T) {
 			}
 			bundles = append(bundles, b)
 			return bundles
-		})
+		}).AnyTimes()
 	txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
 	builderModule := builderImpl.NewBuilderModule()
 	builderModule.Init(nil)
@@ -2188,4 +2435,25 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 	usedGas := uint64(0)
 	receipt, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)
 	return receipt, err
+}
+
+var testBundlingModule = func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
+	// Bundle every two tx
+	bundles := []*builder.Bundle{}
+	tmpTx := &types.Transaction{}
+	for i, tx := range txs {
+		if i%2 == 0 {
+			tmpTx = tx
+			continue
+		}
+		b := &builder.Bundle{}
+		b.BundleTxs = append(b.BundleTxs, tmpTx)
+		b.BundleTxs = append(b.BundleTxs, tx)
+		tmpTx = &types.Transaction{}
+		bundles = append(bundles, b)
+		if i > 1 {
+			b.TargetTxHash = txs[i-2].Hash()
+		}
+	}
+	return bundles
 }

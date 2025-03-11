@@ -27,6 +27,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 )
 
 // //////////////////////////////////////////////////////////////////////////////
@@ -107,7 +109,17 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, txBundlingModules []builder.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+	incorporatedTxs, _ := builder_impl.ExtractBundlesAndIncorporate(txs, txBundlingModules)
+	for _, txOrGen := range incorporatedTxs {
+		if gen, ok := txOrGen.(builder.TxGenerator); ok {
+			tx, err := gen.Generate(0)
+			if err != nil {
+				continue
+			}
+			txs = append(txs, tx)
+		}
+	}
 	for _, tx := range txs {
 		if slices.Contains(txHashesExpectedFail, tx.Hash()) {
 			continue

@@ -367,7 +367,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Update accountMap
 	start = time.Now()
-	if err := accountMap.Update(newtxs, nil, signer, statedb, b.NumberU64()); err != nil {
+	if err := accountMap.Update(newtxs, nil, nil, signer, statedb, b.NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
@@ -448,7 +448,7 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 
 	// Update accountMap
 	start := time.Now()
-	if err := accountMap.Update(transactions, txHashesExpectedFail, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
