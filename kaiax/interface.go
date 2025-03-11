@@ -153,9 +153,6 @@ type TxPoolModule interface {
 
 	// Additional actions to check if a module transaction should be appended to pending
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
-
-	// Additional actions to perform after resetting tx pool.
-	Reset(pool TxPoolForCaller, oldHead, newHead *types.Header)
 }
 
 type TxPoolForCaller interface {

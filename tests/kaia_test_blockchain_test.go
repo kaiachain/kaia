@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -74,7 +73,6 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
-	txPoolModules      []kaiax.TxPoolModule
 }
 
 var (
@@ -189,7 +187,6 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
 		validatorPrivKeys, engine, genesis, mGov,
-		[]kaiax.TxPoolModule{mGasless},
 	}, nil
 }
 

@@ -38,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
@@ -422,7 +421,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
 		validatorPrivKeys, engine, genesis, mGov,
-		[]kaiax.TxPoolModule{mGasless},
 	}, nil
 }
 

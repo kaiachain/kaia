@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -83,10 +82,6 @@ func TestIsReady(t *testing.T) {
 
 	nodeKey, _ := crypto.GenerateKey()
 	g := NewGaslessModule()
-	g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     nodeKey,
-	})
 	approveTx := func(nonce uint64) *types.Transaction {
 		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	}
@@ -180,8 +175,13 @@ func TestIsReady(t *testing.T) {
 
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			g.currentState, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-			g.currentState.SetNonce(addr, tc.nonce)
+			sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			sdb.SetNonce(addr, tc.nonce)
+			g.Init(&InitOpts{
+				ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+				NodeKey:     nodeKey,
+				TxPool:      &testTxPool{sdb},
+			})
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
@@ -203,13 +203,6 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 	testTxPoolConfig.Journal = ""
 
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-
-	g := NewGaslessModule()
-	nodeKey, _ := crypto.GenerateKey()
-	g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     nodeKey,
-	})
 
 	userKey, err := crypto.GenerateKey()
 	require.NoError(t, err)
@@ -313,8 +306,15 @@ func TestPromoteGaslessTransactions(t *testing.T) {
 			// set some token
 			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
-		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig}, []kaiax.TxPoolModule{g})
-
+		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
+		g := NewGaslessModule()
+		nodeKey, _ := crypto.GenerateKey()
+		g.Init(&InitOpts{
+			ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+			NodeKey:     nodeKey,
+			TxPool:      pool,
+		})
+		pool.RegisterTxPoolModule(g)
 		txMap := map[txTypeTest]*types.Transaction{}
 
 		for i, ttype := range tc.txs {

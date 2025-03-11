@@ -19,8 +19,8 @@ package impl
 import (
 	"crypto/ecdsa"
 
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -30,11 +30,11 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
+	TxPool      kaiax.TxPoolForCaller
 }
 
 type GaslessModule struct {
 	InitOpts
-	currentState  *state.StateDB
 	swapRouters   map[common.Address]bool
 	allowedTokens map[common.Address]bool
 }

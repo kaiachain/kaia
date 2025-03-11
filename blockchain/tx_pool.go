@@ -232,7 +232,7 @@ type TxPool struct {
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule, modules []kaiax.TxPoolModule) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
@@ -254,7 +254,6 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 		txFeedCh:     make(chan types.Transactions, txFeedChSize),
 		govModule:    govModule,
-		modules:      modules,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -508,10 +507,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if pool.rules.IsMagma {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
-	}
-
-	for _, module := range pool.modules {
-		module.Reset(pool, oldHead, newHead)
 	}
 }
 
@@ -1741,6 +1736,12 @@ func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
 	if pool.getPendingNonce(addr) > nonce {
 		pool.setPendingNonce(addr, nonce)
 	}
+}
+
+func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.modules = modules
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

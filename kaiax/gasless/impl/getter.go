@@ -205,12 +205,12 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
 			return false
 		}
-		if nonce := g.currentState.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+		if nonce := g.TxPool.GetCurrentState().GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
 			return false
 		}
 	} else {
 		// SP3.
-		if nonce := g.currentState.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
+		if nonce := g.TxPool.GetCurrentState().GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
 			return false
 		}
 	}
