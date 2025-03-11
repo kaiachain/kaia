@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
@@ -37,6 +38,7 @@ type GaslessModule struct {
 	InitOpts
 	swapRouters   map[common.Address]bool
 	allowedTokens map[common.Address]bool
+	signer        types.Signer
 }
 
 func NewGaslessModule() *GaslessModule {
@@ -55,6 +57,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 	g.allowedTokens = map[common.Address]bool{
 		common.HexToAddress("0xabcd"): true,
 	}
+	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 	return nil
 }
 

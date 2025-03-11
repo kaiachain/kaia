@@ -61,7 +61,10 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
-	addr := approveTx.ValidatedSender()
+	addr, err := types.Sender(g.signer, approveTx)
+	if err != nil {
+		panic(err)
+	}
 	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
 
 	if approveTx.Nonce() != nonce {
@@ -76,7 +79,10 @@ func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) b
 
 // isSwapTxReady assumes that the caller checked `g.IsSwapTx(swapTx)`
 func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
-	addr := swapTx.ValidatedSender()
+	addr, err := types.Sender(g.signer, swapTx)
+	if err != nil {
+		panic(err)
+	}
 	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
 
 	var approveTx *types.Transaction
