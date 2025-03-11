@@ -113,6 +113,8 @@ func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []commo
 	incorporatedTxs, _ := builder_impl.ExtractBundlesAndIncorporate(txs, txBundlingModules)
 	for _, txOrGen := range incorporatedTxs {
 		if gen, ok := txOrGen.(builder.TxGenerator); ok {
+			// To simulate tx, the nonce given to generate is set to zero.
+			// This does not affect subsequent operations on the AccountMap state.
 			tx, err := gen.Generate(0)
 			if err != nil {
 				continue
