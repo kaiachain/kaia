@@ -183,7 +183,7 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	return txs, nil
 }
 
-// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KAIA
+// makeNewTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KAIA
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,

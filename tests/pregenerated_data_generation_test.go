@@ -93,7 +93,7 @@ func makeTxsWithStateDB(isGenerate bool, stateDB *state.StateDB, fromAddrs []*co
 	return makeTxsWithNonceMap(isGenerate, nonceMap, fromAddrs, fromKeys, toAddrs, signer, numTransactions, indexPicker)
 }
 
-// makeTxsWithStateDB generates transactions with the nonce retrieved from nonceMap.
+// makeTxsWithNonceMap generates transactions with the nonce retrieved from nonceMap.
 func makeTxsWithNonceMap(isGenerate bool, nonceMap map[common.Address]uint64, fromAddrs []*common.Address, fromKeys []*ecdsa.PrivateKey, toAddrs []*common.Address, signer types.Signer, numTransactions int, indexPicker func(int, int) int) (types.Transactions, map[common.Address]uint64, error) {
 	txs := make(types.Transactions, 0, numTransactions)
 	lenFromAddrs := len(fromAddrs)
