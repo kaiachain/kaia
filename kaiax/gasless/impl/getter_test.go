@@ -59,10 +59,12 @@ func TestIsApproveTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
-	g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		TxPool:      &testTxPool{},
 	})
+	require.NoError(t, err)
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsApproveTx(tc.tx)
@@ -96,10 +98,13 @@ func TestIsSwapTx(t *testing.T) {
 
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
-	g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
+		TxPool:      &testTxPool{},
 	})
+	require.NoError(t, err)
+
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsSwapTx(tc.tx)
@@ -166,11 +171,13 @@ func TestIsExecutable(t *testing.T) {
 	g := NewGaslessModule()
 	key, _ := crypto.GenerateKey()
 	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     key,
 		TxPool:      &testTxPool{sdb},
 	})
+	require.NoError(t, err)
+
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsExecutable(tc.approve, tc.swap)
