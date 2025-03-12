@@ -38,7 +38,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -403,15 +402,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		ChainConfig: genesis.Config,
 		Chain:       bc,
 		ChainKv:     chainDB.GetMiscDB(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	mGasless := gasless_impl.NewGaslessModule()
-	err = mGasless.Init(&gasless_impl.InitOpts{
-		ChainConfig: genesis.Config,
-		NodeKey:     validatorPrivKeys[0],
 	})
 	if err != nil {
 		return nil, err
