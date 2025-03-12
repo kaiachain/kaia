@@ -26,6 +26,7 @@ func NewGovData(m gov.PartialParamSet) GovData {
 	for name, value := range m {
 		err := items.Add(string(name), value)
 		if err != nil {
+			logger.Error("Invalid param", "name", name, "value", value)
 			return nil
 		}
 	}

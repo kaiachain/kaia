@@ -33,8 +33,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/node/cn/snap"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -122,7 +122,7 @@ var errorToString = map[int]string{
 
 // ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
 //
-//go:generate mockgen -destination=node/cn/mocks/downloader_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerDownloader
+//go:generate mockgen -destination=./mocks/downloader_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerDownloader
 type ProtocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
@@ -131,11 +131,12 @@ type ProtocolManagerDownloader interface {
 	DeliverHeaders(id string, headers []*types.Header) error
 	DeliverNodeData(id string, data [][]byte) error
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
-	DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error
+	DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error
 	DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
+	Synchronising() bool
 	Progress() kaia.SyncProgress
 	Cancel()
 
@@ -146,7 +147,7 @@ type ProtocolManagerDownloader interface {
 
 // ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
 //
-//go:generate mockgen -destination=node/cn/mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerFetcher
+//go:generate mockgen -destination=./mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerFetcher
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction

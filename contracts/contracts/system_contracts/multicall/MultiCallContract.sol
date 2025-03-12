@@ -17,19 +17,24 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.19;
 
-// MultiCallContract has to be compiled with solc 0.8.19.
-//
-// MultiCallContract can be called at any block number including the Genesis block.
-// Note that MultiCallContract is never deployed on the network. Instead, it is
-// injected into a temporary state for the data query purpose. Similar to eth_call's state override.
-//
-// MultiCallContract must be compatible with any version of the EVM, any hardfork levels.
-// Starting from solc 0.8.20, the default EVM target is Shanghai or later, where PUSH0 opcode can be emitted.
-// Therefore we use solc 0.8.19, the newest compiler before 0.8.20.
 interface IAddressBook {
     function isActivated() external view returns (bool);
 
-    function getAllAddress() external view returns (uint8[] memory typeList, address[] memory addressList);
+    function getAllAddress()
+        external
+        view
+        returns (uint8[] memory typeList, address[] memory addressList);
+}
+
+interface IRegistry {
+    function getActiveAddr(string memory name) external view returns (address);
+}
+
+interface ICLRegistry {
+    function getAllCLs()
+        external
+        view
+        returns (address[] memory, uint256[] memory, address[] memory);
 }
 
 interface ICnStaking {
@@ -40,11 +45,18 @@ interface ICnStaking {
     function unstaking() external view returns (uint256);
 }
 
+interface IERC20 {
+    function balanceOf(address account) external view returns (uint256);
+}
+
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
 // It will be temporarily injected into state to be used by the Kaia client.
 // After retrieving the information, the contract will be removed from the state.
 contract MultiCallContract {
-    address private constant ADDRESS_BOOK_ADDRESS = 0x0000000000000000000000000000000000000400;
+    address private constant ADDRESS_BOOK_ADDRESS =
+        0x0000000000000000000000000000000000000400;
+    address private constant REGISTRY_ADDRESS =
+        0x0000000000000000000000000000000000000401;
 
     /* ========== STAKING INFORMATION ========== */
 
@@ -52,7 +64,11 @@ contract MultiCallContract {
     function multiCallStakingInfo()
         external
         view
-        returns (uint8[] memory typeList, address[] memory addressList, uint256[] memory stakingAmounts)
+        returns (
+            uint8[] memory typeList,
+            address[] memory addressList,
+            uint256[] memory stakingAmounts
+        )
     {
         IAddressBook addressBook = IAddressBook(ADDRESS_BOOK_ADDRESS);
         (typeList, addressList) = addressBook.getAllAddress();
@@ -76,8 +92,40 @@ contract MultiCallContract {
         return (typeList, addressList, stakingAmounts);
     }
 
-    function _getCnStakingAmounts(address cnStaking) private view returns (uint256) {
+    function _getCnStakingAmounts(
+        address cnStaking
+    ) private view returns (uint256) {
         return cnStaking.balance;
+    }
+
+    function multiCallDPStakingInfo()
+        external
+        view
+        returns (
+            address[] memory nodeIds,
+            address[] memory clPools,
+            uint256[] memory stakingAmounts
+        )
+    {
+        address clreg = IRegistry(REGISTRY_ADDRESS).getActiveAddr("CLRegistry");
+        address wKaia = IRegistry(REGISTRY_ADDRESS).getActiveAddr(
+            "WrappedKaia"
+        );
+
+        if (clreg == address(0)) {
+            return (nodeIds, clPools, stakingAmounts);
+        }
+
+        (nodeIds, , clPools) = ICLRegistry(clreg).getAllCLs();
+        uint256 poolLength = clPools.length;
+        stakingAmounts = new uint256[](poolLength);
+
+        if (wKaia != address(0)) {
+            IERC20 wKaiaToken = IERC20(wKaia);
+            for (uint256 i = 0; i < poolLength; i++) {
+                stakingAmounts[i] = wKaiaToken.balanceOf(clPools[i]);
+            }
+        }
     }
 
     /* ========== MORE FUNCTIONS TBA ========== */

@@ -275,7 +275,6 @@ func doTest(cmdline []string) {
 	// Get test fixtures.
 	csdb := build.MustLoadChecksums("build/checksums.txt")
 	downloadSpecTestFixtures(csdb, *cachedir)
-	downloadPragueSpecTestFixtures(csdb, *cachedir)
 
 	packages := []string{"./..."}
 	if len(flag.CommandLine.Args()) > 0 {
@@ -306,28 +305,7 @@ func downloadSpecTestFixtures(csdb *build.ChecksumDB, cachedir string) string {
 		log.Fatal(err)
 	}
 	ext := ".tar.gz"
-	base := "fixtures_develop" // TODO(MariusVanDerWijden) rename once the version becomes part of the filename
-	url := fmt.Sprintf("https://github.com/ethereum/execution-spec-tests/releases/download/v%s/%s%s", executionSpecTestsVersion, base, ext)
-	archivePath := filepath.Join(cachedir, base+ext)
-	if err := csdb.DownloadFile(url, archivePath); err != nil {
-		log.Fatal(err)
-	}
-	if err := build.ExtractArchive(archivePath, executionSpecTestsDir); err != nil {
-		log.Fatal(err)
-	}
-	return filepath.Join(cachedir, base)
-}
-
-// downloadPragueSpecTestFixtures downloads and extracts the execution-spec-tests fixtures for Prague.
-func downloadPragueSpecTestFixtures(csdb *build.ChecksumDB, cachedir string) string {
-	// remove prague of v3
-	os.RemoveAll(executionSpecTestsDir + "/fixtures/blockchain_tests/prague")
-	os.RemoveAll(executionSpecTestsDir + "/fixtures/blockchain_tests_engine/prague")
-	os.RemoveAll(executionSpecTestsDir + "/fixtures/state_tests/prague")
-
-	executionSpecTestsVersion := "pectra-devnet-4@v1.0.1"
-	ext := ".tar.gz"
-	base := "fixtures_pectra-devnet-4"
+	base := "fixtures_pectra-devnet-6" // TODO(MariusVanDerWijden) rename once the version becomes part of the filename
 	url := fmt.Sprintf("https://github.com/ethereum/execution-spec-tests/releases/download/%s/%s%s", executionSpecTestsVersion, base, ext)
 	archivePath := filepath.Join(cachedir, base+ext)
 	if err := csdb.DownloadFile(url, archivePath); err != nil {

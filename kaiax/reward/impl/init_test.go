@@ -41,12 +41,16 @@ func init() {
 
 // Make a RewardModule that works with the given block.
 func makeTestRewardModule(t *testing.T,
-	simple, deferred bool,
+	simple, deferred, isPrague bool,
 	header *types.Header, txs []*types.Transaction, receipts []*types.Receipt,
 ) *RewardModule {
 	proposerPolicy := uint64(istanbul.WeightedRandom)
+	var pragueForkBlock *big.Int
 	if simple {
 		proposerPolicy = uint64(istanbul.RoundRobin)
+	}
+	if isPrague {
+		pragueForkBlock = big.NewInt(60)
 	}
 
 	var (
@@ -66,6 +70,7 @@ func makeTestRewardModule(t *testing.T,
 			ShanghaiCompatibleBlock:  big.NewInt(40),
 			CancunCompatibleBlock:    big.NewInt(50),
 			KaiaCompatibleBlock:      big.NewInt(60),
+			PragueCompatibleBlock:    pragueForkBlock,
 		}
 
 		paramset = gov.ParamSet{
@@ -78,7 +83,7 @@ func makeTestRewardModule(t *testing.T,
 			Kip82Ratio:     "20/80",
 		}
 
-		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000})
+		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, isPrague)
 
 		block = types.NewBlock(header, txs, receipts)
 	)
@@ -95,13 +100,34 @@ func makeTestRewardModule(t *testing.T,
 	chain.EXPECT().GetReceiptsByBlockHash(block.Hash()).Return(receipts).AnyTimes()
 	chain.EXPECT().Engine().Return(engine).AnyTimes()
 	engine.EXPECT().Author(gomock.Any()).Return(common.HexToAddress("0xeee"), nil).AnyTimes() // Author is different from Rewardbase
-	mGov.EXPECT().EffectiveParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
+	mGov.EXPECT().GetParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
 	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
 
 	return r
 }
 
-func makeTestStakingInfo(stakingAmounts []uint64) *staking.StakingInfo {
+func makeTestStakingInfo(stakingAmounts []uint64, isPrague bool) *staking.StakingInfo {
+	var clStakingInfos staking.CLStakingInfos
+	if isPrague {
+		clStakingInfos = staking.CLStakingInfos{
+			&staking.CLStakingInfo{
+				CLNodeId:        common.HexToAddress("0xa01"), // For Node1
+				CLPoolAddr:      common.HexToAddress("0xe01"),
+				CLStakingAmount: 999_999, // Total staking amount = 5_000_001 + 999_999 = 6_000_000
+			},
+			&staking.CLStakingInfo{
+				CLNodeId:        common.HexToAddress("0xa02"), // For Node2
+				CLPoolAddr:      common.HexToAddress("0xe02"),
+				CLStakingAmount: 1_999_998, // Total staking amount = 5_000_002 + 1_999_998 = 7_000_000
+			},
+			&staking.CLStakingInfo{
+				CLNodeId:        common.HexToAddress("0xa03"), // For Node3
+				CLPoolAddr:      common.HexToAddress("0xe03"),
+				CLStakingAmount: 2_999_997, // Total staking amount = 5_000_003 + 2_999_997 = 8_000_000
+			},
+		}
+	}
+
 	return &staking.StakingInfo{
 		NodeIds:          []common.Address{common.HexToAddress("0xa01"), common.HexToAddress("0xa02"), common.HexToAddress("0xa03"), common.HexToAddress("0xa04")},
 		StakingContracts: []common.Address{common.HexToAddress("0xb01"), common.HexToAddress("0xb02"), common.HexToAddress("0xb03"), common.HexToAddress("0xb04")},
@@ -109,6 +135,7 @@ func makeTestStakingInfo(stakingAmounts []uint64) *staking.StakingInfo {
 		StakingAmounts:   stakingAmounts,
 		KIFAddr:          common.HexToAddress("0xd01"),
 		KEFAddr:          common.HexToAddress("0xd02"),
+		CLStakingInfos:   clStakingInfos,
 	}
 }
 

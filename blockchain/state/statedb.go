@@ -23,6 +23,8 @@
 package state
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -289,6 +291,14 @@ func (s *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
+func (s *StateDB) GetStorageRoot(addr common.Address) common.Hash {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.Root()
+	}
+	return common.Hash{}
+}
+
 func (s *StateDB) GetAccount(addr common.Address) account.Account {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
@@ -377,12 +387,12 @@ func (s *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
-// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+// GetVmVersion returns true when the address is an SCA or an EOA with code.
 func (s *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
-		if pa != nil {
+		if pa != nil && !(bytes.Equal(pa.GetCodeHash(), emptyCodeHash) && pa.Type() == account.ExternallyOwnedAccountType) {
 			return pa.GetVmVersion(), true
 		}
 		return params.VmVersion0, false
@@ -467,6 +477,26 @@ func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (s *StateDB) SetCode(addr common.Address, code []byte) error {
 	stateObject := s.GetOrNewSmartContract(addr)
 	if stateObject != nil {
+		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
+	}
+
+	return nil
+}
+
+func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte, r params.Rules) error {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa == nil {
+			return nil
+		}
+		if bytes.Equal(code, []byte{}) {
+			pa.SetCodeInfo(params.CodeInfo(0))
+		} else {
+			pa.SetCodeInfo(params.NewCodeInfoWithRules(params.CodeFormatEVM, r))
+		}
+		// If it is not a program account, SetCode will return an error,
+		// but that is handled above so there is no need to roll back SetCodeInfo.
 		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
 
@@ -669,6 +699,21 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	return obj
 }
 
+// resolveStateObject follows delegation designations to resolve a state object
+// given by the address, returning nil if the object is not found or was deleted
+// in this execution context.
+func (s *StateDB) resolveStateObject(addr common.Address) *stateObject {
+	obj := s.getStateObject(addr)
+	if obj == nil {
+		return nil
+	}
+	addr, ok := types.ParseDelegation(obj.Code(s.db))
+	if !ok {
+		return obj
+	}
+	return s.getStateObject(addr)
+}
+
 func (s *StateDB) setStateObject(object *stateObject) {
 	s.stateObjects[object.Address()] = object
 }
@@ -719,8 +764,6 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
 
-	newobj.created = true
-
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
 		return newobj, prev
@@ -754,8 +797,6 @@ func (s *StateDB) createObjectWithMap(addr common.Address, accountType account.A
 	} else {
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
-
-	newobj.created = true
 
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
@@ -800,6 +841,7 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := s.createObjectWithMap(addr, account.SmartContractAccountType, values)
+	new.created = true
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
 	}
@@ -818,6 +860,19 @@ func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, bal
 	s.journal.append(createObjectChange{account: &addr})
 	newobj.created = true
 	s.setStateObject(newobj)
+}
+
+func (s *StateDB) ForEachAccount(cb func(addr common.Address, data account.Account)) {
+	it := statedb.NewIterator(s.trie.NodeIterator(nil))
+	for it.Next() {
+		addr := s.trie.GetKey(it.Key)
+		serializer := account.NewAccountSerializer()
+		if err := rlp.DecodeBytes(it.Value, serializer); err != nil {
+			panic(err)
+		}
+		data := serializer.GetAccount()
+		cb(common.BytesToAddress(addr), data)
+	}
 }
 
 func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) {
@@ -1060,16 +1115,14 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
 		case isDirty:
-			if stateObject.IsProgramAccount() {
-				// Write any contract code associated with the state object.
-				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
-					stateObject.dirtyCode = false
-				}
-				// Write any storage changes in the state object to its storage trie.
-				if err := stateObject.CommitStorageTrie(s.db); err != nil {
-					return common.Hash{}, err
-				}
+			// Write any contract code associated with the state object.
+			if stateObject.code != nil && stateObject.dirtyCode {
+				s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+				stateObject.dirtyCode = false
+			}
+			// Write any storage changes in the state object to its storage trie.
+			if err := stateObject.CommitStorageTrie(s.db); err != nil {
+				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
 			stateObjectsToUpdate = append(stateObjectsToUpdate, stateObject)
@@ -1111,6 +1164,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
 				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)
 			}
+
 			// Keep 128 diff layers in the memory, persistent layer is 129th.
 			// - head layer is paired with HEAD state
 			// - head-1 layer is paired with HEAD-1 state
@@ -1121,7 +1175,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
-
 	return root, err
 }
 
@@ -1131,8 +1184,8 @@ func (s *StateDB) GetTxHash() common.Hash {
 }
 
 var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotContractAddress = fmt.Errorf("given address is not a contract address")
+	errNotExistingAddress = errors.New("there is no account corresponding to the given address")
+	errNotProgramAccount  = errors.New("given address is not a program account")
 )
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
@@ -1140,14 +1193,11 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 	if acc == nil {
 		return common.ExtHash{}, errNotExistingAddress
 	}
-	if acc.Type() != account.SmartContractAccountType {
-		return common.ExtHash{}, errNotContractAddress
+	pa := account.GetProgramAccount(acc)
+	if pa == nil {
+		return common.ExtHash{}, errNotProgramAccount
 	}
-	contract, true := acc.(*account.SmartContractAccount)
-	if !true {
-		return common.ExtHash{}, errNotContractAddress
-	}
-	return contract.GetStorageRoot(), nil
+	return pa.GetStorageRoot(), nil
 }
 
 // Prepare handles the preparatory steps for executing a state transition with.

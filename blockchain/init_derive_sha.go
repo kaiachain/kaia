@@ -32,6 +32,6 @@ func InitDeriveSha(config *params.ChainConfig) {
 // InitDeriveShaWithGov makes DeriveSha() and EmptyRootHash depend on the
 // governance parameters. For any given block number, correct DeriveShaImpl will be used.
 // Call InitDeriveShaWithGov before processing blocks.
-func InitDeriveShaWithGov(config *params.ChainConfig, gov derivesha.GovernanceEngine) {
-	derivesha.InitDeriveSha(config, gov)
+func InitDeriveShaWithGov(config *params.ChainConfig, govModule GovModule) {
+	derivesha.InitDeriveSha(config, govModule)
 }

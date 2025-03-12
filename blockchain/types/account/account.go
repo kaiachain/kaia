@@ -98,14 +98,8 @@ type Account interface {
 	// - codeHash is the same as emptyCodeHash
 	Empty() bool
 
-	// Equal returns true if all the attributes are exactly same. Otherwise, returns false.
-	Equal(Account) bool
-
 	// DeepCopy copies all the attributes.
 	DeepCopy() Account
-
-	// String returns all attributes of this object as a string.
-	String() string
 }
 
 // ProgramAccount is an interface of an account having a program (code + storage).

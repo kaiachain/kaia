@@ -6,7 +6,9 @@ This module is responsible for tracking validator staking amounts and their addr
 
 - StakingInfo is a struct representing Validator staking information at a certain block including staked amount, reward address, and node address. It is primarily used to determine validator set and rewards distribution.
 - StakingInfo summarizes the current AddressBook contract state, and all the staking contracts registered in the AddressBook, and their native token balances.
+  - Since the Prague hardfork, the StakingInfo will include the [consensus liquidity](https://kips.kaia.io/KIPs/kip-226) information from the CLRegistry.
 - When processing a block at `num`, the StakingInfo from a historic block state is used and the historic block (i.e. source block) is determined by the following:
+
   - If `num` is before Kaia hardfork, then StakingInfo is drawn from the beginning of the previous staking interval. Note that if the `num` is a multiple of StakingInterval, the staking info is drawn from two epochs ahead (e.g. in the example below, the staking info at block 3000 is drawn from block 1000).
     ```go
     SourceNum(num) = RoundDown(num - 1, StakingInterval) - StakingInterval
@@ -17,6 +19,7 @@ This module is responsible for tracking validator staking amounts and their addr
     SourceNum(num) = num - 1
     ```
   - Example
+
     ```
     Given StakingInterval = 1000,
     Given Kaia hardfork at block 3456,
@@ -34,6 +37,7 @@ This module is responsible for tracking validator staking amounts and their addr
     3456     3455 // after Kaia HF, using the previous block rule
     3457     3456
     ```
+
 - StakingInterval a governance parameter (`reward.stakingupdateinterval`) that is first defined in the ChainConfig (`ChainConfig.Reward.StakingUpdateInterval`) at genesis and never changes afterwards.
 - Kaia has two treasury fund addresses.
   - KEF (Kaia Ecosystem Fund). Stored in the AddressBook contract's `kirContractAddress` variable. This variable previously held the KCF, KIR addresses.
@@ -51,6 +55,7 @@ This module is responsible for tracking validator staking amounts and their addr
 ### StakingInfo
 
 The staking info to be used for block processing.
+
 ```go
 type StakingInfo struct {
   // The source block number where the staking info is captured.
@@ -67,9 +72,22 @@ type StakingInfo struct {
 
   // Staking amounts of each staking contracts, in KAIA, rounded down.
   StakingAmounts []uint64 `json:"councilStakingAmounts"`
+
+  // The consensus liquidity information
+  CLStakingInfos *CLStakingInfos `json:"clStakingInfos"`
 }
+
+type CLStakingInfo struct {
+	CLNodeId        common.Address `json:"clNodeId"`
+	CLPoolAddr      common.Address `json:"clPoolAddr"`
+	CLStakingAmount uint64         `json:"clStakingAmount"`
+}
+
+type CLStakingInfos []*CLStakingInfo
 ```
+
 - `ConsolidatedNodes()` returns the nodes consolidated by the duplicating reward addresses. Note that the AddressBook entries with the same reward address are considered a single validator.
+  - If `CLStakingInfo` exists for a validator after the Prague hardfork, the `ConsolidatedNodes()` will consolidate it. Note that `CLStakingInfo` has different reward address so the `CLNodeId` is used to consolidate.
 - `Gini(minStake)` returns the gini coefficient of the staking amounts that are no less than `minStake`.
 
 ### StakingInfoResponse
@@ -123,13 +141,14 @@ Upon rewind, this module deletes the related persistent data and flushes the in-
 
 ### kaia_getStakingInfo, governance_getStakingInfo
 
-Query the StakingInfo to be used for the block `num`.
+Query the StakingInfo to be used for the block `num`. If the block number is before the Prague hardfork or there's no consensus liquidity, the `clStakingInfos` field will be null.
 
 - Parameters
   - `num`: block number or hash
 - Returns
   - `StakingInfoResponse`
 - Example
+
 ```json
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
   {"jsonrpc":"2.0","id":1,"method":"kaia_getStakingInfo","params":[
@@ -141,6 +160,15 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   "id": 1,
   "result": {
     "blockNum": 165145974,
+    "clStakingInfos": [{
+      "clNodeId": "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
+      "clPoolAddr": "0x106b8d39ec9d669e8f8a2aef5f06b3fcdaf074fb",
+      "clStakingAmount": 5000000
+    }, {
+      "clNodeId": "0x571e53df607be97431a5bbefca1dffe5aef56f4d",
+      "clPoolAddr": "0xaf7fb5d4bfe3126d7024eccc5ab18e887eff7979",
+      "clStakingAmount": 10000000
+    }],
     "councilNodeAddrs": [
       "0x99fb17d324fa0e07f23b49d09028ac0919414db6",
       "0x571e53df607be97431a5bbefca1dffe5aef56f4d",

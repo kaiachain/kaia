@@ -495,36 +495,6 @@ var (
 		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
 		Category: "DATABASE",
 	}
-	TxPruningFlag = &cli.BoolFlag{
-		Name:     "db.tx-pruning",
-		Usage:    "Enables tx pruning",
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING", "KAIA_DB_TX_PRUNING"},
-		Category: "DATABASE",
-	}
-	TxPruningRetentionFlag = &cli.Uint64Flag{
-		Name:     "db.tx-pruning-retention",
-		Usage:    "Number of blocks from the latest block whose transaction data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_TX_PRUNING_RETENTION", "KAIA_DB_TX_PRUNING_RETENTION"},
-		Category: "DATABASE",
-	}
-	ReceiptPruningFlag = &cli.BoolFlag{
-		Name:     "db.receipt-pruning",
-		Usage:    "Enables receipt pruning",
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING", "KAIA_DB_RECEIPT_PRUNING"},
-		Category: "DATABASE",
-	}
-	ReceiptPruningRetentionFlag = &cli.Uint64Flag{
-		Name:     "db.receipt-pruning-retention",
-		Usage:    "Number of blocks from the latest block whose receipt data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
-		Aliases:  []string{},
-		EnvVars:  []string{"KLAYTN_DB_RECEIPT_PRUNING_RETENTION", "KAIA_DB_RECEIPT_PRUNING_RETENTION"},
-		Category: "DATABASE",
-	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",
@@ -582,7 +552,7 @@ var (
 	LivePruningRetentionFlag = &cli.Uint64Flag{
 		Name:     "state.live-pruning-retention",
 		Usage:    "Number of blocks from the latest block whose state data should not be pruned",
-		Value:    blockchain.DefaultPruningRetention,
+		Value:    blockchain.DefaultLivePruningRetention,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
@@ -1220,6 +1190,14 @@ var (
 		Usage:    "Disables the peer discovery mechanism (manual peer addition)",
 		Aliases:  []string{"p2p.no-discover"},
 		EnvVars:  []string{"KLAYTN_NODISCOVER", "KAIA_NODISCOVER"},
+		Category: "NETWORK",
+	}
+	DiscoverTypesFlag = &cli.StringFlag{
+		Name:     "discover-types",
+		Usage:    "Comma-separated node type to enable discovery (auto, cn, pn, en)",
+		Value:    "auto",
+		Aliases:  []string{"p2p.discover-types"},
+		EnvVars:  []string{"KLAYTN_DISCOVER_TYPES", "KAIA_DISCOVER_TYPES"},
 		Category: "NETWORK",
 	}
 	NetrestrictFlag = &cli.StringFlag{
@@ -2016,6 +1994,13 @@ var (
 			"Should set the same value within the network",
 		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
 		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT", "KAIA_OPCODE_COMPUTATION_COST_LIMIT"},
+		Category: "KAIA",
+	}
+	UseConsoleLogFlag = &cli.BoolFlag{
+		Name:     "use-console-log",
+		Usage:    "",
+		Value:    false,
+		EnvVars:  []string{"KLAYTN_USE_CONSOLE_LOG", "KAIA_USE_CONSOLE_LOG"},
 		Category: "KAIA",
 	}
 

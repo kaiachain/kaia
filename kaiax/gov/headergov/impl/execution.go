@@ -44,15 +44,14 @@ func (h *headerGovModule) PostInsertBlock(b *types.Block) error {
 func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) error {
 	// if governance vote (i.e., not validator vote), add to vote
 	if _, ok := gov.Params[vote.Name()]; ok {
-		h.AddVote(calcEpochIdx(blockNum, h.epoch), blockNum, vote)
+		h.AddVote(blockNum, vote)
 		InsertVoteDataBlockNum(h.ChainKv, blockNum)
 	}
 
 	// if the vote was mine, remove it.
 	for i, myvote := range h.myVotes {
-		if bytes.Equal(myvote.Voter().Bytes(), vote.Voter().Bytes()) &&
-			myvote.Name() == vote.Name() &&
-			reflect.DeepEqual(myvote.Value(), vote.Value()) {
+		if isEqualVotes(myvote, vote) {
+			logger.Debug("Removing myvote", "vote", myvote)
 			h.PopMyVotes(i)
 			break
 		}
@@ -77,12 +76,20 @@ func (h *headerGovModule) AddGov(blockNum uint64, gov headergov.GovData) {
 	h.history = headergov.GovsToHistory(h.governances)
 }
 
-func (h *headerGovModule) AddVote(epochIdx, blockNum uint64, vote headergov.VoteData) {
+func (h *headerGovModule) AddVote(blockNum uint64, vote headergov.VoteData) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
+	epochIdx := calcEpochIdx(blockNum, h.epoch)
 
 	if _, ok := h.groupedVotes[epochIdx]; !ok {
 		h.groupedVotes[epochIdx] = make(headergov.VotesInEpoch)
 	}
 	h.groupedVotes[epochIdx][blockNum] = vote
+}
+
+func isEqualVotes(a headergov.VoteData, b headergov.VoteData) bool {
+	return bytes.Equal(a.Voter().Bytes(), b.Voter().Bytes()) &&
+		a.Name() == b.Name() &&
+		reflect.DeepEqual(a.Value(), b.Value())
 }

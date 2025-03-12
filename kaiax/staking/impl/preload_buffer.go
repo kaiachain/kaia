@@ -119,5 +119,6 @@ func (s *StakingModule) PreloadFromState(refId uint64, header *types.Header, sta
 		}
 	}
 	ss.preloaded[root].refs[refId] = struct{}{}
+	s.stakingInfoCache.Add(header.Number.Uint64(), info)
 	return nil
 }

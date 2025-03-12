@@ -35,9 +35,14 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-// emptyCodeHash is used by create to ensure deployment is disallowed to already
-// deployed contract addresses (relevant after the account abstraction).
-var emptyCodeHash = crypto.Keccak256Hash(nil)
+var (
+	// emptyCodeHash is used by create to ensure deployment is disallowed to already
+	// deployed contract addresses (relevant after the account abstraction).
+	emptyCodeHash = crypto.Keccak256Hash(nil)
+
+	// consoleLog is a precompiled contract used for debugging purposes.
+	consoleLogContractAddress = common.HexToAddress("0x000000000000000000636F6E736F6C652E6C6F67")
+)
 
 const (
 	CancelByCtxDone = 1 << iota
@@ -256,7 +261,8 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	)
 
 	// Filter out invalid precompiled address calls, and create a precompiled contract object if it is not exist.
-	if IsPrecompiledContractAddress(addr, evm.chainRules) {
+	// Because IsPrecompiledContractAddress checks for 0..0x400 and ConsoleLog address is outside of the range, we add one more condition if UseConsoleLog.
+	if common.IsPrecompiledContractAddress(addr, evm.chainRules) || (addr == consoleLogContractAddress && evm.Config.UseConsoleLog) {
 		precompiles := evm.GetPrecompiledContractMap(caller.Address())
 		if precompiles[addr] == nil || value.Sign() != 0 {
 			// Return an error if an enabled precompiled address is called or a value is transferred to a precompiled address.
@@ -284,7 +290,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 		// Initialise a new contract and set the code that is to be used by the EVM.
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, to, value, gas)
-		contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+		contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 		ret, err = run(evm, contract, input)
 		gas = contract.Gas
 	}
@@ -346,7 +352,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, value, gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -396,7 +402,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 
 	// Initialise a new contract and make initialise the delegate values
 	contract := NewContract(caller, to, nil, gas).AsDelegate()
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	ret, err = run(evm, contract, input)
 	if err != nil {
@@ -449,7 +455,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
 	contract := NewContract(caller, to, new(big.Int), gas)
-	contract.SetCallCode(&addr, evm.StateDB.GetCodeHash(addr), evm.StateDB.GetCode(addr))
+	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
@@ -511,8 +517,13 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 		evm.StateDB.AddAddressToAccessList(address)
 	}
 
-	// Ensure there's no existing contract already at the designated address
+	// Ensure there's no existing contract already at the designated address.
+	// Account is regarded as existent if any of these three conditions is met:
+	// - the nonce is nonzero
+	// - the code is non-empty
+	// - the storage is non-empty
 	contractHash := evm.StateDB.GetCodeHash(address)
+	storageRoot := evm.StateDB.GetStorageRoot(address)
 
 	// The early Kaia design tried to support the account creation with a user selected address,
 	// so the account overwriting was restricted.
@@ -520,14 +531,16 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	// Kaia enables SCA overwriting over EOA like Ethereum after Shanghai compatible hardfork.
 	// NOTE: The following code should be re-considered when Kaia enables TxTypeAccountCreation
 	if evm.chainRules.IsShanghai {
-		if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		if evm.StateDB.GetNonce(address) != 0 ||
+			(contractHash != (common.Hash{}) && contractHash != types.EmptyCodeHash) || // non-empty code
+			(storageRoot != (common.Hash{}) && storageRoot != types.EmptyRootHash) { // non-empty storage
 			return nil, common.Address{}, 0, ErrContractAddressCollision
 		}
 	} else if evm.StateDB.Exist(address) {
 		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 
-	if IsPrecompiledContractAddress(address, evm.chainRules) {
+	if common.IsPrecompiledContractAddress(address, evm.chainRules) {
 		return nil, common.Address{}, gas, kerrors.ErrPrecompiledContractAddress
 	}
 
@@ -629,6 +642,15 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 }
 
 func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
+	precompiles := evm.getPrecompiledContractForVersion(addr)
+	// If console.log is enabled, add console.log precompile too.
+	if evm.Config.UseConsoleLog {
+		precompiles[consoleLogContractAddress] = &consoleLog{}
+	}
+	return precompiles
+}
+
+func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common.Address]PrecompiledContract {
 	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
 	// Also, it follows old map's gas price & computation cost.
 
@@ -652,6 +674,35 @@ func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Addres
 	default:
 		return PrecompiledContractsByzantium
 	}
+}
+
+// resolveCode returns the code associated with the provided account. After
+// Prague, it can also resolve code pointed to by a delegation designator.
+func (evm *EVM) resolveCode(addr common.Address) []byte {
+	code := evm.StateDB.GetCode(addr)
+	if !evm.chainRules.IsPrague {
+		return code
+	}
+	if target, ok := types.ParseDelegation(code); ok {
+		// Note we only follow one level of delegation.
+		return evm.StateDB.GetCode(target)
+	}
+	return code
+}
+
+// resolveCodeHash returns the code hash associated with the provided address.
+// After Prague, it can also resolve code hash of the account pointed to by a
+// delegation designator. Although this is not accessible in the EVM it is used
+// internally to associate jumpdest analysis to code.
+func (evm *EVM) resolveCodeHash(addr common.Address) common.Hash {
+	if evm.chainRules.IsPrague {
+		code := evm.StateDB.GetCode(addr)
+		if target, ok := types.ParseDelegation(code); ok {
+			// Note we only follow one level of delegation.
+			return evm.StateDB.GetCodeHash(target)
+		}
+	}
+	return evm.StateDB.GetCodeHash(addr)
 }
 
 // ChainConfig returns the environment's chain configuration

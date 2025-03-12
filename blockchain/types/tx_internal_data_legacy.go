@@ -236,7 +236,7 @@ func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool,
 }
 
 func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, nil, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
@@ -361,7 +361,7 @@ func (t *TxInternalDataLegacy) String() string {
 
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient) {
+		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
 	}

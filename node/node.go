@@ -195,6 +195,12 @@ func (n *Node) Start() error {
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
+	if len(n.serverConfig.BootstrapNodes) == 0 && len(n.serverConfig.StaticNodes) == 0 && len(n.serverConfig.TrustedNodes) == 0 {
+		// Still there are possibilities such as (1) NodeDB has some content (2) Other node connecting to this node,
+		// so we cannot definitely say this node will be isolated. But having none of them could indicate a configuration mistake
+		// especially for mainnet or kairos nodes where there should be some bootnode.
+		logger.Warn("no p2p bootnodes, static or trusted nodes are configured; This node may fail to connect to any peers")
+	}
 
 	p2pServer := p2p.NewServer(n.serverConfig)
 	n.logger.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)

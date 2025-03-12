@@ -36,13 +36,14 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/istanbul/validator"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -55,41 +56,34 @@ const (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 type BackendOpts struct {
-	IstanbulConfig    *istanbul.Config // Istanbul consensus core config
-	Rewardbase        common.Address
-	PrivateKey        *ecdsa.PrivateKey // Consensus message signing key
-	BlsSecretKey      bls.SecretKey     // Randao signing key. Required since Randao fork
-	DB                database.DBManager
-	Governance        governance.Engine // Governance parameter provider
-	BlsPubkeyProvider BlsPubkeyProvider // If not nil, override the default BLS public key provider
-	NodeType          common.ConnType
+	IstanbulConfig *istanbul.Config // Istanbul consensus core config
+	Rewardbase     common.Address
+	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
+	BlsSecretKey   bls.SecretKey     // Randao signing key. Required since Randao fork
+	DB             database.DBManager
+	GovModule      gov.GovModule
+	NodeType       common.ConnType
 }
 
 func New(opts *BackendOpts) consensus.Istanbul {
-	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
-		config:            opts.IstanbulConfig,
-		istanbulEventMux:  new(event.TypeMux),
-		privateKey:        opts.PrivateKey,
-		address:           crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
-		blsSecretKey:      opts.BlsSecretKey,
-		logger:            logger.NewWith(),
-		db:                opts.DB,
-		commitCh:          make(chan *types.Result, 1),
-		recents:           recents,
-		candidates:        make(map[common.Address]bool),
-		coreStarted:       false,
-		recentMessages:    recentMessages,
-		knownMessages:     knownMessages,
-		rewardbase:        opts.Rewardbase,
-		governance:        opts.Governance,
-		blsPubkeyProvider: opts.BlsPubkeyProvider,
-		nodetype:          opts.NodeType,
-	}
-	if backend.blsPubkeyProvider == nil {
-		backend.blsPubkeyProvider = newChainBlsPubkeyProvider()
+		config:           opts.IstanbulConfig,
+		istanbulEventMux: new(event.TypeMux),
+		privateKey:       opts.PrivateKey,
+		address:          crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
+		blsSecretKey:     opts.BlsSecretKey,
+		logger:           logger.NewWith(),
+		db:               opts.DB,
+		commitCh:         make(chan *types.Result, 1),
+		candidates:       make(map[common.Address]bool),
+		coreStarted:      false,
+		recentMessages:   recentMessages,
+		knownMessages:    knownMessages,
+		rewardbase:       opts.Rewardbase,
+		govModule:        opts.GovModule,
+		nodetype:         opts.NodeType,
 	}
 
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
@@ -110,6 +104,7 @@ type backend struct {
 	db               database.DBManager
 	chain            consensus.ChainReader
 	stakingModule    staking.StakingModule
+	valsetModule     valset.ValsetModule
 	consensusModules []kaiax.ConsensusModule
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
@@ -125,8 +120,6 @@ type backend struct {
 	candidates map[common.Address]bool
 	// Protects the signer fields
 	candidatesLock sync.RWMutex
-	// Snapshots for recent block to speed up reorgs
-	recents *lru.ARCCache
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -138,10 +131,9 @@ type backend struct {
 	currentView atomic.Value //*istanbul.View
 
 	// Reference to the governance.Engine
-	governance governance.Engine
+	govModule gov.GovModule
 
-	// Reference to BlsPubkeyProvider
-	blsPubkeyProvider BlsPubkeyProvider
+	randaoModule randao.RandaoModule
 
 	// Node type
 	nodetype common.ConnType
@@ -166,13 +158,8 @@ func (sb *backend) Address() common.Address {
 	return sb.address
 }
 
-// Validators implements istanbul.Backend.Validators
-func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
-}
-
 // Broadcast implements istanbul.Backend.Broadcast
-func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Broadcast(prevHash common.Hash, payload []byte) error {
 	// send to others
 	// TODO Check gossip again in event handle
 	// sb.Gossip(valSet, payload)
@@ -186,7 +173,7 @@ func (sb *backend) Broadcast(prevHash common.Hash, valSet istanbul.ValidatorSet,
 }
 
 // Broadcast implements istanbul.Backend.Gossip
-func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
+func (sb *backend) Gossip(payload []byte) error {
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
 
@@ -220,49 +207,43 @@ func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// checkInSubList checks if the node is in a sublist
-func (sb *backend) checkInSubList(prevHash common.Hash, valSet istanbul.ValidatorSet) bool {
-	return valSet.CheckInSubList(prevHash, sb.currentView.Load().(*istanbul.View), sb.Address())
-}
-
 // getTargetReceivers returns a map of nodes which need to receive a message
-func (sb *backend) getTargetReceivers(prevHash common.Hash, valSet istanbul.ValidatorSet) map[common.Address]bool {
-	targets := make(map[common.Address]bool)
-
+func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
-	view := &istanbul.View{
-		Round:    big.NewInt(cv.Round.Int64()),
-		Sequence: big.NewInt(cv.Sequence.Int64()),
-	}
 
-	proposer := valSet.GetProposer()
+	// calculates a map of target nodes which need to receive a message
+	// committee[currentView].Union(committee[nextView]) => targets
+	targets := make(map[common.Address]bool)
 	for i := 0; i < 2; i++ {
-		committee := valSet.SubListWithProposer(prevHash, proposer.Address(), view)
-		for _, val := range committee {
-			if val.Address() != sb.Address() {
-				targets[val.Address()] = true
+		roundCommittee, err := sb.GetCommitteeStateByRound(cv.Sequence.Uint64(), cv.Round.Uint64()+uint64(i))
+		if err != nil {
+			return nil
+		}
+		// i == 0: get current round's committee. additionally, check if the node is in the current view's committee
+		if i == 0 && !roundCommittee.Committee().Contains(sb.Address()) {
+			return nil
+		}
+		for _, val := range roundCommittee.Committee().List() {
+			if val != sb.Address() {
+				targets[val] = true
 			}
 		}
-		view.Round = view.Round.Add(view.Round, common.Big1)
-		proposer = valSet.Selector(valSet, common.Address{}, view.Round.Uint64())
 	}
 	return targets
 }
 
 // GossipSubPeer implements istanbul.Backend.Gossip
-func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.ValidatorSet, payload []byte) map[common.Address]bool {
-	if !sb.checkInSubList(prevHash, valSet) {
-		return nil
+func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
+	targets := sb.getTargetReceivers()
+	if targets == nil {
+		return
 	}
-
 	hash := istanbul.RLPHash(payload)
 	sb.knownMessages.Add(hash, true)
-
-	targets := sb.getTargetReceivers(prevHash, valSet)
 
 	if sb.broadcaster != nil && len(targets) > 0 {
 		ps := sb.broadcaster.FindCNPeers(targets)
@@ -290,7 +271,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, valSet istanbul.Validator
 			go p.Send(IstanbulMsg, cmsg)
 		}
 	}
-	return targets
+	return
 }
 
 // Commit implements istanbul.Backend.Commit
@@ -392,41 +373,6 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
-// GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
-	}
-	return common.Address{}
-}
-
-// ParentValidators implements istanbul.Backend.GetParentValidators
-func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	if block, ok := proposal.(*types.Block); ok {
-		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
-	}
-
-	// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
-	return validator.NewValidatorSet(nil, nil,
-		istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
-		sb.chain.Config().Istanbul.SubGroupSize,
-		sb.chain)
-}
-
-func (sb *backend) getValidators(number uint64, hash common.Hash) istanbul.ValidatorSet {
-	snap, err := sb.snapshot(sb.chain, number, hash, nil, false)
-	if err != nil {
-		logger.Error("Snapshot not found.", "err", err)
-		// TODO-Kaia-Governance The following return case should not be called. Refactor it to error handling.
-		return validator.NewValidatorSet(nil, nil,
-			istanbul.ProposerPolicy(sb.chain.Config().Istanbul.ProposerPolicy),
-			sb.chain.Config().Istanbul.SubGroupSize,
-			sb.chain)
-	}
-	return snap.ValSet
-}
-
 func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	block := sb.currentBlock()
 
@@ -449,4 +395,70 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
+}
+
+func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
+	council, err := sb.valsetModule.GetCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+
+	demoted, err := sb.valsetModule.GetDemotedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+
+	return istanbul.NewBlockValSet(council, demoted), nil
+}
+
+func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
+	header := sb.chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, errUnknownBlock
+	}
+
+	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
+}
+
+func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
+	blockValSet, err := sb.GetValidatorSet(num)
+	if err != nil {
+		return nil, err
+	}
+
+	committee, err := sb.valsetModule.GetCommittee(num, round)
+	if err != nil {
+		return nil, err
+	}
+
+	proposer, err := sb.valsetModule.GetProposer(num, round)
+	if err != nil {
+		return nil, err
+	}
+
+	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
+	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
+}
+
+// GetProposer implements istanbul.Backend.GetProposer
+func (sb *backend) GetProposer(number uint64) common.Address {
+	if h := sb.chain.GetHeaderByNumber(number); h != nil {
+		a, _ := sb.Author(h)
+		return a
+	}
+	return common.Address{}
+}
+
+func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
+	sInfo, err := sb.stakingModule.GetStakingInfo(num)
+	if err != nil {
+		return common.Address{}
+	}
+
+	for idx, id := range sInfo.NodeIds {
+		if id == nodeId {
+			return sInfo.RewardAddrs[idx]
+		}
+	}
+	return common.Address{}
 }

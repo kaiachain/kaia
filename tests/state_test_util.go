@@ -31,9 +31,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -114,6 +116,7 @@ type stTransaction struct {
 	GasLimit             []uint64            `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           []byte              `json:"secretKey"`
+	AuthorizationList    []*stAuthorization  `json:"authorizationList"`
 }
 
 type stTransactionMarshaling struct {
@@ -123,6 +126,28 @@ type stTransactionMarshaling struct {
 	Nonce                math.HexOrDecimal64
 	GasLimit             []math.HexOrDecimal64
 	PrivateKey           hexutil.Bytes
+}
+
+//go:generate gencodec -type stAuthorization -field-override stAuthorizationMarshaling -out gen_stauthorization.go
+
+// Authorization is an authorization from an account to deploy code at it's
+// address.
+type stAuthorization struct {
+	ChainID *big.Int       `gencodec:"required" json:"chainId"`
+	Address common.Address `gencodec:"required" json:"address"`
+	Nonce   uint64         `gencodec:"required" json:"nonce"`
+	V       uint8          `gencodec:"required" json:"v"`
+	R       *big.Int       `gencodec:"required" json:"r"`
+	S       *big.Int       `gencodec:"required" json:"s"`
+}
+
+// field type overrides for gencodec
+type stAuthorizationMarshaling struct {
+	ChainID *math.HexOrDecimal256
+	Nonce   math.HexOrDecimal64
+	V       math.HexOrDecimal64
+	R       *math.HexOrDecimal256
+	S       *math.HexOrDecimal256
 }
 
 // getVMConfig takes a fork definition and returns a chain config.
@@ -232,10 +257,10 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	blockchain.InitDeriveSha(config)
 	block := t.genesis(config).ToBlock(common.Hash{}, nil)
 	memDBManager := database.NewMemoryDBManager()
-	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState)
+	rules := config.Rules(block.Number())
+	st = MakePreState(memDBManager, t.json.Pre, isTestExecutionSpecState, rules)
 
 	post := t.json.Post[subtest.Fork][subtest.Index]
-	rules := config.Rules(block.Number())
 	msg, err := t.json.Tx.toMessage(post, rules, isTestExecutionSpecState)
 	if err != nil {
 		return st, common.Hash{}, err
@@ -282,7 +307,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	}
 
 	if err == nil && isTestExecutionSpecState {
-		useEthMiningReward(st, evm, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice)
+		useEthMiningReward(st, evm.Context.Coinbase, &t.json.Tx, t.json.Env.BaseFee, result.UsedGas, txContext.GasPrice, rules)
 	}
 
 	root, _ = st.Commit(true)
@@ -296,7 +321,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	root = st.IntermediateRoot(true)
 
 	if err == nil && isTestExecutionSpecState {
-		root, err = useEthStateRoot(st)
+		root, err = useEthState(st)
 		if err != nil {
 			return st, common.Hash{}, err
 		}
@@ -308,15 +333,23 @@ func (t *StateTest) gasLimit(subtest StateSubtest) uint64 {
 	return t.json.Tx.GasLimit[t.json.Post[subtest.Fork][subtest.Index].Indexes.Gas]
 }
 
-func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool) *state.StateDB {
+func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTestExecutionSpecState bool, rules params.Rules) *state.StateDB {
 	sdb := state.NewDatabase(db)
 	statedb, _ := state.New(common.Hash{}, sdb, nil, nil)
 	for addr, a := range accounts {
-		if len(a.Code) != 0 {
-			if isTestExecutionSpecState {
-				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+		if isTestExecutionSpecState {
+			if _, ok := types.ParseDelegation(a.Code); ok && rules.IsPrague {
+				statedb.SetCodeToEOA(addr, a.Code, rules)
+			} else if len(a.Code) == 0 && len(a.Storage) != 0 && rules.IsPrague {
+				statedb.CreateEOA(addr, false, accountkey.NewAccountKeyLegacy())
+			} else if len(a.Code) != 0 {
+				statedb.CreateSmartContractAccount(addr, params.CodeFormatEVM, rules)
+				statedb.SetCode(addr, a.Code)
 			}
-			statedb.SetCode(addr, a.Code)
+		} else {
+			if len(a.Code) != 0 {
+				statedb.SetCode(addr, a.Code)
+			}
 		}
 		for k, v := range a.Storage {
 			statedb.SetState(addr, k, v)
@@ -352,7 +385,13 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	}
 	// Parse recipient if present.
 	var to *common.Address
-	if tx.To != "" {
+	if tx.To == "" {
+		if tx.AuthorizationList != nil {
+			// NOTE: Kaia's `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
+			// so specify an emptyAddress to generate a test message and test it.
+			to = &common.Address{}
+		}
+	} else {
 		to = new(common.Address)
 		if err := to.UnmarshalText([]byte(tx.To)); err != nil {
 			return nil, fmt.Errorf("invalid to address: %v", err)
@@ -391,17 +430,33 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		accessList = *tx.AccessLists[ps.Indexes.Data]
 	}
 
+	var authorizationList []types.SetCodeAuthorization
+	if tx.AuthorizationList != nil {
+		authorizationList = make([]types.SetCodeAuthorization, 0)
+		for _, auth := range tx.AuthorizationList {
+			authorizationList = append(authorizationList, types.SetCodeAuthorization{
+				ChainID: *uint256.MustFromBig(auth.ChainID),
+				Address: auth.Address,
+				Nonce:   auth.Nonce,
+				V:       auth.V,
+				R:       *uint256.MustFromBig(auth.R),
+				S:       *uint256.MustFromBig(auth.S),
+			})
+		}
+	}
+
 	var intrinsicGas uint64
 	if isTestExecutionSpecState {
-		intrinsicGas, err = useEthIntrinsicGas(data, accessList, to == nil, r)
+		intrinsicGas, err = useEthIntrinsicGas(data, accessList, authorizationList, to == nil, r)
 	} else {
-		intrinsicGas, err = types.IntrinsicGas(data, nil, to == nil, r)
+		intrinsicGas, err = types.IntrinsicGas(data, nil, nil, to == nil, r)
 	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, data, true, intrinsicGas, accessList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, nil, authorizationList)
 	return msg, nil
 }
 
@@ -413,10 +468,23 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 func useEthGasPrice(r params.Rules, json *stJSON) (*big.Int, error) {
+	if json.Tx.MaxFeePerGas == nil {
+		json.Tx.MaxFeePerGas = json.Tx.GasPrice
+	}
+	if json.Tx.MaxFeePerGas == nil {
+		json.Tx.MaxFeePerGas = new(big.Int)
+	}
+	if json.Tx.MaxPriorityFeePerGas == nil {
+		json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
+	}
+	return calculateEthGasPrice(r, json.Tx.GasPrice, json.Env.BaseFee, json.Tx.MaxFeePerGas, json.Tx.MaxPriorityFeePerGas)
+}
+
+func calculateEthGasPrice(r params.Rules, envGasPrice, envBaseFee, envMaxFeePerGas, envMaxPriorityFeePerGas *big.Int) (*big.Int, error) {
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
 	var baseFee *big.Int
 	if r.IsLondon {
-		baseFee = json.Env.BaseFee
+		baseFee = envBaseFee
 		if baseFee == nil {
 			// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
 			// parent - 2 : 0xa as the basefee for 'this' context.
@@ -425,18 +493,9 @@ func useEthGasPrice(r params.Rules, json *stJSON) (*big.Int, error) {
 	}
 
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L402-L416
-	gasPrice := json.Tx.GasPrice
+	gasPrice := envGasPrice
 	if baseFee != nil {
-		if json.Tx.MaxFeePerGas == nil {
-			json.Tx.MaxFeePerGas = gasPrice
-		}
-		if json.Tx.MaxFeePerGas == nil {
-			json.Tx.MaxFeePerGas = new(big.Int)
-		}
-		if json.Tx.MaxPriorityFeePerGas == nil {
-			json.Tx.MaxPriorityFeePerGas = json.Tx.MaxFeePerGas
-		}
-		gasPrice = math.BigMin(new(big.Int).Add(json.Tx.MaxPriorityFeePerGas, baseFee), json.Tx.MaxFeePerGas)
+		gasPrice = math.BigMin(new(big.Int).Add(envMaxPriorityFeePerGas, baseFee), envMaxFeePerGas)
 	}
 
 	if gasPrice == nil {
@@ -453,15 +512,19 @@ func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	}
 }
 
-func useEthIntrinsicGas(data []byte, accessList types.AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func useEthIntrinsicGas(data []byte, accessList types.AccessList, authorizationList []types.SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, error) {
 	if r.IsIstanbul {
 		r.IsPrague = true
 	}
-	return types.IntrinsicGas(data, accessList, contractCreation, r)
+	return types.IntrinsicGas(data, accessList, authorizationList, contractCreation, r)
 }
 
-func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int) {
-	rules := evm.ChainConfig().Rules(evm.Context.BlockNumber)
+func useEthMiningReward(statedb *state.StateDB, coinbase common.Address, tx *stTransaction, envBaseFee *big.Int, usedGas uint64, gasPrice *big.Int, rules params.Rules) {
+	fee := calculateEthMiningReward(gasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, envBaseFee, usedGas, rules)
+	statedb.AddBalance(coinbase, fee)
+}
+
+func calculateEthMiningReward(gasPrice, maxFeePerGas, maxPriorityFeePerGas, envBaseFee *big.Int, usedGas uint64, rules params.Rules) *big.Int {
 	effectiveTip := new(big.Int).Set(gasPrice)
 
 	// https://github.com/ethereum/go-ethereum/blob/v1.14.11/tests/state_test_util.go#L241-L249
@@ -473,15 +536,22 @@ func useEthMiningReward(statedb *state.StateDB, evm *vm.EVM, tx *stTransaction, 
 			// parent - 2 : 0xa as the basefee for 'this' context.
 			baseFee = big.NewInt(0x0a)
 		}
-		effectiveTip = math.BigMin(tx.MaxPriorityFeePerGas, new(big.Int).Sub(tx.MaxFeePerGas, baseFee))
+		effectiveTip = math.BigMin(maxPriorityFeePerGas, new(big.Int).Sub(maxFeePerGas, baseFee))
 	}
 
 	fee := new(big.Int).SetUint64(usedGas)
-	fee.Mul(fee, effectiveTip)
-	statedb.AddBalance(evm.Context.Coinbase, fee)
+	return fee.Mul(fee, effectiveTip)
 }
 
-func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
+func useEthGenesisState(statedb *state.StateDB) (common.Hash, error) {
+	return useEthStateRootWithOption(statedb, false)
+}
+
+func useEthState(statedb *state.StateDB) (common.Hash, error) {
+	return useEthStateRootWithOption(statedb, true)
+}
+
+func useEthStateRootWithOption(statedb *state.StateDB, deleteEmptyObjects bool) (common.Hash, error) {
 	memDb := database.NewMemoryDBManager()
 	db := state.NewDatabase(memDb)
 	newState, _ := state.New(common.Hash{}, db, nil, nil)
@@ -500,5 +570,5 @@ func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
 		)
 	}
 
-	return newState.IntermediateRoot(true), nil
+	return newState.IntermediateRoot(deleteEmptyObjects), nil
 }

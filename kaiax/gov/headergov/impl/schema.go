@@ -12,7 +12,7 @@ import (
 var (
 	voteDataBlockNumsKey         = []byte("governanceVoteDataBlockNums")
 	govDataBlockNumsKey          = []byte("governanceDataBlockNums")
-	lowestVoteScannedBlockNumKey = []byte("governanceLowestVoteScannedBlockNum") // grows downwards
+	lowestVoteScannedEpochIdxKey = []byte("governanceLowestVoteScannedEpochIdx") // grows downwards
 
 	legacyIdxHistoryKey = []byte("governanceIdxHistory")
 	mu                  = &sync.RWMutex{}
@@ -20,8 +20,8 @@ var (
 
 type StoredUint64Array []uint64
 
-// readStoredUint64ArrayNoLock should be called only when the caller holds the lock.
-func readStoredUint64ArrayNoLock(db database.Database, key []byte) StoredUint64Array {
+// readStoredUint64Array should be called only when the caller holds the lock.
+func readStoredUint64Array(db database.Database, key []byte) StoredUint64Array {
 	b, err := db.Get(key)
 	if err != nil || len(b) == 0 {
 		return nil
@@ -35,8 +35,8 @@ func readStoredUint64ArrayNoLock(db database.Database, key []byte) StoredUint64A
 	return ret
 }
 
-// writeStoredUint64ArrayNoLock should be called only when the caller holds the lock.
-func writeStoredUint64ArrayNoLock(db database.Database, key []byte, data StoredUint64Array) {
+// writeStoredUint64Array should be called only when the caller holds the lock.
+func writeStoredUint64Array(db database.Database, key []byte, data StoredUint64Array) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		logger.Error("Failed to marshal voteDataBlocks", "err", err)
@@ -46,20 +46,6 @@ func writeStoredUint64ArrayNoLock(db database.Database, key []byte, data StoredU
 	if err := db.Put(key, b); err != nil {
 		logger.Crit("Failed to write voteDataBlocks", "err", err)
 	}
-}
-
-func readStoredUint64Array(db database.Database, key []byte) StoredUint64Array {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	return readStoredUint64ArrayNoLock(db, key)
-}
-
-func writeStoredUint64Array(db database.Database, key []byte, data StoredUint64Array) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	writeStoredUint64ArrayNoLock(db, key, data)
 }
 
 func ReadVoteDataBlockNums(db database.Database) StoredUint64Array {
@@ -74,7 +60,7 @@ func InsertVoteDataBlockNum(db database.Database, blockNum uint64) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	blockNums := readStoredUint64ArrayNoLock(db, voteDataBlockNumsKey)
+	blockNums := readStoredUint64Array(db, voteDataBlockNumsKey)
 	if blockNums == nil {
 		blockNums = StoredUint64Array{}
 	}
@@ -89,7 +75,7 @@ func InsertVoteDataBlockNum(db database.Database, blockNum uint64) {
 	blockNums = append(blockNums, blockNum)
 	slices.Sort(blockNums)
 
-	writeStoredUint64ArrayNoLock(db, voteDataBlockNumsKey, blockNums)
+	writeStoredUint64Array(db, voteDataBlockNumsKey, blockNums)
 }
 
 func ReadGovDataBlockNums(db database.Database) StoredUint64Array {
@@ -100,17 +86,14 @@ func WriteGovDataBlockNums(db database.Database, govDataBlockNums StoredUint64Ar
 	writeStoredUint64Array(db, govDataBlockNumsKey, govDataBlockNums)
 }
 
-func ReadLowestVoteScannedBlockNum(db database.Database) *uint64 {
-	mu.RLock()
-	defer mu.RUnlock()
-
-	b, err := db.Get(lowestVoteScannedBlockNumKey)
+func ReadLowestVoteScannedEpochIdx(db database.Database) *uint64 {
+	b, err := db.Get(lowestVoteScannedEpochIdxKey)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
 	if len(b) != 8 {
-		logger.Error("Invalid lowestVoteScannedBlockNum data length", "length", len(b))
+		logger.Error("Invalid lowestVoteScannedEpochIdx data length", "length", len(b))
 		return nil
 	}
 
@@ -118,13 +101,10 @@ func ReadLowestVoteScannedBlockNum(db database.Database) *uint64 {
 	return &ret
 }
 
-func WriteLowestVoteScannedBlockNum(db database.Database, lowestVoteScannedBlockNum uint64) {
-	mu.Lock()
-	defer mu.Unlock()
-
+func WriteLowestVoteScannedEpochIdx(db database.Database, lowestVoteScannedEpochIdx uint64) {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, lowestVoteScannedBlockNum)
-	db.Put(lowestVoteScannedBlockNumKey, b)
+	binary.BigEndian.PutUint64(b, lowestVoteScannedEpochIdx)
+	db.Put(lowestVoteScannedEpochIdxKey, b)
 }
 
 func ReadLegacyIdxHistory(db database.Database) StoredUint64Array {

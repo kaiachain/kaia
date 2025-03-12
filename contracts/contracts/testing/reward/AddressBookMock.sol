@@ -388,11 +388,17 @@ contract AddressBookMockOneCN {
     }
 }
 
+contract MockValues {
+    address public constant nodeId0 = 0x0000000000000000000000000000000000000F00;
+    address public constant nodeId1 = 0x0000000000000000000000000000000000000F03;
+    address public constant nodeId2 = 0x0000000000000000000000000000000000000F06;
+}
+
 /**
  * @title AddressBookMockTwoCN
  */
 
-contract AddressBookMockTwoCN {
+contract AddressBookMockTwoCN is MockValues {
 
     function getAllAddress() external view returns (uint8[] memory typeList, address[] memory addressList) {
         typeList = new uint8[](8);
@@ -407,10 +413,10 @@ contract AddressBookMockTwoCN {
         typeList[6] = 3; // POC address
         typeList[7] = 4; // KIR address
 
-        addressList[0] = 0x0000000000000000000000000000000000000F00;
+        addressList[0] = nodeId0;
         addressList[1] = 0x0000000000000000000000000000000000000F01;
         addressList[2] = 0x0000000000000000000000000000000000000f02;
-        addressList[3] = 0x0000000000000000000000000000000000000F03;
+        addressList[3] = nodeId1;
         addressList[4] = 0x0000000000000000000000000000000000000f04;
         addressList[5] = 0x0000000000000000000000000000000000000f05;
         addressList[6] = 0x0000000000000000000000000000000000000F06;

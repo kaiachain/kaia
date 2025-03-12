@@ -4,7 +4,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-//go:generate mockgen -destination=mock/govmodule_mock.go github.com/kaiachain/kaia/kaiax/gov GovModule
+//go:generate mockgen -destination=./mock/govmodule_mock.go -package=mock_gov github.com/kaiachain/kaia/kaiax/gov GovModule
 type GovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
@@ -12,5 +12,5 @@ type GovModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
-	EffectiveParamSet(blockNum uint64) ParamSet
+	GetParamSet(blockNum uint64) ParamSet
 }

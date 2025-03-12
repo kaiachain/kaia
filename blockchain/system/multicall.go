@@ -63,7 +63,7 @@ func (caller *ContractCallerForMultiCall) CallContract(ctx context.Context, call
 	}
 
 	msg := types.NewMessage(call.From, call.To, caller.state.GetNonce(call.From),
-		call.Value, gasLimit, gasPrice, call.Data, false, intrinsicGas, nil)
+		call.Value, gasLimit, gasPrice, nil, nil, call.Data, false, intrinsicGas, nil, nil, nil)
 
 	blockContext := blockchain.NewEVMBlockContext(caller.header, caller.chain, nil)
 	txContext := blockchain.NewEVMTxContext(msg, caller.header, caller.chain.Config())

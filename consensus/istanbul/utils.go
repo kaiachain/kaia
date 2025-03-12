@@ -50,19 +50,3 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
-
-func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (common.Address, error) {
-	// 1. Get signature address
-	signer, err := GetSignatureAddress(data, sig)
-	if err != nil {
-		logger.Error("Failed to get signer address", "err", err)
-		return common.Address{}, err
-	}
-
-	// 2. Check validator
-	if _, val := valSet.GetByAddress(signer); val != nil {
-		return val.Address(), nil
-	}
-
-	return common.Address{}, ErrUnauthorizedAddress
-}

@@ -26,43 +26,48 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFeeHistory(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	cases := []struct {
-		maxHeader, maxBlock int
-		count               int
+		pending             bool
+		maxHeader, maxBlock uint64
+		count               uint64
 		last                rpc.BlockNumber
 		percent             []float64
 		expFirst            uint64
 		expCount            int
 		expErr              error
 	}{
-		{1000, 1000, 10, 30, nil, 21, 10, nil},
-		{1000, 1000, 10, 30, []float64{0, 10}, 21, 10, nil},
-		{1000, 1000, 10, 30, []float64{20, 10}, 0, 0, fmt.Errorf("%w: #%d:%f > #%d:%f", errInvalidPercentile, 0, 20.0000, 1, 10.0000)},
-		{1000, 1000, 1000000000, 30, nil, 0, 31, nil},
-		{1000, 1000, 1000000000, rpc.LatestBlockNumber, nil, 0, 33, nil},
-		{1000, 1000, 10, 40, nil, 0, 0, fmt.Errorf("%w: requested %d, head %d", errRequestBeyondHead, 40, 32)},
-		{20, 2, 100, rpc.LatestBlockNumber, nil, 13, 20, nil},
-		{20, 2, 100, rpc.LatestBlockNumber, []float64{0, 10}, 31, 2, nil},
-		{20, 2, 100, 32, []float64{0, 10}, 31, 2, nil},
-		{1000, 1000, 1, rpc.PendingBlockNumber, nil, 0, 0, nil},
-		{1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 1, nil},
+		{false, 1000, 1000, 10, 30, nil, 21, 10, nil},
+		{false, 1000, 1000, 10, 30, []float64{0, 10}, 21, 10, nil},
+		{false, 1000, 1000, 10, 30, []float64{20, 10}, 0, 0, fmt.Errorf("%w: #%d:%f > #%d:%f", errInvalidPercentile, 0, 20.0000, 1, 10.0000)},
+		{false, 1000, 1000, 1000000000, 30, nil, 0, 31, nil},
+		{false, 1000, 1000, 1000000000, rpc.LatestBlockNumber, nil, 0, 33, nil},
+		{false, 1000, 1000, 10, 40, nil, 0, 0, fmt.Errorf("%w: requested %d, head %d", errRequestBeyondHead, 40, 32)},
+		{true, 1000, 1000, 10, 40, nil, 0, 0, fmt.Errorf("%w: requested %d, head %d", errRequestBeyondHead, 40, 32)},
+		{false, 20, 2, 100, rpc.LatestBlockNumber, nil, 13, 20, nil},
+		{false, 20, 2, 100, rpc.LatestBlockNumber, []float64{0, 10}, 31, 2, nil},
+		{false, 20, 2, 100, 32, []float64{0, 10}, 31, 2, nil},
+		{false, 1000, 1000, 1, rpc.PendingBlockNumber, nil, 0, 0, nil},
+		{false, 1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 1, nil},
+		{true, 1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 2, nil},
+		{true, 1000, 1000, 2, rpc.PendingBlockNumber, []float64{0, 10}, 32, 2, nil},
 	}
 	magmaBlock, kaiaBlock := int64(16), int64(20)
-	backend, gov := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock))
-	defer backend.teardown()
 	for i, c := range cases {
 		config := Config{
 			MaxHeaderHistory: c.maxHeader,
 			MaxBlockHistory:  c.maxBlock,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		oracle := NewOracle(backend, config, nil, gov)
+		backend, govModule := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), c.pending)
+		oracle := NewOracle(backend, config, nil, govModule)
 
 		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
 
@@ -89,18 +94,19 @@ func TestFeeHistory(t *testing.T) {
 			MaxBlockHistory:  1000,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		oracle = NewOracle(backend, config, nil, gov)
+		backend, govModule = newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), false)
+		oracle             = NewOracle(backend, config, nil, govModule)
 
-		atMagmaGovParams, _    = oracle.gov.EffectiveParams(uint64(magmaBlock))
-		afterMagmaGovParams, _ = oracle.gov.EffectiveParams(uint64(magmaBlock + 1))
+		atMagmaPset    = oracle.govModule.GetParamSet(uint64(magmaBlock))
+		afterMagmaPset = oracle.govModule.GetParamSet(uint64(magmaBlock + 1))
 
 		beforeMagmaExpectedBaseFee = big.NewInt(0)
-		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaGovParams.LowerBoundBaseFee()))
-		afterMagmaExpectedBaseFee  = big.NewInt(int64(afterMagmaGovParams.LowerBoundBaseFee()))
+		atMagmaExpectedBaseFee     = big.NewInt(int64(atMagmaPset.LowerBoundBaseFee))
+		afterMagmaExpectedBaseFee  = big.NewInt(int64(afterMagmaPset.LowerBoundBaseFee))
 
 		beforeMagmaExpectedGasUsedRatio = float64(21000) / float64(params.UpperGasLimit)
-		atMagmaExpectedGasUsedRatio     = float64(21000) / float64(atMagmaGovParams.MaxBlockGasUsedForBaseFee())
-		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(afterMagmaGovParams.MaxBlockGasUsedForBaseFee())
+		atMagmaExpectedGasUsedRatio     = float64(21000) / float64(atMagmaPset.MaxBlockGasUsedForBaseFee)
+		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(afterMagmaPset.MaxBlockGasUsedForBaseFee)
 	)
 
 	first, _, baseFee, ratio, err := oracle.FeeHistory(context.Background(), 32, rpc.LatestBlockNumber, nil)

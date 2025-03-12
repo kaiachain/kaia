@@ -27,8 +27,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -226,7 +226,7 @@ func (t *TxInternalDataValueTransfer) IntrinsicGas(currentBlockNumber uint64) (u
 	// TxInternalDataValueTransfer does not have payload, and it
 	// is not account creation. Hence, its intrinsic gas is determined by
 	// params.TxGas. Refer to types.IntrinsicGas().
-	return params.TxGasValueTransfer, nil
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 }
 
 func (t *TxInternalDataValueTransfer) SerializeForSignToBytes() []byte {
@@ -284,15 +284,15 @@ func (t *TxInternalDataValueTransfer) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient) {
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
 func (t *TxInternalDataValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if stateDB.IsProgramAccount(t.Recipient) {
-		return kerrors.ErrNotForProgramAccount
+	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
+		return err
 	}
 	return nil
 }

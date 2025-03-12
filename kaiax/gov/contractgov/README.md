@@ -1,6 +1,7 @@
 # kaiax/gov/contractgov
 
 This module is responsible for providing the governance parameter set from **contract governance** at a given block number.
+This module is not meant to be used by any modules except for gov.
 
 ## Concepts
 
@@ -9,7 +10,7 @@ Please read [gov module](../README.md) and [header governance](../headergov/READ
 ### Key Concepts
 
 - _GovParam contract_: a contract that stores the governance parameters.
-- _effective parameter set at blockNum_: the governance parameter set that are effective when mining the given block.
+- _parameter set at blockNum_: the governance parameter set that are effective when mining the given block.
 
 ### Contract governance
 
@@ -84,13 +85,13 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- `EffectiveParamSet(num)`: Returns the effective parameter set at the block `num`. Those not specified in the contract are filled with defaults (defined [here](../param.go)).
+- `GetParamSet(num)`: Returns the effective parameter set at the block `num`. Those not specified in the contract are filled with defaults (defined [here](../param.go)).
 
   ```
-  EffectiveParamSet(num) -> ParamSet
+  GetParamSet(num) -> ParamSet
   ```
 
-- `EffectiveParamsPartial(num)`: Returns only the parameters effective by GovParam contract at the block `num`. It is used for assembling parameters in a gov module.
+- `GetPartialParamSet(num)`: Returns only the parameters effective by GovParam contract at the block `num`. It is used for assembling parameters in a gov module.
   ```
-  EffectiveParamsPartial(num) -> PartialParamSet
+  GetPartialParamSet(num) -> PartialParamSet
   ```

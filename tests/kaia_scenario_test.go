@@ -154,7 +154,7 @@ func createRoleBasedAccountWithAccountKeyPublic(prvKeys []string, addr common.Ad
 	}, nil
 }
 
-// createRoleBasedAccountWithAccountKeyWeightedMultisig creates an account having keys that have role with AccountKeyWeightedMultisig.
+// createRoleBasedAccountWithAccountKeyWeightedMultiSig creates an account having keys that have role with AccountKeyWeightedMultisig.
 func createRoleBasedAccountWithAccountKeyWeightedMultiSig(multisigs []TestCreateMultisigAccountParam, addr common.Address) (*TestRoleBasedAccountType, error) {
 	var err error
 

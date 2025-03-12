@@ -23,7 +23,6 @@
 package vm
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
@@ -31,6 +30,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
@@ -157,14 +157,12 @@ var PrecompiledContractsPrague = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{9}):      &blake2F{},
 	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
 	common.BytesToAddress([]byte{0x0b}):   &bls12381G1Add{},
-	common.BytesToAddress([]byte{0x0c}):   &bls12381G1Mul{},
-	common.BytesToAddress([]byte{0x0d}):   &bls12381G1MultiExp{},
-	common.BytesToAddress([]byte{0x0e}):   &bls12381G2Add{},
-	common.BytesToAddress([]byte{0x0f}):   &bls12381G2Mul{},
-	common.BytesToAddress([]byte{0x10}):   &bls12381G2MultiExp{},
-	common.BytesToAddress([]byte{0x11}):   &bls12381Pairing{},
-	common.BytesToAddress([]byte{0x12}):   &bls12381MapG1{},
-	common.BytesToAddress([]byte{0x13}):   &bls12381MapG2{},
+	common.BytesToAddress([]byte{0x0c}):   &bls12381G1MultiExp{},
+	common.BytesToAddress([]byte{0x0d}):   &bls12381G2Add{},
+	common.BytesToAddress([]byte{0x0e}):   &bls12381G2MultiExp{},
+	common.BytesToAddress([]byte{0x0f}):   &bls12381Pairing{},
+	common.BytesToAddress([]byte{0x10}):   &bls12381MapG1{},
+	common.BytesToAddress([]byte{0x11}):   &bls12381MapG2{},
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
@@ -215,31 +213,6 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	} else {
 		return precompiledContractAddrs
 	}
-}
-
-// IsPrecompiledContractAddress returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
-func IsPrecompiledContractAddress(addr common.Address, rules params.Rules) bool {
-	if relaxPrecompileRangeForTest {
-		activePrecompiles := ActivePrecompiles(rules)
-		for _, pre := range activePrecompiles {
-			// skip 0x0a and 0x0b if before Prague
-			if !rules.IsPrague && (bytes.Compare(pre.Bytes(), []byte{10}) == 0 || bytes.Compare(pre.Bytes(), []byte{11}) == 0) {
-				continue
-			}
-			if bytes.Compare(pre.Bytes(), addr.Bytes()) == 0 {
-				return true
-			}
-		}
-		return false
-	}
-	return common.IsPrecompiledContractAddress(addr)
-}
-
-var relaxPrecompileRangeForTest bool
-
-// Only for testing. Make sure to reset (false) after test.
-func RelaxPrecompileRangeForTest(enable bool) {
-	relaxPrecompileRangeForTest = enable
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -932,44 +905,6 @@ func (c *bls12381G1Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return encodePointG1(p0), nil
 }
 
-// bls12381G1Mul implements EIP-2537 G1Mul precompile.
-type bls12381G1Mul struct{}
-
-// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract.
-func (c *bls12381G1Mul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bls12381G1MulGas, params.Bls12381G1MulComputationCost
-}
-
-func (c *bls12381G1Mul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	// Implements EIP-2537 G1Mul precompile.
-	// > G1 multiplication call expects `160` bytes as an input that is interpreted as byte concatenation of encoding of G1 point (`128` bytes) and encoding of a scalar value (`32` bytes).
-	// > Output is an encoding of multiplication operation result - single G1 point (`128` bytes).
-	if len(input) != 160 {
-		return nil, errBLS12381InvalidInputLength
-	}
-	var err error
-	var p0 *bls12381.G1Affine
-
-	// Decode G1 point
-	if p0, err = decodePointG1(input[:128]); err != nil {
-		return nil, err
-	}
-	// 'point is on curve' check already done,
-	// Here we need to apply subgroup checks.
-	if !p0.IsInSubGroup() {
-		return nil, errBLS12381G1PointSubgroup
-	}
-	// Decode scalar value
-	e := new(big.Int).SetBytes(input[128:])
-
-	// Compute r = e * p_0
-	r := new(bls12381.G1Affine)
-	r.ScalarMultiplication(p0, e)
-
-	// Encode the G1 point into 128 bytes
-	return encodePointG1(r), nil
-}
-
 // bls12381G1MultiExp implements EIP-2537 G1MultiExp precompile.
 type bls12381G1MultiExp struct{}
 
@@ -983,10 +918,10 @@ func (c *bls12381G1MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Lookup discount value for G1 point, scalar value pair length
 	var discount uint64
-	if dLen := len(params.Bls12381MultiExpDiscountTable); k < dLen {
-		discount = params.Bls12381MultiExpDiscountTable[k-1]
+	if dLen := len(params.Bls12381G1MultiExpDiscountTable); k < dLen {
+		discount = params.Bls12381G1MultiExpDiscountTable[k-1]
 	} else {
-		discount = params.Bls12381MultiExpDiscountTable[dLen-1]
+		discount = params.Bls12381G1MultiExpDiscountTable[dLen-1]
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G1MulGas * discount) / 1000,
@@ -1068,44 +1003,6 @@ func (c *bls12381G2Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return encodePointG2(r), nil
 }
 
-// bls12381G2Mul implements EIP-2537 G2Mul precompile.
-type bls12381G2Mul struct{}
-
-// GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract.
-func (c *bls12381G2Mul) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
-	return params.Bls12381G2MulGas, params.Bls12381G2MulComputationCost
-}
-
-func (c *bls12381G2Mul) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
-	// Implements EIP-2537 G2MUL precompile logic.
-	// > G2 multiplication call expects `288` bytes as an input that is interpreted as byte concatenation of encoding of G2 point (`256` bytes) and encoding of a scalar value (`32` bytes).
-	// > Output is an encoding of multiplication operation result - single G2 point (`256` bytes).
-	if len(input) != 288 {
-		return nil, errBLS12381InvalidInputLength
-	}
-	var err error
-	var p0 *bls12381.G2Affine
-
-	// Decode G2 point
-	if p0, err = decodePointG2(input[:256]); err != nil {
-		return nil, err
-	}
-	// 'point is on curve' check already done,
-	// Here we need to apply subgroup checks.
-	if !p0.IsInSubGroup() {
-		return nil, errBLS12381G2PointSubgroup
-	}
-	// Decode scalar value
-	e := new(big.Int).SetBytes(input[256:])
-
-	// Compute r = e * p_0
-	r := new(bls12381.G2Affine)
-	r.ScalarMultiplication(p0, e)
-
-	// Encode the G2 point into 256 bytes
-	return encodePointG2(r), nil
-}
-
 // bls12381G2MultiExp implements EIP-2537 G2MultiExp precompile.
 type bls12381G2MultiExp struct{}
 
@@ -1119,10 +1016,10 @@ func (c *bls12381G2MultiExp) GetRequiredGasAndComputationCost(input []byte) (uin
 	}
 	// Lookup discount value for G2 point, scalar value pair length
 	var discount uint64
-	if dLen := len(params.Bls12381MultiExpDiscountTable); k < dLen {
-		discount = params.Bls12381MultiExpDiscountTable[k-1]
+	if dLen := len(params.Bls12381G2MultiExpDiscountTable); k < dLen {
+		discount = params.Bls12381G2MultiExpDiscountTable[k-1]
 	} else {
-		discount = params.Bls12381MultiExpDiscountTable[dLen-1]
+		discount = params.Bls12381G2MultiExpDiscountTable[dLen-1]
 	}
 	// Calculate gas and return the result
 	return (uint64(k) * params.Bls12381G2MulGas * discount) / 1000,
@@ -1381,4 +1278,111 @@ func (c *bls12381MapG2) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 
 	// Encode the G2 point to 256 bytes
 	return encodePointG2(&r), nil
+}
+
+// consoleLog implements solidity console.log for local networks.
+type consoleLog struct{}
+
+func (c *consoleLog) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return 0, 0
+}
+
+func (c *consoleLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	decoded, _ := c.toLogString(input)
+	if decoded != "" {
+		logger.Debug(decoded)
+	}
+	return nil, nil
+}
+
+// Hardhat console.log accepts format string, however we don't support it.
+// Instead, we just join all the parameters with a space.
+func (c *consoleLog) toLogString(input []byte) (string, error) {
+	if len(input) < 4 {
+		return "", errors.New("input too short")
+	}
+	selector := binary.BigEndian.Uint32(input[:4])
+	params := input[4:]
+
+	types, ok := common.ConsoleLogSignatures[selector]
+	if !ok {
+		return "", errors.New("unknown selector")
+	}
+	decoded, err := c.decode(params, types)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Join(decoded, " "), nil
+}
+
+var registerSize = 32
+
+// decode decodes the input into a list of string according to the provided types
+func (c *consoleLog) decode(params []byte, types []common.ConsoleLogType) ([]string, error) {
+	var res []string
+	for i, t := range types {
+		pos := i * registerSize
+		switch t {
+		case common.Uint256Ty:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, strconv.FormatUint(big.NewInt(0).SetBytes(params[pos:pos+registerSize]).Uint64(), 10))
+		case common.Int256Ty:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, strconv.FormatInt(big.NewInt(0).SetBytes(params[pos:pos+registerSize]).Int64(), 10))
+		case common.BoolTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			if params[pos+registerSize-1] != 0 {
+				res = append(res, "true")
+			} else {
+				res = append(res, "false")
+			}
+		case common.StringTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			start := int(big.NewInt(0).SetBytes(params[pos : pos+registerSize]).Int64())
+			if len(params) < start+registerSize {
+				return nil, errors.New("input too short")
+			}
+			size := int(big.NewInt(0).SetBytes(params[start : start+registerSize]).Int64())
+			if len(params) < start+size+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, string(params[start+registerSize:start+size+registerSize]))
+		case common.AddressTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.BytesToAddress(params[pos+12:pos+registerSize]).Hex())
+		case common.BytesTy:
+			if len(params) < pos+registerSize {
+				return nil, errors.New("input too short")
+			}
+			start := int(big.NewInt(0).SetBytes(params[pos : pos+registerSize]).Int64())
+			if len(params) < start+registerSize {
+				return nil, errors.New("input too short")
+			}
+			size := int(big.NewInt(0).SetBytes(params[start : start+registerSize]).Int64())
+			if len(params) < start+size+registerSize {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.Bytes2Hex(params[start+registerSize:start+size+registerSize]))
+		case common.Bytes1Ty, common.Bytes2Ty, common.Bytes3Ty, common.Bytes4Ty, common.Bytes5Ty, common.Bytes6Ty, common.Bytes7Ty, common.Bytes8Ty, common.Bytes9Ty, common.Bytes10Ty, common.Bytes11Ty, common.Bytes12Ty, common.Bytes13Ty, common.Bytes14Ty, common.Bytes15Ty, common.Bytes16Ty, common.Bytes17Ty, common.Bytes18Ty, common.Bytes19Ty, common.Bytes20Ty, common.Bytes21Ty, common.Bytes22Ty, common.Bytes23Ty, common.Bytes24Ty, common.Bytes25Ty, common.Bytes26Ty, common.Bytes27Ty, common.Bytes28Ty, common.Bytes29Ty, common.Bytes30Ty, common.Bytes31Ty, common.Bytes32Ty:
+			size, _ := strconv.Atoi(string(t[5:]))
+			if len(params) < pos+size {
+				return nil, errors.New("input too short")
+			}
+			res = append(res, common.Bytes2Hex(params[pos:pos+size]))
+		default:
+			return nil, errors.New("unknown type")
+		}
+	}
+	return res, nil
 }

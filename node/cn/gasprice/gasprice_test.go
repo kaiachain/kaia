@@ -26,13 +26,17 @@ import (
 	"github.com/golang/mock/gomock"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -42,7 +46,8 @@ import (
 const testHead = 32
 
 type testBackend struct {
-	chain *blockchain.BlockChain
+	chain   *blockchain.BlockChain
+	pending bool // pending block available
 }
 
 func (b *testBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
@@ -51,6 +56,13 @@ func (b *testBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber
 	}
 	if number == rpc.LatestBlockNumber {
 		number = testHead
+	}
+	if number == rpc.PendingBlockNumber {
+		if b.pending {
+			number = testHead + 1
+		} else {
+			return nil, nil
+		}
 	}
 	return b.chain.GetHeaderByNumber(uint64(number)), nil
 }
@@ -62,11 +74,27 @@ func (b *testBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber)
 	if number == rpc.LatestBlockNumber {
 		number = testHead
 	}
+	if number == rpc.PendingBlockNumber {
+		if b.pending {
+			number = testHead + 1
+		} else {
+			return nil, nil
+		}
+	}
 	return b.chain.GetBlockByNumber(uint64(number)), nil
 }
 
 func (b *testBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts {
 	return b.chain.GetReceiptsByBlockHash(hash)
+}
+
+func (b *testBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	if b.pending {
+		block := b.chain.GetBlockByNumber(testHead + 1)
+		state, _ := b.chain.StateAt(block.Root())
+		return block, b.chain.GetReceiptsByBlockHash(block.Hash()), state
+	}
+	return nil, nil, nil
 }
 
 func (b *testBackend) ChainConfig() *params.ChainConfig {
@@ -83,7 +111,7 @@ func (b *testBackend) teardown() {
 
 // newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
 // after use, otherwise the blockchain instance will mem-leak via goroutines.
-func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend, Governance) {
+func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) (*testBackend, gov.GovModule) {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -143,11 +171,18 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int) (*testBackend,
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}
-	gov := governance.NewMixedEngine(gspec.Config, db)
-	gov.SetBlockchain(chain)
+	// govModule := mock_gov.NewMockGovModule(gomock.NewController(t))
+	govModule := gov_impl.NewGovModule()
+	govModule.Init(&gov_impl.InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: gspec.Config,
+		Chain:       chain,
+		NodeAddress: addr,
+	})
+
 	chain.InsertChain(blocks)
 
-	return &testBackend{chain: chain}, gov
+	return &testBackend{chain: chain, pending: pending}, govModule
 }
 
 func TestGasPrice_NewOracle(t *testing.T) {
@@ -191,7 +226,7 @@ func TestGasPrice_NewOracle(t *testing.T) {
 	assert.Equal(t, 5, oracle.maxBlocks)
 	assert.Equal(t, 100, oracle.percentile)
 
-	params = Config{Percentile: 101, Default: big.NewInt(123)}
+	params = Config{Percentile: 101}
 	oracle = NewOracle(mockBackend, params, nil, nil)
 
 	assert.Equal(t, big.NewInt(0), oracle.lastPrice)
@@ -202,48 +237,44 @@ func TestGasPrice_NewOracle(t *testing.T) {
 }
 
 func TestGasPrice_SuggestPrice(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	testBackend, testGov := newTestBackend(t, nil, nil)
+	testBackend, _ := newTestBackend(t, nil, nil, false)
 	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
-	chainConfig.UnitPrice = 0
-	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
+	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 0}).Times(1)
+	txPoolWith0 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
 
-	oracle := NewOracle(mockBackend, params, txPoolWith0, testGov)
+	oracle := NewOracle(mockBackend, params, txPoolWith0, mockGov)
 
 	currentBlock := testBackend.CurrentBlock()
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
 	mockBackend.EXPECT().CurrentBlock().Return(currentBlock).Times(2)
 
 	price, err := oracle.SuggestPrice(nil)
-	assert.Equal(t, price, common.Big0)
+	assert.Equal(t, common.Big0, price)
 	assert.Nil(t, err)
 
-	params = Config{Default: big.NewInt(123)}
-	chainConfig.UnitPrice = 25
+	params = Config{}
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: 25}).Times(1)
 	mockBackend.EXPECT().ChainConfig().Return(chainConfig).Times(2)
-	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-	oracle = NewOracle(mockBackend, params, txPoolWith25, testGov)
+	txPoolWith25 := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, mockGov)
+	oracle = NewOracle(mockBackend, params, txPoolWith25, mockGov)
 
 	price, err = oracle.SuggestPrice(nil)
 	assert.Equal(t, big.NewInt(25), price)
 	assert.Nil(t, err)
 }
 
-type MockGov struct{}
-
-func (m *MockGov) EffectiveParams(bn uint64) (*params.GovParamSet, error) {
-	return nil, nil
-}
-
 func TestSuggestTipCap(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	config := Config{
 		Blocks:           3,
 		Percentile:       60,
-		Default:          big.NewInt(params.Gkei),
 		MaxHeaderHistory: 30,
 		MaxBlockHistory:  30,
 	}
@@ -278,14 +309,15 @@ func TestSuggestTipCap(t *testing.T) {
 		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in the future
 	}
 	for _, c := range cases {
-		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock)
+		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock, false)
 		chainConfig := testBackend.ChainConfig()
-		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain)
-		gov := testGov
 		if c.isBusy {
-			gov = &MockGov{}
+			mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
+			mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: testBackend.ChainConfig().UnitPrice, LowerBoundBaseFee: math.MaxUint64}).AnyTimes()
+			testGov = mockGov
 		}
-		oracle := NewOracle(testBackend, config, txPool, gov)
+		txPool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, chainConfig, testBackend.chain, testGov)
+		oracle := NewOracle(testBackend, config, txPool, testGov)
 
 		// The gas price sampled is: 32G, 31G, 30G, 29G, 28G, 27G
 		got, err := oracle.SuggestTipCap(context.Background())

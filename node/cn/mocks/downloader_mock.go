@@ -9,12 +9,12 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia"
+	kaia "github.com/kaiachain/kaia"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	downloader "github.com/kaiachain/kaia/datasync/downloader"
+	staking "github.com/kaiachain/kaia/kaiax/staking"
 	snap "github.com/kaiachain/kaia/node/cn/snap"
-	reward "github.com/kaiachain/kaia/reward"
 )
 
 // MockProtocolManagerDownloader is a mock of ProtocolManagerDownloader interface.
@@ -123,7 +123,7 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverSnapPacket(arg0, arg
 }
 
 // DeliverStakingInfos mocks base method.
-func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []*reward.StakingInfo) error {
+func (m *MockProtocolManagerDownloader) DeliverStakingInfos(arg0 string, arg1 []*staking.P2PStakingInfo) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeliverStakingInfos", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -218,6 +218,20 @@ func (m *MockProtocolManagerDownloader) Synchronise(arg0 string, arg1 common.Has
 func (mr *MockProtocolManagerDownloaderMockRecorder) Synchronise(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Synchronise", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Synchronise), arg0, arg1, arg2, arg3)
+}
+
+// Synchronising mocks base method.
+func (m *MockProtocolManagerDownloader) Synchronising() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Synchronising")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Synchronising indicates an expected call of Synchronising.
+func (mr *MockProtocolManagerDownloaderMockRecorder) Synchronising() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Synchronising", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Synchronising))
 }
 
 // Terminate mocks base method.

@@ -59,6 +59,26 @@ func (api *KaiaAPI) GetParams(num *rpc.BlockNumber) (gov.PartialParamSet, error)
 	return getParams(api.g, num)
 }
 
+func patchDeprecatedParams(gp gov.ParamSet, rule params.Rules) gov.ParamSet {
+	// To avoid confusion, override some parameters that are deprecated after hardforks.
+	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
+	if rule.IsKore {
+		// Gini option deprecated since Kore, as All committee members have an equal chance
+		// of being elected block proposers.
+		gp.UseGiniCoeff = false
+	}
+	if rule.IsRandao {
+		// Block proposer is randomly elected at every block with Randao,
+		// no more precalculated proposer list.
+		gp.ProposerUpdateInterval = 1
+	}
+	if rule.IsKaia {
+		// Staking information updated every block since Kaia.
+		gp.StakingUpdateInterval = 1
+	}
+	return gp
+}
+
 func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	var blocknum uint64
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
@@ -67,8 +87,10 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 		blocknum = num.Uint64()
 	}
 
-	pset := g.EffectiveParamSet(blocknum)
 	latestConfig := g.Chain.Config()
+	pset := g.GetParamSet(blocknum)
+	rule := latestConfig.Rules(new(big.Int).SetUint64(blocknum))
+	pset = patchDeprecatedParams(pset, rule)
 	config := pset.ToGovParamSet().ToChainConfig()
 	config.ChainID = latestConfig.ChainID
 	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
@@ -84,7 +106,7 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
-
+	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
 	return config
 }
 
@@ -115,32 +137,10 @@ func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) 
 		blockNumber = uint64(num.Int64())
 	}
 
-	gp := g.EffectiveParamSet(blockNumber)
-	ret := gp.ToMap()
-	// To avoid confusion, override some parameters that are deprecated after hardforks.
-	// e.g., stakingupdateinterval is shown as 86400 but actually irrelevant (i.e. updated every block)
 	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
-	if rule.IsKore {
-		// Gini option deprecated since Kore, as All committee members have an equal chance
-		// of being elected block proposers.
-		if _, ok := ret[gov.RewardUseGiniCoeff]; ok {
-			ret[gov.RewardUseGiniCoeff] = false
-		}
-	}
-	if rule.IsRandao {
-		// Block proposer is randomly elected at every block with Randao,
-		// no more precalculated proposer list.
-		if _, ok := ret[gov.RewardProposerUpdateInterval]; ok {
-			ret[gov.RewardProposerUpdateInterval] = 1
-		}
-	}
-	if rule.IsKaia {
-		// Staking information updated every block since Kaia.
-		if _, ok := ret[gov.RewardStakingUpdateInterval]; ok {
-			ret[gov.RewardStakingUpdateInterval] = 1
-		}
-	}
-
+	gp := g.GetParamSet(blockNumber)
+	gp = patchDeprecatedParams(gp, rule)
+	ret := gp.ToMap()
 	return ret, nil
 }
 

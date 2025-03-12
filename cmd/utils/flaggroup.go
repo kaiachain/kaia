@@ -55,6 +55,7 @@ var FlagGroups = []FlagGroup{
 			BlockGenerationIntervalFlag,
 			BlockGenerationTimeLimitFlag,
 			OpcodeComputationCostLimitFlag,
+			UseConsoleLogFlag,
 		},
 	},
 	{
@@ -114,10 +115,6 @@ var FlagGroups = []FlagGroup{
 			NoParallelDBWriteFlag,
 			SenderTxHashIndexingFlag,
 			DBNoPerformanceMetricsFlag,
-			TxPruningFlag,
-			TxPruningRetentionFlag,
-			ReceiptPruningFlag,
-			ReceiptPruningRetentionFlag,
 		},
 	},
 	{

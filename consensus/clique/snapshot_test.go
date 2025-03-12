@@ -29,9 +29,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -420,16 +419,26 @@ func TestClique(t *testing.T) {
 		engine.fakeBlockScore = true
 
 		blocks, _ := blockchain.GenerateChain(config, genesis.ToBlock(common.Hash{}, db), engine, db, len(tt.votes), func(j int, gen *blockchain.BlockGen) {
-			vote := new(governance.GovernanceVote)
+			var voteName gov.ParamName
 			if tt.votes[j].auth {
-				vote.Key = "addvalidator"
+				voteName = "addvalidator"
 			} else {
-				vote.Key = "removevalidator"
+				voteName = "removevalidator"
 			}
 
 			if len(tt.votes[j].voted) > 0 {
-				vote.Value = accounts.address(tt.votes[j].voted)
-				encoded, _ := rlp.EncodeToBytes(vote)
+				addr := accounts.address(tt.votes[j].voted)
+				vote := &voteData{
+					Validator: common.Address{},
+					Key:       string(voteName),
+					Value:     addr,
+				}
+				encoded, err := vote.ToVoteBytes()
+				if err != nil {
+					t.Fatalf("test %d: failed to encode vote: %v", i, err)
+					return
+				}
+
 				gen.SetVoteData(encoded)
 			}
 		})

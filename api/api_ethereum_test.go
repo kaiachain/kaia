@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -83,13 +82,8 @@ func TestEthereumAPI_Coinbase(t *testing.T) {
 
 // testNodeAddress generates nodeAddress and tests Etherbase and Coinbase.
 func testNodeAddress(t *testing.T, testAPIName string) {
-	gov := governance.NewMixedEngineNoInit(
-		dummyChainConfigForEthereumAPITest,
-		database.NewMemoryDBManager(),
-	)
 	key, _ := crypto.GenerateKey()
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
-	gov.SetNodeAddress(nodeAddress)
 
 	api := EthereumAPI{nodeAddress: nodeAddress}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
@@ -223,8 +217,6 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
-	var dummyTotalDifficulty uint64 = 5
-	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
@@ -329,8 +321,6 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
-	var dummyTotalDifficulty uint64 = 5
-	mockBackend.EXPECT().GetTd(gomock.Any()).Return(new(big.Int).SetUint64(dummyTotalDifficulty))
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
@@ -2452,15 +2442,19 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	chainConfig.ShanghaiCompatibleBlock = common.Big0
 	chainConfig.CancunCompatibleBlock = common.Big0
 	chainConfig.KaiaCompatibleBlock = common.Big0
+	chainConfig.PragueCompatibleBlock = common.Big0
 	var (
 		// genesis
 		account1 = common.HexToAddress("0xaaaa")
 		account2 = common.HexToAddress("0xbbbb")
 		account3 = common.HexToAddress("0xcccc")
+		account4 = common.HexToAddress("0xdddd")
+		account5 = common.HexToAddress("0xeeee")
 		gspec    = &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
 			account1: {Balance: big.NewInt(params.KAIA * 2)},
 			account2: {Balance: common.Big0},
 			account3: {Balance: common.Big0, Code: hexutil.MustDecode(codeRevertHello)},
+			account4: {Balance: big.NewInt(params.KAIA * 2), Code: append(types.DelegationPrefix, account5.Bytes()...)},
 		}, Config: chainConfig}
 
 		// blockchain
@@ -2498,6 +2492,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	mockBackend.EXPECT().StateAndHeaderByNumber(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().StateAndHeaderByNumberOrHash(any, any).DoAndReturn(getStateAndHeader).AnyTimes()
 	mockBackend.EXPECT().GetEVM(any, any, any, any, any).DoAndReturn(getEVM).AnyTimes()
+	mockBackend.EXPECT().IsConsoleLogEnabled().Return(false).AnyTimes()
 
 	testcases := []struct {
 		args      EthTransactionArgs
@@ -2576,6 +2571,22 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 				To:   &account3,
 			},
 			expectErr: "execution reverted: hello",
+		},
+		{ // Should be able to send to an EIP-7702 delegated account.
+			args: EthTransactionArgs{
+				From:  &account1,
+				To:    &account4,
+				Value: (*hexutil.Big)(big.NewInt(1)),
+			},
+			expectGas: 21000,
+		},
+		{ // Should be able to send as EIP-7702 delegated account.
+			args: EthTransactionArgs{
+				From:  &account4,
+				To:    &account2,
+				Value: (*hexutil.Big)(big.NewInt(1)),
+			},
+			expectGas: 21000,
 		},
 	}
 

@@ -493,3 +493,88 @@ func TestColdAccountAccessCost(t *testing.T) {
 		}
 	}
 }
+
+// TestDelegatedAccountAccessCost tests that calling an account with an EIP-7702
+// delegation designator incurs the correct amount of gas based on the tracer.
+func TestDelegatedAccountAccessCost(t *testing.T) {
+	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	statedb.SetCodeToEOA(common.HexToAddress("0xff"), types.AddressToDelegation(common.HexToAddress("0xaa")), params.TestRules)
+	statedb.SetCodeToEOA(common.HexToAddress("0xaa"), []byte{}, params.TestRules)
+
+	for i, tc := range []struct {
+		code []byte
+		step int
+		want uint64
+	}{
+		{ // CALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALL), byte(vm.POP),
+			},
+			step: 7,
+			want: 5455,
+		},
+		{ // CALLCODE(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.CALLCODE), byte(vm.POP),
+			},
+			step: 7,
+			want: 5455,
+		},
+		{ // DELEGATECALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.DELEGATECALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 5455,
+		},
+		{ // STATICCALL(0xff)
+			code: []byte{
+				byte(vm.PUSH1), 0x0,
+				byte(vm.DUP1), byte(vm.DUP1), byte(vm.DUP1),
+				byte(vm.PUSH1), 0xff, byte(vm.DUP1), byte(vm.STATICCALL), byte(vm.POP),
+			},
+			step: 6,
+			want: 5455,
+		},
+		{ // SELFDESTRUCT(0xff): should not be affected by resolution
+			code: []byte{
+				byte(vm.PUSH1), 0xff, byte(vm.SELFDESTRUCT),
+			},
+			step: 1,
+			want: 7600,
+		},
+	} {
+		tracer := vm.NewStructLogger(nil)
+		Execute(tc.code, nil, &Config{
+			ChainConfig: &params.ChainConfig{
+				ChainID: big.NewInt(1),
+				// IstanbulCompatibleBlock:  new(big.Int),
+				// LondonCompatibleBlock:    new(big.Int),
+				// EthTxTypeCompatibleBlock: new(big.Int),
+				KoreCompatibleBlock: new(big.Int), // XXX TODO have to ask why it is needed?
+				// ShanghaiCompatibleBlock: new(big.Int),
+				// CancunCompatibleBlock: new(big.Int),
+				// KaiaCompatibleBlock:     new(big.Int),
+				PragueCompatibleBlock: new(big.Int), // XXX TODO have to ask when to set default
+			},
+			State: statedb,
+			EVMConfig: vm.Config{
+				Debug:  true,
+				Tracer: tracer,
+			},
+		})
+		have := tracer.StructLogs()[tc.step].GasCost
+		if want := tc.want; have != want {
+			for ii, op := range tracer.StructLogs() {
+				t.Logf("%d: %v %d", ii, op.OpName(), op.GasCost)
+			}
+			t.Fatalf("tescase %d, gas report wrong, step %d, have %d want %d", i, tc.step, have, want)
+		}
+	}
+}

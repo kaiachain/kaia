@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -214,6 +213,22 @@ type Clique struct {
 	fakeBlockScore bool // Skip blockScore verifications
 }
 
+type voteData struct {
+	Validator common.Address
+	Key       string
+	Value     any
+}
+
+func (v *voteData) ToVoteBytes() ([]byte, error) {
+	return rlp.EncodeToBytes(v)
+}
+
+func BytesToVoteData(b []byte) (voteData, error) {
+	var v voteData
+	err := rlp.DecodeBytes(b, &v)
+	return v, err
+}
+
 // New creates a Clique proof-of-authority consensus engine with the initial
 // signers set to the ones provided by the user.
 func New(config *params.CliqueConfig, db database.DBManager) *Clique {
@@ -358,17 +373,6 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainReader, header *type
 	}
 	// All basic checks passed, verify the seal and return
 	return c.verifySeal(chain, header, parents)
-}
-
-// CreateSnapshot does not return a snapshot but creates a new snapshot if not exists at a given point in time
-func (c *Clique) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	_, err := c.snapshot(chain, number, hash, parents)
-	return err
-}
-
-// GetKaiaHeadersForSnapshotApply is not used for Clique engine
-func (c *Clique) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
-	return nil, nil
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
@@ -527,19 +531,22 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 		}
 		// If there's pending proposals, cast a vote on them
 		if len(addresses) > 0 {
-			vote := new(governance.GovernanceVote)
 			addr := addresses[rand.Intn(len(addresses))]
+			v := &voteData{
+				Validator: c.signer,
+				Value:     addr,
+			}
+
 			if c.proposals[addr] == true {
-				vote.Key = "addvalidator"
+				v.Key = "addvalidator"
 			} else {
-				vote.Key = "removevalidator"
+				v.Key = "removevalidator"
 			}
-			vote.Value = addr
-			encoded, err := rlp.EncodeToBytes(vote)
+
+			header.Vote, err = v.ToVoteBytes()
 			if err != nil {
-				logger.Error("Failed to RLP Encode a vote", "vote", vote)
+				logger.Error("Failed to RLP Encode a vote", "vote", v)
 			}
-			header.Vote = encoded
 		}
 		c.lock.RUnlock()
 	}
@@ -575,7 +582,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	return nil
 }
 
-func (c *Clique) InitSnapshot() {}
+func (c *Clique) PurgeCache() {}
 
 func (c *Clique) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 }

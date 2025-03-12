@@ -28,7 +28,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/holiman/uint256 v1.2.0
+	github.com/holiman/uint256 v1.3.2
 	github.com/huin/goupnp v1.0.3-0.20220313090229-ca81a64b4204
 	github.com/influxdata/influxdb v1.8.3
 	github.com/jackpal/go-nat-pmp v1.0.2
@@ -56,10 +56,10 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	github.com/valyala/fasthttp v1.40.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/crypto v0.21.0
-	golang.org/x/net v0.23.0
-	golang.org/x/sys v0.18.0
-	golang.org/x/tools v0.19.0
+	golang.org/x/crypto v0.24.0
+	golang.org/x/net v0.26.0
+	golang.org/x/sys v0.21.0
+	golang.org/x/tools v0.22.0
 	google.golang.org/grpc v1.56.3
 	gopkg.in/DataDog/dd-trace-go.v1 v1.42.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
@@ -78,6 +78,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
+	go.uber.org/mock v0.5.0
 	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81
 )
 
@@ -115,7 +116,7 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.1.0 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
@@ -149,9 +150,9 @@ require (
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.16.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect

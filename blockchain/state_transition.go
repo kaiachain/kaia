@@ -23,8 +23,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -74,16 +76,16 @@ type StateTransition struct {
 // Message represents a message sent to a contract.
 type Message interface {
 	// ValidatedSender returns the sender of the transaction.
-	// The returned sender should be derived by calling AsMessageAccountKeyPicker().
+	// It should be set by calling AsMessageAccountKeyPicker().
 	ValidatedSender() common.Address
 
 	// ValidatedFeePayer returns the fee payer of the transaction.
-	// The returned fee payer should be derived by calling AsMessageAccountKeyPicker().
+	// It should be set by calling AsMessageAccountKeyPicker().
 	ValidatedFeePayer() common.Address
 
-	// ValidatedIntrinsicGas returns the intrinsic gas of the transaction.
-	// The returned intrinsic gas should be derived by calling AsMessageAccountKeyPicker().
-	ValidatedIntrinsicGas() uint64
+	// ValidatedGas holds the intrinsic gas, sig validation gas, and number of data tokens for the transaction.
+	// It should be set by calling AsMessageAccountKeyPicker().
+	ValidatedGas() *types.ValidatedGas
 
 	// FeeRatio returns a ratio of tx fee paid by the fee payer in percentage.
 	// For example, if it is 30, 30% of tx fee will be paid by the fee payer.
@@ -123,6 +125,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
+	AuthList() []types.SetCodeAuthorization
 }
 
 // ExecutionResult includes all output after executing given evm
@@ -291,6 +294,16 @@ func (st *StateTransition) preCheck() error {
 			return ErrNonceTooLow
 		}
 	}
+
+	// Check that EIP-7702 authorization list signatures are well formed.
+	if st.msg.AuthList() != nil {
+		if st.msg.To() == nil {
+			return fmt.Errorf("%w (sender %v)", ErrSetCodeTxCreate, st.msg.ValidatedSender())
+		}
+		if len(st.msg.AuthList()) == 0 {
+			return fmt.Errorf("%w (sender %v)", ErrEmptyAuthList, st.msg.ValidatedSender())
+		}
+	}
 	return st.buyGas()
 }
 
@@ -324,7 +337,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, err
 	}
 
-	msg := st.msg
+	var (
+		msg          = st.msg
+		rules        = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+		floorDataGas uint64
+		err          error
+	)
 
 	if st.evm.Config.Debug {
 		st.evm.Config.Tracer.CaptureTxStart(st.initialGas)
@@ -334,23 +352,58 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	amount := msg.ValidatedIntrinsicGas()
-	if st.gas < amount {
+	validatedGas := msg.ValidatedGas()
+	if st.gas < validatedGas.IntrinsicGas {
 		return nil, ErrIntrinsicGas
 	}
-	st.gas -= amount
+	if rules.IsPrague {
+		floorDataGas, err = FloorDataGas(msg.Type(), msg.Data(), validatedGas.SigValidateGas)
+		if err != nil {
+			return nil, err
+		}
+		if msg.Gas() < floorDataGas {
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorDataGas)
+		}
+	}
+	// SigValidationGas is already inclduded in IntrinsicGas
+	st.gas -= validatedGas.IntrinsicGas
 
 	// Check clause 6
 	if msg.Value().Sign() > 0 && !st.evm.Context.CanTransfer(st.state, msg.ValidatedSender(), msg.Value()) {
 		return nil, vm.ErrInsufficientBalance
 	}
 
-	rules := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-
 	// Execute the preparatory steps for state transition which includes:
 	// - prepare accessList(post-berlin)
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+
+	// SetCode sender nonce increment should be done before set code process.
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		// Increment the nonce for the next transaction.
+		// Note: EIP-7702 authorizations can also modify the nonce. We perform
+		// this update first to ensure correct validation of authorization nonces.
+		st.state.IncNonce(msg.ValidatedSender())
+	}
+
+	// Apply EIP-7702 authorizations.
+	if msg.AuthList() != nil {
+		for _, auth := range msg.AuthList() {
+			// Note errors are ignored, we simply skip invalid authorizations here.
+			st.applyAuthorization(&auth, *msg.To(), rules)
+		}
+	}
+
+	if msg.Type() == types.TxTypeEthereumSetCode {
+		if addr, ok := types.ParseDelegation(st.state.GetCode(*msg.To())); ok {
+			// Perform convenience warming of sender's delegation target. Although the
+			// sender is already warmed in Prepare(..), it's possible a delegation to
+			// the account was deployed during this transaction. To handle correctly,
+			// wait until the final state of delegations is determined before
+			// performing the resolution and warming.
+			st.state.AddAddressToAccessList(addr)
+		}
+	}
 
 	// Check whether the init code size has been exceeded.
 	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
@@ -382,15 +435,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, vm.ErrTotalTimeLimitReached
 	}
 
-	if rules.IsKore {
-		// After EIP-3529: refunds are capped to gasUsed / 5
-		st.refundGas(params.RefundQuotientEIP3529)
-	} else {
-		// Before EIP-3529: refunds were capped to gasUsed / 2
-		st.refundGas(params.RefundQuotient)
+	// Compute refund
+	gasRefund := st.calcRefund()
+	st.gas += gasRefund
+	if rules.IsPrague {
+		// After EIP-7623: Data-heavy transactions pay the floor gas.
+		if st.gasUsed() < floorDataGas {
+			st.gas = st.initialGas - floorDataGas
+		}
 	}
+	st.returnGas()
 
 	// Defer transferring Tx fee when DeferredTxFee is true
+	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		if rules.IsMagma {
 			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
@@ -471,15 +528,88 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
 }
 
-func (st *StateTransition) refundGas(refundQuotient uint64) {
-	// Apply refund counter, capped a refund quotient
-	refund := st.gasUsed() / refundQuotient
-	if refund > st.state.GetRefund() {
-		refund = st.state.GetRefund()
+func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {
+	// Verify chain ID is 0 or equal to current chain ID.
+	if !auth.ChainID.IsZero() && auth.ChainID.CmpBig(st.evm.ChainConfig().ChainID) != 0 {
+		return authority, ErrAuthorizationWrongChainID
 	}
-	st.gas += refund
+	// Limit nonce to 2^64-1 per EIP-2681.
+	if auth.Nonce+1 < auth.Nonce {
+		return authority, ErrAuthorizationNonceOverflow
+	}
+	// Validate signature values and recover authority.
+	authority, err = auth.Authority()
+	if err != nil {
+		return authority, fmt.Errorf("%w: %v", ErrAuthorizationInvalidSignature, err)
+	}
+	// Check the authority account
+	//  1) doesn't have code or has exisiting delegation
+	//  2) matches the auth's nonce
+	//
+	// Note it is added to the access list even if the authorization is invalid.
+	st.state.AddAddressToAccessList(authority)
+	code := st.state.GetCode(authority)
+	if _, ok := types.ParseDelegation(code); len(code) != 0 && !ok {
+		return authority, ErrAuthorizationDestinationHasCode
+	}
+	if have := st.state.GetNonce(authority); have != auth.Nonce {
+		return authority, ErrAuthorizationNonceMismatch
+	}
+	return authority, nil
+}
 
-	// Return KAIA for remaining gas, exchanged at the original rate.
+func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, to common.Address, rules params.Rules) (err error) {
+	authority, err := st.validateAuthorization(auth)
+	if err != nil {
+		return err
+	}
+
+	// If the account already exists in state, refund the new account cost
+	// charged in the initrinsic calculation.
+	if st.state.Exist(authority) {
+		// If the account is not AccountKeyTypeLegacy, setcode is not allowed.
+		accountKeyType := st.state.GetKey(authority).Type()
+		if !accountKeyType.IsLegacyAccountKey() {
+			return fmt.Errorf("%w: %v", ErrAuthorizationNotAllowAccountKeyType, accountKeyType)
+		}
+		st.state.AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
+	}
+
+	// Update nonce and account code.
+	st.state.IncNonce(authority)
+	delegation := types.AddressToDelegation(auth.Address)
+	if common.EmptyAddress(auth.Address) {
+		// Delegation to zero address means clear.
+		st.state.SetCodeToEOA(authority, []byte{}, rules)
+		return nil
+	}
+
+	// Otherwise install delegation to auth.Address.
+	// We treat EOA and SCA as separate objects and therefore need to use
+	// distinct methods.
+	st.state.SetCodeToEOA(authority, delegation, rules)
+
+	return nil
+}
+
+// calcRefund computes refund counter, capped to a refund quotient.
+func (st *StateTransition) calcRefund() uint64 {
+	var gasRefund uint64
+	if !st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsKore {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		gasRefund = st.gasUsed() / params.RefundQuotient
+	} else {
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		gasRefund = st.gasUsed() / params.RefundQuotientEIP3529
+	}
+	if gasRefund > st.state.GetRefund() {
+		gasRefund = st.state.GetRefund()
+	}
+	return gasRefund
+}
+
+// returnGas returns KAIA for remaining gas, exchanged at the original rate.
+func (st *StateTransition) returnGas() {
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
@@ -499,4 +629,26 @@ func (st *StateTransition) refundGas(refundQuotient uint64) {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+// FloorDataGas calculates the minimum gas required for a transaction
+// based on its data tokens (EIP-7623).
+func FloorDataGas(txType types.TxType, data []byte, sigValidateGas uint64) (uint64, error) {
+	var (
+		z      = uint64(bytes.Count(data, []byte{0}))
+		nz     = uint64(len(data)) - z
+		tokens = nz*params.TxTokenPerNonZeroByte + z
+	)
+	// Check for overflow
+	// Instead of using parmas.TxGas, we should consider the tx type
+	// because Kaia tx type has different tx gas (e.g., fee delegated tx).
+	txGas, err := types.GetTxGasForTxType(txType)
+	if err != nil {
+		return 0, err
+	}
+	if (math.MaxUint64-txGas-sigValidateGas)/params.TxCostFloorPerToken < tokens {
+		return 0, types.ErrGasUintOverflow
+	}
+	// We add up sig validate gas too, as it's the final floor gas
+	return txGas + tokens*params.TxCostFloorPerToken + sigValidateGas, nil
 }

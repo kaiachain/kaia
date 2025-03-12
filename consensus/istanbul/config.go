@@ -38,6 +38,16 @@ type Config struct {
 	SubGroupSize   uint64         `toml:",omitempty"`
 }
 
+func (c *Config) Copy() *Config {
+	return &Config{
+		Timeout:        c.Timeout,
+		BlockPeriod:    c.BlockPeriod,
+		ProposerPolicy: c.ProposerPolicy,
+		Epoch:          c.Epoch,
+		SubGroupSize:   c.SubGroupSize,
+	}
+}
+
 // TODO-Kaia-Istanbul: Do not use DefaultConfig except for assigning new config
 var DefaultConfig = &Config{
 	Timeout:        10000,

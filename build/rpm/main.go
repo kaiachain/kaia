@@ -205,6 +205,9 @@ License:            GNU
 URL:                https://kaia.io
 Source0:            %{name}-%{version}.tar.gz
 BuildRoot:          %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+Requires:           initscripts
+
+%global debug_package %{nil}
 
 %description
   {{ .Description }}
@@ -222,11 +225,13 @@ mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/var/log/{{ .DaemonName }}
+mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
 
 cp build/bin/{{ .ProgramName }} $RPM_BUILD_ROOT/usr/bin/{{ .ProgramName }}
 %if %is_daemon
 cp build/rpm/etc/init.d/{{ .DaemonName }} $RPM_BUILD_ROOT/etc/init.d/{{ .DaemonName }}
 cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RPM_BUILD_ROOT/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
+cp build/rpm/etc/systemd/system/{{ .DaemonName }}.service $RPM_BUILD_ROOT/etc/systemd/system/{{ .DaemonName }}.service
 %endif
 
 %files
@@ -234,16 +239,29 @@ cp build/rpm/etc/{{ .DaemonName }}/conf/{{ .DaemonName }}{{ .PostFix }}.conf $RP
 %if %is_daemon
 %config(noreplace) %attr(644, -, -) /etc/{{ .DaemonName }}/conf/{{ .DaemonName }}.conf
 %attr(754, -, -) /etc/init.d/{{ .DaemonName }}
+%attr(644, -, -) /etc/systemd/system/{{ .DaemonName }}.service
 %endif
 %exclude /usr/local/var/lib/rpm/*
 %exclude /usr/local/var/lib/rpm/.*
 %exclude /usr/local/var/tmp/*
 
 %pre
+# /etc/init.d/{{ .DaemonName }} requires /etc/init.d/functions file to work. That is why 'initscripts' is required.
+# Installing initscripts has two outcomes.
+# case 1. symlink /etc/init.d -> /etc/rc.d/init.d created. No action needed.
+# case 2. symlink /etc/init.d -> /etc/rc.d/init.d creation failed because /etc/init.d/ directory exists
+#         (e.g. kend.rpm v1.x was previously installed) If so, create symlink to 'functions'.
+if [ -d /etc/init.d ] && [ ! -e /etc/init.d/functions ]; then
+	ln -s /etc/rc.d/init.d/functions /etc/init.d/functions
+fi
 %if %is_daemon
 if [ $1 -eq 2 ]; then
 	# Package upgrade
-	systemctl stop {{ .DaemonName }}.service > /dev/null 2>&1
+	# rpm v1.x installs init.d only. rpm v2.0+ installs init.d and systemd.
+	# case 1. upgrading from v2.0 and systemctl works.
+	# case 2. upgrading from v1.x and init.d works.
+	# case 3. upgrading from v1.x and init.d fails (e.g. In Rocky Linux, init.d fails without systemd)
+	(systemctl stop {{ .DaemonName }}.service || /etc/init.d/{{ .DaemonName }} stop || true) > /dev/null 2>&1
 fi
 %endif
 

@@ -49,6 +49,9 @@ type Config struct {
 	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set infinite to disable the computation cost limit.
 	ComputationCostLimit uint64
 
+	// UseConsoleLog enables console.log() in solidity for local network
+	UseConsoleLog bool
+
 	// Enables collecting internal transaction data during processing a block
 	EnableInternalTxTracing bool
 
@@ -102,6 +105,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsPrague:
+			jt = PragueInstructionSet
 		case evm.chainRules.IsCancun:
 			jt = CancunInstructionSet
 		case evm.chainRules.IsShanghai:

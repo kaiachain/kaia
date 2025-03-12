@@ -69,16 +69,6 @@ func (gxhash *Gxhash) PreprocessHeaderVerification(headers []*types.Header) (cha
 	panic("this method is not used for PoW engine")
 }
 
-// CreateSnapshot is not used for PoW engine.
-func (gxhash *Gxhash) CreateSnapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) error {
-	return nil
-}
-
-// GetKaiaHeadersForSnapshotApply is not used for PoW engine.
-func (gxhash *Gxhash) GetKaiaHeadersForSnapshotApply(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.Header) ([]*types.Header, error) {
-	return nil, nil
-}
-
 // GetConsensusInfo is not used for PoW engine.
 func (gxhash *Gxhash) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	return consensus.ConsensusInfo{}, nil
@@ -350,7 +340,7 @@ func calcBlockScoreHomestead(time uint64, parent *types.Header) *big.Int {
 	return x
 }
 
-func (gxhash *Gxhash) InitSnapshot() {}
+func (gxhash *Gxhash) PurgeCache() {}
 
 // VerifySeal implements consensus.Engine, checking whether the given block satisfies
 // the PoW blockscore requirements.

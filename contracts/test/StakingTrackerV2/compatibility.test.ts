@@ -8,12 +8,11 @@ import {
   submitAndExecuteRequest,
   ABOOK_ADDRESS,
   setBlock,
-  REGISTRY_ADDRESS,
 } from "../common/helper";
 import { ethers } from "hardhat";
-import { stakingTrackerV2TestFixture } from "../common/fixtures";
+import { registerContract, stakingTrackerV2TestFixture } from "../materials";
 import { smock } from "@defi-wonderland/smock";
-import { ICLRegistry, ICLRegistry__factory, Registry, Registry__factory } from "../../typechain-types";
+import { ICLRegistry, ICLRegistry__factory } from "../../typechain-types";
 
 const DAY = 24 * 60 * 60;
 const WEEK = 7 * DAY;
@@ -31,11 +30,16 @@ describe("StakingTrackerV2.sol", function () {
   beforeEach(async function () {
     augmentChai();
     fixture = await loadFixture(stakingTrackerV2TestFixture);
-    const fakeRegistry = await smock.fake<Registry>(Registry__factory.abi, { address: REGISTRY_ADDRESS });
-    const fakeCLRegistry = await smock.fake<ICLRegistry>(ICLRegistry__factory.abi);
+    const fakeCLRegistry = await smock.fake<ICLRegistry>(
+      ICLRegistry__factory.abi
+    );
 
-    fakeRegistry.getActiveAddr.returns(fakeCLRegistry.address);
-    fakeCLRegistry.getAllCLs.returns([[], [], [], []]);
+    await registerContract(
+      fixture.registry,
+      "CLRegistry",
+      fakeCLRegistry.address
+    );
+    fakeCLRegistry.getAllCLs.returns([[], [], []]);
   });
 
   // 1. Test initializing process
@@ -87,7 +91,16 @@ describe("StakingTrackerV2.sol", function () {
       ]);
     });
     it("Check CnStaking setting", async function () {
-      const { cnStakingV1A, cnStakingV2B, cnStakingV2C, cnStakingV2D, admin1, admin2, admin3, admin4 } = fixture;
+      const {
+        cnStakingV1A,
+        cnStakingV2B,
+        cnStakingV2C,
+        cnStakingV2D,
+        admin1,
+        admin2,
+        admin3,
+        admin4,
+      } = fixture;
 
       const stateOfA = await cnStakingV1A.getState();
       const adminB = await cnStakingV2B.adminList(0);
@@ -107,15 +120,20 @@ describe("StakingTrackerV2.sol", function () {
       const { stakingTracker, trackStart, trackEnd, other1 } = fixture;
 
       // Note that contractValidator(= accounts[0]) is an owner of contracts by hardhat default setting
-      await expect(stakingTracker.connect(other1).createTracker(trackStart, trackEnd)).to.be.revertedWithCustomError(
+      await expect(
+        stakingTracker.connect(other1).createTracker(trackStart, trackEnd)
+      ).to.be.revertedWithCustomError(
         stakingTracker,
-        "OwnableUnauthorizedAccount",
+        "OwnableUnauthorizedAccount"
       );
     });
     it("Create and check a single tracker", async function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
 
-      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(
+        stakingTracker,
+        "CreateTracker"
+      );
 
       // Checkpoint:
       // 1. LastTrackerId
@@ -126,7 +144,9 @@ describe("StakingTrackerV2.sol", function () {
       const lastTrackerId = await stakingTracker.getLastTrackerId();
       const allTrackerIds = await stakingTracker.getAllTrackerIds();
       const liveTrackerIds = await stakingTracker.getLiveTrackerIds();
-      const trackerSummary = await stakingTracker.getTrackerSummary(lastTrackerId);
+      const trackerSummary = await stakingTracker.getTrackerSummary(
+        lastTrackerId
+      );
 
       expect(lastTrackerId).to.equal(1);
       expect(allTrackerIds).to.equalNumberList([1]);
@@ -145,12 +165,18 @@ describe("StakingTrackerV2.sol", function () {
       const { stakingTracker, trackStart, trackEnd, cnStakingV2B } = fixture;
 
       // Note that contractValidator(= accounts[0]) is an owner of contracts by hardhat default setting
-      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(
+        stakingTracker,
+        "CreateTracker"
+      );
 
       await setBlock(trackEnd + 1);
 
       // Call refreshStake to expire the outdated tracker
-      await expect(stakingTracker.refreshStake(cnStakingV2B.address)).to.emit(stakingTracker, "RetireTracker");
+      await expect(stakingTracker.refreshStake(cnStakingV2B.address)).to.emit(
+        stakingTracker,
+        "RetireTracker"
+      );
 
       const liveTrackerIds = await stakingTracker.getLiveTrackerIds();
 
@@ -158,13 +184,32 @@ describe("StakingTrackerV2.sol", function () {
       expect(liveTrackerIds).to.equalNumberList([]);
     });
     it("Create trackers and check getter", async function () {
-      const { stakingTracker, trackStart, trackEnd, argsForContractB, argsForContractC, argsForContractD } = fixture;
+      const {
+        stakingTracker,
+        trackStart,
+        trackEnd,
+        argsForContractB,
+        argsForContractC,
+        argsForContractD,
+      } = fixture;
 
-      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(
+        stakingTracker,
+        "CreateTracker"
+      );
 
-      const trackedGCB = await stakingTracker.getTrackedGC(1, argsForContractB.gcId!);
-      const trackedGCC = await stakingTracker.getTrackedGC(1, argsForContractC.gcId!);
-      const trackedGCD = await stakingTracker.getTrackedGC(1, argsForContractD.gcId!);
+      const trackedGCB = await stakingTracker.getTrackedGC(
+        1,
+        argsForContractB.gcId!
+      );
+      const trackedGCC = await stakingTracker.getTrackedGC(
+        1,
+        argsForContractC.gcId!
+      );
+      const trackedGCD = await stakingTracker.getTrackedGC(
+        1,
+        argsForContractD.gcId!
+      );
 
       const allTrackedGCs = await stakingTracker.getAllTrackedGCs(1);
 
@@ -175,7 +220,11 @@ describe("StakingTrackerV2.sol", function () {
       expect(trackedGCD[0]).to.equal(toPeb(6_000_000n));
       expect(trackedGCD[1]).to.equal(1);
 
-      if (argsForContractB.gcId && argsForContractC.gcId && argsForContractD.gcId) {
+      if (
+        argsForContractB.gcId &&
+        argsForContractC.gcId &&
+        argsForContractD.gcId
+      ) {
         expect(allTrackedGCs[0]).to.equalNumberList([
           argsForContractB.gcId,
           argsForContractC.gcId,
@@ -183,7 +232,11 @@ describe("StakingTrackerV2.sol", function () {
         ]);
       }
 
-      expect(allTrackedGCs[1]).to.equalNumberList([toPeb(6_000_000n), toPeb(6_000_000n), toPeb(6_000_000n)]);
+      expect(allTrackedGCs[1]).to.equalNumberList([
+        toPeb(6_000_000n),
+        toPeb(6_000_000n),
+        toPeb(6_000_000n),
+      ]);
 
       expect(allTrackedGCs[2]).to.equalNumberList([1, 1, 1]);
     });
@@ -216,10 +269,15 @@ describe("StakingTrackerV2.sol", function () {
       // Check tracker states
 
       // 1. Create tracker 1
-      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(
+        stakingTracker,
+        "CreateTracker"
+      );
 
       // 2. cnStakingV2B adds 4m KLAY stakes
-      await expect(cnStakingV2B.connect(admin2).stakeKlay({ value: toPeb(4_000_000n) }))
+      await expect(
+        cnStakingV2B.connect(admin2).stakeKlay({ value: toPeb(4_000_000n) })
+      )
         .to.emit(cnStakingV2B, "StakeKlay")
         .to.emit(stakingTracker, "RefreshStake");
 
@@ -234,19 +292,28 @@ describe("StakingTrackerV2.sol", function () {
       await jumpTime(105);
 
       // 3. Create tracker 2
-      await expect(stakingTracker.createTracker(trackStart + trackInterval, trackEnd + trackInterval)).to.emit(
-        stakingTracker,
-        "CreateTracker",
-      );
+      await expect(
+        stakingTracker.createTracker(
+          trackStart + trackInterval,
+          trackEnd + trackInterval
+        )
+      ).to.emit(stakingTracker, "CreateTracker");
 
       // 4. CnStakingV2C removes 2m KLAY stakes: expire tracker 1 and CnStakingV2C loses its vote
-      await submitAndExecuteRequest(cnStakingV2C, [admin3], 1, FuncID.WithdrawLockupStaking, admin3, [
-        0,
+      await submitAndExecuteRequest(
+        cnStakingV2C,
+        [admin3],
+        1,
         FuncID.WithdrawLockupStaking,
-        other1.address,
-        BigInt(unLockAmounts[0]),
-        0,
-      ]);
+        admin3,
+        [
+          0,
+          FuncID.WithdrawLockupStaking,
+          other1.address,
+          BigInt(unLockAmounts[0]),
+          0,
+        ]
+      );
 
       // Check tracker states
       let lastTrackerId = await stakingTracker.getLastTrackerId();
@@ -268,13 +335,17 @@ describe("StakingTrackerV2.sol", function () {
       await setBlock(trackEnd + trackInterval);
 
       // 5. Create tracker 3
-      await expect(stakingTracker.createTracker(trackStart + trackInterval * 2, trackEnd + trackInterval * 2)).to.emit(
-        stakingTracker,
-        "CreateTracker",
-      );
+      await expect(
+        stakingTracker.createTracker(
+          trackStart + trackInterval * 2,
+          trackEnd + trackInterval * 2
+        )
+      ).to.emit(stakingTracker, "CreateTracker");
 
       // 6. CnStakingV2C adds 2m KLAY free-stakes: expire tracker 2 and CnStakingV2C recovers its vote
-      await expect(cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(2_000_000n) }))
+      await expect(
+        cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(2_000_000n) })
+      )
         .to.emit(cnStakingV2C, "StakeKlay")
         .to.emit(stakingTracker, "RefreshStake");
 
@@ -313,24 +384,27 @@ describe("StakingTrackerV2.sol", function () {
         // Check tracker states
 
         // 1. Create tracker 1
-        await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+        await expect(
+          stakingTracker.createTracker(trackStart, trackEnd)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         // 2. Create tracker 2
-        await expect(stakingTracker.createTracker(trackStart + 10, trackEnd + 10)).to.emit(
-          stakingTracker,
-          "CreateTracker",
-        );
+        await expect(
+          stakingTracker.createTracker(trackStart + 10, trackEnd + 10)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         // 3. Create tracker 3
-        await expect(stakingTracker.createTracker(trackStart + 20, trackEnd + 20)).to.emit(
-          stakingTracker,
-          "CreateTracker",
-        );
+        await expect(
+          stakingTracker.createTracker(trackStart + 20, trackEnd + 20)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         await setBlock(trackStart + 30);
 
         // 4. Call refreshStake
-        await expect(stakingTracker.refreshStake(cnStakingV2B.address)).to.emit(stakingTracker, "RefreshStake");
+        await expect(stakingTracker.refreshStake(cnStakingV2B.address)).to.emit(
+          stakingTracker,
+          "RefreshStake"
+        );
 
         // Check tracker states
         const lastTrackerId = await stakingTracker.getLastTrackerId();
@@ -343,7 +417,13 @@ describe("StakingTrackerV2.sol", function () {
         expect(liveTrackerIds).to.equalNumberList([1, 2, 3]);
       });
       it("#refreshStake: When there's expired tracker", async function () {
-        const { stakingTracker, trackInterval, trackStart, trackEnd, cnStakingV2B } = fixture;
+        const {
+          stakingTracker,
+          trackInterval,
+          trackStart,
+          trackEnd,
+          cnStakingV2B,
+        } = fixture;
 
         // 1. Create tracker 1 with (trackStart, trackEnd)
         // 2. Create tracker 2 with (trackEnd, trackEnd + trackInterval)
@@ -354,19 +434,22 @@ describe("StakingTrackerV2.sol", function () {
         // 4. Call refreshStake: #2 is live (Need to check if it's intended)
 
         // 1. Create tracker 1
-        await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+        await expect(
+          stakingTracker.createTracker(trackStart, trackEnd)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         // 2. Create tracker 2
-        await expect(stakingTracker.createTracker(trackEnd, trackEnd + trackInterval)).to.emit(
-          stakingTracker,
-          "CreateTracker",
-        );
+        await expect(
+          stakingTracker.createTracker(trackEnd, trackEnd + trackInterval)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         // 3. Create tracker 3
-        await expect(stakingTracker.createTracker(trackEnd + 10, trackEnd + trackInterval + 10)).to.emit(
-          stakingTracker,
-          "CreateTracker",
-        );
+        await expect(
+          stakingTracker.createTracker(
+            trackEnd + 10,
+            trackEnd + trackInterval + 10
+          )
+        ).to.emit(stakingTracker, "CreateTracker");
 
         await setBlock(trackStart + 30);
 
@@ -401,22 +484,31 @@ describe("StakingTrackerV2.sol", function () {
       it("#refreshVoter: Wrong staking contract", async function () {
         const { stakingTracker, trackStart, trackEnd, cnStakingV1A } = fixture;
 
-        await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+        await expect(
+          stakingTracker.createTracker(trackStart, trackEnd)
+        ).to.emit(stakingTracker, "CreateTracker");
 
         // 1. V1 contract can't update voter
-        await expect(stakingTracker.refreshVoter(cnStakingV1A.address)).to.be.revertedWith(
-          "Invalid CnStaking contract",
-        );
+        await expect(
+          stakingTracker.refreshVoter(cnStakingV1A.address)
+        ).to.be.revertedWith("Invalid CnStaking contract");
 
         // 2. Not a staking contract
-        await expect(stakingTracker.refreshVoter(stakingTracker.address)).to.be.revertedWith("Not a staking contract");
+        await expect(
+          stakingTracker.refreshVoter(stakingTracker.address)
+        ).to.be.revertedWith("Not a staking contract");
       });
       it("#refreshVoter: Emits RefreshVoter event", async function () {
         const { stakingTracker, trackStart, trackEnd, cnStakingV2B } = fixture;
 
-        await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+        await expect(
+          stakingTracker.createTracker(trackStart, trackEnd)
+        ).to.emit(stakingTracker, "CreateTracker");
 
-        await expect(stakingTracker.refreshVoter(cnStakingV2B.address)).to.emit(stakingTracker, "RefreshVoter");
+        await expect(stakingTracker.refreshVoter(cnStakingV2B.address)).to.emit(
+          stakingTracker,
+          "RefreshVoter"
+        );
       });
     });
   });
@@ -427,7 +519,10 @@ describe("StakingTrackerV2.sol", function () {
     this.beforeEach(async function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
 
-      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(stakingTracker, "CreateTracker");
+      await expect(stakingTracker.createTracker(trackStart, trackEnd)).to.emit(
+        stakingTracker,
+        "CreateTracker"
+      );
     });
     describe("#refreshStake", async function () {
       it("#stakeKlay: By V1 contract", async function () {
@@ -438,10 +533,9 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(3);
 
         // CnStakingV1A stake 4m KLAY
-        await expect(cnStakingV1A.connect(admin1).stakeKlay({ value: toPeb(4_000_000n) })).to.emit(
-          cnStakingV1A,
-          "StakeKlay",
-        );
+        await expect(
+          cnStakingV1A.connect(admin1).stakeKlay({ value: toPeb(4_000_000n) })
+        ).to.emit(cnStakingV1A, "StakeKlay");
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -456,10 +550,9 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(3);
 
         // CnStakingV2B stake 4m KLAY
-        await expect(cnStakingV2B.connect(admin2).stakeKlay({ value: toPeb(4_000_000n) })).to.emit(
-          cnStakingV2B,
-          "StakeKlay",
-        );
+        await expect(
+          cnStakingV2B.connect(admin2).stakeKlay({ value: toPeb(4_000_000n) })
+        ).to.emit(cnStakingV2B, "StakeKlay");
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -467,7 +560,8 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(4);
       });
       it("#withdrawLockupStaking", async function () {
-        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } = fixture;
+        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } =
+          fixture;
 
         let trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -476,13 +570,20 @@ describe("StakingTrackerV2.sol", function () {
         await jumpTime(105);
 
         // CnStakingV2C withdraws 2m KLAY
-        await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.WithdrawLockupStaking, admin3, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2C,
+          [admin3],
+          requirement,
           FuncID.WithdrawLockupStaking,
-          other1.address,
-          BigInt(toPeb(2_000_000n)),
-          0,
-        ]);
+          admin3,
+          [
+            0,
+            FuncID.WithdrawLockupStaking,
+            other1.address,
+            BigInt(toPeb(2_000_000n)),
+            0,
+          ]
+        );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -490,14 +591,17 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(2);
       });
       it("#approveStakingWithdrawal", async function () {
-        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } = fixture;
+        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } =
+          fixture;
 
         let trackerSummary = await stakingTracker.getTrackerSummary(1);
 
         expect(trackerSummary[3]).to.equal(3);
 
         // stakeKlay 4m KLAY
-        await expect(cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) }))
+        await expect(
+          cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) })
+        )
           .to.emit(cnStakingV2C, "StakeKlay")
           .to.emit(stakingTracker, "RefreshStake");
 
@@ -508,13 +612,20 @@ describe("StakingTrackerV2.sol", function () {
         jumpTime(WEEK);
 
         // CnStakingV2C withdraws 2m KLAY
-        await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.ApproveStakingWithdrawal, admin3, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2C,
+          [admin3],
+          requirement,
           FuncID.ApproveStakingWithdrawal,
-          other1.address,
-          BigInt(toPeb(4_000_000n)),
-          0,
-        ]);
+          admin3,
+          [
+            0,
+            FuncID.ApproveStakingWithdrawal,
+            other1.address,
+            BigInt(toPeb(4_000_000n)),
+            0,
+          ]
+        );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -522,14 +633,17 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(3);
       });
       it("#cancelApprovedStakingWithdrawal", async function () {
-        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } = fixture;
+        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } =
+          fixture;
 
         let trackerSummary = await stakingTracker.getTrackerSummary(1);
 
         expect(trackerSummary[3]).to.equal(3);
 
         // stakeKlay 4m KLAY
-        await expect(cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) }))
+        await expect(
+          cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) })
+        )
           .to.emit(cnStakingV2C, "StakeKlay")
           .to.emit(stakingTracker, "RefreshStake");
 
@@ -540,13 +654,20 @@ describe("StakingTrackerV2.sol", function () {
         jumpTime(WEEK);
 
         // CnStakingV2C withdraws 4m KLAY
-        await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.ApproveStakingWithdrawal, admin3, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2C,
+          [admin3],
+          requirement,
           FuncID.ApproveStakingWithdrawal,
-          other1.address,
-          BigInt(toPeb(4_000_000n)),
-          0,
-        ]);
+          admin3,
+          [
+            0,
+            FuncID.ApproveStakingWithdrawal,
+            other1.address,
+            BigInt(toPeb(4_000_000n)),
+            0,
+          ]
+        );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -560,7 +681,7 @@ describe("StakingTrackerV2.sol", function () {
           requirement,
           FuncID.CancelApprovedStakingWithdrawal,
           admin3,
-          [1, FuncID.CancelApprovedStakingWithdrawal, 0, 0, 0],
+          [1, FuncID.CancelApprovedStakingWithdrawal, 0, 0, 0]
         );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
@@ -569,14 +690,17 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(4);
       });
       it("#withdrawApprovedStaking: Successfully withdraw free stakes", async function () {
-        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } = fixture;
+        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } =
+          fixture;
 
         let trackerSummary = await stakingTracker.getTrackerSummary(1);
 
         expect(trackerSummary[3]).to.equal(3);
 
         // stakeKlay 4m KLAY
-        await expect(cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) }))
+        await expect(
+          cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) })
+        )
           .to.emit(cnStakingV2C, "StakeKlay")
           .to.emit(stakingTracker, "RefreshStake");
 
@@ -585,13 +709,20 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(4);
 
         // CnStakingV2C withdraws 4m KLAY
-        await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.ApproveStakingWithdrawal, admin3, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2C,
+          [admin3],
+          requirement,
           FuncID.ApproveStakingWithdrawal,
-          other1.address,
-          BigInt(toPeb(4_000_000n)),
-          0,
-        ]);
+          admin3,
+          [
+            0,
+            FuncID.ApproveStakingWithdrawal,
+            other1.address,
+            BigInt(toPeb(4_000_000n)),
+            0,
+          ]
+        );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -611,14 +742,17 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(3);
       });
       it("#withdrawApprovedStaking: Can't withdraw it since it's over 2 weeks", async function () {
-        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } = fixture;
+        const { stakingTracker, admin3, requirement, cnStakingV2C, other1 } =
+          fixture;
 
         let trackerSummary = await stakingTracker.getTrackerSummary(1);
 
         expect(trackerSummary[3]).to.equal(3);
 
         // stakeKlay 4m KLAY
-        await expect(cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) }))
+        await expect(
+          cnStakingV2C.connect(admin3).stakeKlay({ value: toPeb(4_000_000n) })
+        )
           .to.emit(cnStakingV2C, "StakeKlay")
           .to.emit(stakingTracker, "RefreshStake");
 
@@ -627,13 +761,20 @@ describe("StakingTrackerV2.sol", function () {
         expect(trackerSummary[3]).to.equal(4);
 
         // CnStakingV2C withdraws 4m KLAY
-        await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.ApproveStakingWithdrawal, admin3, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2C,
+          [admin3],
+          requirement,
           FuncID.ApproveStakingWithdrawal,
-          other1.address,
-          BigInt(toPeb(4_000_000n)),
-          0,
-        ]);
+          admin3,
+          [
+            0,
+            FuncID.ApproveStakingWithdrawal,
+            other1.address,
+            BigInt(toPeb(4_000_000n)),
+            0,
+          ]
+        );
 
         trackerSummary = await stakingTracker.getTrackerSummary(1);
 
@@ -655,29 +796,38 @@ describe("StakingTrackerV2.sol", function () {
     });
     describe("#refreshVoter", async function () {
       it("#updateVoterAddress", async function () {
-        const { stakingTracker, admin4, requirement, cnStakingV2D, other1 } = fixture;
+        const { stakingTracker, admin4, requirement, cnStakingV2D, other1 } =
+          fixture;
 
         // Check voter before updateVoterAddress
-        let cnStakingState = await stakingTracker.readCnStaking(cnStakingV2D.address);
+        let cnStakingState = await stakingTracker.readCnStaking(
+          cnStakingV2D.address
+        );
 
         // We haven't set voter address yet
         expect(cnStakingState[4]).to.equal(ethers.constants.AddressZero);
 
         // submit and execute updateVoterAddress request
-        await submitAndExecuteRequest(cnStakingV2D, [admin4], requirement, FuncID.UpdateVoterAddress, admin4, [
-          0,
+        await submitAndExecuteRequest(
+          cnStakingV2D,
+          [admin4],
+          requirement,
           FuncID.UpdateVoterAddress,
-          other1.address,
-          0,
-          0,
-        ]);
+          admin4,
+          [0, FuncID.UpdateVoterAddress, other1.address, 0, 0]
+        );
 
-        cnStakingState = await stakingTracker.readCnStaking(cnStakingV2D.address);
+        cnStakingState = await stakingTracker.readCnStaking(
+          cnStakingV2D.address
+        );
 
         // Now voter address should be other1.address
         expect(cnStakingState[4]).to.equal(other1.address);
 
-        await expect(stakingTracker.refreshVoter(cnStakingV2D.address)).to.emit(stakingTracker, "RefreshVoter");
+        await expect(stakingTracker.refreshVoter(cnStakingV2D.address)).to.emit(
+          stakingTracker,
+          "RefreshVoter"
+        );
         expect(await stakingTracker.voterToGCId(other1.address)).to.equal(702);
       });
     });

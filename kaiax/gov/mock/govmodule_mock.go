@@ -52,20 +52,6 @@ func (mr *MockGovModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockGovModule)(nil).APIs))
 }
 
-// EffectiveParamSet mocks base method.
-func (m *MockGovModule) EffectiveParamSet(arg0 uint64) gov.ParamSet {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EffectiveParamSet", arg0)
-	ret0, _ := ret[0].(gov.ParamSet)
-	return ret0
-}
-
-// EffectiveParamSet indicates an expected call of EffectiveParamSet.
-func (mr *MockGovModuleMockRecorder) EffectiveParamSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EffectiveParamSet", reflect.TypeOf((*MockGovModule)(nil).EffectiveParamSet), arg0)
-}
-
 // FinalizeHeader mocks base method.
 func (m *MockGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
 	m.ctrl.T.Helper()
@@ -78,6 +64,20 @@ func (m *MockGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, 
 func (mr *MockGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+}
+
+// GetParamSet mocks base method.
+func (m *MockGovModule) GetParamSet(arg0 uint64) gov.ParamSet {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetParamSet", arg0)
+	ret0, _ := ret[0].(gov.ParamSet)
+	return ret0
+}
+
+// GetParamSet indicates an expected call of GetParamSet.
+func (mr *MockGovModuleMockRecorder) GetParamSet(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetParamSet", reflect.TypeOf((*MockGovModule)(nil).GetParamSet), arg0)
 }
 
 // PostInsertBlock mocks base method.

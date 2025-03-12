@@ -72,6 +72,17 @@ func ErrFeePayer(err error) error {
 	return fmt.Errorf("invalid fee payer: %s", err)
 }
 
+// ValidatedGas holds the intrinsic gas, sig validation gas, and data tokens.
+//   - Intrinsic gas is the gas for the tx type + signature validation + data.
+//     After Prague, floor gas would be used if intrinsic gas < floor gas.
+//     Note that SigValidationGas is already included in IntrinsicGas.
+//   - Sig validation gas is the gas for validating sender and feePayer.
+//     It is related to Kaia-specific tx types, so it is not part of the floor gas comparison.
+type ValidatedGas struct {
+	IntrinsicGas   uint64
+	SigValidateGas uint64
+}
+
 type Transaction struct {
 	data TxInternalData
 	time time.Time
@@ -88,9 +99,9 @@ type Transaction struct {
 	// validatedFeePayer represents the fee payer of the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
 	validatedFeePayer common.Address
-	// validatedIntrinsicGas represents intrinsic gas of the transaction to be used for ApplyTransaction().
+	// validatedGas holds intrinsic gas, sig validation gas, and number of tokens for the transaction to be used for ApplyTransaction().
 	// This value is set in AsMessageWithAccountKeyPicker().
-	validatedIntrinsicGas uint64
+	validatedGas *ValidatedGas
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
@@ -285,7 +296,7 @@ func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
 func (tx *Transaction) GasTipCap() *big.Int {
-	if tx.Type() == TxTypeEthereumDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee || tx.Type() == TxTypeEthereumSetCode {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasTipCap()
 	}
@@ -294,7 +305,7 @@ func (tx *Transaction) GasTipCap() *big.Int {
 }
 
 func (tx *Transaction) GasFeeCap() *big.Int {
-	if tx.Type() == TxTypeEthereumDynamicFee {
+	if tx.Type() == TxTypeEthereumDynamicFee || tx.Type() == TxTypeEthereumSetCode {
 		te := tx.GetTxInternalData().(TxInternalDataBaseFee)
 		return te.GetGasFeeCap()
 	}
@@ -331,6 +342,36 @@ func (tx *Transaction) AccessList() AccessList {
 		return te.GetAccessList()
 	}
 	return nil
+}
+
+func (tx *Transaction) AuthList() []SetCodeAuthorization {
+	if tx.Type() == TxTypeEthereumSetCode {
+		te := tx.GetTxInternalData().(*TxInternalDataEthereumSetCode)
+		return te.GetAuthorizationList()
+	}
+	return nil
+}
+
+// SetCodeAuthorities returns a list of unique authorities from the
+// authorization list.
+func (tx *Transaction) SetCodeAuthorities() []common.Address {
+	if tx.Type() != TxTypeEthereumSetCode {
+		return nil
+	}
+	var (
+		marks = make(map[common.Address]bool)
+		auths = make([]common.Address, 0, len(tx.AuthList()))
+	)
+	for _, auth := range tx.AuthList() {
+		if addr, err := auth.Authority(); err == nil {
+			if marks[addr] {
+				continue
+			}
+			marks[addr] = true
+			auths = append(auths, addr)
+		}
+	}
+	return auths
 }
 
 func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
@@ -377,10 +418,10 @@ func (tx *Transaction) ValidatedFeePayer() common.Address {
 	return tx.validatedFeePayer
 }
 
-func (tx *Transaction) ValidatedIntrinsicGas() uint64 {
+func (tx *Transaction) ValidatedGas() *ValidatedGas {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
-	return tx.validatedIntrinsicGas
+	return tx.validatedGas
 }
 func (tx *Transaction) MakeRPCOutput() map[string]interface{} { return tx.data.MakeRPCOutput() }
 func (tx *Transaction) GetTxInternalData() TxInternalData     { return tx.data }
@@ -598,8 +639,11 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 		}
 	}
 
+	sigValidationGas := gasFrom + gasFeePayer
+	intrinsicGas = intrinsicGas + sigValidationGas
+
 	tx.mu.Lock()
-	tx.validatedIntrinsicGas = intrinsicGas + gasFrom + gasFeePayer
+	tx.validatedGas = &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: sigValidationGas}
 	tx.mu.Unlock()
 
 	return tx, err
@@ -1071,17 +1115,22 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 }
 
 // NewMessage returns a `*Transaction` object with the given arguments.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList) *Transaction {
+// Care must be taken when creating SetCodeTx because if you assign nil to `to`,
+// a panic will occur because `newTxInternalDataEthereumSetCodeWithValues` reference the pointer of `to`.
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
-		validatedIntrinsicGas: intrinsicGas,
-		validatedFeePayer:     from,
-		validatedSender:       from,
-		checkNonce:            checkNonce,
+		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
+		validatedFeePayer: from,
+		validatedSender:   from,
+		checkNonce:        checkNonce,
 	}
 
-	// Call supports EthereumAccessList and Legacy txTypes only.
-	if list != nil {
-		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, nil)
+	// Call supports EthereumAccessList, EthereumSetCode and Legacy txTypes only.
+	if auth != nil {
+		internalData := newTxInternalDataEthereumSetCodeWithValues(nonce, *to, amount, gasLimit, gasFeeCap, gasTipCap, data, list, chainId, auth)
+		transaction.setDecoded(internalData, 0)
+	} else if list != nil {
+		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, chainId)
 		transaction.setDecoded(internalData, 0)
 	} else {
 		internalData := newTxInternalDataLegacyWithValues(nonce, to, amount, gasLimit, gasPrice, data)

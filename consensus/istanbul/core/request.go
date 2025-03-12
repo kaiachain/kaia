@@ -56,9 +56,10 @@ func (c *core) checkRequestMsg(request *istanbul.Request) error {
 		return errInvalidMessage
 	}
 
-	if c := c.current.sequence.Cmp(request.Proposal.Number()); c > 0 {
+	cmp := c.current.sequence.Cmp(request.Proposal.Number())
+	if cmp > 0 { // request.Proposal.Number < c.current.sequence
 		return errOldMessage
-	} else if c < 0 {
+	} else if cmp < 0 { // request.Proposer.Number > c.current.Sequence
 		return errFutureMessage
 	} else {
 		return nil

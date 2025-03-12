@@ -40,10 +40,16 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 		n3 = common.HexToAddress("0xD95c70710f07A3DaF7ae11cFBa10c789da3564D0")
 		n4 = common.HexToAddress("0xC704765db1d21C2Ea6F7359dcB8FD5233DeD16b5")
 
+		n5 = common.HexToAddress("0xff363cBd51c352934Da83d435493FB587F9efbD5")
+
 		s1 = common.HexToAddress("0x4dd324F9821485caE941640B32c3Bcf1fA6E93E6")
 		s2 = common.HexToAddress("0x0d5Df5086B5f86f748dFaed5779c3f862C075B1f")
 		s3 = common.HexToAddress("0xD3Ff05f00491571E86A3cc8b0c320aA76D7413A5")
 		s4 = common.HexToAddress("0x11EF8e61d10365c2ECAe0E95b5fFa9ed4D68d64f")
+
+		clPool1 = common.HexToAddress("0x46114609ddDafFE05957a9Cf7953fE630D6A0220")
+		clPool2 = common.HexToAddress("0x7048320d0159673b7361154680C5eDf202bb2AAE")
+		clPool3 = common.HexToAddress("0xE6bd76E6317d1456f72c1F03126EFB11e6cA7982")
 
 		r1 = common.HexToAddress("0x241c793A9AD555f52f6C3a83afe6178408796ab2")
 		r2 = common.HexToAddress("0x79b427Fb77077A9716E08D049B0e8f36Abfc8E2E")
@@ -60,6 +66,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 		a2 uint64 = 20000000
 		a3 uint64 = 40000000
 		a4 uint64 = 80000000
+
+		clStakingAmount1 uint64 = 1000000
+		clStakingAmount2 uint64 = 3000000
+		clStakingAmount3 uint64 = 5000000
 	)
 	if aM != params.DefaultMinimumStake.Uint64() {
 		panic("broken test assumption")
@@ -82,7 +92,7 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				StakingAmounts:   []uint64{a1},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a1},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
 			},
 			expectedGini: 0.0,
 		},
@@ -97,10 +107,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				StakingAmounts:   []uint64{a1, a2, a3, a4},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a1},
-				{[]common.Address{n2}, []common.Address{s2}, r2, a2},
-				{[]common.Address{n3}, []common.Address{s3}, r3, a3},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a4},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, a2, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, a3, nil},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a4, nil},
 			},
 			expectedGini: 0.38,
 		},
@@ -115,8 +125,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				StakingAmounts:   []uint64{a1, a2, a3, a4},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, nil},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
 			},
 			expectedGini: 0.17,
 		},
@@ -131,12 +141,133 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				StakingAmounts:   []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a2},
-				{[]common.Address{n2}, []common.Address{s2}, r2, aM},
-				{[]common.Address{n3}, []common.Address{s3}, r3, aL},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a0},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, aL, nil},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a0, nil},
 			},
 			expectedGini: 0.41,
+		},
+		"2 nodes under minStaking have CLs": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   4 * 86400,
+				NodeIds:          []common.Address{n1, n2, n3, n4},
+				StakingContracts: []common.Address{s1, s2, s3, s4},
+				RewardAddrs:      []common.Address{r1, r2, r3, r4},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation even it exceeds when considering CLs
+				CLStakingInfos: CLStakingInfos{
+					{
+						CLNodeId:        n3,
+						CLPoolAddr:      clPool1,
+						CLStakingAmount: clStakingAmount2,
+					},
+					{
+						CLNodeId:        n4,
+						CLPoolAddr:      clPool2,
+						CLStakingAmount: clStakingAmount2,
+					},
+				},
+			},
+			expectedConsolidated: []consolidatedNode{
+				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+			},
+			expectedGini: 0.41,
+		},
+		"4 nodes consolidated to 2 nodes and 2 CLs": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2, n3, n4},
+				StakingContracts: []common.Address{s1, s2, s3, s4},
+				RewardAddrs:      []common.Address{r1, r2, r1, r2},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2, a3, a4},
+				CLStakingInfos: CLStakingInfos{
+					{
+						CLNodeId:        n1,
+						CLPoolAddr:      clPool1,
+						CLStakingAmount: clStakingAmount1,
+					},
+					{
+						CLNodeId:        n4, // Using n2 or n4 should yield the same result
+						CLPoolAddr:      clPool2,
+						CLStakingAmount: clStakingAmount2,
+					},
+				},
+			},
+			expectedConsolidated: []consolidatedNode{
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+			},
+			expectedGini: 0.17,
+		},
+		"4 nodes consolidated to 2 nodes and 2 CLs + non-existing CL": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2, n3, n4},
+				StakingContracts: []common.Address{s1, s2, s3, s4},
+				RewardAddrs:      []common.Address{r1, r2, r1, r2},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2, a3, a4},
+				CLStakingInfos: CLStakingInfos{
+					{
+						CLNodeId:        n1,
+						CLPoolAddr:      clPool1,
+						CLStakingAmount: clStakingAmount1,
+					},
+					{
+						CLNodeId:        n2,
+						CLPoolAddr:      clPool2,
+						CLStakingAmount: clStakingAmount2,
+					},
+					// CL3 will be ignored when being consolidated since n5 is not in the AddressBook staking info.
+					{
+						CLNodeId:        n5,
+						CLPoolAddr:      clPool3,
+						CLStakingAmount: clStakingAmount3,
+					},
+				},
+			},
+			expectedConsolidated: []consolidatedNode{
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
+			},
+			expectedGini: 0.17,
+		},
+		"4 nodes consolidated to 2 nodes and one node has two CLs": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2, n3, n4},
+				StakingContracts: []common.Address{s1, s2, s3, s4},
+				RewardAddrs:      []common.Address{r1, r2, r1, r2},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2, a3, a4},
+				CLStakingInfos: CLStakingInfos{
+					{
+						CLNodeId:        n1,
+						CLPoolAddr:      clPool1,
+						CLStakingAmount: clStakingAmount1,
+					},
+					// CL1 will be ignored when being consolidated since it has duplicate CL (not feasible in real)
+					{
+						CLNodeId:        n3,
+						CLPoolAddr:      clPool2,
+						CLStakingAmount: clStakingAmount2,
+					},
+				},
+			},
+			expectedConsolidated: []consolidatedNode{
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
+			},
+			expectedGini: 0.15,
 		},
 	}
 }
@@ -149,10 +280,10 @@ func TestComputedFields(t *testing.T) {
 }
 
 func TestComputeGini(t *testing.T) {
-	assert.Equal(t, EmptyGini, computeGini([]float64{}))
-	assert.Equal(t, 0.0, computeGini([]float64{1, 1, 1}))
-	assert.Equal(t, 0.8, computeGini([]float64{0, 8, 0, 0, 0}))
-	assert.Equal(t, 0.27, computeGini([]float64{5, 4, 1, 2, 3}))
+	assert.Equal(t, EmptyGini, ComputeGini([]float64{}))
+	assert.Equal(t, 0.0, ComputeGini([]float64{1, 1, 1}))
+	assert.Equal(t, 0.8, ComputeGini([]float64{0, 8, 0, 0, 0}))
+	assert.Equal(t, 0.27, ComputeGini([]float64{5, 4, 1, 2, 3}))
 }
 
 func TestLegacy(t *testing.T) {
@@ -172,6 +303,7 @@ func TestLegacy(t *testing.T) {
 		KEFAddr:          common.HexToAddress("0x673003e5f9a852d3dc85b83d16ef62d45497fb96"),
 		KIFAddr:          common.HexToAddress("0x576dc0c2afeb1661da3cf53a60e76dd4e32c7ab1"),
 		StakingAmounts:   []uint64{5000000},
+		CLStakingInfos:   nil,
 	}
 
 	for _, tc := range testcases {
@@ -192,6 +324,8 @@ func TestResponse(t *testing.T) {
 		assert.Equal(t, tc.stakingInfo.KIFAddr, sr.PoCAddr)
 		assert.Equal(t, tc.stakingInfo.KIFAddr, sr.KFFAddr)
 		assert.Equal(t, tc.stakingInfo.KIFAddr, sr.KIFAddr)
+
+		assert.Equal(t, tc.stakingInfo.CLStakingInfos, sr.CLStakingInfos)
 
 		assert.Equal(t, true, sr.UseGini)
 		assert.Equal(t, tc.expectedGini, sr.Gini)

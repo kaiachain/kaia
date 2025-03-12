@@ -156,13 +156,13 @@ func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types
 	if call.AccessList != nil {
 		accessList = *call.AccessList
 	}
-	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, call.To == nil, b.bc.Config().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}
 
-	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, call.Data,
-		false, intrinsicGas, accessList)
+	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, nil, nil, call.Data,
+		false, intrinsicGas, accessList, nil, nil)
 
 	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
 	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
@@ -226,6 +226,7 @@ func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.I
 			return new(big.Int).Mul(b.bc.CurrentBlock().Header().BaseFee, big.NewInt(2)), nil
 		}
 	} else {
+		// This is used for sending txs, so it's ok to use the genesis value instead of the latest value from governance.
 		return new(big.Int).SetUint64(b.bc.Config().UnitPrice), nil
 	}
 }
@@ -300,7 +301,7 @@ func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.F
 	if !ok {
 		return nil, errors.New("BlockChainForCaller is not blockchain.BlockChain")
 	}
-	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), bc}, from, to, query.Addresses, query.Topics)
+	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), bc, nil}, from, to, query.Addresses, query.Topics)
 
 	logs, err := filter.Logs(ctx)
 	if err != nil {

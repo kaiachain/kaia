@@ -6,7 +6,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
-//go:generate mockgen -destination=mock/headergov_mock.go github.com/kaiachain/kaia/kaiax/gov/headergov HeaderGovModule
+//go:generate mockgen -destination=./mock/headergov_mock.go -package=mock_headergov github.com/kaiachain/kaia/kaiax/gov/headergov HeaderGovModule
 type HeaderGovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
@@ -14,9 +14,10 @@ type HeaderGovModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
-	EffectiveParamSet(blockNum uint64) gov.ParamSet
-	EffectiveParamsPartial(blockNum uint64) gov.PartialParamSet
+	GetParamSet(blockNum uint64) gov.ParamSet
+	GetPartialParamSet(blockNum uint64) gov.PartialParamSet
 	NodeAddress() common.Address
+	PushMyVotes(vote VoteData)
 }
 
 type GovData interface {

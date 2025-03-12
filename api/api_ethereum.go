@@ -707,39 +707,38 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
 func (api *EthereumAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
-	return transactionCount
+	return api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	transactionCount, _ := api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
-	return transactionCount
+	return api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
 }
 
 // EthRPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 // RPCTransaction in go-ethereum has been renamed to EthRPCTransaction.
 // RPCTransaction is defined in go-ethereum's internal package, so RPCTransaction is redefined here as EthRPCTransaction.
 type EthRPCTransaction struct {
-	BlockHash        *common.Hash      `json:"blockHash"`
-	BlockNumber      *hexutil.Big      `json:"blockNumber"`
-	From             common.Address    `json:"from"`
-	Gas              hexutil.Uint64    `json:"gas"`
-	GasPrice         *hexutil.Big      `json:"gasPrice"`
-	GasFeeCap        *hexutil.Big      `json:"maxFeePerGas,omitempty"`
-	GasTipCap        *hexutil.Big      `json:"maxPriorityFeePerGas,omitempty"`
-	Hash             common.Hash       `json:"hash"`
-	Input            hexutil.Bytes     `json:"input"`
-	Nonce            hexutil.Uint64    `json:"nonce"`
-	To               *common.Address   `json:"to"`
-	TransactionIndex *hexutil.Uint64   `json:"transactionIndex"`
-	Value            *hexutil.Big      `json:"value"`
-	Type             hexutil.Uint64    `json:"type"`
-	Accesses         *types.AccessList `json:"accessList,omitempty"`
-	ChainID          *hexutil.Big      `json:"chainId,omitempty"`
-	V                *hexutil.Big      `json:"v"`
-	R                *hexutil.Big      `json:"r"`
-	S                *hexutil.Big      `json:"s"`
+	BlockHash         *common.Hash                 `json:"blockHash"`
+	BlockNumber       *hexutil.Big                 `json:"blockNumber"`
+	From              common.Address               `json:"from"`
+	Gas               hexutil.Uint64               `json:"gas"`
+	GasPrice          *hexutil.Big                 `json:"gasPrice"`
+	GasFeeCap         *hexutil.Big                 `json:"maxFeePerGas,omitempty"`
+	GasTipCap         *hexutil.Big                 `json:"maxPriorityFeePerGas,omitempty"`
+	Hash              common.Hash                  `json:"hash"`
+	Input             hexutil.Bytes                `json:"input"`
+	Nonce             hexutil.Uint64               `json:"nonce"`
+	To                *common.Address              `json:"to"`
+	TransactionIndex  *hexutil.Uint64              `json:"transactionIndex"`
+	Value             *hexutil.Big                 `json:"value"`
+	Type              hexutil.Uint64               `json:"type"`
+	Accesses          *types.AccessList            `json:"accessList,omitempty"`
+	ChainID           *hexutil.Big                 `json:"chainId,omitempty"`
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
+	V                 *hexutil.Big                 `json:"v"`
+	R                 *hexutil.Big                 `json:"r"`
+	S                 *hexutil.Big                 `json:"s"`
 }
 
 // ethTxJSON is the JSON representation of Ethereum transaction.
@@ -768,6 +767,9 @@ type ethTxJSON struct {
 	// Access list transaction fields:
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 	AccessList *types.AccessList `json:"accessList,omitempty"`
+
+	// Set code transaction fields:
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
 
 	// Only used for encoding:
 	Hash common.Hash `json:"hash"`
@@ -862,6 +864,19 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 			// transaction is not processed yet
 			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
+	case types.TxTypeEthereumSetCode:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		if block != nil {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header(), config))
+		} else {
+			// transaction is not processed yet
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
+		}
+		result.AuthorizationList = tx.AuthList()
 	}
 	return result
 }
@@ -917,6 +932,13 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+	case types.TxTypeEthereumSetCode:
+		al := tx.AccessList()
+		enc.AccessList = &al
+		enc.ChainID = (*hexutil.Big)(tx.ChainId())
+		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
+		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+		enc.AuthorizationList = tx.AuthList()
 	default:
 		enc.GasPrice = (*hexutil.Big)(tx.GasPrice())
 	}
@@ -944,8 +966,8 @@ func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, b
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
 func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
-	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
-	if rawTx == nil || err != nil {
+	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+	if rawTx == nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -956,8 +978,8 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
 func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
-	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
-	if rawTx == nil || err != nil {
+	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
+	if rawTx == nil {
 		return nil
 	}
 	if rawTx[0] == byte(types.EthereumTxTypeEnvelope) {
@@ -1387,7 +1409,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	} else {
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
-	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.To == nil, b.ChainConfig().Rules(header.Number))
+	intrinsicGas, err := types.IntrinsicGas(args.data(), args.GetAccessList(), args.GetAuthorizationList(), args.To == nil, b.ChainConfig().Rules(header.Number))
 	if err != nil {
 		return nil, err
 	}
@@ -1406,7 +1428,7 @@ func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrO
 	if msg.Gas() < intrinsicGas {
 		return nil, fmt.Errorf("%w: msg.gas %d, want %d", blockchain.ErrIntrinsicGas, msg.Gas(), intrinsicGas)
 	}
-	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	evm, vmError, err := b.GetEVM(ctx, msg, state, header, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite, UseConsoleLog: b.IsConsoleLogEnabled()})
 	if err != nil {
 		return nil, err
 	}
@@ -1544,7 +1566,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	precompiles := vm.ActivePrecompiles(rules)
 
 	toMsg := func() (*types.Transaction, error) {
-		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, args.To == nil, rules)
+		intrinsicGas, err := types.IntrinsicGas(args.data(), nil, nil, args.To == nil, rules)
 		if err != nil {
 			return nil, err
 		}

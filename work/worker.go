@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -150,6 +151,7 @@ type worker struct {
 	chain            BlockChain
 	proc             blockchain.Validator
 	chainDB          database.DBManager
+	govModule        gov.GovModule
 	executionModules []kaiax.ExecutionModule
 
 	extra []byte
@@ -158,9 +160,10 @@ type worker struct {
 	current    *Task
 	rewardbase common.Address
 
-	snapshotMu    sync.RWMutex
-	snapshotBlock *types.Block
-	snapshotState *state.StateDB
+	snapshotMu       sync.RWMutex // The lock used to protect the block snapshot and state snapshot
+	snapshotBlock    *types.Block
+	snapshotReceipts types.Receipts
+	snapshotState    *state.StateDB
 
 	// atomic status counters
 	mining int32
@@ -169,7 +172,7 @@ type worker struct {
 	nodetype common.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -185,6 +188,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
 		rewardbase:  rewardbase,
+		govModule:   govModule,
 	}
 
 	// Subscribe NewTxsEvent for tx pool
@@ -204,22 +208,22 @@ func (self *worker) setExtra(extra []byte) {
 	self.extra = extra
 }
 
-func (self *worker) pending() (*types.Block, *state.StateDB) {
+func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
 	if atomic.LoadInt32(&self.mining) == 0 {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
 		if self.snapshotState == nil {
-			return nil, nil
+			return nil, nil, nil
 		}
-		return self.snapshotBlock, self.snapshotState.Copy()
+		return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
 	}
 
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
-	return self.current.Block, self.current.state.Copy()
+	return self.current.Block, self.current.receipts, self.current.state.Copy()
 }
 
 func (self *worker) pendingBlock() *types.Block {
@@ -447,18 +451,6 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 				}
 			}
 
-			// update governance CurrentSet if it is at an epoch block
-			if err := self.engine.CreateSnapshot(self.chain, block.NumberU64(), block.Hash(), nil); err != nil {
-				logger.Error("Failed to call snapshot", "err", err)
-			}
-
-			// update governance parameters
-			if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-				if err := istanbul.UpdateParam(block.NumberU64()); err != nil {
-					logger.Error("Failed to update governance parameters", "err", err)
-				}
-			}
-
 			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 			self.chain.PostChainEvents(events, logs)
@@ -551,7 +543,8 @@ func (self *worker) commitNewWork() {
 		if self.config.IsMagmaForkEnabled(nextBlockNum) {
 			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), self.config.Governance.KIP71)
+			pset := self.govModule.GetParamSet(nextBlockNum.Uint64())
+			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
 	}
@@ -648,6 +641,7 @@ func (self *worker) updateSnapshot() {
 		self.current.txs,
 		self.current.receipts,
 	)
+	self.snapshotReceipts = self.current.receipts
 	self.snapshotState = self.current.state.Copy()
 }
 

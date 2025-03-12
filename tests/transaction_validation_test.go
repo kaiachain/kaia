@@ -149,7 +149,7 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// 1. contract execution transaction to the contract account.
 	{
@@ -167,12 +167,12 @@ func TestValidatingUnavailableContractExecution(t *testing.T) {
 		assert.Equal(t, kerrors.ErrNotProgramAccount, err)
 	}
 
-	// 3. contract execution transaction to the EOA account.
+	// 3. contract execution transaction to the EOA without a code account.
 	{
 		tx, _ := genSmartContractExecution(t, signer, reservoir, EOA, nil, gasPrice)
 
 		err = txpool.AddRemote(tx)
-		assert.Equal(t, kerrors.ErrNotProgramAccount, err)
+		assert.Equal(t, kerrors.ErrToMustBeEOAWithCodeOrSCA, err)
 	}
 
 	if testing.Verbose() {

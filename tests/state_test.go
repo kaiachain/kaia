@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TestCoreSpecState runs the StateTests fixtures from kaia-core-tests
+// TestKaiaSpecState runs the StateTests fixtures from kaia-core-tests
 func TestKaiaSpecState(t *testing.T) {
 	t.Parallel()
 
@@ -69,14 +69,16 @@ func TestKaiaSpecState(t *testing.T) {
 
 type ExecutionSpecStateTestSuite struct {
 	suite.Suite
+	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
 }
 
 func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
-	vm.RelaxPrecompileRangeForTest(true)
+	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
+	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 }
 
 func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
-	vm.RelaxPrecompileRangeForTest(false)
+	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 }
 
 func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
@@ -87,16 +89,26 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	}
 	st := new(testMatcher)
 
+	// TODO-Kaia: should remove these skip
+	// executing precompiled contracts with value transferring is not permitted
+	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
-	st.skipLoad(`^prague\/eip7702_set_code_tx\/`)
-	// calculate the different consumed gas because 0x0a and 0x0b contract is set to access list by ActivePrecompiles in Cancun
-	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork`)
+	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-31_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-32_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-empty_calldata\]`)
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_CancunToPragueAtTime15k-state_test--G1ADD\]`)
+	// type 3 tx (EIP-4844) is not supported
+	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
+			// Even if we skip fork levels, old EIPs are still retrospectively tested against Cancun or later forks.
+			// The EEST framework was added when Kaia was at Cancun hardfork. Previous forks will be, and continue to be tested with kaia-core-tests.
 			"Frontier",
 			"Homestead",
 			"Byzantium",

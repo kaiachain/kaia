@@ -155,9 +155,9 @@ func (p *ParamSet) ToMap() map[ParamName]any {
 		case RewardKip82Ratio:
 			ret[name] = p.Kip82Ratio
 		case RewardMintingAmount:
-			ret[name] = p.MintingAmount
+			ret[name] = p.MintingAmount.String()
 		case RewardMinimumStake:
-			ret[name] = p.MinimumStake
+			ret[name] = p.MinimumStake.String()
 		case RewardProposerUpdateInterval:
 			ret[name] = p.ProposerUpdateInterval
 		case RewardRatio:
@@ -183,6 +183,16 @@ func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
 
 	ps, _ := params.NewGovParamSetStrMap(m)
 	return ps
+}
+
+func (p *ParamSet) ToKip71Config() *params.KIP71Config {
+	return &params.KIP71Config{
+		LowerBoundBaseFee:         p.LowerBoundBaseFee,
+		UpperBoundBaseFee:         p.UpperBoundBaseFee,
+		GasTarget:                 p.GasTarget,
+		MaxBlockGasUsedForBaseFee: p.MaxBlockGasUsedForBaseFee,
+		BaseFeeDenominator:        p.BaseFeeDenominator,
+	}
 }
 
 func (p PartialParamSet) Add(name string, value any) error {

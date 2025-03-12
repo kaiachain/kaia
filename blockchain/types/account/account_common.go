@@ -20,7 +20,6 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -209,16 +208,4 @@ func (e *AccountCommon) UpdateKey(newKey accountkey.AccountKey, currentBlockNumb
 		return e.key.Update(newKey, currentBlockNumber)
 	}
 	return e.ReplaceKey(newKey, currentBlockNumber)
-}
-
-func (e *AccountCommon) Equal(ta *AccountCommon) bool {
-	return e.nonce == ta.nonce &&
-		e.balance.Cmp(ta.balance) == 0 &&
-		e.humanReadable == ta.humanReadable &&
-		e.key.Equal(ta.key)
-}
-
-func (e *AccountCommon) String() string {
-	return fmt.Sprintf("{Nonce:%d, Balance:%s, HumanReadable:%t key:%s}\n", e.nonce, e.balance.String(), e.humanReadable,
-		e.key.String())
 }

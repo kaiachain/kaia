@@ -31,10 +31,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/governance"
+	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
@@ -128,14 +127,7 @@ func initGenesis(ctx *cli.Context) error {
 	}
 
 	// Set genesis.Governance and reward intervals
-	govSet := governance.GetGovernanceItemsFromChainConfig(genesis.Config)
-	govItemBytes, err := json.Marshal(govSet.Items())
-	if err != nil {
-		logger.Crit("Failed to json marshaling governance data", "err", err)
-	}
-	if genesis.Governance, err = rlp.EncodeToBytes(govItemBytes); err != nil {
-		logger.Crit("Failed to encode initial settings. Check your genesis.json", "err", err)
-	}
+	genesis.Governance = headergov_impl.GetGenesisGovBytes(genesis.Config)
 	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
 	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
 
@@ -195,13 +187,6 @@ func initGenesis(ctx *cli.Context) error {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
 
-		// Write governance items to database
-		// If governance data already exist, it'll be skipped with an error log and will not return an error
-		gov := governance.NewMixedEngineNoInit(genesis.Config, chainDB)
-		if err := gov.WriteGovernance(0, govSet, governance.NewGovernanceSet()); err != nil {
-			logger.Crit("Failed to write governance items", "err", err)
-		}
-
 		// Write the live pruning flag to database
 		if livePruning {
 			logger.Info("Writing live pruning flag to database")
@@ -259,10 +244,6 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 	}
 
 	if g.Config.Istanbul != nil {
-		if err := governance.CheckGenesisValues(g.Config); err != nil {
-			return err
-		}
-
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {

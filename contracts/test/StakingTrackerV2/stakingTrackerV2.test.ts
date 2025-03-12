@@ -1,8 +1,11 @@
-import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import {
+  loadFixture,
+  setBalance,
+} from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ABOOK_ADDRESS, REGISTRY_ADDRESS, MILLIONS } from "../common/helper";
 import { BigNumber } from "ethers";
-import { stakingTrackerV2TestFixture } from "../common/fixtures";
+import { registerContract, stakingTrackerV2TestFixture } from "../materials";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import {
   ICLPool,
@@ -11,8 +14,6 @@ import {
   ICLRegistry__factory,
   IERC20,
   IERC20__factory,
-  Registry,
-  Registry__factory,
   StakingTrackerV2,
 } from "../../typechain-types";
 
@@ -30,26 +31,36 @@ describe("StakingTrackerV2.sol", function () {
     gcIds: number[],
     cnStakingBalances: BigNumber[],
     gcBalances: BigNumber[],
-    votes: number[],
+    votes: number[]
   ) {
     const totalVotes = votes.reduce((a, b) => a + b, 0);
     const lenGCs = gcIds.length;
-    const numEligible = cnStakingBalances.filter((x) => x.gt(MILLIONS.FIVE)).length;
+    const numEligible = cnStakingBalances.filter((x) =>
+      x.gt(MILLIONS.FIVE)
+    ).length;
 
     const summary = await stakingTracker.getTrackerSummary(trackerId);
-    expect(summary).to.deep.equal([trackStart, trackEnd, lenGCs, totalVotes, numEligible]);
+    expect(summary).to.deep.equal([
+      trackStart,
+      trackEnd,
+      lenGCs,
+      totalVotes,
+      numEligible,
+    ]);
 
     const trackedGCs = await stakingTracker.getAllTrackedGCs(trackerId);
     expect(trackedGCs).to.deep.equal([gcIds, gcBalances, votes]);
 
     for (let i = 0; i < lenGCs; i++) {
-      const gcBalance = await stakingTracker.getTrackedGCBalance(trackerId, gcIds[i]);
+      const gcBalance = await stakingTracker.getTrackedGCBalance(
+        trackerId,
+        gcIds[i]
+      );
       expect(gcBalance).to.deep.equal([cnStakingBalances[i], gcBalances[i]]);
     }
   }
 
   let fixture: UnPromisify<ReturnType<typeof stakingTrackerV2TestFixture>>;
-  let fakeRegistry: FakeContract<Registry>;
   let fakeCLRegistry: FakeContract<ICLRegistry>;
   let fakeWKaia: FakeContract<IERC20>;
   let clPoolA: FakeContract<ICLPool>;
@@ -57,12 +68,16 @@ describe("StakingTrackerV2.sol", function () {
   let clPoolC: FakeContract<ICLPool>;
   beforeEach(async function () {
     fixture = await loadFixture(stakingTrackerV2TestFixture);
-    fakeRegistry = await smock.fake<Registry>(Registry__factory.abi, { address: REGISTRY_ADDRESS });
+
     fakeCLRegistry = await smock.fake<ICLRegistry>(ICLRegistry__factory.abi);
     fakeWKaia = await smock.fake<IERC20>(IERC20__factory.abi);
 
-    fakeRegistry.getActiveAddr.whenCalledWith("CLRegistry").returns(fakeCLRegistry.address);
-    fakeRegistry.getActiveAddr.whenCalledWith("WrappedKaia").returns(fakeWKaia.address);
+    await registerContract(
+      fixture.registry,
+      "CLRegistry",
+      fakeCLRegistry.address
+    );
+    await registerContract(fixture.registry, "WrappedKaia", fakeWKaia.address);
 
     clPoolA = await smock.fake<ICLPool>(ICLPool__factory.abi);
     clPoolB = await smock.fake<ICLPool>(ICLPool__factory.abi);
@@ -72,8 +87,12 @@ describe("StakingTrackerV2.sol", function () {
     clPoolB.stakingTracker.returns(fixture.stakingTracker.address);
     clPoolC.stakingTracker.returns(fixture.stakingTracker.address);
 
-    // Ignore nodeIds and CLStakings.
-    fakeCLRegistry.getAllCLs.returns([[], [699, 700, 701], [clPoolA.address, clPoolB.address, clPoolC.address], []]);
+    // Ignore nodeIds.
+    fakeCLRegistry.getAllCLs.returns([
+      [],
+      [699, 700, 701],
+      [clPoolA.address, clPoolB.address, clPoolC.address],
+    ]);
   });
 
   describe("StakingTrackerV2 Initialize", function () {
@@ -82,8 +101,12 @@ describe("StakingTrackerV2.sol", function () {
 
       expect(await stakingTracker.CONTRACT_TYPE()).to.equal("StakingTracker");
       expect(await stakingTracker.VERSION()).to.equal(1);
-      expect(await stakingTracker.ADDRESS_BOOK_ADDRESS()).to.equal(ABOOK_ADDRESS);
-      expect(await stakingTracker.REGISTRY_ADDRESS()).to.equal(REGISTRY_ADDRESS);
+      expect(await stakingTracker.ADDRESS_BOOK_ADDRESS()).to.equal(
+        ABOOK_ADDRESS
+      );
+      expect(await stakingTracker.REGISTRY_ADDRESS()).to.equal(
+        REGISTRY_ADDRESS
+      );
       expect(await stakingTracker.MIN_STAKE()).to.equal(MILLIONS.FIVE);
       expect(await stakingTracker.owner()).to.equal(contractValidator.address);
     });
@@ -93,7 +116,11 @@ describe("StakingTrackerV2.sol", function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX } = MILLIONS;
 
-      fakeRegistry.getActiveAddr.whenCalledWith("CLRegistry").returns(hre.ethers.constants.AddressZero);
+      await registerContract(
+        fixture.registry,
+        "CLRegistry",
+        hre.ethers.constants.AddressZero
+      );
 
       await expect(stakingTracker.createTracker(trackStart, trackEnd))
         .to.emit(stakingTracker, "CreateTracker")
@@ -107,14 +134,19 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [SIX, SIX, SIX],
-        [1, 1, 1],
+        [1, 1, 1]
       );
     });
     it("#createTracker: no wKaia so do not track wKaia balance", async function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX, TWO, FIVE } = MILLIONS;
 
-      fakeRegistry.getActiveAddr.whenCalledWith("WrappedKaia").returns(hre.ethers.constants.AddressZero);
+      await registerContract(
+        fixture.registry,
+        "WrappedKaia",
+        hre.ethers.constants.AddressZero
+      );
+
       fakeWKaia.balanceOf.whenCalledWith(clPoolB.address).returns(TWO);
       fakeWKaia.balanceOf.whenCalledWith(clPoolC.address).returns(FIVE);
 
@@ -130,7 +162,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [SIX, SIX, SIX], // No wKaia balance reflected since wKaia is not active yet.
-        [1, 1, 1],
+        [1, 1, 1]
       );
     });
     it("#createTracker: no CLPool", async function () {
@@ -149,7 +181,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [SIX, SIX, SIX],
-        [1, 1, 1],
+        [1, 1, 1]
       );
     });
     it("#createTracker: do not track CLPool with invalid StakingTracker address", async function () {
@@ -170,20 +202,28 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [SIX, SIX, SIX],
-        [1, 1, 1],
+        [1, 1, 1]
       );
 
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(0);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        0
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: do not track CLPool with non-existent gcId", async function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX } = MILLIONS;
 
       // clPoolB is assigned gcId 800, which is not a valid gcId
-      fakeCLRegistry.getAllCLs.returns([[], [699, 800, 701], [clPoolA.address, clPoolB.address, clPoolC.address], []]);
+      fakeCLRegistry.getAllCLs.returns([
+        [],
+        [699, 800, 701],
+        [clPoolA.address, clPoolB.address, clPoolC.address],
+      ]);
 
       await expect(stakingTracker.createTracker(trackStart, trackEnd))
         .to.emit(stakingTracker, "CreateTracker")
@@ -197,16 +237,27 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [SIX, SIX, SIX],
-        [1, 1, 1],
+        [1, 1, 1]
       );
 
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(0);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        0
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: two CLPools", async function () {
-      const { stakingTracker, cnStakingV2B, cnStakingV2C, cnStakingV2D, trackStart, trackEnd } = fixture;
+      const {
+        stakingTracker,
+        cnStakingV2B,
+        cnStakingV2C,
+        cnStakingV2D,
+        trackStart,
+        trackEnd,
+      } = fixture;
       const { TWO, FIVE, SIX, EIGHT, ELEVEN } = MILLIONS;
 
       fakeWKaia.balanceOf.whenCalledWith(clPoolA.address).returns(TWO);
@@ -229,20 +280,36 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [EIGHT, ELEVEN, SIX],
-        [1, 2, 1],
+        [1, 2, 1]
       );
 
       expect(await stakingTracker.isCLPool(1, clPoolA.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(true);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2B.address)).to.equal(false);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2C.address)).to.equal(false);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2D.address)).to.equal(false);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2B.address)).to.equal(700);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2C.address)).to.equal(701);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2D.address)).to.equal(702);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(700);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.isCLPool(1, cnStakingV2B.address)).to.equal(
+        false
+      );
+      expect(await stakingTracker.isCLPool(1, cnStakingV2C.address)).to.equal(
+        false
+      );
+      expect(await stakingTracker.isCLPool(1, cnStakingV2D.address)).to.equal(
+        false
+      );
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2B.address)
+      ).to.equal(700);
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2C.address)
+      ).to.equal(701);
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2D.address)
+      ).to.equal(702);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        700
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: CnStaking has less than 5M", async function () {
       const { stakingTracker, cnStakingV2C, trackStart, trackEnd } = fixture;
@@ -266,7 +333,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, FOUR, SIX],
         [EIGHT, NINE, SIX],
-        [1, 0, 1], // CnStakingV2C is not eligible since its CnStaking balance is less than 5M
+        [1, 0, 1] // CnStakingV2C is not eligible since its CnStaking balance is less than 5M
       );
 
       // The addition of CLPoolC's balance should not affect the votes of CnStakingV2C
@@ -283,7 +350,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, FOUR, SIX],
         [EIGHT, TEN.add(FOUR), SIX],
-        [1, 0, 1],
+        [1, 0, 1]
       );
     });
   });
@@ -316,7 +383,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [EIGHT, SIX, SIX],
         [TEN, ELEVEN, SIX],
-        [2, 2, 1],
+        [2, 2, 1]
       );
     });
     it("#refreshStake: From CnStaking, eligible -> ineligible", async function () {
@@ -336,7 +403,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [FOUR, SIX, SIX],
         [SIX, ELEVEN, SIX],
-        [0, 1, 1], // the votes of CnStakingV2C are also capped by 1
+        [0, 1, 1] // the votes of CnStakingV2C are also capped by 1
       );
     });
     it("#refreshStake: From CnStaking, ineligible -> eligible", async function () {
@@ -356,7 +423,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [FOUR, SIX, SIX],
         [SIX, ELEVEN, SIX],
-        [0, 1, 1],
+        [0, 1, 1]
       );
 
       await setBalance(cnStakingV2B.address, EIGHT); // 4M -> 8M, votes: 0 -> 2
@@ -372,7 +439,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [EIGHT, SIX, SIX],
         [TEN, ELEVEN, SIX],
-        [2, 2, 1],
+        [2, 2, 1]
       );
     });
     it("#refreshStake: From CnStaking, ineligible -> ineligible", async function () {
@@ -392,7 +459,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [FOUR, SIX, SIX],
         [SIX, ELEVEN, SIX],
-        [0, 1, 1],
+        [0, 1, 1]
       );
 
       await setBalance(cnStakingV2B.address, TWO); // 4M -> 2M, votes: 0 -> 0
@@ -408,7 +475,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [TWO, SIX, SIX],
         [FOUR, ELEVEN, SIX],
-        [0, 1, 1],
+        [0, 1, 1]
       );
     });
     it("#refreshStake: From CLPool, votes unchanged", async function () {
@@ -428,7 +495,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [NINE, ELEVEN, SIX],
-        [1, 2, 1],
+        [1, 2, 1]
       );
     });
     it("#refreshStake: From CLPool, votes increased", async function () {
@@ -448,7 +515,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [TEN, ELEVEN, SIX],
-        [2, 2, 1],
+        [2, 2, 1]
       );
     });
     it("#refreshStake: From CLPool, votes decreased", async function () {
@@ -468,7 +535,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [TEN, ELEVEN, SIX],
-        [2, 2, 1],
+        [2, 2, 1]
       );
 
       fakeWKaia.balanceOf.whenCalledWith(clPoolB.address).returns(TWO); // 4M -> 2M, votes: 2 -> 1
@@ -484,7 +551,7 @@ describe("StakingTrackerV2.sol", function () {
         [700, 701, 702],
         [SIX, SIX, SIX],
         [EIGHT, ELEVEN, SIX],
-        [1, 2, 1],
+        [1, 2, 1]
       );
     });
   });

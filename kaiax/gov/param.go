@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -75,17 +74,11 @@ var (
 				return addresses, nil
 			}
 
-			// Type3
-			v, err := hexutil.Decode(string(v))
-			if err != nil {
-				return nil, errors.Join(ErrCanonicalizeByteToAddress, err)
-			}
-
-			if len(v) == common.AddressLength {
-				return []common.Address{common.BytesToAddress(v)}, nil
-			}
-
-			return nil, ErrCanonicalizeToAddressList
+			// Type 3
+			// Ideally, v should be decoded using hexutil.Decode(string(v)) to ensure correct processing.
+			// However, decoding is intentionally skipped here because it would result in a bad block error
+			// at block 75038593, caused by an incorrect council configuration at block 75038594.
+			return []common.Address{common.BytesToAddress(v)}, nil
 		case string: // input from API
 			return stringToAddressList(v)
 		case common.Address:
@@ -167,10 +160,7 @@ func noopFormatChecker(cv any) bool {
 	return true
 }
 
-type (
-	ParamName          string
-	ValidatorParamName string
-)
+type ParamName string
 
 // alphabetically sorted. These are only used in-memory, so the order does not matter.
 const (
@@ -198,8 +188,8 @@ const (
 )
 
 const (
-	AddValidator    ValidatorParamName = "governance.addvalidator"
-	RemoveValidator ValidatorParamName = "governance.removevalidator"
+	AddValidator    ParamName = "governance.addvalidator"
+	RemoveValidator ParamName = "governance.removevalidator"
 )
 
 var Params = map[ParamName]*Param{
@@ -533,7 +523,7 @@ var Params = map[ParamName]*Param{
 	},
 }
 
-var ValidatorParams = map[ValidatorParamName]*Param{
+var ValidatorParams = map[ParamName]*Param{
 	AddValidator: {
 		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,

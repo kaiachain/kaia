@@ -139,6 +139,12 @@ type (
 
 	// TODO-Kaia Change private type
 	NodeType uint8
+
+	DiscoverTypesConfig struct {
+		CN bool
+		PN bool
+		EN bool
+	}
 )
 
 func makeEndpoint(addr *net.UDPAddr, tcpPort uint16, nType NodeType) rpcEndpoint {
@@ -281,6 +287,9 @@ type Config struct {
 	// These settings are required for discovery packet control
 	MaxNeighborsNode uint
 	AuthorizedNodes  []*Node
+
+	// DiscoverNodetype is list of node type to enable discovery.
+	DiscoverTypes DiscoverTypesConfig
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -775,6 +784,10 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
 func findnodeRetrieveSize(nType NodeType) int {
+	// Returning too small value will make CNs unable to find each other.
+	if nType == NodeTypeCN {
+		return 100
+	}
 	// Return at most 2 PNs.
 	// 1. Under current CN-PN-EN 3-tier operating practices, findnode(type=PN) packet originates only from EN.
 	//    CNs only connect to other CNs via CNBN. PNs are connected to PNs and CNs via static-nodes.json.

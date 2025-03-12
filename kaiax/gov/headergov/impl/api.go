@@ -50,7 +50,7 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	var (
 		voter       = api.h.nodeAddress
 		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
-		gp          = api.h.EffectiveParamSet(blockNumber + 1)
+		gp          = api.h.GetParamSet(blockNumber + 1)
 		gMode       = gp.GovernanceMode
 	)
 

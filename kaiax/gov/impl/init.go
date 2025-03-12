@@ -14,6 +14,7 @@ import (
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -26,7 +27,7 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
-//go:generate mockgen -destination=mock/blockchain_mock.go github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
+//go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
 type BlockChain interface {
 	blockchain.ChainContext
 
@@ -35,7 +36,6 @@ type BlockChain interface {
 	GetHeaderByNumber(val uint64) *types.Header
 	State() (*state.StateDB, error)
 	StateAt(root common.Hash) (*state.StateDB, error)
-	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
@@ -51,6 +51,7 @@ type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	ChainKv     database.Database
 	Chain       BlockChain
+	Valset      valset.ValsetModule
 	NodeAddress common.Address
 }
 
@@ -73,6 +74,7 @@ func (m *GovModule) Init(opts *InitOpts) error {
 			ChainKv:     opts.ChainKv,
 			ChainConfig: opts.ChainConfig,
 			Chain:       opts.Chain,
+			ValSet:      opts.Valset,
 			NodeAddress: opts.NodeAddress,
 		}),
 		cgm.Init(&contractgov_impl.InitOpts{
@@ -98,11 +100,11 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 	fallback := make(gov.PartialParamSet)
 
 	if chainConfig == nil {
+		logger.Info("Using empty fallback")
 		return fallback
 	}
 
-	// on private net, fallback candidates are all params.
-	candidates := maps.Keys(gov.Params)
+	var candidates []gov.ParamName
 
 	// on Mainnet/Kairos, fallback candidates are only the initial params specified in `params.{Mainnet,Kairos}ChainConfig`.
 	if chainId := chainConfig.ChainID; chainId != nil &&
@@ -114,15 +116,29 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 			gov.RewardProposerUpdateInterval, gov.RewardMinimumStake, gov.IstanbulEpoch, gov.IstanbulPolicy,
 			gov.IstanbulCommitteeSize, gov.GovernanceUnitPrice,
 		}
+		logger.Info("Using Mainnet/Kairos fallback")
+	} else {
+		// on private net, fallback candidates are all params.
+		candidates = maps.Keys(gov.Params)
+		logger.Info("Using default fallback")
 	}
 
 	for _, name := range candidates {
 		param := gov.Params[name]
 		value, err := param.ChainConfigValue(chainConfig)
-		if err == nil && !reflect.DeepEqual(value, param.DefaultValue) {
-			fallback.Add(string(name), value)
+		if err != nil {
+			logger.Error("Failed to fetch value from ChainConfig", "name", name, "error", err)
+			continue
+		}
+
+		if !reflect.DeepEqual(value, param.DefaultValue) {
+			err := fallback.Add(string(name), value)
+			if err != nil {
+				logger.Error("Failed to add param to fallback", "name", name, "value", value, "error", err)
+			}
 		}
 	}
+
 	return fallback
 }
 

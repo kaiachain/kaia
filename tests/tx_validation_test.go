@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -96,11 +97,15 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
 	}
 
+	if txType == types.TxTypeEthereumSetCode {
+		valueMap, gas = genMapForSetCodeTransaction(from, to, gasPrice, txType)
+	}
+
 	return valueMap, gas
 }
 
-// TestValidationPoolInsert generates invalid txs which will be invalidated during txPool insert process.
-func TestValidationPoolInsert(t *testing.T) {
+// TestValidationPoolInsertEthTxType generates invalid txs which will be invalidated during txPool insert process.
+func TestValidationPoolInsertEthTxType(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	testTxTypes := []testTxType{}
@@ -130,13 +135,10 @@ func TestValidationPoolInsert(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -192,7 +194,7 @@ func TestValidationPoolInsert(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -254,14 +256,10 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	// prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().MagmaCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -320,7 +318,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -357,6 +355,161 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	}
 }
 
+func TestValidationPoolInsertPrague(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	testTxTypes := []testTxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKaiaLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			testTxTypes = append(testTxTypes, testTxType{i.String(), i})
+		}
+	}
+
+	invalidCases := []struct {
+		Name string
+		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+	}{
+		{"invalidTo", valueTransferToEOAWithCode},
+		{"invalidFrom", keyUpdateFromEOAWithCode},
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// eoa with code
+	eoaWithCode := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
+
+	var txs types.Transactions
+	// deploy a contract for contract execution tx type
+	{
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
+
+		reservoir.AddNonce()
+	}
+
+	// set code for contract execution tx type
+	{
+		auth, err := types.SignSetCode(eoaWithCode.Keys[0], types.SetCodeAuthorization{
+			ChainID: *uint256.MustFromBig(bcdata.bc.Config().ChainID),
+			Address: contract.Addr,
+			Nonce:   uint64(0),
+		})
+		assert.Equal(t, nil, err)
+
+		authorizationList := []types.SetCodeAuthorization{auth}
+
+		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), nil, bcdata.bc.Config().ChainID, authorizationList)
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		reservoir.AddNonce()
+		eoaWithCode.AddNonce()
+		accountMap.IncNonce(eoaWithCode.Addr)
+	}
+
+	if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+		t.Fatal(err)
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
+
+	// test for all tx types
+	for _, testTxType := range testTxTypes {
+		txType := testTxType.txType
+
+		// generate invalid txs and check the return error
+		for _, invalidCase := range invalidCases {
+			to := reservoir
+			if toBasicType(testTxType.txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+
+			// generate a new tx and mutate it
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, eoaWithCode.Addr)
+
+			tx, err := types.NewTransactionWithMap(txType, invalidMap)
+			assert.Equal(t, nil, err)
+
+			if from, _ := tx.From(); from == eoaWithCode.Addr {
+				err = tx.SignWithKeys(signer, eoaWithCode.Keys)
+			} else {
+				err = tx.SignWithKeys(signer, reservoir.Keys)
+			}
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			err = txpool.AddRemote(tx)
+			assert.Equal(t, expectedErr, err, txType, to, contract.Addr)
+			if expectedErr == nil {
+				reservoir.Nonce += 1
+			}
+		}
+	}
+}
+
 // TestValidationBlockTx generates invalid txs which will be invalidated during block insert process.
 func TestValidationBlockTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
@@ -386,13 +539,10 @@ func TestValidationBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -491,7 +641,7 @@ func decreaseNonce(txType types.TxType, values txValueMap, contract common.Addre
 // decreaseGasPrice changes gasPrice to 12345678
 func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrInvalidGasTipCap
@@ -504,10 +654,10 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 	return values, err
 }
 
-// decreaseGasPrice changes gasPrice to 12345678 and return an error with magma policy
+// decreaseGasPriceMagma changes gasPrice to 12345678 and return an error with magma policy
 func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	var err error
-	if txType == types.TxTypeEthereumDynamicFee {
+	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
 		(*big.Int).SetUint64(values[types.TxValueKeyGasTipCap].(*big.Int), 12345678)
 		err = blockchain.ErrFeeCapBelowBaseFee
@@ -517,6 +667,26 @@ func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract comm
 	}
 
 	return values, err
+}
+
+func valueTransferToEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
+		values[types.TxValueKeyTo] = contract
+		return values, kerrors.ErrToMustBeEOAWithoutCode
+	}
+
+	return values, nil
+}
+
+func keyUpdateFromEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeAccountUpdate {
+		values[types.TxValueKeyFrom] = contract
+		return values, kerrors.ErrFromMustBeEOAWithoutCode
+	}
+
+	return values, nil
 }
 
 // exceedSizeLimit assigns tx data bigger than MaxTxDataSize.
@@ -541,7 +711,7 @@ func valueTransferToContract(txType types.TxType, values txValueMap, contract co
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
 		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrNotForProgramAccount
+		return values, kerrors.ErrToMustBeEOAWithoutCode
 	}
 
 	return values, nil
@@ -551,7 +721,7 @@ func valueTransferToContract(txType types.TxType, values txValueMap, contract co
 func executeToEOA(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
 	if toBasicType(txType) == types.TxTypeSmartContractExecution {
 		values[types.TxValueKeyTo] = values[types.TxValueKeyFrom].(common.Address)
-		return values, kerrors.ErrNotProgramAccount
+		return values, kerrors.ErrToMustBeEOAWithCodeOrSCA
 	}
 
 	return values, nil
@@ -594,9 +764,6 @@ func TestValidationInvalidSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -652,7 +819,7 @@ func TestValidationInvalidSig(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -779,7 +946,7 @@ func TestLegacyTxFromNonLegacyAcc(t *testing.T) {
 	reservoir.AddNonce()
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	valueMap, _ = genMapForTxTypes(reservoir, reservoir, types.TxTypeLegacyTransaction)
 	tx, err = types.NewTransactionWithMap(types.TxTypeLegacyTransaction, valueMap)
@@ -809,13 +976,10 @@ func TestInvalidBalance(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -902,7 +1066,7 @@ func TestInvalidBalance(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
@@ -1206,13 +1370,10 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1619,13 +1780,10 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1681,7 +1839,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// test for all tx types
 	for _, txType := range testTxTypes {
@@ -1782,13 +1940,10 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bcdata.bc.Config().IstanbulCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().LondonCompatibleBlock = big.NewInt(0)
-	bcdata.bc.Config().EthTxTypeCompatibleBlock = big.NewInt(0)
 	defer bcdata.Shutdown()
 
 	// Initialize address-balance map for verification
@@ -1844,7 +1999,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// state changing tx which will invalidate other txs when it is contained in a block.
 	var txs types.Transactions
@@ -2020,7 +2175,7 @@ func TestValidationPoolResetAfterFeePayerKeyChange(t *testing.T) {
 	}
 
 	// make TxPool to test validation in 'TxPool add' process
-	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc)
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
 	// state changing tx which will invalidate other txs when it is contained in a block.
 	var txs types.Transactions

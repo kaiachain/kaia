@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -239,7 +238,10 @@ func (t *TxInternalDataSmartContractExecution) String() string {
 }
 
 func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGasContractExecution
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
+	if err != nil {
+		return 0, err
+	}
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 	if err != nil {
@@ -312,6 +314,9 @@ func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, current
 }
 
 func (t *TxInternalDataSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
+		return err
+	}
 	// Fail if the target address is not a program account.
 	if !stateDB.IsContractAvailable(t.Recipient) {
 		return kerrors.ErrNotProgramAccount

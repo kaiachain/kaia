@@ -28,8 +28,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -258,7 +258,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return params.TxGasValueTransfer + params.TxGasFeeDelegated, nil
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, false)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSignToBytes() []byte {
@@ -316,15 +316,15 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient) {
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	if stateDB.IsProgramAccount(t.Recipient) {
-		return kerrors.ErrNotForProgramAccount
+	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
+		return err
 	}
 	return nil
 }

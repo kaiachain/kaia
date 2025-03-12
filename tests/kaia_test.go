@@ -183,7 +183,7 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 	return txs, nil
 }
 
-// makeTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KAIA
+// makeNewTransactionsToRandom makes `numTransactions` transactions which transfers a random amount of KAIA
 // from accounts in `AccountMap` to a randomly generated account.
 // It returns the generated transactions if successful, or it returns an error if failed.
 func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer types.Signer, numTransactions int,
@@ -757,5 +757,5 @@ func makeTxPool(bcdata *BCData, txPoolSize int) *blockchain.TxPool {
 	txpoolconfig.NonExecSlotsAccount = uint64(txPoolSize)
 	txpoolconfig.ExecSlotsAll = 2 * uint64(txPoolSize)
 	txpoolconfig.NonExecSlotsAll = 2 * uint64(txPoolSize)
-	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc)
+	return blockchain.NewTxPool(txpoolconfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 }

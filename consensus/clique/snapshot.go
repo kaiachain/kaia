@@ -29,9 +29,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -235,19 +233,18 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		var nonce []byte
 
 		if len(header.Vote) > 0 {
-			gVote := new(governance.GovernanceVote)
-			if err := rlp.DecodeBytes(header.Vote, gVote); err != nil {
-				logger.Error("Failed to decode a vote", "number", header.Number, "key", gVote.Key, "value", gVote.Value, "validator", gVote.Validator)
+			voteData, err := BytesToVoteData(header.Vote)
+			if err != nil {
 				return nil, errInvalidVote
 			}
 
-			if temp, ok := gVote.Value.([]uint8); !ok {
+			if temp, ok := voteData.Value.([]uint8); !ok {
 				return nil, errInvalidVote
 			} else {
 				cb = common.BytesToAddress(temp)
 			}
 
-			switch gVote.Key {
+			switch voteData.Key {
 			case "addvalidator":
 				nonce = nonceAuthVote
 			case "removevalidator":

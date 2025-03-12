@@ -57,7 +57,13 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
 
     /* ========== CONSTANTS ========== */
 
-    function CONTRACT_TYPE() external view virtual override returns (string memory) {
+    function CONTRACT_TYPE()
+        external
+        view
+        virtual
+        override
+        returns (string memory)
+    {
         return "StakingTracker";
     }
 
@@ -66,7 +72,13 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         return 1;
     }
 
-    function ADDRESS_BOOK_ADDRESS() public view virtual override returns (address) {
+    function ADDRESS_BOOK_ADDRESS()
+        public
+        view
+        virtual
+        override
+        returns (address)
+    {
         return 0x0000000000000000000000000000000000000400;
     }
 
@@ -119,7 +131,13 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
 
         for (uint256 i = 0; i < stakingContracts.length; i++) {
             address staking = stakingContracts[i];
-            (bool isV2, uint256 balance, uint256 gcId, address stakingTracker, ) = readCnStaking(staking);
+            (
+                bool isV2,
+                uint256 balance,
+                uint256 gcId,
+                address stakingTracker,
+
+            ) = readCnStaking(staking);
 
             if (!isV2) {
                 // Ignore V1 contract
@@ -148,7 +166,10 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
     function _populateFromCLRegistry(uint256 trackerId) private {
         Tracker storage tracker = trackers[trackerId];
 
-        (uint256[] memory gcIds, address[] memory pools) = _getCLRegistryLists();
+        (
+            uint256[] memory gcIds,
+            address[] memory pools
+        ) = _getCLRegistryLists();
 
         for (uint256 i = 0; i < pools.length; i++) {
             (uint256 gcId, address pool) = (gcIds[i], pools[i]);
@@ -229,7 +250,11 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         }
 
         // Update general staking balances and GC balances and determine if recalculating all votes is necessary
-        (uint256 newBalance, bool recalcAllVotes) = _updateBalances(trackerId, gcId, staking);
+        (uint256 newBalance, bool recalcAllVotes) = _updateBalances(
+            trackerId,
+            gcId,
+            staking
+        );
 
         if (recalcAllVotes) {
             _updateAllVotes(trackerId, gcId);
@@ -261,13 +286,21 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         newBalance = _readStakingBalance(isCL, cnStakingOrCLPool);
 
         tracker.stakingBalances[cnStakingOrCLPool] = newBalance;
-        tracker.gcBalances[gcId] = tracker.gcBalances[gcId] - oldBalance + newBalance;
+        tracker.gcBalances[gcId] =
+            tracker.gcBalances[gcId] -
+            oldBalance +
+            newBalance;
 
         if (!isCL) {
             uint256 oldCnStakingBalance = tracker.cnStakingBalances[gcId];
-            uint256 newCnStakingBalance = oldCnStakingBalance - oldBalance + newBalance;
+            uint256 newCnStakingBalance = oldCnStakingBalance -
+                oldBalance +
+                newBalance;
             tracker.cnStakingBalances[gcId] = newCnStakingBalance;
-            recalcAllVotes = _shouldRecalcAllVotes(oldCnStakingBalance, newCnStakingBalance);
+            recalcAllVotes = _shouldRecalcAllVotes(
+                oldCnStakingBalance,
+                newCnStakingBalance
+            );
         }
 
         return (newBalance, recalcAllVotes);
@@ -354,7 +387,9 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         }
         require(stakingInAddressBook, "Not a staking contract");
 
-        (bool isV2, , uint256 gcId, , address newVoter) = readCnStaking(staking);
+        (bool isV2, , uint256 gcId, , address newVoter) = readCnStaking(
+            staking
+        );
         require(isV2, "Invalid CnStaking contract");
 
         _updateVoter(gcId, newVoter);
@@ -383,7 +418,10 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
     /// @dev Calculate voting power from staking amounts.
     /// One integer vote is granted for each MIN_STAKE() balance. But the number of votes
     /// is at most ([number of eligible GCs] - 1).
-    function _calcVotes(uint256 trackerId, uint256 gcId) private view returns (uint256) {
+    function _calcVotes(
+        uint256 trackerId,
+        uint256 gcId
+    ) internal view returns (uint256) {
         Tracker storage tracker = trackers[trackerId];
         uint256 cnStakingBalance = tracker.cnStakingBalances[gcId];
         uint256 balance = tracker.gcBalances[gcId];
@@ -407,38 +445,58 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
 
     /// @dev Query the 3-tuples (node, staking, reward) from AddressBook
     function _getAddressBookLists()
-        private
+        internal
         view
-        returns (address[] memory nodeIds, address[] memory stakingContracts, address[] memory rewardAddrs)
+        returns (
+            address[] memory nodeIds,
+            address[] memory stakingContracts,
+            address[] memory rewardAddrs
+        )
     {
-        (nodeIds, stakingContracts, rewardAddrs /* kgf */ /* kir */, , ) = IAddressBook(ADDRESS_BOOK_ADDRESS())
-            .getAllAddressInfo();
-        require(nodeIds.length == stakingContracts.length && nodeIds.length == rewardAddrs.length, "Invalid data");
+        (
+            nodeIds,
+            stakingContracts,
+            rewardAddrs /* kgf */ /* kir */,
+            ,
+
+        ) = IAddressBook(ADDRESS_BOOK_ADDRESS()).getAllAddressInfo();
+        require(
+            nodeIds.length == stakingContracts.length &&
+                nodeIds.length == rewardAddrs.length,
+            "Invalid data"
+        );
     }
 
     /// @dev Get the address of the CLRegistry
-    function _getCLRegistryAddress() private view returns (address) {
+    function _getCLRegistryAddress() internal view returns (address) {
         return IRegistry(REGISTRY_ADDRESS()).getActiveAddr("CLRegistry");
     }
 
     /// @dev Get the address of the Wrapped Kaia
-    function _getWKaiaAddress() private view returns (address) {
+    function _getWKaiaAddress() internal view returns (address) {
         return IRegistry(REGISTRY_ADDRESS()).getActiveAddr("WrappedKaia");
     }
 
     /// @dev Query the 2-tuples (gcId, pool) from CLRegistry
     /// Returns empty arrays if CLRegistry is not found
-    function _getCLRegistryLists() private view returns (uint256[] memory gcIds, address[] memory pools) {
+    function _getCLRegistryLists()
+        internal
+        view
+        returns (uint256[] memory gcIds, address[] memory pools)
+    {
         address clRegistry = _getCLRegistryAddress();
         if (clRegistry == address(0)) {
             return (gcIds, pools);
         }
-        (, gcIds, pools, ) = ICLRegistry(clRegistry).getAllCLs();
+        (, gcIds, pools) = ICLRegistry(clRegistry).getAllCLs();
         require(gcIds.length == pools.length, "Invalid data");
     }
 
     /// @dev Read staking balance from staking contract
-    function _readStakingBalance(bool isCL, address staking) private view returns (uint256 balance) {
+    function _readStakingBalance(
+        bool isCL,
+        address staking
+    ) internal view returns (uint256 balance) {
         if (isCL) {
             (, balance) = readCLPool(staking);
         } else {
@@ -447,9 +505,10 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
     }
 
     /// @dev Determine if given tracker is updatable with respect to current block.
-    function _isTrackerLive(uint256 trackerId) private view returns (bool) {
+    function _isTrackerLive(uint256 trackerId) internal view returns (bool) {
         Tracker storage tracker = trackers[trackerId];
-        return (tracker.trackStart <= block.number && block.number < tracker.trackEnd);
+        return (tracker.trackStart <= block.number &&
+            block.number < tracker.trackEnd);
     }
 
     /// @dev Test if the given contract is a CnStakingV2 instance
@@ -458,7 +517,9 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         bool ok;
         bytes memory out;
 
-        (ok, out) = staking.staticcall(abi.encodeWithSignature("CONTRACT_TYPE()"));
+        (ok, out) = staking.staticcall(
+            abi.encodeWithSignature("CONTRACT_TYPE()")
+        );
         if (!ok || out.length == 0) {
             return false;
         }
@@ -486,7 +547,13 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         public
         view
         virtual
-        returns (bool isV2, uint256 effectiveBalance, uint256 gcId, address stakingTracker, address voterAddress)
+        returns (
+            bool isV2,
+            uint256 effectiveBalance,
+            uint256 gcId,
+            address stakingTracker,
+            address voterAddress
+        )
     {
         if (isCnStakingV2(staking)) {
             return (
@@ -501,7 +568,9 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
     }
 
     /// @dev Read balance from CLPool
-    function readCLPool(address pool) public view virtual returns (address stakingTracker, uint256 balance) {
+    function readCLPool(
+        address pool
+    ) public view virtual returns (address stakingTracker, uint256 balance) {
         address wKaia = _getWKaiaAddress();
         if (wKaia != address(0)) {
             balance = IERC20(wKaia).balanceOf(pool);
@@ -515,11 +584,21 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         return allTrackerIds.length;
     }
 
-    function getAllTrackerIds() external view override returns (uint256[] memory) {
+    function getAllTrackerIds()
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
         return allTrackerIds;
     }
 
-    function getLiveTrackerIds() external view override returns (uint256[] memory) {
+    function getLiveTrackerIds()
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
         return liveTrackerIds;
     }
 
@@ -529,10 +608,22 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         public
         view
         override
-        returns (uint256 trackStart, uint256 trackEnd, uint256 numGCs, uint256 totalVotes, uint256 numEligible)
+        returns (
+            uint256 trackStart,
+            uint256 trackEnd,
+            uint256 numGCs,
+            uint256 totalVotes,
+            uint256 numEligible
+        )
     {
         Tracker storage tracker = trackers[trackerId];
-        return (tracker.trackStart, tracker.trackEnd, tracker.gcIds.length, tracker.totalVotes, tracker.numEligible);
+        return (
+            tracker.trackStart,
+            tracker.trackEnd,
+            tracker.gcIds.length,
+            tracker.totalVotes,
+            tracker.numEligible
+        );
     }
 
     function getTrackedGC(
@@ -543,14 +634,26 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         return (tracker.gcBalances[gcId], tracker.gcVotes[gcId]);
     }
 
-    function getTrackedGCBalance(uint256 trackerId, uint256 gcId) external view override returns (uint256, uint256) {
+    function getTrackedGCBalance(
+        uint256 trackerId,
+        uint256 gcId
+    ) external view override returns (uint256, uint256) {
         Tracker storage tracker = trackers[trackerId];
         return (tracker.cnStakingBalances[gcId], tracker.gcBalances[gcId]);
     }
 
     function getAllTrackedGCs(
         uint256 trackerId
-    ) public view override returns (uint256[] memory gcIds, uint256[] memory gcBalances, uint256[] memory gcVotes) {
+    )
+        public
+        view
+        override
+        returns (
+            uint256[] memory gcIds,
+            uint256[] memory gcBalances,
+            uint256[] memory gcVotes
+        )
+    {
         Tracker storage tracker = trackers[trackerId];
         uint256 numGCs = tracker.gcIds.length;
         gcIds = tracker.gcIds;
@@ -564,12 +667,18 @@ contract StakingTrackerV2 is IStakingTrackerV2, Ownable {
         }
     }
 
-    function stakingToGCId(uint256 trackerId, address staking) external view override returns (uint256) {
+    function stakingToGCId(
+        uint256 trackerId,
+        address staking
+    ) external view override returns (uint256) {
         Tracker storage tracker = trackers[trackerId];
         return tracker.stakingToGCId[staking];
     }
 
-    function isCLPool(uint256 trackerId, address staking) external view override returns (bool) {
+    function isCLPool(
+        uint256 trackerId,
+        address staking
+    ) external view override returns (bool) {
         Tracker storage tracker = trackers[trackerId];
         return tracker.isCLPool[staking];
     }
@@ -579,7 +688,13 @@ interface IAddressBook {
     function getAllAddressInfo()
         external
         view
-        returns (address[] memory, address[] memory, address[] memory, address, address);
+        returns (
+            address[] memory,
+            address[] memory,
+            address[] memory,
+            address,
+            address
+        );
 }
 
 interface ICnStakingV2 {
@@ -601,7 +716,10 @@ interface IRegistry {
 }
 
 interface ICLRegistry {
-    function getAllCLs() external view returns (address[] memory, uint256[] memory, address[] memory, address[] memory);
+    function getAllCLs()
+        external
+        view
+        returns (address[] memory, uint256[] memory, address[] memory);
 }
 
 interface ICLPool {

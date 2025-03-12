@@ -23,9 +23,12 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -48,13 +51,29 @@ var Forks = map[string]*params.ChainConfig{
 		ChainID: big.NewInt(1),
 	},
 	"Istanbul": {
-		ChainID: big.NewInt(1),
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
 	},
 	"Berlin": {
 		ChainID: big.NewInt(1),
 	},
 	"London": {
-		ChainID: big.NewInt(1),
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
+		LondonCompatibleBlock:   new(big.Int),
+	},
+	"EthTxType": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+	},
+	"Magma": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
 	},
 	"Merge": {
 		ChainID: big.NewInt(1),
@@ -78,7 +97,6 @@ var Forks = map[string]*params.ChainConfig{
 		Kip103CompatibleBlock:    new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
 		CancunCompatibleBlock:    new(big.Int),
-		RandaoCompatibleBlock:    new(big.Int),
 		KaiaCompatibleBlock:      new(big.Int),
 		Kip160CompatibleBlock:    new(big.Int),
 	},
@@ -92,7 +110,6 @@ var Forks = map[string]*params.ChainConfig{
 		Kip103CompatibleBlock:    new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
 		CancunCompatibleBlock:    new(big.Int),
-		RandaoCompatibleBlock:    new(big.Int),
 		KaiaCompatibleBlock:      new(big.Int),
 		Kip160CompatibleBlock:    new(big.Int),
 		PragueCompatibleBlock:    new(big.Int),
@@ -106,4 +123,29 @@ type UnsupportedForkError struct {
 
 func (e UnsupportedForkError) Error() string {
 	return fmt.Sprintf("unsupported fork %q", e.Name)
+}
+
+// IsPrecompiledContractAddressForEthTest returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
+func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface{}) bool {
+	r, ok := rules.(params.Rules)
+	if !ok {
+		panic("unexpected type of rules")
+	}
+	var activePrecompiles []common.Address
+	switch {
+	case r.IsPrague:
+		activePrecompiles = vm.PrecompiledAddressPrague
+	case r.IsCancun:
+		activePrecompiles = vm.PrecompiledAddressCancun
+	case r.IsIstanbul:
+		activePrecompiles = vm.PrecompiledAddressIstanbul
+	default:
+		activePrecompiles = vm.PrecompiledAddressesByzantium
+	}
+	for _, pre := range activePrecompiles {
+		if bytes.Equal(pre.Bytes(), addr.Bytes()) {
+			return true
+		}
+	}
+	return false
 }

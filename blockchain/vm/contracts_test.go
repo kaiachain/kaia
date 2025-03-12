@@ -24,18 +24,24 @@ package vm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
+	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -78,14 +84,12 @@ var allPrecompiles = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
 
 	common.BytesToAddress([]byte{0x0f, 0x0a}): &bls12381G1Add{},
-	common.BytesToAddress([]byte{0x0f, 0x0b}): &bls12381G1Mul{},
-	common.BytesToAddress([]byte{0x0f, 0x0c}): &bls12381G1MultiExp{},
-	common.BytesToAddress([]byte{0x0f, 0x0d}): &bls12381G2Add{},
-	common.BytesToAddress([]byte{0x0f, 0x0e}): &bls12381G2Mul{},
-	common.BytesToAddress([]byte{0x0f, 0x0f}): &bls12381G2MultiExp{},
-	common.BytesToAddress([]byte{0x0f, 0x10}): &bls12381Pairing{},
-	common.BytesToAddress([]byte{0x0f, 0x11}): &bls12381MapG1{},
-	common.BytesToAddress([]byte{0x0f, 0x12}): &bls12381MapG2{},
+	common.BytesToAddress([]byte{0x0f, 0x0b}): &bls12381G1MultiExp{},
+	common.BytesToAddress([]byte{0x0f, 0x0c}): &bls12381G2Add{},
+	common.BytesToAddress([]byte{0x0f, 0x0d}): &bls12381G2MultiExp{},
+	common.BytesToAddress([]byte{0x0f, 0x0e}): &bls12381Pairing{},
+	common.BytesToAddress([]byte{0x0f, 0x0f}): &bls12381MapG1{},
+	common.BytesToAddress([]byte{0x0f, 0x10}): &bls12381MapG2{},
 }
 
 // EIP-152 test vectors
@@ -282,38 +286,33 @@ func TestValidateSenderContract(t *testing.T)         { testJson("validateSender
 func BenchmarkPrecompiledValidateSender(b *testing.B) { benchJson("validateSender", "3ff", b) }
 
 // BLS12-381 tests
-func TestPrecompiledBLS12381G1Add(t *testing.T) { testJson("blsG1Add", "f0a", t) }
-func TestPrecompiledBLS12381G1Mul(t *testing.T) { testJson("blsG1Mul", "f0b", t) }
+func TestPrecompiledBLS12381G1Add(t *testing.T)      { testJson("blsG1Add", "f0a", t) }
+func TestPrecompiledBLS12381G1Mul(t *testing.T)      { testJson("blsG1Mul", "f0b", t) }
+func TestPrecompiledBLS12381G1MultiExp(t *testing.T) { testJson("blsG1MultiExp", "f0b", t) }
+func TestPrecompiledBLS12381G2Add(t *testing.T)      { testJson("blsG2Add", "f0c", t) }
+func TestPrecompiledBLS12381G2Mul(t *testing.T)      { testJson("blsG2Mul", "f0d", t) }
+func TestPrecompiledBLS12381G2MultiExp(t *testing.T) { testJson("blsG2MultiExp", "f0d", t) }
+func TestPrecompiledBLS12381Pairing(t *testing.T)    { testJson("blsPairing", "f0e", t) }
+func TestPrecompiledBLS12381MapG1(t *testing.T)      { testJson("blsMapG1", "f0f", t) }
+func TestPrecompiledBLS12381MapG2(t *testing.T)      { testJson("blsMapG2", "f10", t) }
 
-// func TestPrecompiledBLS12381G1MultiExp(t *testing.T) { testJson("blsG1MultiExp", "f0c", t) }
-func TestPrecompiledBLS12381G2Add(t *testing.T)      { testJson("blsG2Add", "f0d", t) }
-func TestPrecompiledBLS12381G2Mul(t *testing.T)      { testJson("blsG2Mul", "f0e", t) }
-func TestPrecompiledBLS12381G2MultiExp(t *testing.T) { testJson("blsG2MultiExp", "f0f", t) }
-func TestPrecompiledBLS12381Pairing(t *testing.T)    { testJson("blsPairing", "f10", t) }
-func TestPrecompiledBLS12381MapG1(t *testing.T)      { testJson("blsMapG1", "f11", t) }
-func TestPrecompiledBLS12381MapG2(t *testing.T)      { testJson("blsMapG2", "f12", t) }
+func TestPrecompiledBLS12381G1AddFail(t *testing.T)      { testJsonFail("blsG1Add", "f0a", t) }
+func TestPrecompiledBLS12381G1MulFail(t *testing.T)      { testJsonFail("blsG1Mul", "f0b", t) }
+func TestPrecompiledBLS12381G1MultiExpFail(t *testing.T) { testJsonFail("blsG1MultiExp", "f0b", t) }
+func TestPrecompiledBLS12381G2AddFail(t *testing.T)      { testJsonFail("blsG2Add", "f0c", t) }
+func TestPrecompiledBLS12381G2MulFail(t *testing.T)      { testJsonFail("blsG2Mul", "f0d", t) }
+func TestPrecompiledBLS12381G2MultiExpFail(t *testing.T) { testJsonFail("blsG2MultiExp", "f0d", t) }
+func TestPrecompiledBLS12381PairingFail(t *testing.T)    { testJsonFail("blsPairing", "f0e", t) }
+func TestPrecompiledBLS12381MapG1Fail(t *testing.T)      { testJsonFail("blsMapG1", "f0f", t) }
+func TestPrecompiledBLS12381MapG2Fail(t *testing.T)      { testJsonFail("blsMapG2", "f10", t) }
 
-func TestPrecompiledBLS12381G1AddFail(t *testing.T) { testJsonFail("blsG1Add", "f0a", t) }
-func TestPrecompiledBLS12381G1MulFail(t *testing.T) { testJsonFail("blsG1Mul", "f0b", t) }
-
-// func TestPrecompiledBLS12381G1MultiExpFail(t *testing.T) { testJsonFail("blsG1MultiExp", "f0c", t) }
-func TestPrecompiledBLS12381G2AddFail(t *testing.T)      { testJsonFail("blsG2Add", "f0d", t) }
-func TestPrecompiledBLS12381G2MulFail(t *testing.T)      { testJsonFail("blsG2Mul", "f0e", t) }
-func TestPrecompiledBLS12381G2MultiExpFail(t *testing.T) { testJsonFail("blsG2MultiExp", "f0f", t) }
-func TestPrecompiledBLS12381PairingFail(t *testing.T)    { testJsonFail("blsPairing", "f10", t) }
-func TestPrecompiledBLS12381MapG1Fail(t *testing.T)      { testJsonFail("blsMapG1", "f11", t) }
-func TestPrecompiledBLS12381MapG2Fail(t *testing.T)      { testJsonFail("blsMapG2", "f12", t) }
-
-func BenchmarkPrecompiledBLS12381G1Add(b *testing.B) { benchJson("blsG1Add", "f0a", b) }
-func BenchmarkPrecompiledBLS12381G1Mul(b *testing.B) { benchJson("blsG1Mul", "f0b", b) }
-
-func BenchmarkPrecompiledBLS12381G1MultiExp(b *testing.B) { benchJson("blsG1MultiExp", "f0c", b) }
-func BenchmarkPrecompiledBLS12381G2Add(b *testing.B)      { benchJson("blsG2Add", "f0d", b) }
-func BenchmarkPrecompiledBLS12381G2Mul(b *testing.B)      { benchJson("blsG2Mul", "f0e", b) }
-func BenchmarkPrecompiledBLS12381G2MultiExp(b *testing.B) { benchJson("blsG2MultiExp", "f0f", b) }
-func BenchmarkPrecompiledBLS12381Pairing(b *testing.B)    { benchJson("blsPairing", "f10", b) }
-func BenchmarkPrecompiledBLS12381MapG1(b *testing.B)      { benchJson("blsMapG1", "f11", b) }
-func BenchmarkPrecompiledBLS12381MapG2(b *testing.B)      { benchJson("blsMapG2", "f12", b) }
+func BenchmarkPrecompiledBLS12381G1Add(b *testing.B)      { benchJson("blsG1Add", "f0a", b) }
+func BenchmarkPrecompiledBLS12381G1MultiExp(b *testing.B) { benchJson("blsG1MultiExp", "f0b", b) }
+func BenchmarkPrecompiledBLS12381G2Add(b *testing.B)      { benchJson("blsG2Add", "f0c", b) }
+func BenchmarkPrecompiledBLS12381G2MultiExp(b *testing.B) { benchJson("blsG2MultiExp", "f0d", b) }
+func BenchmarkPrecompiledBLS12381Pairing(b *testing.B)    { benchJson("blsPairing", "f0e", b) }
+func BenchmarkPrecompiledBLS12381MapG1(b *testing.B)      { benchJson("blsMapG1", "f0f", b) }
+func BenchmarkPrecompiledBLS12381MapG2(b *testing.B)      { benchJson("blsMapG2", "f10", b) }
 
 // Tests OOG (out-of-gas) of modExp
 func TestPrecompiledModExpOOG(t *testing.T) {
@@ -466,5 +465,91 @@ func TestEVM_CVE_2021_39137(t *testing.T) {
 		}
 
 		assert.Equal(t, tc.expectedResult, ret[12:32])
+	}
+}
+
+func TestConsoleLog(t *testing.T) {
+	// Test if the ConsoleLog.toLogString can convert the input correctly into log string
+	// Test all combinations of parameters from ConsoleLogSignatures
+	for selector, paramTypes := range common.ConsoleLogSignatures {
+		t.Run(fmt.Sprintf("selector_%x", selector), func(t *testing.T) {
+			// Generate test input values and expected output based on parameter types
+			var (
+				inputs      []interface{}
+				expectedStr []string
+			)
+
+			for _, paramType := range paramTypes {
+				switch paramType {
+				case common.Int256Ty:
+					inputs = append(inputs, big.NewInt(-123))
+					expectedStr = append(expectedStr, "-123")
+				case common.Uint256Ty:
+					inputs = append(inputs, big.NewInt(123))
+					expectedStr = append(expectedStr, "123")
+				case common.StringTy:
+					inputs = append(inputs, "test")
+					expectedStr = append(expectedStr, "test")
+				case common.BoolTy:
+					inputs = append(inputs, true)
+					expectedStr = append(expectedStr, "true")
+				case common.AddressTy:
+					addr := common.HexToAddress("0x1234567890123456789012345678901234567890")
+					inputs = append(inputs, addr)
+					expectedStr = append(expectedStr, addr.Hex())
+				case common.BytesTy:
+					b := []byte{1, 2, 3}
+					inputs = append(inputs, b)
+					expectedStr = append(expectedStr, common.Bytes2Hex(b))
+				default:
+					// Handle fixed byte types (Bytes1Ty through Bytes32Ty)
+					if len(paramType) > 5 && paramType[:5] == "Bytes" {
+						size, _ := strconv.Atoi(string(paramType[5:]))
+						b := make([]byte, size)
+						for i := 0; i < size; i++ {
+							b[i] = byte(i)
+						}
+						arrayType := reflect.ArrayOf(size, reflect.TypeOf(byte(0)))
+						array := reflect.New(arrayType).Elem()
+						for i := 0; i < size; i++ {
+							array.Index(i).Set(reflect.ValueOf(byte(i)))
+						}
+						inputs = append(inputs, array.Interface())
+						expectedStr = append(expectedStr, common.Bytes2Hex(b))
+					}
+				}
+			}
+
+			expected := strings.Join(expectedStr, " ")
+
+			// Encode the selector and parameters
+			sig := make([]byte, 4)
+			binary.BigEndian.PutUint32(sig, selector)
+
+			// Pack parameters using abi encoding
+			// Parse the parameter types dynamically
+			arguments := abi.Arguments{}
+			for _, paramType := range paramTypes {
+				// when parsing paramType to abi.Type, convert to lowercase (e.g., "Uint256" -> "uint256")
+				typ, _ := abi.NewType(strings.ToLower(string(paramType)), "", nil)
+				arguments = append(arguments, abi.Argument{
+					Type: typ,
+				})
+			}
+
+			// Encode the parameters
+			encodedParams, err := arguments.Pack(inputs...)
+			if err != nil {
+				log.Fatalf("Failed to encode parameters: %v", err)
+			}
+
+			callData := append(sig, encodedParams...)
+
+			// Decode and verify
+			c := &consoleLog{}
+			decoded, err := c.toLogString(callData)
+			assert.NoError(t, err)
+			assert.Equal(t, expected, decoded)
+		})
 	}
 }

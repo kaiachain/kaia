@@ -109,10 +109,10 @@ const (
 )
 
 const (
-	DefaultTriesInMemory    = 128
-	DefaultBlockInterval    = 128
-	DefaultPruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
-	MaxPrefetchTxs          = 20000
+	DefaultTriesInMemory        = 128
+	DefaultBlockInterval        = 128
+	DefaultLivePruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
+	MaxPrefetchTxs              = 20000
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:
@@ -239,7 +239,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			CacheSize:            512,
 			BlockInterval:        DefaultBlockInterval,
 			TriesInMemory:        DefaultTriesInMemory,
-			LivePruningRetention: DefaultPruningRetention,
+			LivePruningRetention: DefaultLivePruningRetention,
 			TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
 			SnapshotCacheSize:    512,
 			SnapshotAsyncGen:     true,
@@ -438,14 +438,6 @@ func (bc *BlockChain) SetCanonicalBlock(blockNum uint64) {
 		}
 	}
 	logger.Info("successfully set the canonical block", "blockNum", blockNum)
-}
-
-func (bc *BlockChain) UseGiniCoeff() bool {
-	return bc.chainConfig.Governance.Reward.UseGiniCoeff
-}
-
-func (bc *BlockChain) ProposerPolicy() uint64 {
-	return bc.chainConfig.Istanbul.ProposerPolicy
 }
 
 func (bc *BlockChain) getProcInterrupt() bool {
@@ -1540,7 +1532,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 	}
 
 	if bc.chainConfig.Istanbul != nil {
-		return bc.ProposerPolicy() == params.WeightedRandom &&
+		return bc.chainConfig.Istanbul.ProposerPolicy == params.WeightedRandom &&
 			params.IsStakingUpdateInterval(blockNum)
 	}
 	return false
@@ -2158,18 +2150,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				return i, events, coalescedLogs, err
 			}
 		}
-
-		// update governance CurrentSet if it is at an epoch block
-		if bc.engine.CreateSnapshot(bc, block.NumberU64(), block.Hash(), nil) != nil {
-			return i, events, coalescedLogs, err
-		}
-
-		// update governance parameters
-		if istanbul, ok := bc.engine.(consensus.Istanbul); ok {
-			if err = istanbul.UpdateParam(block.NumberU64()); err != nil {
-				return i, events, coalescedLogs, err
-			}
-		}
 	}
 	// Append a single chain head event if we've progressed the chain
 	if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
@@ -2784,6 +2764,16 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
+
+	// change evm and msg for eest
+	if bc != nil {
+		if e, hasMethod := bc.Engine().(interface {
+			BeforeApplyMessage(*vm.EVM, *types.Transaction)
+		}); hasMethod {
+			e.BeforeApplyMessage(vmenv, msg)
+		}
+	}
+
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg)
 	if err != nil {
