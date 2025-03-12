@@ -906,7 +906,7 @@ func (s *StateDB) Copy() *StateDB {
 		trie:                     s.db.CopyTrie(s.trie),
 		stateObjects:             make(map[common.Address]*stateObject, len(s.journal.dirties)),
 		stateObjectsDirty:        make(map[common.Address]struct{}, len(s.journal.dirties)),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
+		stateObjectsDirtyStorage: make(map[common.Address]struct{}, len(s.stateObjectsDirtyStorage)),
 		refund:                   s.refund,
 		logs:                     make(map[common.Hash][]*types.Log, len(s.logs)),
 		logSize:                  s.logSize,
@@ -932,6 +932,9 @@ func (s *StateDB) Copy() *StateDB {
 			state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
 			state.stateObjectsDirty[addr] = struct{}{}
 		}
+	}
+	for addr := range s.stateObjectsDirtyStorage {
+		state.stateObjectsDirtyStorage[addr] = struct{}{}
 	}
 
 	deepCopyLogs(s, state)
