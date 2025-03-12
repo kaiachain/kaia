@@ -36,11 +36,13 @@ func TestExtractTxBundles(t *testing.T) {
 
 	g := NewGaslessModule()
 	nodeKey, _ := crypto.GenerateKey()
-	g.Init(&InitOpts{
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	err := g.Init(&InitOpts{
 		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
 		NodeKey:     nodeKey,
+		TxPool:      &testTxPool{sdb},
 	})
-	g.currentState, _ = state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	require.NoError(t, err)
 
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()

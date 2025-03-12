@@ -173,3 +173,11 @@ func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
 	}
 	return hashes, nil
 }
+
+type testTxPool struct {
+	statedb *state.StateDB
+}
+
+func (pool *testTxPool) GetCurrentState() *state.StateDB {
+	return pool.statedb
+}

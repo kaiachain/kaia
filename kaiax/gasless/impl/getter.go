@@ -66,7 +66,7 @@ type SwapArgs struct {
 // A3. spender is a whitelisted SwapRouter contract.
 // A4. amount is nonzero.
 func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
-	args, ok := decodeApproveTx(tx)
+	args, ok := decodeApproveTx(tx, g.signer)
 	return ok && g.isApproveTx(args)
 }
 
@@ -81,7 +81,7 @@ func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
 // S2. tx.data is `swapForGas(token, amountIn, minAmountOut, amountRepay)`.
 // S3. token is a whitelisted ERC20 token.
 func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
-	args, ok := decodeSwapTx(tx)
+	args, ok := decodeSwapTx(tx, g.signer)
 	return ok && g.isSwapTx(args)
 }
 
@@ -102,7 +102,7 @@ func mustParseAbi(abiJson string, funcName string) abi.Method {
 	return method
 }
 
-func decodeApproveTx(tx *types.Transaction) (*ApproveArgs, bool) {
+func decodeApproveTx(tx *types.Transaction, signer types.Signer) (*ApproveArgs, bool) {
 	to, inputs, ok := decodeFunctionCall(tx, erc20ApproveFunc)
 	if !ok {
 		return nil, false
@@ -115,15 +115,19 @@ func decodeApproveTx(tx *types.Transaction) (*ApproveArgs, bool) {
 	if !ok {
 		return nil, false
 	}
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return nil, false
+	}
 	return &ApproveArgs{
-		Sender:  tx.ValidatedSender(),
+		Sender:  from,
 		Token:   to,
 		Spender: spender,
 		Amount:  amount,
 	}, true
 }
 
-func decodeSwapTx(tx *types.Transaction) (args *SwapArgs, ok bool) {
+func decodeSwapTx(tx *types.Transaction, signer types.Signer) (args *SwapArgs, ok bool) {
 	to, inputs, ok := decodeFunctionCall(tx, routerSwapFunc)
 	if !ok {
 		return nil, false
@@ -144,8 +148,12 @@ func decodeSwapTx(tx *types.Transaction) (args *SwapArgs, ok bool) {
 	if !ok {
 		return nil, false
 	}
+	from, err := types.Sender(signer, tx)
+	if err != nil {
+		return nil, false
+	}
 	return &SwapArgs{
-		Sender:       tx.ValidatedSender(),
+		Sender:       from,
 		Router:       to,
 		Token:        token,
 		AmountIn:     amountIn,
@@ -177,7 +185,7 @@ func decodeFunctionCall(tx *types.Transaction, method abi.Method) (common.Addres
 // SP4. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
 func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool {
 	// Sx.
-	swapArgs, ok := decodeSwapTx(swapTx)
+	swapArgs, ok := decodeSwapTx(swapTx, g.signer)
 	if !ok || !g.isSwapTx(swapArgs) {
 		return false
 	}
@@ -185,12 +193,12 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 	// Conditions involving ApproveTx
 	if approveTxOrNil != nil {
 		// Ax.
-		approveArgs, ok := decodeApproveTx(approveTxOrNil)
+		approveArgs, ok := decodeApproveTx(approveTxOrNil, g.signer)
 		if !ok || !g.isApproveTx(approveArgs) {
 			return false
 		}
 		// AP1.
-		if approveArgs.Sender != swapTx.ValidatedSender() {
+		if approveArgs.Sender != swapArgs.Sender {
 			return false
 		}
 		// SP1.
@@ -205,12 +213,12 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
 			return false
 		}
-		if nonce := g.currentState.GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+		if nonce := g.TxPool.GetCurrentState().GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
 			return false
 		}
 	} else {
 		// SP3.
-		if nonce := g.currentState.GetNonce(swapTx.ValidatedSender()); nonce != swapTx.Nonce() {
+		if nonce := g.TxPool.GetCurrentState().GetNonce(swapArgs.Sender); nonce != swapTx.Nonce() {
 			return false
 		}
 	}
@@ -232,11 +240,15 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	return builder.TxGenerator{
 		Generate: func(nonce uint64) (*types.Transaction, error) {
 			var (
-				to      = swapTx.ValidatedSender()
 				chainId = g.InitOpts.ChainConfig.ChainID
 				signer  = types.LatestSignerForChainID(chainId)
 				key     = g.InitOpts.NodeKey
 			)
+
+			to, err := types.Sender(signer, swapTx)
+			if err != nil {
+				return nil, err
+			}
 
 			tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
 				types.TxValueKeyNonce:      nonce,

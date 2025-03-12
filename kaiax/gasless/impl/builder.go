@@ -30,7 +30,10 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	approveTxs := map[common.Address]*types.Transaction{}
 	targetTxHash := common.Hash{}
 	for _, tx := range txs {
-		addr := tx.ValidatedSender()
+		addr, err := types.Sender(g.signer, tx)
+		if err != nil {
+			continue
+		}
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx
 		} else if g.IsSwapTx(tx) && g.IsExecutable(approveTxs[addr], tx) {

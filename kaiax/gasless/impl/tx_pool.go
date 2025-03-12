@@ -59,14 +59,13 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 	return false
 }
 
-func (g *GaslessModule) Reset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {
-	g.currentState = pool.GetCurrentState()
-}
-
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
-	addr := approveTx.ValidatedSender()
-	nonce := g.currentState.GetNonce(addr)
+	addr, err := types.Sender(g.signer, approveTx)
+	if err != nil {
+		return false
+	}
+	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
 
 	if approveTx.Nonce() != nonce {
 		return false
@@ -80,8 +79,11 @@ func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) b
 
 // isSwapTxReady assumes that the caller checked `g.IsSwapTx(swapTx)`
 func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
-	addr := swapTx.ValidatedSender()
-	nonce := g.currentState.GetNonce(addr)
+	addr, err := types.Sender(g.signer, swapTx)
+	if err != nil {
+		return false
+	}
+	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
 
 	var approveTx *types.Transaction
 	if swapTx.Nonce() == nonce {

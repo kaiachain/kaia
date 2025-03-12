@@ -10,9 +10,11 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/kaiachain/kaia/blockchain"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	event "github.com/kaiachain/kaia/event"
+	kaiax "github.com/kaiachain/kaia/kaiax"
 )
 
 // MockTxPool is a mock of TxPool interface.
@@ -109,6 +111,20 @@ func (mr *MockTxPoolMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTxPool)(nil).Get), arg0)
 }
 
+// GetCurrentState mocks base method.
+func (m *MockTxPool) GetCurrentState() *state.StateDB {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCurrentState")
+	ret0, _ := ret[0].(*state.StateDB)
+	return ret0
+}
+
+// GetCurrentState indicates an expected call of GetCurrentState.
+func (mr *MockTxPoolMockRecorder) GetCurrentState() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentState", reflect.TypeOf((*MockTxPool)(nil).GetCurrentState))
+}
+
 // GetPendingNonce mocks base method.
 func (m *MockTxPool) GetPendingNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
@@ -148,6 +164,22 @@ func (m *MockTxPool) Pending() (map[common.Address]types.Transactions, error) {
 func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
+}
+
+// RegisterTxPoolModule mocks base method.
+func (m *MockTxPool) RegisterTxPoolModule(arg0 ...kaiax.TxPoolModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterTxPoolModule", varargs...)
+}
+
+// RegisterTxPoolModule indicates an expected call of RegisterTxPoolModule.
+func (mr *MockTxPoolMockRecorder) RegisterTxPoolModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTxPoolModule", reflect.TypeOf((*MockTxPool)(nil).RegisterTxPoolModule), arg0...)
 }
 
 // SetGasPrice mocks base method.

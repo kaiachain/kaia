@@ -349,13 +349,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 
-	mGasless := gasless_impl.NewGaslessModule()
-	mGasless.Init(&gasless_impl.InitOpts{
-		ChainConfig: cn.chainConfig,
-		NodeKey:     ctx.NodeKey(),
-	})
-
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov, []kaiax.TxPoolModule{mGasless})
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -552,6 +546,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext) error {
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig: s.chainConfig,
 			NodeKey:     ctx.NodeKey(),
+			TxPool:      s.txPool,
 		}),
 	)
 	if err != nil {
@@ -566,6 +561,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext) error {
 	s.miner.RegisterTxBundlingModule(mGasless)
 	s.blockchain.RegisterExecutionModule(mStaking, mSupply, mGov, mValset, mRandao)
 	s.blockchain.RegisterRewindableModule(mStaking, mSupply, mGov, mValset, mRandao)
+	s.txPool.RegisterTxPoolModule(mGasless)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 		engine.RegisterConsensusModule(mReward, mGov)

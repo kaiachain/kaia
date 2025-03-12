@@ -19,8 +19,9 @@ package impl
 import (
 	"crypto/ecdsa"
 
-	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -30,13 +31,14 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
+	TxPool      kaiax.TxPoolForCaller
 }
 
 type GaslessModule struct {
 	InitOpts
-	currentState  *state.StateDB
 	swapRouters   map[common.Address]bool
 	allowedTokens map[common.Address]bool
+	signer        types.Signer
 }
 
 func NewGaslessModule() *GaslessModule {
@@ -44,7 +46,7 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 	g.InitOpts = *opts
@@ -55,6 +57,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 	g.allowedTokens = map[common.Address]bool{
 		common.HexToAddress("0xabcd"): true,
 	}
+	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 	return nil
 }
 
