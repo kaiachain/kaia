@@ -117,7 +117,7 @@ func decodeApproveTx(tx *types.Transaction, signer types.Signer) (*ApproveArgs, 
 	}
 	from, err := types.Sender(signer, tx)
 	if err != nil {
-		panic(err)
+		return nil, false
 	}
 	return &ApproveArgs{
 		Sender:  from,
@@ -150,7 +150,7 @@ func decodeSwapTx(tx *types.Transaction, signer types.Signer) (args *SwapArgs, o
 	}
 	from, err := types.Sender(signer, tx)
 	if err != nil {
-		panic(err)
+		return nil, false
 	}
 	return &SwapArgs{
 		Sender:       from,
