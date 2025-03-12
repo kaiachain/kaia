@@ -32,7 +32,7 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	for _, tx := range txs {
 		addr, err := types.Sender(g.signer, tx)
 		if err != nil {
-			panic(err)
+			return nil
 		}
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx

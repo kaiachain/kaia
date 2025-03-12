@@ -81,7 +81,7 @@ func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) b
 func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
 	addr, err := types.Sender(g.signer, swapTx)
 	if err != nil {
-		panic(err)
+		return false
 	}
 	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
 

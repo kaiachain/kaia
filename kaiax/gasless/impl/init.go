@@ -46,7 +46,7 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 	g.InitOpts = *opts
