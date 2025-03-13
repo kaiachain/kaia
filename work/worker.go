@@ -770,7 +770,8 @@ CommitTransactionLoop:
 				continue
 			}
 		}
-		numTxsChecked++
+		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
+		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		//
