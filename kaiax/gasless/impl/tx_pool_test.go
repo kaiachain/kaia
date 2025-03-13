@@ -391,6 +391,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	key2, _ := crypto.GenerateKey()
 	key4, _ := crypto.GenerateKey()
 
+	// The number of variable means the number of sender. For exampele, A1 and S1 are Sender1's txs.
 	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 
