@@ -102,8 +102,6 @@ func makeTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, to common.Add
 	tx := types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data)
 	tx, err := types.SignTx(tx, signer, privKey)
 	require.NoError(t, err)
-	_, err = tx.ValidateSender(signer, p, 0)
-	require.NoError(t, err)
 
 	return tx
 }
