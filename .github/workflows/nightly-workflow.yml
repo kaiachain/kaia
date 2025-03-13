@@ -3,7 +3,9 @@ name: Nightly Tests
 on:
   schedule:
     - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
-  workflow_dispatch:  # Manual trigger option
+  push:
+    branches:
+      - 'test/github-action'
 
 env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
