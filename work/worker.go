@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -770,7 +771,8 @@ CommitTransactionLoop:
 				continue
 			}
 		}
-		numTxsChecked++
+		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
+		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		//
@@ -834,16 +836,14 @@ CommitTransactionLoop:
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
 			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
+		case kerrors.ErrRevertedBundleByVmErr:
+			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
+			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
+			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
-			if len(targetBundle.BundleTxs) != 0 {
-				for i := 0; i < len(targetBundle.BundleTxs); i++ {
-					env.tcount++
-				}
-			} else {
-				env.tcount++
-			}
-
 			coalescedLogs = append(coalescedLogs, logs...)
 			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
 
@@ -883,6 +883,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
@@ -892,6 +893,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
+	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
 	logs := []*types.Log{}
@@ -911,6 +913,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 				logger.Error("TxGenerator error", "error", err)
 				*env.state = *lastSnapshot
 				env.header.GasUsed = gasUsedSnapshot
+				env.tcount = tcountSnapshot
 				return err, &types.Transaction{}, nil
 			}
 		} else {
@@ -932,9 +935,14 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			}
 			*env.state = *lastSnapshot
 			env.header.GasUsed = gasUsedSnapshot
+			env.tcount = tcountSnapshot
+			if err == nil {
+				err = kerrors.ErrRevertedBundleByVmErr
+			}
 			return err, tx, nil
 		}
 
+		env.tcount++
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
