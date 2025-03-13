@@ -404,7 +404,7 @@ jobs:
           no_output_timeout: 30m
           command: |
             git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
-            make test-tests
+            cd tests && go test -v
   test-others:
     executor: test-others-executor
     resource_class: xlarge
