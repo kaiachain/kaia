@@ -836,14 +836,6 @@ CommitTransactionLoop:
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
-			if len(targetBundle.BundleTxs) != 0 {
-				for i := 0; i < len(targetBundle.BundleTxs); i++ {
-					env.tcount++
-				}
-			} else {
-				env.tcount++
-			}
-
 			coalescedLogs = append(coalescedLogs, logs...)
 			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
 
@@ -883,6 +875,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
@@ -892,6 +885,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
+	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
 	logs := []*types.Log{}
@@ -911,6 +905,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 				logger.Error("TxGenerator error", "error", err)
 				*env.state = *lastSnapshot
 				env.header.GasUsed = gasUsedSnapshot
+				env.tcount = tcountSnapshot
 				return err, &types.Transaction{}, nil
 			}
 		} else {
@@ -932,9 +927,11 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			}
 			*env.state = *lastSnapshot
 			env.header.GasUsed = gasUsedSnapshot
+			env.tcount = tcountSnapshot
 			return err, tx, nil
 		}
 
+		env.tcount++
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
