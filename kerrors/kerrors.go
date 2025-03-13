@@ -58,4 +58,5 @@ var (
 
 	ErrDeprecated   = errors.New("deprecated feature")
 	ErrNotSupported = errors.New("not supported")
+	ErrRevertedBundleByVmErr = errors.New("bundle is reverted by vm err")
 )

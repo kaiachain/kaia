@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -835,6 +836,12 @@ CommitTransactionLoop:
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
 			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
+		case kerrors.ErrRevertedBundleByVmErr:
+			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
+			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
+			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
@@ -929,6 +936,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			*env.state = *lastSnapshot
 			env.header.GasUsed = gasUsedSnapshot
 			env.tcount = tcountSnapshot
+			if err == nil {
+				err = kerrors.ErrRevertedBundleByVmErr
+			}
 			return err, tx, nil
 		}
 
