@@ -788,8 +788,6 @@ CommitTransactionLoop:
 		//	continue
 		//}
 		// Start executing the transaction
-		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&isExecutingBundleTxs, 1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
@@ -798,6 +796,7 @@ CommitTransactionLoop:
 				from, _ = types.Sender(env.signer, tx)
 			}
 		} else {
+			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 			err, logs = env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		}
 
@@ -918,6 +917,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			tx = txOrGen.(*types.Transaction)
 		}
 
+		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 		receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 		// Bundled tx will be rejected with any receipt.Status other than success.
 		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
