@@ -407,7 +407,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	statedb.SetBalance(crypto.PubkeyToAddress(key4.PublicKey), new(big.Int).SetUint64(params.KAIA))
 
 	expected := []*types.Transaction{A1, S1, A2, S2, S3, T4}
-	// sending A1, S1, A2, S2, S3, T4, and T5 in random order and then check if pending has expected txs.
+	// send A1, S1, A2, S2, S3, T4, and T5 in random order and then check if pending has expected txs.
 	for range make([]int, 1000) {
 		sdb := statedb.Copy()
 		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
@@ -422,13 +422,14 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 		pool.RegisterTxPoolModule(g)
 
 		txs := []*types.Transaction{A1, S1, A2, S2, S3, T4, T5}
-		for len(txs) != 0 {
-			r := rand.IntN(len(txs))
-			err := pool.AddLocal(txs[r])
+		rand.Shuffle(len(txs), func(i, j int) {
+			txs[i], txs[j] = txs[j], txs[i]
+		})
+		for i := range txs {
+			err := pool.AddLocal(txs[i])
 			if err != nil {
 				require.ErrorIs(t, err, blockchain.ErrInsufficientFundsFrom)
 			}
-			txs = append(txs[:r], txs[r+1:]...)
 		}
 
 		pending, err := pool.Pending()
