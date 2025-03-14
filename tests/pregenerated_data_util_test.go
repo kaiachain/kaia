@@ -447,7 +447,7 @@ func genCandidateLevelDBOptions() (*database.DBConfig, *opt.Options) {
 	return dbc, opts
 }
 
-// genCandidateLevelDBOptions returns candidate database configurations of main-net, using BadgerDB.
+// genCandidateBadgerDBOptions returns candidate database configurations of main-net, using BadgerDB.
 func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
 	dbc := defaultDBConfig()
 	dbc.DBType = database.BadgerDB

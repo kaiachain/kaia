@@ -10,3 +10,4 @@ export * from "./fixtures/voting";
 export * from "./fixtures/rebalance";
 export * from "./fixtures/common";
 export * from "./fixtures/clRegistry";
+export * from "./fixtures/gaslessSwapRouter";

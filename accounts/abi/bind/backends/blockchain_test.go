@@ -383,7 +383,7 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 	mockBackend.EXPECT().SubscribeRemovedLogsEvent(any).DoAndReturn(subscribeRemovedLogsEvent).AnyTimes()
 	mockBackend.EXPECT().SubscribeChainEvent(any).DoAndReturn(subscribeChainEvent).AnyTimes()
 
-	f := filters.NewEventSystem(&event.TypeMux{}, mockBackend, false)
+	f := filters.NewEventSystem(&event.TypeMux{}, mockBackend)
 	c := NewBlockchainContractBackend(bc, nil, f)
 
 	return c

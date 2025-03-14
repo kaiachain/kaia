@@ -27,20 +27,30 @@ interface ICLRegistry {
         uint256 gcId;
         /// @dev The address of the CLDEX pool
         address clPool;
-        /// @dev The address of the CLStaking
-        address clStaking;
     }
 
     /* ========== EVENT ========== */
 
     /// @dev Emitted when a pair is registered
-    event RegisterPair(address nodeId, uint256 indexed gcId, address indexed clPool, address indexed clStaking);
+    event RegisterPair(
+        address nodeId,
+        uint256 indexed gcId,
+        address indexed clPool
+    );
 
     /// @dev Emitted when a pair is retired
-    event RetirePair(address nodeId, uint256 indexed gcId, address indexed clPool, address indexed clStaking);
+    event RetirePair(
+        address nodeId,
+        uint256 indexed gcId,
+        address indexed clPool
+    );
 
     /// @dev Emitted when a pair is updated
-    event UpdatePair(address nodeId, uint256 indexed gcId, address indexed clPool, address indexed clStaking);
+    event UpdatePair(
+        address nodeId,
+        uint256 indexed gcId,
+        address indexed clPool
+    );
 
     /// @dev Register CL pair(s)
     /// @param list A struct of CLInfo
@@ -56,5 +66,8 @@ interface ICLRegistry {
 
     /// @dev Returns the CL information of all registered validators
     /// @return The CL information of all registered validators
-    function getAllCLs() external view returns (address[] memory, uint256[] memory, address[] memory, address[] memory);
+    function getAllCLs()
+        external
+        view
+        returns (address[] memory, uint256[] memory, address[] memory);
 }

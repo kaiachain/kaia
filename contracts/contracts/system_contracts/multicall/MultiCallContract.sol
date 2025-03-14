@@ -20,7 +20,10 @@ pragma solidity 0.8.19;
 interface IAddressBook {
     function isActivated() external view returns (bool);
 
-    function getAllAddress() external view returns (uint8[] memory typeList, address[] memory addressList);
+    function getAllAddress()
+        external
+        view
+        returns (uint8[] memory typeList, address[] memory addressList);
 }
 
 interface IRegistry {
@@ -28,7 +31,10 @@ interface IRegistry {
 }
 
 interface ICLRegistry {
-    function getAllCLs() external view returns (address[] memory, uint256[] memory, address[] memory, address[] memory);
+    function getAllCLs()
+        external
+        view
+        returns (address[] memory, uint256[] memory, address[] memory);
 }
 
 interface ICnStaking {
@@ -47,8 +53,10 @@ interface IERC20 {
 // It will be temporarily injected into state to be used by the Kaia client.
 // After retrieving the information, the contract will be removed from the state.
 contract MultiCallContract {
-    address private constant ADDRESS_BOOK_ADDRESS = 0x0000000000000000000000000000000000000400;
-    address private constant REGISTRY_ADDRESS = 0x0000000000000000000000000000000000000401;
+    address private constant ADDRESS_BOOK_ADDRESS =
+        0x0000000000000000000000000000000000000400;
+    address private constant REGISTRY_ADDRESS =
+        0x0000000000000000000000000000000000000401;
 
     /* ========== STAKING INFORMATION ========== */
 
@@ -56,7 +64,11 @@ contract MultiCallContract {
     function multiCallStakingInfo()
         external
         view
-        returns (uint8[] memory typeList, address[] memory addressList, uint256[] memory stakingAmounts)
+        returns (
+            uint8[] memory typeList,
+            address[] memory addressList,
+            uint256[] memory stakingAmounts
+        )
     {
         IAddressBook addressBook = IAddressBook(ADDRESS_BOOK_ADDRESS);
         (typeList, addressList) = addressBook.getAllAddress();
@@ -80,7 +92,9 @@ contract MultiCallContract {
         return (typeList, addressList, stakingAmounts);
     }
 
-    function _getCnStakingAmounts(address cnStaking) private view returns (uint256) {
+    function _getCnStakingAmounts(
+        address cnStaking
+    ) private view returns (uint256) {
         return cnStaking.balance;
     }
 
@@ -90,18 +104,19 @@ contract MultiCallContract {
         returns (
             address[] memory nodeIds,
             address[] memory clPools,
-            address[] memory clStakings,
             uint256[] memory stakingAmounts
         )
     {
         address clreg = IRegistry(REGISTRY_ADDRESS).getActiveAddr("CLRegistry");
-        address wKaia = IRegistry(REGISTRY_ADDRESS).getActiveAddr("WrappedKaia");
+        address wKaia = IRegistry(REGISTRY_ADDRESS).getActiveAddr(
+            "WrappedKaia"
+        );
 
         if (clreg == address(0)) {
-            return (nodeIds, clPools, clStakings, stakingAmounts);
+            return (nodeIds, clPools, stakingAmounts);
         }
 
-        (nodeIds, , clPools, clStakings) = ICLRegistry(clreg).getAllCLs();
+        (nodeIds, , clPools) = ICLRegistry(clreg).getAllCLs();
         uint256 poolLength = clPools.length;
         stakingAmounts = new uint256[](poolLength);
 

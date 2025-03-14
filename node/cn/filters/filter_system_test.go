@@ -24,7 +24,6 @@ package filters
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -32,9 +31,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/gxhash"
@@ -45,14 +44,16 @@ import (
 )
 
 type testBackend struct {
-	mux         *event.TypeMux
-	db          database.DBManager
-	sections    uint64
-	txFeed      *event.Feed
-	rmLogsFeed  *event.Feed
-	logsFeed    *event.Feed
-	chainFeed   *event.Feed
-	chainConfig *params.ChainConfig
+	mux             *event.TypeMux
+	db              database.DBManager
+	sections        uint64
+	txFeed          *event.Feed
+	rmLogsFeed      *event.Feed
+	logsFeed        *event.Feed
+	chainFeed       *event.Feed
+	chainConfig     *params.ChainConfig
+	pendingBlock    *types.Block
+	pendingReceipts types.Receipts
 }
 
 /*
@@ -119,6 +120,10 @@ func (b *testBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types
 	return logs, nil
 }
 
+func (b *testBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	return b.pendingBlock, b.pendingReceipts, nil
+}
+
 func (b *testBackend) SubscribeNewTxsEvent(ch chan<- blockchain.NewTxsEvent) event.Subscription {
 	return b.txFeed.Subscribe(ch)
 }
@@ -166,6 +171,22 @@ func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.Matc
 	}()
 }
 
+func (b *testBackend) setPending(block *types.Block, receipts types.Receipts) {
+	b.pendingBlock = block
+	b.pendingReceipts = receipts
+}
+
+func (b *testBackend) notifyPending(logs []*types.Log) {
+	genesis := &blockchain.Genesis{
+		Config: params.TestChainConfig,
+	}
+	db := database.NewMemoryDBManager()
+	genesisBlock := genesis.MustCommit(db)
+	blocks, _ := blockchain.GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 2, func(i int, b *blockchain.BlockGen) {})
+	b.setPending(blocks[1], []*types.Receipt{{Logs: logs}})
+	b.chainFeed.Send(blockchain.ChainEvent{Block: blocks[0]})
+}
+
 func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return b.chainConfig
 }
@@ -185,11 +206,11 @@ func TestBlockSubscription(t *testing.T) {
 		rmLogsFeed  = new(event.Feed)
 		logsFeed    = new(event.Feed)
 		chainFeed   = new(event.Feed)
-		backend     = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api         = NewPublicFilterAPI(backend, false)
+		backend     = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api         = NewPublicFilterAPI(backend)
 		genesis     = new(blockchain.Genesis).MustCommit(db)
 		chain, _    = blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
-		chainEvents = []blockchain.ChainEvent{}
+		chainEvents []blockchain.ChainEvent
 	)
 
 	for _, blk := range chain {
@@ -242,8 +263,8 @@ func TestPendingTxFilter(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api        = NewPublicFilterAPI(backend)
 
 		transactions = []*types.Transaction{
 			types.NewTransaction(0, common.HexToAddress("0xb794f5ea0ba39494ce83a213fffba74279579268"), new(big.Int), 0, new(big.Int), nil),
@@ -302,8 +323,8 @@ func TestLogFilterCreation(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api        = NewPublicFilterAPI(backend)
 
 		testCases = []struct {
 			crit    FilterCriteria
@@ -315,26 +336,31 @@ func TestLogFilterCreation(t *testing.T) {
 			{FilterCriteria{FromBlock: big.NewInt(1), ToBlock: big.NewInt(2)}, true},
 			// "mined" block range to pending
 			{FilterCriteria{FromBlock: big.NewInt(1), ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, true},
-			// new mined and pending blocks
-			{FilterCriteria{FromBlock: big.NewInt(rpc.LatestBlockNumber.Int64()), ToBlock: big.NewInt(rpc.PendingBlockNumber.Int64())}, true},
 			// from block "higher" than to block
 			{FilterCriteria{FromBlock: big.NewInt(2), ToBlock: big.NewInt(1)}, false},
 			// from block "higher" than to block
 			{FilterCriteria{FromBlock: big.NewInt(rpc.LatestBlockNumber.Int64()), ToBlock: big.NewInt(100)}, false},
-			// from block "higher" than to block
+			// errPendingLogsUnsupported
 			{FilterCriteria{FromBlock: big.NewInt(rpc.PendingBlockNumber.Int64()), ToBlock: big.NewInt(100)}, false},
-			// from block "higher" than to block
+			// errPendingLogsUnsupported
 			{FilterCriteria{FromBlock: big.NewInt(rpc.PendingBlockNumber.Int64()), ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, false},
+			// errPendingLogsUnsupported
+			{FilterCriteria{FromBlock: big.NewInt(rpc.LatestBlockNumber.Int64()), ToBlock: big.NewInt(rpc.PendingBlockNumber.Int64())}, false},
+			// topics more than 4 // NOTE: Kaia doesn't support errExceedMaxTopics
+			{FilterCriteria{Topics: [][]common.Hash{{}, {}, {}, {}, {}}}, true},
 		}
 	)
 
 	for i, test := range testCases {
-		_, err := api.NewFilter(test.crit)
+		id, err := api.NewFilter(test.crit)
 		if test.success && err != nil {
 			t.Errorf("expected filter creation for case %d to success, got %v", i, err)
 		}
-		if !test.success && err == nil {
-			t.Errorf("expected testcase %d to fail with an error", i)
+		if err == nil {
+			api.UninstallFilter(id)
+			if !test.success {
+				t.Errorf("expected testcase %d to fail with an error", i)
+			}
 		}
 	}
 }
@@ -351,8 +377,8 @@ func TestInvalidLogFilterCreation(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api        = NewPublicFilterAPI(backend)
 	)
 
 	// different situations where log filter creation should fail.
@@ -378,8 +404,8 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api        = NewPublicFilterAPI(backend)
 		blockHash  = common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
 	)
 
@@ -408,8 +434,8 @@ func TestLogFilter(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		api        = NewPublicFilterAPI(backend)
 
 		firstAddr      = common.HexToAddress("0x1111111111111111111111111111111111111111")
 		secondAddr     = common.HexToAddress("0x2222222222222222222222222222222222222222")
@@ -428,9 +454,6 @@ func TestLogFilter(t *testing.T) {
 			{Address: thirdAddress, Topics: []common.Hash{secondTopic}, BlockNumber: 3},
 		}
 
-		expectedCase7  = []*types.Log{allLogs[3], allLogs[4], allLogs[0], allLogs[1], allLogs[2], allLogs[3], allLogs[4]}
-		expectedCase11 = []*types.Log{allLogs[1], allLogs[2], allLogs[1], allLogs[2]}
-
 		testCases = []struct {
 			crit     FilterCriteria
 			expected []*types.Log
@@ -448,20 +471,14 @@ func TestLogFilter(t *testing.T) {
 			4: {FilterCriteria{Addresses: []common.Address{thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, allLogs[3:5], ""},
 			// match logs based on multiple addresses and "or" topics
 			5: {FilterCriteria{Addresses: []common.Address{secondAddr, thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, allLogs[2:5], ""},
-			// logs in the pending block
-			6: {FilterCriteria{Addresses: []common.Address{firstAddr}, FromBlock: big.NewInt(rpc.PendingBlockNumber.Int64()), ToBlock: big.NewInt(rpc.PendingBlockNumber.Int64())}, allLogs[:2], ""},
-			// mined logs with block num >= 2 or pending logs
-			7: {FilterCriteria{FromBlock: big.NewInt(2), ToBlock: big.NewInt(rpc.PendingBlockNumber.Int64())}, expectedCase7, ""},
 			// all "mined" logs with block num >= 2
-			8: {FilterCriteria{FromBlock: big.NewInt(2), ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, allLogs[3:], ""},
+			6: {FilterCriteria{FromBlock: big.NewInt(2), ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, allLogs[3:], ""},
 			// all "mined" logs
-			9: {FilterCriteria{ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, allLogs, ""},
+			7: {FilterCriteria{ToBlock: big.NewInt(rpc.LatestBlockNumber.Int64())}, allLogs, ""},
 			// all "mined" logs with 1>= block num <=2 and topic secondTopic
-			10: {FilterCriteria{FromBlock: big.NewInt(1), ToBlock: big.NewInt(2), Topics: [][]common.Hash{{secondTopic}}}, allLogs[3:4], ""},
-			// all "mined" and pending logs with topic firstTopic
-			11: {FilterCriteria{FromBlock: big.NewInt(rpc.LatestBlockNumber.Int64()), ToBlock: big.NewInt(rpc.PendingBlockNumber.Int64()), Topics: [][]common.Hash{{firstTopic}}}, expectedCase11, ""},
+			8: {FilterCriteria{FromBlock: big.NewInt(1), ToBlock: big.NewInt(2), Topics: [][]common.Hash{{secondTopic}}}, allLogs[3:4], ""},
 			// match all logs due to wildcard topic
-			12: {FilterCriteria{Topics: [][]common.Hash{nil}}, allLogs[1:], ""},
+			9: {FilterCriteria{Topics: [][]common.Hash{nil}}, allLogs[1:], ""},
 		}
 	)
 
@@ -475,9 +492,9 @@ func TestLogFilter(t *testing.T) {
 	if nsend := logsFeed.Send(allLogs); nsend == 0 {
 		t.Fatal("Shoud have at least one subscription")
 	}
-	if err := mux.Post(blockchain.PendingLogsEvent{Logs: allLogs}); err != nil {
-		t.Fatal(err)
-	}
+
+	// set pending logs
+	backend.notifyPending(allLogs)
 
 	for i, tt := range testCases {
 		var fetched []*types.Log
@@ -485,7 +502,7 @@ func TestLogFilter(t *testing.T) {
 		for { // fetch all expected logs
 			results, err := api.GetFilterChanges(tt.id)
 			if err != nil {
-				t.Fatalf("Unable to fetch logs: %v", err)
+				t.Fatalf("test %d: unable to fetch logs: %v", i, err)
 			}
 
 			fetched = append(fetched, results.([]*types.Log)...)
@@ -516,124 +533,6 @@ func TestLogFilter(t *testing.T) {
 	}
 }
 
-// TestPendingLogsSubscription tests if a subscription receives the correct pending logs that are posted to the event feed.
-func TestPendingLogsSubscription(t *testing.T) {
-	t.Parallel()
-
-	var (
-		mux        = new(event.TypeMux)
-		db         = database.NewMemoryDBManager()
-		txFeed     = new(event.Feed)
-		rmLogsFeed = new(event.Feed)
-		logsFeed   = new(event.Feed)
-		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
-		api        = NewPublicFilterAPI(backend, false)
-
-		firstAddr      = common.HexToAddress("0x1111111111111111111111111111111111111111")
-		secondAddr     = common.HexToAddress("0x2222222222222222222222222222222222222222")
-		thirdAddress   = common.HexToAddress("0x3333333333333333333333333333333333333333")
-		notUsedAddress = common.HexToAddress("0x9999999999999999999999999999999999999999")
-		firstTopic     = common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
-		secondTopic    = common.HexToHash("0x2222222222222222222222222222222222222222222222222222222222222222")
-		thirdTopic     = common.HexToHash("0x3333333333333333333333333333333333333333333333333333333333333333")
-		fourthTopic    = common.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444")
-		notUsedTopic   = common.HexToHash("0x9999999999999999999999999999999999999999999999999999999999999999")
-
-		allLogs = []blockchain.PendingLogsEvent{
-			{Logs: []*types.Log{{Address: firstAddr, Topics: []common.Hash{}, BlockNumber: 0}}},
-			{Logs: []*types.Log{{Address: firstAddr, Topics: []common.Hash{firstTopic}, BlockNumber: 1}}},
-			{Logs: []*types.Log{{Address: secondAddr, Topics: []common.Hash{firstTopic}, BlockNumber: 2}}},
-			{Logs: []*types.Log{{Address: thirdAddress, Topics: []common.Hash{secondTopic}, BlockNumber: 3}}},
-			{Logs: []*types.Log{{Address: thirdAddress, Topics: []common.Hash{secondTopic}, BlockNumber: 4}}},
-			{Logs: []*types.Log{
-				{Address: thirdAddress, Topics: []common.Hash{firstTopic}, BlockNumber: 5},
-				{Address: thirdAddress, Topics: []common.Hash{thirdTopic}, BlockNumber: 5},
-				{Address: thirdAddress, Topics: []common.Hash{fourthTopic}, BlockNumber: 5},
-				{Address: firstAddr, Topics: []common.Hash{firstTopic}, BlockNumber: 5},
-			}},
-		}
-
-		convertLogs = func(pl []blockchain.PendingLogsEvent) []*types.Log {
-			var logs []*types.Log
-			for _, l := range pl {
-				logs = append(logs, l.Logs...)
-			}
-			return logs
-		}
-
-		testCases = []struct {
-			crit     kaia.FilterQuery
-			expected []*types.Log
-			c        chan []*types.Log
-			sub      *Subscription
-		}{
-			// match all
-			{kaia.FilterQuery{}, convertLogs(allLogs), nil, nil},
-			// match none due to no matching addresses
-			{kaia.FilterQuery{Addresses: []common.Address{{}, notUsedAddress}, Topics: [][]common.Hash{nil}}, []*types.Log{}, nil, nil},
-			// match logs based on addresses, ignore topics
-			{kaia.FilterQuery{Addresses: []common.Address{firstAddr}}, append(convertLogs(allLogs[:2]), allLogs[5].Logs[3]), nil, nil},
-			// match none due to no matching topics (match with address)
-			{kaia.FilterQuery{Addresses: []common.Address{secondAddr}, Topics: [][]common.Hash{{notUsedTopic}}}, []*types.Log{}, nil, nil},
-			// match logs based on addresses and topics
-			{kaia.FilterQuery{Addresses: []common.Address{thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, append(convertLogs(allLogs[3:5]), allLogs[5].Logs[0]), nil, nil},
-			// match logs based on multiple addresses and "or" topics
-			{kaia.FilterQuery{Addresses: []common.Address{secondAddr, thirdAddress}, Topics: [][]common.Hash{{firstTopic, secondTopic}}}, append(convertLogs(allLogs[2:5]), allLogs[5].Logs[0]), nil, nil},
-			// block numbers are ignored for filters created with New***Filter, these return all logs that match the given criteria when the state changes
-			{kaia.FilterQuery{Addresses: []common.Address{firstAddr}, FromBlock: big.NewInt(2), ToBlock: big.NewInt(3)}, append(convertLogs(allLogs[:2]), allLogs[5].Logs[3]), nil, nil},
-			// multiple pending logs, should match only 2 topics from the logs in block 5
-			{kaia.FilterQuery{Addresses: []common.Address{thirdAddress}, Topics: [][]common.Hash{{firstTopic, fourthTopic}}}, []*types.Log{allLogs[5].Logs[0], allLogs[5].Logs[2]}, nil, nil},
-		}
-	)
-
-	// create all subscriptions, this ensures all subscriptions are created before the events are posted.
-	// on slow machines this could otherwise lead to missing events when the subscription is created after
-	// (some) events are posted.
-	for i := range testCases {
-		testCases[i].c = make(chan []*types.Log)
-		testCases[i].sub, _ = api.events.SubscribeLogs(testCases[i].crit, testCases[i].c)
-	}
-
-	for n, test := range testCases {
-		i := n
-		tt := test
-		go func() {
-			var fetched []*types.Log
-		fetchLoop:
-			for {
-				logs := <-tt.c
-				fetched = append(fetched, logs...)
-				if len(fetched) >= len(tt.expected) {
-					break fetchLoop
-				}
-			}
-
-			if len(fetched) != len(tt.expected) {
-				panic(fmt.Sprintf("invalid number of logs for case %d, want %d log(s), got %d", i, len(tt.expected), len(fetched)))
-			}
-
-			for l := range fetched {
-				if fetched[l].Removed {
-					panic(fmt.Sprintf("expected log not to be removed for log %d in case %d", l, i))
-				}
-				if !reflect.DeepEqual(fetched[l], tt.expected[l]) {
-					panic(fmt.Sprintf("invalid log on index %d for case %d", l, i))
-				}
-			}
-		}()
-	}
-
-	// raise events
-	time.Sleep(1 * time.Second)
-	// allLogs are type of blockchain.PendingLogsEvent
-	for _, l := range allLogs {
-		if err := mux.Post(l); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 // TestPendingTxFilterDeadlock tests if the event loop hangs when pending
 // txs arrive at the same time that one of multiple filters is timing out.
 func TestPendingTxFilterDeadlock(t *testing.T) {
@@ -647,7 +546,7 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
 		done       = make(chan struct{})
 	)
 
@@ -657,7 +556,7 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 		backend: backend,
 		mux:     backend.EventMux(),
 		chainDB: backend.ChainDB(),
-		events:  NewEventSystem(backend.EventMux(), backend, false),
+		events:  NewEventSystem(backend.EventMux(), backend),
 		filters: make(map[rpc.ID]*filter),
 		timeout: timeout,
 	}

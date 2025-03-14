@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/misc"
@@ -42,8 +43,8 @@ const sampleNumber = 3 // Number of transactions sampled in a block
 type Config struct {
 	Blocks           int
 	Percentile       int
-	MaxHeaderHistory int
-	MaxBlockHistory  int
+	MaxHeaderHistory uint64
+	MaxBlockHistory  uint64
 	MaxPrice         *big.Int `toml:",omitempty"`
 }
 
@@ -52,6 +53,7 @@ type OracleBackend interface {
 	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
 	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
 	GetBlockReceipts(ctx context.Context, hash common.Hash) types.Receipts
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
 }
@@ -74,7 +76,7 @@ type Oracle struct {
 
 	checkBlocks, maxEmpty, maxBlocks  int
 	percentile                        int
-	maxHeaderHistory, maxBlockHistory int
+	maxHeaderHistory, maxBlockHistory uint64
 
 	historyCache *lru.Cache
 }
@@ -148,17 +150,17 @@ func NewOracle(backend OracleBackend, config Config, txPool TxPool, govModule go
 
 // SuggestPrice returns the recommended gas price.
 // This value is intended to be used as gasPrice or maxFeePerGas.
-func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
-	if gpo.txPool == nil {
+func (oracle *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
+	if oracle.txPool == nil {
 		// If txpool is not set, just return 0. This is used for testing.
 		return common.Big0, nil
 	}
 
-	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
+	nextNum := new(big.Int).Add(oracle.backend.CurrentBlock().Number(), common.Big1)
+	if oracle.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
 		// After Kaia, include suggested tip
-		baseFee := gpo.txPool.GasPrice()
-		suggestedTip, err := gpo.SuggestTipCap(ctx)
+		baseFee := oracle.txPool.GasPrice()
+		suggestedTip, err := oracle.SuggestTipCap(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -170,52 +172,52 @@ func (gpo *Oracle) SuggestPrice(ctx context.Context) (*big.Int, error) {
 		}
 		baseFee.Div(baseFee, big.NewInt(100))
 		return new(big.Int).Add(baseFee, suggestedTip), nil
-	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+	} else if oracle.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return the twice of BaseFee as a buffer.
-		baseFee := gpo.txPool.GasPrice()
+		baseFee := oracle.txPool.GasPrice()
 		return new(big.Int).Mul(baseFee, common.Big2), nil
 	} else {
 		// Before Magma, return the fixed UnitPrice.
-		unitPrice := gpo.txPool.GasPrice()
+		unitPrice := oracle.txPool.GasPrice()
 		return unitPrice, nil
 	}
 }
 
 // SuggestTipCap returns the recommended gas tip cap.
 // This value is intended to be used as maxPriorityFeePerGas.
-func (gpo *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
-	if gpo.txPool == nil {
+func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
+	if oracle.txPool == nil {
 		// If txpool is not set, just return 0. This is used for testing.
 		return common.Big0, nil
 	}
 
-	nextNum := new(big.Int).Add(gpo.backend.CurrentBlock().Number(), common.Big1)
-	if gpo.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
+	nextNum := new(big.Int).Add(oracle.backend.CurrentBlock().Number(), common.Big1)
+	if oracle.backend.ChainConfig().IsKaiaForkEnabled(nextNum) {
 		// After Kaia, return using fee history.
 		// If the next baseFee is lower bound, return 0.
 		// Otherwise, by default config, this will return 60% percentile of last 20 blocks.
 		// See node/cn/config.go for the default config.
-		header := gpo.backend.CurrentBlock().Header()
+		header := oracle.backend.CurrentBlock().Header()
 		headHash := header.Hash()
 		// If the latest gasprice is still available, return it.
-		if lastPrice, ok := gpo.readCacheChecked(headHash); ok {
+		if lastPrice, ok := oracle.readCacheChecked(headHash); ok {
 			return new(big.Int).Set(lastPrice), nil
 		}
-		if gpo.isRelaxedNetwork(header) {
-			gpo.writeCache(headHash, common.Big0)
+		if oracle.isRelaxedNetwork(header) {
+			oracle.writeCache(headHash, common.Big0)
 			return common.Big0, nil
 		}
-		price, err := gpo.suggestTipCapUsingFeeHistory(ctx)
+		price, err := oracle.suggestTipCapUsingFeeHistory(ctx)
 		if err == nil {
-			gpo.writeCache(headHash, price)
+			oracle.writeCache(headHash, price)
 		}
 		return price, err
-	} else if gpo.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
+	} else if oracle.backend.ChainConfig().IsMagmaForkEnabled(nextNum) {
 		// After Magma, return zero
 		return common.Big0, nil
 	} else {
 		// Before Magma, return the fixed UnitPrice.
-		unitPrice := gpo.txPool.GasPrice()
+		unitPrice := oracle.txPool.GasPrice()
 		return unitPrice, nil
 	}
 }

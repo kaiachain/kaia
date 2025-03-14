@@ -26,12 +26,11 @@ contract CLRegistryMockThreeCL is MockValues {
     function getAllCLs()
         external
         view
-        returns (address[] memory, uint256[] memory, address[] memory, address[] memory)
+        returns (address[] memory, uint256[] memory, address[] memory)
     {
         address[] memory nodeIds = new address[](3);
         uint256[] memory gcIds = new uint256[](3);
         address[] memory clPools = new address[](3);
-        address[] memory clStakings = new address[](3);
 
         nodeIds[0] = nodeId0;
         nodeIds[1] = nodeId1;
@@ -45,11 +44,7 @@ contract CLRegistryMockThreeCL is MockValues {
         clPools[1] = 0x0000000000000000000000000000000000000e01;
         clPools[2] = 0x0000000000000000000000000000000000000e02;
 
-        clStakings[0] = 0x0000000000000000000000000000000000000e03;
-        clStakings[1] = 0x0000000000000000000000000000000000000e04;
-        clStakings[2] = 0x0000000000000000000000000000000000000e05;
-
-        return (nodeIds, gcIds, clPools, clStakings);
+        return (nodeIds, gcIds, clPools);
     }
 }
 
@@ -78,7 +73,7 @@ contract RegistryMockZero {
 }
 
 contract WrappedKaiaMock {
-    function balanceOf(address account) external view returns (uint256) {   
+    function balanceOf(address account) external view returns (uint256) {
         return account.balance;
     }
 }

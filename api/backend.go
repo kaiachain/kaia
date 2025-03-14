@@ -60,7 +60,7 @@ type Backend interface {
 	RPCGasCap() *big.Int          // global gas cap for eth/kaia_call/estimateGas/estimateComputationCost
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Engine() consensus.Engine
-	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
+	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64) error
@@ -72,6 +72,7 @@ type Backend interface {
 	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
 	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error)
 	StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetTxLookupInfoAndReceipt(ctx context.Context, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)

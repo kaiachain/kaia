@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"math/big"
-	"os"
 	"reflect"
 	"testing"
 
@@ -71,11 +70,7 @@ func TestTxTypeSupport(t *testing.T) {
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
 
 	// generate a keystore and active accounts
-	dir, err := os.MkdirTemp("", "kaia-test-tx-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	ks := keystore.NewKeyStore(dir, 2, 1)
 	password := ""
 	acc, err := ks.ImportECDSA(senderPrvKey, password)

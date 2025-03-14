@@ -321,7 +321,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	root = st.IntermediateRoot(true)
 
 	if err == nil && isTestExecutionSpecState {
-		root, err = useEthStateRoot(st)
+		root, err = useEthState(st)
 		if err != nil {
 			return st, common.Hash{}, err
 		}
@@ -543,7 +543,15 @@ func calculateEthMiningReward(gasPrice, maxFeePerGas, maxPriorityFeePerGas, envB
 	return fee.Mul(fee, effectiveTip)
 }
 
-func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
+func useEthGenesisState(statedb *state.StateDB) (common.Hash, error) {
+	return useEthStateRootWithOption(statedb, false)
+}
+
+func useEthState(statedb *state.StateDB) (common.Hash, error) {
+	return useEthStateRootWithOption(statedb, true)
+}
+
+func useEthStateRootWithOption(statedb *state.StateDB, deleteEmptyObjects bool) (common.Hash, error) {
 	memDb := database.NewMemoryDBManager()
 	db := state.NewDatabase(memDb)
 	newState, _ := state.New(common.Hash{}, db, nil, nil)
@@ -562,5 +570,5 @@ func useEthStateRoot(statedb *state.StateDB) (common.Hash, error) {
 		)
 	}
 
-	return newState.IntermediateRoot(true), nil
+	return newState.IntermediateRoot(deleteEmptyObjects), nil
 }

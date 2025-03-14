@@ -56,10 +56,6 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 		r3 = common.HexToAddress("0x62E47d858bf8513fc401886B94E33e7DCec2Bfb7")
 		r4 = common.HexToAddress("0xf275f9f4c0d375F9E3E50370f93b504A1e45dB09")
 
-		clReward1 = common.HexToAddress("0x870ad57DEd9DcF2935A097E2052B71263c8F538a")
-		clReward2 = common.HexToAddress("0x4D4DEF5ACC94f1D3CCC284A1b5B8C0cF7106ecAd")
-		clReward3 = common.HexToAddress("0x405ffd50d57D570839fa21D7a395C135D6292f79")
-
 		kef = common.HexToAddress("0x136807B12327a8AfF9831F09617dA1B9D398cda2")
 		kif = common.HexToAddress("0x46bA8F7538CD0749e572b2631F9FB4Ce3653AFB8")
 
@@ -165,13 +161,11 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					{
 						CLNodeId:        n3,
 						CLPoolAddr:      clPool1,
-						CLRewardAddr:    clReward1,
 						CLStakingAmount: clStakingAmount2,
 					},
 					{
 						CLNodeId:        n4,
 						CLPoolAddr:      clPool2,
-						CLRewardAddr:    clReward2,
 						CLStakingAmount: clStakingAmount2,
 					},
 				},
@@ -179,8 +173,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			expectedConsolidated: []consolidatedNode{
 				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
 				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
-				{[]common.Address{n3}, []common.Address{s3}, r3, aL, &CLStakingInfo{n3, clPool1, clReward1, clStakingAmount2}},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a0, &CLStakingInfo{n4, clPool2, clReward2, clStakingAmount2}},
+				{[]common.Address{n3}, []common.Address{s3}, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.41,
 		},
@@ -197,20 +191,18 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					{
 						CLNodeId:        n1,
 						CLPoolAddr:      clPool1,
-						CLRewardAddr:    clReward1,
 						CLStakingAmount: clStakingAmount1,
 					},
 					{
 						CLNodeId:        n4, // Using n2 or n4 should yield the same result
 						CLPoolAddr:      clPool2,
-						CLRewardAddr:    clReward2,
 						CLStakingAmount: clStakingAmount2,
 					},
 				},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clReward1, clStakingAmount1}},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clReward2, clStakingAmount2}},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -227,27 +219,24 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					{
 						CLNodeId:        n1,
 						CLPoolAddr:      clPool1,
-						CLRewardAddr:    clReward1,
 						CLStakingAmount: clStakingAmount1,
 					},
 					{
 						CLNodeId:        n2,
 						CLPoolAddr:      clPool2,
-						CLRewardAddr:    clReward2,
 						CLStakingAmount: clStakingAmount2,
 					},
 					// CL3 will be ignored when being consolidated since n5 is not in the AddressBook staking info.
 					{
 						CLNodeId:        n5,
 						CLPoolAddr:      clPool3,
-						CLRewardAddr:    clReward3,
 						CLStakingAmount: clStakingAmount3,
 					},
 				},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clReward1, clStakingAmount1}},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clReward2, clStakingAmount2}},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -264,20 +253,18 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					{
 						CLNodeId:        n1,
 						CLPoolAddr:      clPool1,
-						CLRewardAddr:    clReward1,
 						CLStakingAmount: clStakingAmount1,
 					},
 					// CL1 will be ignored when being consolidated since it has duplicate CL (not feasible in real)
 					{
 						CLNodeId:        n3,
 						CLPoolAddr:      clPool2,
-						CLRewardAddr:    clReward2,
 						CLStakingAmount: clStakingAmount2,
 					},
 				},
 			},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clReward2, clStakingAmount2}},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
 				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
 			},
 			expectedGini: 0.15,

@@ -54,16 +54,10 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt := new(testMatcher)
 
 	// TODO-Kaia: should remove these skip
-	// json format error
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/invalid_tx_invalid_auth_signature.json`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_chain_id.json`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/tx_validity_nonce.json`)
-	// not yet supported EIPs
-	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles`) // gas error
-	bt.skipLoad(`^prague\/eip7702_set_code_tx`)            // state, gas (after update we should do it)
-	// temporary skip failing frontier tests
+	// executing precompiled contracts with value transferring is not permitted
 	bt.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json`)
+	// executing precompiled contracts with set code tx is not permitted
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/gas_diff_pointer_vs_direct_call.json`)
 
 	// tests to skip
 	// unsupported EIPs
@@ -75,11 +69,18 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
+	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-31_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-32_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-empty_calldata\]`)
 	// type 3 tx (EIP-4844) is not supported
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test\]`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		skipForks := []string{
+			// Even if we skip fork levels, old EIPs are still retrospectively tested against Cancun or later forks.
+			// The EEST framework was added when Kaia was at Cancun hardfork.
 			"Frontier",
 			"Homestead",
 			"Byzantium",

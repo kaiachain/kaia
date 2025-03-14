@@ -425,6 +425,7 @@ func TestCNAPIBackend_BlockByNumberOrHash(t *testing.T) {
 func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 	blockNum := uint64(123)
 	block := newBlock(int(blockNum))
+	var reciept types.Receipts
 
 	stateDB, err := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	if err != nil {
@@ -436,7 +437,7 @@ func TestCNAPIBackend_StateAndHeaderByNumber(t *testing.T) {
 	expectedHeader := block.Header()
 	{
 		mockCtrl, _, mockMiner, api := newCNAPIBackend(t)
-		mockMiner.EXPECT().Pending().Return(block, stateDB).Times(1)
+		mockMiner.EXPECT().Pending().Return(block, reciept, stateDB).Times(1)
 
 		returnedStateDB, header, err := api.StateAndHeaderByNumber(context.Background(), rpc.PendingBlockNumber)
 

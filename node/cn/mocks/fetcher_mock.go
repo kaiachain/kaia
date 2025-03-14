@@ -14,30 +14,30 @@ import (
 	fetcher "github.com/kaiachain/kaia/datasync/fetcher"
 )
 
-// MockProtocolManagerFetcher is a mock of ProtocolManagerFetcher interface
+// MockProtocolManagerFetcher is a mock of ProtocolManagerFetcher interface.
 type MockProtocolManagerFetcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockProtocolManagerFetcherMockRecorder
 }
 
-// MockProtocolManagerFetcherMockRecorder is the mock recorder for MockProtocolManagerFetcher
+// MockProtocolManagerFetcherMockRecorder is the mock recorder for MockProtocolManagerFetcher.
 type MockProtocolManagerFetcherMockRecorder struct {
 	mock *MockProtocolManagerFetcher
 }
 
-// NewMockProtocolManagerFetcher creates a new mock instance
+// NewMockProtocolManagerFetcher creates a new mock instance.
 func NewMockProtocolManagerFetcher(ctrl *gomock.Controller) *MockProtocolManagerFetcher {
 	mock := &MockProtocolManagerFetcher{ctrl: ctrl}
 	mock.recorder = &MockProtocolManagerFetcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockProtocolManagerFetcher) EXPECT() *MockProtocolManagerFetcherMockRecorder {
 	return m.recorder
 }
 
-// Enqueue mocks base method
+// Enqueue mocks base method.
 func (m *MockProtocolManagerFetcher) Enqueue(arg0 string, arg1 *types.Block) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Enqueue", arg0, arg1)
@@ -45,13 +45,13 @@ func (m *MockProtocolManagerFetcher) Enqueue(arg0 string, arg1 *types.Block) err
 	return ret0
 }
 
-// Enqueue indicates an expected call of Enqueue
+// Enqueue indicates an expected call of Enqueue.
 func (mr *MockProtocolManagerFetcherMockRecorder) Enqueue(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enqueue", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).Enqueue), arg0, arg1)
 }
 
-// FilterBodies mocks base method
+// FilterBodies mocks base method.
 func (m *MockProtocolManagerFetcher) FilterBodies(arg0 string, arg1 [][]*types.Transaction, arg2 time.Time) [][]*types.Transaction {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FilterBodies", arg0, arg1, arg2)
@@ -59,13 +59,13 @@ func (m *MockProtocolManagerFetcher) FilterBodies(arg0 string, arg1 [][]*types.T
 	return ret0
 }
 
-// FilterBodies indicates an expected call of FilterBodies
+// FilterBodies indicates an expected call of FilterBodies.
 func (mr *MockProtocolManagerFetcherMockRecorder) FilterBodies(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterBodies", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).FilterBodies), arg0, arg1, arg2)
 }
 
-// FilterHeaders mocks base method
+// FilterHeaders mocks base method.
 func (m *MockProtocolManagerFetcher) FilterHeaders(arg0 string, arg1 []*types.Header, arg2 time.Time) []*types.Header {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FilterHeaders", arg0, arg1, arg2)
@@ -73,13 +73,13 @@ func (m *MockProtocolManagerFetcher) FilterHeaders(arg0 string, arg1 []*types.He
 	return ret0
 }
 
-// FilterHeaders indicates an expected call of FilterHeaders
+// FilterHeaders indicates an expected call of FilterHeaders.
 func (mr *MockProtocolManagerFetcherMockRecorder) FilterHeaders(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterHeaders", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).FilterHeaders), arg0, arg1, arg2)
 }
 
-// Notify mocks base method
+// Notify mocks base method.
 func (m *MockProtocolManagerFetcher) Notify(arg0 string, arg1 common.Hash, arg2 uint64, arg3 time.Time, arg4 fetcher.HeaderRequesterFn, arg5 fetcher.BodyRequesterFn) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Notify", arg0, arg1, arg2, arg3, arg4, arg5)
@@ -87,31 +87,31 @@ func (m *MockProtocolManagerFetcher) Notify(arg0 string, arg1 common.Hash, arg2 
 	return ret0
 }
 
-// Notify indicates an expected call of Notify
+// Notify indicates an expected call of Notify.
 func (mr *MockProtocolManagerFetcherMockRecorder) Notify(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).Notify), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockProtocolManagerFetcher) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockProtocolManagerFetcherMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).Start))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockProtocolManagerFetcher) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockProtocolManagerFetcherMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).Stop))

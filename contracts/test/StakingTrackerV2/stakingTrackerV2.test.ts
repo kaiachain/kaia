@@ -1,4 +1,7 @@
-import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
+import {
+  loadFixture,
+  setBalance,
+} from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ABOOK_ADDRESS, REGISTRY_ADDRESS, MILLIONS } from "../common/helper";
 import { BigNumber } from "ethers";
@@ -32,16 +35,27 @@ describe("StakingTrackerV2.sol", function () {
   ) {
     const totalVotes = votes.reduce((a, b) => a + b, 0);
     const lenGCs = gcIds.length;
-    const numEligible = cnStakingBalances.filter((x) => x.gt(MILLIONS.FIVE)).length;
+    const numEligible = cnStakingBalances.filter((x) =>
+      x.gt(MILLIONS.FIVE)
+    ).length;
 
     const summary = await stakingTracker.getTrackerSummary(trackerId);
-    expect(summary).to.deep.equal([trackStart, trackEnd, lenGCs, totalVotes, numEligible]);
+    expect(summary).to.deep.equal([
+      trackStart,
+      trackEnd,
+      lenGCs,
+      totalVotes,
+      numEligible,
+    ]);
 
     const trackedGCs = await stakingTracker.getAllTrackedGCs(trackerId);
     expect(trackedGCs).to.deep.equal([gcIds, gcBalances, votes]);
 
     for (let i = 0; i < lenGCs; i++) {
-      const gcBalance = await stakingTracker.getTrackedGCBalance(trackerId, gcIds[i]);
+      const gcBalance = await stakingTracker.getTrackedGCBalance(
+        trackerId,
+        gcIds[i]
+      );
       expect(gcBalance).to.deep.equal([cnStakingBalances[i], gcBalances[i]]);
     }
   }
@@ -58,7 +72,11 @@ describe("StakingTrackerV2.sol", function () {
     fakeCLRegistry = await smock.fake<ICLRegistry>(ICLRegistry__factory.abi);
     fakeWKaia = await smock.fake<IERC20>(IERC20__factory.abi);
 
-    await registerContract(fixture.registry, "CLRegistry", fakeCLRegistry.address);
+    await registerContract(
+      fixture.registry,
+      "CLRegistry",
+      fakeCLRegistry.address
+    );
     await registerContract(fixture.registry, "WrappedKaia", fakeWKaia.address);
 
     clPoolA = await smock.fake<ICLPool>(ICLPool__factory.abi);
@@ -69,8 +87,12 @@ describe("StakingTrackerV2.sol", function () {
     clPoolB.stakingTracker.returns(fixture.stakingTracker.address);
     clPoolC.stakingTracker.returns(fixture.stakingTracker.address);
 
-    // Ignore nodeIds and CLStakings.
-    fakeCLRegistry.getAllCLs.returns([[], [699, 700, 701], [clPoolA.address, clPoolB.address, clPoolC.address], []]);
+    // Ignore nodeIds.
+    fakeCLRegistry.getAllCLs.returns([
+      [],
+      [699, 700, 701],
+      [clPoolA.address, clPoolB.address, clPoolC.address],
+    ]);
   });
 
   describe("StakingTrackerV2 Initialize", function () {
@@ -79,8 +101,12 @@ describe("StakingTrackerV2.sol", function () {
 
       expect(await stakingTracker.CONTRACT_TYPE()).to.equal("StakingTracker");
       expect(await stakingTracker.VERSION()).to.equal(1);
-      expect(await stakingTracker.ADDRESS_BOOK_ADDRESS()).to.equal(ABOOK_ADDRESS);
-      expect(await stakingTracker.REGISTRY_ADDRESS()).to.equal(REGISTRY_ADDRESS);
+      expect(await stakingTracker.ADDRESS_BOOK_ADDRESS()).to.equal(
+        ABOOK_ADDRESS
+      );
+      expect(await stakingTracker.REGISTRY_ADDRESS()).to.equal(
+        REGISTRY_ADDRESS
+      );
       expect(await stakingTracker.MIN_STAKE()).to.equal(MILLIONS.FIVE);
       expect(await stakingTracker.owner()).to.equal(contractValidator.address);
     });
@@ -90,7 +116,11 @@ describe("StakingTrackerV2.sol", function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX } = MILLIONS;
 
-      await registerContract(fixture.registry, "CLRegistry", hre.ethers.constants.AddressZero);
+      await registerContract(
+        fixture.registry,
+        "CLRegistry",
+        hre.ethers.constants.AddressZero
+      );
 
       await expect(stakingTracker.createTracker(trackStart, trackEnd))
         .to.emit(stakingTracker, "CreateTracker")
@@ -111,7 +141,11 @@ describe("StakingTrackerV2.sol", function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX, TWO, FIVE } = MILLIONS;
 
-      await registerContract(fixture.registry, "WrappedKaia", hre.ethers.constants.AddressZero);
+      await registerContract(
+        fixture.registry,
+        "WrappedKaia",
+        hre.ethers.constants.AddressZero
+      );
 
       fakeWKaia.balanceOf.whenCalledWith(clPoolB.address).returns(TWO);
       fakeWKaia.balanceOf.whenCalledWith(clPoolC.address).returns(FIVE);
@@ -173,15 +207,23 @@ describe("StakingTrackerV2.sol", function () {
 
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(0);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        0
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: do not track CLPool with non-existent gcId", async function () {
       const { stakingTracker, trackStart, trackEnd } = fixture;
       const { SIX } = MILLIONS;
 
       // clPoolB is assigned gcId 800, which is not a valid gcId
-      fakeCLRegistry.getAllCLs.returns([[], [699, 800, 701], [clPoolA.address, clPoolB.address, clPoolC.address], []]);
+      fakeCLRegistry.getAllCLs.returns([
+        [],
+        [699, 800, 701],
+        [clPoolA.address, clPoolB.address, clPoolC.address],
+      ]);
 
       await expect(stakingTracker.createTracker(trackStart, trackEnd))
         .to.emit(stakingTracker, "CreateTracker")
@@ -200,11 +242,22 @@ describe("StakingTrackerV2.sol", function () {
 
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(0);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        0
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: two CLPools", async function () {
-      const { stakingTracker, cnStakingV2B, cnStakingV2C, cnStakingV2D, trackStart, trackEnd } = fixture;
+      const {
+        stakingTracker,
+        cnStakingV2B,
+        cnStakingV2C,
+        cnStakingV2D,
+        trackStart,
+        trackEnd,
+      } = fixture;
       const { TWO, FIVE, SIX, EIGHT, ELEVEN } = MILLIONS;
 
       fakeWKaia.balanceOf.whenCalledWith(clPoolA.address).returns(TWO);
@@ -233,14 +286,30 @@ describe("StakingTrackerV2.sol", function () {
       expect(await stakingTracker.isCLPool(1, clPoolA.address)).to.equal(false);
       expect(await stakingTracker.isCLPool(1, clPoolB.address)).to.equal(true);
       expect(await stakingTracker.isCLPool(1, clPoolC.address)).to.equal(true);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2B.address)).to.equal(false);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2C.address)).to.equal(false);
-      expect(await stakingTracker.isCLPool(1, cnStakingV2D.address)).to.equal(false);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2B.address)).to.equal(700);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2C.address)).to.equal(701);
-      expect(await stakingTracker.stakingToGCId(1, cnStakingV2D.address)).to.equal(702);
-      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(700);
-      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(701);
+      expect(await stakingTracker.isCLPool(1, cnStakingV2B.address)).to.equal(
+        false
+      );
+      expect(await stakingTracker.isCLPool(1, cnStakingV2C.address)).to.equal(
+        false
+      );
+      expect(await stakingTracker.isCLPool(1, cnStakingV2D.address)).to.equal(
+        false
+      );
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2B.address)
+      ).to.equal(700);
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2C.address)
+      ).to.equal(701);
+      expect(
+        await stakingTracker.stakingToGCId(1, cnStakingV2D.address)
+      ).to.equal(702);
+      expect(await stakingTracker.stakingToGCId(1, clPoolB.address)).to.equal(
+        700
+      );
+      expect(await stakingTracker.stakingToGCId(1, clPoolC.address)).to.equal(
+        701
+      );
     });
     it("#createTracker: CnStaking has less than 5M", async function () {
       const { stakingTracker, cnStakingV2C, trackStart, trackEnd } = fixture;

@@ -172,10 +172,14 @@ func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rp
 	return nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
 }
 
+func (b *CNAPIBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	return b.cn.miner.Pending()
+}
+
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.cn.miner.Pending()
+		block, _, state := b.cn.miner.Pending()
 		if block == nil || state == nil {
 			return nil, nil, fmt.Errorf("pending block is not prepared yet")
 		}
@@ -393,6 +397,6 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }

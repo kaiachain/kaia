@@ -368,7 +368,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 		}
 	}
 
-	es := filters.NewEventSystem(sb.eventMux, &filterLocalBackend{sb}, false)
+	es := filters.NewEventSystem(sb.eventMux, &filterLocalBackend{sb})
 	sb.localBackend = backends.NewBlockchainContractBackend(sb.blockchain, sb.txPool, es)
 
 	sb.bridgeManager, err = NewBridgeManager(sb)

@@ -291,7 +291,7 @@ func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.Bloc
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
 		// the miner and operate on those
-		_, stateDb := api.cn.miner.Pending()
+		_, _, stateDb := api.cn.miner.Pending()
 		if stateDb == nil {
 			return state.Dump{}, fmt.Errorf("pending block is not prepared yet")
 		}

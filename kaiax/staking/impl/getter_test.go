@@ -170,19 +170,16 @@ func TestGetStakingInfo_Prague_Uncached(t *testing.T) {
 				{
 					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F00"),
 					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e00"),
-					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e03"),
 					CLStakingAmount: 20_000_000,
 				},
 				{
 					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F03"),
 					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e01"),
-					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e04"),
 					CLStakingAmount: 23_000_000,
 				},
 				{
 					CLNodeId:        common.HexToAddress("0x0000000000000000000000000000000000000F06"),
 					CLPoolAddr:      common.HexToAddress("0x0000000000000000000000000000000000000e02"),
-					CLRewardAddr:    common.HexToAddress("0x0000000000000000000000000000000000000e05"),
 					CLStakingAmount: 30_000_000,
 				},
 			},

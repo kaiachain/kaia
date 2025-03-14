@@ -244,6 +244,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(TargetGasLimitFlag),
 	altsrc.NewStringFlag(NATFlag),
 	altsrc.NewBoolFlag(NoDiscoverFlag),
+	altsrc.NewStringFlag(DiscoverTypesFlag),
 	altsrc.NewDurationFlag(RWTimerWaitTimeFlag),
 	altsrc.NewUint64Flag(RWTimerIntervalFlag),
 	altsrc.NewStringFlag(NetrestrictFlag),

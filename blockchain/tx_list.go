@@ -321,6 +321,12 @@ func (l *txList) Overlaps(tx *types.Transaction) bool {
 	return l.txs.Get(tx.Nonce()) != nil
 }
 
+// Contains returns whether the  list contains a transaction
+// with the provided nonce.
+func (l *txList) Contains(nonce uint64) bool {
+	return l.txs.Get(nonce) != nil
+}
+
 // Add tries to insert a new transaction into the list, returning whether the
 // transaction was accepted, and if yes, any previous transaction it replaced.
 //
