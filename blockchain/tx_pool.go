@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -72,6 +73,8 @@ const (
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
+
+	txPoolIsFullErr = errors.New("txpool is full")
 
 	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
 
@@ -241,6 +244,8 @@ type TxPool struct {
 	rules params.Rules // Fork indicator
 
 	govModule GovModule
+
+	modules []kaiax.TxPoolModule
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -795,6 +800,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNonceTooLow
 	}
 
+	// If module recognizes the tx, run an alternative balance check and then skip the default balance check later.
+	shouldSkipBalanceCheck := false
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
+				shouldSkipBalanceCheck = true
+				err := checkBalance(tx)
+				if err != nil {
+					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
+					return err
+				}
+			}
+			break
+		}
+	}
+
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if tx.IsFeeDelegatedTransaction() {
@@ -844,7 +865,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
 		}
-	} else {
+	} else if !shouldSkipBalanceCheck {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
@@ -1514,7 +1535,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Gather all executable transactions and promote them
 		var readyTxs types.Transactions
 		if pool.rules.IsMagma {
-			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice, pool.modules)
 		} else {
 			readyTxs = list.Ready(pool.getPendingNonce(addr))
 		}
@@ -1736,6 +1757,11 @@ func (pool *TxPool) demoteUnexecutables() {
 	}
 }
 
+// GetCurrentState returns the current stateDB.
+func (pool *TxPool) GetCurrentState() *state.StateDB {
+	return pool.currentState
+}
+
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
 func (pool *TxPool) getNonce(addr common.Address) uint64 {
 	return pool.currentState.GetNonce(addr)
@@ -1775,6 +1801,12 @@ func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
 	if pool.getPendingNonce(addr) > nonce {
 		pool.setPendingNonce(addr, nonce)
 	}
+}
+
+func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.modules = modules
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

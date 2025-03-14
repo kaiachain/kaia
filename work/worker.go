@@ -37,7 +37,10 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -147,12 +150,14 @@ type worker struct {
 	agents map[Agent]struct{}
 	recv   chan *Result
 
-	backend          Backend
-	chain            BlockChain
-	proc             blockchain.Validator
-	chainDB          database.DBManager
-	govModule        gov.GovModule
-	executionModules []kaiax.ExecutionModule
+	backend           Backend
+	chain             BlockChain
+	proc              blockchain.Validator
+	chainDB           database.DBManager
+	govModule         gov.GovModule
+	builderModule     builder.BuilderModule
+	executionModules  []kaiax.ExecutionModule
+	txBundlingModules []builder.TxBundlingModule
 
 	extra []byte
 
@@ -579,7 +584,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
-		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase)
+		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase, self.txBundlingModules)
 		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
@@ -649,8 +654,12 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.executionModules = append(self.executionModules, modules...)
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) {
-	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase)
+func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+	self.txBundlingModules = append(self.txBundlingModules, modules...)
+}
+
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) {
+	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -672,12 +681,15 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
+	arrayTxs := builder_impl.Arrayify(txs)
+	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0       // To break the below commitTransaction for loop when timed out
-	chDone := make(chan bool) // To stop the goroutine below when processing txs is completed
+	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
+	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
+	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
 
 	// chEVM is used to notify the below goroutine of the running EVM so it can call evm.Cancel
 	// when timed out.  We use a buffered channel to prevent the main EVM execution routine
@@ -704,7 +716,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 
 			if timeout && evm != nil {
 				// Allow the first transaction to complete although it exceeds the time limit.
-				if env.tcount > 0 {
+				// Even in this case, the evm will not be canceled if the bundle is running.
+				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
 				}
@@ -724,20 +737,49 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
-		tx := txs.Peek()
-		if tx == nil {
+		if len(incorporatedTxs) == 0 {
 			// To indicate that it does not have enough transactions for params.BlockGenerationTimeLimit.
 			if numTxsChecked > 0 {
 				usedAllTxsCounter.Inc(1)
 			}
 			break
 		}
-		numTxsChecked++
+
+		var (
+			tx      *types.Transaction
+			err     error
+			logs    []*types.Log
+			txOrGen = incorporatedTxs[0]
+			from    common.Address
+		)
+
+		// Verify that tx is included in the bundle
+		targetBundle := &builder.Bundle{}
+		numShift := 1
+		if bundleIdx := builder_impl.FindBundleIdxAsTxOrGen(bundles, txOrGen); bundleIdx != -1 {
+			targetBundle = bundles[bundleIdx]
+			numShift = len(targetBundle.BundleTxs)
+		}
+
+		switch txOrGen.(type) {
+		case *types.Transaction:
+			tx = txOrGen.(*types.Transaction)
+		case builder.TxGenerator:
+			txGen := txOrGen.(builder.TxGenerator)
+			tx, err = txGen.Generate(env.state.GetNonce(rewardbase))
+			if tx == nil {
+				logger.Warn("TxGenerator returned a nil tx", "error", err)
+				builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
+		}
+		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
+		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
 		// during transaction acceptance is the transaction pool.
 		//
 		// We use the eip155 signer regardless of the current hf.
-		from, _ := types.Sender(env.signer, tx)
+		from, _ = types.Sender(env.signer, tx)
 
 		// NOTE-Kaia Since Kaia is always in EIP155, the below replay protection code is not needed.
 		// TODO-Kaia-RemoveLater Remove the code commented below.
@@ -750,27 +792,36 @@ CommitTransactionLoop:
 		//	continue
 		//}
 		// Start executing the transaction
-		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
+		if len(targetBundle.BundleTxs) != 0 {
+			atomic.StoreInt32(&isExecutingBundleTxs, 1)
+			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
+			if err != nil {
+				// override sender to error tx
+				from, _ = types.Sender(env.signer, tx)
+			}
+		} else {
+			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
+			err, logs = env.commitTransaction(tx, bc, rewardbase, vmConfig)
+		}
 
-		err, logs := env.commitTransaction(tx, bc, rewardbase, vmConfig)
 		switch err {
 		case blockchain.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
 			logger.Trace("Gas limit exceeded for current block", "sender", from)
 			numTxsGasLimitReached++
-			txs.Pop()
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			txs.Shift()
+			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			txs.Pop()
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -785,20 +836,29 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			txs.Pop()
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+
+		case kerrors.ErrRevertedBundleByVmErr:
+			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
+			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
+			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
-			env.tcount++
-			txs.Shift()
+			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			txs.Shift()
+			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+		}
+		if len(targetBundle.BundleTxs) != 0 {
+			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
+			atomic.StoreInt32(&isExecutingBundleTxs, 0)
 		}
 	}
 
@@ -825,10 +885,75 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 
 	return nil, receipt.Logs
+}
+
+func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
+	lastSnapshot := env.state.Copy()
+	gasUsedSnapshot := env.header.GasUsed
+	tcountSnapshot := env.tcount
+	txs := []*types.Transaction{}
+	receipts := []*types.Receipt{}
+	logs := []*types.Log{}
+
+	for _, txOrGen := range bundle.BundleTxs {
+		var tx *types.Transaction
+		if gen, ok := txOrGen.(builder.TxGenerator); ok {
+			var err error
+			tx, err = gen.Generate(env.state.GetNonce(rewardbase))
+			if err != nil {
+				for _, txInBundle := range bundle.BundleTxs {
+					switch v := txInBundle.(type) {
+					case *types.Transaction:
+						v.MarkUnexecutable(true)
+					}
+				}
+				logger.Error("TxGenerator error", "error", err)
+				*env.state = *lastSnapshot
+				env.header.GasUsed = gasUsedSnapshot
+				env.tcount = tcountSnapshot
+				return err, &types.Transaction{}, nil
+			}
+		} else {
+			tx = txOrGen.(*types.Transaction)
+		}
+
+		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
+		receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+		// Bundled tx will be rejected with any receipt.Status other than success.
+		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
+		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
+			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+				for _, txInBundle := range bundle.BundleTxs {
+					switch v := txInBundle.(type) {
+					case *types.Transaction:
+						v.MarkUnexecutable(true)
+					}
+				}
+			}
+			*env.state = *lastSnapshot
+			env.header.GasUsed = gasUsedSnapshot
+			env.tcount = tcountSnapshot
+			if err == nil {
+				err = kerrors.ErrRevertedBundleByVmErr
+			}
+			return err, tx, nil
+		}
+
+		env.tcount++
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
+		logs = append(logs, receipt.Logs...)
+	}
+
+	env.txs = append(env.txs, txs...)
+	env.receipts = append(env.receipts, receipts...)
+
+	return nil, &types.Transaction{}, logs
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
