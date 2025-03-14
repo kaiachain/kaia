@@ -254,13 +254,16 @@ func TestRedisCache_Timeout(t *testing.T) {
 	start := time.Now()
 	redisCache := cache.(*RedisCache) // Because RedisCache.Set writes item asynchronously, use RedisCache.set
 	redisCache.Set(key, value)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_ = cache.Get(key)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_, _ = cache.Has(key)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 }
