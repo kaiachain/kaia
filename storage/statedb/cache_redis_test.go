@@ -210,13 +210,16 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 // TestRedisCache_Timeout tests timout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
 	storage.SkipLocalTest(t)
+	serverReady := make(chan struct{})
 
+	// spawn an unresponsive server that accepts TCP connection but won't respond
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
 			t.Error(err)
 			return
 		}
+		close(serverReady)
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
@@ -241,6 +244,8 @@ func TestRedisCache_Timeout(t *testing.T) {
 		}
 	}()
 
+	// wait for server to spawn
+	<-serverReady
 	var cache TrieNodeCache = &RedisCache{redis.NewClient(&redis.Options{
 		Addr:         "localhost:11234",
 		DialTimeout:  redisCacheDialTimeout,
