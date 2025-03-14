@@ -19,6 +19,8 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
@@ -31,12 +33,13 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	NodeKey     *ecdsa.PrivateKey
+	Chain       backends.BlockChainForCaller
 	TxPool      kaiax.TxPoolForCaller
 }
 
 type GaslessModule struct {
 	InitOpts
-	swapRouters   map[common.Address]bool
+	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
 }
@@ -45,25 +48,28 @@ func NewGaslessModule() *GaslessModule {
 	return &GaslessModule{}
 }
 
-func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.TxPool == nil {
-		return ErrInitUnexpectedNil
+func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
+	if opts == nil || opts.ChainConfig == nil || opts.ChainConfig.Gasless == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+		return true, ErrInitUnexpectedNil
 	}
+
+	if opts.ChainConfig.Gasless.IsDisabled {
+		return true, nil
+	}
+
 	g.InitOpts = *opts
-
-	g.swapRouters = map[common.Address]bool{
-		common.HexToAddress("0x1234"): true,
-	}
-	g.allowedTokens = map[common.Address]bool{
-		common.HexToAddress("0xabcd"): true,
-	}
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
-	return nil
-}
 
-func (g *GaslessModule) Start() error {
-	return nil
-}
+	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
+	g.swapRouter, err = system.ReadActiveAddressFromRegistry(backend, GaslessSwapRouterName, g.Chain.CurrentBlock().Number())
+	if err != nil {
+		return true, err
+	}
 
-func (g *GaslessModule) Stop() {
+	err = g.updateSupportedTokens(g.Chain.CurrentBlock().Number())
+	if err != nil {
+		return true, err
+	}
+
+	return false, nil
 }

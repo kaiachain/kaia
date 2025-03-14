@@ -18,13 +18,17 @@ package impl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
@@ -72,7 +76,7 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
 	return g.allowedTokens[args.Token] && // A1
-		g.swapRouters[args.Spender] && // A3
+		g.swapRouter == args.Spender && // A3
 		args.Amount.Sign() > 0 // A4
 }
 
@@ -86,7 +90,7 @@ func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isSwapTx(args *SwapArgs) bool {
-	return g.swapRouters[args.Router] && // S1
+	return g.swapRouter == args.Router && // S1
 		g.allowedTokens[args.Token] // S3
 }
 
@@ -269,6 +273,47 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 			return tx, err
 		},
 	}
+}
+
+func (g *GaslessModule) updateSupportedTokens(blockNumber *big.Int) error {
+	tokens, err := g.getSupportedTokens(blockNumber)
+	if err != nil {
+		return err
+	}
+
+	g.allowedTokens = map[common.Address]bool{}
+	for _, addr := range tokens {
+		// all tokens are allowed if nil
+		if g.ChainConfig.Gasless.AllowedTokens == nil {
+			g.allowedTokens[addr] = true
+		}
+		for _, allowed := range g.ChainConfig.Gasless.AllowedTokens {
+			if addr == allowed {
+				g.allowedTokens[addr] = true
+			}
+		}
+	}
+
+	return nil
+}
+
+func (g *GaslessModule) getSupportedTokens(blockNumber *big.Int) ([]common.Address, error) {
+	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
+	code, err := backend.CodeAt(context.Background(), g.swapRouter, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	if code == nil {
+		return nil, ErrGSRNotInstalled
+	}
+
+	caller, err := contracts.NewGaslessSwapRouterCaller(g.swapRouter, backend)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := &bind.CallOpts{BlockNumber: blockNumber}
+	return caller.GetSupportedTokens(opts)
 }
 
 func lendAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {

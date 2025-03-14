@@ -59,10 +59,12 @@ fi
 # abigen can't handle node_modules imports, so we symlink them
 ln -sf node_modules/@openzeppelin ./@openzeppelin
 ln -sf node_modules/openzeppelin-contracts-5.0 ./openzeppelin-contracts-5.0
+ln -sf node_modules/@uniswap ./@uniswap
 cleanup() {
   # This symlink interferes with hardhat; delete after abigen.
   rm -f ./@openzeppelin
   rm -f ./openzeppelin-contracts-5.0
+  rm -f ./@uniswap
 }
 trap cleanup EXIT
 

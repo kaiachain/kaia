@@ -20,13 +20,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
@@ -35,14 +35,19 @@ func TestExtractTxBundles(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
 
 	g := NewGaslessModule()
+	dbm := database.NewMemoryDBManager()
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 	nodeKey, _ := crypto.GenerateKey()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	err := g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+	disabled, err := g.Init(&InitOpts{
+		ChainConfig: testChainConfig,
 		NodeKey:     nodeKey,
+		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{sdb},
 	})
 	require.NoError(t, err)
+	require.False(t, disabled)
 
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()

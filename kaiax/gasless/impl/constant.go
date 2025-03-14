@@ -16,22 +16,4 @@
 
 package impl
 
-import (
-	"errors"
-	"fmt"
-)
-
-var (
-	ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
-	ErrGSRNotInstalled   = errors.New("Gasless swap router contract not installed")
-)
-
-func printApproveTx(args *ApproveArgs) string {
-	return fmt.Sprintf("ApproveTx{Sender: %s, Token: %s, Spender: %s, Amount: %s}",
-		args.Sender.Hex(), args.Token.Hex(), args.Spender.Hex(), args.Amount.String())
-}
-
-func printSwapTx(args *SwapArgs) string {
-	return fmt.Sprintf("SwapTx{Sender: %s, Router: %s, Token: %s, AmountIn: %s, MinAmountOut: %s, AmountRepay: %s}",
-		args.Sender.Hex(), args.Router.Hex(), args.Token.Hex(), args.AmountIn.String(), args.MinAmountOut.String(), args.AmountRepay.String())
-}
+var GaslessSwapRouterName = "GaslessSwapRouter"

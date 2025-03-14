@@ -21,6 +21,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -28,26 +29,29 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
-var chainConfig = params.TestChainConfig.Copy()
-
-func init() {
-	chainConfig.IstanbulCompatibleBlock = big.NewInt(0)
-	chainConfig.LondonCompatibleBlock = big.NewInt(0)
-	chainConfig.EthTxTypeCompatibleBlock = big.NewInt(0)
-	chainConfig.MagmaCompatibleBlock = big.NewInt(0)
-	fork.SetHardForkBlockNumberConfig(chainConfig)
-	blockchain.InitDeriveSha(chainConfig)
-}
-
 func TestIsModuleTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	g := NewGaslessModule()
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	nodekey, _ := crypto.GenerateKey()
+	disabled, err := g.Init(&InitOpts{
+		ChainConfig: testChainConfig,
+		NodeKey:     nodekey,
+		Chain:       backend.BlockChain(),
+		TxPool:      &testTxPool{},
+	})
+	require.NoError(t, err)
+	require.False(t, disabled)
+
 	privkey, _ := crypto.GenerateKey()
 	testcases := []struct {
 		tx *types.Transaction
@@ -67,15 +71,6 @@ func TestIsModuleTx(t *testing.T) {
 		},
 	}
 
-	g := NewGaslessModule()
-	key, _ := crypto.GenerateKey()
-	err := g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     key,
-		TxPool:      &testTxPool{},
-	})
-	require.NoError(t, err)
-
 	for _, tc := range testcases {
 		ok := g.IsModuleTx(tc.tx)
 		require.Equal(t, tc.ok, ok)
@@ -85,11 +80,15 @@ func TestIsModuleTx(t *testing.T) {
 func TestIsReady(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
 
+	dbm := database.NewMemoryDBManager()
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	nodeKey, _ := crypto.GenerateKey()
+
 	privkey, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(privkey.PublicKey)
 
-	nodeKey, _ := crypto.GenerateKey()
-	g := NewGaslessModule()
 	approveTx := func(nonce uint64) *types.Transaction {
 		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 	}
@@ -183,14 +182,18 @@ func TestIsReady(t *testing.T) {
 
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-			sdb.SetNonce(addr, tc.nonce)
-			err := g.Init(&InitOpts{
-				ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+			cdb := sdb.Copy()
+			cdb.SetNonce(addr, tc.nonce)
+			g := NewGaslessModule()
+			disabled, err := g.Init(&InitOpts{
+				ChainConfig: testChainConfig,
 				NodeKey:     nodeKey,
-				TxPool:      &testTxPool{sdb},
+				Chain:       backend.BlockChain(),
+				TxPool:      &testTxPool{cdb},
 			})
 			require.NoError(t, err)
+			require.False(t, disabled)
+
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
@@ -211,7 +214,11 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	nodeKey, _ := crypto.GenerateKey()
 
 	userKey, err := crypto.GenerateKey()
 	require.NoError(t, err)
@@ -321,20 +328,21 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		sdb := statedb.Copy()
-		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
+		cdb := sdb.Copy()
 		if tc.balance {
-			sdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
+			cdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
-		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
+		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
+		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
-		nodeKey, _ := crypto.GenerateKey()
-		err := g.Init(&InitOpts{
-			ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		disabled, err := g.Init(&InitOpts{
+			ChainConfig: testChainConfig,
 			NodeKey:     nodeKey,
+			Chain:       backend.BlockChain(),
 			TxPool:      pool,
 		})
 		require.NoError(t, err)
+		require.False(t, disabled)
 		pool.RegisterTxPoolModule(g)
 		txMap := map[txTypeTest]*types.Transaction{}
 
@@ -385,7 +393,11 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	nodeKey, _ := crypto.GenerateKey()
 
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()
@@ -404,22 +416,26 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 
 	T5 := makeTx(t, nil, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 
-	statedb.SetBalance(crypto.PubkeyToAddress(key2.PublicKey), new(big.Int).SetUint64(params.KAIA))
-	statedb.SetBalance(crypto.PubkeyToAddress(key4.PublicKey), new(big.Int).SetUint64(params.KAIA))
+	sdb.SetBalance(crypto.PubkeyToAddress(key2.PublicKey), new(big.Int).SetUint64(params.KAIA))
+	sdb.SetBalance(crypto.PubkeyToAddress(key4.PublicKey), new(big.Int).SetUint64(params.KAIA))
 
 	expected := []*types.Transaction{A1, S1, A2, S2, S3, T4}
+
 	// send A1, S1, A2, S2, S3, T4, and T5 in random order and then check if pending has expected txs.
 	for range make([]int, 1000) {
-		sdb := statedb.Copy()
-		bc := &testBlockChain{sdb, 10000000, new(event.Feed)}
-		pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
+		cdb := sdb.Copy()
+		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
+		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
-		nodeKey, _ := crypto.GenerateKey()
-		g.Init(&InitOpts{
-			ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
+		disabled, err := g.Init(&InitOpts{
+			ChainConfig: testChainConfig,
 			NodeKey:     nodeKey,
+			Chain:       backend.BlockChain(),
 			TxPool:      pool,
 		})
+		require.NoError(t, err)
+		require.False(t, disabled)
+
 		pool.RegisterTxPoolModule(g)
 
 		txs := []*types.Transaction{A1, S1, A2, S2, S3, T4, T5}
