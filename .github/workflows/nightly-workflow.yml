@@ -44,6 +44,8 @@ jobs:
 
   coverage:
     runs-on: ubuntu-latest
+    container:
+      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
     
     steps:
       - uses: actions/checkout@v4
