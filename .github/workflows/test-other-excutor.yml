@@ -37,10 +37,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
       - name: Download dev branch
+        shell: bash
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           git fetch origin dev:dev
       - name: Run test
+        shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

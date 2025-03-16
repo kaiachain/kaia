@@ -12,60 +12,23 @@ permissions: write-all
 #  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
-  integration:
-    runs-on: ubuntu-latest
-    container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-
-    services:
-      redis:
-        image: redis:6.0.8-alpine
-        ports:
-          - 6379:6379
-      kafka:
-        image: bitnami/kafka:3.7
-        env:
-          KAFKA_CFG_NODE_ID: 0
-          KAFKA_CFG_PROCESS_ROLES: controller,broker
-          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-          KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-        ports:
-          - 9092:9092
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run integration tests
-        shell: bash
-        run: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          make test-integration
-
   coverage:
     runs-on: ubuntu-latest
     container:
       image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
     
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Generate coverage report
-        shell: bash
-        run: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          set -e
-          export GOPATH=/go
-          git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
-          make cover
-          mkdir -p /tmp/coverage_reports
-          cp coverage_report.txt /tmp/coverage_reports/
-          cp coverage_report.html /tmp/coverage_reports/
-      
-#      - name: Upload coverage
-#        uses: codecov/codecov-action@v4
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: ./.github/workflows/test-other-excutor.yml
+        with:
+          test_command: |
+            git config --global --add safe.directory /__w/kaia/kaia
+            set -e
+            export GOPATH=/go
+            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+            make cover
+            mkdir -p /tmp/coverage_reports
+            cp coverage_report.txt /tmp/coverage_reports/
+            cp coverage_report.html /tmp/coverage_reports/
+        secrets:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

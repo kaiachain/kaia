@@ -17,9 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
-      credentials:
-        username: ${{ env.DOCKER_LOGIN }}
-        password: ${{ env.DOCKER_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -67,9 +64,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-      credentials:
-        username: ${{ env.DOCKER_LOGIN }}
-        password: ${{ env.DOCKER_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -106,37 +100,14 @@ jobs:
     runs-on: ['self-hosted', 'ARM64']
     container:
       image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
-      credentials:
-        username: ${{ env.DOCKER_LOGIN }}
-        password: ${{ env.DOCKER_PASSWORD }}
-
     steps:
       - uses: actions/checkout@v4
-
-  tar-darwin-arm64:
-    runs-on: macos-14
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install dependencies
-        run: |
-          brew install awscli
-          curl -O https://dl.google.com/go/go1.22.1.darwin-arm64.tar.gz
-          mkdir $HOME/go1.22.1
-          tar -C $HOME/go1.22.1 -xzf go1.22.1.darwin-arm64.tar.gz
-          echo 'export GOPATH=~/go' >> ~/.bashrc
-          echo 'export PATH=$HOME/go1.22.1/go/bin:$PATH' >> ~/.bashrc
-          source ~/.bashrc
 
   deploy-rpm:
-    needs: [rpm-linux-amd64, rpm-linux-arm64, tar-linux-amd64, tar-linux-arm64, tar-darwin-arm64]
+    needs: [rpm-linux-amd64, rpm-linux-arm64, tar-linux-amd64, tar-linux-arm64]
     runs-on: ubuntu-latest
     container:
       image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
-      credentials:
-        username: ${{ env.DOCKER_LOGIN }}
-        password: ${{ env.DOCKER_PASSWORD }}
 
     steps:
       - name: Update RPM repository
