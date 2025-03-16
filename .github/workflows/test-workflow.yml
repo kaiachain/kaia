@@ -1,9 +1,9 @@
 name: Testing Workflow
 
 on:
-#  push:
-#    branches:
-#      - 'test/github-action'
+  push:
+    branches:
+      - 'mock'
 
 jobs:
   # Basic test jobs
