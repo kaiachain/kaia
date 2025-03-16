@@ -1,0 +1,18 @@
+name: Nightly Coverage
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
+  push:
+    branches:
+      - 'test/github-action'
+permissions: write-all
+
+jobs:
+  coverage:
+      uses: ./.github/workflows/workflow-template/test-excutor.yml
+      with:
+        test_command: |
+          make lint-try
+          mkdir -p /tmp/linter_reports
+          cp linter_report.txt /tmp/linter_reports/
