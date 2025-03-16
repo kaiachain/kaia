@@ -7,18 +7,15 @@ on:
     branches:
       - 'test/github-action'
 
-env:
-  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+#env:
+#  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
+#  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
   integration:
     runs-on: ubuntu-latest
     container:
       image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-      credentials:
-        username: ${{ env.DOCKER_LOGIN }}
-        password: ${{ env.DOCKER_PASSWORD }}
 
     services:
       redis:
@@ -54,7 +51,7 @@ jobs:
       - name: Generate coverage report
         run: make coverage
       
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }} 
+#      - name: Upload coverage
+#        uses: codecov/codecov-action@v4
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
