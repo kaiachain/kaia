@@ -13,22 +13,17 @@ permissions: write-all
 
 jobs:
   coverage:
-    runs-on: ubuntu-latest
-    container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-    
-    steps:
-      - uses: ./.github/workflows/test-other-excutor.yml
-        with:
-          test_command: |
-            git config --global --add safe.directory /__w/kaia/kaia
-            set -e
-            export GOPATH=/go
-            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
-            make cover
-            mkdir -p /tmp/coverage_reports
-            cp coverage_report.txt /tmp/coverage_reports/
-            cp coverage_report.html /tmp/coverage_reports/
-        secrets:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      uses: ./.github/workflows/test-other-excutor.yml
+      secrets:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      with:
+        test_command: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          set -e
+          export GOPATH=/go
+          git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+          make cover
+          mkdir -p /tmp/coverage_reports
+          cp coverage_report.txt /tmp/coverage_reports/
+          cp coverage_report.html /tmp/coverage_reports/
