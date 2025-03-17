@@ -1,4 +1,4 @@
-name: Nightly Coverage
+name: Nightly Linter
 
 on:
   schedule:
@@ -9,7 +9,7 @@ on:
 permissions: write-all
 
 jobs:
-  coverage:
+  linter:
       uses: ./.github/workflows/test-excutor.yml
       with:
         test_command: |
