@@ -8,33 +8,33 @@ on:
 jobs:
   # Basic test jobs
   build:
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
         git config --global --add safe.directory /__w/kaia/kaia
         make all
 
   test-linter:
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
         git config --global --add safe.directory /__w/kaia/kaia
         go run build/ci.go lint -v --new-from-rev=dev
 
   test-networks:
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
         git config --global --add safe.directory /__w/kaia/kaia
         make test-networks
 
   test-node:
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: make test-node
 
   test-tests:
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
@@ -42,7 +42,7 @@ jobs:
 
   test-rpc:
     permissions: write-all
-    uses: ./.github/workflows/workflow-template/test-excutor.yml
+    uses: ./.github/workflows/test-excutor.yml
     with:
       test_command: |
         make kcn
@@ -63,7 +63,7 @@ jobs:
 
   # Service-dependent test jobs
   test-datasync:
-    uses: ./.github/workflows/workflow-template/test-other-excutor.yml
+    uses: ./.github/workflows/test-other-excutor.yml
     with:
       test_command: make test-datasync
     secrets:
@@ -71,7 +71,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   test-others:
-    uses: ./.github/workflows/workflow-template/test-other-excutor.yml
+    uses: ./.github/workflows/test-other-excutor.yml
     with:
       test_command: make test-others
     secrets:

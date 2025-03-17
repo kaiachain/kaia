@@ -10,7 +10,7 @@ permissions: write-all
 
 jobs:
   coverage:
-      uses: ./.github/workflows/workflow-template/test-excutor.yml
+      uses: ./.github/workflows/test-excutor.yml
       with:
         test_command: |
           make lint-try
