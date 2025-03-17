@@ -300,17 +300,18 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 
 	for _, txBundlingModule := range txBundlingModules {
 		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
-		prevBundles := bundles
 		for _, newBundle := range newBundles {
 			isConflict := false
 			// Check for conflicts with all previous bundles
-			for _, prevBundle := range prevBundles {
+			for _, prevBundle := range bundles {
 				isConflict = prevBundle.IsConflict(newBundle)
+				if isConflict {
+					break
+				}
 			}
-			if isConflict {
-				continue
+			if !isConflict {
+				bundles = append(bundles, newBundle)
 			}
-			bundles = append(bundles, newBundle)
 		}
 	}
 
