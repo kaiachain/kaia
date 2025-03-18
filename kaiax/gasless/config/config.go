@@ -24,7 +24,7 @@ import (
 var (
 	AllowedTokensFlag = &cli.StringSliceFlag{
 		Name:    "gasless.allowed-tokens",
-		Usage:   "allow token addresses for gasless module. default all",
+		Usage:   "allow token addresses for gasless module. default is all.",
 		Value:   cli.NewStringSlice("all"),
 		Aliases: []string{"genesis.module.gasless.allowed-tokens"},
 	}
