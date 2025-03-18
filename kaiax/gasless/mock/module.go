@@ -91,6 +91,20 @@ func (mr *MockGaslessModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockGaslessModule)(nil).IsReady), arg0, arg1, arg2)
 }
 
+// PostInsertBlock mocks base method.
+func (m *MockGaslessModule) PostInsertBlock(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
+}
+
 // PreAddLocal mocks base method.
 func (m *MockGaslessModule) PreAddLocal(arg0 *types.Transaction) error {
 	m.ctrl.T.Helper()
@@ -117,30 +131,4 @@ func (m *MockGaslessModule) PreAddRemote(arg0 *types.Transaction) error {
 func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
-}
-
-// Start mocks base method.
-func (m *MockGaslessModule) Start() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockGaslessModuleMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockGaslessModule)(nil).Start))
-}
-
-// Stop mocks base method.
-func (m *MockGaslessModule) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop.
-func (mr *MockGaslessModuleMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockGaslessModule)(nil).Stop))
 }
