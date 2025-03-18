@@ -49,11 +49,11 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
-	if opts == nil || opts.ChainConfig == nil || opts.ChainConfig.Gasless == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
 		return true, ErrInitUnexpectedNil
 	}
 
-	if opts.ChainConfig.Gasless.IsDisabled {
+	if opts.ChainConfig.Gasless == nil || opts.ChainConfig.Gasless.IsDisabled {
 		return true, nil
 	}
 
@@ -66,7 +66,7 @@ func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
 		return true, err
 	}
 
-	err = g.updateSupportedTokens(g.Chain.CurrentBlock().Number())
+	err = g.updateAllowedTokens(g.Chain.CurrentBlock().Number())
 	if err != nil {
 		return true, err
 	}

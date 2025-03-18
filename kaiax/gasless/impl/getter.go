@@ -275,7 +275,7 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	}
 }
 
-func (g *GaslessModule) updateSupportedTokens(blockNumber *big.Int) error {
+func (g *GaslessModule) updateAllowedTokens(blockNumber *big.Int) error {
 	tokens, err := g.getSupportedTokens(blockNumber)
 	if err != nil {
 		return err

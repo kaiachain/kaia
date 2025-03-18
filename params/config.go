@@ -244,7 +244,7 @@ type ChainConfig struct {
 	Governance    *GovernanceConfig `json:"governance"`
 
 	// kaiax module config
-	Gasless *gasless_cfg.ChainConfig `json:"gasless"`
+	Gasless *gasless_cfg.ChainConfig `json:"gasless,omitempty"`
 }
 
 // GovernanceConfig stores governance information for a network
