@@ -17,6 +17,10 @@ func (t *TxOrGen) IsConcreteTx() bool {
 	return t.ConcreteTx != nil
 }
 
+func (t *TxOrGen) IsTxGenerator() bool {
+	return t.TxGenerator != nil
+}
+
 func NewTxOrGenFromTx(tx *types.Transaction) *TxOrGen {
 	return &TxOrGen{
 		ConcreteTx: tx,
@@ -39,6 +43,8 @@ func NewTxOrGenFromGen(generator TxGenerator, id common.Hash) *TxOrGen {
 	}
 }
 
+// NewTxOrGenList creates a list of TxOrGen from a list of interfaces.
+// Used for testing.
 func NewTxOrGenList(interfaces ...interface{}) []*TxOrGen {
 	txOrGens := make([]*TxOrGen, len(interfaces))
 	for i, tx := range interfaces {

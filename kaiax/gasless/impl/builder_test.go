@@ -68,7 +68,7 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: common.Hash{},
 				},
 			},
@@ -78,7 +78,7 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: T4.Hash(),
 				},
 			},
@@ -88,7 +88,7 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: T4.Hash(),
 				},
 			},
@@ -98,11 +98,11 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: common.Hash{},
 				},
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A2, S2), A2, S2),
 					TargetTxHash: T4.Hash(),
 				},
 			},
@@ -112,11 +112,11 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: common.Hash{},
 				},
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A2, S2), A2, S2),
 					TargetTxHash: S1.Hash(),
 				},
 			},
@@ -126,11 +126,11 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: common.Hash{},
 				},
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A2, S2), A2, S2),
 					TargetTxHash: S1.Hash(),
 				},
 			},
@@ -140,11 +140,11 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A2, S2), A2, S2},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A2, S2), A2, S2),
 					TargetTxHash: common.Hash{},
 				},
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: S2.Hash(),
 				},
 			},
@@ -154,11 +154,11 @@ func TestExtractTxBundles(t *testing.T) {
 			nil,
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(A1, S1), A1, S1},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
 					TargetTxHash: common.Hash{},
 				},
 				{
-					BundleTxs:    []interface{}{g.GetLendTxGenerator(nil, S3), S3},
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(nil, S3), S3),
 					TargetTxHash: S1.Hash(),
 				},
 			},
@@ -167,7 +167,7 @@ func TestExtractTxBundles(t *testing.T) {
 			[]*types.Transaction{A1, S1, T4, T5},
 			[]*builder.Bundle{
 				{
-					BundleTxs:    []interface{}{},
+					BundleTxs:    builder.NewTxOrGenList(),
 					TargetTxHash: common.Hash{},
 				},
 			},

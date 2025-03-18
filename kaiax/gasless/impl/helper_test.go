@@ -19,7 +19,6 @@ package impl
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
-	"errors"
 	"math/big"
 	"testing"
 
@@ -148,24 +147,16 @@ func flattenPoolTxs(structured map[common.Address]types.Transactions) map[common
 	return flattened
 }
 
-func flattenBundleTxs(txs []interface{}) ([]common.Hash, error) {
+func flattenBundleTxs(txOrGens []*builder.TxOrGen) ([]common.Hash, error) {
 	nodeNonce := uint64(0)
 	hashes := []common.Hash{}
-	for _, txi := range txs {
-		var tx *types.Transaction
-		var err error
-		if genLendTx, ok := txi.(builder.TxGenerator); ok {
-			tx, err = genLendTx.Generate(nodeNonce)
-			if err != nil {
-				return nil, err
-			}
-			nodeNonce += 1
-		} else if tx, ok = txi.(*types.Transaction); ok {
-		} else {
-			err = errors.New("unsupported bundle tx")
-		}
+	for _, txOrGen := range txOrGens {
+		tx, err := txOrGen.GetTx(nodeNonce)
 		if err != nil {
 			return nil, err
+		}
+		if txOrGen.IsTxGenerator() {
+			nodeNonce += 1
 		}
 		hashes = append(hashes, tx.Hash())
 	}

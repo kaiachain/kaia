@@ -229,7 +229,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 			require.True(t, ok)
 
 			generator := g.GetLendTxGenerator(tc.approve, tc.swap)
-			tx, err := generator.Generate(0)
+			tx, err := generator.GetTx(0)
 			require.NoError(t, err)
 
 			// tx contents test
@@ -255,8 +255,8 @@ func TestTxGeneratorHashUniqueness(t *testing.T) {
 	g := NewGaslessModule()
 	for range 100 {
 		generator := g.GetLendTxGenerator(nil, makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000)}))
-		_, ok := hashSet[generator.Hash]
+		_, ok := hashSet[generator.Id]
 		assert.False(t, ok)
-		hashSet[generator.Hash] = struct{}{}
+		hashSet[generator.Id] = struct{}{}
 	}
 }
