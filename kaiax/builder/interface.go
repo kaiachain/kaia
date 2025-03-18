@@ -44,6 +44,10 @@ type TxBundlingModule interface {
 	// if zero or minus value is returned, it means no limit.
 	// this limitation works properly only when a module bundles only sequential txs by the same sender.
 	GetMaxBundleTxsInPending() uint
+	
+	// The function filters transactions to be executed.
+	// It can only remove transactions.
+	FilterTx(txs []*types.Transaction)
 }
 
 // Any component or module that accomodate tx bundling modules.
