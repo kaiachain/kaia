@@ -80,12 +80,6 @@ var (
 	dummyTokenAddress3 = common.HexToAddress("0xcdef")
 )
 
-func init() {
-	// TODO-Shogo: what's this?
-	// fork.SetHardForkBlockNumberConfig(testChainConfig)
-	// blockchain.InitDeriveSha(testChainConfig)
-}
-
 type testBlockChain struct {
 	statedb       *state.StateDB
 	gasLimit      uint64
