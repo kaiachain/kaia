@@ -13,14 +13,6 @@ type TxOrGen struct {
 	Id          common.Hash
 }
 
-func (t *TxOrGen) IsConcreteTx() bool {
-	return t.concreteTx != nil
-}
-
-func (t *TxOrGen) IsTxGenerator() bool {
-	return t.txGenerator != nil
-}
-
 func NewTxOrGenFromTx(tx *types.Transaction) *TxOrGen {
 	if tx == nil {
 		return nil
@@ -62,13 +54,21 @@ func NewTxOrGenList(interfaces ...interface{}) []*TxOrGen {
 	return txOrGens
 }
 
-func (t *TxOrGen) Equals(other *TxOrGen) bool {
-	return t.Id == other.Id
-}
-
 func (t *TxOrGen) GetTx(nonce uint64) (*types.Transaction, error) {
 	if t.IsConcreteTx() {
 		return t.concreteTx, nil
 	}
 	return t.txGenerator(nonce)
+}
+
+func (t *TxOrGen) IsConcreteTx() bool {
+	return t.concreteTx != nil
+}
+
+func (t *TxOrGen) IsTxGenerator() bool {
+	return t.txGenerator != nil
+}
+
+func (t *TxOrGen) Equals(other *TxOrGen) bool {
+	return t.Id == other.Id
 }
