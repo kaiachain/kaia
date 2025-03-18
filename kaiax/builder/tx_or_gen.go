@@ -8,37 +8,37 @@ import (
 )
 
 type TxOrGen struct {
-	ConcreteTx  *types.Transaction
-	TxGenerator TxGenerator
+	concreteTx  *types.Transaction
+	txGenerator TxGenerator
 	Id          common.Hash
 }
 
 func (t *TxOrGen) IsConcreteTx() bool {
-	return t.ConcreteTx != nil
+	return t.concreteTx != nil
 }
 
 func (t *TxOrGen) IsTxGenerator() bool {
-	return t.TxGenerator != nil
+	return t.txGenerator != nil
 }
 
 func NewTxOrGenFromTx(tx *types.Transaction) *TxOrGen {
+	if tx == nil {
+		return nil
+	}
+
 	return &TxOrGen{
-		ConcreteTx: tx,
+		concreteTx: tx,
 		Id:         tx.Hash(),
 	}
 }
 
-func NewTxOrGenListFromTxs(txs ...*types.Transaction) []*TxOrGen {
-	txOrGens := make([]*TxOrGen, len(txs))
-	for i, tx := range txs {
-		txOrGens[i] = NewTxOrGenFromTx(tx)
-	}
-	return txOrGens
-}
-
 func NewTxOrGenFromGen(generator TxGenerator, id common.Hash) *TxOrGen {
+	if generator == nil {
+		return nil
+	}
+
 	return &TxOrGen{
-		TxGenerator: generator,
+		txGenerator: generator,
 		Id:          id,
 	}
 }
@@ -51,6 +51,8 @@ func NewTxOrGenList(interfaces ...interface{}) []*TxOrGen {
 		switch v := tx.(type) {
 		case *types.Transaction:
 			txOrGens[i] = NewTxOrGenFromTx(v)
+		case TxGenerator:
+			txOrGens[i] = NewTxOrGenFromGen(v, common.Hash{byte(i + 1)})
 		case *TxOrGen:
 			txOrGens[i] = v
 		default:
@@ -66,7 +68,7 @@ func (t *TxOrGen) Equals(other *TxOrGen) bool {
 
 func (t *TxOrGen) GetTx(nonce uint64) (*types.Transaction, error) {
 	if t.IsConcreteTx() {
-		return t.ConcreteTx, nil
+		return t.concreteTx, nil
 	}
-	return t.TxGenerator(nonce)
+	return t.txGenerator(nonce)
 }

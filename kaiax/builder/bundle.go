@@ -29,8 +29,8 @@ type Bundle struct {
 }
 
 // Has checks if the bundle contains a tx with the given hash.
-func (b *Bundle) Has(id common.Hash) bool {
-	return b.FindIdx(id) != -1
+func (b *Bundle) Has(txOrGen *TxOrGen) bool {
+	return b.FindIdx(txOrGen.Id) != -1
 }
 
 // FindIdx returns if the bundle contains a tx with the given hash and its index in bundle.
@@ -55,25 +55,19 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 		return false
 	}
 
-	// 2-2. Build a map of TxHash -> IndexInBundle
-	ids := make(map[common.Hash]int)
-	for i, txOrGen := range b.BundleTxs {
-		ids[txOrGen.Id] = i
+	// 2-2. Check for overlapping txs
+	for _, txOrGen := range newBundle.BundleTxs {
+		if b.Has(txOrGen) {
+			return true
+		}
 	}
 
 	// 2-3. Check for TargetTxHash breaking current bundle.
 	// If newBundle.TargetTxHash is equal to the last tx of current bundle, it is NOT a conflict.
 	// e.g.) b.txs = [0x1, 0x2] and newBundle's TargetTxHash is 0x2.
-	if idx, ok := ids[newBundle.TargetTxHash]; ok && idx != len(b.BundleTxs)-1 {
-		return true
+	if idx := b.FindIdx(newBundle.TargetTxHash); idx == -1 || idx == len(b.BundleTxs)-1 {
+		return false
 	}
 
-	// 2-4. Check for overlapping txs
-	for _, txOrGen := range newBundle.BundleTxs {
-		if _, has := ids[txOrGen.Id]; has {
-			return true
-		}
-	}
-
-	return false
+	return true
 }

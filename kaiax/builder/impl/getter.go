@@ -31,7 +31,8 @@ func buildDependencyIndices(txs []*builder.TxOrGen, bundles []*builder.Bundle, s
 
 	for i, txOrGen := range txs {
 		if txOrGen.IsConcreteTx() {
-			from, err := types.Sender(signer, txOrGen.ConcreteTx)
+			tx, _ := txOrGen.GetTx(0)
+			from, err := types.Sender(signer, tx)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -77,7 +78,7 @@ func incorporate(txs []*builder.TxOrGen, bundle *builder.Bundle) ([]*builder.TxO
 	// 2. place bundle after TargetTxHash
 	for _, txOrGen := range txs {
 		// if tx-in-bundle, the tx will be appended when target is found.
-		if bundle.Has(txOrGen.Id) {
+		if bundle.Has(txOrGen) {
 			continue
 		}
 		ret = append(ret, txOrGen)
@@ -131,7 +132,7 @@ func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
 
 func FindBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
 	for i, bundle := range bundles {
-		if bundle.Has(txOrGen.Id) {
+		if bundle.Has(txOrGen) {
 			return i
 		}
 	}
@@ -149,7 +150,7 @@ func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []*builder.TxOrGen) [
 
 func FindTargetTxHash(bundle *builder.Bundle, txOrGens []*builder.TxOrGen) common.Hash {
 	for i := range txOrGens {
-		if bundle.BundleTxs[0].Id == txOrGens[i].Id {
+		if bundle.BundleTxs[0].Equals(txOrGens[i]) {
 			if i == 0 {
 				return common.Hash{}
 			} else {
@@ -168,22 +169,22 @@ func ShiftTxs(txs *[]*builder.TxOrGen, num int) {
 	*txs = (*txs)[num:]
 }
 
-func PopTxs(txs *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	if len(*txs) == 0 || num == 0 {
+func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+	if len(*txOrGens) == 0 || num == 0 {
 		return
 	}
 
-	senderToIndices, bundleToIndices, err := buildDependencyIndices(*txs, *bundles, signer)
+	senderToIndices, bundleToIndices, err := buildDependencyIndices(*txOrGens, *bundles, signer)
 	if err != nil {
 		logger.Error("Failed to build dependency indices", "err", err)
-		ShiftTxs(txs, num)
+		ShiftTxs(txOrGens, num)
 		return
 	}
 
 	toRemove := make(map[int]bool)
 	queue := make([]int, 0, num)
 
-	for i := 0; i < min(num, len(*txs)); i++ {
+	for i := 0; i < min(num, len(*txOrGens)); i++ {
 		toRemove[i] = true
 		queue = append(queue, i)
 	}
@@ -191,9 +192,11 @@ func PopTxs(txs *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer
 	for len(queue) > 0 {
 		curIdx := queue[0]
 		queue = queue[1:]
+		txOrGen := (*txOrGens)[curIdx]
 
-		if (*txs)[curIdx].IsConcreteTx() {
-			from, _ := types.Sender(signer, (*txs)[curIdx].ConcreteTx)
+		if txOrGen.IsConcreteTx() {
+			tx, _ := txOrGen.GetTx(0)
+			from, _ := types.Sender(signer, tx)
 			for _, idx := range senderToIndices[from] {
 				if idx > curIdx && !toRemove[idx] {
 					toRemove[idx] = true
@@ -201,7 +204,7 @@ func PopTxs(txs *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdx(*bundles, (*txs)[curIdx]); bundleIdx != -1 {
+		if bundleIdx := FindBundleIdx(*bundles, (*txOrGens)[curIdx]); bundleIdx != -1 {
 			for _, idx := range bundleToIndices[bundleIdx] {
 				if !toRemove[idx] {
 					toRemove[idx] = true
@@ -211,7 +214,7 @@ func PopTxs(txs *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer
 		}
 	}
 
-	newTxs := Filter(txs, toRemove)
+	newTxs := Filter(txOrGens, toRemove)
 
 	bundleIdxToRemove := map[int]bool{}
 	for bundleIdx, txIndices := range bundleToIndices {
@@ -225,7 +228,7 @@ func PopTxs(txs *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer
 
 	newBundles := SetCorrectTargetTxHash(Filter(bundles, bundleIdxToRemove), newTxs)
 
-	*txs = newTxs
+	*txOrGens = newTxs
 	*bundles = newBundles
 }
 

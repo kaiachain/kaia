@@ -895,7 +895,8 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	markAllTxUnexecutable := func() {
 		for _, txOrGen := range bundle.BundleTxs {
 			if txOrGen.IsConcreteTx() {
-				txOrGen.ConcreteTx.MarkUnexecutable(true)
+				tx, _ := txOrGen.GetTx(0)
+				tx.MarkUnexecutable(true)
 			}
 		}
 	}
