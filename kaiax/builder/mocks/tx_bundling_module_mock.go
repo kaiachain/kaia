@@ -5,46 +5,58 @@
 package mock_builder
 
 import (
-        reflect "reflect"
+	reflect "reflect"
 
-        gomock "github.com/golang/mock/gomock"
-        types "github.com/kaiachain/kaia/blockchain/types"
-        builder "github.com/kaiachain/kaia/kaiax/builder"
+	gomock "github.com/golang/mock/gomock"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
 // MockTxBundlingModule is a mock of TxBundlingModule interface.
 type MockTxBundlingModule struct {
-        ctrl     *gomock.Controller
-        recorder *MockTxBundlingModuleMockRecorder
+	ctrl     *gomock.Controller
+	recorder *MockTxBundlingModuleMockRecorder
 }
 
 // MockTxBundlingModuleMockRecorder is the mock recorder for MockTxBundlingModule.
 type MockTxBundlingModuleMockRecorder struct {
-        mock *MockTxBundlingModule
+	mock *MockTxBundlingModule
 }
 
 // NewMockTxBundlingModule creates a new mock instance.
 func NewMockTxBundlingModule(ctrl *gomock.Controller) *MockTxBundlingModule {
-        mock := &MockTxBundlingModule{ctrl: ctrl}
-        mock.recorder = &MockTxBundlingModuleMockRecorder{mock}
-        return mock
+	mock := &MockTxBundlingModule{ctrl: ctrl}
+	mock.recorder = &MockTxBundlingModuleMockRecorder{mock}
+	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTxBundlingModule) EXPECT() *MockTxBundlingModuleMockRecorder {
-        return m.recorder
+	return m.recorder
 }
 
 // ExtractTxBundles mocks base method.
 func (m *MockTxBundlingModule) ExtractTxBundles(arg0 []*types.Transaction, arg1 []*builder.Bundle) []*builder.Bundle {
-        m.ctrl.T.Helper()
-        ret := m.ctrl.Call(m, "ExtractTxBundles", arg0, arg1)
-        ret0, _ := ret[0].([]*builder.Bundle)
-        return ret0
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractTxBundles", arg0, arg1)
+	ret0, _ := ret[0].([]*builder.Bundle)
+	return ret0
 }
 
 // ExtractTxBundles indicates an expected call of ExtractTxBundles.
 func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interface{}) *gomock.Call {
-        mr.mock.ctrl.T.Helper()
-        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
+}
+
+// FilterTx mocks base method.
+func (m *MockTxBundlingModule) FilterTx(arg0 []*types.Transaction) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "FilterTx", arg0)
+}
+
+// FilterTx indicates an expected call of FilterTx.
+func (mr *MockTxBundlingModuleMockRecorder) FilterTx(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTx", reflect.TypeOf((*MockTxBundlingModule)(nil).FilterTx), arg0)
 }

@@ -37,12 +37,13 @@ var (
 	logger = log.NewModuleLogger(log.Blockchain)
 
 	// Canonical system contract names registered in Registry.
-	AddressBookName = "AddressBook"
-	GovParamName    = "GovParam"
-	Kip103Name      = "KIP103"
-	Kip113Name      = "KIP113"
-	Kip160Name      = "KIP160"
-	CLRegistryName  = "CLRegistry"
+	AddressBookName       = "AddressBook"
+	GovParamName          = "GovParam"
+	Kip103Name            = "KIP103"
+	Kip113Name            = "KIP113"
+	Kip160Name            = "KIP160"
+	CLRegistryName        = "CLRegistry"
+	AuctionEntryPointName = "AuctionEntryPoint"
 
 	AllContractNames = []string{
 		AddressBookName,
@@ -50,6 +51,7 @@ var (
 		Kip103Name,
 		Kip113Name,
 		Kip160Name,
+		AuctionEntryPointName,
 	}
 
 	// This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1 used in the
