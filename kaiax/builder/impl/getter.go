@@ -204,7 +204,7 @@ func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, s
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdx(*bundles, (*txOrGens)[curIdx]); bundleIdx != -1 {
+		if bundleIdx := FindBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
 			for _, idx := range bundleToIndices[bundleIdx] {
 				if !toRemove[idx] {
 					toRemove[idx] = true
