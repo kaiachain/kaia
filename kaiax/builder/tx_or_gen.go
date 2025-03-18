@@ -13,6 +13,10 @@ type TxOrGen struct {
 	Id          common.Hash // For concreteTx, txHash. For txGenerator, use a unique and deterministic identifier.
 }
 
+func (t *TxOrGen) IsTxGenerator() bool {
+	return t.TxGenerator != nil
+}
+
 func NewTxOrGenFromTx(tx *types.Transaction) *TxOrGen {
 	if tx == nil {
 		return nil
