@@ -66,3 +66,7 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	}
 	return bundles
 }
+
+func (g *GaslessModule) FilterTx(txs []*types.Transaction) {
+	// do nothing
+}

@@ -35,6 +35,10 @@ type TxBundlingModule interface {
 	// returned bundles must not have conflict with `prevBundles`.
 	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+
+	// The function filters transactions to be executed.
+	// It can only remove transactions.
+	FilterTx(txs []*types.Transaction)
 }
 
 // Any component or module that accomodate tx bundling modules.
