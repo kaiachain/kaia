@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
@@ -237,6 +238,13 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 // L3. LendTx.to = SwapTx.from
 // L4. LendTx.value = LendAmount(approveTxOrNil, swapTx)
 func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) builder.TxGenerator {
+	var src []byte
+	if approveTxOrNil != nil {
+		src = append(src, approveTxOrNil.Hash().Bytes()...)
+	}
+	src = append(src, swapTx.Hash().Bytes()...)
+	bundleHash := crypto.Keccak256Hash(src)
+
 	return builder.TxGenerator{
 		Generate: func(nonce uint64) (*types.Transaction, error) {
 			var (
@@ -268,6 +276,7 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 			err = tx.Sign(signer, key)
 			return tx, err
 		},
+		Hash: bundleHash,
 	}
 }
 
