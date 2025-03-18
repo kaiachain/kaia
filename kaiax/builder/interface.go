@@ -18,14 +18,10 @@ package builder
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-type TxGenerator struct {
-	Generate func(nonce uint64) (*types.Transaction, error)
-	Hash     common.Hash // initialized at incorporate, write-once
-}
+type TxGenerator func(nonce uint64) (*types.Transaction, error)
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/builder BuilderModule
 type BuilderModule interface {

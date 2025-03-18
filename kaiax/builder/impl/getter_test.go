@@ -19,7 +19,6 @@ package impl
 import (
 	"crypto/ecdsa"
 	"math/big"
-	"reflect"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -38,44 +37,45 @@ func TestIncorporateBundleTx(t *testing.T) {
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}
-	g := builder.TxGenerator{
-		Generate: func(nonce uint64) (*types.Transaction, error) {
-			return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
-		},
+
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
+	g1 := builder.NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := builder.NewTxOrGenFromGen(gen, common.Hash{2})
 
 	testCases := []struct {
 		name     string
 		bundles  []*builder.Bundle
-		expected []interface{}
+		expected []*builder.TxOrGen
 	}{
 		{
 			name: "incorporate multiple bundles",
 			bundles: []*builder.Bundle{
-				{BundleTxs: []interface{}{txs[0], txs[1]}, TargetTxHash: common.Hash{}},
-				{BundleTxs: []interface{}{txs[2]}, TargetTxHash: txs[1].Hash()},
+				{BundleTxs: builder.NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+				{BundleTxs: builder.NewTxOrGenList(txs[2]), TargetTxHash: txs[1].Hash()},
 			},
-			expected: []interface{}{txs[0], txs[1], txs[2], txs[3]},
+			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
 		},
 		{
 			name:     "incorporate empty bundles",
 			bundles:  []*builder.Bundle{},
-			expected: []interface{}{txs[0], txs[1], txs[2], txs[3]},
+			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
 		},
 		{
 			name: "incorporate bundle with generator",
 			bundles: []*builder.Bundle{
-				{BundleTxs: []interface{}{txs[0], g}, TargetTxHash: common.Hash{}},
+				{BundleTxs: builder.NewTxOrGenList(txs[0], g1), TargetTxHash: common.Hash{}},
 			},
-			expected: []interface{}{txs[0], g, txs[1], txs[2], txs[3]},
+			expected: builder.NewTxOrGenList(txs[0], g1, txs[1], txs[2], txs[3]),
 		},
 		{
 			name: "incorporate bundle with generator 2",
 			bundles: []*builder.Bundle{
-				{BundleTxs: []interface{}{g, txs[0]}, TargetTxHash: common.Hash{}},
-				{BundleTxs: []interface{}{g, txs[1]}, TargetTxHash: txs[0].Hash()},
+				{BundleTxs: builder.NewTxOrGenList(g1, txs[0]), TargetTxHash: common.Hash{}},
+				{BundleTxs: builder.NewTxOrGenList(g2, txs[1]), TargetTxHash: txs[0].Hash()},
 			},
-			expected: []interface{}{g, txs[0], g, txs[1], txs[2], txs[3]},
+			expected: builder.NewTxOrGenList(g1, txs[0], g2, txs[1], txs[2], txs[3]),
 		},
 	}
 
@@ -85,18 +85,7 @@ func TestIncorporateBundleTx(t *testing.T) {
 			require.Nil(t, err)
 			require.Equal(t, len(tc.expected), len(ret))
 			for i := range ret {
-				require.Equal(t, reflect.TypeOf(tc.expected[i]), reflect.TypeOf(ret[i]), "type at ret[%d] is different", i)
-				switch v := ret[i].(type) {
-				case *types.Transaction:
-					t.Logf("expected txs[%d]=hash %s", i, tc.expected[i].(*types.Transaction).Hash().Hex())
-					t.Logf("actual txs[%d]=hash %s", i, v.Hash().Hex())
-					expected, ok := tc.expected[i].(*types.Transaction)
-					assert.True(t, ok, "tx %d", i)
-					assert.Equal(t, expected.Hash(), v.Hash(), "tx %d", i, "nonce", v.Nonce)
-				case builder.TxGenerator:
-					_, ok := tc.expected[i].(builder.TxGenerator)
-					assert.True(t, ok, "tx %d", i)
-				}
+				assert.Equal(t, tc.expected[i].Id.Hex(), ret[i].Id.Hex(), "mismatch at ret[%d]", i)
 			}
 		})
 	}
@@ -109,31 +98,31 @@ func TestIncorporate(t *testing.T) {
 		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}
-	txOrGenList := []interface{}{txs[0], txs[1], txs[2]}
+	txOrGenList := builder.NewTxOrGenList(txs[0], txs[1], txs[2])
 	testCases := []struct {
 		name     string
 		bundle   *builder.Bundle
-		expected []interface{}
+		expected []*builder.TxOrGen
 	}{
 		{
 			name:     "incorporate first two transactions",
-			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[0], txs[1]}, TargetTxHash: common.Hash{}},
-			expected: []interface{}{txs[0], txs[1], txs[2]},
+			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2]),
 		},
 		{
 			name:     "incorporate last two transactions",
-			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[1], txs[2]}, TargetTxHash: common.Hash{}},
-			expected: []interface{}{txs[1], txs[2], txs[0]},
+			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[1], txs[2]), TargetTxHash: common.Hash{}},
+			expected: builder.NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate with target hash",
-			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[0]}, TargetTxHash: txs[2].Hash()},
-			expected: []interface{}{txs[1], txs[2], txs[0]},
+			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[0]), TargetTxHash: txs[2].Hash()},
+			expected: builder.NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate single transaction",
-			bundle:   &builder.Bundle{BundleTxs: []interface{}{txs[2]}, TargetTxHash: common.Hash{}},
-			expected: []interface{}{txs[2], txs[0], txs[1]},
+			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[2]), TargetTxHash: common.Hash{}},
+			expected: builder.NewTxOrGenList(txs[2], txs[0], txs[1]),
 		},
 	}
 
@@ -184,7 +173,7 @@ func TestIsConflict(t *testing.T) {
 	}
 
 	b0 := &builder.Bundle{
-		BundleTxs:    []interface{}{txs[0], txs[1]},
+		BundleTxs:    builder.NewTxOrGenList(txs[0], txs[1]),
 		TargetTxHash: common.Hash{},
 	}
 	defaultTargetHash := txs[1].Hash() // make TargetTxHash checks pass
@@ -198,31 +187,31 @@ func TestIsConflict(t *testing.T) {
 		{
 			name:        "Same TargetTxHash",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{}, TargetTxHash: common.Hash{}}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: common.Hash{}}},
 			expected:    true,
 		},
 		{
 			name:        "TargetTxHash divides a bundle",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{}, TargetTxHash: txs[0].Hash()}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: txs[0].Hash()}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 1",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[0], txs[2]}, TargetTxHash: defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[0], txs[2]), TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 2",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[1], txs[2], txs[3]}, TargetTxHash: defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Non-overlapping BundleTxs",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []interface{}{txs[2], txs[3]}, TargetTxHash: defaultTargetHash}},
+			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
 			expected:    false,
 		},
 	}
@@ -242,11 +231,11 @@ func TestPopTxs(t *testing.T) {
 		addrs  = make([]common.Address, 4)
 		txs    = make([]*types.Transaction, 7)
 	)
-	g := builder.TxGenerator{
-		Generate: func(nonce uint64) (*types.Transaction, error) {
-			return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
-		},
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
+	g1 := builder.NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := builder.NewTxOrGenFromGen(gen, common.Hash{2})
 
 	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
@@ -261,83 +250,83 @@ func TestPopTxs(t *testing.T) {
 	// Create test bundles
 	bundles := []*builder.Bundle{
 		{
-			BundleTxs: []interface{}{txs[1], txs[2]},
+			BundleTxs: builder.NewTxOrGenList(txs[1], txs[2]),
 		},
 		{
-			BundleTxs:    []interface{}{txs[3], txs[4]},
+			BundleTxs:    builder.NewTxOrGenList(txs[3], txs[4]),
 			TargetTxHash: txs[2].Hash(),
 		},
 		{
-			BundleTxs:    []interface{}{g, txs[5]},
+			BundleTxs:    builder.NewTxOrGenList(g1, txs[5]),
 			TargetTxHash: txs[4].Hash(),
 		},
 		{
-			BundleTxs: []interface{}{g, txs[1], txs[2]},
+			BundleTxs: builder.NewTxOrGenList(g1, txs[1], txs[2]),
 		},
 	}
 
 	testCases := []struct {
 		name            string
-		incorporatedTxs []interface{}
+		incorporatedTxs []*builder.TxOrGen
 		numToPop        int
 		bundles         []*builder.Bundle
-		expectedTxs     []interface{}
+		expectedTxs     []*builder.TxOrGen
 	}{
 		{
 			name:            "Without any dependencies",
-			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5]},
+			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
 			numToPop:        1,
 			bundles:         []*builder.Bundle{},
-			expectedTxs:     []interface{}{txs[2], txs[3], txs[4], txs[5]},
+			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[5]),
 		},
 		{
 			name:            "No bundles, tx0 and tx1 dependency (same sender)",
-			incorporatedTxs: []interface{}{txs[0], txs[1], txs[2], txs[3], txs[4]},
+			incorporatedTxs: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3], txs[4]),
 			numToPop:        1,
 			bundles:         []*builder.Bundle{},
-			expectedTxs:     []interface{}{txs[2], txs[3], txs[4]},
+			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4]),
 		},
 		{
 			name:            "One bundle - first tx is generator",
-			incorporatedTxs: []interface{}{g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			incorporatedTxs: builder.NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        1,
 			bundles:         []*builder.Bundle{bundles[3]},
-			expectedTxs:     []interface{}{txs[4], txs[5], txs[6]},
+			expectedTxs:     builder.NewTxOrGenList(txs[4], txs[5], txs[6]),
 		},
 		{
 			name:            "Two bundles - chaining dependency",
-			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5]},
+			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
 			numToPop:        2,
 			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     []interface{}{},
+			expectedTxs:     builder.NewTxOrGenList(),
 		},
 		{
 			name:            "Two bundles - one independent tx (tx6)",
-			incorporatedTxs: []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
 			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     []interface{}{txs[6]},
+			expectedTxs:     builder.NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - change order",
-			incorporatedTxs: []interface{}{txs[2], txs[3], txs[4], txs[6], txs[5]}, // 6 is before 5
+			incorporatedTxs: builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[6], txs[5]), // 6 is before 5
 			numToPop:        2,
 			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     []interface{}{txs[6]},
+			expectedTxs:     builder.NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - one independent tx (tx6) with one generator",
-			incorporatedTxs: []interface{}{g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			incorporatedTxs: builder.NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
 			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     []interface{}{txs[6]},
+			expectedTxs:     builder.NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - two generators",
-			incorporatedTxs: []interface{}{g, g, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			incorporatedTxs: builder.NewTxOrGenList(g1, g2, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
 			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     []interface{}{txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]},
+			expectedTxs:     builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 		},
 	}
 
@@ -349,9 +338,7 @@ func TestPopTxs(t *testing.T) {
 				t.Errorf("Expected %d transactions, got %d", len(tc.expectedTxs), len(tc.incorporatedTxs))
 			}
 			for i := range tc.expectedTxs {
-				if expectedTx, ok := tc.expectedTxs[i].(*types.Transaction); ok {
-					assert.Equal(t, expectedTx.Hash(), tc.incorporatedTxs[i].(*types.Transaction).Hash())
-				}
+				assert.Equal(t, tc.expectedTxs[i].Id.Hex(), tc.incorporatedTxs[i].Id.Hex())
 			}
 		})
 	}

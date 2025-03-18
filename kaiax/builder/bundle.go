@@ -17,27 +17,26 @@
 package builder
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
 
 type Bundle struct {
 	// each element can be either *types.Transaction, or TxGenerator
-	BundleTxs []interface{}
+	BundleTxs []*TxOrGen
 
 	// BundleTxs is placed AFTER the target tx. If empty hash, it is placed at the very front.
 	TargetTxHash common.Hash
 }
 
 // Has checks if the bundle contains a tx with the given hash.
-func (b *Bundle) Has(hash common.Hash) bool {
-	return b.FindIdx(hash) != -1
+func (b *Bundle) Has(id common.Hash) bool {
+	return b.FindIdx(id) != -1
 }
 
 // FindIdx returns if the bundle contains a tx with the given hash and its index in bundle.
-func (b *Bundle) FindIdx(hash common.Hash) int {
+func (b *Bundle) FindIdx(id common.Hash) int {
 	for i, txOrGen := range b.BundleTxs {
-		if tx, ok := txOrGen.(*types.Transaction); ok && tx.Hash() == hash {
+		if txOrGen.Id == id {
 			return i
 		}
 	}
@@ -57,28 +56,22 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 	}
 
 	// 2-2. Build a map of TxHash -> IndexInBundle
-	hashes := make(map[common.Hash]int)
+	ids := make(map[common.Hash]int)
 	for i, txOrGen := range b.BundleTxs {
-		tx, ok := txOrGen.(*types.Transaction)
-		if !ok {
-			continue
-		}
-		hashes[tx.Hash()] = i
+		ids[txOrGen.Id] = i
 	}
 
 	// 2-3. Check for TargetTxHash breaking current bundle.
 	// If newBundle.TargetTxHash is equal to the last tx of current bundle, it is NOT a conflict.
 	// e.g.) b.txs = [0x1, 0x2] and newBundle's TargetTxHash is 0x2.
-	if idx, ok := hashes[newBundle.TargetTxHash]; ok && idx != len(b.BundleTxs)-1 {
+	if idx, ok := ids[newBundle.TargetTxHash]; ok && idx != len(b.BundleTxs)-1 {
 		return true
 	}
 
 	// 2-4. Check for overlapping txs
 	for _, txOrGen := range newBundle.BundleTxs {
-		if tx, ok := txOrGen.(*types.Transaction); ok {
-			if _, has := hashes[tx.Hash()]; has {
-				return true
-			}
+		if _, has := ids[txOrGen.Id]; has {
+			return true
 		}
 	}
 
