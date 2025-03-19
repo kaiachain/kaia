@@ -27,4 +27,10 @@ type AuctionModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 	builder.TxBundlingModule
+
+	// HandleBid(bid *Bid)
+}
+
+type AuctionModuleHost interface {
+	RegisterAuctionModule(module AuctionModule)
 }
