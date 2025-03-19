@@ -17,16 +17,17 @@
 package impl
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"gotest.tools/assert"
@@ -82,6 +83,12 @@ func testAllocStorage() blockchain.GenesisAlloc {
 	return alloc
 }
 
+type MockBackend struct{}
+
+func (m *MockBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
+	return nil
+}
+
 func TestUpdateAuctionInfo(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
@@ -93,7 +100,7 @@ func TestUpdateAuctionInfo(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	mAuction := NewAuctionModule()
-	apiBackend := &cn.CNAPIBackend{}
+	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}
 	mAuction.Init(&InitOpts{
 		ChainConfig: config,
