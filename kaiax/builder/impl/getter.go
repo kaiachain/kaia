@@ -293,3 +293,16 @@ func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, m
 
 	return ret
 }
+
+func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []builder.TxBundlingModule) map[common.Address]types.Transactions {
+	txMap := make(map[common.Address]types.Transactions)
+	for addr, txs := range txs {
+		txMap[addr] = txs
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		txBundlingModule.FilterTxs(txMap)
+	}
+
+	return txMap
+}
