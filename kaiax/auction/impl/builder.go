@@ -17,7 +17,10 @@
 package impl
 
 import (
+	"time"
+
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -28,6 +31,19 @@ func (a *AuctionModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	return nil
 }
 
-func (a *AuctionModule) FilterTx(txs []*types.Transaction) {
-	// TODO: implement me
+func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	now := time.Now()
+	// filter txs that are after the auction early deadline
+	for addr, list := range txs {
+		temp := list
+		for i, tx := range list {
+			if tx.Time().Add(AuctionEarlyDeadline).After(now) {
+				temp = list[:i]
+				break
+			}
+		}
+		if len(temp) > 0 {
+			txs[addr] = temp
+		}
+	}
 }

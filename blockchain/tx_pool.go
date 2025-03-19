@@ -1359,6 +1359,9 @@ func (pool *TxPool) handleTxFeed() {
 	for {
 		select {
 		case txs := <-pool.txFeedCh:
+			for _, tx := range txs {
+				tx.UpdateTime()
+			}
 			pool.txFeed.Send(NewTxsEvent{txs})
 		case <-pool.chainHeadSub.Err():
 			return
