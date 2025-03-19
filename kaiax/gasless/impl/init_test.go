@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitSuccess(t *testing.T) {
+func TestInitSuccessAndFailure(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
@@ -112,6 +112,17 @@ func TestInitSuccess(t *testing.T) {
 			true,
 			nil,
 		},
+		"system contract is not prepared": {
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
+				&testTxPool{},
+			},
+			false,
+			nil,
+		},
 	}
 
 	for _, tc := range tcs {
@@ -122,7 +133,7 @@ func TestInitSuccess(t *testing.T) {
 	}
 }
 
-func TestInitAllowedTokens(t *testing.T) {
+func TestInitGSRAndAllowedTokens(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
@@ -130,6 +141,7 @@ func TestInitAllowedTokens(t *testing.T) {
 
 	tcs := map[string]struct {
 		opts          *InitOpts
+		swapRouter    *common.Address
 		allowedTokens []common.Address
 	}{
 		"allowed tokens are nil": {
@@ -140,6 +152,7 @@ func TestInitAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
+			&dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2, dummyTokenAddress3},
 		},
 		"allowed tokens are empty slice": {
@@ -153,6 +166,7 @@ func TestInitAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
+			&dummyGSRAddress,
 			[]common.Address{},
 		},
 		"allowed tokens have existing addresses": {
@@ -166,6 +180,7 @@ func TestInitAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
+			&dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2},
 		},
 		"allowed tokens have a non-existing address": {
@@ -179,7 +194,19 @@ func TestInitAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
+			&dummyGSRAddress,
 			[]common.Address{},
+		},
+		"system contract is not prepared": {
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
+				&testTxPool{},
+			},
+			nil,
+			nil,
 		},
 	}
 
@@ -189,8 +216,11 @@ func TestInitAllowedTokens(t *testing.T) {
 			disabled, err := g.Init(tc.opts)
 			require.NoError(t, err)
 			require.False(t, disabled)
-
-			require.Equal(t, dummyGSRAddress.Bytes(), g.swapRouter.Bytes())
+			if tc.swapRouter == nil {
+				require.Nil(t, g.swapRouter)
+			} else {
+				require.Equal(t, tc.swapRouter.Bytes(), g.swapRouter.Bytes())
+			}
 			require.Equal(t, len(tc.allowedTokens), len(g.allowedTokens))
 			for _, addr := range tc.allowedTokens {
 				_, ok := g.allowedTokens[addr]
