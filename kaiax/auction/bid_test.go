@@ -17,6 +17,7 @@
 package auction
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -64,4 +65,29 @@ func TestBidValidateAuctioneerSig(t *testing.T) {
 	require.NoError(t, err)
 	// Do not modify the original bid.
 	require.Equal(t, uint8(27), testBid.AuctioneerSig[crypto.RecoveryIDOffset])
+}
+
+func TestBidEncodeRLP(t *testing.T) {
+	bid := testBid
+	var buf bytes.Buffer
+	err := bid.EncodeRLP(&buf)
+	require.NoError(t, err)
+	require.Equal(t, bid.Hash(), crypto.Keccak256Hash(buf.Bytes()))
+}
+
+func TestBidDecodeRLP(t *testing.T) {
+	bid := testBid
+	decoded := &Bid{}
+	var buf bytes.Buffer
+	err := bid.EncodeRLP(&buf)
+	require.NoError(t, err)
+	err = decoded.DecodeRLP(&buf)
+	require.NoError(t, err)
+	require.Equal(t, bid.bidData, decoded.bidData)
+}
+
+func TestBidHash(t *testing.T) {
+	bid := testBid
+	hash := bid.Hash()
+	require.Equal(t, bid.hash.Load(), hash)
 }
