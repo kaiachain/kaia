@@ -991,6 +991,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		return false, err
 	}
 
+	// Update the transaction time
+	tx.UpdateTime()
+
 	// If the transaction pool is full and new Tx is valid,
 	// (1) discard a new Tx if there is no room for the account of the Tx
 	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
@@ -1290,9 +1293,6 @@ func (pool *TxPool) handleTxFeed() {
 	for {
 		select {
 		case txs := <-pool.txFeedCh:
-			for _, tx := range txs {
-				tx.UpdateTime()
-			}
 			pool.txFeed.Send(NewTxsEvent{txs})
 		case <-pool.chainHeadSub.Err():
 			return
