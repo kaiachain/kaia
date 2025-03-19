@@ -19,7 +19,6 @@ package impl
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -30,7 +29,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
+	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
@@ -284,19 +283,17 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 }
 
 func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
-	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
-	swapRouter, err := system.ReadActiveAddressFromRegistry(backend, GaslessSwapRouterName, g.Chain.CurrentBlock().Number())
-	// proceed even if there is something wrong with registry
+	swapRouter, tokens, err := getGaslessInfo(g.Chain, blockNumber)
+
+	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = nil
+		g.allowedTokens = nil
+		logger.Warn("there is something wrong with multicall contract", err.Error())
 		return nil
 	}
-	g.swapRouter = &swapRouter
 
-	tokens, err := g.getSupportedTokens(blockNumber)
-	if err != nil {
-		return err
-	}
+	g.swapRouter = &swapRouter
 
 	g.allowedTokens = map[common.Address]bool{}
 	for _, addr := range tokens {
@@ -312,28 +309,6 @@ func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
 	}
 
 	return nil
-}
-
-func (g *GaslessModule) getSupportedTokens(blockNumber *big.Int) ([]common.Address, error) {
-	if g.swapRouter == nil {
-		return nil, errors.New("swap router is nil")
-	}
-	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
-	code, err := backend.CodeAt(context.Background(), *g.swapRouter, blockNumber)
-	if err != nil {
-		return nil, err
-	}
-	if code == nil {
-		return nil, ErrGSRNotInstalled
-	}
-
-	caller, err := contracts.NewGaslessSwapRouterCaller(*g.swapRouter, backend)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &bind.CallOpts{BlockNumber: blockNumber}
-	return caller.GetSupportedTokens(opts)
 }
 
 func lendAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
@@ -357,4 +332,25 @@ func repayAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 
 	// RepayAmount = R1 + R2 + R3
 	return new(big.Int).Add(r1, lendAmount(approveTxOrNil, swapTx))
+}
+
+func getGaslessInfo(bc backends.BlockChainForCaller, blockNumber *big.Int) (common.Address, []common.Address, error) {
+	backend := backends.NewBlockchainContractBackend(bc, nil, nil)
+	code, err := backend.CodeAt(context.Background(), system.MultiCallAddr, blockNumber)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	if code == nil {
+		return common.Address{}, nil, ErrGSRNotInstalled
+	}
+
+	caller, err := contracts.NewMultiCallContractCaller(system.MultiCallAddr, backend)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
+	opts := &bind.CallOpts{BlockNumber: blockNumber}
+	info, err := caller.MultiCallGaslessInfo(opts)
+
+	return info.Gsr, info.Tokens, err
 }

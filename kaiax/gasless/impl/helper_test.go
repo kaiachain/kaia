@@ -237,6 +237,10 @@ func testAllocStorage() blockchain.GenesisAlloc {
 			Balance: big.NewInt(0),
 			Storage: allocStorage,
 		},
+		system.MultiCallAddr: {
+			Code:    system.MultiCallCode,
+			Balance: big.NewInt(0),
+		},
 		dummyGSRAddress: {
 			Code:    hexutil.MustDecode(dummyGSRCode),
 			Balance: big.NewInt(0),
