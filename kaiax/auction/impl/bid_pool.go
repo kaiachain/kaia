@@ -70,83 +70,83 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 	return bp
 }
 
-func (a *BidPool) start() {
-	atomic.CompareAndSwapUint32(&a.running, 0, 1)
-	a.wg.Add(1)
-	go a.handleBidMsg()
+func (bp *BidPool) start() {
+	atomic.CompareAndSwapUint32(&bp.running, 0, 1)
+	bp.wg.Add(1)
+	go bp.handleBidMsg()
 }
 
-func (a *BidPool) stop() {
-	atomic.CompareAndSwapUint32(&a.running, 1, 0)
-	a.clearBidPool()
-	close(a.bidCh)
-	a.wg.Wait()
+func (bp *BidPool) stop() {
+	atomic.CompareAndSwapUint32(&bp.running, 1, 0)
+	bp.clearBidPool()
+	close(bp.bidCh)
+	bp.wg.Wait()
 }
 
 // removeOldBids removes the old bids for the given block number.
-func (a *BidPool) removeOldBids(num uint64) {
-	a.bidMu.Lock()
-	defer a.bidMu.Unlock()
+func (bp *BidPool) removeOldBids(num uint64) {
+	bp.bidMu.Lock()
+	defer bp.bidMu.Unlock()
 
 	// Clear the bid for the given block number.
-	delete(a.bidTargetMap, num)
-	delete(a.bidWinnerMap, num)
-	for _, bid := range a.allBids[num] {
-		delete(a.bidMap, bid.Hash())
+	delete(bp.bidTargetMap, num)
+	delete(bp.bidWinnerMap, num)
+	for _, bid := range bp.allBids[num] {
+		delete(bp.bidMap, bid.Hash())
 	}
-	delete(a.allBids, num)
+	delete(bp.allBids, num)
 }
 
 // clearBidPool clears the bid pool.
-func (a *BidPool) clearBidPool() {
-	a.bidMu.Lock()
-	defer a.bidMu.Unlock()
+func (bp *BidPool) clearBidPool() {
+	bp.bidMu.Lock()
+	defer bp.bidMu.Unlock()
 
-	a.bidTargetMap = make(map[uint64]map[common.Hash]*auction.Bid)
-	a.bidWinnerMap = make(map[uint64]map[common.Address]common.Hash)
-	a.bidMap = make(map[common.Hash]*auction.Bid)
-	a.allBids = make(map[uint64][]*auction.Bid)
+	bp.bidTargetMap = make(map[uint64]map[common.Hash]*auction.Bid)
+	bp.bidWinnerMap = make(map[uint64]map[common.Address]common.Hash)
+	bp.bidMap = make(map[common.Hash]*auction.Bid)
+	bp.allBids = make(map[uint64][]*auction.Bid)
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
-func (a *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address) {
-	a.auctionInfoMu.Lock()
-	defer a.auctionInfoMu.Unlock()
+func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address) {
+	bp.auctionInfoMu.Lock()
+	defer bp.auctionInfoMu.Unlock()
 
-	if a.auctioneer == auctioneer && a.auctionEntryPoint == auctionEntryPoint {
+	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint {
 		return
 	}
 
 	// Clear the existing auction pool since the auctioneer or auction entry point address is changed.
-	a.clearBidPool()
+	bp.clearBidPool()
 
-	a.auctioneer = auctioneer
-	a.auctionEntryPoint = auctionEntryPoint
+	bp.auctioneer = auctioneer
+	bp.auctionEntryPoint = auctionEntryPoint
 
 	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint)
 }
 
 // AddBid adds a bid to the bid pool.
-func (a *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
-	if atomic.LoadUint32(&a.running) == 0 {
+func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
+	if atomic.LoadUint32(&bp.running) == 0 {
 		return common.Hash{}, auction.ErrAuctionPaused
 	}
 
-	a.bidMu.Lock()
-	defer a.bidMu.Unlock()
+	bp.bidMu.Lock()
+	defer bp.bidMu.Unlock()
 
-	if err := a.validateBid(bid); err != nil {
+	if err := bp.validateBid(bid); err != nil {
 		return common.Hash{}, err
 	}
 
-	if err := a.insertBid(bid); err != nil {
+	if err := bp.insertBid(bid); err != nil {
 		return common.Hash{}, err
 	}
 
 	return bid.Hash(), nil
 }
 
-func (a *BidPool) insertBid(bid *auction.Bid) error {
+func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	var (
 		blockNumber  = bid.BlockNumber
 		targetTxHash = bid.TargetTxHash
@@ -154,48 +154,48 @@ func (a *BidPool) insertBid(bid *auction.Bid) error {
 	)
 
 	// If same block number, same target tx hash exists, replace it if it's better
-	if existingTx, ok := a.bidTargetMap[blockNumber][targetTxHash]; ok {
+	if existingTx, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
 		if existingTx.Bid.Cmp(bid.Bid) >= 0 {
 			return auction.ErrLowBid
 		}
 
 		logger.Trace("Replace bid", "old", existingTx.Hash(), "new", bid.Hash())
-		delete(a.bidMap, existingTx.Hash())
-		delete(a.bidWinnerMap[blockNumber], existingTx.Sender)
+		delete(bp.bidMap, existingTx.Hash())
+		delete(bp.bidWinnerMap[blockNumber], existingTx.Sender)
 	}
 
 	hash := bid.Hash()
 
-	a.initializeBidMap(blockNumber)
+	bp.initializeBidMap(blockNumber)
 
-	a.bidMap[hash] = bid
-	a.bidTargetMap[blockNumber][targetTxHash] = bid
-	a.bidWinnerMap[blockNumber][sender] = hash
-	a.allBids[blockNumber] = append(a.allBids[blockNumber], bid)
+	bp.bidMap[hash] = bid
+	bp.bidTargetMap[blockNumber][targetTxHash] = bid
+	bp.bidWinnerMap[blockNumber][sender] = hash
+	bp.allBids[blockNumber] = append(bp.allBids[blockNumber], bid)
 
 	logger.Trace("Add bid", "bid", hash)
 
 	return nil
 }
 
-func (a *BidPool) initializeBidMap(num uint64) {
-	if _, ok := a.bidTargetMap[num]; !ok {
-		a.bidTargetMap[num] = make(map[common.Hash]*auction.Bid)
+func (bp *BidPool) initializeBidMap(num uint64) {
+	if _, ok := bp.bidTargetMap[num]; !ok {
+		bp.bidTargetMap[num] = make(map[common.Hash]*auction.Bid)
 	}
-	if _, ok := a.bidWinnerMap[num]; !ok {
-		a.bidWinnerMap[num] = make(map[common.Address]common.Hash)
+	if _, ok := bp.bidWinnerMap[num]; !ok {
+		bp.bidWinnerMap[num] = make(map[common.Address]common.Hash)
 	}
-	if _, ok := a.allBids[num]; !ok {
-		a.allBids[num] = make([]*auction.Bid, 0)
+	if _, ok := bp.allBids[num]; !ok {
+		bp.allBids[num] = make([]*auction.Bid, 0)
 	}
 }
 
-func (a *BidPool) validateBid(bid *auction.Bid) error {
+func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
 	sender := bid.Sender
 
-	curBlock := a.Chain.CurrentBlock()
+	curBlock := bp.Chain.CurrentBlock()
 	if curBlock == nil {
 		return auction.ErrBlockNotFound
 	}
@@ -210,66 +210,66 @@ func (a *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// Check if the auction tx is already in the pool.
-	if _, ok := a.bidMap[bid.Hash()]; ok {
+	if _, ok := bp.bidMap[bid.Hash()]; ok {
 		return auction.ErrBidAlreadyExists
 	}
 
 	// Check if the sender is already in the winner list.
-	if _, ok := a.bidWinnerMap[blockNumber][sender]; ok {
-		if !isSameBid(bid, a.bidMap[a.bidWinnerMap[blockNumber][sender]]) {
+	if _, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
+		if !isSameBid(bid, bp.bidMap[bp.bidWinnerMap[blockNumber][sender]]) {
 			return auction.ErrBidSenderExists
 		}
 	}
 
 	// Check if the bid is valid.
-	if err := a.validateBidSigs(bid); err != nil {
+	if err := bp.validateBidSigs(bid); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (a *BidPool) stats() int {
-	a.bidMu.RLock()
-	defer a.bidMu.RUnlock()
+func (bp *BidPool) stats() int {
+	bp.bidMu.RLock()
+	defer bp.bidMu.RUnlock()
 
-	return len(a.bidMap)
+	return len(bp.bidMap)
 }
 
-func (a *BidPool) validateBidSigs(bid *auction.Bid) error {
-	a.auctionInfoMu.RLock()
-	defer a.auctionInfoMu.RUnlock()
+func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
+	bp.auctionInfoMu.RLock()
+	defer bp.auctionInfoMu.RUnlock()
 
 	// Verify the EIP712 signature.
-	if err := bid.ValidateSearcherSig(a.ChainConfig.ChainID, a.auctionEntryPoint); err != nil {
+	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint); err != nil {
 		return err
 	}
 
 	// Verify the auctioneer signature.
-	if err := bid.ValidateAuctioneerSig(a.auctioneer); err != nil {
+	if err := bid.ValidateAuctioneerSig(bp.auctioneer); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (a *BidPool) HandleBid(bid *auction.Bid) {
-	if atomic.LoadUint32(&a.running) == 0 {
+func (bp *BidPool) HandleBid(bid *auction.Bid) {
+	if atomic.LoadUint32(&bp.running) == 0 {
 		return
 	}
-	a.bidCh <- bid
+	bp.bidCh <- bid
 }
 
-func (a *BidPool) handleBidMsg() {
-	defer a.wg.Done()
+func (bp *BidPool) handleBidMsg() {
+	defer bp.wg.Done()
 
 	for {
 		select {
-		case bid, ok := <-a.bidCh:
+		case bid, ok := <-bp.bidCh:
 			if !ok {
 				return
 			}
-			a.AddBid(bid)
+			bp.AddBid(bid)
 		}
 	}
 }
