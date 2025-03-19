@@ -22,10 +22,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
+	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,6 +101,15 @@ func initBaseBid(bid *auction.Bid, index int) {
 }
 
 func TestNewBidPool(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
 	testCases := []struct {
 		name        string
 		chainConfig *params.ChainConfig
@@ -117,7 +129,7 @@ func TestNewBidPool(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pool := NewBidPool(tc.chainConfig)
+			pool := NewBidPool(tc.chainConfig, chain)
 			if tc.wantNil {
 				assert.Nil(t, pool)
 			} else {
@@ -134,17 +146,34 @@ func TestNewBidPool(t *testing.T) {
 }
 
 func TestBidPool_AddBid(t *testing.T) {
-	pool := NewBidPool(testChainConfig)
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+		block5   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(5)})
+		block10  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	)
+	defer mockCtrl.Finish()
+
+	pool := NewBidPool(testChainConfig, chain)
 	require.NotNil(t, pool)
+
+	chain.EXPECT().CurrentBlock().Return(block5).Times(1)
 
 	// Test adding bid when auction is paused
 	_, err := pool.AddBid(testBids[0])
 	assert.Equal(t, auction.ErrAuctionPaused, err)
 
 	// Start the auction
-	pool.running = 1
+	pool.start()
+	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Test adding bid not valid block number
+	_, err = pool.AddBid(testBids[0])
+	assert.Equal(t, auction.ErrInvalidBlockNumber, err)
+
+	chain.EXPECT().CurrentBlock().Return(block10).AnyTimes()
 
 	// Test successful bid additions
 	for _, bid := range testBids[:3] {
@@ -192,11 +221,21 @@ func TestBidPool_AddBid(t *testing.T) {
 }
 
 func TestBidPool_RemoveOldBids(t *testing.T) {
-	pool := NewBidPool(testChainConfig)
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain)
 	require.NotNil(t, pool)
 
 	// Start the auction
-	pool.running = 1
+	pool.start()
+	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
 
@@ -222,11 +261,21 @@ func TestBidPool_RemoveOldBids(t *testing.T) {
 }
 
 func TestBidPool_ClearBidPool(t *testing.T) {
-	pool := NewBidPool(testChainConfig)
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain)
 	require.NotNil(t, pool)
 
 	// Start the auction
-	pool.running = 1
+	pool.start()
+	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
 
@@ -254,11 +303,21 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 }
 
 func TestBidPool_UpdateAuctionInfo(t *testing.T) {
-	pool := NewBidPool(testChainConfig)
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain)
 	require.NotNil(t, pool)
 
 	// Start the auction
-	pool.running = 1
+	pool.start()
+	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
 

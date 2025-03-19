@@ -20,6 +20,7 @@ import "errors"
 
 var (
 	ErrInitUnexpectedNil    = errors.New("unexpected nil during module init")
+	ErrBlockNotFound        = errors.New("block not found")
 	ErrInvalidBlockNumber   = errors.New("invalid block number")
 	ErrInvalidSearcherSig   = errors.New("invalid searcher sig")
 	ErrInvalidAuctioneerSig = errors.New("invalid auctioneer sig")
