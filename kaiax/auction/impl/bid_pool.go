@@ -33,9 +33,9 @@ type BidPool struct {
 	auctionEntryPoint common.Address
 
 	bidMu        sync.RWMutex
-	bidTargetMap map[uint64]map[common.Hash]*auction.Bid
-	bidWinnerMap map[uint64]map[common.Address]struct{}
 	bidMap       map[common.Hash]*auction.Bid
+	bidTargetMap map[uint64]map[common.Hash]*auction.Bid
+	bidWinnerMap map[uint64]map[common.Address]common.Hash
 	allBids      map[uint64][]*auction.Bid
 
 	running uint32
@@ -49,7 +49,7 @@ func NewBidPool(chainConfig *params.ChainConfig) *BidPool {
 	return &BidPool{
 		ChainConfig:  chainConfig,
 		bidTargetMap: make(map[uint64]map[common.Hash]*auction.Bid),
-		bidWinnerMap: make(map[uint64]map[common.Address]struct{}),
+		bidWinnerMap: make(map[uint64]map[common.Address]common.Hash),
 		bidMap:       make(map[common.Hash]*auction.Bid),
 		allBids:      make(map[uint64][]*auction.Bid),
 		running:      0, // not running yet
@@ -76,7 +76,7 @@ func (a *BidPool) clearBidPool() {
 	defer a.bidMu.Unlock()
 
 	a.bidTargetMap = make(map[uint64]map[common.Hash]*auction.Bid)
-	a.bidWinnerMap = make(map[uint64]map[common.Address]struct{})
+	a.bidWinnerMap = make(map[uint64]map[common.Address]common.Hash)
 	a.bidMap = make(map[common.Hash]*auction.Bid)
 	a.allBids = make(map[uint64][]*auction.Bid)
 }
@@ -112,10 +112,6 @@ func (a *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
-	if err := a.validateBidSigs(bid); err != nil {
-		return common.Hash{}, err
-	}
-
 	if err := a.insertBid(bid); err != nil {
 		return common.Hash{}, err
 	}
@@ -132,7 +128,8 @@ func (a *BidPool) insertBid(bid *auction.Bid) error {
 
 	// If same block number, same target tx hash exists, replace it if it's better
 	if existingTx, ok := a.bidTargetMap[blockNumber][targetTxHash]; ok {
-		if existingTx.Bid.Cmp(bid.Bid) > 0 {
+		// FCFS if the bid is the same.
+		if existingTx.Bid.Cmp(bid.Bid) >= 0 {
 			return auction.ErrLowBid
 		}
 
@@ -143,12 +140,11 @@ func (a *BidPool) insertBid(bid *auction.Bid) error {
 
 	hash := bid.Hash()
 
+	a.initializeBidMap(blockNumber)
+
 	a.bidMap[hash] = bid
 	a.bidTargetMap[blockNumber][targetTxHash] = bid
-	a.bidWinnerMap[blockNumber][sender] = struct{}{}
-	if _, ok := a.allBids[blockNumber]; !ok {
-		a.allBids[blockNumber] = make([]*auction.Bid, 0)
-	}
+	a.bidWinnerMap[blockNumber][sender] = hash
 	a.allBids[blockNumber] = append(a.allBids[blockNumber], bid)
 
 	logger.Trace("Add bid", "bid", hash)
@@ -156,9 +152,25 @@ func (a *BidPool) insertBid(bid *auction.Bid) error {
 	return nil
 }
 
+func (a *BidPool) initializeBidMap(num uint64) {
+	if _, ok := a.bidTargetMap[num]; !ok {
+		a.bidTargetMap[num] = make(map[common.Hash]*auction.Bid)
+	}
+	if _, ok := a.bidWinnerMap[num]; !ok {
+		a.bidWinnerMap[num] = make(map[common.Address]common.Hash)
+	}
+	if _, ok := a.allBids[num]; !ok {
+		a.allBids[num] = make([]*auction.Bid, 0)
+	}
+}
+
 func (a *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
 	sender := bid.Sender
+
+	if bid.Bid.Sign() <= 0 {
+		return auction.ErrZeroBid
+	}
 
 	// Check if the auction tx is already in the pool.
 	if _, ok := a.bidMap[bid.Hash()]; ok {
@@ -167,13 +179,30 @@ func (a *BidPool) validateBid(bid *auction.Bid) error {
 
 	// Check if the sender is already in the winner list.
 	if _, ok := a.bidWinnerMap[blockNumber][sender]; ok {
-		return auction.ErrBidSenderExists
+		if !isSameBid(bid, a.bidMap[a.bidWinnerMap[blockNumber][sender]]) {
+			return auction.ErrBidSenderExists
+		}
+	}
+
+	// Check if the bid is valid.
+	if err := a.validateBidSigs(bid); err != nil {
+		return err
 	}
 
 	return nil
 }
 
+func (a *BidPool) stats() int {
+	a.bidMu.RLock()
+	defer a.bidMu.RUnlock()
+
+	return len(a.bidMap)
+}
+
 func (a *BidPool) validateBidSigs(bid *auction.Bid) error {
+	a.auctionInfoMu.RLock()
+	defer a.auctionInfoMu.RUnlock()
+
 	// Verify the EIP712 signature.
 	if err := bid.ValidateSearcherSig(a.ChainConfig.ChainID, a.auctionEntryPoint); err != nil {
 		return err
@@ -185,4 +214,8 @@ func (a *BidPool) validateBidSigs(bid *auction.Bid) error {
 	}
 
 	return nil
+}
+
+func isSameBid(bid1 *auction.Bid, bid2 *auction.Bid) bool {
+	return bid1.BlockNumber == bid2.BlockNumber && bid1.TargetTxHash == bid2.TargetTxHash
 }
