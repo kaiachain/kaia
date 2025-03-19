@@ -17,8 +17,12 @@
 package impl
 
 import (
+	"fmt"
+	"math/big"
 	"sync/atomic"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
@@ -37,9 +41,8 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 		atomic.CompareAndSwapUint32(&a.bidPool.running, 0, 1)
 	}
 
-	if atomic.LoadUint32(&a.bidPool.running) == 1 {
-		a.bidPool.removeOldBids(block.Number().Uint64())
-	}
+	// Remove old bids unconditionally.
+	a.bidPool.removeOldBids(block.Number().Uint64())
 
 	return nil
 }
@@ -50,4 +53,33 @@ func (a *AuctionModule) RewindTo(newBlock *types.Block) {
 
 func (a *AuctionModule) RewindDelete(hash common.Hash, num uint64) {
 	// Nothing to do.
+}
+
+// updateAuctionInfo updates the auctioneer address and auction entry point address for the given block number.
+// It expects the `num` is after Randao fork.
+func (a *AuctionModule) updateAuctionInfo(num *big.Int) error {
+	header := a.Chain.GetHeaderByNumber(num.Uint64())
+	if header == nil {
+		return fmt.Errorf("failed to get header for block number %d", num.Uint64())
+	}
+	_, err := a.Chain.StateAt(header.Root)
+	if err != nil {
+		return fmt.Errorf("failed to get state for block number %d: %v", num.Uint64(), err)
+	}
+
+	backend := backends.NewBlockchainContractBackend(a.Chain, nil, nil)
+
+	auctionEntryPointAddr, err := system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
+	if err != nil {
+		return fmt.Errorf("failed to read auction entry point address: %v", err)
+	}
+
+	auctioneer, err := system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
+	if err != nil {
+		return fmt.Errorf("failed to read auctioneer address: %v", err)
+	}
+
+	a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr)
+
+	return nil
 }

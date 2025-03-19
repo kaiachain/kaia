@@ -64,21 +64,23 @@ var (
 	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
 	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	// The following addresses are only used for testing.
-	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
-	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
+	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000402")
+	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")
+	AuctionEntryPointAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000404")
 
 	// Registry will return zero address for non-existent system contract.
 	NonExistentAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	// System contract binaries to be injected at hardfork or used in testing.
-	MainnetCreditCode   = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
-	MainnetCreditV2Code = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
-	RegistryCode        = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
-	RegistryMockCode    = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
-	Kip160MockCode      = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)
-	Kip103MockCode      = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockBinRuntime)
-	Kip113Code          = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
-	Kip113MockCode      = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
+	MainnetCreditCode         = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
+	MainnetCreditV2Code       = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
+	RegistryCode              = hexutil.MustDecode("0x" + kip149contract.RegistryBinRuntime)
+	RegistryMockCode          = hexutil.MustDecode("0x" + testcontract.RegistryMockBinRuntime)
+	Kip160MockCode            = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockV2BinRuntime)
+	Kip103MockCode            = hexutil.MustDecode("0x" + testcontract.TreasuryRebalanceMockBinRuntime)
+	Kip113Code                = hexutil.MustDecode("0x" + kip113contract.SimpleBlsRegistryBinRuntime)
+	Kip113MockCode            = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
+	AuctionEntryPointMockCode = hexutil.MustDecode("0x" + testcontract.AuctionEntryPointMockBinRuntime)
 
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 
