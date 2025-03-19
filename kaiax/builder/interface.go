@@ -38,7 +38,7 @@ type TxBundlingModule interface {
 
 	// The function filters transactions to be executed.
 	// It can only remove transactions.
-	FilterTx(txs []*types.Transaction)
+	FilterTxs(txs map[common.Address]types.Transactions)
 }
 
 // Any component or module that accomodate tx bundling modules.
