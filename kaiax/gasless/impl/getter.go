@@ -284,7 +284,6 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 
 func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
 	swapRouter, tokens, err := getGaslessInfo(g.Chain, blockNumber)
-
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = nil
