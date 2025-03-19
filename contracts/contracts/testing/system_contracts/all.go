@@ -29,6 +29,20 @@ var (
 	_ = abi.ConvertType
 )
 
+// AuctionEntryPointMockAuctionTx is an auto generated low-level Go binding around an user-defined struct.
+type AuctionEntryPointMockAuctionTx struct {
+	TargetTxHash  [32]byte
+	BlockNumber   *big.Int
+	Sender        common.Address
+	To            common.Address
+	Nonce         *big.Int
+	Bid           *big.Int
+	CallGasLimit  *big.Int
+	Data          []byte
+	SearcherSig   []byte
+	AuctioneerSig []byte
+}
+
 // IKIP113BlsPublicKeyInfo is an auto generated low-level Go binding around an user-defined struct.
 type IKIP113BlsPublicKeyInfo struct {
 	PublicKey []byte
@@ -215,6 +229,292 @@ func (_AddressUpgradeable *AddressUpgradeableTransactorRaw) Transfer(opts *bind.
 // Transact invokes the (paid) contract method with params as input values.
 func (_AddressUpgradeable *AddressUpgradeableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _AddressUpgradeable.Contract.contract.Transact(opts, method, params...)
+}
+
+// AuctionEntryPointMockMetaData contains all meta data concerning the AuctionEntryPointMock contract.
+var AuctionEntryPointMockMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structAuctionEntryPointMock.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"setAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"5ec2c7bf": "auctioneer()",
+		"ca157554": "call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
+		"06661abd": "count()",
+		"00ede7e4": "setAuctioneer(address)",
+	},
+	Bin: "0x608060405234801561001057600080fd5b50610207806100206000396000f3fe608060405234801561001057600080fd5b506004361061004b5760003560e01c8062ede7e41461005057806306661abd146100825780635ec2c7bf1461009e578063ca157554146100c9575b600080fd5b61008061005e36600461013e565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b61008b60015481565b6040519081526020015b60405180910390f35b6000546100b1906001600160a01b031681565b6040516001600160a01b039091168152602001610095565b6100806100d736600461016e565b3341146100e357600080fd5b6100ec8161010d565b6100f557600080fd5b60018054906000610105836101aa565b919050555050565b60004382602001351461012257506000919050565b60008260a001351161013657506000919050565b506001919050565b60006020828403121561015057600080fd5b81356001600160a01b038116811461016757600080fd5b9392505050565b60006020828403121561018057600080fd5b813567ffffffffffffffff81111561019757600080fd5b8201610140818503121561016757600080fd5b6000600182016101ca57634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122048efb20df156c35937fffb4468794bfe40f552f1f97609f33e53c503b9f2602464736f6c63430008130033",
+}
+
+// AuctionEntryPointMockABI is the input ABI used to generate the binding from.
+// Deprecated: Use AuctionEntryPointMockMetaData.ABI instead.
+var AuctionEntryPointMockABI = AuctionEntryPointMockMetaData.ABI
+
+// AuctionEntryPointMockBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const AuctionEntryPointMockBinRuntime = `608060405234801561001057600080fd5b506004361061004b5760003560e01c8062ede7e41461005057806306661abd146100825780635ec2c7bf1461009e578063ca157554146100c9575b600080fd5b61008061005e36600461013e565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b61008b60015481565b6040519081526020015b60405180910390f35b6000546100b1906001600160a01b031681565b6040516001600160a01b039091168152602001610095565b6100806100d736600461016e565b3341146100e357600080fd5b6100ec8161010d565b6100f557600080fd5b60018054906000610105836101aa565b919050555050565b60004382602001351461012257506000919050565b60008260a001351161013657506000919050565b506001919050565b60006020828403121561015057600080fd5b81356001600160a01b038116811461016757600080fd5b9392505050565b60006020828403121561018057600080fd5b813567ffffffffffffffff81111561019757600080fd5b8201610140818503121561016757600080fd5b6000600182016101ca57634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122048efb20df156c35937fffb4468794bfe40f552f1f97609f33e53c503b9f2602464736f6c63430008130033`
+
+// Deprecated: Use AuctionEntryPointMockMetaData.Sigs instead.
+// AuctionEntryPointMockFuncSigs maps the 4-byte function signature to its string representation.
+var AuctionEntryPointMockFuncSigs = AuctionEntryPointMockMetaData.Sigs
+
+// AuctionEntryPointMockBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use AuctionEntryPointMockMetaData.Bin instead.
+var AuctionEntryPointMockBin = AuctionEntryPointMockMetaData.Bin
+
+// DeployAuctionEntryPointMock deploys a new Kaia contract, binding an instance of AuctionEntryPointMock to it.
+func DeployAuctionEntryPointMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *AuctionEntryPointMock, error) {
+	parsed, err := AuctionEntryPointMockMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(AuctionEntryPointMockBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &AuctionEntryPointMock{AuctionEntryPointMockCaller: AuctionEntryPointMockCaller{contract: contract}, AuctionEntryPointMockTransactor: AuctionEntryPointMockTransactor{contract: contract}, AuctionEntryPointMockFilterer: AuctionEntryPointMockFilterer{contract: contract}}, nil
+}
+
+// AuctionEntryPointMock is an auto generated Go binding around a Kaia contract.
+type AuctionEntryPointMock struct {
+	AuctionEntryPointMockCaller     // Read-only binding to the contract
+	AuctionEntryPointMockTransactor // Write-only binding to the contract
+	AuctionEntryPointMockFilterer   // Log filterer for contract events
+}
+
+// AuctionEntryPointMockCaller is an auto generated read-only Go binding around a Kaia contract.
+type AuctionEntryPointMockCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AuctionEntryPointMockTransactor is an auto generated write-only Go binding around a Kaia contract.
+type AuctionEntryPointMockTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AuctionEntryPointMockFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type AuctionEntryPointMockFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AuctionEntryPointMockSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type AuctionEntryPointMockSession struct {
+	Contract     *AuctionEntryPointMock // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts          // Call options to use throughout this session
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// AuctionEntryPointMockCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type AuctionEntryPointMockCallerSession struct {
+	Contract *AuctionEntryPointMockCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                // Call options to use throughout this session
+}
+
+// AuctionEntryPointMockTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type AuctionEntryPointMockTransactorSession struct {
+	Contract     *AuctionEntryPointMockTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                // Transaction auth options to use throughout this session
+}
+
+// AuctionEntryPointMockRaw is an auto generated low-level Go binding around a Kaia contract.
+type AuctionEntryPointMockRaw struct {
+	Contract *AuctionEntryPointMock // Generic contract binding to access the raw methods on
+}
+
+// AuctionEntryPointMockCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type AuctionEntryPointMockCallerRaw struct {
+	Contract *AuctionEntryPointMockCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// AuctionEntryPointMockTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type AuctionEntryPointMockTransactorRaw struct {
+	Contract *AuctionEntryPointMockTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewAuctionEntryPointMock creates a new instance of AuctionEntryPointMock, bound to a specific deployed contract.
+func NewAuctionEntryPointMock(address common.Address, backend bind.ContractBackend) (*AuctionEntryPointMock, error) {
+	contract, err := bindAuctionEntryPointMock(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionEntryPointMock{AuctionEntryPointMockCaller: AuctionEntryPointMockCaller{contract: contract}, AuctionEntryPointMockTransactor: AuctionEntryPointMockTransactor{contract: contract}, AuctionEntryPointMockFilterer: AuctionEntryPointMockFilterer{contract: contract}}, nil
+}
+
+// NewAuctionEntryPointMockCaller creates a new read-only instance of AuctionEntryPointMock, bound to a specific deployed contract.
+func NewAuctionEntryPointMockCaller(address common.Address, caller bind.ContractCaller) (*AuctionEntryPointMockCaller, error) {
+	contract, err := bindAuctionEntryPointMock(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionEntryPointMockCaller{contract: contract}, nil
+}
+
+// NewAuctionEntryPointMockTransactor creates a new write-only instance of AuctionEntryPointMock, bound to a specific deployed contract.
+func NewAuctionEntryPointMockTransactor(address common.Address, transactor bind.ContractTransactor) (*AuctionEntryPointMockTransactor, error) {
+	contract, err := bindAuctionEntryPointMock(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionEntryPointMockTransactor{contract: contract}, nil
+}
+
+// NewAuctionEntryPointMockFilterer creates a new log filterer instance of AuctionEntryPointMock, bound to a specific deployed contract.
+func NewAuctionEntryPointMockFilterer(address common.Address, filterer bind.ContractFilterer) (*AuctionEntryPointMockFilterer, error) {
+	contract, err := bindAuctionEntryPointMock(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &AuctionEntryPointMockFilterer{contract: contract}, nil
+}
+
+// bindAuctionEntryPointMock binds a generic wrapper to an already deployed contract.
+func bindAuctionEntryPointMock(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := AuctionEntryPointMockMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AuctionEntryPointMock *AuctionEntryPointMockRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _AuctionEntryPointMock.Contract.AuctionEntryPointMockCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AuctionEntryPointMock *AuctionEntryPointMockRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.AuctionEntryPointMockTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AuctionEntryPointMock *AuctionEntryPointMockRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.AuctionEntryPointMockTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AuctionEntryPointMock *AuctionEntryPointMockCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _AuctionEntryPointMock.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.contract.Transact(opts, method, params...)
+}
+
+// Auctioneer is a free data retrieval call binding the contract method 0x5ec2c7bf.
+//
+// Solidity: function auctioneer() view returns(address)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCaller) Auctioneer(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _AuctionEntryPointMock.contract.Call(opts, &out, "auctioneer")
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// Auctioneer is a free data retrieval call binding the contract method 0x5ec2c7bf.
+//
+// Solidity: function auctioneer() view returns(address)
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) Auctioneer() (common.Address, error) {
+	return _AuctionEntryPointMock.Contract.Auctioneer(&_AuctionEntryPointMock.CallOpts)
+}
+
+// Auctioneer is a free data retrieval call binding the contract method 0x5ec2c7bf.
+//
+// Solidity: function auctioneer() view returns(address)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCallerSession) Auctioneer() (common.Address, error) {
+	return _AuctionEntryPointMock.Contract.Auctioneer(&_AuctionEntryPointMock.CallOpts)
+}
+
+// Count is a free data retrieval call binding the contract method 0x06661abd.
+//
+// Solidity: function count() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCaller) Count(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AuctionEntryPointMock.contract.Call(opts, &out, "count")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// Count is a free data retrieval call binding the contract method 0x06661abd.
+//
+// Solidity: function count() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) Count() (*big.Int, error) {
+	return _AuctionEntryPointMock.Contract.Count(&_AuctionEntryPointMock.CallOpts)
+}
+
+// Count is a free data retrieval call binding the contract method 0x06661abd.
+//
+// Solidity: function count() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCallerSession) Count() (*big.Int, error) {
+	return _AuctionEntryPointMock.Contract.Count(&_AuctionEntryPointMock.CallOpts)
+}
+
+// Call is a paid mutator transaction binding the contract method 0xca157554.
+//
+// Solidity: function call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes) auctionTx) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactor) Call(opts *bind.TransactOpts, auctionTx AuctionEntryPointMockAuctionTx) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.contract.Transact(opts, "call", auctionTx)
+}
+
+// Call is a paid mutator transaction binding the contract method 0xca157554.
+//
+// Solidity: function call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes) auctionTx) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) Call(auctionTx AuctionEntryPointMockAuctionTx) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.Call(&_AuctionEntryPointMock.TransactOpts, auctionTx)
+}
+
+// Call is a paid mutator transaction binding the contract method 0xca157554.
+//
+// Solidity: function call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes) auctionTx) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorSession) Call(auctionTx AuctionEntryPointMockAuctionTx) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.Call(&_AuctionEntryPointMock.TransactOpts, auctionTx)
+}
+
+// SetAuctioneer is a paid mutator transaction binding the contract method 0x00ede7e4.
+//
+// Solidity: function setAuctioneer(address _auctioneer) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactor) SetAuctioneer(opts *bind.TransactOpts, _auctioneer common.Address) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.contract.Transact(opts, "setAuctioneer", _auctioneer)
+}
+
+// SetAuctioneer is a paid mutator transaction binding the contract method 0x00ede7e4.
+//
+// Solidity: function setAuctioneer(address _auctioneer) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) SetAuctioneer(_auctioneer common.Address) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.SetAuctioneer(&_AuctionEntryPointMock.TransactOpts, _auctioneer)
+}
+
+// SetAuctioneer is a paid mutator transaction binding the contract method 0x00ede7e4.
+//
+// Solidity: function setAuctioneer(address _auctioneer) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorSession) SetAuctioneer(_auctioneer common.Address) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.SetAuctioneer(&_AuctionEntryPointMock.TransactOpts, _auctioneer)
 }
 
 // ContextUpgradeableMetaData contains all meta data concerning the ContextUpgradeable contract.

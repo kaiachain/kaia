@@ -16,39 +16,6 @@
 
 package impl
 
-import (
-	"fmt"
-	"math/big"
-
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/system"
-)
-
-// updateAuctionInfo updates the auctioneer address and auction entry point address for the given block number.
-// It expects the `num` is after Randao fork.
-func (a *AuctionModule) updateAuctionInfo(num *big.Int) error {
-	header := a.Chain.GetHeaderByNumber(num.Uint64())
-	if header == nil {
-		return fmt.Errorf("failed to get header for block number %d", num.Uint64())
-	}
-	_, err := a.Chain.StateAt(header.Root)
-	if err != nil {
-		return fmt.Errorf("failed to get state for block number %d: %v", num.Uint64(), err)
-	}
-
-	backend := backends.NewBlockchainContractBackend(a.Chain, nil, nil)
-
-	auctionEntryPointAddr, err := system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
-	if err != nil {
-		return fmt.Errorf("failed to read auction entry point address: %v", err)
-	}
-
-	auctioneer, err := system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
-	if err != nil {
-		return fmt.Errorf("failed to read auctioneer address: %v", err)
-	}
-
-	a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr)
-
-	return nil
+func (a *AuctionModule) Stats() int {
+	return a.bidPool.stats()
 }

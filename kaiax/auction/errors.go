@@ -29,6 +29,7 @@ var (
 	ErrBidInvalidSearcherSig   = errors.New("invalid searcher sig")
 	ErrBidInvalidAuctioneerSig = errors.New("invalid auctioneer sig")
 	ErrLowBid                  = errors.New("low bid")
+	ErrZeroBid                 = errors.New("zero bid")
 
 	ErrAuctionPaused = errors.New("auction is paused")
 )
