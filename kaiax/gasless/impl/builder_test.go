@@ -42,6 +42,7 @@ func TestExtractTxBundles(t *testing.T) {
 	nodeKey, _ := crypto.GenerateKey()
 	disabled, err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
+		CNConfig:    testCNConfig,
 		NodeKey:     nodeKey,
 		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{sdb},

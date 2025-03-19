@@ -45,6 +45,7 @@ func TestIsModuleTx(t *testing.T) {
 	nodekey, _ := crypto.GenerateKey()
 	disabled, err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
+		CNConfig:    testCNConfig,
 		NodeKey:     nodekey,
 		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{},
@@ -187,6 +188,7 @@ func TestIsReady(t *testing.T) {
 			g := NewGaslessModule()
 			disabled, err := g.Init(&InitOpts{
 				ChainConfig: testChainConfig,
+				CNConfig:    testCNConfig,
 				NodeKey:     nodeKey,
 				Chain:       backend.BlockChain(),
 				TxPool:      &testTxPool{cdb},
@@ -337,6 +339,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 		g := NewGaslessModule()
 		disabled, err := g.Init(&InitOpts{
 			ChainConfig: testChainConfig,
+			CNConfig:    testCNConfig,
 			NodeKey:     nodeKey,
 			Chain:       backend.BlockChain(),
 			TxPool:      pool,
@@ -429,6 +432,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 		g := NewGaslessModule()
 		disabled, err := g.Init(&InitOpts{
 			ChainConfig: testChainConfig,
+			CNConfig:    testCNConfig,
 			NodeKey:     nodeKey,
 			Chain:       backend.BlockChain(),
 			TxPool:      pool,

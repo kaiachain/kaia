@@ -43,6 +43,7 @@ func TestIsApproveTx(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	disabled, err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
+		CNConfig:    testCNConfig,
 		NodeKey:     key,
 		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{},
@@ -93,6 +94,7 @@ func TestIsSwapTx(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	disabled, err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
+		CNConfig:    testCNConfig,
 		NodeKey:     key,
 		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{},
@@ -140,6 +142,7 @@ func TestIsExecutable(t *testing.T) {
 	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	disabled, err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
+		CNConfig:    testCNConfig,
 		NodeKey:     key,
 		Chain:       backend.BlockChain(),
 		TxPool:      &testTxPool{sdb},
@@ -244,6 +247,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 			pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 			disabled, err := g.Init(&InitOpts{
 				ChainConfig: testChainConfig,
+				CNConfig:    testCNConfig,
 				NodeKey:     nodekey,
 				Chain:       backend.BlockChain(),
 				TxPool:      pool,

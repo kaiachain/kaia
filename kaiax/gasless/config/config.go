@@ -24,7 +24,7 @@ import (
 var (
 	AllowedTokensFlag = &cli.StringSliceFlag{
 		Name:    "gasless.allowed-tokens",
-		Usage:   "allow token addresses for gasless module. default is all.",
+		Usage:   "allow token addresses for gasless module, default is all",
 		Value:   cli.NewStringSlice("all"),
 		Aliases: []string{"genesis.module.gasless.allowed-tokens"},
 	}
@@ -36,12 +36,13 @@ var (
 	}
 )
 
-type ChainConfig struct {
-	AllowedTokens []common.Address `json:"allowedTokens,omitempty"` // all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
-	IsDisabled    bool             `json:"isDisabled"`
+type CNConfig struct {
+	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
+	AllowedTokens []common.Address `toml:",omitempty"`
+	Disable       bool
 }
 
-func GenGenesis(ctx *cli.Context) *ChainConfig {
+func GetCNConfig(ctx *cli.Context) *CNConfig {
 	allowedTokens := []common.Address{}
 	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
 		if addr == "all" {
@@ -50,8 +51,8 @@ func GenGenesis(ctx *cli.Context) *ChainConfig {
 		}
 		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
 	}
-	return &ChainConfig{
+	return &CNConfig{
 		AllowedTokens: allowedTokens,
-		IsDisabled:    ctx.Bool(DisableFlag.Name),
+		Disable:       ctx.Bool(DisableFlag.Name),
 	}
 }

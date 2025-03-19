@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	gasless "github.com/kaiachain/kaia/kaiax/gasless/config"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
@@ -757,6 +758,9 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
+
+	// Set kaiax module config
+	cfg.Gasless = gasless.GetCNConfig(ctx)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value

@@ -49,10 +49,6 @@ var (
 			},
 			KIP71: params.GetDefaultKIP71Config(),
 		},
-		Gasless: &gasless_cfg.ChainConfig{
-			AllowedTokens: nil,
-			IsDisabled:    false,
-		},
 		IstanbulCompatibleBlock:  big.NewInt(0),
 		LondonCompatibleBlock:    big.NewInt(0),
 		EthTxTypeCompatibleBlock: big.NewInt(0),
@@ -65,6 +61,10 @@ var (
 		Kip103CompatibleBlock:    big.NewInt(0),
 		Kip160CompatibleBlock:    big.NewInt(0),
 		RandaoCompatibleBlock:    big.NewInt(0),
+	}
+	testCNConfig = &gasless_cfg.CNConfig{
+		AllowedTokens: nil,
+		Disable:       false,
 	}
 
 	// interface DummyGSR {

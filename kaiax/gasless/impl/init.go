@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
+	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -32,6 +33,7 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
+	CNConfig    *gasless_cfg.CNConfig
 	NodeKey     *ecdsa.PrivateKey
 	Chain       backends.BlockChainForCaller
 	TxPool      kaiax.TxPoolForCaller
@@ -49,11 +51,11 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
-	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.CNConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
 		return true, ErrInitUnexpectedNil
 	}
 
-	if opts.ChainConfig.Gasless == nil || opts.ChainConfig.Gasless.IsDisabled {
+	if opts.CNConfig.Disable {
 		return true, nil
 	}
 

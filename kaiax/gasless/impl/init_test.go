@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
@@ -30,96 +31,83 @@ func TestInitSuccess(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 
 	tcs := map[string]struct {
-		getOpts  func() *InitOpts
+		opts     *InitOpts
 		disabled bool
 		err      error
 	}{
 		"correct chain conifg": {
-			func() *InitOpts {
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
-				return &InitOpts{
-					testChainConfig,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			false,
 			nil,
 		},
-		"chain conifg is nil": {
-			func() *InitOpts {
-				return nil
+		"init option is nil": {
+			nil,
+			true,
+			ErrInitUnexpectedNil,
+		},
+		"cn config is nil": {
+			&InitOpts{
+				testChainConfig,
+				nil,
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			true,
 			ErrInitUnexpectedNil,
 		},
 		"node key is nil": {
-			func() *InitOpts {
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
-				return &InitOpts{
-					testChainConfig,
-					nil,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				nil,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			true,
 			ErrInitUnexpectedNil,
 		},
 		"chain is nil": {
-			func() *InitOpts {
-				return &InitOpts{
-					testChainConfig,
-					key,
-					nil,
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				nil,
+				&testTxPool{},
 			},
 			true,
 			ErrInitUnexpectedNil,
 		},
 		"tx pool is nil": {
-			func() *InitOpts {
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
-				return &InitOpts{
-					testChainConfig,
-					key,
-					backend.BlockChain(),
-					nil,
-				}
-			},
-			true,
-			ErrInitUnexpectedNil,
-		},
-		"gasless config is nil": {
-			func() *InitOpts {
-				cfg := testChainConfig.Copy()
-				cfg.Gasless = nil
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, cfg)
-				return &InitOpts{
-					cfg,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				backend.BlockChain(),
+				nil,
 			},
 			true,
 			ErrInitUnexpectedNil,
 		},
 		"gasless is disabled": {
-			func() *InitOpts {
-				cfg := testChainConfig.Copy()
-				cfg.Gasless.IsDisabled = true
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, cfg)
-				return &InitOpts{
-					cfg,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				&gasless_cfg.CNConfig{
+					AllowedTokens: nil,
+					Disable:       true,
+				},
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			true,
 			nil,
@@ -128,7 +116,7 @@ func TestInitSuccess(t *testing.T) {
 
 	for _, tc := range tcs {
 		g := NewGaslessModule()
-		disabled, err := g.Init(tc.getOpts())
+		disabled, err := g.Init(tc.opts)
 		require.Equal(t, tc.disabled, disabled)
 		require.ErrorIs(t, tc.err, err)
 	}
@@ -138,62 +126,58 @@ func TestInitAllowedTokens(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 
 	tcs := map[string]struct {
-		getOpts       func() *InitOpts
+		opts          *InitOpts
 		allowedTokens []common.Address
 	}{
 		"allowed tokens are nil": {
-			func() *InitOpts {
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
-				return &InitOpts{
-					testChainConfig,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				testCNConfig,
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2, dummyTokenAddress3},
 		},
 		"allowed tokens are empty slice": {
-			func() *InitOpts {
-				cfg := testChainConfig.Copy()
-				cfg.Gasless.AllowedTokens = []common.Address{}
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, cfg)
-				return &InitOpts{
-					cfg,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				&gasless_cfg.CNConfig{
+					AllowedTokens: []common.Address{},
+					Disable:       false,
+				},
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			[]common.Address{},
 		},
 		"allowed tokens have existing addresses": {
-			func() *InitOpts {
-				cfg := testChainConfig.Copy()
-				cfg.Gasless.AllowedTokens = []common.Address{dummyTokenAddress1, dummyTokenAddress2}
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, cfg)
-				return &InitOpts{
-					cfg,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				&gasless_cfg.CNConfig{
+					AllowedTokens: []common.Address{dummyTokenAddress1, dummyTokenAddress2},
+					Disable:       false,
+				},
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2},
 		},
 		"allowed tokens have a non-existing address": {
-			func() *InitOpts {
-				cfg := testChainConfig.Copy()
-				cfg.Gasless.AllowedTokens = []common.Address{common.HexToAddress("0xffff")}
-				backend := backends.NewSimulatedBackendWithDatabase(db, alloc, cfg)
-				return &InitOpts{
-					cfg,
-					key,
-					backend.BlockChain(),
-					&testTxPool{},
-				}
+			&InitOpts{
+				testChainConfig,
+				&gasless_cfg.CNConfig{
+					AllowedTokens: []common.Address{common.HexToAddress("0xffff")},
+					Disable:       false,
+				},
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
 			},
 			[]common.Address{},
 		},
@@ -202,7 +186,7 @@ func TestInitAllowedTokens(t *testing.T) {
 	for name, tc := range tcs {
 		t.Run(name, func(t *testing.T) {
 			g := NewGaslessModule()
-			disabled, err := g.Init(tc.getOpts())
+			disabled, err := g.Init(tc.opts)
 			require.NoError(t, err)
 			require.False(t, disabled)
 

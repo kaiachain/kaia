@@ -554,6 +554,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	disabled, err := mGasless.Init(&gasless_impl.InitOpts{
 		ChainConfig: s.chainConfig,
+		CNConfig:    s.config.Gasless,
 		NodeKey:     ctx.NodeKey(),
 		Chain:       s.blockchain,
 		TxPool:      s.txPool,

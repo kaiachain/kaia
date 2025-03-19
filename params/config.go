@@ -28,7 +28,6 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
-	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -242,9 +241,6 @@ type ChainConfig struct {
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
 	Governance    *GovernanceConfig `json:"governance"`
-
-	// kaiax module config
-	Gasless *gasless_cfg.ChainConfig `json:"gasless,omitempty"`
 }
 
 // GovernanceConfig stores governance information for a network

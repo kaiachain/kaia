@@ -51,6 +51,7 @@ func TestPostInsertBlock(t *testing.T) {
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 				disabled, err := g.Init(&InitOpts{
 					ChainConfig: testChainConfig,
+					CNConfig:    testCNConfig,
 					NodeKey:     nodekey,
 					Chain:       backend.BlockChain(),
 					TxPool:      &testTxPool{},
@@ -77,6 +78,7 @@ func TestPostInsertBlock(t *testing.T) {
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 				disabled, err := g.Init(&InitOpts{
 					ChainConfig: testChainConfig,
+					CNConfig:    testCNConfig,
 					NodeKey:     nodekey,
 					Chain:       backend.BlockChain(),
 					TxPool:      &testTxPool{},
