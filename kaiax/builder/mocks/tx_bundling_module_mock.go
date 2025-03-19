@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -49,14 +50,14 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
-// FilterTx mocks base method.
-func (m *MockTxBundlingModule) FilterTx(arg0 []*types.Transaction) {
+// FilterTxs mocks base method.
+func (m *MockTxBundlingModule) FilterTxs(arg0 map[common.Address]types.Transactions) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "FilterTx", arg0)
+	m.ctrl.Call(m, "FilterTxs", arg0)
 }
 
-// FilterTx indicates an expected call of FilterTx.
-func (mr *MockTxBundlingModuleMockRecorder) FilterTx(arg0 interface{}) *gomock.Call {
+// FilterTxs indicates an expected call of FilterTxs.
+func (mr *MockTxBundlingModuleMockRecorder) FilterTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTx", reflect.TypeOf((*MockTxBundlingModule)(nil).FilterTx), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTxs", reflect.TypeOf((*MockTxBundlingModule)(nil).FilterTxs), arg0)
 }

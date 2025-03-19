@@ -552,6 +552,9 @@ func (self *worker) commitNewWork() {
 			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
+
+		// Filter txs with txBundlingModules
+		pending = builder_impl.FilterTxs(pending, self.txBundlingModules)
 	}
 
 	header := &types.Header{
