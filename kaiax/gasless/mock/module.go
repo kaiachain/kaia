@@ -132,3 +132,29 @@ func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
 }
+
+// Start mocks base method.
+func (m *MockGaslessModule) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockGaslessModuleMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockGaslessModule)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockGaslessModule) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockGaslessModuleMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockGaslessModule)(nil).Stop))
+}

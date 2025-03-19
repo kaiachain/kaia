@@ -73,3 +73,10 @@ func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
 
 	return false, nil
 }
+
+func (g *GaslessModule) Start() error {
+	return nil
+}
+
+func (g *GaslessModule) Stop() {
+}
