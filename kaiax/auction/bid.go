@@ -19,12 +19,15 @@ package auction
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"slices"
 	"sync/atomic"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 const (
@@ -86,27 +89,44 @@ type Bid struct {
 	hash atomic.Value
 }
 
-func (at *Bid) Hash() common.Hash {
-	if at.hash.Load() == nil {
-		at.hash.Store(crypto.Keccak256Hash(at.EncodeData()))
-	}
-	return at.hash.Load().(common.Hash)
+func (b *Bid) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, b.bidData)
 }
 
-func (at *Bid) EncodeType() []byte {
+func (b *Bid) DecodeRLP(r io.Reader) error {
+	return rlp.Decode(r, &b.bidData)
+}
+
+func (b *Bid) Hash() common.Hash {
+	if hash := b.hash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	hash := rlpHash(b.bidData)
+	b.hash.Store(hash)
+	return hash
+}
+
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
+
+func (b *Bid) EncodeType() []byte {
 	return auctionTypeHash.Bytes()
 }
 
-func (at *Bid) EncodeData() []byte {
+func (b *Bid) EncodeData() []byte {
 	encoded := make([]byte, 0)
-	encoded = append(encoded, at.TargetTxHash.Bytes()...)
-	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(at.BlockNumber), 32)...)
-	encoded = append(encoded, common.LeftPadBytes(at.Sender.Bytes(), 32)...)
-	encoded = append(encoded, common.LeftPadBytes(at.To.Bytes(), 32)...)
-	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(at.Nonce), 32)...)
-	encoded = append(encoded, common.LeftPadBytes(at.Bid.Bytes(), 32)...)
-	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(at.CallGasLimit), 32)...)
-	encoded = append(encoded, crypto.Keccak256Hash(at.Data).Bytes()...)
+	encoded = append(encoded, b.TargetTxHash.Bytes()...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.BlockNumber), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.Sender.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.To.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.Nonce), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.Bid.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.CallGasLimit), 32)...)
+	encoded = append(encoded, crypto.Keccak256Hash(b.Data).Bytes()...)
 	return encoded
 }
 
@@ -118,7 +138,7 @@ func encodeEIP712(encoder EIP712Encoder) []byte {
 	return crypto.Keccak256Hash(encoded).Bytes()
 }
 
-func (at *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address) []byte {
+func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address) []byte {
 	if chainId == nil {
 		return nil
 	}
@@ -132,17 +152,17 @@ func (at *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Addre
 	}
 
 	domainSeparator := encodeEIP712(domain)
-	structHash := encodeEIP712(at)
+	structHash := encodeEIP712(b)
 
 	return crypto.Keccak256([]byte{0x19, 0x01}, domainSeparator, structHash)
 }
 
-func (at *Bid) GetEthSignedMessageHash() []byte {
-	data := at.SearcherSig
+func (b *Bid) GetEthSignedMessageHash() []byte {
+	data := b.SearcherSig
 	return crypto.Keccak256(fmt.Appendf(nil, "\x19Ethereum Signed Message:\n%d%s", len(data), data))
 }
 
-func (at *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
+func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
 	if chainId == nil {
 		return errors.New("chainId is nil")
 	}
@@ -151,10 +171,10 @@ func (at *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Ad
 		return errors.New("verifyingContract is empty")
 	}
 
-	digest := at.GetHashTypedData(chainId, verifyingContract)
+	digest := b.GetHashTypedData(chainId, verifyingContract)
 
 	// Manually convert V from 27/28 to 0/1
-	sig := slices.Clone(at.SearcherSig)
+	sig := slices.Clone(b.SearcherSig)
 	if sig[crypto.RecoveryIDOffset] == 27 || sig[crypto.RecoveryIDOffset] == 28 {
 		sig[crypto.RecoveryIDOffset] -= 27
 	}
@@ -165,18 +185,18 @@ func (at *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Ad
 	}
 
 	recoveredSender := common.BytesToAddress(crypto.Keccak256(pub[1:])[12:])
-	if recoveredSender != at.Sender {
+	if recoveredSender != b.Sender {
 		return errors.New("invalid searcher sig")
 	}
 
 	return nil
 }
 
-func (at *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
-	digest := at.GetEthSignedMessageHash()
+func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
+	digest := b.GetEthSignedMessageHash()
 
 	// Manually convert V from 27/28 to 0/1
-	sig := slices.Clone(at.AuctioneerSig)
+	sig := slices.Clone(b.AuctioneerSig)
 	if sig[crypto.RecoveryIDOffset] == 27 || sig[crypto.RecoveryIDOffset] == 28 {
 		sig[crypto.RecoveryIDOffset] -= 27
 	}
