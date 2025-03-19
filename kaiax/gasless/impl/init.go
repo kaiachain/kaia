@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
@@ -41,7 +40,7 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
-	swapRouter    common.Address
+	swapRouter    *common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
 }
@@ -62,13 +61,7 @@ func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
 	g.InitOpts = *opts
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 
-	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
-	g.swapRouter, err = system.ReadActiveAddressFromRegistry(backend, GaslessSwapRouterName, g.Chain.CurrentBlock().Number())
-	if err != nil {
-		return true, err
-	}
-
-	err = g.updateAllowedTokens(g.Chain.CurrentBlock().Number())
+	err = g.updateAddresses(g.Chain.CurrentBlock().Number())
 	if err != nil {
 		return true, err
 	}

@@ -19,6 +19,7 @@ package impl
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
@@ -75,8 +77,11 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
+	if g.swapRouter == nil {
+		return false
+	}
 	return g.allowedTokens[args.Token] && // A1
-		g.swapRouter == args.Spender && // A3
+		*g.swapRouter == args.Spender && // A3
 		args.Amount.Sign() > 0 // A4
 }
 
@@ -90,7 +95,10 @@ func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isSwapTx(args *SwapArgs) bool {
-	return g.swapRouter == args.Router && // S1
+	if g.swapRouter == nil {
+		return false
+	}
+	return *g.swapRouter == args.Router && // S1
 		g.allowedTokens[args.Token] // S3
 }
 
@@ -275,7 +283,16 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	}
 }
 
-func (g *GaslessModule) updateAllowedTokens(blockNumber *big.Int) error {
+func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
+	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
+	swapRouter, err := system.ReadActiveAddressFromRegistry(backend, GaslessSwapRouterName, g.Chain.CurrentBlock().Number())
+	// proceed even if there is something wrong with registry
+	if err != nil {
+		g.swapRouter = nil
+		return nil
+	}
+	g.swapRouter = &swapRouter
+
 	tokens, err := g.getSupportedTokens(blockNumber)
 	if err != nil {
 		return err
@@ -298,8 +315,11 @@ func (g *GaslessModule) updateAllowedTokens(blockNumber *big.Int) error {
 }
 
 func (g *GaslessModule) getSupportedTokens(blockNumber *big.Int) ([]common.Address, error) {
+	if g.swapRouter == nil {
+		return nil, errors.New("swap router is nil")
+	}
 	backend := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
-	code, err := backend.CodeAt(context.Background(), g.swapRouter, blockNumber)
+	code, err := backend.CodeAt(context.Background(), *g.swapRouter, blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +327,7 @@ func (g *GaslessModule) getSupportedTokens(blockNumber *big.Int) ([]common.Addre
 		return nil, ErrGSRNotInstalled
 	}
 
-	caller, err := contracts.NewGaslessSwapRouterCaller(g.swapRouter, backend)
+	caller, err := contracts.NewGaslessSwapRouterCaller(*g.swapRouter, backend)
 	if err != nil {
 		return nil, err
 	}
