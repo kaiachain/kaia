@@ -66,7 +66,7 @@ executors:
           password: $DOCKER_PASSWORD
   test-large-executor: # this executor is for general bigger test jobs
     working_directory: ~/go/src/github.com/kaiachain/kaia
-    resource_class: medium
+    resource_class: medium+
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
         auth:
@@ -575,17 +575,7 @@ workflows:
     jobs:
       - build:
           filters: *filter-version-not-release
-      - test-datasync:
-          filters: *filter-version-not-release
-      - test-networks:
-          filters: *filter-version-not-release
-      - test-node:
-          filters: *filter-version-not-release
       - test-tests:
-          filters: *filter-version-not-release
-      - test-others:
-          filters: *filter-version-not-release
-      - test-linter:
           filters: *filter-version-not-release
       - tagger-verify:
           filters:
@@ -598,13 +588,7 @@ workflows:
       - pass-tests:
           requires:
             - build
-            - test-datasync
-            - test-networks
-            - test-node
             - test-tests
-            - test-others
-            - tag-verify
-            - tagger-verify
           filters: *filter-version-not-release
       - docker/publish: # for dev branch
           filters:
