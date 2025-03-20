@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -63,7 +62,6 @@ var (
 
 // EthereumAPI provides an API to access the Kaia through the `eth` namespace.
 type EthereumAPI struct {
-	publicFilterAPI          *filters.PublicFilterAPI
 	publicKaiaAPI            *PublicKaiaAPI
 	publicBlockChainAPI      *PublicBlockChainAPI
 	publicTransactionPoolAPI *PublicTransactionPoolAPI
@@ -76,7 +74,6 @@ type EthereumAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthereumAPI(
-	publicFilterAPI *filters.PublicFilterAPI,
 	publicKaiaAPI *PublicKaiaAPI,
 	publicBlockChainAPI *PublicBlockChainAPI,
 	publicTransactionPoolAPI *PublicTransactionPoolAPI,
@@ -84,7 +81,6 @@ func NewEthereumAPI(
 	nodeAddress common.Address,
 ) *EthereumAPI {
 	return &EthereumAPI{
-		publicFilterAPI,
 		publicKaiaAPI,
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
@@ -161,121 +157,6 @@ func (api *EthereumAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool
 // GetHashrate returns ZeroHashrate because Kaia does not have a POW mechanism.
 func (api *EthereumAPI) GetHashrate() uint64 {
 	return ZeroHashrate
-}
-
-// NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
-// as transactions enter the pending state.
-//
-// It is part of the filter package because this filter can be used through the
-// `eth_getFilterChanges` polling method that is also used for log filters.
-//
-// https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
-func (api *EthereumAPI) NewPendingTransactionFilter() rpc.ID {
-	return api.publicFilterAPI.NewPendingTransactionFilter()
-}
-
-// NewPendingTransactions creates a subscription that is triggered each time a transaction
-// enters the transaction pool and was signed from one of the transactions this nodes manages.
-func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
-	return api.publicFilterAPI.NewPendingTransactions(ctx)
-}
-
-// NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
-// It is part of the filter package since polling goes with eth_getFilterChanges.
-//
-// https://eth.wiki/json-rpc/API#eth_newblockfilter
-func (api *EthereumAPI) NewBlockFilter() rpc.ID {
-	return api.publicFilterAPI.NewBlockFilter()
-}
-
-// NewHeads send a notification each time a new (header) block is appended to the chain.
-func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
-	notifier, supported := rpc.NotifierFromContext(ctx)
-	if !supported {
-		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
-	}
-
-	rpcSub := notifier.CreateSubscription()
-	go func() {
-		headers := make(chan *types.Header)
-		headersSub := api.publicFilterAPI.Events().SubscribeNewHeads(headers)
-
-		for {
-			select {
-			case h := <-headers:
-				header, err := api.rpcMarshalHeader(h, true)
-				if err != nil {
-					logger.Error("Failed to marshal header during newHeads subscription", "err", err)
-					headersSub.Unsubscribe()
-					return
-				}
-				notifier.Notify(rpcSub.ID, header)
-			case <-rpcSub.Err():
-				headersSub.Unsubscribe()
-				return
-			case <-notifier.Closed():
-				headersSub.Unsubscribe()
-				return
-			}
-		}
-	}()
-
-	return rpcSub, nil
-}
-
-// Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *EthereumAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
-	return api.publicFilterAPI.Logs(ctx, crit)
-}
-
-// NewFilter creates a new filter and returns the filter id. It can be
-// used to retrieve logs when the state changes. This method cannot be
-// used to fetch logs that are already stored in the state.
-//
-// Default criteria for the from and to block are "latest".
-// Using "latest" as block number will return logs for mined blocks.
-// Using "pending" as block number returns logs for not yet mined (pending) blocks.
-// In case logs are removed (chain reorg) previously returned logs are returned
-// again but with the removed property set to true.
-//
-// In case "fromBlock" > "toBlock" an error is returned.
-//
-// https://eth.wiki/json-rpc/API#eth_newfilter
-func (api *EthereumAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
-	return api.publicFilterAPI.NewFilter(crit)
-}
-
-// GetLogs returns logs matching the given argument that are stored within the state.
-//
-// https://eth.wiki/json-rpc/API#eth_getlogs
-func (api *EthereumAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
-	return api.publicFilterAPI.GetLogs(ctx, crit)
-}
-
-// UninstallFilter removes the filter with the given filter id.
-//
-// https://eth.wiki/json-rpc/API#eth_uninstallfilter
-func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
-	return api.publicFilterAPI.UninstallFilter(id)
-}
-
-// GetFilterLogs returns the logs for the filter with the given id.
-// If the filter could not be found an empty array of logs is returned.
-//
-// https://eth.wiki/json-rpc/API#eth_getfilterlogs
-func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	return api.publicFilterAPI.GetFilterLogs(ctx, id)
-}
-
-// GetFilterChanges returns the logs for the filter with the given id since
-// last time it was called. This can be used for polling.
-//
-// For pending transaction and block filters the result is []common.Hash.
-// (pending)Log filters return []Log.
-//
-// https://eth.wiki/json-rpc/API#eth_getfilterchanges
-func (api *EthereumAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
-	return api.publicFilterAPI.GetFilterChanges(id)
 }
 
 // GasPrice returns a suggestion for a gas price.
