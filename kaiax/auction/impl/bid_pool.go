@@ -22,6 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
 )
@@ -29,6 +30,8 @@ import (
 const (
 	bidChSize        = 100
 	allowFutureBlock = 2
+
+	MaxBidNum = 2048
 )
 
 type BidPool struct {
@@ -45,8 +48,10 @@ type BidPool struct {
 	bidWinnerMap map[uint64]map[common.Address]common.Hash
 	allBids      map[uint64][]*auction.Bid
 
-	bidCh chan *auction.Bid
-	wg    sync.WaitGroup
+	bidMsgCh   chan *auction.Bid
+	newBidCh   chan *auction.Bid
+	newBidFeed event.Feed
+	wg         sync.WaitGroup
 
 	running uint32
 }
@@ -63,23 +68,38 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 		bidWinnerMap: make(map[uint64]map[common.Address]common.Hash),
 		bidMap:       make(map[common.Hash]*auction.Bid),
 		allBids:      make(map[uint64][]*auction.Bid),
-		bidCh:        make(chan *auction.Bid, bidChSize),
+		bidMsgCh:     make(chan *auction.Bid, bidChSize),
+		newBidCh:     make(chan *auction.Bid, bidChSize),
 		running:      0, // not running yet
 	}
 
 	return bp
 }
 
+func (bp *BidPool) SubscribeNewBid(sink chan<- *auction.Bid) event.Subscription {
+	// Do not prevent subscription before start
+	// if atomic.LoadUint32(&bp.running) == 0 {
+	// 	return nil
+	// }
+	return bp.newBidFeed.Subscribe(sink)
+}
+
 func (bp *BidPool) start() {
+	// Start the bid pool.
 	atomic.CompareAndSwapUint32(&bp.running, 0, 1)
-	bp.wg.Add(1)
+
+	bp.wg.Add(2)
 	go bp.handleBidMsg()
+	go bp.handleNewBid()
 }
 
 func (bp *BidPool) stop() {
+	// Stop the bid pool.
 	atomic.CompareAndSwapUint32(&bp.running, 1, 0)
 	bp.clearBidPool()
-	close(bp.bidCh)
+
+	close(bp.bidMsgCh)
+	close(bp.newBidCh)
 	bp.wg.Wait()
 }
 
@@ -135,6 +155,10 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	bp.bidMu.Lock()
 	defer bp.bidMu.Unlock()
 
+	if len(bp.bidMap) >= MaxBidNum {
+		return common.Hash{}, auction.ErrBidPoolFull
+	}
+
 	if err := bp.validateBid(bid); err != nil {
 		return common.Hash{}, err
 	}
@@ -142,6 +166,8 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	if err := bp.insertBid(bid); err != nil {
 		return common.Hash{}, err
 	}
+
+	bp.newBidCh <- bid
 
 	return bid.Hash(), nil
 }
@@ -254,10 +280,10 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 }
 
 func (bp *BidPool) HandleBid(bid *auction.Bid) {
-	if atomic.LoadUint32(&bp.running) == 0 {
+	if atomic.LoadUint32(&bp.running) == 0 || bid == nil {
 		return
 	}
-	bp.bidCh <- bid
+	bp.bidMsgCh <- bid
 }
 
 func (bp *BidPool) handleBidMsg() {
@@ -265,11 +291,25 @@ func (bp *BidPool) handleBidMsg() {
 
 	for {
 		select {
-		case bid, ok := <-bp.bidCh:
+		case bid, ok := <-bp.bidMsgCh:
 			if !ok {
 				return
 			}
 			bp.AddBid(bid)
+		}
+	}
+}
+
+func (bp *BidPool) handleNewBid() {
+	defer bp.wg.Done()
+
+	for {
+		select {
+		case bid, ok := <-bp.newBidCh:
+			if !ok {
+				return
+			}
+			bp.newBidFeed.Send(bid)
 		}
 	}
 }

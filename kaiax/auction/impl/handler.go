@@ -14,25 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package auction
+package impl
 
 import (
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/kaiax/auction"
 )
 
-type AuctionModule interface {
-	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
-	builder.TxBundlingModule
-
-	HandleBid(bid *Bid)
-	SubscribeNewBid(sink chan<- *Bid) event.Subscription
+func (a *AuctionModule) HandleBid(bid *auction.Bid) {
+	a.bidPool.HandleBid(bid)
 }
 
-type AuctionModuleHost interface {
-	RegisterAuctionModule(module AuctionModule)
+func (a *AuctionModule) SubscribeNewBid(sink chan<- *auction.Bid) event.Subscription {
+	return a.bidPool.SubscribeNewBid(sink)
 }

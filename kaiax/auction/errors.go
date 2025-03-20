@@ -31,6 +31,7 @@ var (
 	ErrBidInvalidAuctioneerSig = errors.New("invalid auctioneer sig")
 	ErrLowBid                  = errors.New("low bid")
 	ErrZeroBid                 = errors.New("zero bid")
+	ErrBidPoolFull             = errors.New("bid pool is full")
 
 	ErrAuctionPaused = errors.New("auction is paused")
 )
