@@ -10,7 +10,7 @@ import (
 type TxOrGen struct {
 	concreteTx  *types.Transaction
 	txGenerator TxGenerator
-	Id          common.Hash
+	Id          common.Hash // For concreteTx, txHash. For txGenerator, use a unique and deterministic identifier.
 }
 
 func NewTxOrGenFromTx(tx *types.Transaction) *TxOrGen {
