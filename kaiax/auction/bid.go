@@ -71,7 +71,7 @@ func (d EIP712Domain) EncodeData() []byte {
 	return encoded
 }
 
-type bidData struct {
+type BidData struct {
 	TargetTxHash  common.Hash    `json:"targetTxHash"`
 	BlockNumber   uint64         `json:"blockNumber"`
 	Sender        common.Address `json:"sender"`
@@ -85,23 +85,28 @@ type bidData struct {
 }
 
 type Bid struct {
-	bidData
+	BidData
 	hash atomic.Value
 }
 
 func (b *Bid) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, b.bidData)
+	return rlp.Encode(w, b.BidData)
 }
 
-func (b *Bid) DecodeRLP(r io.Reader) error {
-	return rlp.Decode(r, &b.bidData)
+func (b *Bid) DecodeRLP(s *rlp.Stream) error {
+	var dec BidData
+	if err := s.Decode(&dec); err != nil {
+		return err
+	}
+	b.BidData = dec
+	return nil
 }
 
 func (b *Bid) Hash() common.Hash {
 	if hash := b.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
-	hash := rlpHash(b.bidData)
+	hash := rlpHash(b.BidData)
 	b.hash.Store(hash)
 	return hash
 }
