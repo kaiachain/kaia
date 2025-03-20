@@ -64,7 +64,15 @@ executors:
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
-  test-others-executor: # this executor is for test-others job
+  test-large-executor: # this executor is for general bigger test jobs
+    working_directory: ~/go/src/github.com/kaiachain/kaia
+    resource_class: medium
+    docker:
+      - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
+        auth:
+          username: $DOCKER_LOGIN
+          password: $DOCKER_PASSWORD
+  test-others-executor: # this executor is for test-others job that involves other networking softwares
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
@@ -396,7 +404,7 @@ jobs:
           no_output_timeout: 30m
           command: make test-node
   test-tests:
-    executor: test-executor
+    executor: test-large-executor
     steps:
       - checkout
       - run:
