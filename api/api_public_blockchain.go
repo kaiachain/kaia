@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -175,7 +174,7 @@ func (s *PublicKaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) 
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
+	fields := RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
 	return fields
 }
 
@@ -672,6 +671,42 @@ func newRPCTransactionFromBlockIndex(b *types.Block, index uint64, config *param
 		return nil
 	}
 	return newRPCTransaction(b.Header(), txs[index], b.Hash(), b.NumberU64(), index, config)
+}
+
+// RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
+// For kaia_getHeaderByNumber and kaia_getHeaderByHash APIs.
+func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
+	result := map[string]interface{}{
+		"parentHash":       head.ParentHash,
+		"reward":           head.Rewardbase,
+		"stateRoot":        head.Root,
+		"transactionsRoot": head.TxHash,
+		"receiptsRoot":     head.ReceiptHash,
+		"logsBloom":        head.Bloom,
+		"blockScore":       (*hexutil.Big)(head.BlockScore),
+		"number":           (*hexutil.Big)(head.Number),
+		"gasUsed":          hexutil.Uint64(head.GasUsed),
+		"timestamp":        (*hexutil.Big)(head.Time),
+		"timestampFoS":     hexutil.Uint(head.TimeFoS),
+		"extraData":        hexutil.Bytes(head.Extra),
+		"governanceData":   hexutil.Bytes(head.Governance),
+		"voteData":         hexutil.Bytes(head.Vote),
+		"hash":             head.Hash(),
+	}
+
+	if rules.IsEthTxType {
+		if head.BaseFee == nil {
+			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
+		} else {
+			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
+		}
+	}
+	if rules.IsRandao {
+		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
+		result["mixhash"] = hexutil.Bytes(head.MixHash)
+	}
+
+	return result
 }
 
 // newRPCRawTransactionFromBlockIndex returns the bytes of a transaction given a block and a transaction index.
