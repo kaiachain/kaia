@@ -175,22 +175,16 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context, fullTx *
 		pendingTxSub := api.events.SubscribePendingTxs(txs)
 		defer pendingTxSub.Unsubscribe()
 
-		chainConfig := api.backend.ChainConfig()
-
 		for {
 			select {
 			case txs := <-txs:
 				// To keep the original behaviour, send a single tx hash in one notification.
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
-				latest, err := api.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
-				if err == nil && latest != nil {
-					for _, tx := range txs {
-						if fullTx != nil && *fullTx {
-							rpcTx := kaiaApi.NewRPCTransaction(latest, tx, latest.Hash(), latest.Number.Uint64(), 0, chainConfig)
-							notifier.Notify(rpcSub.ID, rpcTx)
-						} else {
-							notifier.Notify(rpcSub.ID, tx.Hash())
-						}
+				for _, tx := range txs {
+					if fullTx != nil && *fullTx {
+						notifier.Notify(rpcSub.ID, tx.MakeRPCOutput())
+					} else {
+						notifier.Notify(rpcSub.ID, tx.Hash())
 					}
 				}
 			case <-rpcSub.Err():
@@ -439,8 +433,6 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
-	chainConfig := api.backend.ChainConfig()
-
 	if f, found := api.filters[id]; found {
 		if !f.deadline.Stop() {
 			// timer expired but filter is not yet removed in timeout loop
@@ -456,15 +448,12 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 			return returnHashes(hashes), nil
 		case PendingTransactionsSubscription:
 			if f.fullTx {
-				latest, err := api.backend.HeaderByNumber(context.Background(), rpc.LatestBlockNumber)
-				if err == nil && latest != nil {
-					txs := make([]map[string]interface{}, 0, len(f.txs))
-					for idx, tx := range f.txs {
-						txs = append(txs, kaiaApi.NewRPCTransaction(latest, tx, latest.Hash(), latest.Number.Uint64(), uint64(idx), chainConfig))
-					}
-					f.txs = nil
-					return txs, nil
+				txs := make([]map[string]interface{}, 0, len(f.txs))
+				for _, tx := range f.txs {
+					txs = append(txs, tx.MakeRPCOutput())
 				}
+				f.txs = nil
+				return txs, nil
 			} else {
 				hashes := make([]common.Hash, 0, len(f.txs))
 				for _, tx := range f.txs {
