@@ -32,12 +32,12 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia"
+	kaiaApi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -57,6 +57,8 @@ type filter struct {
 	typ      Type
 	deadline *time.Timer // filter is inactiv when deadline triggers
 	hashes   []common.Hash
+	fullTx   bool
+	txs      []*types.Transaction
 	crit     FilterCriteria
 	logs     []*types.Log
 	s        *Subscription // associated subscription in event system
@@ -129,21 +131,21 @@ func (api *PublicFilterAPI) timeoutLoop() {
 // `kaia_getFilterChanges` polling method that is also used for log filters.
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
-		pendingTxs   = make(chan []common.Hash)
+		pendingTxs   = make(chan []*types.Transaction)
 		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs)
 	)
 
 	api.filtersMu.Lock()
-	api.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(api.timeout), hashes: make([]common.Hash, 0), s: pendingTxSub}
+	api.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(api.timeout), txs: make([]*types.Transaction, 0), s: pendingTxSub}
 	api.filtersMu.Unlock()
 
 	go func() {
 		for {
 			select {
-			case ph := <-pendingTxs:
+			case pTx := <-pendingTxs:
 				api.filtersMu.Lock()
 				if f, found := api.filters[pendingTxSub.ID]; found {
-					f.hashes = append(f.hashes, ph...)
+					f.txs = append(f.txs, pTx...)
 				}
 				api.filtersMu.Unlock()
 			case <-pendingTxSub.Err():
@@ -160,7 +162,7 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
-func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
+func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -169,22 +171,29 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 	rpcSub := notifier.CreateSubscription()
 
 	go func() {
-		txHashes := make(chan []common.Hash, 128)
-		pendingTxSub := api.events.SubscribePendingTxs(txHashes)
+		txs := make(chan []*types.Transaction, 128)
+		pendingTxSub := api.events.SubscribePendingTxs(txs)
+		defer pendingTxSub.Unsubscribe()
+
+		chainConfig := api.backend.ChainConfig()
 
 		for {
 			select {
-			case hashes := <-txHashes:
+			case txs := <-txs:
 				// To keep the original behaviour, send a single tx hash in one notification.
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
-				for _, h := range hashes {
-					notifier.Notify(rpcSub.ID, h)
+				latest, err := api.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
+				if err == nil && latest != nil {
+					for _, tx := range txs {
+						if fullTx != nil && *fullTx {
+							rpcTx := kaiaApi.NewRPCTransaction(latest, tx, latest.Hash(), latest.Number.Uint64(), 0, chainConfig)
+							notifier.Notify(rpcSub.ID, rpcTx)
+						} else {
+							notifier.Notify(rpcSub.ID, tx.Hash())
+						}
+					}
 				}
 			case <-rpcSub.Err():
-				pendingTxSub.Unsubscribe()
-				return
-			case <-notifier.Closed():
-				pendingTxSub.Unsubscribe()
 				return
 			}
 		}
@@ -226,42 +235,6 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 	return headerSub.ID
 }
 
-// RPCMarshalHeader converts the given header to the RPC output that includes Klaytn-specific fields.
-// For kaia_getHeaderByNumber and kaia_getHeaderByHash APIs.
-func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interface{} {
-	result := map[string]interface{}{
-		"parentHash":       head.ParentHash,
-		"reward":           head.Rewardbase,
-		"stateRoot":        head.Root,
-		"transactionsRoot": head.TxHash,
-		"receiptsRoot":     head.ReceiptHash,
-		"logsBloom":        head.Bloom,
-		"blockScore":       (*hexutil.Big)(head.BlockScore),
-		"number":           (*hexutil.Big)(head.Number),
-		"gasUsed":          hexutil.Uint64(head.GasUsed),
-		"timestamp":        (*hexutil.Big)(head.Time),
-		"timestampFoS":     hexutil.Uint(head.TimeFoS),
-		"extraData":        hexutil.Bytes(head.Extra),
-		"governanceData":   hexutil.Bytes(head.Governance),
-		"voteData":         hexutil.Bytes(head.Vote),
-		"hash":             head.Hash(),
-	}
-
-	if rules.IsEthTxType {
-		if head.BaseFee == nil {
-			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
-		} else {
-			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
-		}
-	}
-	if rules.IsRandao {
-		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
-		result["mixhash"] = hexutil.Bytes(head.MixHash)
-	}
-
-	return result
-}
-
 // NewHeads send a notification each time a new (header) block is appended to the chain.
 func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
@@ -278,7 +251,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 		for {
 			select {
 			case h := <-headers:
-				header := RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
+				header := kaiaApi.RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
 				notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe()
@@ -466,6 +439,8 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
+	chainConfig := api.backend.ChainConfig()
+
 	if f, found := api.filters[id]; found {
 		if !f.deadline.Stop() {
 			// timer expired but filter is not yet removed in timeout loop
@@ -475,10 +450,29 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 		f.deadline.Reset(api.timeout)
 
 		switch f.typ {
-		case PendingTransactionsSubscription, BlocksSubscription:
+		case BlocksSubscription:
 			hashes := f.hashes
 			f.hashes = nil
 			return returnHashes(hashes), nil
+		case PendingTransactionsSubscription:
+			if f.fullTx {
+				latest, err := api.backend.HeaderByNumber(context.Background(), rpc.LatestBlockNumber)
+				if err == nil && latest != nil {
+					txs := make([]map[string]interface{}, 0, len(f.txs))
+					for idx, tx := range f.txs {
+						txs = append(txs, kaiaApi.NewRPCTransaction(latest, tx, latest.Hash(), latest.Number.Uint64(), uint64(idx), chainConfig))
+					}
+					f.txs = nil
+					return txs, nil
+				}
+			} else {
+				hashes := make([]common.Hash, 0, len(f.txs))
+				for _, tx := range f.txs {
+					hashes = append(hashes, tx.Hash())
+				}
+				f.txs = nil
+				return hashes, nil
+			}
 		case LogsSubscription:
 			logs := f.logs
 			f.logs = nil
