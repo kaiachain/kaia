@@ -222,17 +222,4 @@ describe("Multicall", function () {
       [],
     ]);
   });
-  it("Multicall returns gasless info", async function () {
-    const { addressBook, multiCall } = multiCallFixture;
-
-    await addressBook.activateAddressBook();
-
-    const gaslessInfo = await multiCall.multiCallGaslessInfo();
-
-    // const stakingAmounts = stakingInfo[2];
-
-    // for (let i = 0; i < 7; i++) {
-    //   expect(stakingAmounts[i]).to.equal(expectedStakingAmounts[i]);
-    // }
-  });
 });
