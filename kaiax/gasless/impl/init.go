@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
-	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -32,7 +32,7 @@ var logger = log.NewModuleLogger(log.KaiaxGasless)
 
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
-	CNConfig    *gasless_cfg.CNConfig
+	CNConfig    *gasless.CNConfig
 	NodeKey     *ecdsa.PrivateKey
 	Chain       backends.BlockChainForCaller
 	TxPool      kaiax.TxPoolForCaller

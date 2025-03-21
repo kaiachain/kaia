@@ -50,7 +50,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
 	"github.com/kaiachain/kaia/datasync/downloader"
-	gasless "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"

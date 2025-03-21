@@ -42,7 +42,7 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	gasless "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/params"

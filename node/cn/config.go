@@ -34,7 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/datasync/downloader"
-	gasless "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/params"

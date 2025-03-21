@@ -22,7 +22,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
@@ -101,7 +101,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"gasless is disabled": {
 			&InitOpts{
 				testChainConfig,
-				&gasless_cfg.CNConfig{
+				&gasless.CNConfig{
 					AllowedTokens: nil,
 					Disable:       true,
 				},
@@ -158,7 +158,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens are empty slice": {
 			&InitOpts{
 				testChainConfig,
-				&gasless_cfg.CNConfig{
+				&gasless.CNConfig{
 					AllowedTokens: []common.Address{},
 					Disable:       false,
 				},
@@ -172,7 +172,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens have existing addresses": {
 			&InitOpts{
 				testChainConfig,
-				&gasless_cfg.CNConfig{
+				&gasless.CNConfig{
 					AllowedTokens: []common.Address{dummyTokenAddress1, dummyTokenAddress2},
 					Disable:       false,
 				},
@@ -186,7 +186,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens have a non-existing address": {
 			&InitOpts{
 				testChainConfig,
-				&gasless_cfg.CNConfig{
+				&gasless.CNConfig{
 					AllowedTokens: []common.Address{common.HexToAddress("0xffff")},
 					Disable:       false,
 				},

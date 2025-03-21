@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/builder"
-	gasless_cfg "github.com/kaiachain/kaia/kaiax/gasless/config"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/require"
@@ -62,7 +62,7 @@ var (
 		Kip160CompatibleBlock:    big.NewInt(0),
 		RandaoCompatibleBlock:    big.NewInt(0),
 	}
-	testCNConfig = &gasless_cfg.CNConfig{
+	testCNConfig = &gasless.CNConfig{
 		AllowedTokens: nil,
 		Disable:       false,
 	}
