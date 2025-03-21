@@ -281,7 +281,7 @@ func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = common.Address{}
-		g.allowedTokens = nil
+		g.allowedTokens = map[common.Address]bool{}
 		logger.Warn("there is something wrong with multicall contract", err.Error())
 		return nil
 	}
