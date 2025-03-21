@@ -543,6 +543,13 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mBuilder.Init(&builder_impl.InitOpts{
 			Backend: s.APIBackend,
 		}),
+		mGasless.Init(&gasless_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			CNConfig:    s.config.Gasless,
+			NodeKey:     ctx.NodeKey(),
+			Chain:       s.blockchain,
+			TxPool:      s.txPool,
+		}),
 	)
 	if err != nil {
 		return err
@@ -552,17 +559,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mTxBundling := []builder.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 
-	disabled, err := mGasless.Init(&gasless_impl.InitOpts{
-		ChainConfig: s.chainConfig,
-		CNConfig:    s.config.Gasless,
-		NodeKey:     ctx.NodeKey(),
-		Chain:       s.blockchain,
-		TxPool:      s.txPool,
-	})
-	if err != nil {
-		return err
-	}
-
+	disabled := mGasless.IsDisabled()
 	if !disabled {
 		mExecution = append(mExecution, mGasless)
 		mTxBundling = append(mTxBundling, mGasless)

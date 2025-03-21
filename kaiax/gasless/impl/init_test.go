@@ -127,9 +127,12 @@ func TestInitSuccessAndFailure(t *testing.T) {
 
 	for _, tc := range tcs {
 		g := NewGaslessModule()
-		disabled, err := g.Init(tc.opts)
-		require.Equal(t, tc.disabled, disabled)
+		err := g.Init(tc.opts)
 		require.ErrorIs(t, tc.err, err)
+		if err == nil {
+			disabled := g.IsDisabled()
+			require.Equal(t, tc.disabled, disabled)
+		}
 	}
 }
 
@@ -213,9 +216,8 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 	for name, tc := range tcs {
 		t.Run(name, func(t *testing.T) {
 			g := NewGaslessModule()
-			disabled, err := g.Init(tc.opts)
+			err := g.Init(tc.opts)
 			require.NoError(t, err)
-			require.False(t, disabled)
 			if tc.swapRouter == nil {
 				require.Nil(t, g.swapRouter)
 			} else {

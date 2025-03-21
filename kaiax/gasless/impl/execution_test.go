@@ -65,7 +65,7 @@ func TestPostInsertBlock(t *testing.T) {
 				g := NewGaslessModule()
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-				disabled, err := g.Init(&InitOpts{
+				err := g.Init(&InitOpts{
 					ChainConfig: testChainConfig,
 					CNConfig:    testCNConfig,
 					NodeKey:     nodekey,
@@ -73,7 +73,6 @@ func TestPostInsertBlock(t *testing.T) {
 					TxPool:      &testTxPool{},
 				})
 				require.NoError(t, err)
-				require.False(t, disabled)
 
 				data := common.Hex2Bytes("d48bfca7000000000000000000000000000000000000000000000000000000000000ffff") // addToken(0x000000000000000000000000000000000000ffff)
 				tx := types.NewTransaction(0, dummyGSRAddress, big.NewInt(0), 50000, big.NewInt(25000000000), data)
@@ -94,7 +93,7 @@ func TestPostInsertBlock(t *testing.T) {
 				g := NewGaslessModule()
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-				disabled, err := g.Init(&InitOpts{
+				err := g.Init(&InitOpts{
 					ChainConfig: testChainConfig,
 					CNConfig:    testCNConfig,
 					NodeKey:     nodekey,
@@ -102,7 +101,6 @@ func TestPostInsertBlock(t *testing.T) {
 					TxPool:      &testTxPool{},
 				})
 				require.NoError(t, err)
-				require.False(t, disabled)
 				data := common.Hex2Bytes("5fa7b584000000000000000000000000000000000000000000000000000000000000abcd") // removeToken(dummyTokenAddress1)
 				tx := types.NewTransaction(0, dummyGSRAddress, big.NewInt(0), 50000, big.NewInt(25000000000), data)
 				signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(testChainConfig.ChainID), senderkey)
@@ -122,7 +120,7 @@ func TestPostInsertBlock(t *testing.T) {
 				g := NewGaslessModule()
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-				disabled, err := g.Init(&InitOpts{
+				err := g.Init(&InitOpts{
 					ChainConfig: testChainConfig,
 					CNConfig:    testCNConfig,
 					NodeKey:     nodekey,
@@ -130,7 +128,6 @@ func TestPostInsertBlock(t *testing.T) {
 					TxPool:      &testTxPool{},
 				})
 				require.NoError(t, err)
-				require.False(t, disabled)
 
 				sender := bind.NewKeyedTransactor(senderkey)
 				contract, _ := contracts.NewRegistryMockTransactor(system.RegistryAddr, backend)

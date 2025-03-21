@@ -43,7 +43,7 @@ func TestIsModuleTx(t *testing.T) {
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 	nodekey, _ := crypto.GenerateKey()
-	disabled, err := g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
 		CNConfig:    testCNConfig,
 		NodeKey:     nodekey,
@@ -51,7 +51,6 @@ func TestIsModuleTx(t *testing.T) {
 		TxPool:      &testTxPool{},
 	})
 	require.NoError(t, err)
-	require.False(t, disabled)
 
 	privkey, _ := crypto.GenerateKey()
 	testcases := []struct {
@@ -186,7 +185,7 @@ func TestIsReady(t *testing.T) {
 			cdb := sdb.Copy()
 			cdb.SetNonce(addr, tc.nonce)
 			g := NewGaslessModule()
-			disabled, err := g.Init(&InitOpts{
+			err := g.Init(&InitOpts{
 				ChainConfig: testChainConfig,
 				CNConfig:    testCNConfig,
 				NodeKey:     nodeKey,
@@ -194,7 +193,6 @@ func TestIsReady(t *testing.T) {
 				TxPool:      &testTxPool{cdb},
 			})
 			require.NoError(t, err)
-			require.False(t, disabled)
 
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
@@ -337,7 +335,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
-		disabled, err := g.Init(&InitOpts{
+		err := g.Init(&InitOpts{
 			ChainConfig: testChainConfig,
 			CNConfig:    testCNConfig,
 			NodeKey:     nodeKey,
@@ -345,7 +343,6 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			TxPool:      pool,
 		})
 		require.NoError(t, err)
-		require.False(t, disabled)
 		pool.RegisterTxPoolModule(g)
 		txMap := map[txTypeTest]*types.Transaction{}
 
@@ -430,7 +427,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
-		disabled, err := g.Init(&InitOpts{
+		err := g.Init(&InitOpts{
 			ChainConfig: testChainConfig,
 			CNConfig:    testCNConfig,
 			NodeKey:     nodeKey,
@@ -438,7 +435,6 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 			TxPool:      pool,
 		})
 		require.NoError(t, err)
-		require.False(t, disabled)
 
 		pool.RegisterTxPoolModule(g)
 

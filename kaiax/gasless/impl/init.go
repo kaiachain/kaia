@@ -49,24 +49,19 @@ func NewGaslessModule() *GaslessModule {
 	return &GaslessModule{}
 }
 
-func (g *GaslessModule) Init(opts *InitOpts) (disabled bool, err error) {
+func (g *GaslessModule) Init(opts *InitOpts) error {
 	if opts == nil || opts.ChainConfig == nil || opts.CNConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
-		return true, ErrInitUnexpectedNil
-	}
-
-	if opts.CNConfig.Disable {
-		return true, nil
+		return ErrInitUnexpectedNil
 	}
 
 	g.InitOpts = *opts
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 
-	err = g.updateAddresses(g.Chain.CurrentBlock().Number())
-	if err != nil {
-		return true, err
-	}
+	return g.updateAddresses(g.Chain.CurrentBlock().Number())
+}
 
-	return false, nil
+func (g *GaslessModule) IsDisabled() bool {
+	return g.CNConfig.Disable
 }
 
 func (g *GaslessModule) Start() error {

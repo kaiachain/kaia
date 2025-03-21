@@ -41,7 +41,7 @@ func TestIsApproveTx(t *testing.T) {
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 	key, _ := crypto.GenerateKey()
-	disabled, err := g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
 		CNConfig:    testCNConfig,
 		NodeKey:     key,
@@ -49,7 +49,6 @@ func TestIsApproveTx(t *testing.T) {
 		TxPool:      &testTxPool{},
 	})
 	require.NoError(t, err)
-	require.False(t, disabled)
 
 	privkey, _ := crypto.GenerateKey()
 	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
@@ -92,7 +91,7 @@ func TestIsSwapTx(t *testing.T) {
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 	key, _ := crypto.GenerateKey()
-	disabled, err := g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
 		CNConfig:    testCNConfig,
 		NodeKey:     key,
@@ -100,7 +99,6 @@ func TestIsSwapTx(t *testing.T) {
 		TxPool:      &testTxPool{},
 	})
 	require.NoError(t, err)
-	require.False(t, disabled)
 
 	privkey, _ := crypto.GenerateKey()
 	correct := makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
@@ -140,7 +138,7 @@ func TestIsExecutable(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 	key, _ := crypto.GenerateKey()
 	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	disabled, err := g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
 		CNConfig:    testCNConfig,
 		NodeKey:     key,
@@ -148,7 +146,6 @@ func TestIsExecutable(t *testing.T) {
 		TxPool:      &testTxPool{sdb},
 	})
 	require.NoError(t, err)
-	require.False(t, disabled)
 
 	privkey, _ := crypto.GenerateKey()
 	testcases := map[string]struct {
@@ -245,7 +242,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 			g := NewGaslessModule()
 			bc := &testBlockChain{sdb.Copy(), 10000000, new(event.Feed)}
 			pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
-			disabled, err := g.Init(&InitOpts{
+			err := g.Init(&InitOpts{
 				ChainConfig: testChainConfig,
 				CNConfig:    testCNConfig,
 				NodeKey:     nodekey,
@@ -253,7 +250,6 @@ func TestGetLendTxGenerator(t *testing.T) {
 				TxPool:      pool,
 			})
 			require.NoError(t, err)
-			require.False(t, disabled)
 
 			pool.RegisterTxPoolModule(g)
 

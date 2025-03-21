@@ -40,7 +40,7 @@ func TestExtractTxBundles(t *testing.T) {
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 	nodeKey, _ := crypto.GenerateKey()
-	disabled, err := g.Init(&InitOpts{
+	err := g.Init(&InitOpts{
 		ChainConfig: testChainConfig,
 		CNConfig:    testCNConfig,
 		NodeKey:     nodeKey,
@@ -48,7 +48,6 @@ func TestExtractTxBundles(t *testing.T) {
 		TxPool:      &testTxPool{sdb},
 	})
 	require.NoError(t, err)
-	require.False(t, disabled)
 
 	key1, _ := crypto.GenerateKey()
 	key2, _ := crypto.GenerateKey()
