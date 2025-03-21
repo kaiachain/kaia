@@ -112,6 +112,8 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, txBundlingModules []builder.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	incorporatedTxs, _ := builder_impl.ExtractBundlesAndIncorporate(txs, txBundlingModules)
 	for _, txOrGen := range incorporatedTxs {
+		// To simulate tx, the nonce given to generate is set to zero.
+		// This does not affect subsequent operations on the AccountMap state.
 		tx, err := txOrGen.GetTx(0)
 		if err != nil {
 			return err
