@@ -760,7 +760,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 
 	// Set kaiax module config
-	cfg.Gasless = gasless.GetCNConfig(ctx)
+	cfg.Gasless = gasless.GetGaslessConfig(ctx)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value

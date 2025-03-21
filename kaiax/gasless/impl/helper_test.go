@@ -62,7 +62,7 @@ var (
 		Kip160CompatibleBlock:    big.NewInt(0),
 		RandaoCompatibleBlock:    big.NewInt(0),
 	}
-	testCNConfig = &gasless.CNConfig{
+	testGaslessConfig = &gasless.GaslessConfig{
 		AllowedTokens: nil,
 		Disable:       false,
 	}

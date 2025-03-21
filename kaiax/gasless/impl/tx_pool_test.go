@@ -44,11 +44,11 @@ func TestIsModuleTx(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 	nodekey, _ := crypto.GenerateKey()
 	err := g.Init(&InitOpts{
-		ChainConfig: testChainConfig,
-		CNConfig:    testCNConfig,
-		NodeKey:     nodekey,
-		Chain:       backend.BlockChain(),
-		TxPool:      &testTxPool{},
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       nodekey,
+		Chain:         backend.BlockChain(),
+		TxPool:        &testTxPool{},
 	})
 	require.NoError(t, err)
 
@@ -186,11 +186,11 @@ func TestIsReady(t *testing.T) {
 			cdb.SetNonce(addr, tc.nonce)
 			g := NewGaslessModule()
 			err := g.Init(&InitOpts{
-				ChainConfig: testChainConfig,
-				CNConfig:    testCNConfig,
-				NodeKey:     nodeKey,
-				Chain:       backend.BlockChain(),
-				TxPool:      &testTxPool{cdb},
+				ChainConfig:   testChainConfig,
+				GaslessConfig: testGaslessConfig,
+				NodeKey:       nodeKey,
+				Chain:         backend.BlockChain(),
+				TxPool:        &testTxPool{cdb},
 			})
 			require.NoError(t, err)
 
@@ -336,11 +336,11 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
-			ChainConfig: testChainConfig,
-			CNConfig:    testCNConfig,
-			NodeKey:     nodeKey,
-			Chain:       backend.BlockChain(),
-			TxPool:      pool,
+			ChainConfig:   testChainConfig,
+			GaslessConfig: testGaslessConfig,
+			NodeKey:       nodeKey,
+			Chain:         backend.BlockChain(),
+			TxPool:        pool,
 		})
 		require.NoError(t, err)
 		pool.RegisterTxPoolModule(g)
@@ -428,11 +428,11 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
-			ChainConfig: testChainConfig,
-			CNConfig:    testCNConfig,
-			NodeKey:     nodeKey,
-			Chain:       backend.BlockChain(),
-			TxPool:      pool,
+			ChainConfig:   testChainConfig,
+			GaslessConfig: testGaslessConfig,
+			NodeKey:       nodeKey,
+			Chain:         backend.BlockChain(),
+			TxPool:        pool,
 		})
 		require.NoError(t, err)
 

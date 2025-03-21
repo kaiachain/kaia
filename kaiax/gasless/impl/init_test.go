@@ -41,7 +41,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"correct chain conifg": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
@@ -68,7 +68,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"node key is nil": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				nil,
 				backend.BlockChain(),
 				&testTxPool{},
@@ -79,7 +79,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"chain is nil": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				nil,
 				&testTxPool{},
@@ -90,7 +90,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"tx pool is nil": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				backend.BlockChain(),
 				nil,
@@ -101,7 +101,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"gasless is disabled": {
 			&InitOpts{
 				testChainConfig,
-				&gasless.CNConfig{
+				&gasless.GaslessConfig{
 					AllowedTokens: nil,
 					Disable:       true,
 				},
@@ -115,7 +115,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		"system contract is not prepared": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
@@ -150,7 +150,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens are nil": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
@@ -161,7 +161,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens are empty slice": {
 			&InitOpts{
 				testChainConfig,
-				&gasless.CNConfig{
+				&gasless.GaslessConfig{
 					AllowedTokens: []common.Address{},
 					Disable:       false,
 				},
@@ -175,7 +175,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens have existing addresses": {
 			&InitOpts{
 				testChainConfig,
-				&gasless.CNConfig{
+				&gasless.GaslessConfig{
 					AllowedTokens: []common.Address{dummyTokenAddress1, dummyTokenAddress2},
 					Disable:       false,
 				},
@@ -189,7 +189,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"allowed tokens have a non-existing address": {
 			&InitOpts{
 				testChainConfig,
-				&gasless.CNConfig{
+				&gasless.GaslessConfig{
 					AllowedTokens: []common.Address{common.HexToAddress("0xffff")},
 					Disable:       false,
 				},
@@ -203,7 +203,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 		"system contract is not prepared": {
 			&InitOpts{
 				testChainConfig,
-				testCNConfig,
+				testGaslessConfig,
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},

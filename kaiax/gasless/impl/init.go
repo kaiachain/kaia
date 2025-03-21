@@ -31,11 +31,11 @@ import (
 var logger = log.NewModuleLogger(log.KaiaxGasless)
 
 type InitOpts struct {
-	ChainConfig *params.ChainConfig
-	CNConfig    *gasless.CNConfig
-	NodeKey     *ecdsa.PrivateKey
-	Chain       backends.BlockChainForCaller
-	TxPool      kaiax.TxPoolForCaller
+	ChainConfig   *params.ChainConfig
+	GaslessConfig *gasless.GaslessConfig
+	NodeKey       *ecdsa.PrivateKey
+	Chain         backends.BlockChainForCaller
+	TxPool        kaiax.TxPoolForCaller
 }
 
 type GaslessModule struct {
@@ -50,7 +50,7 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.CNConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 
@@ -61,7 +61,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 }
 
 func (g *GaslessModule) IsDisabled() bool {
-	return g.CNConfig.Disable
+	return g.GaslessConfig.Disable
 }
 
 func (g *GaslessModule) Start() error {

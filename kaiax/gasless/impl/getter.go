@@ -291,10 +291,10 @@ func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
 	g.allowedTokens = map[common.Address]bool{}
 	for _, addr := range tokens {
 		// all tokens are allowed if nil
-		if g.CNConfig.AllowedTokens == nil {
+		if g.GaslessConfig.AllowedTokens == nil {
 			g.allowedTokens[addr] = true
 		}
-		for _, allowed := range g.CNConfig.AllowedTokens {
+		for _, allowed := range g.GaslessConfig.AllowedTokens {
 			if addr == allowed {
 				g.allowedTokens[addr] = true
 			}

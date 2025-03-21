@@ -41,11 +41,11 @@ func TestExtractTxBundles(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 	nodeKey, _ := crypto.GenerateKey()
 	err := g.Init(&InitOpts{
-		ChainConfig: testChainConfig,
-		CNConfig:    testCNConfig,
-		NodeKey:     nodeKey,
-		Chain:       backend.BlockChain(),
-		TxPool:      &testTxPool{sdb},
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       nodeKey,
+		Chain:         backend.BlockChain(),
+		TxPool:        &testTxPool{sdb},
 	})
 	require.NoError(t, err)
 

@@ -66,11 +66,11 @@ func TestPostInsertBlock(t *testing.T) {
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 				err := g.Init(&InitOpts{
-					ChainConfig: testChainConfig,
-					CNConfig:    testCNConfig,
-					NodeKey:     nodekey,
-					Chain:       backend.BlockChain(),
-					TxPool:      &testTxPool{},
+					ChainConfig:   testChainConfig,
+					GaslessConfig: testGaslessConfig,
+					NodeKey:       nodekey,
+					Chain:         backend.BlockChain(),
+					TxPool:        &testTxPool{},
 				})
 				require.NoError(t, err)
 
@@ -94,11 +94,11 @@ func TestPostInsertBlock(t *testing.T) {
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 				err := g.Init(&InitOpts{
-					ChainConfig: testChainConfig,
-					CNConfig:    testCNConfig,
-					NodeKey:     nodekey,
-					Chain:       backend.BlockChain(),
-					TxPool:      &testTxPool{},
+					ChainConfig:   testChainConfig,
+					GaslessConfig: testGaslessConfig,
+					NodeKey:       nodekey,
+					Chain:         backend.BlockChain(),
+					TxPool:        &testTxPool{},
 				})
 				require.NoError(t, err)
 				data := common.Hex2Bytes("5fa7b584000000000000000000000000000000000000000000000000000000000000abcd") // removeToken(dummyTokenAddress1)
@@ -121,11 +121,11 @@ func TestPostInsertBlock(t *testing.T) {
 				dbm := database.NewMemoryDBManager()
 				backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 				err := g.Init(&InitOpts{
-					ChainConfig: testChainConfig,
-					CNConfig:    testCNConfig,
-					NodeKey:     nodekey,
-					Chain:       backend.BlockChain(),
-					TxPool:      &testTxPool{},
+					ChainConfig:   testChainConfig,
+					GaslessConfig: testGaslessConfig,
+					NodeKey:       nodekey,
+					Chain:         backend.BlockChain(),
+					TxPool:        &testTxPool{},
 				})
 				require.NoError(t, err)
 

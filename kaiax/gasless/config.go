@@ -36,13 +36,13 @@ var (
 	}
 )
 
-type CNConfig struct {
+type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
 	AllowedTokens []common.Address `toml:",omitempty"`
 	Disable       bool
 }
 
-func GetCNConfig(ctx *cli.Context) *CNConfig {
+func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
 	allowedTokens := []common.Address{}
 	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
 		if addr == "all" {
@@ -51,7 +51,7 @@ func GetCNConfig(ctx *cli.Context) *CNConfig {
 		}
 		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
 	}
-	return &CNConfig{
+	return &GaslessConfig{
 		AllowedTokens: allowedTokens,
 		Disable:       ctx.Bool(DisableFlag.Name),
 	}

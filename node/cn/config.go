@@ -71,7 +71,7 @@ func GetDefaultConfig() *Config {
 		Istanbul:      *istanbul.DefaultConfig,
 		RPCEVMTimeout: 5 * time.Second,
 
-		Gasless: &gasless.CNConfig{
+		Gasless: &gasless.GaslessConfig{
 			AllowedTokens: nil,
 			Disable:       false,
 		},
@@ -203,7 +203,7 @@ type Config struct {
 	UseConsoleLog bool
 
 	// Kaiax configs
-	Gasless *gasless.CNConfig
+	Gasless *gasless.GaslessConfig
 }
 
 type configMarshaling struct {

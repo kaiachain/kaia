@@ -544,11 +544,11 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Backend: s.APIBackend,
 		}),
 		mGasless.Init(&gasless_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			CNConfig:    s.config.Gasless,
-			NodeKey:     ctx.NodeKey(),
-			Chain:       s.blockchain,
-			TxPool:      s.txPool,
+			ChainConfig:   s.chainConfig,
+			GaslessConfig: s.config.Gasless,
+			NodeKey:       ctx.NodeKey(),
+			Chain:         s.blockchain,
+			TxPool:        s.txPool,
 		}),
 	)
 	if err != nil {
