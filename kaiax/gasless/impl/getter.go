@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
@@ -241,39 +242,46 @@ func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) 
 // L2. LendTx.from = proposer
 // L3. LendTx.to = SwapTx.from
 // L4. LendTx.value = LendAmount(approveTxOrNil, swapTx)
-func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) builder.TxGenerator {
-	return builder.TxGenerator{
-		Generate: func(nonce uint64) (*types.Transaction, error) {
-			var (
-				chainId = g.InitOpts.ChainConfig.ChainID
-				signer  = types.LatestSignerForChainID(chainId)
-				key     = g.InitOpts.NodeKey
-			)
-
-			to, err := types.Sender(signer, swapTx)
-			if err != nil {
-				return nil, err
-			}
-
-			tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
-				types.TxValueKeyNonce:      nonce,
-				types.TxValueKeyTo:         &to,
-				types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
-				types.TxValueKeyData:       common.Hex2Bytes("0x"),
-				types.TxValueKeyGasLimit:   params.TxGas,
-				types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
-				types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
-				types.TxValueKeyAccessList: types.AccessList{},
-				types.TxValueKeyChainID:    chainId,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			err = tx.Sign(signer, key)
-			return tx, err
-		},
+func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) *builder.TxOrGen {
+	var src []byte
+	if approveTxOrNil != nil {
+		src = append(src, approveTxOrNil.Hash().Bytes()...)
 	}
+	src = append(src, swapTx.Hash().Bytes()...)
+	bundleHash := crypto.Keccak256Hash(src)
+
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		var (
+			chainId = g.InitOpts.ChainConfig.ChainID
+			signer  = types.LatestSignerForChainID(chainId)
+			key     = g.InitOpts.NodeKey
+		)
+
+		to, err := types.Sender(signer, swapTx)
+		if err != nil {
+			return nil, err
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      nonce,
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     lendAmount(approveTxOrNil, swapTx),
+			types.TxValueKeyData:       common.Hex2Bytes("0x"),
+			types.TxValueKeyGasLimit:   params.TxGas,
+			types.TxValueKeyGasFeeCap:  swapTx.GasFeeCap(),
+			types.TxValueKeyGasTipCap:  swapTx.GasTipCap(),
+			types.TxValueKeyAccessList: types.AccessList{},
+			types.TxValueKeyChainID:    chainId,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		err = tx.Sign(signer, key)
+		return tx, err
+	}
+
+	return builder.NewTxOrGenFromGen(gen, bundleHash)
 }
 
 func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
