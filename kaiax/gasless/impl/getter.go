@@ -76,11 +76,8 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
-	if g.swapRouter == nil {
-		return false
-	}
 	return g.allowedTokens[args.Token] && // A1
-		*g.swapRouter == args.Spender && // A3
+		g.swapRouter == args.Spender && // A3
 		args.Amount.Sign() > 0 // A4
 }
 
@@ -94,10 +91,7 @@ func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isSwapTx(args *SwapArgs) bool {
-	if g.swapRouter == nil {
-		return false
-	}
-	return *g.swapRouter == args.Router && // S1
+	return g.swapRouter == args.Router && // S1
 		g.allowedTokens[args.Token] // S3
 }
 
@@ -286,13 +280,13 @@ func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
 	swapRouter, tokens, err := getGaslessInfo(g.Chain, blockNumber)
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
-		g.swapRouter = nil
+		g.swapRouter = common.Address{}
 		g.allowedTokens = nil
 		logger.Warn("there is something wrong with multicall contract", err.Error())
 		return nil
 	}
 
-	g.swapRouter = &swapRouter
+	g.swapRouter = swapRouter
 
 	g.allowedTokens = map[common.Address]bool{}
 	for _, addr := range tokens {

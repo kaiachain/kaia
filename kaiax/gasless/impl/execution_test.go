@@ -148,7 +148,7 @@ func TestPostInsertBlock(t *testing.T) {
 			err := g.PostInsertBlock(g.Chain.CurrentBlock())
 			require.NoError(t, err)
 
-			require.Equal(t, tc.swapRouter, *g.swapRouter)
+			require.Equal(t, tc.swapRouter, g.swapRouter)
 
 			require.Equal(t, len(tc.tokens), len(g.allowedTokens))
 			for _, addr := range tc.tokens {

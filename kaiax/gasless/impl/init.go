@@ -40,7 +40,7 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
-	swapRouter    *common.Address
+	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
 }

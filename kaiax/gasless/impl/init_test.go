@@ -144,7 +144,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 
 	tcs := map[string]struct {
 		opts          *InitOpts
-		swapRouter    *common.Address
+		swapRouter    common.Address
 		allowedTokens []common.Address
 	}{
 		"allowed tokens are nil": {
@@ -155,7 +155,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
-			&dummyGSRAddress,
+			dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2, dummyTokenAddress3},
 		},
 		"allowed tokens are empty slice": {
@@ -169,7 +169,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
-			&dummyGSRAddress,
+			dummyGSRAddress,
 			[]common.Address{},
 		},
 		"allowed tokens have existing addresses": {
@@ -183,7 +183,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
-			&dummyGSRAddress,
+			dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2},
 		},
 		"allowed tokens have a non-existing address": {
@@ -197,7 +197,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				backend.BlockChain(),
 				&testTxPool{},
 			},
-			&dummyGSRAddress,
+			dummyGSRAddress,
 			[]common.Address{},
 		},
 		"system contract is not prepared": {
@@ -208,7 +208,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
 			},
-			nil,
+			common.Address{},
 			nil,
 		},
 	}
@@ -218,11 +218,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 			g := NewGaslessModule()
 			err := g.Init(tc.opts)
 			require.NoError(t, err)
-			if tc.swapRouter == nil {
-				require.Nil(t, g.swapRouter)
-			} else {
-				require.Equal(t, tc.swapRouter.Bytes(), g.swapRouter.Bytes())
-			}
+			require.Equal(t, tc.swapRouter, g.swapRouter)
 			require.Equal(t, len(tc.allowedTokens), len(g.allowedTokens))
 			for _, addr := range tc.allowedTokens {
 				_, ok := g.allowedTokens[addr]
