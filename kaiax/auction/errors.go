@@ -33,5 +33,6 @@ var (
 	ErrZeroBid                 = errors.New("zero bid")
 	ErrBidPoolFull             = errors.New("bid pool is full")
 
-	ErrAuctionPaused = errors.New("auction is paused")
+	ErrAuctionPaused           = errors.New("auction is paused")
+	ErrAuctionEntryPointNotSet = errors.New("auction entry point is not set")
 )
