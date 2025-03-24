@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
@@ -52,6 +53,7 @@ var (
 const (
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownBids   = 2048  // Maximum bid hashes to keep in the known list (prevent DOS)
 
 	// maxQueuedTxs is the maximum number of transaction lists to queue up before
 	// dropping broadcasts. This is a sensitive number as a transaction list might
@@ -69,6 +71,10 @@ const (
 	// above some healthy uncle limit, so use that.
 	// TODO-Kaia-Refactoring Look into the usage of maxQueuedAnns and remove it if needed
 	maxQueuedAnns = 4
+
+	// maxQueuedBids is the maximum number of bid lists to queue up before
+	// dropping broadcasts.
+	maxQueuedBids = 128
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -133,6 +139,13 @@ type Peer interface {
 	// remote peer. If the peer's broadcast queue is full, the event is silently
 	// dropped.
 	AsyncSendNewBlockHash(block *types.Block)
+
+	// SendBid sends a bid to a remote peer.
+	SendBid(bid *auction.Bid) error
+
+	// AsyncSendBid queues the availability of a bid for propagation to a remote peer.
+	// If the peer's broadcast queue is full, the event is silently dropped.
+	AsyncSendBid(bid *auction.Bid)
 
 	// SendNewBlock propagates an entire block to a remote peer.
 	SendNewBlock(block *types.Block, td *big.Int) error
@@ -207,6 +220,9 @@ type Peer interface {
 	// KnowsBlock returns if the peer is known to have the block, based on knownBlocksCache.
 	KnowsBlock(hash common.Hash) bool
 
+	// KnowsBid returns if the peer is known to have the bid, based on knownBidsCache.
+	KnowsBid(hash common.Hash) bool
+
 	// KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
 	KnowsTx(hash common.Hash) bool
 
@@ -262,9 +278,11 @@ type basePeer struct {
 
 	knownTxsCache    common.Cache              // FIFO cache of transaction hashes known to be known by this peer
 	knownBlocksCache common.Cache              // FIFO cache of block hashes known to be known by this peer
+	knownBidsCache   common.Cache              // FIFO cache of bid hashes known to be known by this peer
 	queuedTxs        chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps      chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns       chan *types.Block         // Queue of blocks to announce to the peer
+	queuedBids       chan *auction.Bid         // Queue of bids to broadcast to the peer
 	term             chan struct{}             // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
@@ -282,6 +300,11 @@ func newKnownTxCache() common.Cache {
 	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs, IsScaled: true})
 }
 
+// newKnownBidCache returns an empty cache for knownBidsCache.
+func newKnownBidCache() common.Cache {
+	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBids, IsScaled: true})
+}
+
 // newPeer returns new Peer interface.
 func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 	id := p.ID()
@@ -294,9 +317,11 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 			id:               fmt.Sprintf("%x", id[:8]),
 			knownTxsCache:    newKnownTxCache(),
 			knownBlocksCache: newKnownBlockCache(),
+			knownBidsCache:   newKnownBidCache(),
 			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
 			queuedProps:      make(chan *propEvent, maxQueuedProps),
 			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
+			queuedBids:       make(chan *auction.Bid, maxQueuedBids),
 			term:             make(chan struct{}),
 		},
 	}
@@ -326,6 +351,9 @@ var ChannelOfMessage = map[uint64]int{
 	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg: p2p.ConnDefault,
 	StakingInfoMsg:        p2p.ConnDefault,
+
+	// Protocol messages belonging to kaia/66
+	BidMsg: p2p.ConnDefault,
 }
 
 var ConcurrentOfChannel = []int{
@@ -351,6 +379,7 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
 			queuedProps:      make(chan *propEvent, maxQueuedProps),
 			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
+			queuedBids:       make(chan *auction.Bid, maxQueuedBids),
 			term:             make(chan struct{}),
 		}
 		return &multiChannelPeer{
@@ -392,6 +421,14 @@ func (p *basePeer) Broadcast() {
 				// return
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
+
+		case bid := <-p.queuedBids:
+			if err := p.SendBid(bid); err != nil {
+				logger.Error("fail to SendBid", "peer", p.id, "err", err)
+				continue
+				// return
+			}
+			p.Log().Trace("Broadcast bid", "peer", p.id, "hash", bid.Hash())
 
 		case <-p.term:
 			p.Log().Debug("Peer broadcast loop end", "peer", p.id)
@@ -445,6 +482,12 @@ func (p *basePeer) AddToKnownBlocks(hash common.Hash) {
 // will never be propagated to this particular peer.
 func (p *basePeer) AddToKnownTxs(hash common.Hash) {
 	p.knownTxsCache.Add(hash, struct{}{})
+}
+
+// AddToKnownBids adds a bid hash to knownBidsCache for the peer, ensuring that it
+// will never be propagated to this particular peer.
+func (p *basePeer) AddToKnownBids(hash common.Hash) {
+	p.knownBidsCache.Add(hash, struct{}{})
 }
 
 // Send writes an RLP-encoded message with the given code.
@@ -521,6 +564,15 @@ func (p *basePeer) AsyncSendNewBlock(block *types.Block, td *big.Int) {
 	}
 }
 
+func (p *basePeer) AsyncSendBid(bid *auction.Bid) {
+	select {
+	case p.queuedBids <- bid:
+		p.AddToKnownBids(bid.Hash())
+	default:
+		p.Log().Debug("Dropping bid propagation", "hash", bid.Hash())
+	}
+}
+
 // SendBlockHeaders sends a batch of block headers to the remote peer.
 func (p *basePeer) SendBlockHeaders(headers []*types.Header) error {
 	return p2p.Send(p.rw, BlockHeadersMsg, headers)
@@ -564,6 +616,11 @@ func (p *basePeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 // ones requested from an already RLP encoded format.
 func (p *basePeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
 	return p2p.Send(p.rw, StakingInfoMsg, stakingInfos)
+}
+
+// SendBid sends a bid to the remote peer.
+func (p *basePeer) SendBid(bid *auction.Bid) error {
+	return p2p.Send(p.rw, BidMsg, bid)
 }
 
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
@@ -740,6 +797,12 @@ func (p *basePeer) KnowsTx(hash common.Hash) bool {
 	return ok
 }
 
+// KnowsBid returns if the peer is known to have the bid, based on knownBidsCache.
+func (p *basePeer) KnowsBid(hash common.Hash) bool {
+	_, ok := p.knownBidsCache.Get(hash)
+	return ok
+}
+
 // GetP2PPeer returns the p2p.Peer.
 func (p *basePeer) GetP2PPeer() *p2p.Peer {
 	return p.Peer
@@ -837,6 +900,14 @@ func (p *multiChannelPeer) Broadcast() {
 			}
 			p.Log().Trace("Announced block", "peer", p.id, "number", block.Number(), "hash", block.Hash())
 
+		case bid := <-p.queuedBids:
+			if err := p.SendBid(bid); err != nil {
+				logger.Error("fail to SendBid", "peer", p.id, "err", err)
+				continue
+				// return
+			}
+			p.Log().Trace("Broadcast bid", "peer", p.id, "hash", bid.Hash())
+
 		case <-p.term:
 			p.Log().Debug("Peer broadcast loop end", "peer", p.id)
 			return
@@ -921,6 +992,12 @@ func (p *multiChannelPeer) SendReceiptsRLP(receipts []rlp.RawValue) error {
 // ones requested from an already RLP encoded format.
 func (p *multiChannelPeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error {
 	return p.msgSender(StakingInfoMsg, stakingInfos)
+}
+
+// SendBid sends a bid to the remote peer.
+func (p *multiChannelPeer) SendBid(bid *auction.Bid) error {
+	p.AddToKnownBids(bid.Hash())
+	return p.msgSender(BidMsg, bid)
 }
 
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
