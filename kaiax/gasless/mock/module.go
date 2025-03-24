@@ -91,6 +91,20 @@ func (mr *MockGaslessModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockGaslessModule)(nil).IsReady), arg0, arg1, arg2)
 }
 
+// PostInsertBlock mocks base method.
+func (m *MockGaslessModule) PostInsertBlock(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
+}
+
 // PreAddLocal mocks base method.
 func (m *MockGaslessModule) PreAddLocal(arg0 *types.Transaction) error {
 	m.ctrl.T.Helper()

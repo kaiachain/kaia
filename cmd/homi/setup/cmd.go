@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/params"
@@ -141,6 +142,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
 	altsrc.NewBoolFlag(registryMockFlag),
+	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
+	altsrc.NewBoolFlag(gasless.DisableFlag),
 }
 
 var SetupCommand = &cli.Command{
