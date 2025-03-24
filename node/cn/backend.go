@@ -559,8 +559,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mTxBundling := []builder.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 
-	disabled := mGasless.IsDisabled()
-	if !disabled {
+	gaslessDisabled := mGasless.IsDisabled()
+	if !gaslessDisabled {
 		mExecution = append(mExecution, mGasless)
 		mTxBundling = append(mTxBundling, mGasless)
 		mTxPool = append(mTxPool, mGasless)
