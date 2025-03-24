@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/params"
@@ -69,6 +70,11 @@ func GetDefaultConfig() *Config {
 
 		Istanbul:      *istanbul.DefaultConfig,
 		RPCEVMTimeout: 5 * time.Second,
+
+		Gasless: &gasless.GaslessConfig{
+			AllowedTokens: nil,
+			Disable:       false,
+		},
 	}
 }
 
@@ -195,6 +201,9 @@ type Config struct {
 
 	// Use console.log in solidity for local network
 	UseConsoleLog bool
+
+	// Kaiax configs
+	Gasless *gasless.GaslessConfig
 }
 
 type configMarshaling struct {

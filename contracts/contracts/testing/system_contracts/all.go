@@ -448,6 +448,7 @@ type ContextUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ContextUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _ContextUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -459,6 +460,7 @@ func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ContextUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _ContextUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -735,6 +737,7 @@ type ERC1967UpgradeUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -746,6 +749,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdmin
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -867,6 +871,7 @@ type ERC1967UpgradeUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeUpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -883,6 +888,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaco
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -1009,6 +1015,7 @@ type ERC1967UpgradeUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1020,6 +1027,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterIniti
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1141,6 +1149,7 @@ type ERC1967UpgradeUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1157,6 +1166,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgra
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1397,8 +1407,7 @@ func (_IAddressBook *IAddressBookTransactorRaw) Transact(opts *bind.TransactOpts
 func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddress")
 
@@ -1414,6 +1423,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return *outstruct, err
+
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -1422,8 +1432,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1433,8 +1442,7 @@ func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1447,8 +1455,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddressInfo")
 
@@ -1470,6 +1477,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	outstruct.KirContractAddress = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
 
 	return *outstruct, err
+
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -1481,8 +1489,7 @@ func (_IAddressBook *IAddressBookSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1495,8 +1502,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1507,8 +1513,7 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
 
@@ -1526,6 +1531,7 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	outstruct.CnRewardAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
 
 	return *outstruct, err
+
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -1535,8 +1541,7 @@ func (_IAddressBook *IAddressBookSession) GetCnInfo(_cnNodeId common.Address) (s
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1547,8 +1552,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1558,6 +1562,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getPendingRequestList")
+
 	if err != nil {
 		return *new([][32]byte), err
 	}
@@ -1565,6 +1570,7 @@ func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
 
 	return out0, err
+
 }
 
 // GetPendingRequestList is a free data retrieval call binding the contract method 0xda34a0bd.
@@ -1592,8 +1598,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfo", _id)
 
@@ -1619,6 +1624,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	outstruct.State = *abi.ConvertType(out[6], new(uint8)).(*uint8)
 
 	return *outstruct, err
+
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x82d67e5a.
@@ -1632,8 +1638,7 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfo(_id [32]byte) (struct {
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1648,8 +1653,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfo(_id [32]byte) (st
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1661,8 +1665,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfoByArgs", _functionId, _firstArg, _secondArg, _thirdArg)
 
@@ -1682,6 +1685,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	outstruct.State = *abi.ConvertType(out[3], new(uint8)).(*uint8)
 
 	return *outstruct, err
+
 }
 
 // GetRequestInfoByArgs is a free data retrieval call binding the contract method 0x407091eb.
@@ -1692,8 +1696,7 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfoByArgs(_functionId uint8
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1705,8 +1708,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1716,8 +1718,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getState")
 
@@ -1733,6 +1734,7 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	outstruct.Requirement = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -1741,8 +1743,7 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 func (_IAddressBook *IAddressBookSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1752,8 +1753,7 @@ func (_IAddressBook *IAddressBookSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1763,6 +1763,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isActivated")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1770,6 +1771,7 @@ func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -1792,6 +1794,7 @@ func (_IAddressBook *IAddressBookCallerSession) IsActivated() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isConstructed")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1799,6 +1802,7 @@ func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (boo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -1821,6 +1825,7 @@ func (_IAddressBook *IAddressBookCallerSession) IsConstructed() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "kirContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1828,6 +1833,7 @@ func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -1850,6 +1856,7 @@ func (_IAddressBook *IAddressBookCallerSession) KirContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "pocContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1857,6 +1864,7 @@ func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -1879,6 +1887,7 @@ func (_IAddressBook *IAddressBookCallerSession) PocContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "spareContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1886,6 +1895,7 @@ func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -2342,6 +2352,7 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableTransactorRaw) Transact(opts *bind.
 func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IBeaconUpgradeable.contract.Call(opts, &out, "implementation")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2349,6 +2360,7 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
@@ -2532,6 +2544,7 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableTransactorRaw) 
 func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IERC1822ProxiableUpgradeable.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -2539,6 +2552,7 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) Proxiab
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -2787,6 +2801,7 @@ type IERC1967UpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*IERC1967UpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _IERC1967Upgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2798,6 +2813,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _IERC1967Upgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2919,6 +2935,7 @@ type IERC1967UpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*IERC1967UpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2935,6 +2952,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(op
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -3061,6 +3079,7 @@ type IERC1967UpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*IERC1967UpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3077,6 +3096,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bi
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3293,8 +3313,7 @@ func (_IKIP113 *IKIP113TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IKIP113.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -3310,6 +3329,7 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -3318,8 +3338,7 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3329,8 +3348,7 @@ func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 func (_IKIP113 *IKIP113CallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3508,6 +3526,7 @@ func (_IRegistry *IRegistryTransactorRaw) Transact(opts *bind.TransactOpts, meth
 func (_IRegistry *IRegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "getAllNames")
+
 	if err != nil {
 		return *new([]string), err
 	}
@@ -3515,6 +3534,7 @@ func (_IRegistry *IRegistryCaller) GetAllNames(opts *bind.CallOpts) ([]string, e
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
+
 }
 
 // GetAllNames is a free data retrieval call binding the contract method 0xfb825e5f.
@@ -3537,6 +3557,7 @@ func (_IRegistry *IRegistryCallerSession) GetAllNames() ([]string, error) {
 func (_IRegistry *IRegistryCaller) GetAllRecords(opts *bind.CallOpts, name string) ([]IRegistryRecord, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "getAllRecords", name)
+
 	if err != nil {
 		return *new([]IRegistryRecord), err
 	}
@@ -3544,6 +3565,7 @@ func (_IRegistry *IRegistryCaller) GetAllRecords(opts *bind.CallOpts, name strin
 	out0 := *abi.ConvertType(out[0], new([]IRegistryRecord)).(*[]IRegistryRecord)
 
 	return out0, err
+
 }
 
 // GetAllRecords is a free data retrieval call binding the contract method 0x78d573a2.
@@ -3566,6 +3588,7 @@ func (_IRegistry *IRegistryCallerSession) GetAllRecords(name string) ([]IRegistr
 func (_IRegistry *IRegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "names", arg0)
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -3573,6 +3596,7 @@ func (_IRegistry *IRegistryCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (st
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Names is a free data retrieval call binding the contract method 0x4622ab03.
@@ -3595,6 +3619,7 @@ func (_IRegistry *IRegistryCallerSession) Names(arg0 *big.Int) (string, error) {
 func (_IRegistry *IRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3602,6 +3627,7 @@ func (_IRegistry *IRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, e
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3624,8 +3650,7 @@ func (_IRegistry *IRegistryCallerSession) Owner() (common.Address, error) {
 func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IRegistry.contract.Call(opts, &out, "records", arg0, arg1)
 
@@ -3641,6 +3666,7 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Records is a free data retrieval call binding the contract method 0x3b51650d.
@@ -3649,8 +3675,7 @@ func (_IRegistry *IRegistryCaller) Records(opts *bind.CallOpts, arg0 string, arg
 func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -3660,8 +3685,7 @@ func (_IRegistry *IRegistrySession) Records(arg0 string, arg1 *big.Int) (struct 
 func (_IRegistry *IRegistryCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	return _IRegistry.Contract.Records(&_IRegistry.CallOpts, arg0, arg1)
 }
 
@@ -3806,6 +3830,7 @@ type IRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*IRegistryOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -3826,6 +3851,7 @@ func (_IRegistry *IRegistryFilterer) FilterOwnershipTransferred(opts *bind.Filte
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_IRegistry *IRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *IRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -3958,6 +3984,7 @@ type IRegistryRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*IRegistryRegisteredIterator, error) {
+
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -3978,6 +4005,7 @@ func (_IRegistry *IRegistryFilterer) FilterRegistered(opts *bind.FilterOpts, add
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_IRegistry *IRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *IRegistryRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
+
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -4198,8 +4226,7 @@ func (_IRetiredContract *IRetiredContractTransactorRaw) Transact(opts *bind.Tran
 func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IRetiredContract.contract.Call(opts, &out, "getState")
 
@@ -4215,6 +4242,7 @@ func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (
 	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -4223,8 +4251,7 @@ func (_IRetiredContract *IRetiredContractCaller) GetState(opts *bind.CallOpts) (
 func (_IRetiredContract *IRetiredContractSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	return _IRetiredContract.Contract.GetState(&_IRetiredContract.CallOpts)
 }
 
@@ -4234,8 +4261,7 @@ func (_IRetiredContract *IRetiredContractSession) GetState() (struct {
 func (_IRetiredContract *IRetiredContractCallerSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	return _IRetiredContract.Contract.GetState(&_IRetiredContract.CallOpts)
 }
 
@@ -4424,11 +4450,13 @@ func (_ITreasuryRebalance *ITreasuryRebalanceTransactorRaw) Transact(opts *bind.
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) CheckRetiredsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "checkRetiredsApproved")
+
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 // CheckRetiredsApproved is a free data retrieval call binding the contract method 0x966e0794.
@@ -4451,6 +4479,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) CheckRetiredsApprove
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts, newbieAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getNewbie", newbieAddress)
+
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -4459,6 +4488,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbie(opts *bind.CallOp
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
+
 }
 
 // GetNewbie is a free data retrieval call binding the contract method 0xeb5a8e55.
@@ -4481,6 +4511,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetNewbie(newbieAddr
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbieCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getNewbieCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4488,6 +4519,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetNewbieCount(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetNewbieCount is a free data retrieval call binding the contract method 0x91734d86.
@@ -4510,6 +4542,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetNewbieCount() (*b
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetired(opts *bind.CallOpts, retiredAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getRetired", retiredAddress)
+
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -4518,6 +4551,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetired(opts *bind.CallO
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
+
 }
 
 // GetRetired is a free data retrieval call binding the contract method 0xbf680590.
@@ -4540,6 +4574,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetRetired(retiredAd
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetiredCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getRetiredCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4547,6 +4582,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetRetiredCount(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetRetiredCount is a free data retrieval call binding the contract method 0xd1ed33fc.
@@ -4569,6 +4605,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetRetiredCount() (*
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "getTreasuryAmount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4576,6 +4613,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) GetTreasuryAmount(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -4598,6 +4636,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) GetTreasuryAmount() 
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "memo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -4605,6 +4644,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -4627,6 +4667,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) Memo() (string, erro
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "rebalanceBlockNumber")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4634,6 +4675,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) RebalanceBlockNumber(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -4656,6 +4698,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) RebalanceBlockNumber
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "status")
+
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -4663,6 +4706,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) Status(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
+
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -4685,6 +4729,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCallerSession) Status() (uint8, err
 func (_ITreasuryRebalance *ITreasuryRebalanceCaller) SumOfRetiredBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _ITreasuryRebalance.contract.Call(opts, &out, "sumOfRetiredBalance")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4692,6 +4737,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceCaller) SumOfRetiredBalance(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // SumOfRetiredBalance is a free data retrieval call binding the contract method 0x45205a6b.
@@ -4976,6 +5022,7 @@ type ITreasuryRebalanceApproved struct {
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterApproved(opts *bind.FilterOpts) (*ITreasuryRebalanceApprovedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -4987,6 +5034,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterApproved(opts *bind
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceApproved) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -5110,6 +5158,7 @@ type ITreasuryRebalanceContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterContractDeployed(opts *bind.FilterOpts) (*ITreasuryRebalanceContractDeployedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -5121,6 +5170,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterContractDeployed(op
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceContractDeployed) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -5243,6 +5293,7 @@ type ITreasuryRebalanceFinalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterFinalized(opts *bind.FilterOpts) (*ITreasuryRebalanceFinalizedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -5254,6 +5305,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterFinalized(opts *bin
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceFinalized) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -5376,6 +5428,7 @@ type ITreasuryRebalanceNewbieRegistered struct {
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRegistered(opts *bind.FilterOpts) (*ITreasuryRebalanceNewbieRegisteredIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -5387,6 +5440,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRegistered(op
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchNewbieRegistered(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceNewbieRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -5508,6 +5562,7 @@ type ITreasuryRebalanceNewbieRemoved struct {
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRemoved(opts *bind.FilterOpts) (*ITreasuryRebalanceNewbieRemovedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -5519,6 +5574,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterNewbieRemoved(opts 
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchNewbieRemoved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceNewbieRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -5640,6 +5696,7 @@ type ITreasuryRebalanceRetiredRegistered struct {
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRegistered(opts *bind.FilterOpts) (*ITreasuryRebalanceRetiredRegisteredIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -5651,6 +5708,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRegistered(o
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchRetiredRegistered(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceRetiredRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -5772,6 +5830,7 @@ type ITreasuryRebalanceRetiredRemoved struct {
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRemoved(opts *bind.FilterOpts) (*ITreasuryRebalanceRetiredRemovedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -5783,6 +5842,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterRetiredRemoved(opts
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchRetiredRemoved(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceRetiredRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -5904,6 +5964,7 @@ type ITreasuryRebalanceStatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterStatusChanged(opts *bind.FilterOpts) (*ITreasuryRebalanceStatusChangedIterator, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -5915,6 +5976,7 @@ func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) FilterStatusChanged(opts 
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_ITreasuryRebalance *ITreasuryRebalanceFilterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *ITreasuryRebalanceStatusChanged) (event.Subscription, error) {
+
 	logs, sub, err := _ITreasuryRebalance.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -6126,8 +6188,7 @@ func (_IZeroedContract *IZeroedContractTransactorRaw) Transact(opts *bind.Transa
 func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IZeroedContract.contract.Call(opts, &out, "getState")
 
@@ -6143,6 +6204,7 @@ func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (st
 	outstruct.Quorom = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -6151,8 +6213,7 @@ func (_IZeroedContract *IZeroedContractCaller) GetState(opts *bind.CallOpts) (st
 func (_IZeroedContract *IZeroedContractSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
 }
 
@@ -6162,8 +6223,7 @@ func (_IZeroedContract *IZeroedContractSession) GetState() (struct {
 func (_IZeroedContract *IZeroedContractCallerSession) GetState() (struct {
 	AdminList []common.Address
 	Quorom    *big.Int
-}, error,
-) {
+}, error) {
 	return _IZeroedContract.Contract.GetState(&_IZeroedContract.CallOpts)
 }
 
@@ -6398,6 +6458,7 @@ type InitializableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.FilterOpts) (*InitializableInitializedIterator, error) {
+
 	logs, sub, err := _Initializable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6409,6 +6470,7 @@ func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.Filter
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *InitializableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _Initializable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6656,6 +6718,7 @@ func (_KIP113Mock *KIP113MockTransactorRaw) Transact(opts *bind.TransactOpts, me
 func (_KIP113Mock *KIP113MockCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "ZERO48HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6663,6 +6726,7 @@ func (_KIP113Mock *KIP113MockCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -6685,6 +6749,7 @@ func (_KIP113Mock *KIP113MockCallerSession) ZERO48HASH() ([32]byte, error) {
 func (_KIP113Mock *KIP113MockCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "ZERO96HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6692,6 +6757,7 @@ func (_KIP113Mock *KIP113MockCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, 
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -6714,6 +6780,7 @@ func (_KIP113Mock *KIP113MockCallerSession) ZERO96HASH() ([32]byte, error) {
 func (_KIP113Mock *KIP113MockCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "abook")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -6721,6 +6788,7 @@ func (_KIP113Mock *KIP113MockCaller) Abook(opts *bind.CallOpts) (common.Address,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -6743,6 +6811,7 @@ func (_KIP113Mock *KIP113MockCallerSession) Abook() (common.Address, error) {
 func (_KIP113Mock *KIP113MockCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "allNodeIds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -6750,6 +6819,7 @@ func (_KIP113Mock *KIP113MockCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.I
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -6772,8 +6842,7 @@ func (_KIP113Mock *KIP113MockCallerSession) AllNodeIds(arg0 *big.Int) (common.Ad
 func (_KIP113Mock *KIP113MockCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -6789,6 +6858,7 @@ func (_KIP113Mock *KIP113MockCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct 
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -6797,8 +6867,7 @@ func (_KIP113Mock *KIP113MockCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct 
 func (_KIP113Mock *KIP113MockSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _KIP113Mock.Contract.GetAllBlsInfo(&_KIP113Mock.CallOpts)
 }
 
@@ -6808,8 +6877,7 @@ func (_KIP113Mock *KIP113MockSession) GetAllBlsInfo() (struct {
 func (_KIP113Mock *KIP113MockCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _KIP113Mock.Contract.GetAllBlsInfo(&_KIP113Mock.CallOpts)
 }
 
@@ -6819,6 +6887,7 @@ func (_KIP113Mock *KIP113MockCallerSession) GetAllBlsInfo() (struct {
 func (_KIP113Mock *KIP113MockCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -6826,6 +6895,7 @@ func (_KIP113Mock *KIP113MockCaller) Owner(opts *bind.CallOpts) (common.Address,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -6848,6 +6918,7 @@ func (_KIP113Mock *KIP113MockCallerSession) Owner() (common.Address, error) {
 func (_KIP113Mock *KIP113MockCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6855,6 +6926,7 @@ func (_KIP113Mock *KIP113MockCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -6877,8 +6949,7 @@ func (_KIP113Mock *KIP113MockCallerSession) ProxiableUUID() ([32]byte, error) {
 func (_KIP113Mock *KIP113MockCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _KIP113Mock.contract.Call(opts, &out, "record", arg0)
 
@@ -6894,6 +6965,7 @@ func (_KIP113Mock *KIP113MockCaller) Record(opts *bind.CallOpts, arg0 common.Add
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return *outstruct, err
+
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -6902,8 +6974,7 @@ func (_KIP113Mock *KIP113MockCaller) Record(opts *bind.CallOpts, arg0 common.Add
 func (_KIP113Mock *KIP113MockSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _KIP113Mock.Contract.Record(&_KIP113Mock.CallOpts, arg0)
 }
 
@@ -6913,8 +6984,7 @@ func (_KIP113Mock *KIP113MockSession) Record(arg0 common.Address) (struct {
 func (_KIP113Mock *KIP113MockCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _KIP113Mock.Contract.Record(&_KIP113Mock.CallOpts, arg0)
 }
 
@@ -7143,6 +7213,7 @@ type KIP113MockAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_KIP113Mock *KIP113MockFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*KIP113MockAdminChangedIterator, error) {
+
 	logs, sub, err := _KIP113Mock.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -7154,6 +7225,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterAdminChanged(opts *bind.FilterOpts)
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_KIP113Mock *KIP113MockFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *KIP113MockAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113Mock.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -7275,6 +7347,7 @@ type KIP113MockBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_KIP113Mock *KIP113MockFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*KIP113MockBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -7291,6 +7364,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterBeaconUpgraded(opts *bind.FilterOpt
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_KIP113Mock *KIP113MockFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *KIP113MockBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -7417,6 +7491,7 @@ type KIP113MockInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_KIP113Mock *KIP113MockFilterer) FilterInitialized(opts *bind.FilterOpts) (*KIP113MockInitializedIterator, error) {
+
 	logs, sub, err := _KIP113Mock.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -7428,6 +7503,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterInitialized(opts *bind.FilterOpts) 
 //
 // Solidity: event Initialized(uint8 version)
 func (_KIP113Mock *KIP113MockFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *KIP113MockInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113Mock.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -7550,6 +7626,7 @@ type KIP113MockOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_KIP113Mock *KIP113MockFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*KIP113MockOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7570,6 +7647,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterOwnershipTransferred(opts *bind.Fil
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_KIP113Mock *KIP113MockFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *KIP113MockOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -7702,6 +7780,7 @@ type KIP113MockRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113Mock *KIP113MockFilterer) FilterRegistered(opts *bind.FilterOpts) (*KIP113MockRegisteredIterator, error) {
+
 	logs, sub, err := _KIP113Mock.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -7713,6 +7792,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterRegistered(opts *bind.FilterOpts) (
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113Mock *KIP113MockFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *KIP113MockRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113Mock.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -7836,6 +7916,7 @@ type KIP113MockUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113Mock *KIP113MockFilterer) FilterUnregistered(opts *bind.FilterOpts) (*KIP113MockUnregisteredIterator, error) {
+
 	logs, sub, err := _KIP113Mock.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -7847,6 +7928,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterUnregistered(opts *bind.FilterOpts)
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113Mock *KIP113MockFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *KIP113MockUnregistered) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113Mock.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -7968,6 +8050,7 @@ type KIP113MockUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_KIP113Mock *KIP113MockFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*KIP113MockUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -7984,6 +8067,7 @@ func (_KIP113Mock *KIP113MockFilterer) FilterUpgraded(opts *bind.FilterOpts, imp
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_KIP113Mock *KIP113MockFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *KIP113MockUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -8236,6 +8320,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNTransactorRaw) Transact(opts *bind.Tr
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "ZERO48HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -8243,6 +8328,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ZERO48HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -8265,6 +8351,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) ZERO48HASH() ([32]byte
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "ZERO96HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -8272,6 +8359,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ZERO96HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -8294,6 +8382,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) ZERO96HASH() ([32]byte
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "abook")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8301,6 +8390,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Abook(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -8323,6 +8413,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) Abook() (common.Addres
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "allNodeIds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8330,6 +8421,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) AllNodeIds(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -8352,8 +8444,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) AllNodeIds(arg0 *big.I
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -8369,6 +8460,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) GetAllBlsInfo(opts *bind.Call
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -8377,8 +8469,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) GetAllBlsInfo(opts *bind.Call
 func (_KIP113MockThreeCN *KIP113MockThreeCNSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _KIP113MockThreeCN.Contract.GetAllBlsInfo(&_KIP113MockThreeCN.CallOpts)
 }
 
@@ -8388,8 +8479,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNSession) GetAllBlsInfo() (struct {
 func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _KIP113MockThreeCN.Contract.GetAllBlsInfo(&_KIP113MockThreeCN.CallOpts)
 }
 
@@ -8399,6 +8489,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) GetAllBlsInfo() (struc
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -8406,6 +8497,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -8428,6 +8520,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) Owner() (common.Addres
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -8435,6 +8528,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -8457,8 +8551,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) ProxiableUUID() ([32]b
 func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _KIP113MockThreeCN.contract.Call(opts, &out, "record", arg0)
 
@@ -8474,6 +8567,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Record(opts *bind.CallOpts, a
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return *outstruct, err
+
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -8482,8 +8576,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNCaller) Record(opts *bind.CallOpts, a
 func (_KIP113MockThreeCN *KIP113MockThreeCNSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _KIP113MockThreeCN.Contract.Record(&_KIP113MockThreeCN.CallOpts, arg0)
 }
 
@@ -8493,8 +8586,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNSession) Record(arg0 common.Address) 
 func (_KIP113MockThreeCN *KIP113MockThreeCNCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _KIP113MockThreeCN.Contract.Record(&_KIP113MockThreeCN.CallOpts, arg0)
 }
 
@@ -8723,6 +8815,7 @@ type KIP113MockThreeCNAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*KIP113MockThreeCNAdminChangedIterator, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -8734,6 +8827,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterAdminChanged(opts *bi
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -8855,6 +8949,7 @@ type KIP113MockThreeCNBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*KIP113MockThreeCNBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -8871,6 +8966,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterBeaconUpgraded(opts *
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -8997,6 +9093,7 @@ type KIP113MockThreeCNInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterInitialized(opts *bind.FilterOpts) (*KIP113MockThreeCNInitializedIterator, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -9008,6 +9105,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterInitialized(opts *bin
 //
 // Solidity: event Initialized(uint8 version)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -9130,6 +9228,7 @@ type KIP113MockThreeCNOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*KIP113MockThreeCNOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9150,6 +9249,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -9282,6 +9382,7 @@ type KIP113MockThreeCNRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterRegistered(opts *bind.FilterOpts) (*KIP113MockThreeCNRegisteredIterator, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -9293,6 +9394,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterRegistered(opts *bind
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -9416,6 +9518,7 @@ type KIP113MockThreeCNUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterUnregistered(opts *bind.FilterOpts) (*KIP113MockThreeCNUnregisteredIterator, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -9427,6 +9530,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterUnregistered(opts *bi
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNUnregistered) (event.Subscription, error) {
+
 	logs, sub, err := _KIP113MockThreeCN.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -9548,6 +9652,7 @@ type KIP113MockThreeCNUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*KIP113MockThreeCNUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -9564,6 +9669,7 @@ func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) FilterUpgraded(opts *bind.F
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_KIP113MockThreeCN *KIP113MockThreeCNFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *KIP113MockThreeCNUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -9803,8 +9909,7 @@ func (_MultiCallContractMock *MultiCallContractMockCaller) MultiCallStakingInfo(
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _MultiCallContractMock.contract.Call(opts, &out, "multiCallStakingInfo")
 
@@ -9822,6 +9927,7 @@ func (_MultiCallContractMock *MultiCallContractMockCaller) MultiCallStakingInfo(
 	outstruct.StakingAmounts = *abi.ConvertType(out[2], new([]*big.Int)).(*[]*big.Int)
 
 	return *outstruct, err
+
 }
 
 // MultiCallStakingInfo is a free data retrieval call binding the contract method 0xadde19c6.
@@ -9831,8 +9937,7 @@ func (_MultiCallContractMock *MultiCallContractMockSession) MultiCallStakingInfo
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContractMock.Contract.MultiCallStakingInfo(&_MultiCallContractMock.CallOpts)
 }
 
@@ -9843,8 +9948,7 @@ func (_MultiCallContractMock *MultiCallContractMockCallerSession) MultiCallStaki
 	TypeList       []uint8
 	AddressList    []common.Address
 	StakingAmounts []*big.Int
-}, error,
-) {
+}, error) {
 	return _MultiCallContractMock.Contract.MultiCallStakingInfo(&_MultiCallContractMock.CallOpts)
 }
 
@@ -10040,6 +10144,7 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "isOwner")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -10047,6 +10152,7 @@ func (_Ownable *OwnableCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -10069,6 +10175,7 @@ func (_Ownable *OwnableCallerSession) IsOwner() (bool, error) {
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -10076,6 +10183,7 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -10212,6 +10320,7 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10232,6 +10341,7 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10454,6 +10564,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableTransactorRaw) Transact(opts *bind.
 func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _OwnableUpgradeable.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -10461,6 +10572,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -10596,6 +10708,7 @@ type OwnableUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*OwnableUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _OwnableUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -10607,6 +10720,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _OwnableUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -10729,6 +10843,7 @@ type OwnableUpgradeableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableUpgradeableOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10749,6 +10864,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -10998,6 +11114,7 @@ func (_RegistryMock *RegistryMockTransactorRaw) Transact(opts *bind.TransactOpts
 func (_RegistryMock *RegistryMockCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "getActiveAddr", name)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -11005,6 +11122,7 @@ func (_RegistryMock *RegistryMockCaller) GetActiveAddr(opts *bind.CallOpts, name
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
@@ -11027,6 +11145,7 @@ func (_RegistryMock *RegistryMockCallerSession) GetActiveAddr(name string) (comm
 func (_RegistryMock *RegistryMockCaller) GetAllNames(opts *bind.CallOpts) ([]string, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "getAllNames")
+
 	if err != nil {
 		return *new([]string), err
 	}
@@ -11034,6 +11153,7 @@ func (_RegistryMock *RegistryMockCaller) GetAllNames(opts *bind.CallOpts) ([]str
 	out0 := *abi.ConvertType(out[0], new([]string)).(*[]string)
 
 	return out0, err
+
 }
 
 // GetAllNames is a free data retrieval call binding the contract method 0xfb825e5f.
@@ -11056,6 +11176,7 @@ func (_RegistryMock *RegistryMockCallerSession) GetAllNames() ([]string, error) 
 func (_RegistryMock *RegistryMockCaller) GetAllRecords(opts *bind.CallOpts, name string) ([]IRegistryRecord, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "getAllRecords", name)
+
 	if err != nil {
 		return *new([]IRegistryRecord), err
 	}
@@ -11063,6 +11184,7 @@ func (_RegistryMock *RegistryMockCaller) GetAllRecords(opts *bind.CallOpts, name
 	out0 := *abi.ConvertType(out[0], new([]IRegistryRecord)).(*[]IRegistryRecord)
 
 	return out0, err
+
 }
 
 // GetAllRecords is a free data retrieval call binding the contract method 0x78d573a2.
@@ -11085,6 +11207,7 @@ func (_RegistryMock *RegistryMockCallerSession) GetAllRecords(name string) ([]IR
 func (_RegistryMock *RegistryMockCaller) Names(opts *bind.CallOpts, arg0 *big.Int) (string, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "names", arg0)
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -11092,6 +11215,7 @@ func (_RegistryMock *RegistryMockCaller) Names(opts *bind.CallOpts, arg0 *big.In
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Names is a free data retrieval call binding the contract method 0x4622ab03.
@@ -11114,6 +11238,7 @@ func (_RegistryMock *RegistryMockCallerSession) Names(arg0 *big.Int) (string, er
 func (_RegistryMock *RegistryMockCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -11121,6 +11246,7 @@ func (_RegistryMock *RegistryMockCaller) Owner(opts *bind.CallOpts) (common.Addr
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -11143,8 +11269,7 @@ func (_RegistryMock *RegistryMockCallerSession) Owner() (common.Address, error) 
 func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _RegistryMock.contract.Call(opts, &out, "records", arg0, arg1)
 
@@ -11160,6 +11285,7 @@ func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 strin
 	outstruct.Activation = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Records is a free data retrieval call binding the contract method 0x3b51650d.
@@ -11168,8 +11294,7 @@ func (_RegistryMock *RegistryMockCaller) Records(opts *bind.CallOpts, arg0 strin
 func (_RegistryMock *RegistryMockSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
@@ -11179,8 +11304,7 @@ func (_RegistryMock *RegistryMockSession) Records(arg0 string, arg1 *big.Int) (s
 func (_RegistryMock *RegistryMockCallerSession) Records(arg0 string, arg1 *big.Int) (struct {
 	Addr       common.Address
 	Activation *big.Int
-}, error,
-) {
+}, error) {
 	return _RegistryMock.Contract.Records(&_RegistryMock.CallOpts, arg0, arg1)
 }
 
@@ -11304,6 +11428,7 @@ type RegistryMockOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_RegistryMock *RegistryMockFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*RegistryMockOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -11324,6 +11449,7 @@ func (_RegistryMock *RegistryMockFilterer) FilterOwnershipTransferred(opts *bind
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_RegistryMock *RegistryMockFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *RegistryMockOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -11456,6 +11582,7 @@ type RegistryMockRegistered struct {
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_RegistryMock *RegistryMockFilterer) FilterRegistered(opts *bind.FilterOpts, addr []common.Address, activation []*big.Int) (*RegistryMockRegisteredIterator, error) {
+
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -11476,6 +11603,7 @@ func (_RegistryMock *RegistryMockFilterer) FilterRegistered(opts *bind.FilterOpt
 //
 // Solidity: event Registered(string name, address indexed addr, uint256 indexed activation)
 func (_RegistryMock *RegistryMockFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *RegistryMockRegistered, addr []common.Address, activation []*big.Int) (event.Subscription, error) {
+
 	var addrRule []interface{}
 	for _, addrItem := range addr {
 		addrRule = append(addrRule, addrItem)
@@ -11732,6 +11860,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryTransactorRaw) Transact(opts *bind.Tr
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO48HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -11739,6 +11868,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -11761,6 +11891,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO48HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO96HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -11768,6 +11899,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -11790,6 +11922,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO96HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "abook")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -11797,6 +11930,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -11819,6 +11953,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Abook() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "allNodeIds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -11826,6 +11961,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -11848,8 +11984,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) AllNodeIds(arg0 *big.I
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -11865,6 +12000,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
 
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -11873,8 +12009,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -11884,8 +12019,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -11895,6 +12029,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struc
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -11902,6 +12037,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -11924,6 +12060,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Owner() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -11931,6 +12068,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -11953,8 +12091,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ProxiableUUID() ([32]b
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "record", arg0)
 
@@ -11970,6 +12107,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
 
 	return *outstruct, err
+
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -11978,8 +12116,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -11989,8 +12126,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) 
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -12219,6 +12355,7 @@ type SimpleBlsRegistryAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*SimpleBlsRegistryAdminChangedIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -12230,6 +12367,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bi
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -12351,6 +12489,7 @@ type SimpleBlsRegistryBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*SimpleBlsRegistryBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -12367,6 +12506,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -12493,6 +12633,7 @@ type SimpleBlsRegistryInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bind.FilterOpts) (*SimpleBlsRegistryInitializedIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -12504,6 +12645,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bin
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -12626,6 +12768,7 @@ type SimpleBlsRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*SimpleBlsRegistryOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -12646,6 +12789,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -12778,6 +12922,7 @@ type SimpleBlsRegistryRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind.FilterOpts) (*SimpleBlsRegistryRegisteredIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -12789,6 +12934,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -12912,6 +13058,7 @@ type SimpleBlsRegistryUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bind.FilterOpts) (*SimpleBlsRegistryUnregisteredIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -12923,6 +13070,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bi
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUnregistered) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -13044,6 +13192,7 @@ type SimpleBlsRegistryUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*SimpleBlsRegistryUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -13060,6 +13209,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.F
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -13503,11 +13653,13 @@ func (_TreasuryRebalance *TreasuryRebalanceTransactorRaw) Transact(opts *bind.Tr
 func (_TreasuryRebalance *TreasuryRebalanceCaller) CheckRetiredsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "checkRetiredsApproved")
+
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 // CheckRetiredsApproved is a free data retrieval call binding the contract method 0x966e0794.
@@ -13530,6 +13682,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) CheckRetiredsApproved(
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts, _newbieAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbie", _newbieAddress)
+
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -13538,6 +13691,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbie(opts *bind.CallOpts
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
+
 }
 
 // GetNewbie is a free data retrieval call binding the contract method 0xeb5a8e55.
@@ -13560,6 +13714,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbie(_newbieAddre
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbieCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13567,6 +13722,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieCount(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetNewbieCount is a free data retrieval call binding the contract method 0x91734d86.
@@ -13589,6 +13745,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbieCount() (*big
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieIndex(opts *bind.CallOpts, _newbieAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getNewbieIndex", _newbieAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13596,6 +13753,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetNewbieIndex(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetNewbieIndex is a free data retrieval call binding the contract method 0x11f5c466.
@@ -13618,6 +13776,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetNewbieIndex(_newbie
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetired(opts *bind.CallOpts, _retiredAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetired", _retiredAddress)
+
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -13626,6 +13785,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetired(opts *bind.CallOpt
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
+
 }
 
 // GetRetired is a free data retrieval call binding the contract method 0xbf680590.
@@ -13648,6 +13808,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetired(_retiredAdd
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetiredCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13655,6 +13816,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredCount(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetRetiredCount is a free data retrieval call binding the contract method 0xd1ed33fc.
@@ -13677,6 +13839,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetiredCount() (*bi
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredIndex(opts *bind.CallOpts, _retiredAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getRetiredIndex", _retiredAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13684,6 +13847,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetRetiredIndex(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetRetiredIndex is a free data retrieval call binding the contract method 0x681f6e7c.
@@ -13706,6 +13870,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetRetiredIndex(_retir
 func (_TreasuryRebalance *TreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "getTreasuryAmount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13713,6 +13878,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) GetTreasuryAmount(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -13735,6 +13901,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) GetTreasuryAmount() (*
 func (_TreasuryRebalance *TreasuryRebalanceCaller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "isContractAddr", _addr)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -13742,6 +13909,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) IsContractAddr(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -13764,6 +13932,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) IsContractAddr(_addr c
 func (_TreasuryRebalance *TreasuryRebalanceCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "isOwner")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -13771,6 +13940,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) IsOwner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -13793,6 +13963,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) IsOwner() (bool, error
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "memo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -13800,6 +13971,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Memo(opts *bind.CallOpts) (st
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -13822,6 +13994,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Memo() (string, error)
 func (_TreasuryRebalance *TreasuryRebalanceCaller) NewbieExists(opts *bind.CallOpts, _newbieAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "newbieExists", _newbieAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -13829,6 +14002,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) NewbieExists(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // NewbieExists is a free data retrieval call binding the contract method 0x683e13cb.
@@ -13851,8 +14025,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) NewbieExists(_newbieAd
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "newbies", arg0)
 
@@ -13868,6 +14041,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, 
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Newbies is a free data retrieval call binding the contract method 0x94393e11.
@@ -13876,8 +14050,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Newbies(opts *bind.CallOpts, 
 func (_TreasuryRebalance *TreasuryRebalanceSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalance.Contract.Newbies(&_TreasuryRebalance.CallOpts, arg0)
 }
 
@@ -13887,8 +14060,7 @@ func (_TreasuryRebalance *TreasuryRebalanceSession) Newbies(arg0 *big.Int) (stru
 func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalance.Contract.Newbies(&_TreasuryRebalance.CallOpts, arg0)
 }
 
@@ -13898,6 +14070,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Newbies(arg0 *big.Int)
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -13905,6 +14078,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -13927,6 +14101,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Owner() (common.Addres
 func (_TreasuryRebalance *TreasuryRebalanceCaller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "rebalanceBlockNumber")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -13934,6 +14109,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) RebalanceBlockNumber(opts *bi
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -13956,6 +14132,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) RebalanceBlockNumber()
 func (_TreasuryRebalance *TreasuryRebalanceCaller) RetiredExists(opts *bind.CallOpts, _retiredAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "retiredExists", _retiredAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -13963,6 +14140,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) RetiredExists(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // RetiredExists is a free data retrieval call binding the contract method 0x01784e05.
@@ -13985,6 +14163,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) RetiredExists(_retired
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Retirees(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "retirees", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -13992,6 +14171,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Retirees(opts *bind.CallOpts,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Retirees is a free data retrieval call binding the contract method 0x5a12667b.
@@ -14014,6 +14194,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Retirees(arg0 *big.Int
 func (_TreasuryRebalance *TreasuryRebalanceCaller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "status")
+
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -14021,6 +14202,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) Status(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
+
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -14043,6 +14225,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCallerSession) Status() (uint8, error
 func (_TreasuryRebalance *TreasuryRebalanceCaller) SumOfRetiredBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalance.contract.Call(opts, &out, "sumOfRetiredBalance")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -14050,6 +14233,7 @@ func (_TreasuryRebalance *TreasuryRebalanceCaller) SumOfRetiredBalance(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // SumOfRetiredBalance is a free data retrieval call binding the contract method 0x45205a6b.
@@ -14397,6 +14581,7 @@ type TreasuryRebalanceApproved struct {
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceApprovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -14408,6 +14593,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterApproved(opts *bind.F
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceApproved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -14531,6 +14717,7 @@ type TreasuryRebalanceContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceContractDeployedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -14542,6 +14729,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterContractDeployed(opts
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceContractDeployed) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -14664,6 +14852,7 @@ type TreasuryRebalanceFinalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceFinalizedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -14675,6 +14864,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterFinalized(opts *bind.
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceFinalized) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -14797,6 +14987,7 @@ type TreasuryRebalanceNewbieRegistered struct {
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceNewbieRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -14808,6 +14999,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRegistered(opts
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchNewbieRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceNewbieRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -14929,6 +15121,7 @@ type TreasuryRebalanceNewbieRemoved struct {
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceNewbieRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -14940,6 +15133,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterNewbieRemoved(opts *b
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchNewbieRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceNewbieRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -15062,6 +15256,7 @@ type TreasuryRebalanceOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -15082,6 +15277,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -15212,6 +15408,7 @@ type TreasuryRebalanceRetiredRegistered struct {
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceRetiredRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -15223,6 +15420,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRegistered(opt
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchRetiredRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceRetiredRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -15344,6 +15542,7 @@ type TreasuryRebalanceRetiredRemoved struct {
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceRetiredRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -15355,6 +15554,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterRetiredRemoved(opts *
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchRetiredRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceRetiredRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -15476,6 +15676,7 @@ type TreasuryRebalanceStatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceStatusChangedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -15487,6 +15688,7 @@ func (_TreasuryRebalance *TreasuryRebalanceFilterer) FilterStatusChanged(opts *b
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalance *TreasuryRebalanceFilterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceStatusChanged) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalance.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -15751,11 +15953,13 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockTransactorRaw) Transact(opts 
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) CheckRetiredsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "checkRetiredsApproved")
+
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 // CheckRetiredsApproved is a free data retrieval call binding the contract method 0x966e0794.
@@ -15778,6 +15982,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) CheckRetiredsA
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbie(opts *bind.CallOpts, _newbieAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getNewbie", _newbieAddress)
+
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -15786,6 +15991,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbie(opts *bind.
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
+
 }
 
 // GetNewbie is a free data retrieval call binding the contract method 0xeb5a8e55.
@@ -15808,6 +16014,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetNewbie(_new
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbieCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getNewbieCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15815,6 +16022,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbieCount(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetNewbieCount is a free data retrieval call binding the contract method 0x91734d86.
@@ -15837,6 +16045,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetNewbieCount
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbieIndex(opts *bind.CallOpts, _newbieAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getNewbieIndex", _newbieAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15844,6 +16053,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetNewbieIndex(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetNewbieIndex is a free data retrieval call binding the contract method 0x11f5c466.
@@ -15866,6 +16076,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetNewbieIndex
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetired(opts *bind.CallOpts, _retiredAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getRetired", _retiredAddress)
+
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -15874,6 +16085,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetired(opts *bind
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
+
 }
 
 // GetRetired is a free data retrieval call binding the contract method 0xbf680590.
@@ -15896,6 +16108,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetRetired(_re
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetiredCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getRetiredCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15903,6 +16116,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetiredCount(opts 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetRetiredCount is a free data retrieval call binding the contract method 0xd1ed33fc.
@@ -15925,6 +16139,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetRetiredCoun
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetiredIndex(opts *bind.CallOpts, _retiredAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getRetiredIndex", _retiredAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15932,6 +16147,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetRetiredIndex(opts 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetRetiredIndex is a free data retrieval call binding the contract method 0x681f6e7c.
@@ -15954,6 +16170,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetRetiredInde
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "getTreasuryAmount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -15961,6 +16178,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) GetTreasuryAmount(opt
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -15983,6 +16201,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) GetTreasuryAmo
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "isContractAddr", _addr)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -15990,6 +16209,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) IsContractAddr(opts *
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -16012,6 +16232,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) IsContractAddr
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "isOwner")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -16019,6 +16240,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) IsOwner(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -16041,6 +16263,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) IsOwner() (boo
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "memo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -16048,6 +16271,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Memo(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -16070,6 +16294,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Memo() (string
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) NewbieExists(opts *bind.CallOpts, _newbieAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "newbieExists", _newbieAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -16077,6 +16302,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) NewbieExists(opts *bi
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // NewbieExists is a free data retrieval call binding the contract method 0x683e13cb.
@@ -16099,8 +16325,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) NewbieExists(_
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Newbies(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "newbies", arg0)
 
@@ -16116,6 +16341,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Newbies(opts *bind.Ca
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Newbies is a free data retrieval call binding the contract method 0x94393e11.
@@ -16124,8 +16350,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Newbies(opts *bind.Ca
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceMock.Contract.Newbies(&_TreasuryRebalanceMock.CallOpts, arg0)
 }
 
@@ -16135,8 +16360,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockSession) Newbies(arg0 *big.In
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Newbies(arg0 *big.Int) (struct {
 	Newbie common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceMock.Contract.Newbies(&_TreasuryRebalanceMock.CallOpts, arg0)
 }
 
@@ -16146,6 +16370,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Newbies(arg0 *
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -16153,6 +16378,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Owner(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -16175,6 +16401,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Owner() (commo
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "rebalanceBlockNumber")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -16182,6 +16409,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) RebalanceBlockNumber(
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -16204,6 +16432,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) RebalanceBlock
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) RetiredExists(opts *bind.CallOpts, _retiredAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "retiredExists", _retiredAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -16211,6 +16440,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) RetiredExists(opts *b
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // RetiredExists is a free data retrieval call binding the contract method 0x01784e05.
@@ -16233,6 +16463,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) RetiredExists(
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Retirees(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "retirees", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -16240,6 +16471,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Retirees(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Retirees is a free data retrieval call binding the contract method 0x5a12667b.
@@ -16262,6 +16494,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Retirees(arg0 
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "status")
+
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -16269,6 +16502,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) Status(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
+
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -16291,6 +16525,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCallerSession) Status() (uint
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) SumOfRetiredBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMock.contract.Call(opts, &out, "sumOfRetiredBalance")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -16298,6 +16533,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockCaller) SumOfRetiredBalance(o
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // SumOfRetiredBalance is a free data retrieval call binding the contract method 0x45205a6b.
@@ -16687,6 +16923,7 @@ type TreasuryRebalanceMockApproved struct {
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceMockApprovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -16698,6 +16935,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterApproved(opts
 //
 // Solidity: event Approved(address retired, address approver, uint256 approversCount)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockApproved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -16821,6 +17059,7 @@ type TreasuryRebalanceMockContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceMockContractDeployedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -16832,6 +17071,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterContractDeplo
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockContractDeployed) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -16954,6 +17194,7 @@ type TreasuryRebalanceMockFinalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceMockFinalizedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -16965,6 +17206,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterFinalized(opt
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockFinalized) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -17087,6 +17329,7 @@ type TreasuryRebalanceMockNewbieRegistered struct {
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterNewbieRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockNewbieRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -17098,6 +17341,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterNewbieRegiste
 //
 // Solidity: event NewbieRegistered(address newbie, uint256 fundAllocation)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchNewbieRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockNewbieRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "NewbieRegistered")
 	if err != nil {
 		return nil, err
@@ -17219,6 +17463,7 @@ type TreasuryRebalanceMockNewbieRemoved struct {
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterNewbieRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockNewbieRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -17230,6 +17475,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterNewbieRemoved
 //
 // Solidity: event NewbieRemoved(address newbie)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchNewbieRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockNewbieRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "NewbieRemoved")
 	if err != nil {
 		return nil, err
@@ -17352,6 +17598,7 @@ type TreasuryRebalanceMockOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceMockOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -17372,6 +17619,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterOwnershipTran
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -17502,6 +17750,7 @@ type TreasuryRebalanceMockRetiredRegistered struct {
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterRetiredRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockRetiredRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -17513,6 +17762,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterRetiredRegist
 //
 // Solidity: event RetiredRegistered(address retired)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchRetiredRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockRetiredRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "RetiredRegistered")
 	if err != nil {
 		return nil, err
@@ -17634,6 +17884,7 @@ type TreasuryRebalanceMockRetiredRemoved struct {
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterRetiredRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockRetiredRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -17645,6 +17896,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterRetiredRemove
 //
 // Solidity: event RetiredRemoved(address retired)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchRetiredRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockRetiredRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "RetiredRemoved")
 	if err != nil {
 		return nil, err
@@ -17766,6 +18018,7 @@ type TreasuryRebalanceMockStatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceMockStatusChangedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -17777,6 +18030,7 @@ func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) FilterStatusChanged
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceMock *TreasuryRebalanceMockFilterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockStatusChanged) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMock.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -18044,6 +18298,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2TransactorRaw) Transact(o
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) AllocatedExists(opts *bind.CallOpts, _allocatedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "allocatedExists", _allocatedAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -18051,6 +18306,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) AllocatedExists(o
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
@@ -18073,8 +18329,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) AllocatedE
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Allocateds(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "allocateds", arg0)
 
@@ -18090,6 +18345,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Allocateds(opts *
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
@@ -18098,8 +18354,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Allocateds(opts *
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceMockV2.Contract.Allocateds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
 }
 
@@ -18109,8 +18364,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Session) Allocateds(arg0 
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceMockV2.Contract.Allocateds(&_TreasuryRebalanceMockV2.CallOpts, arg0)
 }
 
@@ -18120,11 +18374,13 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Allocateds
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) CheckZeroedsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "checkZeroedsApproved")
+
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 // CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
@@ -18147,6 +18403,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) CheckZeroe
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocated(opts *bind.CallOpts, _allocatedAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocated", _allocatedAddress)
+
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -18155,6 +18412,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocated(opts
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
+
 }
 
 // GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
@@ -18177,6 +18435,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocat
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocatedCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18184,6 +18443,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedCount
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
@@ -18206,6 +18466,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocat
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedIndex(opts *bind.CallOpts, _allocatedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getAllocatedIndex", _allocatedAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18213,6 +18474,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetAllocatedIndex
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
@@ -18235,6 +18497,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetAllocat
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getTreasuryAmount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18242,6 +18505,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetTreasuryAmount
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -18264,6 +18528,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetTreasur
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroed(opts *bind.CallOpts, _zeroedAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroed", _zeroedAddress)
+
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -18272,6 +18537,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroed(opts *b
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
+
 }
 
 // GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
@@ -18294,6 +18560,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroed(
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroedCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18301,6 +18568,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedCount(op
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
@@ -18323,6 +18591,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroedC
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedIndex(opts *bind.CallOpts, _zeroedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "getZeroedIndex", _zeroedAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18330,6 +18599,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) GetZeroedIndex(op
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
@@ -18352,6 +18622,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) GetZeroedI
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "isContractAddr", _addr)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -18359,6 +18630,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsContractAddr(op
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -18381,6 +18653,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) IsContract
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "isOwner")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -18388,6 +18661,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) IsOwner(opts *bin
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -18410,6 +18684,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) IsOwner() 
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "memo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -18417,6 +18692,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Memo(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -18439,6 +18715,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Memo() (st
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -18446,6 +18723,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Owner(opts *bind.
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -18468,6 +18746,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Owner() (c
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) PendingMemo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "pendingMemo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -18475,6 +18754,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) PendingMemo(opts 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // PendingMemo is a free data retrieval call binding the contract method 0x3a7a47e2.
@@ -18497,6 +18777,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) PendingMem
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "rebalanceBlockNumber")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18504,6 +18785,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) RebalanceBlockNum
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -18526,6 +18808,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) RebalanceB
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "status")
+
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -18533,6 +18816,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Status(opts *bind
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
+
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -18555,6 +18839,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) Status() (
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) SumOfZeroedBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "sumOfZeroedBalance")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -18562,6 +18847,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) SumOfZeroedBalanc
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
@@ -18584,6 +18870,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) SumOfZeroe
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) ZeroedExists(opts *bind.CallOpts, _zeroedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "zeroedExists", _zeroedAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -18591,6 +18878,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) ZeroedExists(opts
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
@@ -18613,6 +18901,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2CallerSession) ZeroedExis
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Zeroeds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceMockV2.contract.Call(opts, &out, "zeroeds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -18620,6 +18909,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Caller) Zeroeds(opts *bin
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
@@ -19029,6 +19319,7 @@ type TreasuryRebalanceMockV2AllocatedRegistered struct {
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocatedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2AllocatedRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -19040,6 +19331,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocated
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchAllocatedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2AllocatedRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -19161,6 +19453,7 @@ type TreasuryRebalanceMockV2AllocatedRemoved struct {
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocatedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2AllocatedRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -19172,6 +19465,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterAllocated
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchAllocatedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2AllocatedRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -19295,6 +19589,7 @@ type TreasuryRebalanceMockV2Approved struct {
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ApprovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -19306,6 +19601,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterApproved(
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2Approved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -19429,6 +19725,7 @@ type TreasuryRebalanceMockV2ContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ContractDeployedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -19440,6 +19737,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterContractD
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ContractDeployed) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -19562,6 +19860,7 @@ type TreasuryRebalanceMockV2Finalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2FinalizedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -19573,6 +19872,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterFinalized
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2Finalized) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -19695,6 +19995,7 @@ type TreasuryRebalanceMockV2OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceMockV2OwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -19715,6 +20016,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterOwnership
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -19845,6 +20147,7 @@ type TreasuryRebalanceMockV2StatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2StatusChangedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -19856,6 +20159,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterStatusCha
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2StatusChanged) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -19977,6 +20281,7 @@ type TreasuryRebalanceMockV2ZeroedRegistered struct {
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ZeroedRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -19988,6 +20293,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedReg
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchZeroedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ZeroedRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -20109,6 +20415,7 @@ type TreasuryRebalanceMockV2ZeroedRemoved struct {
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceMockV2ZeroedRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.FilterLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err
@@ -20120,6 +20427,7 @@ func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) FilterZeroedRem
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceMockV2 *TreasuryRebalanceMockV2Filterer) WatchZeroedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceMockV2ZeroedRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceMockV2.contract.WatchLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err
@@ -20385,6 +20693,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2TransactorRaw) Transact(opts *bin
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) AllocatedExists(opts *bind.CallOpts, _allocatedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocatedExists", _allocatedAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -20392,6 +20701,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) AllocatedExists(opts *bin
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // AllocatedExists is a free data retrieval call binding the contract method 0xbd786f57.
@@ -20414,8 +20724,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) AllocatedExists(_a
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "allocateds", arg0)
 
@@ -20431,6 +20740,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.Cal
 	outstruct.Amount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
+
 }
 
 // Allocateds is a free data retrieval call binding the contract method 0x343e2c85.
@@ -20439,8 +20749,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Allocateds(opts *bind.Cal
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
 }
 
@@ -20450,8 +20759,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Session) Allocateds(arg0 *big.Int
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Allocateds(arg0 *big.Int) (struct {
 	Addr   common.Address
 	Amount *big.Int
-}, error,
-) {
+}, error) {
 	return _TreasuryRebalanceV2.Contract.Allocateds(&_TreasuryRebalanceV2.CallOpts, arg0)
 }
 
@@ -20461,11 +20769,13 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Allocateds(arg0 *b
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) CheckZeroedsApproved(opts *bind.CallOpts) error {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "checkZeroedsApproved")
+
 	if err != nil {
 		return err
 	}
 
 	return err
+
 }
 
 // CheckZeroedsApproved is a free data retrieval call binding the contract method 0x0287d126.
@@ -20488,6 +20798,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) CheckZeroedsApprov
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocated(opts *bind.CallOpts, _allocatedAddress common.Address) (common.Address, *big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocated", _allocatedAddress)
+
 	if err != nil {
 		return *new(common.Address), *new(*big.Int), err
 	}
@@ -20496,6 +20807,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocated(opts *bind.C
 	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 
 	return out0, out1, err
+
 }
 
 // GetAllocated is a free data retrieval call binding the contract method 0x9e59eb14.
@@ -20518,6 +20830,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocated(_allo
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20525,6 +20838,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedCount(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetAllocatedCount is a free data retrieval call binding the contract method 0xed355529.
@@ -20547,6 +20861,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedCount(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedIndex(opts *bind.CallOpts, _allocatedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getAllocatedIndex", _allocatedAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20554,6 +20869,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetAllocatedIndex(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetAllocatedIndex is a free data retrieval call binding the contract method 0x7bfaf7b7.
@@ -20576,6 +20892,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetAllocatedIndex(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetTreasuryAmount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getTreasuryAmount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20583,6 +20900,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetTreasuryAmount(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetTreasuryAmount is a free data retrieval call binding the contract method 0xe20fcf00.
@@ -20605,6 +20923,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetTreasuryAmount(
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroed(opts *bind.CallOpts, _zeroedAddress common.Address) (common.Address, []common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroed", _zeroedAddress)
+
 	if err != nil {
 		return *new(common.Address), *new([]common.Address), err
 	}
@@ -20613,6 +20932,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroed(opts *bind.Call
 	out1 := *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 
 	return out0, out1, err
+
 }
 
 // GetZeroed is a free data retrieval call binding the contract method 0xcea1c338.
@@ -20635,6 +20955,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroed(_zeroedA
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedCount(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedCount")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20642,6 +20963,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedCount(opts *bind
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetZeroedCount is a free data retrieval call binding the contract method 0x9dc954ba.
@@ -20664,6 +20986,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedCount() (
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedIndex(opts *bind.CallOpts, _zeroedAddress common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "getZeroedIndex", _zeroedAddress)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20671,6 +20994,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) GetZeroedIndex(opts *bind
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetZeroedIndex is a free data retrieval call binding the contract method 0x518592da.
@@ -20693,6 +21017,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) GetZeroedIndex(_ze
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsContractAddr(opts *bind.CallOpts, _addr common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isContractAddr", _addr)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -20700,6 +21025,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsContractAddr(opts *bind
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsContractAddr is a free data retrieval call binding the contract method 0xe2384cb3.
@@ -20722,6 +21048,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsContractAddr(_ad
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsOwner(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "isOwner")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -20729,6 +21056,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) IsOwner(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsOwner is a free data retrieval call binding the contract method 0x8f32d59b.
@@ -20751,6 +21079,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) IsOwner() (bool, e
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Memo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "memo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -20758,6 +21087,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Memo(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // Memo is a free data retrieval call binding the contract method 0x58c3b870.
@@ -20780,6 +21110,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Memo() (string, er
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -20787,6 +21118,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Owner(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -20809,6 +21141,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Owner() (common.Ad
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) PendingMemo(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "pendingMemo")
+
 	if err != nil {
 		return *new(string), err
 	}
@@ -20816,6 +21149,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) PendingMemo(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
+
 }
 
 // PendingMemo is a free data retrieval call binding the contract method 0x3a7a47e2.
@@ -20838,6 +21172,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) PendingMemo() (str
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) RebalanceBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "rebalanceBlockNumber")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20845,6 +21180,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) RebalanceBlockNumber(opts
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // RebalanceBlockNumber is a free data retrieval call binding the contract method 0x49a3fb45.
@@ -20867,6 +21203,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) RebalanceBlockNumb
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Status(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "status")
+
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -20874,6 +21211,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Status(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
+
 }
 
 // Status is a free data retrieval call binding the contract method 0x200d2ed2.
@@ -20896,6 +21234,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) Status() (uint8, e
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) SumOfZeroedBalance(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "sumOfZeroedBalance")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -20903,6 +21242,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) SumOfZeroedBalance(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // SumOfZeroedBalance is a free data retrieval call binding the contract method 0x9ab29b70.
@@ -20925,6 +21265,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) SumOfZeroedBalance
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) ZeroedExists(opts *bind.CallOpts, _zeroedAddress common.Address) (bool, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroedExists", _zeroedAddress)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -20932,6 +21273,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) ZeroedExists(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // ZeroedExists is a free data retrieval call binding the contract method 0x5f8798c0.
@@ -20954,6 +21296,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2CallerSession) ZeroedExists(_zero
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Zeroeds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _TreasuryRebalanceV2.contract.Call(opts, &out, "zeroeds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -20961,6 +21304,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Caller) Zeroeds(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Zeroeds is a free data retrieval call binding the contract method 0x62aa3e91.
@@ -21328,6 +21672,7 @@ type TreasuryRebalanceV2AllocatedRegistered struct {
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -21339,6 +21684,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRegister
 //
 // Solidity: event AllocatedRegistered(address allocated, uint256 fundAllocation)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRegistered")
 	if err != nil {
 		return nil, err
@@ -21460,6 +21806,7 @@ type TreasuryRebalanceV2AllocatedRemoved struct {
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2AllocatedRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -21471,6 +21818,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterAllocatedRemoved(
 //
 // Solidity: event AllocatedRemoved(address allocated)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchAllocatedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2AllocatedRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "AllocatedRemoved")
 	if err != nil {
 		return nil, err
@@ -21594,6 +21942,7 @@ type TreasuryRebalanceV2Approved struct {
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterApproved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ApprovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -21605,6 +21954,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterApproved(opts *bi
 //
 // Solidity: event Approved(address zeroed, address approver, uint256 approversCount)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchApproved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Approved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Approved")
 	if err != nil {
 		return nil, err
@@ -21728,6 +22078,7 @@ type TreasuryRebalanceV2ContractDeployed struct {
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterContractDeployed(opts *bind.FilterOpts) (*TreasuryRebalanceV2ContractDeployedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -21739,6 +22090,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterContractDeployed(
 //
 // Solidity: event ContractDeployed(uint8 status, uint256 rebalanceBlockNumber, uint256 deployedBlockNumber)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchContractDeployed(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ContractDeployed) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ContractDeployed")
 	if err != nil {
 		return nil, err
@@ -21861,6 +22213,7 @@ type TreasuryRebalanceV2Finalized struct {
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterFinalized(opts *bind.FilterOpts) (*TreasuryRebalanceV2FinalizedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -21872,6 +22225,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterFinalized(opts *b
 //
 // Solidity: event Finalized(string memo, uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchFinalized(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2Finalized) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "Finalized")
 	if err != nil {
 		return nil, err
@@ -21994,6 +22348,7 @@ type TreasuryRebalanceV2OwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*TreasuryRebalanceV2OwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -22014,6 +22369,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterOwnershipTransfer
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2OwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -22144,6 +22500,7 @@ type TreasuryRebalanceV2StatusChanged struct {
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterStatusChanged(opts *bind.FilterOpts) (*TreasuryRebalanceV2StatusChangedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -22155,6 +22512,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterStatusChanged(opt
 //
 // Solidity: event StatusChanged(uint8 status)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchStatusChanged(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2StatusChanged) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "StatusChanged")
 	if err != nil {
 		return nil, err
@@ -22276,6 +22634,7 @@ type TreasuryRebalanceV2ZeroedRegistered struct {
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRegistered(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRegisteredIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -22287,6 +22646,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRegistered(
 //
 // Solidity: event ZeroedRegistered(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRegistered(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRegistered")
 	if err != nil {
 		return nil, err
@@ -22408,6 +22768,7 @@ type TreasuryRebalanceV2ZeroedRemoved struct {
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRemoved(opts *bind.FilterOpts) (*TreasuryRebalanceV2ZeroedRemovedIterator, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.FilterLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err
@@ -22419,6 +22780,7 @@ func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) FilterZeroedRemoved(opt
 //
 // Solidity: event ZeroedRemoved(address zeroed)
 func (_TreasuryRebalanceV2 *TreasuryRebalanceV2Filterer) WatchZeroedRemoved(opts *bind.WatchOpts, sink chan<- *TreasuryRebalanceV2ZeroedRemoved) (event.Subscription, error) {
+
 	logs, sub, err := _TreasuryRebalanceV2.contract.WatchLogs(opts, "ZeroedRemoved")
 	if err != nil {
 		return nil, err
@@ -22632,6 +22994,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transact(opts *bind.Transa
 func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _UUPSUpgradeable.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -22639,6 +23002,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -22775,6 +23139,7 @@ type UUPSUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*UUPSUpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -22786,6 +23151,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.F
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -22907,6 +23273,7 @@ type UUPSUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*UUPSUpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -22923,6 +23290,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -23049,6 +23417,7 @@ type UUPSUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*UUPSUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -23060,6 +23429,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.Fi
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -23181,6 +23551,7 @@ type UUPSUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*UUPSUpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -23197,6 +23568,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.Filte
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)

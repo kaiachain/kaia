@@ -18,13 +18,18 @@ package impl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/params"
@@ -72,7 +77,7 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
 	return g.allowedTokens[args.Token] && // A1
-		g.swapRouters[args.Spender] && // A3
+		g.swapRouter == args.Spender && // A3
 		args.Amount.Sign() > 0 // A4
 }
 
@@ -86,7 +91,7 @@ func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isSwapTx(args *SwapArgs) bool {
-	return g.swapRouters[args.Router] && // S1
+	return g.swapRouter == args.Router && // S1
 		g.allowedTokens[args.Token] // S3
 }
 
@@ -271,6 +276,34 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	}
 }
 
+func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
+	swapRouter, tokens, err := getGaslessInfo(g.Chain, blockNumber)
+	// proceed even if there is something wrong with multicall contract
+	if err != nil {
+		g.swapRouter = common.Address{}
+		g.allowedTokens = map[common.Address]bool{}
+		logger.Warn("there is something wrong with multicall contract", err.Error())
+		return nil
+	}
+
+	g.swapRouter = swapRouter
+
+	g.allowedTokens = map[common.Address]bool{}
+	for _, addr := range tokens {
+		// all tokens are allowed if nil
+		if g.GaslessConfig.AllowedTokens == nil {
+			g.allowedTokens[addr] = true
+		}
+		for _, allowed := range g.GaslessConfig.AllowedTokens {
+			if addr == allowed {
+				g.allowedTokens[addr] = true
+			}
+		}
+	}
+
+	return nil
+}
+
 func lendAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 	r := new(big.Int)
 
@@ -292,4 +325,25 @@ func repayAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 
 	// RepayAmount = R1 + R2 + R3
 	return new(big.Int).Add(r1, lendAmount(approveTxOrNil, swapTx))
+}
+
+func getGaslessInfo(bc backends.BlockChainForCaller, blockNumber *big.Int) (common.Address, []common.Address, error) {
+	backend := backends.NewBlockchainContractBackend(bc, nil, nil)
+	code, err := backend.CodeAt(context.Background(), system.MultiCallAddr, blockNumber)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	if code == nil {
+		return common.Address{}, nil, ErrGSRNotInstalled
+	}
+
+	caller, err := contracts.NewMultiCallContractCaller(system.MultiCallAddr, backend)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
+	opts := &bind.CallOpts{BlockNumber: blockNumber}
+	info, err := caller.MultiCallGaslessInfo(opts)
+
+	return info.Gsr, info.Tokens, err
 }
