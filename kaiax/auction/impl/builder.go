@@ -35,15 +35,17 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	now := time.Now()
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
-		temp := list
 		for i, tx := range list {
 			if tx.Time().Add(AuctionEarlyDeadline).After(now) {
-				temp = list[:i]
+				if i == 0 {
+					// if first transaction exceeds deadline, remove the address
+					delete(txs, addr)
+				} else {
+					// keep only transactions before the deadline
+					txs[addr] = list[:i]
+				}
 				break
 			}
-		}
-		if len(temp) > 0 {
-			txs[addr] = temp
 		}
 	}
 }
