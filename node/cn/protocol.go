@@ -43,6 +43,7 @@ import (
 const (
 	kaia63 = 63
 	kaia65 = 65
+	kaia66 = 66
 )
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -78,7 +79,10 @@ const (
 	StakingInfoRequestMsg = 0x12
 	StakingInfoMsg        = 0x13
 
-	MsgCodeEnd = 0x14
+	// Protocol messages belonging to kaia/66
+	BidMsg = 0x14
+
+	MsgCodeEnd = 0x15
 )
 
 type errCode int

@@ -537,7 +537,7 @@ func (ps *peerSet) HeaderIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.headerThroughput
 	}
-	return ps.idlePeers(62, 65, idleCheck, throughput)
+	return ps.idlePeers(62, 66, idleCheck, throughput)
 }
 
 // BodyIdlePeers retrieves a flat list of all the currently body-idle peers within
@@ -551,7 +551,7 @@ func (ps *peerSet) BodyIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.blockThroughput
 	}
-	return ps.idlePeers(62, 65, idleCheck, throughput)
+	return ps.idlePeers(62, 66, idleCheck, throughput)
 }
 
 // ReceiptIdlePeers retrieves a flat list of all the currently receipt-idle peers
@@ -565,7 +565,7 @@ func (ps *peerSet) ReceiptIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.receiptThroughput
 	}
-	return ps.idlePeers(63, 65, idleCheck, throughput)
+	return ps.idlePeers(63, 66, idleCheck, throughput)
 }
 
 func (ps *peerSet) StakingInfoIdlePeers() ([]*peerConnection, int) {
@@ -577,7 +577,7 @@ func (ps *peerSet) StakingInfoIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.stakingInfoThroughput
 	}
-	return ps.idlePeers(65, 65, idleCheck, throughput)
+	return ps.idlePeers(65, 66, idleCheck, throughput)
 }
 
 // NodeDataIdlePeers retrieves a flat list of all the currently node-data-idle
@@ -591,7 +591,7 @@ func (ps *peerSet) NodeDataIdlePeers() ([]*peerConnection, int) {
 		defer p.lock.RUnlock()
 		return p.stateThroughput
 	}
-	return ps.idlePeers(63, 65, idleCheck, throughput)
+	return ps.idlePeers(63, 66, idleCheck, throughput)
 }
 
 // TODO-Kaia-Downloader when idlePeers is called magic numbers are used for minProtocol and maxProtocol. Use a constant instead.
