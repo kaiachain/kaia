@@ -556,7 +556,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
-	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder)
+	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder, mGasless)
 	s.miner.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
 	s.miner.RegisterTxBundlingModule(mGasless)
 	s.blockchain.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
