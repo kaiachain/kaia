@@ -138,7 +138,6 @@ func TestNewBidPool(t *testing.T) {
 				assert.NotNil(t, pool.bidTargetMap)
 				assert.NotNil(t, pool.bidWinnerMap)
 				assert.NotNil(t, pool.bidMap)
-				assert.NotNil(t, pool.allBids)
 				assert.Equal(t, uint32(0), pool.running)
 			}
 		})
@@ -185,7 +184,6 @@ func TestBidPool_AddBid(t *testing.T) {
 		assert.Equal(t, bid, pool.bidMap[hash])
 		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
-		assert.Contains(t, pool.allBids[bid.BlockNumber], bid)
 	}
 
 	// Test zero bid
@@ -220,7 +218,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	assert.Equal(t, auction.ErrLowBid, err)
 }
 
-func TestBidPool_RemoveOldBids(t *testing.T) {
+func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	var (
 		mockCtrl = gomock.NewController(t)
 		chain    = chain_mock.NewMockBlockChain(mockCtrl)
@@ -248,16 +246,56 @@ func TestBidPool_RemoveOldBids(t *testing.T) {
 		assert.Equal(t, bid, pool.bidMap[hash])
 		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
-		assert.Contains(t, pool.allBids[bid.BlockNumber], bid)
 	}
 
 	// Remove bids for block 11
-	pool.removeOldBids(11)
+	pool.removeOldBids(11, map[common.Hash]struct{}{})
 
 	// Verify bids for block 11 were removed
 	assert.Empty(t, pool.bidTargetMap[11])
 	assert.Empty(t, pool.bidWinnerMap[11])
-	assert.Empty(t, pool.allBids[11])
+}
+
+func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain)
+	require.NotNil(t, pool)
+
+	// Start the auction
+	pool.start()
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	for _, bid := range testBids[:3] {
+		hash, err := pool.AddBid(bid)
+		require.NoError(t, err)
+		assert.Equal(t, bid.Hash(), hash)
+
+		// Verify bid was added correctly
+		assert.Equal(t, bid, pool.bidMap[hash])
+		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
+		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
+	}
+
+	// Remove bids which target tx is in the txHashMap
+	pool.removeOldBids(10, map[common.Hash]struct{}{
+		testBids[0].TargetTxHash: {},
+		testBids[1].TargetTxHash: {},
+		testBids[2].TargetTxHash: {},
+	})
+
+	// Verify bids which target tx is in the txHashMap were removed
+	assert.Empty(t, pool.bidTargetMap[11])
+	assert.Empty(t, pool.bidWinnerMap[11])
 }
 
 func TestBidPool_ClearBidPool(t *testing.T) {
@@ -289,7 +327,6 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 		assert.Equal(t, bid, pool.bidMap[hash])
 		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
-		assert.Contains(t, pool.allBids[bid.BlockNumber], bid)
 	}
 
 	// Clear the pool
@@ -299,7 +336,6 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 	assert.Empty(t, pool.bidTargetMap)
 	assert.Empty(t, pool.bidWinnerMap)
 	assert.Empty(t, pool.bidMap)
-	assert.Empty(t, pool.allBids)
 }
 
 func TestBidPool_UpdateAuctionInfo(t *testing.T) {
@@ -331,7 +367,6 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 		assert.Equal(t, bid, pool.bidMap[hash])
 		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
-		assert.Contains(t, pool.allBids[bid.BlockNumber], bid)
 	}
 
 	// Update auction info with same addresses
@@ -339,7 +374,6 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	assert.NotEmpty(t, pool.bidTargetMap)
 	assert.NotEmpty(t, pool.bidWinnerMap)
 	assert.NotEmpty(t, pool.bidMap)
-	assert.NotEmpty(t, pool.allBids)
 
 	// Update auction info with different addresses
 	newAuctioneer := common.HexToAddress("0x1234")
@@ -350,7 +384,6 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	assert.Empty(t, pool.bidTargetMap)
 	assert.Empty(t, pool.bidWinnerMap)
 	assert.Empty(t, pool.bidMap)
-	assert.Empty(t, pool.allBids)
 	assert.Equal(t, newAuctioneer, pool.auctioneer)
 	assert.Equal(t, newAuctionEntryPoint, pool.auctionEntryPoint)
 }
