@@ -90,6 +90,11 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		statedb: stateDB,
 	}
 
+	// Create a simulated backend for testing
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+
 	// Create and initialize GaslessModule
 	gaslessModule := NewGaslessModule()
 	nodeKey, _ := crypto.GenerateKey()
