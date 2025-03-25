@@ -23,12 +23,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -60,15 +60,6 @@ func makeDeployTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, gasLimi
 	return tx
 }
 
-// Simple mock implementation of TxPoolForCaller for testing
-type mockTxPool struct {
-	statedb *state.StateDB
-}
-
-func (m *mockTxPool) GetCurrentState() *state.StateDB {
-	return m.statedb
-}
-
 // TestGaslessAPIIsGaslessTx tests the GaslessAPI.IsGaslessTx method
 func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	// Create a private key for testing
@@ -90,17 +81,24 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	stateDB.SetNonce(sender, 0) // For approve tx
 
 	// Create mock txpool
-	txpool := &mockTxPool{
+	txpool := &testTxPool{
 		statedb: stateDB,
 	}
+
+	// Create a simulated backend for testing
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 
 	// Create and initialize GaslessModule
 	gaslessModule := NewGaslessModule()
 	nodeKey, _ := crypto.GenerateKey()
 	err = gaslessModule.Init(&InitOpts{
-		ChainConfig: params.TestChainConfig,
-		NodeKey:     nodeKey,
-		TxPool:      txpool,
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       nodeKey,
+		Chain:         backend.BlockChain(),
+		TxPool:        txpool,
 	})
 	require.NoError(t, err)
 
@@ -108,9 +106,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	gaslessModule.allowedTokens = map[common.Address]bool{
 		tokenAddr: true,
 	}
-	gaslessModule.swapRouters = map[common.Address]bool{
-		routerAddr: true,
-	}
+	gaslessModule.swapRouter = routerAddr
 
 	// Create GaslessAPI
 	api := NewGaslessAPI(gaslessModule)
@@ -208,7 +204,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 			name:           "Invalid - insufficient approved amount in approve+swap pair",
 			txs:            []*types.Transaction{validApproveTx, insufficientAmountSwapTx},
 			expectedResult: false,
-			reasonContains: "approve transaction approves amount",
+			reasonContains: "approve transaction approves insufficient amount",
 		},
 		{
 			name:           "Invalid - different senders in approve+swap pair",

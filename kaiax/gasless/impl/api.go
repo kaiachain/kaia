@@ -98,7 +98,11 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 			}
 		}
 
-		reason, isExecutable := s.b.VerifyExecutable(nil, swapTx)
+		err, isExecutable := s.b.VerifyExecutable(nil, swapTx)
+		reason := ""
+		if err != nil {
+			reason = err.Error()
+		}
 		return &GaslessTxResult{
 			IsGasless: isExecutable,
 			Reason:    reason,
@@ -124,7 +128,11 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 			}
 		}
 
-		reason, isExecutable := s.b.VerifyExecutable(approveTx, swapTx)
+		err, isExecutable := s.b.VerifyExecutable(approveTx, swapTx)
+		reason := ""
+		if err != nil {
+			reason = err.Error()
+		}
 		return &GaslessTxResult{
 			IsGasless: isExecutable,
 			Reason:    reason,
