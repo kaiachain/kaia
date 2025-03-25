@@ -46,7 +46,6 @@ type BidPool struct {
 	bidMap       map[common.Hash]*auction.Bid
 	bidTargetMap map[uint64]map[common.Hash]*auction.Bid
 	bidWinnerMap map[uint64]map[common.Address]common.Hash
-	allBids      map[uint64][]*auction.Bid
 
 	bidMsgCh   chan *auction.Bid
 	newBidCh   chan *auction.Bid
@@ -64,10 +63,9 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 	bp := &BidPool{
 		ChainConfig:  chainConfig,
 		Chain:        chain,
+		bidMap:       make(map[common.Hash]*auction.Bid),
 		bidTargetMap: make(map[uint64]map[common.Hash]*auction.Bid),
 		bidWinnerMap: make(map[uint64]map[common.Address]common.Hash),
-		bidMap:       make(map[common.Hash]*auction.Bid),
-		allBids:      make(map[uint64][]*auction.Bid),
 		bidMsgCh:     make(chan *auction.Bid, bidChSize),
 		newBidCh:     make(chan *auction.Bid, bidChSize),
 		running:      0, // not running yet
@@ -104,17 +102,40 @@ func (bp *BidPool) stop() {
 }
 
 // removeOldBids removes the old bids for the given block number.
-func (bp *BidPool) removeOldBids(num uint64) {
+func (bp *BidPool) removeOldBids(num uint64, txHashMap map[common.Hash]struct{}) {
 	bp.bidMu.Lock()
 	defer bp.bidMu.Unlock()
 
-	// Clear the bid for the given block number.
+	// Remove the bid for the given block number.
+	for _, bh := range bp.bidWinnerMap[num] {
+		delete(bp.bidMap, bh)
+	}
 	delete(bp.bidTargetMap, num)
 	delete(bp.bidWinnerMap, num)
-	for _, bid := range bp.allBids[num] {
-		delete(bp.bidMap, bid.Hash())
+
+	// Remove the bid which target tx is in the txHashMap.
+	toBlock := num + allowFutureBlock
+	for blockNum := num + 1; blockNum <= toBlock; blockNum++ {
+		targetMap := bp.bidTargetMap[blockNum]
+		if targetMap == nil {
+			continue
+		}
+
+		// Collect bids to remove first to avoid modifying map during iteration
+		var bidsToRemove []*auction.Bid
+		for _, bid := range targetMap {
+			if _, ok := txHashMap[bid.TargetTxHash]; ok {
+				bidsToRemove = append(bidsToRemove, bid)
+			}
+		}
+
+		// Remove collected bids
+		for _, bid := range bidsToRemove {
+			delete(targetMap, bid.TargetTxHash)
+			delete(bp.bidWinnerMap[blockNum], bid.Sender)
+			delete(bp.bidMap, bid.Hash())
+		}
 	}
-	delete(bp.allBids, num)
 }
 
 // clearBidPool clears the bid pool.
@@ -122,10 +143,9 @@ func (bp *BidPool) clearBidPool() {
 	bp.bidMu.Lock()
 	defer bp.bidMu.Unlock()
 
+	bp.bidMap = make(map[common.Hash]*auction.Bid)
 	bp.bidTargetMap = make(map[uint64]map[common.Hash]*auction.Bid)
 	bp.bidWinnerMap = make(map[uint64]map[common.Address]common.Hash)
-	bp.bidMap = make(map[common.Hash]*auction.Bid)
-	bp.allBids = make(map[uint64][]*auction.Bid)
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
@@ -198,7 +218,6 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	bp.bidMap[hash] = bid
 	bp.bidTargetMap[blockNumber][targetTxHash] = bid
 	bp.bidWinnerMap[blockNumber][sender] = hash
-	bp.allBids[blockNumber] = append(bp.allBids[blockNumber], bid)
 
 	logger.Trace("Add bid", "bid", hash)
 
@@ -211,9 +230,6 @@ func (bp *BidPool) initializeBidMap(num uint64) {
 	}
 	if _, ok := bp.bidWinnerMap[num]; !ok {
 		bp.bidWinnerMap[num] = make(map[common.Address]common.Hash)
-	}
-	if _, ok := bp.allBids[num]; !ok {
-		bp.allBids[num] = make([]*auction.Bid, 0)
 	}
 }
 
@@ -241,8 +257,8 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// Check if the sender is already in the winner list.
-	if _, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !isSameBid(bid, bp.bidMap[bp.bidWinnerMap[blockNumber][sender]]) {
+	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
+		if !isSameBid(bid, bp.bidMap[hash]) {
 			return auction.ErrBidSenderExists
 		}
 	}
