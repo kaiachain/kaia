@@ -190,51 +190,65 @@ func decodeFunctionCall(tx *types.Transaction, method abi.Method) (common.Addres
 // SP3. ApproveTx.nonce+1 == SwapTx.nonce and Gasless transactions are head for nonce
 // SP4. SwapTx.amountRepay = RepayAmount(ApproveTx, SwapTx)
 func (g *GaslessModule) IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool {
+	_, res := g.VerifyExecutable(approveTxOrNil, swapTx)
+	return res
+}
+
+// VerifyExecutable checks if the given transactions form a valid gasless transaction
+// It returns an error explaining why the transaction is not executable if it's not,
+// and a boolean indicating whether the transaction is executable
+func (g *GaslessModule) VerifyExecutable(approveTxOrNil, swapTx *types.Transaction) (error, bool) {
 	// Sx.
 	swapArgs, ok := decodeSwapTx(swapTx, g.signer)
-	if !ok || !g.isSwapTx(swapArgs) {
-		return false
+	if !ok {
+		return ErrDecodeSwapTx, false
+	}
+	if !g.isSwapTx(swapArgs) {
+		return ErrSwapTxInvalid, false
 	}
 
 	// Conditions involving ApproveTx
 	if approveTxOrNil != nil {
 		// Ax.
 		approveArgs, ok := decodeApproveTx(approveTxOrNil, g.signer)
-		if !ok || !g.isApproveTx(approveArgs) {
-			return false
+		if !ok {
+			return ErrDecodeApproveTx, false
+		}
+		if !g.isApproveTx(approveArgs) {
+			return ErrApproveTxInvalid, false
 		}
 		// AP1.
 		if approveArgs.Sender != swapArgs.Sender {
-			return false
+			return ErrDifferentSenders, false
 		}
 		// SP1.
 		if approveArgs.Token != swapArgs.Token {
-			return false
+			return fmt.Errorf("%w: approve token %s, swap token %s", ErrDifferentTokens, approveArgs.Token.Hex(), swapArgs.Token.Hex()), false
 		}
 		// SP2.
 		if approveArgs.Amount.Cmp(swapArgs.AmountIn) < 0 {
-			return false
+			return fmt.Errorf("%w: approve amount %s, required amount %s", ErrInsufficientApproveAmount, approveArgs.Amount.String(), swapArgs.AmountIn.String()), false
 		}
 		// SP3.
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
-			return false
+			return fmt.Errorf("%w: approve nonce %d, swap nonce %d (expected %d)", ErrNonSequentialNonce, approveTxOrNil.Nonce(), swapTx.Nonce(), approveTxOrNil.Nonce()+1), false
 		}
 		if nonce := g.TxPool.GetCurrentState().GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
-			return false
+			return fmt.Errorf("%w: approve nonce %d, current nonce %d", ErrApproveNonceNotCurrent, approveTxOrNil.Nonce(), nonce), false
 		}
 	} else {
 		// SP3.
 		if nonce := g.TxPool.GetCurrentState().GetNonce(swapArgs.Sender); nonce != swapTx.Nonce() {
-			return false
+			return fmt.Errorf("%w: swap nonce %d, current nonce %d", ErrSwapNonceNotCurrent, swapTx.Nonce(), nonce), false
 		}
 	}
 
 	// SP4.
 	if swapArgs.AmountRepay.Cmp(repayAmount(approveTxOrNil, swapTx)) != 0 {
-		return false
+		return fmt.Errorf("%w: got %s, expected %s", ErrIncorrectRepayAmount, swapArgs.AmountRepay.String(), repayAmount(approveTxOrNil, swapTx).String()), false
 	}
 
-	return true
+	return nil, true
 }
 
 // MakeLendTx creates a transaction with following properties:

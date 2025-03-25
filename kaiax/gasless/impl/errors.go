@@ -22,8 +22,19 @@ import (
 )
 
 var (
-	ErrInitUnexpectedNil = errors.New("unexpected nil during module init")
-	ErrGSRNotInstalled   = errors.New("Gasless swap router contract not installed")
+	ErrInitUnexpectedNil         = errors.New("unexpected nil during module init")
+	ErrGSRNotInstalled           = errors.New("Gasless swap router contract not installed")
+	ErrDecodeSwapTx              = errors.New("failed to decode swap transaction")
+	ErrSwapTxInvalid             = errors.New("swap transaction is not valid")
+	ErrDecodeApproveTx           = errors.New("failed to decode approve transaction")
+	ErrApproveTxInvalid          = errors.New("approve transaction is not valid")
+	ErrDifferentSenders          = errors.New("approve and swap transactions have different senders")
+	ErrDifferentTokens           = errors.New("approve transaction is for different token than swap transaction")
+	ErrInsufficientApproveAmount = errors.New("approve transaction approves insufficient amount")
+	ErrNonSequentialNonce        = errors.New("approve and swap transactions have non-sequential nonces")
+	ErrApproveNonceNotCurrent    = errors.New("approve transaction nonce is not current")
+	ErrSwapNonceNotCurrent       = errors.New("swap transaction nonce is not current")
+	ErrIncorrectRepayAmount      = errors.New("swap transaction has incorrect amountRepay")
 )
 
 func printApproveTx(args *ApproveArgs) string {
