@@ -172,6 +172,18 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint)
 }
 
+// getTargetTxHashMap returns the target tx hash map for the given block number.
+func (bp *BidPool) getTargetTxHashMap(num uint64) map[common.Hash]struct{} {
+	bp.bidMu.RLock()
+	defer bp.bidMu.RUnlock()
+
+	txHashMap := make(map[common.Hash]struct{})
+	for hash := range bp.bidTargetMap[num] {
+		txHashMap[hash] = struct{}{}
+	}
+	return txHashMap
+}
+
 // AddBid adds a bid to the bid pool.
 func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	if atomic.LoadUint32(&bp.running) == 0 {

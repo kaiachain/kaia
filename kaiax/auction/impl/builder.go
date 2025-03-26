@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -32,11 +33,26 @@ func (a *AuctionModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 }
 
 func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	if atomic.LoadUint32(&a.bidPool.running) == 0 {
+		return
+	}
+
+	curBlock := a.Chain.CurrentBlock()
+	if curBlock == nil {
+		return
+	}
+	targetTxHashMap := a.bidPool.getTargetTxHashMap(curBlock.NumberU64() + 1)
+
 	now := time.Now()
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
 		for i, tx := range list {
 			if tx.Time().Add(AuctionEarlyDeadline).After(now) {
+				// if the tx is a target tx, skip it
+				if _, ok := targetTxHashMap[tx.Hash()]; ok {
+					continue
+				}
+
 				if i == 0 {
 					// if first transaction exceeds deadline, remove the address
 					delete(txs, addr)
