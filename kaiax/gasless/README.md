@@ -62,6 +62,25 @@ This module reads every block `GaslessSwapRouter` contract to detect any changes
 
 ## APIs
 
+### debug_isGaslessTx
+
+Returns if given transactions in the list are GaslessTx.
+
+- Parameters:
+  - `txList`: a list of RLP-encoded transactions
+- Returns
+  - `GaslessTxResult`: the result
+- Example
+
+```
+curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
+  {"jsonrpc":"2.0","id":1,"method":"debug_isGaslessTx","params":[["0xf8a58001830f424094000000000000000000000000000000000000abcd80b844095ea7b3000000000000000000000000000000000000000000000000000000000000123400000000000000000000000000000000000000000000000000000000000f424026a0b66cd0d0b30ab02b2d6c74b9452d54f726b0f2ce2ac390ae4995985c58d5afcaa053526b4f8abe66d2d8839f63826347767f59b761c9500f6cfd248613403c5a35"]]}' | jq '.result'
+{
+  "isGasless": false,
+  "reason": "transaction is not a swap transaction"
+}
+```
+
 ## Getters
 
 - `IsApproveTx(tx *types.Transaction) bool`: Returns if given transaction satisfies all conditions to be recognized as GaslessApproveTx.
