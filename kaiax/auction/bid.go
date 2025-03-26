@@ -17,7 +17,6 @@
 package auction
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -169,11 +168,11 @@ func (b *Bid) GetEthSignedMessageHash() []byte {
 
 func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
 	if chainId == nil {
-		return errors.New("chainId is nil")
+		return ErrNilChainId
 	}
 
 	if verifyingContract == (common.Address{}) {
-		return errors.New("verifyingContract is empty")
+		return ErrNilVerifyingContract
 	}
 
 	digest := b.GetHashTypedData(chainId, verifyingContract)
