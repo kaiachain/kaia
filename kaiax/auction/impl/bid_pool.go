@@ -106,12 +106,18 @@ func (bp *BidPool) removeOldBids(num uint64, txHashMap map[common.Hash]struct{})
 	bp.bidMu.Lock()
 	defer bp.bidMu.Unlock()
 
-	// Remove the bid for the given block number.
-	for _, bh := range bp.bidWinnerMap[num] {
-		delete(bp.bidMap, bh)
+	// Remove the old bids.
+	for bn := range bp.bidWinnerMap {
+		if bn > num {
+			break
+		}
+
+		for _, bh := range bp.bidWinnerMap[bn] {
+			delete(bp.bidMap, bh)
+		}
+		delete(bp.bidTargetMap, bn)
+		delete(bp.bidWinnerMap, bn)
 	}
-	delete(bp.bidTargetMap, num)
-	delete(bp.bidWinnerMap, num)
 
 	// Remove the bid which target tx is in the txHashMap.
 	toBlock := num + allowFutureBlock
