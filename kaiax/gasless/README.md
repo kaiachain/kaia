@@ -80,10 +80,3 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   "reason": "transaction is not a swap transaction"
 }
 ```
-
-## Getters
-
-- `IsApproveTx(tx *types.Transaction) bool`: Returns if given transaction satisfies all conditions to be recognized as GaslessApproveTx.
-- `IsSwapTx(tx *types.Transaction) bool`: Returns if given transaction satisfies all conditions to be recognized as GaslessSwapTx.
-- `IsExecutable(approveTxOrNil, swapTx *types.Transaction) bool`: Returns if gasless transactions are ready to be executed.
-- `GetLendTxGenerator(approveTxOrNil, swapTx *types.Transaction) *builder.TxOrGen`: Returns LendTxGenerator.
