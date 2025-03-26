@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"fmt"
 	"math/big"
 	"sync/atomic"
 
@@ -25,25 +24,22 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/auction"
 )
 
 func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
-	if !a.ChainConfig.IsRandaoForkEnabled(block.Number()) || a.Downloader.Synchronising() {
+	if a.Downloader.Synchronising() || !a.ChainConfig.IsRandaoForkEnabled(block.Number()) {
 		atomic.CompareAndSwapUint32(&a.bidPool.running, 1, 0)
 		return nil
 	}
 
-	if err := a.updateAuctionInfo(block.Number()); err != nil {
-		logger.Debug("failed to update auction info", "error", err)
-		a.bidPool.clearBidPool()
+	if !a.updateAuctionInfo(block.Number()) {
+		logger.Debug("stop auction since auctioneer or auction entry point is not set")
 		atomic.CompareAndSwapUint32(&a.bidPool.running, 1, 0)
-		// Do not return error here to not interrupt the block processing.
-	} else {
-		atomic.CompareAndSwapUint32(&a.bidPool.running, 0, 1)
+		return nil
 	}
 
-	// Remove old bids unconditionally.
+	atomic.CompareAndSwapUint32(&a.bidPool.running, 0, 1)
+
 	txHashMap := make(map[common.Hash]struct{})
 	for _, tx := range block.Transactions() {
 		txHashMap[tx.Hash()] = struct{}{}
@@ -63,33 +59,43 @@ func (a *AuctionModule) RewindDelete(hash common.Hash, num uint64) {
 
 // updateAuctionInfo updates the auctioneer address and auction entry point address for the given block number.
 // It expects the `num` is after Randao fork.
-func (a *AuctionModule) updateAuctionInfo(num *big.Int) error {
+// It returns true if the non-zero auctioneer address and auction entry point address are set, otherwise false.
+func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
+	auctioneer := common.Address{}
+	auctionEntryPointAddr := common.Address{}
+
+	defer func() {
+		a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr)
+	}()
+
 	header := a.Chain.GetHeaderByNumber(num.Uint64())
 	if header == nil {
-		return fmt.Errorf("failed to get header for block number %d", num.Uint64())
+		return false
 	}
 	_, err := a.Chain.StateAt(header.Root)
 	if err != nil {
-		return fmt.Errorf("failed to get state for block number %d: %v", num.Uint64(), err)
+		return false
 	}
 
 	backend := backends.NewBlockchainContractBackend(a.Chain, nil, nil)
 
-	auctionEntryPointAddr, err := system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
+	auctionEntryPointAddr, err = system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
 	if err != nil {
-		return fmt.Errorf("failed to read auction entry point address: %v", err)
+		return false
 	}
 
 	if auctionEntryPointAddr == (common.Address{}) {
-		return auction.ErrAuctionEntryPointNotSet
+		return false
 	}
 
-	auctioneer, err := system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
+	auctioneer, err = system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
 	if err != nil {
-		return fmt.Errorf("failed to read auctioneer address: %v", err)
+		return false
 	}
 
-	a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr)
+	if auctioneer == (common.Address{}) || auctionEntryPointAddr == (common.Address{}) {
+		return false
+	}
 
-	return nil
+	return true
 }
