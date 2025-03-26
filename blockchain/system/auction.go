@@ -31,10 +31,5 @@ func ReadAuctioneer(backend bind.ContractCaller, contractAddr common.Address, nu
 	}
 
 	opts := &bind.CallOpts{BlockNumber: num}
-	ret, err := caller.Auctioneer(opts)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	return ret, nil
+	return caller.Auctioneer(opts)
 }
