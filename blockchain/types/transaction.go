@@ -293,7 +293,7 @@ func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
 	}
 }
 
-func (tx *Transaction) UpdateTime() {
+func (tx *Transaction) SetTime() {
 	tx.time = time.Now()
 }
 
