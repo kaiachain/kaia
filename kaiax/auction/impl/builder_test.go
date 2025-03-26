@@ -21,37 +21,119 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFilterTxs(t *testing.T) {
-	auctionModule := NewAuctionModule()
+var (
+	tx1Sender = common.HexToAddress("0x1")
+	tx2Sender = common.HexToAddress("0x2")
+)
 
+func TestFilterTxs(t *testing.T) {
+	var (
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
+		config = testRandaoForkChainConfig(big.NewInt(0))
+	)
+
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	mAuction := NewAuctionModule()
+	apiBackend := &MockBackend{}
+	fakeDownloader := &downloader.FakeDownloader{}
+	mAuction.Init(&InitOpts{
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+		Backend:     apiBackend,
+		Downloader:  fakeDownloader,
+	})
 	txs := make(map[common.Address]types.Transactions)
 
 	for i := 0; i < 5; i++ {
 		// tx.Time is set to current time
-		tx := types.NewTransaction(uint64(i), common.HexToAddress("0x1"), big.NewInt(1), 1000000, big.NewInt(1), nil)
-		tx2 := types.NewTransaction(uint64(i), common.HexToAddress("0x2"), big.NewInt(1), 1000000, big.NewInt(1), nil)
+		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
+		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 
 		time.Sleep(40 * time.Millisecond)
-		txs[common.HexToAddress("0x1")] = append(txs[common.HexToAddress("0x1")], tx)
-		txs[common.HexToAddress("0x2")] = append(txs[common.HexToAddress("0x2")], tx2)
+		txs[tx1Sender] = append(txs[tx1Sender], tx)
+		txs[tx2Sender] = append(txs[tx2Sender], tx2)
 	}
 
-	// [0, 40, 80, 120, 160] -> current: 200 -> [0, 40]
-	auctionModule.FilterTxs(txs)
+	// Not running
+	mAuction.FilterTxs(txs)
 
-	assert.Equal(t, len(txs[common.HexToAddress("0x1")]), 2)
-	assert.Equal(t, len(txs[common.HexToAddress("0x2")]), 2)
+	assert.Equal(t, 5, len(txs[tx1Sender]))
+	assert.Equal(t, 5, len(txs[tx2Sender]))
 
-	for i, tx := range txs[common.HexToAddress("0x1")] {
-		assert.Equal(t, tx.Nonce(), uint64(i))
+	// Running
+	mAuction.bidPool.running = 1
+	mAuction.FilterTxs(txs)
+
+	assert.Equal(t, 2, len(txs[tx1Sender]))
+	assert.Equal(t, 2, len(txs[tx2Sender]))
+
+	for i, tx := range txs[tx1Sender] {
+		assert.Equal(t, uint64(i), tx.Nonce())
 	}
 
-	for i, tx := range txs[common.HexToAddress("0x2")] {
-		assert.Equal(t, tx.Nonce(), uint64(i))
+	for i, tx := range txs[tx2Sender] {
+		assert.Equal(t, uint64(i), tx.Nonce())
+	}
+}
+
+func TestFilterTxs_TargetTx(t *testing.T) {
+	var (
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
+		config = testRandaoForkChainConfig(big.NewInt(0))
+	)
+
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	mAuction := NewAuctionModule()
+	apiBackend := &MockBackend{}
+	fakeDownloader := &downloader.FakeDownloader{}
+	mAuction.Init(&InitOpts{
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+		Backend:     apiBackend,
+		Downloader:  fakeDownloader,
+	})
+	txs := make(map[common.Address]types.Transactions)
+
+	for i := 0; i < 5; i++ {
+		// tx.Time is set to current time
+		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
+		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
+
+		time.Sleep(40 * time.Millisecond)
+		txs[tx1Sender] = append(txs[tx1Sender], tx)
+		txs[tx2Sender] = append(txs[tx2Sender], tx2)
+	}
+
+	// Running
+	mAuction.bidPool.running = 1
+	mAuction.bidPool.bidTargetMap[1] = map[common.Hash]*auction.Bid{
+		txs[tx1Sender][2].Hash(): nil,
+		txs[tx2Sender][2].Hash(): nil,
+	}
+
+	mAuction.FilterTxs(txs)
+
+	assert.Equal(t, 3, len(txs[tx1Sender]))
+	assert.Equal(t, 3, len(txs[tx2Sender]))
+
+	for i, tx := range txs[tx1Sender] {
+		assert.Equal(t, uint64(i), tx.Nonce())
+	}
+
+	for i, tx := range txs[tx2Sender] {
+		assert.Equal(t, uint64(i), tx.Nonce())
 	}
 }
