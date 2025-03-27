@@ -17,7 +17,11 @@
 package impl
 
 import (
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 func (a *AuctionModule) APIs() []rpc.API {
@@ -37,4 +41,15 @@ type AuctionAPI struct {
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
 	return &AuctionAPI{a: a}
+}
+
+// TODO-kaiax: replace this with a correct implementation
+func (a *AuctionAPI) SubmitBid(input hexutil.Bytes) (common.Hash, error) {
+	bid := new(auction.Bid)
+	err := rlp.DecodeBytes(input, bid)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return a.a.bidPool.AddBid(bid)
 }
