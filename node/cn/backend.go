@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
@@ -521,6 +522,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mSupply  = supply_impl.NewSupplyModule()
 		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
+		mAuction = auction_impl.NewAuctionModule()
 	)
 
 	err := errors.Join(
@@ -550,6 +552,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
 			NodeType:      ctx.NodeType(),
+		}),
+		mAuction.Init(&auction_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Backend:     s.APIBackend,
+			Downloader:  s.protocolManager.Downloader(),
 		}),
 	)
 	if err != nil {
