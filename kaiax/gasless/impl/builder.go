@@ -66,3 +66,7 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	}
 	return bundles
 }
+
+func (g *GaslessModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	// do nothing
+}

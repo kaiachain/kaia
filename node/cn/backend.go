@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
@@ -521,6 +522,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mSupply  = supply_impl.NewSupplyModule()
 		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
+		mAuction = auction_impl.NewAuctionModule()
 	)
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
@@ -548,6 +550,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:     ctx.NodeKey(),
 			TxPool:      s.txPool,
 		}),
+		mAuction.Init(&auction_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Backend:     s.APIBackend,
+			Downloader:  s.protocolManager.Downloader(),
+		}),
 	)
 	if err != nil {
 		return err
@@ -555,12 +563,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
-	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder)
-	s.miner.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
-	s.miner.RegisterTxBundlingModule(mGasless)
-	s.blockchain.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
-	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mAuction)
+	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder, mAuction)
+	s.miner.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao, mAuction)
+	s.miner.RegisterTxBundlingModule(mGasless, mAuction)
+	s.blockchain.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao, mAuction)
+	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao, mAuction)
 	s.txPool.RegisterTxPoolModule(mGasless)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
