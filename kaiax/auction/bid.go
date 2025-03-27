@@ -92,13 +92,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 
 	digest := b.GetHashTypedData(chainId, verifyingContract)
 
-	// Manually convert V from 27/28 to 0/1
-	sig := slices.Clone(b.SearcherSig)
-	if sig[crypto.RecoveryIDOffset] == 27 || sig[crypto.RecoveryIDOffset] == 28 {
-		sig[crypto.RecoveryIDOffset] -= 27
-	}
-
-	recoveredSender, err := getSigner(sig, digest)
+	recoveredSender, err := getSigner(b.SearcherSig, digest)
 	if err != nil {
 		return fmt.Errorf("failed to recover searcher sig: %v", err)
 	}
@@ -113,13 +107,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 	digest := b.GetEthSignedMessageHash()
 
-	// Manually convert V from 27/28 to 0/1
-	sig := slices.Clone(b.AuctioneerSig)
-	if sig[crypto.RecoveryIDOffset] == 27 || sig[crypto.RecoveryIDOffset] == 28 {
-		sig[crypto.RecoveryIDOffset] -= 27
-	}
-
-	recoveredAuctioneer, err := getSigner(sig, digest)
+	recoveredAuctioneer, err := getSigner(b.AuctioneerSig, digest)
 	if err != nil {
 		return fmt.Errorf("failed to recover auctioneer sig: %v", err)
 	}
@@ -132,7 +120,13 @@ func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 }
 
 func getSigner(sig, digest []byte) (common.Address, error) {
-	pub, err := crypto.SigToPub(digest, sig)
+	// Manually convert V from 27/28 to 0/1
+	copiedSig := slices.Clone(sig)
+	if copiedSig[crypto.RecoveryIDOffset] == 27 || copiedSig[crypto.RecoveryIDOffset] == 28 {
+		copiedSig[crypto.RecoveryIDOffset] -= 27
+	}
+
+	pub, err := crypto.SigToPub(digest, copiedSig)
 	if err != nil {
 		return common.Address{}, err
 	}
