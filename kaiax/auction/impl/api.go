@@ -106,6 +106,9 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 		if errTxDecode != nil {
 			return makeRPCOutput(common.Hash{}, errTxDecode, nil, nil)
 		}
+		if targetTx.Hash() != bidInput.TargetTxHash {
+			return makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash, nil, nil)
+		}
 		errTargetTxSend := api.a.Backend.SendTx(ctx, targetTx)
 		// ignore `nonce too low` error against target tx validation
 		if errTargetTxSend != nil && errTargetTxSend != blockchain.ErrNonceTooLow {
