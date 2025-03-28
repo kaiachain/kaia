@@ -98,7 +98,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 	}
 
 	if recoveredSender != b.Sender {
-		return fmt.Errorf("invalid searcher sig: expected %v, calculated %v", b.Sender, recoveredSender)
+		return fmt.Errorf("invalid searcher sig: expected %v, calculated %v", b.Sender.String(), recoveredSender.String())
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 	}
 
 	if recoveredAuctioneer != auctioneer {
-		return fmt.Errorf("invalid auctioneer sig: expected %v, calculated %v", auctioneer, recoveredAuctioneer)
+		return fmt.Errorf("invalid auctioneer sig: expected %v, calculated %v", auctioneer.String(), recoveredAuctioneer.String())
 	}
 
 	return nil
