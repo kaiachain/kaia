@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/rlp"
@@ -142,5 +143,23 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 	return &GaslessTxResult{
 		IsGasless: false,
 		Reason:    fmt.Sprintf("expected 1 or 2 transactions, got %d", len(txs)),
+	}
+}
+
+type GaslessInfoResult struct {
+	IsDisabled    bool             `json:"isDisabled"`
+	SwapRouter    common.Address   `json:"swapRouter"`
+	AllowedTokens []common.Address `json:"allowedTokens"`
+}
+
+func (s *GaslessAPI) GaslessInfo() *GaslessInfoResult {
+	at := []common.Address{}
+	for addr := range s.b.allowedTokens {
+		at = append(at, addr)
+	}
+	return &GaslessInfoResult{
+		IsDisabled:    s.b.IsDisabled(),
+		SwapRouter:    s.b.swapRouter,
+		AllowedTokens: at,
 	}
 }

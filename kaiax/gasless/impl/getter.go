@@ -18,7 +18,6 @@ package impl
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"math/big"
 	"strings"
@@ -26,10 +25,10 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
@@ -299,7 +298,8 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 }
 
 func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
-	swapRouter, tokens, err := getGaslessInfo(g.Chain, blockNumber)
+	statedb := g.TxPool.GetCurrentState()
+	swapRouter, tokens, err := getGaslessInfo(statedb, g.Chain, blockNumber)
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = common.Address{}
@@ -349,17 +349,8 @@ func repayAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 	return new(big.Int).Add(r1, lendAmount(approveTxOrNil, swapTx))
 }
 
-func getGaslessInfo(bc backends.BlockChainForCaller, blockNumber *big.Int) (common.Address, []common.Address, error) {
-	backend := backends.NewBlockchainContractBackend(bc, nil, nil)
-	code, err := backend.CodeAt(context.Background(), system.MultiCallAddr, blockNumber)
-	if err != nil {
-		return common.Address{}, nil, err
-	}
-	if code == nil {
-		return common.Address{}, nil, ErrGSRNotInstalled
-	}
-
-	caller, err := contracts.NewMultiCallContractCaller(system.MultiCallAddr, backend)
+func getGaslessInfo(statedb *state.StateDB, bc backends.BlockChainForCaller, blockNumber *big.Int) (common.Address, []common.Address, error) {
+	caller, err := system.NewMultiCallContractCaller(statedb, bc, bc.CurrentBlock().Header())
 	if err != nil {
 		return common.Address{}, nil, err
 	}
