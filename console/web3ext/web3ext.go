@@ -39,6 +39,7 @@ var Modules = map[string]string{
 	"bootnode":         Bootnode_JS,
 	"chaindatafetcher": ChainDataFetcher_JS,
 	"eth":              Eth_JS,
+	"auction":          Auction_JS,
 }
 
 const Eth_JS = `
@@ -1795,6 +1796,20 @@ web3._extend({
 			name: 'proposals',
 			getter: 'clique_proposals'
 		}),
+	]
+});
+`
+
+const Auction_JS = `
+web3._extend({
+	property: 'auction',
+	methods: [
+		new web3._extend.Method({
+			name: 'submitBid',
+			call: 'auction_submitBid',
+			params: 1,
+			inputFormatter: [null]
+		})
 	]
 });
 `
