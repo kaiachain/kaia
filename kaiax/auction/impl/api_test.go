@@ -89,42 +89,42 @@ func TestSubmitBid(t *testing.T) {
 		{
 			"target tx decoding error",
 			invalidTargetTx,
-			makeRPCOutput(common.Hash{}, errors.New("undefined tx type"), nil, nil),
+			makeRPCOutput(common.Hash{}, errors.New("undefined tx type")),
 		},
 		{
 			"invalid seacher signature length",
 			invalidSearcherSigLenBid,
-			makeRPCOutput(common.Hash{}, nil, nil, auction.ErrInvalidSearcherSig),
+			makeRPCOutput(common.Hash{}, auction.ErrInvalidSearcherSig),
 		},
 		{
 			"unexpected seacher signature",
 			unexpectedSEarcherSigBid,
-			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid searcher sig: expected 0x14791697260E4c9A71f18484C9f997B308e59325, calculated 0x5CD48323C0ebc334437ae933E782F2761F8196cA")),
+			makeRPCOutput(common.Hash{}, errors.New("invalid searcher sig: expected 0x14791697260E4c9A71f18484C9f997B308e59325, calculated 0x5CD48323C0ebc334437ae933E782F2761F8196cA")),
 		},
 		{
 			"invalid auctioneer signature length",
 			invalidAuctioneerSigLenBid,
-			makeRPCOutput(common.Hash{}, nil, nil, auction.ErrInvalidAuctioneerSig),
+			makeRPCOutput(common.Hash{}, auction.ErrInvalidAuctioneerSig),
 		},
 		{
 			"unexpected auctioneer signature length",
 			unexpectedAuctioneerSigBid,
-			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid auctioneer sig: expected 0x96Bd8E216c0D894C0486341288Bf486d5686C5b6, calculated 0xd9094A8A697677ab51AA715F6449253Eb9c9885A")),
+			makeRPCOutput(common.Hash{}, errors.New("invalid auctioneer sig: expected 0x96Bd8E216c0D894C0486341288Bf486d5686C5b6, calculated 0xd9094A8A697677ab51AA715F6449253Eb9c9885A")),
 		},
 		{
 			"if target tx is not empty, its hash must be the same with bid's target tx hash",
 			diffTargetTx,
-			makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash, nil, nil),
+			makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash),
 		},
 		{
 			"valid bid and target tx can be empty",
 			validBid,
-			makeRPCOutput(common.HexToHash("0xec633e59d7237fc6cce22dc3ca2dacf5ce9230276644d8e134b5d307ca7981bd"), nil, nil, nil),
+			makeRPCOutput(common.HexToHash("0xec633e59d7237fc6cce22dc3ca2dacf5ce9230276644d8e134b5d307ca7981bd"), nil),
 		},
 		{
 			"another bid with same target tx",
 			anotherBid,
-			makeRPCOutput(common.HexToHash("0x26688d0fc660b6fed98b7f96ab5602e4c4dbe133e278fc08cc6bc51131d1bdd2"), nil, nil, nil),
+			makeRPCOutput(common.HexToHash("0x26688d0fc660b6fed98b7f96ab5602e4c4dbe133e278fc08cc6bc51131d1bdd2"), nil),
 		},
 	}
 
