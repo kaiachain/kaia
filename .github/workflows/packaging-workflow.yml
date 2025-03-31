@@ -18,7 +18,7 @@ jobs:
   rpm-linux-amd64:
     runs-on: ubuntu-latest
     container:
-      image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
+      image: kaiachain/circleci-rpmbuild:1.23.3-gcc11
 
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +65,7 @@ jobs:
   tar-linux-amd64:
     runs-on: ubuntu-latest
     container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
+      image: kaiachain/build_base:go1.23.3-solc0.8.13-ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
   rpm-linux-arm64:
     runs-on: ['self-hosted', 'ARM64']
     container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
+      image: kaiachain/circleci-rpmbuild:1.23.3-gcc11-arm
     steps:
       - uses: actions/checkout@v4
 
@@ -147,7 +147,7 @@ jobs:
   tar-linux-arm64:
     runs-on: ['self-hosted', 'ARM64']
     container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
+      image: kaiachain/build_base:go1.23.3-solc0.8.13-ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
 
