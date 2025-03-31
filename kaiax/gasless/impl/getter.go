@@ -297,9 +297,9 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 	return builder.NewTxOrGenFromGen(gen, bundleHash)
 }
 
-func (g *GaslessModule) updateAddresses(blockNumber *big.Int) error {
+func (g *GaslessModule) updateAddresses() error {
 	statedb := g.TxPool.GetCurrentState()
-	swapRouter, tokens, err := getGaslessInfo(statedb, g.Chain, blockNumber)
+	swapRouter, tokens, err := getGaslessInfo(statedb, g.Chain)
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = common.Address{}
@@ -349,13 +349,13 @@ func repayAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 	return new(big.Int).Add(r1, lendAmount(approveTxOrNil, swapTx))
 }
 
-func getGaslessInfo(statedb *state.StateDB, bc backends.BlockChainForCaller, blockNumber *big.Int) (common.Address, []common.Address, error) {
+func getGaslessInfo(statedb *state.StateDB, bc backends.BlockChainForCaller) (common.Address, []common.Address, error) {
 	caller, err := system.NewMultiCallContractCaller(statedb, bc, bc.CurrentBlock().Header())
 	if err != nil {
 		return common.Address{}, nil, err
 	}
 
-	opts := &bind.CallOpts{BlockNumber: blockNumber}
+	opts := &bind.CallOpts{BlockNumber: bc.CurrentBlock().Number()}
 	info, err := caller.MultiCallGaslessInfo(opts)
 
 	return info.Gsr, info.Tokens, err

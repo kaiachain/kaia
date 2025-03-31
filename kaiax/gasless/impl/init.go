@@ -57,7 +57,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 	g.InitOpts = *opts
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 
-	return g.updateAddresses(g.Chain.CurrentBlock().Number())
+	return g.updateAddresses()
 }
 
 func (g *GaslessModule) IsDisabled() bool {
