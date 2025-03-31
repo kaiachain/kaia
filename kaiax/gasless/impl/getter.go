@@ -25,7 +25,6 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -298,8 +297,7 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 }
 
 func (g *GaslessModule) updateAddresses() error {
-	statedb := g.TxPool.GetCurrentState()
-	swapRouter, tokens, err := getGaslessInfo(statedb, g.Chain)
+	swapRouter, tokens, err := getGaslessInfo(g.Chain)
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
 		g.swapRouter = common.Address{}
@@ -349,7 +347,12 @@ func repayAmount(approveTxOrNil, swapTx *types.Transaction) *big.Int {
 	return new(big.Int).Add(r1, lendAmount(approveTxOrNil, swapTx))
 }
 
-func getGaslessInfo(statedb *state.StateDB, bc backends.BlockChainForCaller) (common.Address, []common.Address, error) {
+func getGaslessInfo(bc backends.BlockChainForCaller) (common.Address, []common.Address, error) {
+	statedb, err := bc.State()
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
 	caller, err := system.NewMultiCallContractCaller(statedb, bc, bc.CurrentBlock().Header())
 	if err != nil {
 		return common.Address{}, nil, err
