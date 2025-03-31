@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/auction"
+	"github.com/kaiachain/kaia/kaiax/auction"
 )
 
 func ReadAuctioneer(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (common.Address, error) {
@@ -32,4 +33,31 @@ func ReadAuctioneer(backend bind.ContractCaller, contractAddr common.Address, nu
 
 	opts := &bind.CallOpts{BlockNumber: num}
 	return caller.Auctioneer(opts)
+}
+
+func EncodeAuctionCallData(bid *auction.Bid) ([]byte, error) {
+	abi, err := contracts.IAuctionEntryPointMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	input := contracts.IAuctionEntryPointAuctionTx{
+		TargetTxHash:  bid.TargetTxHash,
+		BlockNumber:   big.NewInt(int64(bid.BlockNumber)),
+		Sender:        bid.Sender,
+		To:            bid.To,
+		Nonce:         big.NewInt(int64(bid.Nonce)),
+		Bid:           bid.Bid,
+		CallGasLimit:  big.NewInt(int64(bid.CallGasLimit)),
+		Data:          bid.Data,
+		SearcherSig:   bid.SearcherSig,
+		AuctioneerSig: bid.AuctioneerSig,
+	}
+
+	data, err := abi.Pack("call", input)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

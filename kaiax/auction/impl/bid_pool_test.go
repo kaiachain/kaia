@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"sync/atomic"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -39,12 +40,14 @@ var (
 	}
 
 	// Test private keys
+	testNodeKey, _       = crypto.HexToECDSA("8b281f165ba7e5cc30bb791f01e1acb62753c1019ddcfc4da2072dc39a052eb8")
 	testAuctioneerKey, _ = crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
 	testSearcher1Key, _  = crypto.HexToECDSA("59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")
 	testSearcher2Key, _  = crypto.HexToECDSA("5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")
 	testSearcher3Key, _  = crypto.HexToECDSA("7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6")
 
 	// Addresses derived from private keys
+	testNode              = crypto.PubkeyToAddress(testNodeKey.PublicKey)
 	testAuctioneer        = crypto.PubkeyToAddress(testAuctioneerKey.PublicKey)
 	testAuctionEntryPoint = common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9")
 	testSearcher1         = crypto.PubkeyToAddress(testSearcher1Key.PublicKey)
@@ -164,6 +167,7 @@ func TestBidPool_AddBid(t *testing.T) {
 
 	// Start the auction
 	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
@@ -233,6 +237,7 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 
 	// Start the auction
 	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
@@ -271,6 +276,7 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 
 	// Start the auction
 	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
@@ -313,6 +319,7 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 
 	// Start the auction
 	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
@@ -353,6 +360,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 
 	// Start the auction
 	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
