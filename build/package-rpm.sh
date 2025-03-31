@@ -1,5 +1,6 @@
 #!/bin/bash
 
+MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DAEMON_BINARIES=(kcn kpn ken kbn kscn kspn ksen)
 BINARIES=(kgen homi)
 
@@ -33,7 +34,7 @@ if [ -z "$TARGET" ]; then
     printUsage
 fi
 
-MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+# MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 pushd $MYDIR/..
 function finish {
   # Your cleanup code here
