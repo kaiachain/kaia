@@ -36,9 +36,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 var (
@@ -64,13 +62,8 @@ type filter struct {
 	s        *Subscription // associated subscription in event system
 }
 
-// PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
-// information related to the Kaia protocol such als blocks, transactions and logs.
-type PublicFilterAPI struct {
+type FilterAPI struct {
 	backend   Backend
-	mux       *event.TypeMux
-	quit      chan struct{}
-	chainDB   database.DBManager
 	events    *EventSystem
 	filtersMu sync.Mutex
 	filters   map[rpc.ID]*filter
@@ -79,24 +72,20 @@ type PublicFilterAPI struct {
 	timeout time.Duration
 }
 
-// NewPublicFilterAPI returns a new PublicFilterAPI instance.
-func NewPublicFilterAPI(backend Backend) *PublicFilterAPI {
-	api := &PublicFilterAPI{
+func NewFilterAPI(backend Backend) *FilterAPI {
+	api := &FilterAPI{
 		backend: backend,
-		mux:     backend.EventMux(),
-		chainDB: backend.ChainDB(),
 		events:  NewEventSystem(backend.EventMux(), backend),
 		filters: make(map[rpc.ID]*filter),
 		timeout: defaultFilterDeadline,
 	}
 	go api.timeoutLoop()
-
 	return api
 }
 
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
 // Tt is started when the api is created.
-func (api *PublicFilterAPI) timeoutLoop() {
+func (api *FilterAPI) timeoutLoop() {
 	var toUninstall []*Subscription
 	ticker := time.NewTicker(api.timeout)
 	defer ticker.Stop()
@@ -122,6 +111,22 @@ func (api *PublicFilterAPI) timeoutLoop() {
 		}
 		toUninstall = nil
 	}
+}
+
+// Events return private field events of PublicFilterAPI.
+func (api *FilterAPI) Events() *EventSystem {
+	return api.events
+}
+
+// PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
+// information related to the Kaia protocol such als blocks, transactions and logs.
+type PublicFilterAPI struct {
+	*FilterAPI
+}
+
+// NewPublicFilterAPI returns a new PublicFilterAPI instance.
+func NewPublicFilterAPI(backend Backend) *PublicFilterAPI {
+	return &PublicFilterAPI{NewFilterAPI(backend)}
 }
 
 // NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
@@ -470,11 +475,6 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	}
 
 	return []interface{}{}, fmt.Errorf("filter not found")
-}
-
-// Events return private field events of PublicFilterAPI.
-func (api *PublicFilterAPI) Events() *EventSystem {
-	return api.events
 }
 
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,
