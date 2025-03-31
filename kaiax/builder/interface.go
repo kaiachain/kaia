@@ -22,10 +22,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-type TxGenerator struct {
-	Generate func(nonce uint64) (*types.Transaction, error)
-	Hash     common.Hash // initialized at incorporate, write-once
-}
+type TxGenerator func(nonce uint64) (*types.Transaction, error)
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/builder BuilderModule
 type BuilderModule interface {
@@ -39,6 +36,10 @@ type TxBundlingModule interface {
 	// returned bundles must not have conflict with `prevBundles`.
 	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+
+	// The function filters transactions to be executed.
+	// It can only remove transactions.
+	FilterTxs(txs map[common.Address]types.Transactions)
 }
 
 // Any component or module that accomodate tx bundling modules.

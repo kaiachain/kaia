@@ -17,30 +17,28 @@
 package impl
 
 import (
-	"bytes"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
 // buildDependencyIndices builds a dependency indices of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
-func buildDependencyIndices(txs []interface{}, bundles []*builder.Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
+func buildDependencyIndices(txs []*builder.TxOrGen, bundles []*builder.Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
 	senderToIndices := make(map[common.Address][]int)
 	bundleToIndices := make(map[int][]int)
 
 	for i, txOrGen := range txs {
-		if tx, ok := txOrGen.(*types.Transaction); ok {
+		if txOrGen.IsConcreteTx() {
+			tx, _ := txOrGen.GetTx(0)
 			from, err := types.Sender(signer, tx)
 			if err != nil {
 				return nil, nil, err
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-		if bundleIdx := FindBundleIdxAsTxOrGen(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
@@ -50,10 +48,10 @@ func buildDependencyIndices(txs []interface{}, bundles []*builder.Bundle, signer
 
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
 // Caller must ensure that there is no conflict between bundles.
-func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]interface{}, error) {
-	ret := make([]interface{}, len(txs))
-	for i := range txs {
-		ret[i] = txs[i]
+func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]*builder.TxOrGen, error) {
+	ret := make([]*builder.TxOrGen, len(txs))
+	for i, tx := range txs {
+		ret[i] = builder.NewTxOrGenFromTx(tx)
 	}
 
 	for _, bundle := range bundles {
@@ -67,8 +65,8 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 }
 
 // incorporate assumes that `txs` does not contain any bundle transactions.
-func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, error) {
-	ret := make([]interface{}, 0, len(txs)+len(bundle.BundleTxs))
+func incorporate(txs []*builder.TxOrGen, bundle *builder.Bundle) ([]*builder.TxOrGen, error) {
+	ret := make([]*builder.TxOrGen, 0, len(txs)+len(bundle.BundleTxs))
 	targetFound := false
 
 	// 1. place bundle at the beginning
@@ -79,29 +77,14 @@ func incorporate(txs []interface{}, bundle *builder.Bundle) ([]interface{}, erro
 
 	// 2. place bundle after TargetTxHash
 	for _, txOrGen := range txs {
-		switch tx := txOrGen.(type) {
-		case *types.Transaction:
-			// if tx-in-bundle, the tx will be appended when target is found.
-			if bundle.Has(tx.Hash()) {
-				continue
-			}
-			// Because bundle.TargetTxHash cannot be in the bundle, we only check tx-not-in-bundle case.
-			ret = append(ret, tx)
-			if tx.Hash() == bundle.TargetTxHash {
-				targetFound = true
-				for i, txInBundleI := range bundle.BundleTxs {
-					switch txInBundle := txInBundleI.(type) {
-					case *types.Transaction:
-						ret = append(ret, txInBundleI)
-					case builder.TxGenerator:
-						txInBundle.Hash = crypto.Keccak256Hash(bundle.TargetTxHash[:], common.Int64ToByteLittleEndian(uint64(i)))
-						txInBundleI = txInBundle
-						ret = append(ret, txInBundleI)
-					}
-				}
-			}
-		default: // if tx is TxGenerator, unconditionally append
-			ret = append(ret, txOrGen)
+		// if tx-in-bundle, the tx will be appended when target is found.
+		if bundle.Has(txOrGen) {
+			continue
+		}
+		ret = append(ret, txOrGen)
+		if txOrGen.Id == bundle.TargetTxHash {
+			targetFound = true
+			ret = append(ret, bundle.BundleTxs...)
 		}
 	}
 
@@ -147,50 +130,16 @@ func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
 	return ret
 }
 
-func FindBundleIdx(bundles []*builder.Bundle, tx *types.Transaction) int {
+func FindBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
 	for i, bundle := range bundles {
-		if bundle.Has(tx.Hash()) {
+		if bundle.Has(txOrGen) {
 			return i
 		}
 	}
 	return -1
 }
 
-func FindBundleIdxAsTxOrGen(bundles []*builder.Bundle, txOrGen interface{}) int {
-	for i, bundle := range bundles {
-		for _, txOrGenInBundle := range bundle.BundleTxs {
-			if EqualTxOrGen(txOrGenInBundle, txOrGen) {
-				return i
-			}
-		}
-	}
-	return -1
-}
-
-func EqualTxOrGen(txOrGenIX, txOrGenIY interface{}) bool {
-	var (
-		txOrGenXHash common.Hash
-		txOrGenYHash common.Hash
-	)
-
-	switch txOrGenX := txOrGenIX.(type) {
-	case *types.Transaction:
-		txOrGenXHash = txOrGenX.Hash()
-	case builder.TxGenerator:
-		txOrGenXHash = txOrGenX.Hash
-	}
-
-	switch txOrGenY := txOrGenIY.(type) {
-	case *types.Transaction:
-		txOrGenYHash = txOrGenY.Hash()
-	case builder.TxGenerator:
-		txOrGenYHash = txOrGenY.Hash
-	}
-
-	return bytes.Equal(txOrGenXHash.Bytes(), txOrGenYHash.Bytes())
-}
-
-func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []interface{}) []*builder.Bundle {
+func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []*builder.TxOrGen) []*builder.Bundle {
 	ret := make([]*builder.Bundle, 0)
 	for _, bundle := range bundles {
 		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
@@ -199,25 +148,20 @@ func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []interface{}) []*bui
 	return ret
 }
 
-func FindTargetTxHash(bundle *builder.Bundle, txs []interface{}) common.Hash {
-	// If this is never updated it is expected to return an empty hash.
-	targetTxHash := common.Hash{}
-	for i, tx := range txs {
-		// For index greater than 0, if it can be cast to *types.Transaction then record this as the TargetTxHash.
-		if i > 0 {
-			if txTarget, ok := txs[i-1].(*types.Transaction); ok {
-				targetTxHash = txTarget.Hash()
+func FindTargetTxHash(bundle *builder.Bundle, txOrGens []*builder.TxOrGen) common.Hash {
+	for i := range txOrGens {
+		if bundle.BundleTxs[0].Equals(txOrGens[i]) {
+			if i == 0 {
+				return common.Hash{}
+			} else {
+				return txOrGens[i-1].Id
 			}
 		}
-		// If tx is the first tx in the bundle then there is no need to look further.
-		if EqualTxOrGen(bundle.BundleTxs[0], tx) {
-			break
-		}
 	}
-	return targetTxHash
+	return common.Hash{}
 }
 
-func ShiftTxs(txs *[]interface{}, num int) {
+func ShiftTxs(txs *[]*builder.TxOrGen, num int) {
 	if len(*txs) <= num {
 		*txs = (*txs)[:0]
 		return
@@ -225,22 +169,22 @@ func ShiftTxs(txs *[]interface{}, num int) {
 	*txs = (*txs)[num:]
 }
 
-func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer types.Signer) {
-	if len(*txs) == 0 || num == 0 {
+func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+	if len(*txOrGens) == 0 || num == 0 {
 		return
 	}
 
-	senderToIndices, bundleToIndices, err := buildDependencyIndices(*txs, *bundles, signer)
+	senderToIndices, bundleToIndices, err := buildDependencyIndices(*txOrGens, *bundles, signer)
 	if err != nil {
 		logger.Error("Failed to build dependency indices", "err", err)
-		ShiftTxs(txs, num)
+		ShiftTxs(txOrGens, num)
 		return
 	}
 
 	toRemove := make(map[int]bool)
 	queue := make([]int, 0, num)
 
-	for i := 0; i < min(num, len(*txs)); i++ {
+	for i := 0; i < min(num, len(*txOrGens)); i++ {
 		toRemove[i] = true
 		queue = append(queue, i)
 	}
@@ -248,8 +192,10 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 	for len(queue) > 0 {
 		curIdx := queue[0]
 		queue = queue[1:]
+		txOrGen := (*txOrGens)[curIdx]
 
-		if tx, ok := (*txs)[curIdx].(*types.Transaction); ok {
+		if txOrGen.IsConcreteTx() {
+			tx, _ := txOrGen.GetTx(0)
 			from, _ := types.Sender(signer, tx)
 			for _, idx := range senderToIndices[from] {
 				if idx > curIdx && !toRemove[idx] {
@@ -258,7 +204,7 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdxAsTxOrGen(*bundles, (*txs)[curIdx]); bundleIdx != -1 {
+		if bundleIdx := FindBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
 			for _, idx := range bundleToIndices[bundleIdx] {
 				if !toRemove[idx] {
 					toRemove[idx] = true
@@ -268,7 +214,7 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 		}
 	}
 
-	newTxs := Filter(txs, toRemove)
+	newTxs := Filter(txOrGens, toRemove)
 
 	bundleIdxToRemove := map[int]bool{}
 	for bundleIdx, txIndices := range bundleToIndices {
@@ -282,35 +228,35 @@ func PopTxs(txs *[]interface{}, num int, bundles *[]*builder.Bundle, signer type
 
 	newBundles := SetCorrectTargetTxHash(Filter(bundles, bundleIdxToRemove), newTxs)
 
-	*txs = newTxs
+	*txOrGens = newTxs
 	*bundles = newBundles
 }
 
-func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []builder.TxBundlingModule) ([]interface{}, []*builder.Bundle) {
+func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []builder.TxBundlingModule) ([]*builder.TxOrGen, []*builder.Bundle) {
 	// Detect bundles and add them to bundles
 	bundles := []*builder.Bundle{}
-	flattenedTxs := []interface{}{}
+	flattenedTxs := []*builder.TxOrGen{}
 	if txBundlingModules == nil {
 		for _, tx := range arrayTxs {
-			var itx interface{} = tx
-			flattenedTxs = append(flattenedTxs, itx)
+			flattenedTxs = append(flattenedTxs, builder.NewTxOrGenFromTx(tx))
 		}
 		return flattenedTxs, nil
 	}
 
 	for _, txBundlingModule := range txBundlingModules {
 		newBundles := txBundlingModule.ExtractTxBundles(arrayTxs, bundles)
-		prevBundles := bundles
 		for _, newBundle := range newBundles {
 			isConflict := false
 			// Check for conflicts with all previous bundles
-			for _, prevBundle := range prevBundles {
+			for _, prevBundle := range bundles {
 				isConflict = prevBundle.IsConflict(newBundle)
+				if isConflict {
+					break
+				}
 			}
-			if isConflict {
-				continue
+			if !isConflict {
+				bundles = append(bundles, newBundle)
 			}
-			bundles = append(bundles, newBundle)
 		}
 	}
 
@@ -320,4 +266,17 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	}
 
 	return incorporatedTxs, bundles
+}
+
+func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []builder.TxBundlingModule) map[common.Address]types.Transactions {
+	txMap := make(map[common.Address]types.Transactions)
+	for addr, txs := range txs {
+		txMap[addr] = txs
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		txBundlingModule.FilterTxs(txMap)
+	}
+
+	return txMap
 }

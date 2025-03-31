@@ -552,6 +552,9 @@ func (self *worker) commitNewWork() {
 			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
+
+		// Filter txs with txBundlingModules
+		pending = builder_impl.FilterTxs(pending, self.txBundlingModules)
 	}
 
 	header := &types.Header{
@@ -746,8 +749,6 @@ CommitTransactionLoop:
 		}
 
 		var (
-			tx      *types.Transaction
-			err     error
 			logs    []*types.Log
 			txOrGen = incorporatedTxs[0]
 			from    common.Address
@@ -756,22 +757,16 @@ CommitTransactionLoop:
 		// Verify that tx is included in the bundle
 		targetBundle := &builder.Bundle{}
 		numShift := 1
-		if bundleIdx := builder_impl.FindBundleIdxAsTxOrGen(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := builder_impl.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			targetBundle = bundles[bundleIdx]
 			numShift = len(targetBundle.BundleTxs)
 		}
 
-		switch txOrGen.(type) {
-		case *types.Transaction:
-			tx = txOrGen.(*types.Transaction)
-		case builder.TxGenerator:
-			txGen := txOrGen.(builder.TxGenerator)
-			tx, err = txGen.Generate(env.state.GetNonce(rewardbase))
-			if tx == nil {
-				logger.Warn("TxGenerator returned a nil tx", "error", err)
-				builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
-				continue
-			}
+		tx, err := txOrGen.GetTx(env.state.GetNonce(rewardbase))
+		if err != nil {
+			logger.Warn("TxGenerator returned a nil tx", "error", err)
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			continue
 		}
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
@@ -900,26 +895,28 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	receipts := []*types.Receipt{}
 	logs := []*types.Log{}
 
-	for _, txOrGen := range bundle.BundleTxs {
-		var tx *types.Transaction
-		if gen, ok := txOrGen.(builder.TxGenerator); ok {
-			var err error
-			tx, err = gen.Generate(env.state.GetNonce(rewardbase))
-			if err != nil {
-				for _, txInBundle := range bundle.BundleTxs {
-					switch v := txInBundle.(type) {
-					case *types.Transaction:
-						v.MarkUnexecutable(true)
-					}
-				}
-				logger.Error("TxGenerator error", "error", err)
-				*env.state = *lastSnapshot
-				env.header.GasUsed = gasUsedSnapshot
-				env.tcount = tcountSnapshot
-				return err, &types.Transaction{}, nil
+	markAllTxUnexecutable := func() {
+		for _, txOrGen := range bundle.BundleTxs {
+			if txOrGen.IsConcreteTx() {
+				tx, _ := txOrGen.GetTx(0)
+				tx.MarkUnexecutable(true)
 			}
-		} else {
-			tx = txOrGen.(*types.Transaction)
+		}
+	}
+
+	restoreEnv := func() {
+		*env.state = *lastSnapshot
+		env.header.GasUsed = gasUsedSnapshot
+		env.tcount = tcountSnapshot
+	}
+
+	for _, txOrGen := range bundle.BundleTxs {
+		tx, err := txOrGen.GetTx(env.state.GetNonce(rewardbase))
+		if err != nil {
+			logger.Error("TxGenerator error", "error", err)
+			markAllTxUnexecutable()
+			restoreEnv()
+			return err, &types.Transaction{}, nil
 		}
 
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
@@ -928,16 +925,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
 		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
 			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-				for _, txInBundle := range bundle.BundleTxs {
-					switch v := txInBundle.(type) {
-					case *types.Transaction:
-						v.MarkUnexecutable(true)
-					}
-				}
+				markAllTxUnexecutable()
 			}
-			*env.state = *lastSnapshot
-			env.header.GasUsed = gasUsedSnapshot
-			env.tcount = tcountSnapshot
+			restoreEnv()
 			if err == nil {
 				err = kerrors.ErrRevertedBundleByVmErr
 			}

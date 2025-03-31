@@ -59,3 +59,5 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 // These files were compiled with solidity 0.8.25.
 
 //go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/Kip163.sol --out ./contracts/system_contracts/consensus/Kip163.go --ver 0.8.25
+
+//go:generate ./abigenw --pkg auction --sol ./contracts/system_contracts/auction/Kip249.sol --out ./contracts/system_contracts/auction/Kip249.go --ver 0.8.25

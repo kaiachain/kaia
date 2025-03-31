@@ -38,12 +38,12 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 			approveTxs[addr] = tx
 		} else if g.IsSwapTx(tx) && g.IsExecutable(approveTxs[addr], tx) {
 			b := &builder.Bundle{
-				BundleTxs: []interface{}{g.GetLendTxGenerator(approveTxs[addr], tx)},
+				BundleTxs: builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx)),
 			}
 			if approveTxs[addr] != nil {
-				b.BundleTxs = append(b.BundleTxs, approveTxs[addr])
+				b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
 			}
-			b.BundleTxs = append(b.BundleTxs, tx)
+			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 
 			b.TargetTxHash = targetTxHash
 			targetTxHash = tx.Hash()
@@ -65,4 +65,8 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 		}
 	}
 	return bundles
+}
+
+func (g *GaslessModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	// do nothing
 }
