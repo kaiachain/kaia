@@ -423,15 +423,27 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 }
 
 func (ec *Client) SubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	sub, err := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	if err == nil {
+		return sub, err
+	}
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
 func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	sub, err := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	if err == nil {
+		return sub, err
+	}
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
 func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
+	sub, err := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
+	if err == nil {
+		return sub, err
+	}
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
 }
 
 // Contract Calling
