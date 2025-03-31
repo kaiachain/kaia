@@ -98,6 +98,52 @@ jobs:
             aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
           done
 
+  rpm-linux-arm64:
+    runs-on: ['self-hosted', 'ARM64']
+    container:
+      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: make all
+
+      - name: Build RPM packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
   tar-linux-arm64:
     runs-on: ['self-hosted', 'ARM64']
     container:
@@ -105,8 +151,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set version
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: make all
+
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh linux-amd64 $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b linux-amd64 $item
+          done
+
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
   deploy-rpm:
-    needs: [rpm-linux-amd64, tar-linux-amd64, tar-linux-arm64]
+    needs: [rpm-linux-amd64, tar-linux-amd64, tar-linux-arm64, rpm-linux-arm64]
     runs-on: ubuntu-latest
     container:
       image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
