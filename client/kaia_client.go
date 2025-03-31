@@ -425,7 +425,10 @@ func (ec *Client) SubscribeFullPendingTransactions(ctx context.Context, ch chan<
 	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
-// TODO: SubscribePendingTransactions (needs server side)
+func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
+	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+}
+
 func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
 	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
 }
