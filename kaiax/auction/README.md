@@ -38,6 +38,4 @@ json
 }
 ```
 
-```go
 Go client can use `SendAuctionTx(context Context, BidInput) (map[string]any, error)`, which is the same format with JSON RPC.
-```
