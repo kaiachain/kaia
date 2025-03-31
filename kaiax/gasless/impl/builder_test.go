@@ -164,14 +164,21 @@ func TestExtractTxBundles(t *testing.T) {
 			},
 		},
 		{
-			[]*types.Transaction{A1, S1, T4, T5},
+			[]*types.Transaction{A1, T4, S1, T5},
 			[]*builder.Bundle{
 				{
-					BundleTxs:    builder.NewTxOrGenList(),
-					TargetTxHash: common.Hash{},
+					BundleTxs:      builder.NewTxOrGenList(T4),
+					TargetTxHash:   common.Hash{},
+					TargetRequired: true,
 				},
 			},
-			[]*builder.Bundle{},
+			// It exists since gasless bundle is target-independent.
+			[]*builder.Bundle{
+				{
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
+					TargetTxHash: T4.Hash(),
+				},
+			},
 		},
 	}
 

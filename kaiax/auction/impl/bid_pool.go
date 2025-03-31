@@ -85,7 +85,7 @@ func (bp *BidPool) SubscribeNewBid(sink chan<- *auction.Bid) event.Subscription 
 
 func (bp *BidPool) start() {
 	// Start the bid pool.
-	atomic.CompareAndSwapUint32(&bp.running, 0, 1)
+	// running will be set 1 once it's ready.
 
 	bp.wg.Add(2)
 	go bp.handleBidMsg()
@@ -183,6 +183,20 @@ func (bp *BidPool) getTargetTxHashMap(num uint64) map[common.Hash]struct{} {
 		txHashMap[hash] = struct{}{}
 	}
 	return txHashMap
+}
+
+func (bp *BidPool) GetAuctionEntryPoint() common.Address {
+	bp.auctionInfoMu.RLock()
+	defer bp.auctionInfoMu.RUnlock()
+
+	return bp.auctionEntryPoint
+}
+
+func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
+	bp.bidMu.RLock()
+	defer bp.bidMu.RUnlock()
+
+	return bp.bidTargetMap[num]
 }
 
 // AddBid adds a bid to the bid pool.
@@ -288,13 +302,6 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	return nil
-}
-
-func (bp *BidPool) stats() int {
-	bp.bidMu.RLock()
-	defer bp.bidMu.RUnlock()
-
-	return len(bp.bidMap)
 }
 
 func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {

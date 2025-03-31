@@ -26,6 +26,18 @@ type Bundle struct {
 
 	// BundleTxs is placed AFTER the target tx. If empty hash, it is placed at the very front.
 	TargetTxHash common.Hash
+
+	// TargetRequired is true if the bundle must be executed after the target tx
+	// and only if the target tx is successfully executed.
+	TargetRequired bool
+}
+
+func NewBundle(txs []*TxOrGen, targetTxHash common.Hash, targetRequired bool) *Bundle {
+	return &Bundle{
+		BundleTxs:      txs,
+		TargetTxHash:   targetTxHash,
+		TargetRequired: targetRequired,
+	}
 }
 
 // Has checks if the bundle contains a tx with the given hash.
@@ -45,8 +57,9 @@ func (b *Bundle) FindIdx(id common.Hash) int {
 
 // IsConflict checks if newBundle conflicts with current bundle.
 func (b *Bundle) IsConflict(newBundle *Bundle) bool {
-	// 1. Check for same target tx hash
-	if b.TargetTxHash == newBundle.TargetTxHash {
+	// 1. Check for same target tx hash and both are required
+	// If both are required, it discards the new bundle.
+	if b.TargetTxHash == newBundle.TargetTxHash && b.TargetRequired && newBundle.TargetRequired {
 		return true
 	}
 
@@ -70,4 +83,62 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 	}
 
 	return true
+}
+
+// CoordinateTargetTxHash coordinates the target tx hash of bundles.
+// It assumes there's only one bundle with TargetRequired = true among the bundles with the same TargetTxHash
+// and no zero-length bundle.
+// e.g.) bundles = [
+//
+//	{TargetTxHash: 0x1, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//	{TargetTxHash: 0x1, TargetRequired: true, BundleTxs: []*TxOrGen{tx1, tx2}},
+//
+// ]
+// -> returns [
+//
+//	{TargetTxHash: 0x1, TargetRequired: true, BundleTxs: []*TxOrGen{tx1, tx2}},
+//	{TargetTxHash: 0x2, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//
+// ]
+func CoordinateTargetTxHash(bundles []*Bundle) []*Bundle {
+	if len(bundles) <= 1 {
+		return bundles
+	}
+
+	newBundles := make([]*Bundle, 0, len(bundles))
+	sameTargetTxHashBundles := make(map[common.Hash][]*Bundle)
+
+	for _, bundle := range bundles {
+		sameTargetTxHashBundles[bundle.TargetTxHash] = append(sameTargetTxHashBundles[bundle.TargetTxHash], bundle)
+	}
+
+	for _, list := range sameTargetTxHashBundles {
+		if len(list) == 1 {
+			newBundles = append(newBundles, list[0])
+			continue
+		}
+
+		// Find the bundle with TargetRequired = true and move it to the front.
+		// This is needed because #incorporate assumes that targetTxHash is already in the txs.
+		for i, bundle := range list {
+			if bundle.TargetRequired {
+				list[0], list[i] = list[i], list[0]
+				break
+			}
+		}
+
+		for i, bundle := range list {
+			if i == 0 {
+				continue
+			}
+			bundle.TargetTxHash = lastBundleTx(list[i-1]).Id
+		}
+		newBundles = append(newBundles, list...)
+	}
+
+	return newBundles
+}
+
+func lastBundleTx(bundle *Bundle) *TxOrGen {
+	return bundle.BundleTxs[len(bundle.BundleTxs)-1]
 }

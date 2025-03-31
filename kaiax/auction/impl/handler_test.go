@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -89,12 +90,14 @@ func TestHandler_HandleBid(t *testing.T) {
 		Chain:       chain,
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	}
 	err := module.Init(opts)
 	require.NoError(t, err)
 
 	// Start the module
 	err = module.Start()
+	atomic.StoreUint32(&module.bidPool.running, 1)
 	require.NoError(t, err)
 	defer module.Stop()
 
@@ -147,12 +150,14 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 		Chain:       chain,
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	}
 	err := module.Init(opts)
 	require.NoError(t, err)
 
 	// Start the module
 	err = module.Start()
+	atomic.StoreUint32(&module.bidPool.running, 1)
 	require.NoError(t, err)
 	defer module.Stop()
 

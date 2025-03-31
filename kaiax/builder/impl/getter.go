@@ -38,7 +38,7 @@ func buildDependencyIndices(txs []*builder.TxOrGen, bundles []*builder.Bundle, s
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-		if bundleIdx := FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := FindDependentBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
@@ -139,10 +139,24 @@ func FindBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
 	return -1
 }
 
+func FindDependentBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
+	for i, bundle := range bundles {
+		if bundle.Has(txOrGen) || bundle.TargetRequired && bundle.TargetTxHash == txOrGen.Id {
+			return i
+		}
+	}
+	return -1
+}
+
 func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []*builder.TxOrGen) []*builder.Bundle {
 	ret := make([]*builder.Bundle, 0)
 	for _, bundle := range bundles {
-		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
+		newTargetHash := FindTargetTxHash(bundle, txs)
+		if bundle.TargetRequired && newTargetHash != bundle.TargetTxHash {
+			// Discard the bundle
+			continue
+		}
+		bundle.TargetTxHash = newTargetHash
 		ret = append(ret, bundle)
 	}
 	return ret
@@ -204,7 +218,7 @@ func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, s
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := FindDependentBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
 			for _, idx := range bundleToIndices[bundleIdx] {
 				if !toRemove[idx] {
 					toRemove[idx] = true
@@ -254,11 +268,15 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 					break
 				}
 			}
-			if !isConflict {
+			// Not allow zero-length bundle
+			if !isConflict && len(newBundle.BundleTxs) > 0 {
 				bundles = append(bundles, newBundle)
 			}
 		}
 	}
+
+	// Coordinate target tx hash of bundles
+	bundles = builder.CoordinateTargetTxHash(bundles)
 
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {

@@ -173,8 +173,9 @@ func TestIsConflict(t *testing.T) {
 	}
 
 	b0 := &builder.Bundle{
-		BundleTxs:    builder.NewTxOrGenList(txs[0], txs[1]),
-		TargetTxHash: common.Hash{},
+		BundleTxs:      builder.NewTxOrGenList(txs[0], txs[1]),
+		TargetTxHash:   common.Hash{},
+		TargetRequired: true,
 	}
 	defaultTargetHash := txs[1].Hash() // make TargetTxHash checks pass
 
@@ -185,10 +186,16 @@ func TestIsConflict(t *testing.T) {
 		expected    bool
 	}{
 		{
-			name:        "Same TargetTxHash",
+			name:        "Same TargetTxHash, TargetRequired",
 			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: common.Hash{}}},
+			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: common.Hash{}, TargetRequired: true}},
 			expected:    true,
+		},
+		{
+			name:        "Same TargetTxHash, TargetRequired=false",
+			prevBundles: []*builder.Bundle{b0},
+			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: common.Hash{}, TargetRequired: false}},
+			expected:    false,
 		},
 		{
 			name:        "TargetTxHash divides a bundle",
@@ -263,6 +270,16 @@ func TestPopTxs(t *testing.T) {
 		{
 			BundleTxs: builder.NewTxOrGenList(g1, txs[1], txs[2]),
 		},
+		{
+			BundleTxs:      builder.NewTxOrGenList(txs[2]),
+			TargetTxHash:   txs[1].Hash(),
+			TargetRequired: true, // If target is popped, the bundle should be popped
+		},
+		{
+			BundleTxs:      builder.NewTxOrGenList(txs[2]),
+			TargetTxHash:   txs[1].Hash(),
+			TargetRequired: false, // Bundle is not popped if target is popped
+		},
 	}
 
 	testCases := []struct {
@@ -277,6 +294,20 @@ func TestPopTxs(t *testing.T) {
 			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
 			numToPop:        1,
 			bundles:         []*builder.Bundle{},
+			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[5]),
+		},
+		{
+			name:            "One bundle, target is popped with TargetRequired=true",
+			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
+			numToPop:        1,
+			bundles:         []*builder.Bundle{bundles[4]},
+			expectedTxs:     builder.NewTxOrGenList(txs[4], txs[5]),
+		},
+		{
+			name:            "One bundle, target is popped with TargetRequired=false",
+			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
+			numToPop:        1,
+			bundles:         []*builder.Bundle{bundles[5]},
 			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[5]),
 		},
 		{

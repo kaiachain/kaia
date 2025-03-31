@@ -18,6 +18,7 @@ package impl
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -46,6 +47,8 @@ type InitOpts struct {
 	Chain       backends.BlockChainForCaller
 	Backend     apiBackend
 	Downloader  ProtocolManagerDownloader
+
+	NodeKey *ecdsa.PrivateKey
 }
 
 type AuctionModule struct {
@@ -63,7 +66,7 @@ func NewAuctionModule() *AuctionModule {
 }
 
 func (a *AuctionModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.Backend == nil || opts.Downloader == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.Backend == nil || opts.Downloader == nil || opts.NodeKey == nil {
 		return auction.ErrInitUnexpectedNil
 	}
 
