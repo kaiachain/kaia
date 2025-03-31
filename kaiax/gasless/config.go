@@ -49,7 +49,7 @@ func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
 			allowedTokens = nil
 			break
 		}
-		if allowedTokens != nil {
+		if allowedTokens == nil {
 			allowedTokens = []common.Address{}
 		}
 		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
