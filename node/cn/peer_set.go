@@ -316,7 +316,7 @@ func (ps *peerSet) CNWithoutBid(hash common.Hash) []Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
-	list := make([]Peer, 0, len(ps.peers))
+	list := make([]Peer, 0, len(ps.cnpeers))
 	for _, p := range ps.cnpeers {
 		if !p.KnowsBid(hash) {
 			list = append(list, p)
