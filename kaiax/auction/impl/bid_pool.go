@@ -22,6 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
@@ -299,6 +300,13 @@ func (bp *BidPool) stats() int {
 func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	bp.auctionInfoMu.RLock()
 	defer bp.auctionInfoMu.RUnlock()
+
+	if bid.SearcherSig == nil || len(bid.SearcherSig) != crypto.SignatureLength {
+		return auction.ErrInvalidSearcherSig
+	}
+	if bid.AuctioneerSig == nil || len(bid.AuctioneerSig) != crypto.SignatureLength {
+		return auction.ErrInvalidAuctioneerSig
+	}
 
 	// Verify the EIP712 signature.
 	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint); err != nil {
