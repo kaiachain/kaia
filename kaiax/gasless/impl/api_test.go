@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -76,19 +75,19 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	routerAddr := common.HexToAddress("0x1234")
 	differentTokenAddr := common.HexToAddress("0xdead1234dead1234dead1234dead1234dead1234")
 
+	// Create a simulated backend for testing
+	dbm := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+
 	// Setup test stateDB with a proper database
-	stateDB, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	stateDB, _ := backend.BlockChain().State()
 	stateDB.SetNonce(sender, 0) // For approve tx
 
 	// Create mock txpool
 	txpool := &testTxPool{
 		statedb: stateDB,
 	}
-
-	// Create a simulated backend for testing
-	dbm := database.NewMemoryDBManager()
-	alloc := testAllocStorage()
-	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
 
 	// Create and initialize GaslessModule
 	gaslessModule := NewGaslessModule()
