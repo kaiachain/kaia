@@ -6,15 +6,17 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	cn "github.com/kaiachain/kaia/node/cn/filters/mock"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
-func prep() *AuctionModule {
+func prep(t *testing.T) *AuctionModule {
 	var (
 		db     = database.NewMemoryDBManager()
 		alloc  = testAllocStorage()
@@ -22,9 +24,10 @@ func prep() *AuctionModule {
 	)
 
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
-
 	mAuction := NewAuctionModule()
-	apiBackend := &MockBackend{}
+	mockCtrl := gomock.NewController(t)
+	mockBackend := cn.NewMockBackend(mockCtrl)
+	apiBackend := &MockBackend{mockBackend}
 	fakeDownloader := &downloader.FakeDownloader{}
 	mAuction.Init(&InitOpts{
 		ChainConfig: config,
@@ -41,8 +44,8 @@ func prep() *AuctionModule {
 
 func TestSubmitBid(t *testing.T) {
 	var (
-		mAuction = prep()
-		api      = newAuctionAPI(mAuction)
+		mAuction = prep(t)
+		api      = &AuctionAPI{a: mAuction}
 		baseBid  = BidInput{
 			TargetTxRaw:   common.Hex2Bytes("f8674785066720b30083015f909496bd8e216c0d894c0486341288bf486d5686c5b601808207f4a0a97fa83b989a6d66acc942d1cbd70f548c21e24eefea12e72f8c27ba4369a434a01900811315ba3c64055e9778470f438128b54a46712cc032f25a1487e2144578"),
 			TargetTxHash:  common.HexToHash("0xacb81e7c775471be3e286a461701436f74b7bf7b951096f979b8557d870f246e"),
