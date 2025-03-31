@@ -40,12 +40,13 @@ jobs:
 
       - name: Build RPM packages
         run: |
+          git config --global --add safe.directory /__w/kaia/kaia
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
-            ./build/package-rpm.sh $item
+            ./build/package-rpm.sh linux-amd64 $item
           done
           
           for item in kcn kpn ken; do
-            ./build/package-rpm.sh -b $item
+            ./build/package-rpm.sh -b linux-amd64 $item
           done
 
       - name: Upload RPM packages to S3
@@ -103,7 +104,7 @@ jobs:
           done
 
   rpm-linux-arm64:
-    runs-on: ['self-hosted', 'ARM64']
+    runs-on: ['arm-runner']
     container:
       image: kaiachain/circleci-rpmbuild:1.23.3-gcc11-arm
     steps:
@@ -126,12 +127,13 @@ jobs:
 
       - name: Build RPM packages
         run: |
+          git config --global --add safe.directory /__w/kaia/kaia
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
-            ./build/package-rpm.sh $item
+            ./build/package-rpm.sh linux-arm64 $item
           done
           
           for item in kcn kpn ken; do
-            ./build/package-rpm.sh -b $item
+            ./build/package-rpm.sh -b linux-arm64 $item
           done
 
       - name: Upload RPM packages to S3
@@ -151,7 +153,7 @@ jobs:
           done
 
   tar-linux-arm64:
-    runs-on: ['self-hosted', 'ARM64']
+    runs-on: ['arm-runner']
     container:
       image: kaiachain/build_base:go1.23.3-solc0.8.13-ubuntu-22.04-arm
     steps:
@@ -174,11 +176,11 @@ jobs:
       - name: Build tar packages
         run: |
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
-            ./build/package-tar.sh linux-amd64 $item
+            ./build/package-tar.sh linux-arm64 $item
           done
           
           for item in kcn kpn ken; do
-            ./build/package-tar.sh -b linux-amd64 $item
+            ./build/package-tar.sh -b linux-arm64 $item
           done
 
       - name: Upload tar packages to S3
