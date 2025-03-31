@@ -43,7 +43,7 @@ type GaslessConfig struct {
 }
 
 func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	var allowedTokens []common.Address
+	allowedTokens := []common.Address(nil)
 	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
 		if addr == "all" {
 			allowedTokens = nil
