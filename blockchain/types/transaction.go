@@ -279,7 +279,6 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if !serializer.tx.ValidateSignature() {
 		return ErrInvalidSig
 	}
-
 	tx.setDecoded(serializer.tx, 0)
 	return nil
 }
@@ -589,6 +588,10 @@ func (tx *Transaction) Size() common.StorageSize {
 	tx.size.Store(size)
 
 	return size
+}
+
+func (tx *Transaction) SetTime(t time.Time) {
+	tx.time = t
 }
 
 // Time returns the time that transaction was created.
