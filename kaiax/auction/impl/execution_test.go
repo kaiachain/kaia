@@ -84,9 +84,7 @@ func testAllocStorage() blockchain.GenesisAlloc {
 	return alloc
 }
 
-type MockBackend struct {
-	nonces map[common.Address]uint64
-}
+type MockBackend struct{}
 
 func (m *MockBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 	return nil
