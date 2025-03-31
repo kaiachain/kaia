@@ -121,7 +121,6 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 	bid := toBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
 	return makeRPCOutput(bidHash, errValidateBid)
-	return nil
 }
 
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
