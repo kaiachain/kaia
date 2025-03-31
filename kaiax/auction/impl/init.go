@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -38,6 +39,7 @@ type ProtocolManagerDownloader interface {
 }
 
 type apiBackend interface {
+	filters.Backend
 	SendTx(ctx context.Context, signedTx *types.Transaction) error
 }
 
