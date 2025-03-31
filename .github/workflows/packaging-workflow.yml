@@ -42,11 +42,11 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
-            ./build/package-rpm.sh linux-amd64 $item
+            ./build/package-rpm.sh $item
           done
           
           for item in kcn kpn ken; do
-            ./build/package-rpm.sh -b linux-amd64 $item
+            ./build/package-rpm.sh -b $item
           done
 
       - name: Upload RPM packages to S3
@@ -129,11 +129,11 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
-            ./build/package-rpm.sh linux-arm64 $item
+            ./build/package-rpm.sh $item
           done
           
           for item in kcn kpn ken; do
-            ./build/package-rpm.sh -b linux-arm64 $item
+            ./build/package-rpm.sh -b $item
           done
 
       - name: Upload RPM packages to S3
