@@ -19,8 +19,8 @@ package impl
 import (
 	"context"
 	"math/big"
+	"strings"
 
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -35,6 +35,8 @@ const (
 	RPC_AUCTION_TARGET_SEND_ERR   = "errTargetTxSend"
 	RPC_AUCTION_BID_VALIDATE_ERR  = "errValidateBid"
 )
+
+var EMPTY_HASH = common.Hash{}
 
 func (a *AuctionModule) APIs() []rpc.API {
 	return []rpc.API{
@@ -57,7 +59,7 @@ func newAuctionAPI(a *AuctionModule) *AuctionAPI {
 
 type RPCOutput map[string]any
 
-// BidInput is the same format with `BidData`, replacing `[]byte` type to `hexutil.Bytes`
+// BidInput is the same format with `BidData`, execpt adding new field `TargetTxRaw` and replacing `[]byte` type to `hexutil.Bytes`
 type BidInput struct {
 	TargetTxRaw   hexutil.Bytes  `json:"targetTxRaw"`
 	TargetTxHash  common.Hash    `json:"targetTxHash"`
@@ -100,45 +102,35 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 }
 
 func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutput {
-	//  1. directly send traget transaction (target tx can be empty)
+	//  1. directly send target transaction (target tx can be empty)
 	if len(bidInput.TargetTxRaw) > 0 {
 		targetTx, errTxDecode := toTx(bidInput.TargetTxRaw)
 		if errTxDecode != nil {
-			return makeRPCOutput(common.Hash{}, errTxDecode, nil, nil)
+			return makeRPCOutput(EMPTY_HASH, errTxDecode)
 		}
 		if targetTx.Hash() != bidInput.TargetTxHash {
-			return makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash, nil, nil)
+			return makeRPCOutput(EMPTY_HASH, auction.ErrInvalidTargetTxHash)
 		}
 		errTargetTxSend := api.a.Backend.SendTx(ctx, targetTx)
-		// ignore `nonce too low` error against target tx validation
-		if errTargetTxSend != nil && errTargetTxSend != blockchain.ErrNonceTooLow {
-			return makeRPCOutput(common.Hash{}, nil, errTargetTxSend, nil)
+		// ignore `known transaction ...` error against target tx validation
+		if errTargetTxSend != nil && !strings.HasPrefix(errTargetTxSend.Error(), "known transaction:") {
+			return makeRPCOutput(EMPTY_HASH, errTargetTxSend)
 		}
 	}
 
 	// 2. add bid
 	bid := toBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
-	return makeRPCOutput(bidHash, nil, nil, errValidateBid)
+	return makeRPCOutput(bidHash, errValidateBid)
 }
 
-func makeRPCOutput(bidHash common.Hash, errTargetTxDecode, errTargetTxSend, errValidateBid error) RPCOutput {
-	var (
-		m                                                           = make(map[string]any)
-		errTargetTxDecodeStr, errTargetTxSendStr, errValidateBidStr string
-	)
-	if errTargetTxDecode != nil {
-		errTargetTxDecodeStr = errTargetTxDecode.Error()
+func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
+	m := make(map[string]any)
+	if err != nil {
+		m["err"] = err.Error()
 	}
-	if errTargetTxSend != nil {
-		errTargetTxSendStr = errTargetTxSend.Error()
+	if bidHash != EMPTY_HASH {
+		m["bidHash"] = bidHash
 	}
-	if errValidateBid != nil {
-		errValidateBidStr = errValidateBid.Error()
-	}
-	m[RPC_AUCTION_HASH_PROP] = bidHash
-	m[RPC_AUCTION_TARGET_DECODE_ERR] = errTargetTxDecodeStr
-	m[RPC_AUCTION_TARGET_SEND_ERR] = errTargetTxSendStr
-	m[RPC_AUCTION_BID_VALIDATE_ERR] = errValidateBidStr
 	return m
 }
