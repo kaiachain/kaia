@@ -34,7 +34,9 @@ jobs:
           echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make all
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
 
       - name: Build RPM packages
         run: |
@@ -80,7 +82,9 @@ jobs:
           echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make all
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
 
       - name: Build tar packages
         run: |
@@ -116,7 +120,9 @@ jobs:
           echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make all
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
 
       - name: Build RPM packages
         run: |
@@ -161,7 +167,9 @@ jobs:
           echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make all
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
 
       - name: Build tar packages
         run: |
