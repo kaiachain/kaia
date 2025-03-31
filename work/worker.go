@@ -787,7 +787,7 @@ CommitTransactionLoop:
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&isExecutingBundleTxs, 1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
-			if err != nil {
+			if err != nil && tx != nil {
 				// override sender to error tx
 				from, _ = types.Sender(env.signer, tx)
 			}
@@ -834,6 +834,11 @@ CommitTransactionLoop:
 			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
 			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
 			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
+			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+
+		case kerrors.ErrTxGeneration:
+			// Pop transaction in bundle due to tx generation error without shifting in the next from the account
+			logger.Trace("Skipping transaction in bundle due to tx generation error", "err", err)
 			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case nil:
@@ -913,7 +918,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			logger.Error("TxGenerator error", "error", err)
 			markAllTxUnexecutable()
 			restoreEnv()
-			return err, &types.Transaction{}, nil
+			return kerrors.ErrTxGeneration, nil, nil
 		}
 
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
@@ -940,7 +945,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
 
-	return nil, &types.Transaction{}, logs
+	return nil, nil, logs
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
