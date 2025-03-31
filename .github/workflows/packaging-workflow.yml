@@ -40,7 +40,7 @@ jobs:
 
       - name: Build RPM packages
         run: |
-          git config --global --add safe.directory /__w/kaia/kaia
+          git config --list
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
             ./build/package-rpm.sh $item
           done
