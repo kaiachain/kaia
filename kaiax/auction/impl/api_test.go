@@ -8,6 +8,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/storage/database"
@@ -50,7 +51,7 @@ func TestSubmitBid(t *testing.T) {
 			Sender:        common.HexToAddress("0x14791697260E4c9A71f18484C9f997B308e59325"),
 			To:            common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"),
 			Nonce:         4,
-			Bid:           big.NewInt(3),
+			Bid:           hexutil.Big(*big.NewInt(3)),
 			CallGasLimit:  2,
 			Data:          common.Hex2Bytes("1234"),
 			SearcherSig:   common.Hex2Bytes("4f17bd3304ab18e8fd19938b6b3898c491134ecdd6a104244b458dc339ce2bf043f3b8d0a6a96d34cb27180146fe265e3213bb9ddcbafc0778cc39cde4d388d31b"),
@@ -77,7 +78,7 @@ func TestSubmitBid(t *testing.T) {
 
 	validBid.TargetTxRaw = nil
 
-	anotherBid.Bid = big.NewInt(10)
+	anotherBid.Bid = hexutil.Big(*big.NewInt(10))
 	anotherBid.SearcherSig = common.Hex2Bytes("6439652673f1544bcd95d25c1dad31944321bdc0e6720f6c59a582aa0c40cc403ef4b5d1865eb3fa0e26fc49d7ef88f77f42d1559131a83a2326445eab3649741b")
 	anotherBid.AuctioneerSig = common.Hex2Bytes("640a09994942d99bb751db3347ea3e909752b363a90dc3ed9c0b4d8ad512ae3d44ec820239f9875dcdbffc28fafafd3ca7d48a4ff6f4a2d8969a8f5d309460361b")
 
