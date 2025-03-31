@@ -111,6 +111,7 @@ func TestUpdateAuctionInfo(t *testing.T) {
 		Chain:       backend.BlockChain(),
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	})
 
 	// Not updated yet

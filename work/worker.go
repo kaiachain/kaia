@@ -760,6 +760,13 @@ CommitTransactionLoop:
 		if bundleIdx := builder_impl.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			targetBundle = bundles[bundleIdx]
 			numShift = len(targetBundle.BundleTxs)
+			// Skip this bundle if target is required but either:
+			// 1. The previous transaction hash doesn't match the target hash, or
+			// 2. The previous transaction failed (receipt status not successful)
+			if env.shouldDiscardBundle(targetBundle) {
+				builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
 		}
 
 		tx, err := txOrGen.GetTx(env.state.GetNonce(rewardbase))
@@ -950,6 +957,19 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.receipts = append(env.receipts, receipts...)
 
 	return nil, nil, logs
+}
+
+func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) bool {
+	if !bundle.TargetRequired {
+		return false
+	}
+
+	if env.tcount == 0 {
+		return bundle.TargetTxHash != common.Hash{}
+	} else {
+		return bundle.TargetTxHash != env.txs[env.tcount-1].Hash() ||
+			env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful
+	}
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
