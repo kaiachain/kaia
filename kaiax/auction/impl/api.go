@@ -44,7 +44,7 @@ func (a *AuctionModule) APIs() []rpc.API {
 		{
 			Namespace: "auction",
 			Version:   "1.0",
-			Service:   NewAuctionAPI(a),
+			Service:   newAuctionAPI(a),
 			Public:    false,
 		},
 	}
@@ -55,7 +55,7 @@ type AuctionAPI struct {
 	f *filters.FilterAPI
 }
 
-func NewAuctionAPI(a *AuctionModule) *AuctionAPI {
+func newAuctionAPI(a *AuctionModule) *AuctionAPI {
 	return &AuctionAPI{a, filters.NewFilterAPI(a.Backend)}
 }
 
