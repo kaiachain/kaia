@@ -24,5 +24,5 @@ import (
 var _ kaiax.ExecutionModule = (*GaslessModule)(nil)
 
 func (g *GaslessModule) PostInsertBlock(block *types.Block) error {
-	return g.updateAddresses()
+	return g.updateAddresses(block.Header())
 }
