@@ -20,11 +20,13 @@ import (
 	"context"
 	"strings"
 
+	kaiaApi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -50,10 +52,11 @@ func (a *AuctionModule) APIs() []rpc.API {
 
 type AuctionAPI struct {
 	a *AuctionModule
+	f *filters.FilterAPI
 }
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
-	return &AuctionAPI{a: a}
+	return &AuctionAPI{a, filters.NewFilterAPI(a.Backend)}
 }
 
 type RPCOutput map[string]any
@@ -121,6 +124,70 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 	bid := toBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
 	return makeRPCOutput(bidHash, errValidateBid)
+}
+
+func (api *AuctionAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		txs := make(chan []*types.Transaction, 128)
+		pendingTxSub := api.f.Events().SubscribePendingTxs(txs)
+		defer pendingTxSub.Unsubscribe()
+
+		for {
+			select {
+			case txs := <-txs:
+				// To keep the original behaviour, send a single tx hash in one notification.
+				// TODO(rjl493456442) Send a batch of tx hashes in one notification
+				for _, tx := range txs {
+					if fullTx != nil && *fullTx {
+						notifier.Notify(rpcSub.ID, tx.MakeRPCOutput())
+					} else {
+						notifier.Notify(rpcSub.ID, tx.Hash())
+					}
+				}
+			case <-rpcSub.Err():
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+}
+
+func (api *AuctionAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		headers := make(chan *types.Header)
+		headersSub := api.f.Events().SubscribeNewHeads(headers)
+
+		for {
+			select {
+			case h := <-headers:
+				header := kaiaApi.RPCMarshalHeader(h, api.a.Backend.ChainConfig().Rules(h.Number))
+				notifier.Notify(rpcSub.ID, header)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				headersSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
 }
 
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
