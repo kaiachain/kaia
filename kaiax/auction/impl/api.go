@@ -29,6 +29,7 @@ import (
 )
 
 const (
+	RPC_AUCTION_ERROR_PROP        = "err"
 	RPC_AUCTION_HASH_PROP         = "bidHash"
 	RPC_AUCTION_TARGET_DECODE_ERR = "errTargetTxDecode"
 	RPC_AUCTION_TARGET_SEND_ERR   = "errTargetTxSend"
@@ -126,10 +127,10 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
 	m := make(map[string]any)
 	if err != nil {
-		m["err"] = err.Error()
+		m[RPC_AUCTION_ERROR_PROP] = err.Error()
 	}
 	if bidHash != EMPTY_HASH {
-		m["bidHash"] = bidHash
+		m[RPC_AUCTION_HASH_PROP] = bidHash
 	}
 	return m
 }
