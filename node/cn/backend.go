@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
@@ -111,6 +112,7 @@ type BackendProtocolManager interface {
 	Stop()
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
+	auction.AuctionModuleHost
 }
 
 // CN implements the Kaia consensus node service.
@@ -575,6 +577,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		engine.RegisterConsensusModule(mReward, s.govModule)
 	}
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
+	s.protocolManager.RegisterAuctionModule(mAuction)
 
 	return nil
 }
@@ -699,7 +702,6 @@ func (s *CN) APIs() []rpc.API {
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthereumAPI(
-		publicFilterAPI,
 		publicKaiaAPI,
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
@@ -721,6 +723,11 @@ func (s *CN) APIs() []rpc.API {
 			Public:    true,
 		}, {
 			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicFilterAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   publicFilterAPI,
 			Public:    true,

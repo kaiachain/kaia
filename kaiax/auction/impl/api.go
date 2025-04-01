@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -51,10 +52,11 @@ func (a *AuctionModule) APIs() []rpc.API {
 
 type AuctionAPI struct {
 	a *AuctionModule
+	f *filters.FilterAPI
 }
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
-	return &AuctionAPI{a: a}
+	return &AuctionAPI{a, filters.NewFilterAPI(a.Backend)}
 }
 
 type RPCOutput map[string]any
@@ -122,6 +124,14 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 	bid := toBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
 	return makeRPCOutput(bidHash, errValidateBid)
+}
+
+func (api *AuctionAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
+	return api.f.NewPendingTransactions(ctx, fullTx)
+}
+
+func (api *AuctionAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+	return api.f.NewHeads(ctx)
 }
 
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
