@@ -17,7 +17,10 @@
 package impl
 
 import (
+	"time"
+
 	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -29,10 +32,15 @@ var (
 
 type InitOpts struct {
 	Backend api.Backend
+	Modules []builder.TxBundlingModule
 }
 
 type BuilderModule struct {
 	InitOpts
+
+	bundles map[*types.Transaction]time.Time
+	timeout time.Duration
+	period  time.Duration
 }
 
 func NewBuilderModule() *BuilderModule {
@@ -40,7 +48,7 @@ func NewBuilderModule() *BuilderModule {
 }
 
 func (b *BuilderModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Backend == nil {
+	if opts == nil || opts.Backend == nil || opts.Modules == nil {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts

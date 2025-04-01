@@ -27,6 +27,7 @@ type TxGenerator func(nonce uint64) (*types.Transaction, error)
 type BuilderModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
+	kaiax.TxPoolModule
 }
 
 type TxBundlingModule interface {
