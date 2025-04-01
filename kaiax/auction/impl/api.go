@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 
+	kaiaApi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -152,6 +153,36 @@ func (api *AuctionAPI) NewPendingTransactions(ctx context.Context, fullTx *bool)
 					}
 				}
 			case <-rpcSub.Err():
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+}
+
+func (api *AuctionAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		headers := make(chan *types.Header)
+		headersSub := api.f.Events().SubscribeNewHeads(headers)
+
+		for {
+			select {
+			case h := <-headers:
+				header := kaiaApi.RPCMarshalHeader(h, api.a.Backend.ChainConfig().Rules(h.Number))
+				notifier.Notify(rpcSub.ID, header)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				headersSub.Unsubscribe()
 				return
 			}
 		}
