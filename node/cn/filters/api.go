@@ -119,7 +119,7 @@ func (api *FilterAPI) Events() *EventSystem {
 }
 
 // PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
-// information related to the Kaia protocol such als blocks, transactions and logs.
+// information related to the Kaia protocol such as blocks, transactions and logs.
 type PublicFilterAPI struct {
 	*FilterAPI
 }
