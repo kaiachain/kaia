@@ -35,7 +35,7 @@ jobs:
 
       - name: Build binaries
         run: |
-          git config --global --add safe.directory /__w/kaia/kaia
+          git config --global --add safe.directory $GITHUB_WORKSPACE
           make all
 
       - name: Build RPM packages
