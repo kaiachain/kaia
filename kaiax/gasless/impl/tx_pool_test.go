@@ -24,7 +24,6 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -93,9 +92,9 @@ func TestIsReady(t *testing.T) {
 	nodeKey, _ := crypto.GenerateKey()
 
 	dbm := database.NewMemoryDBManager()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 
 	privkey, _ := crypto.GenerateKey()
