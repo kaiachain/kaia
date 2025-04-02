@@ -426,20 +426,17 @@ func (bcdata *BCData) GenABlockWithTransactionsWithBundle(accountMap *AccountMap
 ) error {
 	// Filter failing txs
 	filteredTxs := make(types.Transactions, 0, len(transactions))
-	if len(txHashesExpectedFail) > 0 {
-		for _, tx := range transactions {
-			shouldInclude := true
-			for _, failHash := range txHashesExpectedFail {
-				if tx.Hash() == failHash {
-					shouldInclude = false
-					break
-				}
-			}
-			if shouldInclude {
-				filteredTxs = append(filteredTxs, tx)
+	for _, tx := range transactions {
+		shouldInclude := true
+		for _, failHash := range txHashesExpectedFail {
+			if tx.Hash() == failHash {
+				shouldInclude = false
+				break
 			}
 		}
-		transactions = filteredTxs
+		if shouldInclude {
+			filteredTxs = append(filteredTxs, tx)
+		}
 	}
 
 	return bcdata.genABlockWithTransactionsWithBundle(accountMap, filteredTxs, prof, txBundlingModules, builderModule)
