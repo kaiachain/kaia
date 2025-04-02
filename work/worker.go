@@ -907,7 +907,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	}
 
 	restoreEnv := func() {
-		*env.state = *lastSnapshot
+		env.state = lastSnapshot
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
 	}
@@ -929,6 +929,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 				markAllTxUnexecutable()
 			}
+			logger.Error("ApplyTransaction error, restoring env", "error", err)
 			restoreEnv()
 			if err == nil {
 				err = kerrors.ErrRevertedBundleByVmErr
