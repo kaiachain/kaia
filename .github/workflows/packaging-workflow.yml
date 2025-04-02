@@ -41,6 +41,7 @@ jobs:
       - name: Build RPM packages
         run: |
           git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
           git config --list
           for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
             ./build/package-rpm.sh $item
