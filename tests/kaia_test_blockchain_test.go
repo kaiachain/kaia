@@ -358,7 +358,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Update accountMap
 	start = time.Now()
-	if err := accountMap.Update(newtxs, nil, signer, statedb, b.NumberU64()); err != nil {
+	if err := accountMap.Update(newtxs, nil, nil, signer, statedb, b.NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
@@ -418,31 +418,16 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transactions types.Transactions,
 	prof *profile.Profiler,
 ) error {
-	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, prof, nil, nil)
+	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, nil, prof, nil, nil)
 }
 
 func (bcdata *BCData) GenABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
 	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
 ) error {
-	// Filter failing txs
-	filteredTxs := make(types.Transactions, 0, len(transactions))
-	for _, tx := range transactions {
-		shouldInclude := true
-		for _, failHash := range txHashesExpectedFail {
-			if tx.Hash() == failHash {
-				shouldInclude = false
-				break
-			}
-		}
-		if shouldInclude {
-			filteredTxs = append(filteredTxs, tx)
-		}
-	}
-
-	return bcdata.genABlockWithTransactionsWithBundle(accountMap, filteredTxs, prof, txBundlingModules, builderModule)
+	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, txHashesExpectedFail, prof, txBundlingModules, builderModule)
 }
 
-func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions,
+func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
 	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
 ) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
@@ -454,7 +439,7 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 
 	// Update accountMap
 	start := time.Now()
-	if err := accountMap.Update(transactions, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
