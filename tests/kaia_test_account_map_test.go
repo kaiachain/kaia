@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -109,7 +108,7 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, txBundlingModules []builder.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+func (a *AccountMap) Update(txs types.Transactions, txBundlingModules []builder.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
 	incorporatedTxs, _ := builder_impl.ExtractBundlesAndIncorporate(txs, txBundlingModules)
 	for _, txOrGen := range incorporatedTxs {
 		// To simulate tx, the nonce given to generate is set to zero.
@@ -117,9 +116,6 @@ func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []commo
 		tx, err := txOrGen.GetTx(0)
 		if err != nil {
 			return err
-		}
-		if slices.Contains(txHashesExpectedFail, tx.Hash()) {
-			continue
 		}
 		to := tx.To()
 		v := tx.Value()
