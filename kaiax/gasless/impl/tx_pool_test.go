@@ -23,7 +23,6 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -81,9 +80,9 @@ func TestIsReady(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
 
 	dbm := database.NewMemoryDBManager()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 
 	privkey, _ := crypto.GenerateKey()
@@ -217,7 +216,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 
 	userKey, err := crypto.GenerateKey()
@@ -396,7 +395,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	dbm := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
+	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 
 	key1, _ := crypto.GenerateKey()
