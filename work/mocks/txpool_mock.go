@@ -166,6 +166,21 @@ func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
 }
 
+// PendingUnlock mocks base method.
+func (m *MockTxPool) PendingUnlock() (map[common.Address]types.Transactions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PendingUnlock")
+	ret0, _ := ret[0].(map[common.Address]types.Transactions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PendingUnlock indicates an expected call of PendingUnlock.
+func (mr *MockTxPoolMockRecorder) PendingUnlock() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingUnlock", reflect.TypeOf((*MockTxPool)(nil).PendingUnlock))
+}
+
 // RegisterTxPoolModule mocks base method.
 func (m *MockTxPool) RegisterTxPoolModule(arg0 ...kaiax.TxPoolModule) {
 	m.ctrl.T.Helper()

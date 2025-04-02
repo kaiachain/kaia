@@ -159,7 +159,7 @@ type TxPoolModule interface {
 }
 
 type TxPoolForCaller interface {
-	Pending() (map[common.Address]types.Transactions, error)
+	PendingUnlock() (map[common.Address]types.Transactions, error)
 	GetCurrentState() *state.StateDB
 }
 

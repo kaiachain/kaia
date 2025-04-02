@@ -411,6 +411,12 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.Reset(pool, oldHead, newHead)
+	}
+	pool.txMu.Unlock()
+
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
@@ -526,10 +532,6 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
-
-	for _, module := range pool.modules {
-		module.Reset(pool, oldHead, newHead)
-	}
 }
 
 // Stop terminates the transaction pool.
@@ -638,6 +640,14 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
+func (pool *TxPool) PendingUnlock() (map[common.Address]types.Transactions, error) {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
@@ -816,7 +826,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 					return err
 				}
 			}
-			break
 		}
 	}
 
@@ -982,6 +991,15 @@ func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, f
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			err := module.PreAddLocal(tx)
+			if err != nil {
+				return false, err
+			}
+		}
+	}
+
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {

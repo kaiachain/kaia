@@ -223,8 +223,8 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules 
 			if module.IsModuleTx(m.items[next]) {
 				if !module.IsReady(m.items, next, ready) {
 					rejectByModule = true
+					break
 				}
-				break
 			}
 		}
 		// break if this is rejected because this has to return sequential txs
@@ -404,13 +404,20 @@ func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions
 		}
 
 		// balance check for module transaction
+		shouldSkipBalanceCheck := false
 		for _, module := range pool.modules {
 			if module.IsModuleTx(tx) {
 				if checkBalance := module.GetCheckBalance(); checkBalance != nil {
-					return checkBalance(tx) != nil
+					shouldSkipBalanceCheck = true
+					if checkBalance(tx) != nil {
+						return true
+					}
 				}
-				break
 			}
+		}
+
+		if shouldSkipBalanceCheck {
+			return false
 		}
 
 		// For other transactions, all tx cost should be payable by the sender.

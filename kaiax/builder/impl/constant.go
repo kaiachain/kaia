@@ -19,6 +19,6 @@ package impl
 import "time"
 
 const (
-	BundleTxTimeout  = 30 * time.Second
-	BundleLockPeriod = 40 * time.Second
+	BundleTimeout    = 30 * time.Second
+	BundleLockPeriod = 60 * time.Second
 )

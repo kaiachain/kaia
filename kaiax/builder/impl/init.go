@@ -54,6 +54,10 @@ func (b *BuilderModule) Init(opts *InitOpts) error {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts
+	b.txAndTimes = make(map[common.Hash]struct {
+		time time.Time
+		tx   *types.Transaction
+	})
 	return nil
 }
 

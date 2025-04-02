@@ -27,6 +27,10 @@ import (
 var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
 func (b *BuilderModule) PreAddLocal(tx *types.Transaction) error {
+	txAndTime, ok := b.txAndTimes[tx.Hash()]
+	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
+		return errors.New("Unable to add known bundle tx during lock period")
+	}
 	return nil
 }
 
@@ -40,21 +44,15 @@ func (b *BuilderModule) IsModuleTx(tx *types.Transaction) bool {
 }
 
 func (b *BuilderModule) GetCheckBalance() func(tx *types.Transaction) error {
-	return func(tx *types.Transaction) error {
-		txAndTime, ok := b.txAndTimes[tx.Hash()]
-		if ok && time.Since(txAndTime.time) < BundleLockPeriod {
-			return errors.New("tx is locked")
-		}
-		return nil
-	}
+	return nil
 }
 
 func (b *BuilderModule) IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
-	return false
+	return true
 }
 
 func (b *BuilderModule) Reset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {
-	pending, err := pool.Pending()
+	pending, err := pool.PendingUnlock()
 	if err != nil {
 		logger.Error("Failed to get pending transactions", "err", err)
 		return
@@ -90,8 +88,8 @@ func (b *BuilderModule) Reset(pool kaiax.TxPoolForCaller, oldHead, newHead *type
 	}
 
 	for hash, txAndTime := range b.txAndTimes {
-		if time.Since(txAndTime.time) > BundleTxTimeout {
-			txAndTime.tx.MarkUnexecutable(true)
+		if time.Since(txAndTime.time) > BundleTimeout {
+			b.txAndTimes[hash].tx.MarkUnexecutable(true)
 		}
 		if time.Since(txAndTime.time) > BundleLockPeriod {
 			delete(b.txAndTimes, hash)
