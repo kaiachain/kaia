@@ -21,6 +21,7 @@ import (
 
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -38,9 +39,10 @@ type InitOpts struct {
 type BuilderModule struct {
 	InitOpts
 
-	bundles map[*types.Transaction]time.Time
-	timeout time.Duration
-	period  time.Duration
+	txAndTimes map[common.Hash]struct {
+		time time.Time
+		tx   *types.Transaction
+	}
 }
 
 func NewBuilderModule() *BuilderModule {

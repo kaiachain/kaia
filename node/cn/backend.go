@@ -523,19 +523,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mGasless = gasless_impl.NewGaslessModule()
 	)
 
-	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
-	mTxBundling := []builder.TxBundlingModule{}
-	mTxPool := []kaiax.TxPoolModule{}
-	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
-
-	gaslessDisabled := mGasless.IsDisabled()
-	if !gaslessDisabled {
-		mExecution = append(mExecution, mGasless)
-		mTxBundling = append(mTxBundling, mGasless)
-		mTxPool = append(mTxPool, mGasless)
-		mJsonRpc = append(mJsonRpc, mGasless)
-	}
-
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -554,10 +541,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
-		mBuilder.Init(&builder_impl.InitOpts{
-			Backend: s.APIBackend,
-			Modules: mTxBundling,
-		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			GaslessConfig: s.config.Gasless,
@@ -566,6 +549,27 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			TxPool:        s.txPool,
 		}),
 	)
+	if err != nil {
+		return err
+	}
+
+	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mTxBundling := []builder.TxBundlingModule{}
+	mTxPool := []kaiax.TxPoolModule{mBuilder}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+
+	gaslessDisabled := mGasless.IsDisabled()
+	if !gaslessDisabled {
+		mExecution = append(mExecution, mGasless)
+		mTxBundling = append(mTxBundling, mGasless)
+		mTxPool = append(mTxPool, mGasless)
+		mJsonRpc = append(mJsonRpc, mGasless)
+	}
+
+	err = mBuilder.Init(&builder_impl.InitOpts{
+		Backend: s.APIBackend,
+		Modules: mTxBundling,
+	})
 	if err != nil {
 		return err
 	}

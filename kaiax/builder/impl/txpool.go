@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -34,11 +35,18 @@ func (b *BuilderModule) PreAddRemote(tx *types.Transaction) error {
 }
 
 func (b *BuilderModule) IsModuleTx(tx *types.Transaction) bool {
-	return false
+	_, ok := b.txAndTimes[tx.Hash()]
+	return ok
 }
 
 func (b *BuilderModule) GetCheckBalance() func(tx *types.Transaction) error {
-	return nil
+	return func(tx *types.Transaction) error {
+		txAndTime, ok := b.txAndTimes[tx.Hash()]
+		if ok && time.Since(txAndTime.time) < BundleLockPeriod {
+			return errors.New("tx is locked")
+		}
+		return nil
+	}
 }
 
 func (b *BuilderModule) IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
@@ -66,17 +74,27 @@ func (b *BuilderModule) Reset(pool kaiax.TxPoolForCaller, oldHead, newHead *type
 					logger.Error("Failed to get tx from bundle", "err", err)
 					continue
 				}
-				if _, ok := b.bundles[tx]; !ok {
-					b.bundles[tx] = time.Now()
+				newTxAndTime := struct {
+					time time.Time
+					tx   *types.Transaction
+				}{
+					time: time.Now(),
+					tx:   tx,
 				}
+				if txAndTime, ok := b.txAndTimes[tx.Hash()]; ok {
+					newTxAndTime.time = txAndTime.time
+				}
+				b.txAndTimes[tx.Hash()] = newTxAndTime
 			}
 		}
 	}
 
-	for tx, tm := range b.bundles {
-		if time.Since(tm) > BundleTxTimeout {
-			tx.MarkUnexecutable(true)
-			delete(b.bundles, tx)
+	for hash, txAndTime := range b.txAndTimes {
+		if time.Since(txAndTime.time) > BundleTxTimeout {
+			txAndTime.tx.MarkUnexecutable(true)
+		}
+		if time.Since(txAndTime.time) > BundleLockPeriod {
+			delete(b.txAndTimes, hash)
 		}
 	}
 }
