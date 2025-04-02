@@ -170,7 +170,7 @@ func TestHardForkBlock(t *testing.T) {
 	require.Equal(t, 0, idx)
 }
 
-// genBlock generates two blocks including transactions utilizing all transaction types and account types.
+// genBlocks generates two blocks including transactions utilizing all transaction types and account types.
 func genBlocks(t *testing.T) {
 	testFunctions := []struct {
 		Name  string
