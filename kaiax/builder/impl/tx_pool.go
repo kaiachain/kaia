@@ -29,7 +29,7 @@ var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 func (b *BuilderModule) PreAddTx(pool kaiax.TxPoolForCaller, tx *types.Transaction, local bool) error {
 	txAndTime, ok := b.pendingBundles[tx.Hash()]
 	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
-		return errors.New("Unable to add known bundle tx during lock period")
+		return errors.New("Unable to add known bundle tx into tx pool during lock period")
 	}
 	return nil
 }
