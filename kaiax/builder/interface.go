@@ -30,6 +30,7 @@ type BuilderModule interface {
 	kaiax.TxPoolModule
 }
 
+//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/kaiax/builder TxBundlingModule
 type TxBundlingModule interface {
 	// The function finds transactions to be bundled.
 	// New transactions can be injected.
