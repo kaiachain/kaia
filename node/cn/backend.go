@@ -522,7 +522,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
 	)
-
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
