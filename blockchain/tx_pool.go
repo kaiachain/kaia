@@ -413,7 +413,7 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.txMu.Lock()
 	for _, module := range pool.modules {
-		module.Reset(pool, oldHead, newHead)
+		module.PreReset(pool, oldHead, newHead)
 	}
 	pool.txMu.Unlock()
 

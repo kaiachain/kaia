@@ -120,16 +120,16 @@ func (mr *MockBuilderModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockBuilderModule)(nil).PreAddRemote), arg0)
 }
 
-// Reset mocks base method.
-func (m *MockBuilderModule) Reset(arg0 kaiax.TxPoolForCaller, arg1, arg2 *types.Header) {
+// PreReset mocks base method.
+func (m *MockBuilderModule) PreReset(arg0 kaiax.TxPoolForCaller, arg1, arg2 *types.Header) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Reset", arg0, arg1, arg2)
+	m.ctrl.Call(m, "PreReset", arg0, arg1, arg2)
 }
 
-// Reset indicates an expected call of Reset.
-func (mr *MockBuilderModuleMockRecorder) Reset(arg0, arg1, arg2 interface{}) *gomock.Call {
+// PreReset indicates an expected call of PreReset.
+func (mr *MockBuilderModuleMockRecorder) PreReset(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockBuilderModule)(nil).Reset), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreReset", reflect.TypeOf((*MockBuilderModule)(nil).PreReset), arg0, arg1, arg2)
 }
 
 // Start mocks base method.

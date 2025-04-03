@@ -59,7 +59,7 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 	return false
 }
 
-func (g *GaslessModule) Reset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {}
+func (g *GaslessModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {}
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
