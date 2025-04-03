@@ -69,8 +69,8 @@ func (b *BuilderModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *t
 					continue
 				}
 				newTxAndTime := txAndTime{
-					time: time.Now(),
 					tx:   tx,
+					time: time.Now(),
 				}
 				if txAndTime, ok := b.pendingBundles[tx.Hash()]; ok {
 					newTxAndTime.time = txAndTime.time

@@ -37,8 +37,8 @@ type InitOpts struct {
 }
 
 type txAndTime struct {
-	time time.Time
 	tx   *types.Transaction
+	time time.Time
 }
 
 type BuilderModule struct {
