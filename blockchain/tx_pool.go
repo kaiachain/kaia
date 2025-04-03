@@ -993,7 +993,7 @@ func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, f
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	for _, module := range pool.modules {
 		if module.IsModuleTx(tx) {
-			err := module.PreAddLocal(tx)
+			err := module.PreAddTx(pool, tx, local)
 			if err != nil {
 				return false, err
 			}

@@ -106,32 +106,18 @@ func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
 }
 
-// PreAddLocal mocks base method.
-func (m *MockGaslessModule) PreAddLocal(arg0 *types.Transaction) error {
+// PreAddTx mocks base method.
+func (m *MockGaslessModule) PreAddTx(arg0 kaiax.TxPoolForCaller, arg1 *types.Transaction, arg2 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddLocal", arg0)
+	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PreAddLocal indicates an expected call of PreAddLocal.
-func (mr *MockGaslessModuleMockRecorder) PreAddLocal(arg0 interface{}) *gomock.Call {
+// PreAddTx indicates an expected call of PreAddTx.
+func (mr *MockGaslessModuleMockRecorder) PreAddTx(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddLocal", reflect.TypeOf((*MockGaslessModule)(nil).PreAddLocal), arg0)
-}
-
-// PreAddRemote mocks base method.
-func (m *MockGaslessModule) PreAddRemote(arg0 *types.Transaction) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddRemote", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PreAddRemote indicates an expected call of PreAddRemote.
-func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockGaslessModule)(nil).PreAddTx), arg0, arg1, arg2)
 }
 
 // PreReset mocks base method.

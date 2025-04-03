@@ -25,11 +25,7 @@ import (
 
 var _ kaiax.TxPoolModule = (*GaslessModule)(nil)
 
-func (g *GaslessModule) PreAddLocal(tx *types.Transaction) error {
-	return nil
-}
-
-func (g *GaslessModule) PreAddRemote(tx *types.Transaction) error {
+func (g *GaslessModule) PreAddTx(pool kaiax.TxPoolForCaller, tx *types.Transaction, local bool) error {
 	return nil
 }
 

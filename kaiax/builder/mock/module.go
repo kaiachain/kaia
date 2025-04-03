@@ -92,32 +92,18 @@ func (mr *MockBuilderModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockBuilderModule)(nil).IsReady), arg0, arg1, arg2)
 }
 
-// PreAddLocal mocks base method.
-func (m *MockBuilderModule) PreAddLocal(arg0 *types.Transaction) error {
+// PreAddTx mocks base method.
+func (m *MockBuilderModule) PreAddTx(arg0 kaiax.TxPoolForCaller, arg1 *types.Transaction, arg2 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddLocal", arg0)
+	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PreAddLocal indicates an expected call of PreAddLocal.
-func (mr *MockBuilderModuleMockRecorder) PreAddLocal(arg0 interface{}) *gomock.Call {
+// PreAddTx indicates an expected call of PreAddTx.
+func (mr *MockBuilderModuleMockRecorder) PreAddTx(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddLocal", reflect.TypeOf((*MockBuilderModule)(nil).PreAddLocal), arg0)
-}
-
-// PreAddRemote mocks base method.
-func (m *MockBuilderModule) PreAddRemote(arg0 *types.Transaction) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddRemote", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PreAddRemote indicates an expected call of PreAddRemote.
-func (mr *MockBuilderModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockBuilderModule)(nil).PreAddRemote), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockBuilderModule)(nil).PreAddTx), arg0, arg1, arg2)
 }
 
 // PreReset mocks base method.

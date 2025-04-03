@@ -26,15 +26,11 @@ import (
 
 var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
-func (b *BuilderModule) PreAddLocal(tx *types.Transaction) error {
+func (b *BuilderModule) PreAddTx(pool kaiax.TxPoolForCaller, tx *types.Transaction, local bool) error {
 	txAndTime, ok := b.txAndTimes[tx.Hash()]
 	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
 		return errors.New("Unable to add known bundle tx during lock period")
 	}
-	return nil
-}
-
-func (b *BuilderModule) PreAddRemote(tx *types.Transaction) error {
 	return nil
 }
 

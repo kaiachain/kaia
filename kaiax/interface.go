@@ -140,8 +140,7 @@ type TxProcessModuleHost interface {
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
-	PreAddLocal(*types.Transaction) error
-	PreAddRemote(*types.Transaction) error
+	PreAddTx(pool TxPoolForCaller, tx *types.Transaction, local bool) error
 
 	// Additional checks to check if a given transaction should be handled by module.
 	IsModuleTx(tx *types.Transaction) bool
