@@ -68,10 +68,7 @@ func (b *BuilderModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *t
 					logger.Error("Failed to get tx from bundle", "err", err)
 					continue
 				}
-				newTxAndTime := struct {
-					time time.Time
-					tx   *types.Transaction
-				}{
+				newTxAndTime := txAndTime{
 					time: time.Now(),
 					tx:   tx,
 				}

@@ -36,13 +36,15 @@ type InitOpts struct {
 	Modules []builder.TxBundlingModule
 }
 
+type txAndTime struct {
+	time time.Time
+	tx   *types.Transaction
+}
+
 type BuilderModule struct {
 	InitOpts
 
-	txAndTimes map[common.Hash]struct {
-		time time.Time
-		tx   *types.Transaction
-	}
+	txAndTimes map[common.Hash]txAndTime
 }
 
 func NewBuilderModule() *BuilderModule {
@@ -54,10 +56,7 @@ func (b *BuilderModule) Init(opts *InitOpts) error {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts
-	b.txAndTimes = make(map[common.Hash]struct {
-		time time.Time
-		tx   *types.Transaction
-	})
+	b.txAndTimes = make(map[common.Hash]txAndTime)
 	return nil
 }
 
