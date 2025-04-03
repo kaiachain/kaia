@@ -647,7 +647,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
-func (pool *TxPool) PendingUnlock() (map[common.Address]types.Transactions, error) {
+func (pool *TxPool) UnlockedPending() (map[common.Address]types.Transactions, error) {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()

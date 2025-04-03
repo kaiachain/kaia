@@ -215,7 +215,7 @@ func (pool *testTxPool) GetCurrentState() *state.StateDB {
 	return pool.statedb
 }
 
-func (pool *testTxPool) PendingUnlock() (map[common.Address]types.Transactions, error) {
+func (pool *testTxPool) UnlockedPending() (map[common.Address]types.Transactions, error) {
 	return nil, nil
 }
 

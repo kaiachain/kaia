@@ -52,7 +52,7 @@ func (b *BuilderModule) IsReady(txs map[uint64]*types.Transaction, next uint64, 
 }
 
 func (b *BuilderModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {
-	pending, err := pool.PendingUnlock()
+	pending, err := pool.UnlockedPending()
 	if err != nil {
 		logger.Error("Failed to get pending transactions", "err", err)
 		return
