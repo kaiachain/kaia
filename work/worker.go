@@ -907,7 +907,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	}
 
 	restoreEnv := func() {
-		env.state = lastSnapshot
+		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
 	}
