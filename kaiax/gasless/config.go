@@ -23,16 +23,18 @@ import (
 
 var (
 	AllowedTokensFlag = &cli.StringSliceFlag{
-		Name:    "gasless.allowed-tokens",
-		Usage:   "allow token addresses for gasless module, allow all tokens if all",
-		Value:   cli.NewStringSlice("all"),
-		Aliases: []string{"genesis.module.gasless.allowed-tokens"},
+		Name:     "gasless.allowed-tokens",
+		Usage:    "allow token addresses for gasless module, allow all tokens if all",
+		Value:    cli.NewStringSlice("all"),
+		Aliases:  []string{"genesis.module.gasless.allowed-tokens"},
+		Category: "KAIAX",
 	}
 	DisableFlag = &cli.BoolFlag{
-		Name:    "gasless.disable",
-		Usage:   "disable gasless module",
-		Value:   false,
-		Aliases: []string{"genesis.module.gasless.disable"},
+		Name:     "gasless.disable",
+		Usage:    "disable gasless module",
+		Value:    false,
+		Aliases:  []string{"genesis.module.gasless.disable"},
+		Category: "KAIAX",
 	}
 )
 
