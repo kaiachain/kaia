@@ -170,7 +170,9 @@ func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) 
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
 				for _, tx := range txs {
 					if fullTx != nil && *fullTx {
-						notifier.Notify(rpcSub.ID, tx.MakeRPCOutput())
+						m := tx.MakeRPCOutput()
+						m["time"] = tx.Time()
+						notifier.Notify(rpcSub.ID, m)
 					} else {
 						notifier.Notify(rpcSub.ID, tx.Hash())
 					}
