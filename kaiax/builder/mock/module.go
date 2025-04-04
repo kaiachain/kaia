@@ -9,7 +9,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
-	kaiax "github.com/kaiachain/kaia/kaiax"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -93,29 +92,29 @@ func (mr *MockBuilderModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *
 }
 
 // PreAddTx mocks base method.
-func (m *MockBuilderModule) PreAddTx(arg0 kaiax.TxPoolForCaller, arg1 *types.Transaction, arg2 bool) error {
+func (m *MockBuilderModule) PreAddTx(arg0 *types.Transaction, arg1 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PreAddTx indicates an expected call of PreAddTx.
-func (mr *MockBuilderModuleMockRecorder) PreAddTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockBuilderModuleMockRecorder) PreAddTx(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockBuilderModule)(nil).PreAddTx), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockBuilderModule)(nil).PreAddTx), arg0, arg1)
 }
 
 // PreReset mocks base method.
-func (m *MockBuilderModule) PreReset(arg0 kaiax.TxPoolForCaller, arg1, arg2 *types.Header) {
+func (m *MockBuilderModule) PreReset(arg0, arg1 *types.Header) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PreReset", arg0, arg1, arg2)
+	m.ctrl.Call(m, "PreReset", arg0, arg1)
 }
 
 // PreReset indicates an expected call of PreReset.
-func (mr *MockBuilderModuleMockRecorder) PreReset(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockBuilderModuleMockRecorder) PreReset(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreReset", reflect.TypeOf((*MockBuilderModule)(nil).PreReset), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreReset", reflect.TypeOf((*MockBuilderModule)(nil).PreReset), arg0, arg1)
 }
 
 // Start mocks base method.

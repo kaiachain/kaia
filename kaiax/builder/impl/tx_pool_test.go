@@ -47,9 +47,12 @@ func TestPreAddTx(t *testing.T) {
 	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).Return([]*builder.Bundle{}).AnyTimes()
 
+	mockTxPool := mock_work.NewMockTxPool(ctrl)
+
 	builderModule := &BuilderModule{
 		InitOpts: InitOpts{
 			Backend: mockBackend,
+			TxPool:  mockTxPool,
 			Modules: []builder.TxBundlingModule{
 				mockTxBundlingModule,
 			},
@@ -85,7 +88,7 @@ func TestPreAddTx(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			builderModule.pendingBundles = tt.pendingBundles
-			err := builderModule.PreAddTx(nil, tt.tx, true)
+			err := builderModule.PreAddTx(tt.tx, true)
 			if tt.expectedError != nil {
 				assert.EqualError(t, err, tt.expectedError.Error())
 				return
@@ -240,13 +243,14 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 				pendingBundles: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
+					TxPool:  mockTxPool,
 					Modules: []builder.TxBundlingModule{
 						mockTxBundlingModule,
 					},
 				},
 			}
 
-			builderModule.PreReset(mockTxPool, nil, nil)
+			builderModule.PreReset(nil, nil)
 
 			assert.Equal(t, len(tt.expectedBundles), len(builderModule.pendingBundles))
 
@@ -349,13 +353,14 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 				pendingBundles: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
+					TxPool:  mockTxPool,
 					Modules: []builder.TxBundlingModule{
 						mockTxBundlingModule,
 					},
 				},
 			}
 
-			builderModule.PreReset(mockTxPool, nil, nil)
+			builderModule.PreReset(nil, nil)
 
 			// Verify the number of bundles
 			assert.Equal(t, len(tt.expectedBundles), len(builderModule.pendingBundles))

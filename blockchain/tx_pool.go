@@ -413,7 +413,7 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.txMu.Lock()
 	for _, module := range pool.modules {
-		module.PreReset(pool, oldHead, newHead)
+		module.PreReset(oldHead, newHead)
 	}
 	pool.txMu.Unlock()
 
@@ -993,7 +993,7 @@ func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, f
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 	for _, module := range pool.modules {
 		if module.IsModuleTx(tx) {
-			err := module.PreAddTx(pool, tx, local)
+			err := module.PreAddTx(tx, local)
 			if err != nil {
 				return false, err
 			}

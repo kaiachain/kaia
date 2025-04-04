@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -33,6 +34,7 @@ var (
 
 type InitOpts struct {
 	Backend api.Backend
+	TxPool  kaiax.TxPoolForCaller
 	Modules []builder.TxBundlingModule
 }
 
@@ -52,7 +54,7 @@ func NewBuilderModule() *BuilderModule {
 }
 
 func (b *BuilderModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Backend == nil || opts.Modules == nil {
+	if opts == nil || opts.Backend == nil || opts.Modules == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts

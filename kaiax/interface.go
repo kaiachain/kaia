@@ -140,7 +140,7 @@ type TxProcessModuleHost interface {
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
-	PreAddTx(pool TxPoolForCaller, tx *types.Transaction, local bool) error
+	PreAddTx(tx *types.Transaction, local bool) error
 
 	// Additional checks to check if a given transaction should be handled by module.
 	IsModuleTx(tx *types.Transaction) bool
@@ -154,7 +154,7 @@ type TxPoolModule interface {
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
 
 	// Additional actions to perform before the txpool is reset.
-	PreReset(pool TxPoolForCaller, oldHead, newHead *types.Header)
+	PreReset(oldHead, newHead *types.Header)
 }
 
 //go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller

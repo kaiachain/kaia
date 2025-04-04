@@ -26,7 +26,7 @@ import (
 
 var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
-func (b *BuilderModule) PreAddTx(pool kaiax.TxPoolForCaller, tx *types.Transaction, local bool) error {
+func (b *BuilderModule) PreAddTx(tx *types.Transaction, local bool) error {
 	txAndTime, ok := b.pendingBundles[tx.Hash()]
 	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
 		return errors.New("Unable to add known bundle tx into tx pool during lock period")
@@ -47,8 +47,8 @@ func (b *BuilderModule) IsReady(txs map[uint64]*types.Transaction, next uint64, 
 	return true
 }
 
-func (b *BuilderModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {
-	pending, err := pool.UnlockedPending()
+func (b *BuilderModule) PreReset(oldHead, newHead *types.Header) {
+	pending, err := b.TxPool.UnlockedPending()
 	if err != nil {
 		logger.Error("Failed to get pending transactions", "err", err)
 		return

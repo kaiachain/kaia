@@ -25,7 +25,7 @@ import (
 
 var _ kaiax.TxPoolModule = (*GaslessModule)(nil)
 
-func (g *GaslessModule) PreAddTx(pool kaiax.TxPoolForCaller, tx *types.Transaction, local bool) error {
+func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
@@ -55,7 +55,7 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 	return false
 }
 
-func (g *GaslessModule) PreReset(pool kaiax.TxPoolForCaller, oldHead, newHead *types.Header) {}
+func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) {}
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
