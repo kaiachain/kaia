@@ -39,7 +39,7 @@ func init() {
 	blockchain.InitDeriveSha(params.TestChainConfig)
 }
 
-func TestBuilderModule_PreAddTx(t *testing.T) {
+func TestPreAddTx(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -95,7 +95,7 @@ func TestBuilderModule_PreAddTx(t *testing.T) {
 	}
 }
 
-func TestBuilderModule_IsModuleTx(t *testing.T) {
+func TestIsModuleTx(t *testing.T) {
 	b := &BuilderModule{
 		pendingBundles: make(map[common.Hash]txAndTime),
 	}
@@ -134,17 +134,17 @@ func TestBuilderModule_IsModuleTx(t *testing.T) {
 	}
 }
 
-func TestBuilderModule_GetCheckBalance(t *testing.T) {
+func TestGetCheckBalance(t *testing.T) {
 	b := &BuilderModule{}
 	assert.Nil(t, b.GetCheckBalance())
 }
 
-func TestBuilderModule_IsReady(t *testing.T) {
+func TestIsReady(t *testing.T) {
 	b := &BuilderModule{}
 	assert.True(t, b.IsReady(nil, 0, nil))
 }
 
-func TestBuilderModule_PreReset_NewBundlesAndLocktime(t *testing.T) {
+func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -269,7 +269,7 @@ func TestBuilderModule_PreReset_NewBundlesAndLocktime(t *testing.T) {
 	}
 }
 
-func TestBuilderModule_PreReset_BundleTimeout(t *testing.T) {
+func TestPreReset_BundleTimeout(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
