@@ -157,7 +157,7 @@ type TxPoolModule interface {
 	PreReset(pool TxPoolForCaller, oldHead, newHead *types.Header)
 }
 
-//go:generate mockgen -destination=./mock/txpool.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
+//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
 type TxPoolForCaller interface {
 	UnlockedPending() (map[common.Address]types.Transactions, error)
 	GetCurrentState() *state.StateDB
