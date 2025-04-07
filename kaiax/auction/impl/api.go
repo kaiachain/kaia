@@ -111,7 +111,7 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 }
 
 func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutput {
-	//  1. directly send target transaction (target tx can be empty)
+	//  1. directly send target transaction
 	targetTx, errTxDecode := toTx(bidInput.TargetTxRaw)
 	if errTxDecode != nil {
 		return makeRPCOutput(EMPTY_HASH, errTxDecode)
