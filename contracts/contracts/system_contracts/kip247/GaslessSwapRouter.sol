@@ -30,6 +30,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
     event CommissionClaimed(uint256 amount);
 
     constructor(address _wkaia) {
+        require(_wkaia != address(0), "Zero address is not allowed");
         _transferOwnership(msg.sender);
         WKAIA = IWKAIA(_wkaia);
         commissionRate = 0;
