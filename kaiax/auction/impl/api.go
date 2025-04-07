@@ -18,6 +18,7 @@ package impl
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -37,7 +38,10 @@ const (
 	RPC_AUCTION_BID_VALIDATE_ERR  = "errValidateBid"
 )
 
-var EMPTY_HASH = common.Hash{}
+var (
+	EMPTY_HASH          = common.Hash{}
+	ErrEmptyTargetTxRaw = errors.New("Empty target tx raw")
+)
 
 func (a *AuctionModule) APIs() []rpc.API {
 	return []rpc.API{
@@ -93,6 +97,9 @@ func toBid(bidInput BidInput) *auction.Bid {
 }
 
 func toTx(targetTxRaw []byte) (*types.Transaction, error) {
+	if len(targetTxRaw) == 0 {
+		return nil, ErrEmptyTargetTxRaw
+	}
 	if 0 < targetTxRaw[0] && targetTxRaw[0] < 0x7f {
 		targetTxRaw = append([]byte{byte(types.EthereumTxTypeEnvelope)}, targetTxRaw...)
 	}
@@ -105,19 +112,17 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 
 func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutput {
 	//  1. directly send target transaction (target tx can be empty)
-	if len(bidInput.TargetTxRaw) > 0 {
-		targetTx, errTxDecode := toTx(bidInput.TargetTxRaw)
-		if errTxDecode != nil {
-			return makeRPCOutput(EMPTY_HASH, errTxDecode)
-		}
-		if targetTx.Hash() != bidInput.TargetTxHash {
-			return makeRPCOutput(EMPTY_HASH, auction.ErrInvalidTargetTxHash)
-		}
-		errTargetTxSend := api.a.Backend.SendTx(ctx, targetTx)
-		// ignore `known transaction ...` error against target tx validation
-		if errTargetTxSend != nil && !strings.HasPrefix(errTargetTxSend.Error(), "known transaction:") {
-			return makeRPCOutput(EMPTY_HASH, errTargetTxSend)
-		}
+	targetTx, errTxDecode := toTx(bidInput.TargetTxRaw)
+	if errTxDecode != nil {
+		return makeRPCOutput(EMPTY_HASH, errTxDecode)
+	}
+	if targetTx.Hash() != bidInput.TargetTxHash {
+		return makeRPCOutput(EMPTY_HASH, auction.ErrInvalidTargetTxHash)
+	}
+	errTargetTxSend := api.a.Backend.SendTx(ctx, targetTx)
+	// ignore `known transaction ...` error against target tx validation
+	if errTargetTxSend != nil && !strings.HasPrefix(errTargetTxSend.Error(), "known transaction:") {
+		return makeRPCOutput(EMPTY_HASH, errTargetTxSend)
 	}
 
 	// 2. add bid
