@@ -11,6 +11,17 @@ import {
   gaslessSwapRouterMultiTokenFixture,
 } from "../materials";
 
+describe("GaslessSwapRouter Constructor", function () {
+  it("should fail when initialized with zero address for WKAIA", async function () {
+    const [deployer] = await ethers.getSigners();
+    const GaslessSwapRouter = await ethers.getContractFactory("GaslessSwapRouter");
+
+    await expect(
+      GaslessSwapRouter.deploy(ethers.constants.AddressZero)
+    ).to.be.revertedWith("Zero address is not allowed");
+  });
+});
+
 describe("GaslessSwapRouter", function () {
   describe("Token Management", function () {
     it("should add token successfully", async function () {
