@@ -48,3 +48,17 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
 }
+
+// IsBundleTx mocks base method.
+func (m *MockTxBundlingModule) IsBundleTx(arg0 *types.Transaction) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBundleTx", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsBundleTx indicates an expected call of IsBundleTx.
+func (mr *MockTxBundlingModuleMockRecorder) IsBundleTx(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBundleTx", reflect.TypeOf((*MockTxBundlingModule)(nil).IsBundleTx), arg0)
+}
