@@ -41,14 +41,20 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         require(router != address(0), "Invalid router address");
         require(_dexInfos[token].factory == address(0), "TokenAlreadySupported");
 
+        address pair;
         bool success;
-        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (address) {
+        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (address pairAddress) {
+            pair = pairAddress;
             success = true;
         } catch {
             success = false;
         }
 
         require(success, "InvalidDEXAddress");
+        require(pair != address(0), "PairDoesNotExist");
+
+        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        require(reserve0 > 0 && reserve1 > 0, "NoLiquidity");
 
         _dexInfos[token] = DEXInfo({factory: factory, router: router});
 
