@@ -19,6 +19,6 @@ package impl
 import "time"
 
 const (
-	BundleTimeout    = 30 * time.Second
-	BundleLockPeriod = 60 * time.Second
+	PendingTimeout = 30 * time.Second // bundle tx is removed from txpool.pending after PendingTimeout
+	KnownTxTimeout = 60 * time.Second // bundle tx is removed from knownTxs after KnownTxTimeout
 )

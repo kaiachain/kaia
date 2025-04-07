@@ -204,7 +204,7 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-BundleLockPeriod - time.Second),
+					time: now.Add(-KnownTxTimeout - time.Second),
 				},
 			},
 			pendingTxs: map[common.Address]types.Transactions{
@@ -306,13 +306,13 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-BundleTimeout - time.Second),
+					time: now.Add(-PendingTimeout - time.Second),
 				},
 			},
 			expectedBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-BundleTimeout - time.Second),
+					time: now.Add(-PendingTimeout - time.Second),
 				},
 			},
 			expectedUnexecutable: true,
@@ -322,7 +322,7 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-BundleLockPeriod - time.Second),
+					time: now.Add(-KnownTxTimeout - time.Second),
 				},
 			},
 			expectedBundles:      map[common.Hash]txAndTime{},

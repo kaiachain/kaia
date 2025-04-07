@@ -28,7 +28,7 @@ var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
 func (b *BuilderModule) PreAddTx(tx *types.Transaction, local bool) error {
 	txAndTime, ok := b.knownTxs[tx.Hash()]
-	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
+	if ok && time.Since(txAndTime.time) < KnownTxTimeout {
 		return errors.New("Unable to add known bundle tx into tx pool during lock period")
 	}
 	return nil
@@ -84,11 +84,11 @@ func (b *BuilderModule) PreReset(oldHead, newHead *types.Header) {
 
 	for hash, txAndTime := range b.knownTxs {
 		// remove pending timed out tx from tx pool
-		if time.Since(txAndTime.time) > BundleTimeout {
+		if time.Since(txAndTime.time) > PendingTimeout {
 			b.knownTxs[hash].tx.MarkUnexecutable(true)
 		}
 		// remove known timed out tx from knownTxs
-		if time.Since(txAndTime.time) > BundleLockPeriod {
+		if time.Since(txAndTime.time) > KnownTxTimeout {
 			delete(b.knownTxs, hash)
 		}
 	}
