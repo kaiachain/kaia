@@ -46,7 +46,7 @@ type txAndTime struct {
 type BuilderModule struct {
 	InitOpts
 
-	pendingBundles map[common.Hash]txAndTime
+	knownTxs map[common.Hash]txAndTime
 }
 
 func NewBuilderModule() *BuilderModule {
@@ -58,7 +58,7 @@ func (b *BuilderModule) Init(opts *InitOpts) error {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts
-	b.pendingBundles = make(map[common.Hash]txAndTime)
+	b.knownTxs = make(map[common.Hash]txAndTime)
 	return nil
 }
 

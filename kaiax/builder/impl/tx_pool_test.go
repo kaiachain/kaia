@@ -60,23 +60,23 @@ func TestPreAddTx(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		tx             *types.Transaction
-		local          bool
-		expectedError  error
-		pendingBundles map[common.Hash]txAndTime
+		name          string
+		tx            *types.Transaction
+		local         bool
+		expectedError error
+		knownTxs      map[common.Hash]txAndTime
 	}{
 		{
-			name:           "Valid transaction",
-			tx:             types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-			expectedError:  nil,
-			pendingBundles: make(map[common.Hash]txAndTime),
+			name:          "Valid transaction",
+			tx:            types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+			expectedError: nil,
+			knownTxs:      make(map[common.Hash]txAndTime),
 		},
 		{
 			name:          "Bundle transaction during lock period",
 			tx:            types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 			expectedError: errors.New("Unable to add known bundle tx into tx pool during lock period"),
-			pendingBundles: map[common.Hash]txAndTime{
+			knownTxs: map[common.Hash]txAndTime{
 				types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil).Hash(): {
 					tx:   types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 					time: time.Now(),
@@ -87,7 +87,7 @@ func TestPreAddTx(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builderModule.pendingBundles = tt.pendingBundles
+			builderModule.knownTxs = tt.knownTxs
 			err := builderModule.PreAddTx(tt.tx, true)
 			if tt.expectedError != nil {
 				assert.EqualError(t, err, tt.expectedError.Error())
@@ -100,14 +100,14 @@ func TestPreAddTx(t *testing.T) {
 
 func TestIsModuleTx(t *testing.T) {
 	b := &BuilderModule{
-		pendingBundles: make(map[common.Hash]txAndTime),
+		knownTxs: make(map[common.Hash]txAndTime),
 	}
 
 	tx1 := createTestTransaction(0)
 	tx2 := createTestTransaction(1)
 
 	// Add tx1 to pending bundles
-	b.pendingBundles[tx1.Hash()] = txAndTime{
+	b.knownTxs[tx1.Hash()] = txAndTime{
 		tx:   tx1,
 		time: time.Now(),
 	}
@@ -240,7 +240,7 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 
 			// Setup BuilderModule
 			builderModule := &BuilderModule{
-				pendingBundles: copyTxAndTimeMap(tt.existingBundles),
+				knownTxs: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
 					TxPool:  mockTxPool,
@@ -252,7 +252,7 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 
 			builderModule.PreReset(nil, nil)
 
-			assert.Equal(t, len(tt.expectedBundles), len(builderModule.pendingBundles))
+			assert.Equal(t, len(tt.expectedBundles), len(builderModule.knownTxs))
 
 			for hash, expected := range tt.expectedBundles {
 				_, ok := tt.existingBundles[hash]
@@ -261,12 +261,12 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 				fmt.Println(len(tt.existingBundles))
 				if existing, exists := tt.existingBundles[hash]; exists {
 					// existing bundle tx time should not be changed
-					assert.Equal(t, existing.tx.Hash(), builderModule.pendingBundles[hash].tx.Hash())
-					assert.Equal(t, existing.time, builderModule.pendingBundles[hash].time)
+					assert.Equal(t, existing.tx.Hash(), builderModule.knownTxs[hash].tx.Hash())
+					assert.Equal(t, existing.time, builderModule.knownTxs[hash].time)
 				} else {
 					// new bundle tx time should be set to current time
-					assert.Equal(t, expected.tx.Hash(), builderModule.pendingBundles[hash].tx.Hash())
-					assert.True(t, builderModule.pendingBundles[hash].time.After(now))
+					assert.Equal(t, expected.tx.Hash(), builderModule.knownTxs[hash].tx.Hash())
+					assert.True(t, builderModule.knownTxs[hash].time.After(now))
 				}
 			}
 		})
@@ -350,7 +350,7 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 
 			// Setup BuilderModule
 			builderModule := &BuilderModule{
-				pendingBundles: copyTxAndTimeMap(tt.existingBundles),
+				knownTxs: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
 					TxPool:  mockTxPool,
@@ -363,11 +363,11 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 			builderModule.PreReset(nil, nil)
 
 			// Verify the number of bundles
-			assert.Equal(t, len(tt.expectedBundles), len(builderModule.pendingBundles))
+			assert.Equal(t, len(tt.expectedBundles), len(builderModule.knownTxs))
 
 			// Verify each bundle's state
 			for hash, expected := range tt.expectedBundles {
-				actual, exists := builderModule.pendingBundles[hash]
+				actual, exists := builderModule.knownTxs[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
 				assert.Equal(t, expected.time, actual.time)

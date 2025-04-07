@@ -27,7 +27,7 @@ import (
 var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
 func (b *BuilderModule) PreAddTx(tx *types.Transaction, local bool) error {
-	txAndTime, ok := b.pendingBundles[tx.Hash()]
+	txAndTime, ok := b.knownTxs[tx.Hash()]
 	if ok && time.Since(txAndTime.time) < BundleLockPeriod {
 		return errors.New("Unable to add known bundle tx into tx pool during lock period")
 	}
@@ -35,7 +35,7 @@ func (b *BuilderModule) PreAddTx(tx *types.Transaction, local bool) error {
 }
 
 func (b *BuilderModule) IsModuleTx(tx *types.Transaction) bool {
-	_, ok := b.pendingBundles[tx.Hash()]
+	_, ok := b.knownTxs[tx.Hash()]
 	return ok
 }
 
@@ -72,20 +72,20 @@ func (b *BuilderModule) PreReset(oldHead, newHead *types.Header) {
 					tx:   tx,
 					time: time.Now(),
 				}
-				if txAndTime, ok := b.pendingBundles[tx.Hash()]; ok {
+				if txAndTime, ok := b.knownTxs[tx.Hash()]; ok {
 					newTxAndTime.time = txAndTime.time
 				}
-				b.pendingBundles[tx.Hash()] = newTxAndTime
+				b.knownTxs[tx.Hash()] = newTxAndTime
 			}
 		}
 	}
 
-	for hash, txAndTime := range b.pendingBundles {
+	for hash, txAndTime := range b.knownTxs {
 		if time.Since(txAndTime.time) > BundleTimeout {
-			b.pendingBundles[hash].tx.MarkUnexecutable(true)
+			b.knownTxs[hash].tx.MarkUnexecutable(true)
 		}
 		if time.Since(txAndTime.time) > BundleLockPeriod {
-			delete(b.pendingBundles, hash)
+			delete(b.knownTxs, hash)
 		}
 	}
 }
