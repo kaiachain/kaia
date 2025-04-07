@@ -66,8 +66,8 @@ func TestSubmitBid(t *testing.T) {
 		invalidAuctioneerSigLenBid = baseBid
 		unexpectedAuctioneerSigBid = baseBid
 		diffTargetTx               = baseBid
+		bidWithoutTargetTxRaw      = baseBid
 		validBid                   = baseBid
-		anotherBid                 = baseBid
 	)
 	invalidTargetTx.TargetTxRaw = common.Hex2Bytes("1234")
 
@@ -79,11 +79,11 @@ func TestSubmitBid(t *testing.T) {
 
 	diffTargetTx.TargetTxRaw = common.Hex2Bytes("f8674785066720b30083015f909496bd8e216c0d894c0486341288bf486d5686c5b601808207f4a0a97fa83b989a6d66acc942d1cbd70f548c21e24eefea12e72f8c27ba4369a434a01900811315ba3c64055e9778470f438128b54a46712cc032f25a1487e2144579")
 
-	validBid.TargetTxRaw = nil
+	bidWithoutTargetTxRaw.TargetTxRaw = nil
 
-	anotherBid.Bid = hexutil.Big(*big.NewInt(10))
-	anotherBid.SearcherSig = common.Hex2Bytes("6439652673f1544bcd95d25c1dad31944321bdc0e6720f6c59a582aa0c40cc403ef4b5d1865eb3fa0e26fc49d7ef88f77f42d1559131a83a2326445eab3649741b")
-	anotherBid.AuctioneerSig = common.Hex2Bytes("640a09994942d99bb751db3347ea3e909752b363a90dc3ed9c0b4d8ad512ae3d44ec820239f9875dcdbffc28fafafd3ca7d48a4ff6f4a2d8969a8f5d309460361b")
+	validBid.Bid = hexutil.Big(*big.NewInt(10))
+	validBid.SearcherSig = common.Hex2Bytes("6439652673f1544bcd95d25c1dad31944321bdc0e6720f6c59a582aa0c40cc403ef4b5d1865eb3fa0e26fc49d7ef88f77f42d1559131a83a2326445eab3649741b")
+	validBid.AuctioneerSig = common.Hex2Bytes("640a09994942d99bb751db3347ea3e909752b363a90dc3ed9c0b4d8ad512ae3d44ec820239f9875dcdbffc28fafafd3ca7d48a4ff6f4a2d8969a8f5d309460361b")
 
 	tcs := []struct {
 		name     string
@@ -121,13 +121,13 @@ func TestSubmitBid(t *testing.T) {
 			makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash),
 		},
 		{
-			"valid bid and target tx can be empty",
-			validBid,
-			makeRPCOutput(common.HexToHash("0xec633e59d7237fc6cce22dc3ca2dacf5ce9230276644d8e134b5d307ca7981bd"), nil),
+			"if target tx is empty, bid cannot be added",
+			bidWithoutTargetTxRaw,
+			makeRPCOutput(common.Hash{}, ErrEmptyTargetTxRaw),
 		},
 		{
 			"another bid with same target tx",
-			anotherBid,
+			validBid,
 			makeRPCOutput(common.HexToHash("0x26688d0fc660b6fed98b7f96ab5602e4c4dbe133e278fc08cc6bc51131d1bdd2"), nil),
 		},
 	}
