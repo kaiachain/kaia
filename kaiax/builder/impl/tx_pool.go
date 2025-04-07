@@ -68,6 +68,8 @@ func (b *BuilderModule) PreReset(oldHead, newHead *types.Header) {
 					logger.Error("Failed to get tx from bundle", "err", err)
 					continue
 				}
+
+				// add tx to knownTxs
 				newTxAndTime := txAndTime{
 					tx:   tx,
 					time: time.Now(),
@@ -81,9 +83,11 @@ func (b *BuilderModule) PreReset(oldHead, newHead *types.Header) {
 	}
 
 	for hash, txAndTime := range b.knownTxs {
+		// remove pending timed out tx from tx pool
 		if time.Since(txAndTime.time) > BundleTimeout {
 			b.knownTxs[hash].tx.MarkUnexecutable(true)
 		}
+		// remove known timed out tx from knownTxs
 		if time.Since(txAndTime.time) > BundleLockPeriod {
 			delete(b.knownTxs, hash)
 		}
