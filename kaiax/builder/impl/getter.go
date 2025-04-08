@@ -19,6 +19,7 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -266,4 +267,22 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	}
 
 	return incorporatedTxs, bundles
+}
+
+func (b *BuilderModule) MakeBuilderWrappingModuleIfNeeded(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
+	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
+	exist := map[kaiax.TxPoolModule]bool{}
+	for _, module := range mTxBundling {
+		ret = append(ret, NewBuilderWrappingModule(b, module))
+		if m, ok := module.(kaiax.TxPoolModule); ok {
+			exist[m] = true
+		}
+	}
+	for _, txpool := range mTxPool {
+		if exist[txpool] {
+			continue
+		}
+		ret = append(ret, txpool)
+	}
+	return ret
 }

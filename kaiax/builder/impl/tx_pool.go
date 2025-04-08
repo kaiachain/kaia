@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"errors"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -27,35 +26,10 @@ import (
 var _ kaiax.TxPoolModule = (*BuilderModule)(nil)
 
 func (b *BuilderModule) PreAddTx(tx *types.Transaction, local bool) error {
-	txTime, ok := b.knownTxs[tx.Hash()]
-	if ok && time.Since(txTime.time) < KnownTxTimeout {
-		return errors.New("Unable to add known bundle tx into tx pool during lock period")
-	}
-	for _, module := range b.Modules {
-		if module.IsBundleTx(tx) {
-			newTxTime := txAndTime{
-				tx:   tx,
-				time: time.Now(),
-			}
-			if ok {
-				newTxTime.time = txTime.time
-			}
-			b.knownTxs[tx.Hash()] = newTxTime
-			break
-		}
-	}
 	return nil
 }
 
 func (b *BuilderModule) IsModuleTx(tx *types.Transaction) bool {
-	if _, ok := b.knownTxs[tx.Hash()]; ok {
-		return true
-	}
-	for _, module := range b.Modules {
-		if module.IsBundleTx(tx) {
-			return true
-		}
-	}
 	return false
 }
 
