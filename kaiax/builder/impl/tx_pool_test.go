@@ -47,12 +47,9 @@ func TestPreAddTx(t *testing.T) {
 	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).Return([]*builder.Bundle{}).AnyTimes()
 
-	mockTxPool := mock_work.NewMockTxPool(ctrl)
-
 	builderModule := &BuilderModule{
 		InitOpts: InitOpts{
 			Backend: mockBackend,
-			TxPool:  mockTxPool,
 			Modules: []builder.TxBundlingModule{
 				mockTxBundlingModule,
 			},
@@ -243,7 +240,6 @@ func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
 				knownTxs: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
-					TxPool:  mockTxPool,
 					Modules: []builder.TxBundlingModule{
 						mockTxBundlingModule,
 					},
@@ -353,7 +349,6 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 				knownTxs: copyTxAndTimeMap(tt.existingBundles),
 				InitOpts: InitOpts{
 					Backend: mockBackend,
-					TxPool:  mockTxPool,
 					Modules: []builder.TxBundlingModule{
 						mockTxBundlingModule,
 					},

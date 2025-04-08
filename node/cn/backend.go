@@ -567,7 +567,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	err = mBuilder.Init(&builder_impl.InitOpts{
 		Backend: s.APIBackend,
-		TxPool:  s.txPool,
 		Modules: mTxBundling,
 	})
 	if err != nil {
