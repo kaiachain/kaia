@@ -18,20 +18,16 @@ package impl
 
 import (
 	"errors"
-	"fmt"
-	"math/big"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	"github.com/kaiachain/kaia/params"
-	mock_work "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,52 +35,60 @@ func init() {
 	blockchain.InitDeriveSha(params.TestChainConfig)
 }
 
-func TestPreAddTx(t *testing.T) {
+func TestPreAddTx_LockPeriod(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	mockBackend := mock_api.NewMockBackend(ctrl)
-	mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-	mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).Return([]*builder.Bundle{}).AnyTimes()
-
-	builderModule := &BuilderModule{
-		InitOpts: InitOpts{
-			Backend: mockBackend,
-			Modules: []builder.TxBundlingModule{
-				mockTxBundlingModule,
-			},
-		},
-	}
 
 	tests := []struct {
 		name          string
 		tx            *types.Transaction
-		local         bool
-		expectedError error
 		knownTxs      map[common.Hash]txAndTime
+		expectedError error
 	}{
 		{
-			name:          "Valid transaction",
-			tx:            types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-			expectedError: nil,
+			name:          "Transaction not in knownTxs",
+			tx:            createTestTransaction(0),
 			knownTxs:      make(map[common.Hash]txAndTime),
+			expectedError: nil,
 		},
 		{
-			name:          "Bundle transaction during lock period",
-			tx:            types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
-			expectedError: errors.New("Unable to add known bundle tx into tx pool during lock period"),
+			name: "Transaction during lock period",
+			tx:   createTestTransaction(0),
 			knownTxs: map[common.Hash]txAndTime{
-				types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil).Hash(): {
-					tx:   types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
 					time: time.Now(),
 				},
 			},
+			expectedError: errors.New("Unable to add known bundle tx into tx pool during lock period"),
+		},
+		{
+			name: "Transaction after lock period",
+			tx:   createTestTransaction(0),
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: time.Now().Add(-KnownTxTimeout - time.Second),
+				},
+			},
+			expectedError: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builderModule.knownTxs = tt.knownTxs
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(true).AnyTimes()
+
+			builderModule := &BuilderModule{
+				InitOpts: InitOpts{
+					Modules: []builder.TxBundlingModule{
+						mockTxBundlingModule,
+					},
+				},
+				knownTxs: tt.knownTxs,
+			}
+
 			err := builderModule.PreAddTx(tt.tx, true)
 			if tt.expectedError != nil {
 				assert.EqualError(t, err, tt.expectedError.Error())
@@ -95,40 +99,127 @@ func TestPreAddTx(t *testing.T) {
 	}
 }
 
-func TestIsModuleTx(t *testing.T) {
-	b := &BuilderModule{
-		knownTxs: make(map[common.Hash]txAndTime),
-	}
-
-	tx1 := createTestTransaction(0)
-	tx2 := createTestTransaction(1)
-
-	// Add tx1 to pending bundles
-	b.knownTxs[tx1.Hash()] = txAndTime{
-		tx:   tx1,
-		time: time.Now(),
-	}
+func TestPreAddTx_BundleTransaction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
 	tests := []struct {
-		name     string
-		tx       *types.Transaction
-		expected bool
+		name       string
+		tx         *types.Transaction
+		knownTxs   map[common.Hash]txAndTime
+		isBundleTx bool
 	}{
 		{
-			name:     "transaction in pending bundles",
-			tx:       tx1,
-			expected: true,
+			name:       "Non-bundle transaction",
+			tx:         createTestTransaction(0),
+			knownTxs:   make(map[common.Hash]txAndTime),
+			isBundleTx: false,
 		},
 		{
-			name:     "transaction not in pending bundles",
-			tx:       tx2,
-			expected: false,
+			name:       "New bundle transaction",
+			tx:         createTestTransaction(0),
+			knownTxs:   make(map[common.Hash]txAndTime),
+			isBundleTx: true,
+		},
+		{
+			name: "Existing bundle transaction",
+			tx:   createTestTransaction(0),
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: time.Now(),
+				},
+			},
+			isBundleTx: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := b.IsModuleTx(tt.tx)
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(tt.isBundleTx).AnyTimes()
+
+			builderModule := &BuilderModule{
+				InitOpts: InitOpts{
+					Modules: []builder.TxBundlingModule{
+						mockTxBundlingModule,
+					},
+				},
+				knownTxs: tt.knownTxs,
+			}
+
+			builderModule.PreAddTx(tt.tx, true)
+
+			if tt.isBundleTx {
+				assert.Contains(t, builderModule.knownTxs, tt.tx.Hash())
+				if existing, exists := tt.knownTxs[tt.tx.Hash()]; exists {
+					// If transaction was already in knownTxs, time should be preserved
+					assert.Equal(t, existing.time, builderModule.knownTxs[tt.tx.Hash()].time)
+				} else {
+					// New bundle transaction should have current time
+					assert.True(t, time.Since(builderModule.knownTxs[tt.tx.Hash()].time) < time.Second)
+				}
+			} else {
+				assert.NotContains(t, builderModule.knownTxs, tt.tx.Hash())
+			}
+		})
+	}
+}
+
+func TestIsModuleTx(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name       string
+		tx         *types.Transaction
+		knownTxs   map[common.Hash]txAndTime
+		isBundleTx bool
+		expected   bool
+	}{
+		{
+			name: "Transaction in knownTxs",
+			tx:   createTestTransaction(0),
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: time.Now(),
+				},
+			},
+			isBundleTx: false,
+			expected:   true,
+		},
+		{
+			name:       "Transaction not in knownTxs but is bundle tx",
+			tx:         createTestTransaction(0),
+			knownTxs:   make(map[common.Hash]txAndTime),
+			isBundleTx: true,
+			expected:   true,
+		},
+		{
+			name:       "Transaction not in knownTxs and not bundle tx",
+			tx:         createTestTransaction(0),
+			knownTxs:   make(map[common.Hash]txAndTime),
+			isBundleTx: false,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(tt.isBundleTx).AnyTimes()
+
+			builderModule := &BuilderModule{
+				InitOpts: InitOpts{
+					Modules: []builder.TxBundlingModule{
+						mockTxBundlingModule,
+					},
+				},
+				knownTxs: tt.knownTxs,
+			}
+
+			result := builderModule.IsModuleTx(tt.tx)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -144,132 +235,7 @@ func TestIsReady(t *testing.T) {
 	assert.True(t, b.IsReady(nil, 0, nil))
 }
 
-func TestPreReset_NewBundlesAndLocktime(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	now := time.Now()
-
-	tests := []struct {
-		name            string
-		existingBundles map[common.Hash]txAndTime
-		pendingTxs      map[common.Address]types.Transactions
-		expectedBundles map[common.Hash]txAndTime
-	}{
-		{
-			name:            "No existing bundles, new bundles from unlocked txs",
-			existingBundles: make(map[common.Hash]txAndTime),
-			pendingTxs: map[common.Address]types.Transactions{
-				common.HexToAddress("0x1"): {
-					createTestTransaction(0),
-					createTestTransaction(1),
-				},
-			},
-			expectedBundles: map[common.Hash]txAndTime{
-				createTestTransaction(0).Hash(): {
-					tx: createTestTransaction(0),
-				},
-				createTestTransaction(1).Hash(): {
-					tx: createTestTransaction(1),
-				},
-			},
-		},
-		{
-			name: "Existing bundles within lock period",
-			existingBundles: map[common.Hash]txAndTime{
-				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
-				},
-			},
-			pendingTxs: map[common.Address]types.Transactions{
-				common.HexToAddress("0x1"): {
-					createTestTransaction(1),
-				},
-			},
-			expectedBundles: map[common.Hash]txAndTime{
-				createTestTransaction(0).Hash(): {
-					tx: createTestTransaction(0),
-				},
-				createTestTransaction(1).Hash(): {
-					tx: createTestTransaction(1),
-				},
-			},
-		},
-		{
-			name: "Existing bundles with expired lock period",
-			existingBundles: map[common.Hash]txAndTime{
-				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now.Add(-KnownTxTimeout - time.Second),
-				},
-			},
-			pendingTxs: map[common.Address]types.Transactions{
-				common.HexToAddress("0x1"): {
-					createTestTransaction(1),
-				},
-			},
-			expectedBundles: map[common.Hash]txAndTime{
-				createTestTransaction(1).Hash(): {
-					tx: createTestTransaction(1),
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock backend
-			mockBackend := mock_api.NewMockBackend(ctrl)
-			mockBackend.EXPECT().CurrentBlock().Return(types.NewBlock(&types.Header{
-				BaseFee: common.Big0,
-			}, nil, nil)).AnyTimes()
-			mockBackend.EXPECT().ChainConfig().Return(&params.ChainConfig{}).AnyTimes()
-
-			// Setup mock tx pool
-			mockTxPool := mock_work.NewMockTxPool(ctrl)
-			mockTxPool.EXPECT().UnlockedPending().Return(tt.pendingTxs, nil).AnyTimes()
-			mockTxPool.EXPECT().GetCurrentState().Return(nil).AnyTimes()
-
-			// Setup mock tx bundling module
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Eq(flattenTxs(tt.pendingTxs)), gomock.Any()).Return(bundleTxs(tt.pendingTxs)).AnyTimes()
-
-			// Setup BuilderModule
-			builderModule := &BuilderModule{
-				knownTxs: copyTxAndTimeMap(tt.existingBundles),
-				InitOpts: InitOpts{
-					Backend: mockBackend,
-					Modules: []builder.TxBundlingModule{
-						mockTxBundlingModule,
-					},
-				},
-			}
-
-			builderModule.PreReset(nil, nil)
-
-			assert.Equal(t, len(tt.expectedBundles), len(builderModule.knownTxs))
-
-			for hash, expected := range tt.expectedBundles {
-				_, ok := tt.existingBundles[hash]
-				fmt.Println(ok)
-				fmt.Println(hash.Hex())
-				fmt.Println(len(tt.existingBundles))
-				if existing, exists := tt.existingBundles[hash]; exists {
-					// existing bundle tx time should not be changed
-					assert.Equal(t, existing.tx.Hash(), builderModule.knownTxs[hash].tx.Hash())
-					assert.Equal(t, existing.time, builderModule.knownTxs[hash].time)
-				} else {
-					// new bundle tx time should be set to current time
-					assert.Equal(t, expected.tx.Hash(), builderModule.knownTxs[hash].tx.Hash())
-					assert.True(t, builderModule.knownTxs[hash].time.After(now))
-				}
-			}
-		})
-	}
-}
-
-func TestPreReset_BundleTimeout(t *testing.T) {
+func TestPreReset(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -328,31 +294,9 @@ func TestPreReset_BundleTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup mock backend
-			mockBackend := mock_api.NewMockBackend(ctrl)
-			mockBackend.EXPECT().CurrentBlock().Return(types.NewBlock(&types.Header{
-				BaseFee: common.Big0,
-			}, nil, nil)).AnyTimes()
-			mockBackend.EXPECT().ChainConfig().Return(&params.ChainConfig{}).AnyTimes()
-
-			// Setup mock tx pool
-			mockTxPool := mock_work.NewMockTxPool(ctrl)
-			mockTxPool.EXPECT().UnlockedPending().Return(map[common.Address]types.Transactions{}, nil).AnyTimes()
-			mockTxPool.EXPECT().GetCurrentState().Return(nil).AnyTimes()
-
-			// Setup mock tx bundling module
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).Return([]*builder.Bundle{}).AnyTimes()
-
 			// Setup BuilderModule
 			builderModule := &BuilderModule{
 				knownTxs: copyTxAndTimeMap(tt.existingBundles),
-				InitOpts: InitOpts{
-					Backend: mockBackend,
-					Modules: []builder.TxBundlingModule{
-						mockTxBundlingModule,
-					},
-				},
 			}
 
 			builderModule.PreReset(nil, nil)
