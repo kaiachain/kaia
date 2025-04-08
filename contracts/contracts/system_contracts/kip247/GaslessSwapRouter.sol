@@ -2,6 +2,7 @@
 pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -10,6 +11,7 @@ import "./IKIP247.sol";
 import "./IWKAIA.sol";
 
 contract GaslessSwapRouter is IKIP247, Ownable {
+    using SafeERC20 for IERC20;
     IWKAIA public immutable WKAIA;
 
     mapping(address => DEXInfo) private _dexInfos;
@@ -124,10 +126,10 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         require(minAmountOut >= amountRepay, "InsufficientSwapOutput");
 
         // Get tokens from user
-        IERC20(token).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amountIn);
 
         // Approve tokens for router
-        IERC20(token).approve(dexInfo.router, amountIn);
+        IERC20(token).safeApprove(dexInfo.router, amountIn);
 
         // Set up path for swap
         address[] memory path = new address[](2);
