@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
-	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,15 +76,7 @@ func TestPreAddTx_LockPeriod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(true).AnyTimes()
-
 			builderModule := &BuilderModule{
-				InitOpts: InitOpts{
-					Modules: []builder.TxBundlingModule{
-						mockTxBundlingModule,
-					},
-				},
 				knownTxs: tt.knownTxs,
 			}
 
@@ -136,15 +127,7 @@ func TestPreAddTx_BundleTransaction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(tt.isBundleTx).AnyTimes()
-
 			builderModule := &BuilderModule{
-				InitOpts: InitOpts{
-					Modules: []builder.TxBundlingModule{
-						mockTxBundlingModule,
-					},
-				},
 				knownTxs: tt.knownTxs,
 			}
 
@@ -207,15 +190,7 @@ func TestIsModuleTx(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(tt.isBundleTx).AnyTimes()
-
 			builderModule := &BuilderModule{
-				InitOpts: InitOpts{
-					Modules: []builder.TxBundlingModule{
-						mockTxBundlingModule,
-					},
-				},
 				knownTxs: tt.knownTxs,
 			}
 

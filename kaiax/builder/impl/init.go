@@ -33,7 +33,6 @@ var (
 
 type InitOpts struct {
 	Backend api.Backend
-	Modules []builder.TxBundlingModule
 }
 
 type txAndTime struct {
@@ -52,7 +51,7 @@ func NewBuilderModule() *BuilderModule {
 }
 
 func (b *BuilderModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Backend == nil || opts.Modules == nil {
+	if opts == nil || opts.Backend == nil {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts
