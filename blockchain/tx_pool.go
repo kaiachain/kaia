@@ -818,6 +818,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 					return err
 				}
 			}
+			break
 		}
 	}
 
@@ -989,6 +990,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			if err != nil {
 				return false, err
 			}
+			break
 		}
 	}
 
