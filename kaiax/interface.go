@@ -160,7 +160,6 @@ type TxPoolModule interface {
 
 //go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
 type TxPoolForCaller interface {
-	UnlockedPending() (map[common.Address]types.Transactions, error)
 	GetCurrentState() *state.StateDB
 }
 

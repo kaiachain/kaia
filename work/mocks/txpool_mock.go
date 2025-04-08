@@ -260,18 +260,3 @@ func (mr *MockTxPoolMockRecorder) SubscribeNewTxsEvent(arg0 interface{}) *gomock
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeNewTxsEvent", reflect.TypeOf((*MockTxPool)(nil).SubscribeNewTxsEvent), arg0)
 }
-
-// UnlockedPending mocks base method.
-func (m *MockTxPool) UnlockedPending() (map[common.Address]types.Transactions, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnlockedPending")
-	ret0, _ := ret[0].(map[common.Address]types.Transactions)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UnlockedPending indicates an expected call of UnlockedPending.
-func (mr *MockTxPoolMockRecorder) UnlockedPending() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockedPending", reflect.TypeOf((*MockTxPool)(nil).UnlockedPending))
-}

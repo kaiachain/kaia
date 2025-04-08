@@ -9,8 +9,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/kaiachain/kaia/blockchain/state"
-	types "github.com/kaiachain/kaia/blockchain/types"
-	common "github.com/kaiachain/kaia/common"
 )
 
 // MockTxPoolForCaller is a mock of TxPoolForCaller interface.
@@ -48,19 +46,4 @@ func (m *MockTxPoolForCaller) GetCurrentState() *state.StateDB {
 func (mr *MockTxPoolForCallerMockRecorder) GetCurrentState() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentState", reflect.TypeOf((*MockTxPoolForCaller)(nil).GetCurrentState))
-}
-
-// UnlockedPending mocks base method.
-func (m *MockTxPoolForCaller) UnlockedPending() (map[common.Address]types.Transactions, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnlockedPending")
-	ret0, _ := ret[0].(map[common.Address]types.Transactions)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UnlockedPending indicates an expected call of UnlockedPending.
-func (mr *MockTxPoolForCallerMockRecorder) UnlockedPending() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockedPending", reflect.TypeOf((*MockTxPoolForCaller)(nil).UnlockedPending))
 }
