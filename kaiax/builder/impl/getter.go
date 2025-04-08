@@ -269,20 +269,32 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	return incorporatedTxs, bundles
 }
 
-func (b *BuilderModule) MakeBuilderWrappingModuleIfNeeded(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
+func MakeBuilderWrappingModuleAndConcatTxPool(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
 	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
-	exist := map[kaiax.TxPoolModule]bool{}
+	wrapping := map[kaiax.TxPoolModule]kaiax.TxPoolModule{}
+
 	for _, module := range mTxBundling {
-		ret = append(ret, NewBuilderWrappingModule(b, module))
 		if m, ok := module.(kaiax.TxPoolModule); ok {
-			exist[m] = true
+			wrapping[m] = NewBuilderWrappingModule(module)
+		} else {
+			new := NewBuilderWrappingModule(module)
+			wrapping[new] = new
 		}
 	}
+
+	// mTxPool is priority
 	for _, txpool := range mTxPool {
-		if exist[txpool] {
-			continue
+		if m, ok := wrapping[txpool]; ok {
+			ret = append(ret, m)
+			delete(wrapping, txpool)
+		} else {
+			ret = append(ret, txpool)
 		}
-		ret = append(ret, txpool)
 	}
+
+	for _, module := range wrapping {
+		ret = append(ret, module)
+	}
+
 	return ret
 }

@@ -567,13 +567,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	err = mBuilder.Init(&builder_impl.InitOpts{
 		Backend: s.APIBackend,
-		Modules: mTxBundling,
 	})
 	if err != nil {
 		return err
 	}
 
-	mTxPool = mBuilder.MakeBuilderWrappingModuleIfNeeded(mTxBundling, mTxPool)
+	mTxPool = builder_impl.MakeBuilderWrappingModuleAndConcatTxPool(mTxBundling, mTxPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.

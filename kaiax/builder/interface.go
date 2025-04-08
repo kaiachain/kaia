@@ -27,7 +27,6 @@ type TxGenerator func(nonce uint64) (*types.Transaction, error)
 type BuilderModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-	kaiax.TxPoolModule
 }
 
 //go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/kaiax/builder TxBundlingModule

@@ -138,6 +138,8 @@ type TxProcessModuleHost interface {
 
 // TxPoolModule can intervene how the txpool handles transactions
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
+//
+//go:generate mockgen -destination=./mock/tx_pool_module.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolModule
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
 	PreAddTx(tx *types.Transaction, local bool) error
