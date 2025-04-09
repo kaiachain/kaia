@@ -37,7 +37,7 @@ type TxBundlingModule interface {
 	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
 
-	// IsBundleTx returns true if the module is building a bundle tx.
+	// IsBundleTx returns true if the tx is a potential bundle tx.
 	IsBundleTx(tx *types.Transaction) bool
 }
 
