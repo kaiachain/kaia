@@ -146,7 +146,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
 
         uint256 receivedAmount = amounts[1];
 
-        // Part of R3: Check receivedAmount >= minAmountOuty after swap
+        // Part of R3: Check receivedAmount >= minAmountOut after swap
         require(receivedAmount >= minAmountOut, "ReceivedAmountBelowMinimum");
 
         // Pay the block proposer
