@@ -13,7 +13,7 @@ import "./IWKAIA.sol";
 /**
  * @title GaslessSwapRouter
  * @dev Implements KIP-247 gasless transaction functionality
- * This contract allows users to swap ERC20 tokens for KAIA without possessing any KAIA.
+ * This contract allows users to swap ERC20 tokens for KAIA for gasless transaction.
  * 
  * LIMITATIONS:
  * - This contract does not support Fee-on-transfer (FoT) tokens
