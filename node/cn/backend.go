@@ -556,24 +556,26 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeType:      ctx.NodeType(),
 		}),
 		mAuction.Init(&auction_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Backend:     s.APIBackend,
-			Downloader:  s.protocolManager.Downloader(),
-			NodeKey:     ctx.NodeKey(),
+			ChainConfig:   s.chainConfig,
+			AuctionConfig: s.config.Auction,
+			Chain:         s.blockchain,
+			Backend:       s.APIBackend,
+			Downloader:    s.protocolManager.Downloader(),
+			NodeKey:       ctx.NodeKey(),
 		}),
 	)
 	if err != nil {
 		return err
 	}
 
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []builder.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 
-	gaslessDisabled := mGasless.IsDisabled()
-	if !gaslessDisabled {
+	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
 		mTxBundling = append(mTxBundling, mGasless)
 		mTxPool = append(mTxPool, mGasless)
@@ -584,19 +586,18 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterBaseModules(mBase...)
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
 	s.blockchain.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.blockchain.RegisterRewindableModule(mRewindable...)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
 		engine.RegisterConsensusModule(mReward, s.govModule)
 	}
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
-	s.protocolManager.RegisterAuctionModule(mAuction)
 
 	return nil
 }

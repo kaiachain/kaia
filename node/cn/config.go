@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
@@ -72,6 +73,9 @@ func GetDefaultConfig() *Config {
 		RPCEVMTimeout: 5 * time.Second,
 
 		Gasless: gasless.DefaultGaslessConfig(),
+		Auction: &auction.AuctionConfig{
+			Disable: false,
+		},
 	}
 }
 
@@ -201,6 +205,7 @@ type Config struct {
 
 	// Kaiax configs
 	Gasless *gasless.GaslessConfig
+	Auction *auction.AuctionConfig
 }
 
 type configMarshaling struct {

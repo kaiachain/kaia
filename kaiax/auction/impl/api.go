@@ -111,6 +111,10 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 }
 
 func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutput {
+	if api.a.IsDisabled() {
+		return makeRPCOutput(EMPTY_HASH, auction.ErrAuctionDisabled)
+	}
+
 	//  1. directly send target transaction
 	targetTx, errTxDecode := toTx(bidInput.TargetTxRaw)
 	if errTxDecode != nil {

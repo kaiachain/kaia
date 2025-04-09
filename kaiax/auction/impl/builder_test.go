@@ -21,12 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,24 +33,7 @@ var (
 )
 
 func TestFilterTxs(t *testing.T) {
-	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
-	)
-
-	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
-
-	mAuction := NewAuctionModule()
-	apiBackend := &MockBackend{}
-	fakeDownloader := &downloader.FakeDownloader{}
-	mAuction.Init(&InitOpts{
-		ChainConfig: config,
-		Chain:       backend.BlockChain(),
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
-	})
+	mAuction := prep(t)
 	txs := make(map[common.Address]types.Transactions)
 
 	for i := 0; i < 5; i++ {
@@ -67,6 +47,7 @@ func TestFilterTxs(t *testing.T) {
 	}
 
 	// Not running
+	mAuction.bidPool.running = 0
 	mAuction.FilterTxs(txs)
 
 	assert.Equal(t, 5, len(txs[tx1Sender]))
@@ -89,24 +70,7 @@ func TestFilterTxs(t *testing.T) {
 }
 
 func TestFilterTxs_TargetTx(t *testing.T) {
-	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
-	)
-
-	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
-
-	mAuction := NewAuctionModule()
-	apiBackend := &MockBackend{}
-	fakeDownloader := &downloader.FakeDownloader{}
-	mAuction.Init(&InitOpts{
-		ChainConfig: config,
-		Chain:       backend.BlockChain(),
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
-	})
+	mAuction := prep(t)
 	txs := make(map[common.Address]types.Transactions)
 
 	for i := 0; i < 5; i++ {
@@ -120,7 +84,6 @@ func TestFilterTxs_TargetTx(t *testing.T) {
 	}
 
 	// Running
-	mAuction.bidPool.running = 1
 	mAuction.bidPool.bidTargetMap[1] = map[common.Hash]*auction.Bid{
 		txs[tx1Sender][2].Hash(): nil,
 		txs[tx2Sender][2].Hash(): nil,
