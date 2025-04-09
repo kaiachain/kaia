@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -761,6 +762,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)
+	cfg.Auction = auction.GetAuctionConfig(ctx, kCfg.Node.P2P.ConnectionType)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value

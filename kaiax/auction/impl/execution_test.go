@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
@@ -104,14 +105,18 @@ func TestUpdateAuctionInfo(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	mAuction := NewAuctionModule()
+	auctionConfig := auction.AuctionConfig{
+		Disable: false,
+	}
 	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}
 	mAuction.Init(&InitOpts{
-		ChainConfig: config,
-		Chain:       backend.BlockChain(),
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
+		ChainConfig:   config,
+		AuctionConfig: &auctionConfig,
+		Chain:         backend.BlockChain(),
+		Backend:       apiBackend,
+		Downloader:    fakeDownloader,
+		NodeKey:       testNodeKey,
 	})
 
 	// Not updated yet

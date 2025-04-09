@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
@@ -146,6 +147,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
 	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
+	// kaiax/auction
+	altsrc.NewBoolFlag(auction.DisableFlag),
 }
 
 var SetupCommand = &cli.Command{

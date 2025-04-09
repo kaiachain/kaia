@@ -45,10 +45,11 @@ type apiBackend interface {
 }
 
 type InitOpts struct {
-	ChainConfig *params.ChainConfig
-	Chain       backends.BlockChainForCaller
-	Backend     apiBackend
-	Downloader  ProtocolManagerDownloader
+	ChainConfig   *params.ChainConfig
+	AuctionConfig *auction.AuctionConfig
+	Chain         backends.BlockChainForCaller
+	Backend       apiBackend
+	Downloader    ProtocolManagerDownloader
 
 	NodeKey *ecdsa.PrivateKey
 }
@@ -68,7 +69,7 @@ func NewAuctionModule() *AuctionModule {
 }
 
 func (a *AuctionModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.Backend == nil || opts.Downloader == nil || opts.NodeKey == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.AuctionConfig == nil || opts.Chain == nil || opts.Backend == nil || opts.Downloader == nil || opts.NodeKey == nil {
 		return auction.ErrInitUnexpectedNil
 	}
 
@@ -80,6 +81,10 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 	a.InitOpts = *opts
 
 	return nil
+}
+
+func (a *AuctionModule) IsDisabled() bool {
+	return a.AuctionConfig.Disable
 }
 
 func (a *AuctionModule) Start() error {

@@ -19,9 +19,12 @@ import (
 
 func prep(t *testing.T) *AuctionModule {
 	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
+		db            = database.NewMemoryDBManager()
+		alloc         = testAllocStorage()
+		config        = testRandaoForkChainConfig(big.NewInt(0))
+		auctionConfig = auction.AuctionConfig{
+			Disable: false,
+		}
 	)
 
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
@@ -31,11 +34,12 @@ func prep(t *testing.T) *AuctionModule {
 	apiBackend := &MockBackend{mockBackend}
 	fakeDownloader := &downloader.FakeDownloader{}
 	mAuction.Init(&InitOpts{
-		ChainConfig: config,
-		Chain:       backend.BlockChain(),
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
+		ChainConfig:   config,
+		AuctionConfig: &auctionConfig,
+		Chain:         backend.BlockChain(),
+		Backend:       apiBackend,
+		Downloader:    fakeDownloader,
+		NodeKey:       testNodeKey,
 	})
 	mAuction.bidPool.running = 1
 	mAuction.bidPool.auctioneer = common.HexToAddress("0x96Bd8E216c0D894C0486341288Bf486d5686C5b6")

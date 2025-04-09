@@ -77,6 +77,9 @@ func TestHandler_HandleBid(t *testing.T) {
 
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
+	auctionConfig := auction.AuctionConfig{
+		Disable: false,
+	}
 	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}
 
@@ -86,11 +89,12 @@ func TestHandler_HandleBid(t *testing.T) {
 
 	// Initialize the module with test configuration
 	opts := &InitOpts{
-		ChainConfig: testChainConfig,
-		Chain:       chain,
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
+		ChainConfig:   testChainConfig,
+		AuctionConfig: &auctionConfig,
+		Chain:         chain,
+		Backend:       apiBackend,
+		Downloader:    fakeDownloader,
+		NodeKey:       testNodeKey,
 	}
 	err := module.Init(opts)
 	require.NoError(t, err)
@@ -137,6 +141,9 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
+	auctionConfig := auction.AuctionConfig{
+		Disable: false,
+	}
 	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}
 
@@ -146,11 +153,12 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 
 	// Initialize the module with test configuration
 	opts := &InitOpts{
-		ChainConfig: testChainConfig,
-		Chain:       chain,
-		Backend:     apiBackend,
-		Downloader:  fakeDownloader,
-		NodeKey:     testNodeKey,
+		ChainConfig:   testChainConfig,
+		AuctionConfig: &auctionConfig,
+		Chain:         chain,
+		Backend:       apiBackend,
+		Downloader:    fakeDownloader,
+		NodeKey:       testNodeKey,
 	}
 	err := module.Init(opts)
 	require.NoError(t, err)
