@@ -148,6 +148,9 @@ contract GaslessSwapRouter is IKIP247, Ownable {
 
         uint256 receivedAmount = amounts[1];
 
+        // Part of R3: Check receivedAmount >= minAmountOut after swap
+        require(receivedAmount >= minAmountOut, "ReceivedAmountBelowMinimum");
+
         // Pay the block proposer
         (bool success, ) = block.coinbase.call{value: amountRepay}("");
         require(success, "Failed to send KAIA to proposer");
