@@ -10,6 +10,15 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IKIP247.sol";
 import "./IWKAIA.sol";
 
+/**
+ * @title GaslessSwapRouter
+ * @dev Implements KIP-247 gasless transaction functionality
+ * This contract allows users to swap ERC20 tokens for KAIA for gasless transaction.
+ * 
+ * LIMITATIONS:
+ * - This contract does not support Fee-on-transfer (FoT) tokens
+ * - Using FoT tokens may result in transaction failures or incorrect amounts
+ */
 contract GaslessSwapRouter is IKIP247, Ownable {
     using SafeERC20 for IERC20;
     IWKAIA public immutable WKAIA;
@@ -38,6 +47,11 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         commissionRate = 0;
     }
 
+    /**
+    * @notice Adds a token to the list of supported tokens
+    * @dev IMPORTANT: This contract does not support Fee-on-transfer (FoT) tokens.
+    * Such tokens will not function correctly with this contract and should not be added.
+    */
     function addToken(address token, address factory, address router) external override onlyOwner {
         require(token != address(0), "Invalid token address");
         require(factory != address(0), "Invalid factory address");
