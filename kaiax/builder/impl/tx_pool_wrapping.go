@@ -30,7 +30,7 @@ var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
 
 type BuilderWrappingModule struct {
 	txBundlingModule builder.TxBundlingModule
-	txPoolModule     kaiax.TxPoolModule
+	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         map[common.Hash]txAndTime
 }
 
