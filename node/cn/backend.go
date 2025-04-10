@@ -540,6 +540,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
+		mBuilder.Init(&builder_impl.InitOpts{
+			Backend: s.APIBackend,
+		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			GaslessConfig: s.config.Gasless,
@@ -563,13 +566,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mTxBundling = append(mTxBundling, mGasless)
 		mTxPool = append(mTxPool, mGasless)
 		mJsonRpc = append(mJsonRpc, mGasless)
-	}
-
-	err = mBuilder.Init(&builder_impl.InitOpts{
-		Backend: s.APIBackend,
-	})
-	if err != nil {
-		return err
 	}
 
 	mWrapTxPool := builder_impl.WrapBundlingModules(mTxBundling)
