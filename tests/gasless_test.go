@@ -19,6 +19,7 @@
 package tests
 
 import (
+	"context"
 	"math/big"
 	"os"
 	"testing"
@@ -39,6 +40,7 @@ import (
 	testingGaslessContracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts/gasless"
 	gaslessImpl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/require"
 )
@@ -157,10 +159,10 @@ func TestGasless(t *testing.T) {
 	}
 	owner.Nonce += 1
 
-	balanceOfTestAcc, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, accounts[0].Addr)
-	balanceOfOwner, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, owner.Addr)
-	t.Log("test acc balance: ", balanceOfTestAcc)
-	t.Log("owner balance: ", balanceOfOwner)
+	preSwapBalanceOfTestAcc, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, accounts[0].Addr)
+	preSwapBalanceOfOwner, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, owner.Addr)
+	t.Log("test acc balance: ", preSwapBalanceOfTestAcc)
+	t.Log("owner balance: ", preSwapBalanceOfOwner)
 
 	// send approveTx
 	optsForApprove := bind.NewKeyedTransactor(accounts[0].Keys[0])
@@ -192,6 +194,32 @@ func TestGasless(t *testing.T) {
 	swapTxReceipt := waitReceipt(chain, swapTx.Hash())
 	require.NotNil(t, swapTxReceipt)
 	require.Equal(t, types.ReceiptStatusSuccessful, swapTxReceipt.Status, "swapTx failed")
+
+	// verify test acc's kaia balances
+	// since gasPrice may be less than the theoretical value, we check that the current balance is greater than or equal to FinalUserAmount.
+	// expected: (pre balance) = 0
+	// expected: (current balance) >= FinalUserAmount
+	_, _, gaslessBlockNum, _ := chain.GetTxAndLookupInfo(swapTx.Hash())
+	preState, _, err := node.APIBackend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(gaslessBlockNum-1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentState, _, err := node.APIBackend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(gaslessBlockNum))
+	if err != nil {
+		t.Fatal(err)
+	}
+	swappedForGasEvent, err := gsrContract.ParseSwappedForGas(*swapTxReceipt.Logs[len(swapTxReceipt.Logs)-1]) // SwappedForGas is issued at the end of swapForGas
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.True(t, preState.GetBalance(accounts[0].Addr).Cmp(common.Big0) == 0)
+	require.True(t, currentState.GetBalance(accounts[0].Addr).Cmp(swappedForGasEvent.FinalUserAmount) != -1)
+
+	// verify test token balances
+	// expected: (current balance) = (pre balance) - swapAmmount
+	currentBalanceOfTestAcc, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, accounts[0].Addr)
+	require.True(t, currentBalanceOfTestAcc.Cmp(new(big.Int).Sub(preSwapBalanceOfTestAcc, swapAmmount)) == 0)
+	t.Log(currentBalanceOfTestAcc.Cmp(new(big.Int).Sub(preSwapBalanceOfTestAcc, swapAmmount)) == 0)
 }
 
 func deployTestToken(t *testing.T, chain *blockchain.BlockChain, transactor *backends.BlockchainContractBackend, owner *TestAccountType, initialHolder common.Address,
