@@ -119,6 +119,18 @@ func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
 }
 
+// PostReset mocks base method.
+func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PostReset", arg0, arg1)
+}
+
+// PostReset indicates an expected call of PostReset.
+func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1)
+}
+
 // PreAddTx mocks base method.
 func (m *MockGaslessModule) PreAddTx(arg0 *types.Transaction, arg1 bool) error {
 	m.ctrl.T.Helper()

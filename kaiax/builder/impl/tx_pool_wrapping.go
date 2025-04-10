@@ -115,3 +115,10 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 		b.txPoolModule.PreReset(oldHead, newHead)
 	}
 }
+
+// PostReset is a wrapper function that calls the PostReset method of the underlying module.
+func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
+	if b.txPoolModule != nil {
+		b.txPoolModule.PostReset(oldHead, newHead)
+	}
+}

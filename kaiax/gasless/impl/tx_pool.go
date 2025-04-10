@@ -20,12 +20,36 @@ import (
 	"math"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
 var _ kaiax.TxPoolModule = (*GaslessModule)(nil)
 
 func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
+	if g.NodeType != common.CONSENSUSNODE {
+		return nil
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if len(g.pooledSwapTxs) >= MaxGaslessTxNum {
+		if g.IsApproveTx(tx) {
+			for _, swap := range g.pooledSwapTxs {
+				if g.IsExecutable(tx, swap) {
+					return nil
+				}
+			}
+		}
+		return ErrTooManyGaslessTxs
+	}
+
+	// Gasless tx pair always has an swap tx.
+	if g.IsSwapTx(tx) {
+		g.pooledSwapTxs[tx.Hash()] = tx
+	}
+
 	return nil
 }
 
@@ -56,6 +80,21 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 }
 
 func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) {}
+
+func (g *GaslessModule) PostReset(oldHead, newHead *types.Header) {
+	if g.NodeType != common.CONSENSUSNODE {
+		return
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for hash, _ := range g.pooledSwapTxs {
+		if g.TxPool.Get(hash) == nil {
+			delete(g.pooledSwapTxs, hash)
+		}
+	}
+}
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {

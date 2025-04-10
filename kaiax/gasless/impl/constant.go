@@ -16,4 +16,8 @@
 
 package impl
 
-var GaslessSwapRouterName = "GaslessSwapRouter"
+var (
+	GaslessSwapRouterName = "GaslessSwapRouter"
+
+	MaxGaslessTxNum = 100 // Max number of gasless tx pairs in tx pool
+)

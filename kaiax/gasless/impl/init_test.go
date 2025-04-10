@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitSuccessAndFailure(t *testing.T) {
+func TestInit_SuccessAndFailure(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
@@ -43,6 +43,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -59,6 +60,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				nil,
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -70,6 +72,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				nil,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -81,6 +84,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				nil,
 				&testTxPool{},
 			},
@@ -92,6 +96,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				nil,
 			},
@@ -106,6 +111,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 					Disable:       true,
 				},
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -117,6 +123,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
 			},
@@ -136,7 +143,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 	}
 }
 
-func TestInitGSRAndAllowedTokens(t *testing.T) {
+func TestInit_GSRAndAllowedTokens(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	key, _ := crypto.GenerateKey()
@@ -152,6 +159,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -166,6 +174,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 					Disable:       false,
 				},
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -180,6 +189,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 					Disable:       false,
 				},
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -194,6 +204,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 					Disable:       false,
 				},
 				key,
+				common.ENDPOINTNODE,
 				backend.BlockChain(),
 				&testTxPool{},
 			},
@@ -205,6 +216,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
+				common.ENDPOINTNODE,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
 			},

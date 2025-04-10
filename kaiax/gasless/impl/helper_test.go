@@ -215,6 +215,10 @@ func (pool *testTxPool) GetCurrentState() *state.StateDB {
 	return pool.statedb
 }
 
+func (pool *testTxPool) Get(hash common.Hash) *types.Transaction {
+	return nil
+}
+
 func testAllocStorage() blockchain.GenesisAlloc {
 	allocStorage := system.AllocRegistry(&params.RegistryConfig{
 		Records: map[string]common.Address{

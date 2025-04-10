@@ -18,6 +18,7 @@ package impl
 
 import (
 	"crypto/ecdsa"
+	"sync"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -34,6 +35,7 @@ type InitOpts struct {
 	ChainConfig   *params.ChainConfig
 	GaslessConfig *gasless.GaslessConfig
 	NodeKey       *ecdsa.PrivateKey
+	NodeType      common.ConnType
 	Chain         backends.BlockChainForCaller
 	TxPool        kaiax.TxPoolForCaller
 }
@@ -43,6 +45,8 @@ type GaslessModule struct {
 	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
+	pooledSwapTxs map[common.Hash]*types.Transaction
+	mu            sync.RWMutex
 }
 
 func NewGaslessModule() *GaslessModule {
@@ -50,12 +54,15 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.NodeType != common.UNKNOWNNODE || opts.Chain == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 
 	g.InitOpts = *opts
+	g.swapRouter = common.Address{}
+	g.allowedTokens = map[common.Address]bool{}
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
+	g.pooledSwapTxs = make(map[common.Hash]*types.Transaction)
 
 	return g.updateAddresses(g.Chain.CurrentBlock().Header())
 }
