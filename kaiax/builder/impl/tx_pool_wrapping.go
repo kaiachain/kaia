@@ -18,6 +18,7 @@ package impl
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -32,6 +33,7 @@ type BuilderWrappingModule struct {
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         map[common.Hash]txAndTime
+	mu               sync.RWMutex
 }
 
 func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *BuilderWrappingModule {
@@ -45,6 +47,9 @@ func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *Builde
 
 // PreAddTx is a wrapper function that calls the PreAddTx method of the underlying module.
 func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	txTime, ok := b.knownTxs[tx.Hash()]
 	if ok && time.Since(txTime.time) < KnownTxTimeout {
 		return errors.New("Unable to add known bundle tx into tx pool during lock period")
@@ -73,6 +78,9 @@ func (b *BuilderWrappingModule) GetCheckBalance() func(tx *types.Transaction) er
 
 // IsReady is a wrapper function that checks if the transaction is ready to be added to the tx pool.
 func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	tx, isReady := txs[next]
 	if b.txPoolModule != nil {
 		isReady = b.txPoolModule.IsReady(txs, next, ready)
@@ -90,6 +98,9 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 
 // PreReset is a wrapper function that removes timed out tx from the tx pool and knownTxs.
 func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	for hash, txAndTime := range b.knownTxs {
 		// remove pending timed out tx from tx pool
 		if time.Since(txAndTime.time) >= PendingTimeout {
