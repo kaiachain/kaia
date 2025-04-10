@@ -52,7 +52,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "Transaction during lock period",
+			name: "Transaction during KnownTxTimeout period",
 			tx:   createTestTransaction(0),
 			knownTxs: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
@@ -63,7 +63,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			expectedError: errors.New("Unable to add known bundle tx into tx pool during lock period"),
 		},
 		{
-			name: "Transaction after lock period",
+			name: "Transaction after KnownTxTimeout period",
 			tx:   createTestTransaction(0),
 			knownTxs: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
@@ -486,7 +486,7 @@ func TestPreReset_Timeout(t *testing.T) {
 		expectedUnexecutable bool
 	}{
 		{
-			name: "Bundle within timeout period",
+			name: "Bundle tx within PendingTimeout period",
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
@@ -502,7 +502,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			expectedUnexecutable: false,
 		},
 		{
-			name: "Bundle exceeds timeout period",
+			name: "Bundle tx exceeds PendingTimeout period",
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
@@ -518,7 +518,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			expectedUnexecutable: true,
 		},
 		{
-			name: "Bundle exceeds lock period",
+			name: "Bundle tx exceeds KnownTxTimeout period",
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
