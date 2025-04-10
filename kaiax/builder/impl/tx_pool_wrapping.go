@@ -78,15 +78,12 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		isReady = b.txPoolModule.IsReady(txs, next, ready)
 	}
 	if isReady && b.txBundlingModule.IsBundleTx(tx) {
-		newTxTime := txAndTime{
-			tx:   tx,
-			time: time.Now(),
+		if _, ok := b.knownTxs[tx.Hash()]; !ok {
+			b.knownTxs[tx.Hash()] = txAndTime{
+				tx:   tx,
+				time: time.Now(),
+			}
 		}
-		txTime, ok := b.knownTxs[tx.Hash()]
-		if ok {
-			newTxTime.time = txTime.time
-		}
-		b.knownTxs[tx.Hash()] = newTxTime
 	}
 	return isReady
 }
