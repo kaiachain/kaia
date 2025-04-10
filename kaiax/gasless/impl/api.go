@@ -53,7 +53,7 @@ type GaslessTxResponse struct {
 	Reason    *string `json:"reason"`    // Reason why the transaction is not a gasless transaction, empty if it is
 }
 
-func (GaslessAPI) IsGaslessTxResponse(err error) *GaslessTxResponse {
+func ToResponse(err error) *GaslessTxResponse {
 	var pErrStr *string
 	isExecutable := true
 	if err != nil {
@@ -71,14 +71,14 @@ func (GaslessAPI) IsGaslessTxResponse(err error) *GaslessTxResponse {
 // It returns a detailed result explaining why a transaction is not a valid gasless transaction if it's not
 func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *GaslessTxResponse {
 	if len(rawTxs) == 0 {
-		return s.IsGaslessTxResponse(errors.New("no transactions provided"))
+		return ToResponse(errors.New("no transactions provided"))
 	}
 
 	// Decode the raw transactions
 	txs := make([]*types.Transaction, 0, len(rawTxs))
 	for i, rawTx := range rawTxs {
 		if len(rawTx) == 0 {
-			return s.IsGaslessTxResponse(fmt.Errorf("empty transaction at index %d", i))
+			return ToResponse(fmt.Errorf("empty transaction at index %d", i))
 		}
 
 		// Handle Ethereum transaction envelope
@@ -88,7 +88,7 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 
 		tx := new(types.Transaction)
 		if err := rlp.DecodeBytes(rawTx, tx); err != nil {
-			return s.IsGaslessTxResponse(fmt.Errorf("failed to decode transaction at index %d: %v", i, err))
+			return ToResponse(fmt.Errorf("failed to decode transaction at index %d: %v", i, err))
 		}
 
 		txs = append(txs, tx)
@@ -99,10 +99,10 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 	if len(txs) == 1 {
 		swapTx := txs[0]
 		if !s.b.IsSwapTx(swapTx) {
-			return s.IsGaslessTxResponse(errors.New("transaction is not a swap transaction"))
+			return ToResponse(errors.New("transaction is not a swap transaction"))
 		}
 
-		return s.IsGaslessTxResponse(s.b.VerifyExecutable(nil, swapTx))
+		return ToResponse(s.b.VerifyExecutable(nil, swapTx))
 	}
 
 	// Case 2: An approve transaction followed by a swap transaction
@@ -111,18 +111,18 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 		swapTx := txs[1]
 
 		if !s.b.IsApproveTx(approveTx) {
-			return s.IsGaslessTxResponse(errors.New("first transaction is not an approve transaction"))
+			return ToResponse(errors.New("first transaction is not an approve transaction"))
 		}
 
 		if !s.b.IsSwapTx(swapTx) {
-			return s.IsGaslessTxResponse(errors.New("second transaction is not a swap transaction"))
+			return ToResponse(errors.New("second transaction is not a swap transaction"))
 		}
 
 		err := s.b.VerifyExecutable(approveTx, swapTx)
-		return s.IsGaslessTxResponse(err)
+		return ToResponse(err)
 	}
 
-	return s.IsGaslessTxResponse(fmt.Errorf("expected 1 or 2 transactions, got %d", len(txs)))
+	return ToResponse(fmt.Errorf("expected 1 or 2 transactions, got %d", len(txs)))
 }
 
 type GaslessInfoResult struct {
