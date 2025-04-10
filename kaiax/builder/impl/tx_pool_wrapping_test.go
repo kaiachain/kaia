@@ -102,34 +102,34 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 	preAddTxError := errors.New("tx pool error")
 
 	tests := []struct {
-		name           string
-		hasTxPool      bool
-		preAddTxResult error
-		expectedError  error
+		name            string
+		hasTxPoolModule bool
+		preAddTxResult  error
+		expectedError   error
 	}{
 		{
-			name:           "TxPoolModule is not set",
-			hasTxPool:      false,
-			preAddTxResult: nil,
-			expectedError:  nil,
+			name:            "TxPoolModule is not set",
+			hasTxPoolModule: false,
+			preAddTxResult:  nil,
+			expectedError:   nil,
 		},
 		{
-			name:           "TxPoolModule is not set and PreAddTx returns error",
-			hasTxPool:      false,
-			preAddTxResult: preAddTxError,
-			expectedError:  nil,
+			name:            "TxPoolModule is not set and PreAddTx returns error",
+			hasTxPoolModule: false,
+			preAddTxResult:  preAddTxError,
+			expectedError:   nil,
 		},
 		{
-			name:           "TxPoolModule is set",
-			hasTxPool:      true,
-			preAddTxResult: nil,
-			expectedError:  nil,
+			name:            "TxPoolModule is set",
+			hasTxPoolModule: true,
+			preAddTxResult:  nil,
+			expectedError:   nil,
 		},
 		{
-			name:           "TxPoolModule is set but PreAddTx returns error",
-			hasTxPool:      true,
-			preAddTxResult: preAddTxError,
-			expectedError:  preAddTxError,
+			name:            "TxPoolModule is set but PreAddTx returns error",
+			hasTxPoolModule: true,
+			preAddTxResult:  preAddTxError,
+			expectedError:   preAddTxError,
 		},
 	}
 
@@ -145,7 +145,7 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				mockTxPoolModule.EXPECT().PreAddTx(testTx, true).Return(tt.preAddTxResult)
 				builderModule.txPoolModule = mockTxPoolModule
 			}
@@ -161,39 +161,39 @@ func TestIsModuleTx(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name           string
-		hasTxPool      bool
-		isBundleTx     bool
-		isModuleTx     bool
-		expectedResult bool
+		name            string
+		hasTxPoolModule bool
+		isBundleTx      bool
+		isModuleTx      bool
+		expectedResult  bool
 	}{
 		{
-			name:           "TxPoolModule is not set and IsBundleTx returns true",
-			hasTxPool:      false,
-			isBundleTx:     true,
-			isModuleTx:     false,
-			expectedResult: true,
+			name:            "TxPoolModule is not set and IsBundleTx returns true",
+			hasTxPoolModule: false,
+			isBundleTx:      true,
+			isModuleTx:      false,
+			expectedResult:  true,
 		},
 		{
-			name:           "TxPoolModule is not set and IsBundleTx returns false",
-			hasTxPool:      false,
-			isBundleTx:     false,
-			isModuleTx:     false,
-			expectedResult: false,
+			name:            "TxPoolModule is not set and IsBundleTx returns false",
+			hasTxPoolModule: false,
+			isBundleTx:      false,
+			isModuleTx:      false,
+			expectedResult:  false,
 		},
 		{
-			name:           "TxPoolModule is set and IsModuleTx returns true",
-			hasTxPool:      true,
-			isBundleTx:     false,
-			isModuleTx:     true,
-			expectedResult: true,
+			name:            "TxPoolModule is set and IsModuleTx returns true",
+			hasTxPoolModule: true,
+			isBundleTx:      false,
+			isModuleTx:      true,
+			expectedResult:  true,
 		},
 		{
-			name:           "TxPoolModule is set and IsModuleTx returns false",
-			hasTxPool:      true,
-			isBundleTx:     false,
-			isModuleTx:     false,
-			expectedResult: false,
+			name:            "TxPoolModule is set and IsModuleTx returns false",
+			hasTxPoolModule: true,
+			isBundleTx:      false,
+			isModuleTx:      false,
+			expectedResult:  false,
 		},
 	}
 
@@ -208,7 +208,7 @@ func TestIsModuleTx(t *testing.T) {
 				knownTxs:         make(map[common.Hash]txAndTime),
 			}
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 				mockTxPoolModule.EXPECT().IsModuleTx(testTx).Return(tt.isModuleTx)
 				builderModule.txPoolModule = mockTxPoolModule
@@ -225,28 +225,28 @@ func TestGetCheckBalance(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name           string
-		hasTxPool      bool
-		checkBalance   func(tx *types.Transaction) error
-		expectedResult func(tx *types.Transaction) error
+		name            string
+		hasTxPoolModule bool
+		checkBalance    func(tx *types.Transaction) error
+		expectedResult  func(tx *types.Transaction) error
 	}{
 		{
-			name:           "TxPoolModule is not set",
-			hasTxPool:      false,
-			checkBalance:   nil,
-			expectedResult: nil,
+			name:            "TxPoolModule is not set",
+			hasTxPoolModule: false,
+			checkBalance:    nil,
+			expectedResult:  nil,
 		},
 		{
-			name:      "TxPoolModule is not set with check balance function",
-			hasTxPool: false,
+			name:            "TxPoolModule is not set with check balance function",
+			hasTxPoolModule: false,
 			checkBalance: func(tx *types.Transaction) error {
 				return errors.New("balance check error")
 			},
 			expectedResult: nil,
 		},
 		{
-			name:      "TxPoolModule is set with check balance function",
-			hasTxPool: true,
+			name:            "TxPoolModule is set with check balance function",
+			hasTxPoolModule: true,
 			checkBalance: func(tx *types.Transaction) error {
 				return nil
 			},
@@ -255,8 +255,8 @@ func TestGetCheckBalance(t *testing.T) {
 			},
 		},
 		{
-			name:      "TxPoolModule is set with error check balance function",
-			hasTxPool: true,
+			name:            "TxPoolModule is set with error check balance function",
+			hasTxPoolModule: true,
 			checkBalance: func(tx *types.Transaction) error {
 				return errors.New("balance check error")
 			},
@@ -265,10 +265,10 @@ func TestGetCheckBalance(t *testing.T) {
 			},
 		},
 		{
-			name:           "TxPoolModule is set without check balance function",
-			hasTxPool:      true,
-			checkBalance:   nil,
-			expectedResult: nil,
+			name:            "TxPoolModule is set without check balance function",
+			hasTxPoolModule: true,
+			checkBalance:    nil,
+			expectedResult:  nil,
 		},
 	}
 
@@ -281,7 +281,7 @@ func TestGetCheckBalance(t *testing.T) {
 				knownTxs:         make(map[common.Hash]txAndTime),
 			}
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 				mockTxPoolModule.EXPECT().GetCheckBalance().Return(tt.checkBalance)
 				builderModule.txPoolModule = mockTxPoolModule
@@ -420,28 +420,28 @@ func TestIsReady_TxPoolModule(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name           string
-		hasTxPool      bool
-		isReadyResult  bool
-		expectedResult bool
+		name            string
+		hasTxPoolModule bool
+		isReadyResult   bool
+		expectedResult  bool
 	}{
 		{
-			name:           "TxPoolModule is not set",
-			hasTxPool:      false,
-			isReadyResult:  false,
-			expectedResult: true,
+			name:            "TxPoolModule is not set",
+			hasTxPoolModule: false,
+			isReadyResult:   false,
+			expectedResult:  true,
 		},
 		{
-			name:           "TxPoolModule is set and returns true",
-			hasTxPool:      true,
-			isReadyResult:  true,
-			expectedResult: true,
+			name:            "TxPoolModule is set and returns true",
+			hasTxPoolModule: true,
+			isReadyResult:   true,
+			expectedResult:  true,
 		},
 		{
-			name:           "TxPoolModule is set and returns false",
-			hasTxPool:      true,
-			isReadyResult:  false,
-			expectedResult: false,
+			name:            "TxPoolModule is set and returns false",
+			hasTxPoolModule: true,
+			isReadyResult:   false,
+			expectedResult:  false,
 		},
 	}
 
@@ -461,7 +461,7 @@ func TestIsReady_TxPoolModule(t *testing.T) {
 			// Set up mock expectations
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(false).AnyTimes()
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 				mockTxPoolModule.EXPECT().IsReady(testTxs, uint64(0), nil).Return(tt.isReadyResult)
 				builderModule.txPoolModule = mockTxPoolModule
@@ -562,16 +562,16 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 	defer ctrl.Finish()
 
 	tests := []struct {
-		name      string
-		hasTxPool bool
+		name            string
+		hasTxPoolModule bool
 	}{
 		{
-			name:      "TxPoolModule is not set",
-			hasTxPool: false,
+			name:            "TxPoolModule is not set",
+			hasTxPoolModule: false,
 		},
 		{
-			name:      "TxPoolModule is set",
-			hasTxPool: true,
+			name:            "TxPoolModule is set",
+			hasTxPoolModule: true,
 		},
 	}
 
@@ -583,7 +583,7 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 				knownTxs:         make(map[common.Hash]txAndTime),
 			}
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 				mockTxPoolModule.EXPECT().PreReset(nil, nil).Do(func(txs *types.TransactionsByPriceAndNonce, next uint64, ready types.Transactions) {
 					panic("tx pool is called")
@@ -591,7 +591,7 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 				builderModule.txPoolModule = mockTxPoolModule
 			}
 
-			if tt.hasTxPool {
+			if tt.hasTxPoolModule {
 				assert.Panics(t, func() {
 					builderModule.PreReset(nil, nil)
 				})
