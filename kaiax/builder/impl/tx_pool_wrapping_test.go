@@ -68,7 +68,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			knownTxs: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: time.Now().Add(-KnownTxTimeout - time.Second),
+					time: time.Now().Add(-KnownTxTimeout),
 				},
 			},
 			expectedError: nil,
@@ -506,13 +506,13 @@ func TestPreReset_Timeout(t *testing.T) {
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-PendingTimeout - time.Second),
+					time: now.Add(-PendingTimeout),
 				},
 			},
 			expectedBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-PendingTimeout - time.Second),
+					time: now.Add(-PendingTimeout),
 				},
 			},
 			expectedUnexecutable: true,
@@ -522,7 +522,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			existingBundles: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
-					time: now.Add(-KnownTxTimeout - time.Second),
+					time: now.Add(-KnownTxTimeout),
 				},
 			},
 			expectedBundles:      map[common.Hash]txAndTime{},
