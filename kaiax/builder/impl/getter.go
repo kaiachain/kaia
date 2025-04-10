@@ -269,12 +269,28 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	return incorporatedTxs, bundles
 }
 
-func WrapBundlingModules(mTxBundling []builder.TxBundlingModule) []kaiax.TxPoolModule {
-	ret := make([]kaiax.TxPoolModule, len(mTxBundling))
-
-	for i, module := range mTxBundling {
-		ret[i] = NewBuilderWrappingModule(module)
+// WrapAndConcatenateBundlingModules wraps bundling modules and concatenates them.
+// given: mTxPool = [ A, B, C ], mTxBundling = [ B, D ]
+// want : mTxPool = [ A, WB, C, WD ] (W: wrapped)
+func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
+	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
+	wrappingMap := map[kaiax.TxPoolModule]kaiax.TxPoolModule{}
+	for _, txb := range mTxBundling {
+		new := NewBuilderWrappingModule(txb)
+		if txp, ok := txb.(kaiax.TxPoolModule); ok {
+			wrappingMap[txp] = new
+		} else {
+			wrappingMap[new] = new
+		}
 	}
-
+	for _, txp := range mTxPool {
+		if m, ok := wrappingMap[txp]; ok {
+			ret = append(ret, m)
+			delete(wrappingMap, txp)
+		}
+	}
+	for _, module := range wrappingMap {
+		ret = append(ret, module)
+	}
 	return ret
 }

@@ -568,24 +568,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
 
-	mWrapTxPool := builder_impl.WrapBundlingModules(mTxBundling)
-	wrapperMap := map[kaiax.TxPoolModule]kaiax.TxPoolModule{}
-	for i, txb := range mTxBundling {
-		if txp, ok := txb.(kaiax.TxPoolModule); ok {
-			wrapperMap[txp] = mWrapTxPool[i]
-		} else {
-			wrapperMap[mWrapTxPool[i]] = mWrapTxPool[i]
-		}
-	}
-	for i, txp := range mTxPool {
-		if m, ok := wrapperMap[txp]; ok {
-			mTxPool[i] = m
-			delete(wrapperMap, txp)
-		}
-	}
-	for _, module := range wrapperMap {
-		mTxPool = append(mTxPool, module)
-	}
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
