@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"slices"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
@@ -274,23 +276,20 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 // want : mTxPool = [ A, WB, C, WD ] (W: wrapped)
 func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
 	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
-	wrappingMap := map[kaiax.TxPoolModule]kaiax.TxPoolModule{}
-	for _, txb := range mTxBundling {
-		new := NewBuilderWrappingModule(txb)
-		if txp, ok := txb.(kaiax.TxPoolModule); ok {
-			wrappingMap[txp] = new
+
+	for _, module := range mTxPool {
+		if txb, ok := module.(builder.TxBundlingModule); ok {
+			ret = append(ret, NewBuilderWrappingModule(txb))
 		} else {
-			wrappingMap[new] = new
+			ret = append(ret, module)
 		}
 	}
-	for _, txp := range mTxPool {
-		if m, ok := wrappingMap[txp]; ok {
-			ret = append(ret, m)
-			delete(wrappingMap, txp)
+
+	for _, module := range mTxBundling {
+		if txp, ok := module.(kaiax.TxPoolModule); !(ok && slices.Contains(mTxPool, txp)) {
+			ret = append(ret, NewBuilderWrappingModule(module))
 		}
 	}
-	for _, module := range wrappingMap {
-		ret = append(ret, module)
-	}
+
 	return ret
 }
