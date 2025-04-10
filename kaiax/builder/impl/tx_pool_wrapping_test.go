@@ -583,23 +583,15 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 				knownTxs:         make(map[common.Hash]txAndTime),
 			}
 
+			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 			if tt.hasTxPoolModule {
-				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
-				mockTxPoolModule.EXPECT().PreReset(nil, nil).Do(func(txs *types.TransactionsByPriceAndNonce, next uint64, ready types.Transactions) {
-					panic("tx pool is called")
-				})
+				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return().Times(1)
 				builderModule.txPoolModule = mockTxPoolModule
+			} else {
+				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return().Times(0)
 			}
 
-			if tt.hasTxPoolModule {
-				assert.Panics(t, func() {
-					builderModule.PreReset(nil, nil)
-				})
-			} else {
-				assert.NotPanics(t, func() {
-					builderModule.PreReset(nil, nil)
-				})
-			}
+			builderModule.PreReset(nil, nil)
 		})
 	}
 }
