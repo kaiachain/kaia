@@ -42,11 +42,12 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
-	swapRouter    common.Address
-	allowedTokens map[common.Address]bool
-	signer        types.Signer
-	pooledSwapTxs map[common.Hash]*types.Transaction
-	mu            sync.RWMutex
+	swapRouter       common.Address
+	allowedTokens    map[common.Address]bool
+	signer           types.Signer
+	pooledSwapTxs    map[common.Hash]*types.Transaction
+	pooledApproveTxs map[common.Hash]*types.Transaction
+	mu               sync.RWMutex
 }
 
 func NewGaslessModule() *GaslessModule {
@@ -63,6 +64,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 	g.allowedTokens = map[common.Address]bool{}
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 	g.pooledSwapTxs = make(map[common.Hash]*types.Transaction)
+	g.pooledApproveTxs = make(map[common.Hash]*types.Transaction)
 
 	return g.updateAddresses(g.Chain.CurrentBlock().Header())
 }

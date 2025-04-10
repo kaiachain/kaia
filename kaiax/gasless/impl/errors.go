@@ -35,6 +35,8 @@ var (
 	ErrApproveNonceNotCurrent    = errors.New("approve transaction nonce is not current")
 	ErrSwapNonceNotCurrent       = errors.New("swap transaction nonce is not current")
 	ErrIncorrectRepayAmount      = errors.New("swap transaction has incorrect amountRepay")
+	ErrTooManyApproveTxs         = errors.New("too many approve txs")
+	ErrTooManySwapTxs            = errors.New("too many swap txs")
 )
 
 func printApproveTx(args *ApproveArgs) string {

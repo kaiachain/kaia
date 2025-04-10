@@ -34,19 +34,25 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if len(g.pooledSwapTxs) >= MaxGaslessTxNum {
-		if g.IsApproveTx(tx) {
-			for _, swap := range g.pooledSwapTxs {
+	if g.IsApproveTx(tx) {
+		if len(g.pooledApproveTxs) >= MaxGaslessTxNum {
+			for _, swap := range g.pooledApproveTxs {
 				if g.IsExecutable(tx, swap) {
 					return nil
 				}
 			}
+			return ErrTooManyApproveTxs
 		}
-		return ErrTooManyGaslessTxs
-	}
-
-	// Gasless tx pair always has an swap tx.
-	if g.IsSwapTx(tx) {
+		g.pooledApproveTxs[tx.Hash()] = tx
+	} else if g.IsSwapTx(tx) {
+		if len(g.pooledSwapTxs) >= MaxGaslessTxNum {
+			for _, approve := range g.pooledApproveTxs {
+				if g.IsExecutable(approve, tx) {
+					return nil
+				}
+			}
+			return ErrTooManySwapTxs
+		}
 		g.pooledSwapTxs[tx.Hash()] = tx
 	}
 
@@ -89,6 +95,11 @@ func (g *GaslessModule) PostReset(oldHead, newHead *types.Header) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	for hash, _ := range g.pooledApproveTxs {
+		if g.TxPool.Get(hash) == nil {
+			delete(g.pooledApproveTxs, hash)
+		}
+	}
 	for hash, _ := range g.pooledSwapTxs {
 		if g.TxPool.Get(hash) == nil {
 			delete(g.pooledSwapTxs, hash)
