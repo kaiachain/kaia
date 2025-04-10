@@ -799,13 +799,23 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		switch {
 		case query.Origin.Hash != (common.Hash{}) && query.Reverse:
 			// Hash based traversal towards the genesis block
-			for i := 0; i < int(query.Skip)+1; i++ {
-				if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
-					query.Origin.Hash = header.ParentHash
-					number--
-				} else {
-					unknown = true
-					break
+			var (
+				current = origin.Number.Uint64()
+				next    = current - query.Skip - 1
+			)
+			if next >= current {
+				infos, _ := json.MarshalIndent(p.GetP2PPeer().Info(), "", "  ")
+				p.GetP2PPeer().Log().Warn("GetBlockHeaders skip underflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
+				unknown = true
+			} else {
+				for i := 0; i < int(query.Skip)+1; i++ {
+					if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
+						query.Origin.Hash = header.ParentHash
+						number--
+					} else {
+						unknown = true
+						break
+					}
 				}
 			}
 		case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
@@ -831,15 +841,22 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 			}
 		case query.Reverse:
 			// Number based traversal towards the genesis block
-			if query.Origin.Number >= query.Skip+1 {
-				query.Origin.Number -= query.Skip + 1
-			} else {
+			current := query.Origin.Number
+			ancestor := current - (query.Skip + 1)
+			if ancestor >= current { // check for underflow
 				unknown = true
+			} else {
+				query.Origin.Number = ancestor
 			}
-
 		case !query.Reverse:
 			// Number based traversal towards the leaf block
-			query.Origin.Number += query.Skip + 1
+			current := query.Origin.Number
+			next := current + query.Skip + 1
+			if next <= current { // check for overflow
+				unknown = true
+			} else {
+				query.Origin.Number = next
+			}
 		}
 	}
 	return p.SendBlockHeaders(headers)
