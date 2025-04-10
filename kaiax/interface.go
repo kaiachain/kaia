@@ -156,7 +156,6 @@ type TxPoolModule interface {
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
 
 	// Additional actions to perform before the txpool is reset.
-	// TxPool must be locked before calling this method.
 	PreReset(oldHead, newHead *types.Header)
 }
 
