@@ -95,11 +95,11 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 	for hash, txAndTime := range b.knownTxs {
 		// remove pending timed out tx from tx pool
-		if time.Since(txAndTime.time) > PendingTimeout {
+		if time.Since(txAndTime.time) >= PendingTimeout {
 			b.knownTxs[hash].tx.MarkUnexecutable(true)
 		}
 		// remove known timed out tx from knownTxs
-		if time.Since(txAndTime.time) > KnownTxTimeout {
+		if time.Since(txAndTime.time) >= KnownTxTimeout {
 			delete(b.knownTxs, hash)
 		}
 	}
