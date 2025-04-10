@@ -246,14 +246,24 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 			result := api.IsGaslessTx(context.Background(), rawTxs)
 
 			// Print debug information
-			t.Logf("IsGasless: %v, Reason: %s", result.IsGasless, result.Reason)
+			var reasonStr string
+			if result.Reason != nil {
+				reasonStr = *result.Reason
+				t.Logf("IsGasless: %v, Reason: %s", result.IsGasless, reasonStr)
+			} else {
+				t.Logf("IsGasless: %v, Reason: nil", result.IsGasless)
+			}
 
 			// Check result
 			assert.Equal(t, tc.expectedResult, result.IsGasless, "IsGasless flag should match expected result")
 			if tc.reasonContains != "" {
-				assert.Contains(t, result.Reason, tc.reasonContains, "Reason should contain expected message")
+				assert.NotNil(t, result.Reason, "Reason should not be nil for invalid transactions")
+				assert.Contains(t, *result.Reason, tc.reasonContains, "Reason should contain expected message")
 			} else if !tc.expectedResult {
-				assert.NotEmpty(t, result.Reason, "Reason should not be empty for invalid transactions")
+				assert.NotNil(t, result.Reason, "Reason should not be nil for invalid transactions")
+				assert.NotEmpty(t, *result.Reason, "Reason should not be empty for invalid transactions")
+			} else {
+				assert.Nil(t, result.Reason, "Reason should be nil for valid transactions")
 			}
 		})
 	}

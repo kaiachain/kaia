@@ -18,6 +18,7 @@ package impl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -47,29 +48,37 @@ func NewGaslessAPI(b *GaslessModule) *GaslessAPI {
 }
 
 // GaslessTxResult represents the result of checking if a transaction is a gasless transaction
-type GaslessTxResult struct {
-	IsGasless bool   `json:"isGasless"` // Whether the transaction is a gasless transaction
-	Reason    string `json:"reason"`    // Reason why the transaction is not a gasless transaction, empty if it is
+type GaslessTxResponse struct {
+	IsGasless bool    `json:"isGasless"` // Whether the transaction is a gasless transaction
+	Reason    *string `json:"reason"`    // Reason why the transaction is not a gasless transaction, empty if it is
+}
+
+func ToResponse(err error) *GaslessTxResponse {
+	var pErrStr *string
+	isExecutable := true
+	if err != nil {
+		errStr := err.Error()
+		pErrStr = &errStr
+		isExecutable = false
+	}
+	return &GaslessTxResponse{
+		IsGasless: isExecutable,
+		Reason:    pErrStr,
+	}
 }
 
 // IsGaslessTx checks if the given raw transactions form a valid gasless transaction
 // It returns a detailed result explaining why a transaction is not a valid gasless transaction if it's not
-func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *GaslessTxResult {
+func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *GaslessTxResponse {
 	if len(rawTxs) == 0 {
-		return &GaslessTxResult{
-			IsGasless: false,
-			Reason:    "no transactions provided",
-		}
+		return ToResponse(errors.New("no transactions provided"))
 	}
 
 	// Decode the raw transactions
 	txs := make([]*types.Transaction, 0, len(rawTxs))
 	for i, rawTx := range rawTxs {
 		if len(rawTx) == 0 {
-			return &GaslessTxResult{
-				IsGasless: false,
-				Reason:    fmt.Sprintf("empty transaction at index %d", i),
-			}
+			return ToResponse(fmt.Errorf("empty transaction at index %d", i))
 		}
 
 		// Handle Ethereum transaction envelope
@@ -79,10 +88,7 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 
 		tx := new(types.Transaction)
 		if err := rlp.DecodeBytes(rawTx, tx); err != nil {
-			return &GaslessTxResult{
-				IsGasless: false,
-				Reason:    fmt.Sprintf("failed to decode transaction at index %d: %v", i, err),
-			}
+			return ToResponse(fmt.Errorf("failed to decode transaction at index %d: %v", i, err))
 		}
 
 		txs = append(txs, tx)
@@ -93,21 +99,10 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 	if len(txs) == 1 {
 		swapTx := txs[0]
 		if !s.b.IsSwapTx(swapTx) {
-			return &GaslessTxResult{
-				IsGasless: false,
-				Reason:    "transaction is not a swap transaction",
-			}
+			return ToResponse(errors.New("transaction is not a swap transaction"))
 		}
 
-		err, isExecutable := s.b.VerifyExecutable(nil, swapTx)
-		reason := ""
-		if err != nil {
-			reason = err.Error()
-		}
-		return &GaslessTxResult{
-			IsGasless: isExecutable,
-			Reason:    reason,
-		}
+		return ToResponse(s.b.VerifyExecutable(nil, swapTx))
 	}
 
 	// Case 2: An approve transaction followed by a swap transaction
@@ -116,34 +111,18 @@ func (s *GaslessAPI) IsGaslessTx(ctx context.Context, rawTxs []hexutil.Bytes) *G
 		swapTx := txs[1]
 
 		if !s.b.IsApproveTx(approveTx) {
-			return &GaslessTxResult{
-				IsGasless: false,
-				Reason:    "first transaction is not an approve transaction",
-			}
+			return ToResponse(errors.New("first transaction is not an approve transaction"))
 		}
 
 		if !s.b.IsSwapTx(swapTx) {
-			return &GaslessTxResult{
-				IsGasless: false,
-				Reason:    "second transaction is not a swap transaction",
-			}
+			return ToResponse(errors.New("second transaction is not a swap transaction"))
 		}
 
-		err, isExecutable := s.b.VerifyExecutable(approveTx, swapTx)
-		reason := ""
-		if err != nil {
-			reason = err.Error()
-		}
-		return &GaslessTxResult{
-			IsGasless: isExecutable,
-			Reason:    reason,
-		}
+		err := s.b.VerifyExecutable(approveTx, swapTx)
+		return ToResponse(err)
 	}
 
-	return &GaslessTxResult{
-		IsGasless: false,
-		Reason:    fmt.Sprintf("expected 1 or 2 transactions, got %d", len(txs)),
-	}
+	return ToResponse(fmt.Errorf("expected 1 or 2 transactions, got %d", len(txs)))
 }
 
 type GaslessInfoResult struct {
