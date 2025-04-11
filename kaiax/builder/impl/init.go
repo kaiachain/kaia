@@ -21,7 +21,6 @@ import (
 
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -42,8 +41,6 @@ type txAndTime struct {
 
 type BuilderModule struct {
 	InitOpts
-
-	knownTxs map[common.Hash]txAndTime
 }
 
 func NewBuilderModule() *BuilderModule {
@@ -55,7 +52,6 @@ func (b *BuilderModule) Init(opts *InitOpts) error {
 		return ErrInitUnexpectedNil
 	}
 	b.InitOpts = *opts
-	b.knownTxs = make(map[common.Hash]txAndTime)
 	return nil
 }
 
