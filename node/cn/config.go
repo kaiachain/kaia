@@ -71,10 +71,7 @@ func GetDefaultConfig() *Config {
 		Istanbul:      *istanbul.DefaultConfig,
 		RPCEVMTimeout: 5 * time.Second,
 
-		Gasless: &gasless.GaslessConfig{
-			AllowedTokens: nil,
-			Disable:       false,
-		},
+		Gasless: gasless.DefaultGaslessConfig(),
 	}
 }
 

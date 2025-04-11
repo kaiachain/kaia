@@ -56,33 +56,29 @@ type GaslessConfig struct {
 	GaslessTxSlots int
 }
 
-func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	config := makeDefaultGaslessConfig()
-
-	if tokens := ctx.StringSlice(AllowedTokensFlag.Name); tokens != nil {
-		config.AllowedTokens = []common.Address{}
-		for _, addr := range tokens {
-			if addr == "all" {
-				config.AllowedTokens = nil
-				break
-			}
-			config.AllowedTokens = append(config.AllowedTokens, common.HexToAddress(addr))
-		}
-	}
-
-	config.Disable = ctx.Bool(DisableFlag.Name)
-
-	if slot := ctx.Int(GaslessTxSlotsFlag.Name); slot > 0 {
-		config.GaslessTxSlots = slot
-	}
-
-	return config
-}
-
-func makeDefaultGaslessConfig() *GaslessConfig {
+func DefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
 		AllowedTokens:  nil,
 		Disable:        false,
 		GaslessTxSlots: 100,
+	}
+}
+
+func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
+	if tokens := ctx.StringSlice(AllowedTokensFlag.Name); tokens != nil {
+		cfg.AllowedTokens = []common.Address{}
+		for _, addr := range tokens {
+			if addr == "all" {
+				cfg.AllowedTokens = nil
+				break
+			}
+			cfg.AllowedTokens = append(cfg.AllowedTokens, common.HexToAddress(addr))
+		}
+	}
+
+	cfg.Disable = ctx.Bool(DisableFlag.Name)
+
+	if slot := ctx.Int(GaslessTxSlotsFlag.Name); slot > 0 {
+		cfg.GaslessTxSlots = slot
 	}
 }
