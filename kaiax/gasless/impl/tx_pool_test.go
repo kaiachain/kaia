@@ -201,6 +201,16 @@ func TestPreAddTx(t *testing.T) {
 
 			// Verify error
 			require.ErrorIs(t, err, tc.expectedError)
+
+			var tx *types.Transaction
+			if tc.expectedError == nil {
+				tx = tc.tx
+			}
+			if g.IsApproveTx(tc.tx) {
+				require.Equal(t, tx, g.pooledApproveTxs[tc.tx.Hash()])
+			} else if g.IsSwapTx(tc.tx) {
+				require.Equal(t, tx, g.pooledSwapTxs[tc.tx.Hash()])
+			}
 		})
 	}
 }

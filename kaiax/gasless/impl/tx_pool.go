@@ -33,6 +33,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 		if len(g.pooledApproveTxs) >= g.GaslessConfig.GaslessTxSlots/2 {
 			for _, swap := range g.pooledSwapTxs {
 				if g.IsExecutable(tx, swap) {
+					g.pooledApproveTxs[tx.Hash()] = tx
 					return nil
 				}
 			}
@@ -43,6 +44,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 		if len(g.pooledSwapTxs) >= g.GaslessConfig.GaslessTxSlots/2 {
 			for _, approve := range g.pooledApproveTxs {
 				if g.IsExecutable(approve, tx) {
+					g.pooledSwapTxs[tx.Hash()] = tx
 					return nil
 				}
 			}
