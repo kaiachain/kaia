@@ -57,20 +57,32 @@ type GaslessConfig struct {
 }
 
 func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	allowedTokens := []common.Address(nil)
-	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
-		if addr == "all" {
-			allowedTokens = nil
-			break
+	config := makeDefaultGaslessConfig()
+
+	if tokens := ctx.StringSlice(AllowedTokensFlag.Name); tokens != nil {
+		config.AllowedTokens = []common.Address{}
+		for _, addr := range tokens {
+			if addr == "all" {
+				config.AllowedTokens = nil
+				break
+			}
+			config.AllowedTokens = append(config.AllowedTokens, common.HexToAddress(addr))
 		}
-		if allowedTokens == nil {
-			allowedTokens = []common.Address{}
-		}
-		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
 	}
+
+	config.Disable = ctx.Bool(DisableFlag.Name)
+
+	if slot := ctx.Int(GaslessTxSlotsFlag.Name); slot > 0 {
+		config.GaslessTxSlots = slot
+	}
+
+	return config
+}
+
+func makeDefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
-		AllowedTokens:  allowedTokens,
-		Disable:        ctx.Bool(DisableFlag.Name),
-		GaslessTxSlots: ctx.Int(GaslessTxSlotsFlag.Name),
+		AllowedTokens:  nil,
+		Disable:        false,
+		GaslessTxSlots: 100,
 	}
 }
