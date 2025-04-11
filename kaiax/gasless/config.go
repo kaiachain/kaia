@@ -36,12 +36,24 @@ var (
 		Aliases:  []string{"genesis.module.gasless.disable"},
 		Category: "KAIAX",
 	}
+	GaslessTxSlotsFlag = &cli.IntFlag{
+		Name:     "gasless.gasless-tx-slots",
+		Usage:    "number of gasless transaction pair slots in tx pool",
+		Value:    100,
+		Aliases:  []string{"genesis.module.gasless.gasless-tx-slots"},
+		Category: "KAIAX",
+	}
 )
 
 type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
 	AllowedTokens []common.Address `toml:",omitempty"`
-	Disable       bool
+
+	// disable gasless module
+	Disable bool
+
+	// max number of gasless tx pairs in tx pool
+	GaslessTxSlots int
 }
 
 func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
@@ -57,7 +69,8 @@ func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
 		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
 	}
 	return &GaslessConfig{
-		AllowedTokens: allowedTokens,
-		Disable:       ctx.Bool(DisableFlag.Name),
+		AllowedTokens:  allowedTokens,
+		Disable:        ctx.Bool(DisableFlag.Name),
+		GaslessTxSlots: ctx.Int(GaslessTxSlotsFlag.Name),
 	}
 }

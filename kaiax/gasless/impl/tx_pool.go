@@ -30,7 +30,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	defer g.mu.Unlock()
 
 	if g.IsApproveTx(tx) {
-		if len(g.pooledApproveTxs) >= MaxGaslessTxNum {
+		if len(g.pooledApproveTxs) >= g.GaslessConfig.GaslessTxSlots/2 {
 			for _, swap := range g.pooledApproveTxs {
 				if g.IsExecutable(tx, swap) {
 					return nil
@@ -40,7 +40,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 		}
 		g.pooledApproveTxs[tx.Hash()] = tx
 	} else if g.IsSwapTx(tx) {
-		if len(g.pooledSwapTxs) >= MaxGaslessTxNum {
+		if len(g.pooledSwapTxs) >= g.GaslessConfig.GaslessTxSlots/2 {
 			for _, approve := range g.pooledApproveTxs {
 				if g.IsExecutable(approve, tx) {
 					return nil

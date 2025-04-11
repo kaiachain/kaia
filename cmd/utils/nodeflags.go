@@ -280,6 +280,7 @@ var CommonNodeFlags = []cli.Flag{
 	// kaiax
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewIntFlag(gasless.GaslessTxSlotsFlag),
 }
 
 // Common RPC flags
