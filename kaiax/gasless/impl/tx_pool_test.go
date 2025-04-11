@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -35,6 +36,174 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPreAddTx(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	// Create test transactions
+	privKey, _ := crypto.GenerateKey()
+
+	approveTx := makeApproveTx(t, privKey, 0, ApproveArgs{
+		Spender: common.HexToAddress("0x1234"),
+		Amount:  big.NewInt(1000000),
+	})
+
+	swapTx := makeSwapTx(t, privKey, 1, SwapArgs{
+		Token:        common.HexToAddress("0xabcd"),
+		AmountIn:     big.NewInt(10),
+		MinAmountOut: big.NewInt(100),
+		AmountRepay:  big.NewInt(2021000),
+	})
+
+	singleSwapTx := makeSwapTx(t, privKey, 0, SwapArgs{
+		Token:        common.HexToAddress("0xabcd"),
+		AmountIn:     big.NewInt(10),
+		MinAmountOut: big.NewInt(100),
+		AmountRepay:  big.NewInt(1021000),
+	})
+
+	makePooledTxs := func(num int, tx *types.Transaction) map[common.Hash]*types.Transaction {
+		txs := map[common.Hash]*types.Transaction{}
+		for range num {
+			tx := makeTx(t, nil, 0, common.HexToAddress("0x0"), big.NewInt(0), 1000000, big.NewInt(1), nil)
+			txs[tx.Hash()] = tx
+		}
+		if tx != nil {
+			txs[tx.Hash()] = tx
+		}
+		return txs
+	}
+	makePooledTxs(0, nil)
+
+	testCases := []struct {
+		name              string
+		tx                *types.Transaction
+		initialApproveTxs map[common.Hash]*types.Transaction
+		initialSwapTxs    map[common.Hash]*types.Transaction
+		expectedError     error
+	}{
+		{
+			name:              "approve tx with empty pools",
+			tx:                approveTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    map[common.Hash]*types.Transaction{},
+			expectedError:     nil,
+		},
+		{
+			name:              "approve tx with almost full approve pool",
+			tx:                approveTx,
+			initialApproveTxs: makePooledTxs(testGaslessConfig.GaslessTxSlots/2-1, nil),
+			initialSwapTxs:    map[common.Hash]*types.Transaction{},
+			expectedError:     nil,
+		},
+		{
+			name:              "approve tx with full approve pool",
+			tx:                approveTx,
+			initialApproveTxs: makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			initialSwapTxs:    map[common.Hash]*types.Transaction{},
+			expectedError:     ErrTooManyApproveTxs,
+		},
+		{
+			name:              "approve tx with full approve pool and existing swap tx",
+			tx:                approveTx,
+			initialApproveTxs: makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			initialSwapTxs: map[common.Hash]*types.Transaction{
+				swapTx.Hash(): swapTx,
+			},
+			expectedError: nil,
+		},
+		{
+			name:              "swap tx with empty pools",
+			tx:                swapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    map[common.Hash]*types.Transaction{},
+			expectedError:     nil,
+		},
+		{
+			name:              "swap tx with almost full swap pool",
+			tx:                swapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    makePooledTxs(testGaslessConfig.GaslessTxSlots/2-1, nil),
+			expectedError:     nil,
+		},
+		{
+			name:              "swap tx with full swap pool",
+			tx:                swapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			expectedError:     ErrTooManySwapTxs,
+		},
+		{
+			name: "swap tx with full swap pool and existing approve tx",
+			tx:   swapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{
+				approveTx.Hash(): approveTx,
+			},
+			initialSwapTxs: makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			expectedError:  nil,
+		},
+		{
+			name:              "single swap tx with empty pools",
+			tx:                singleSwapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    map[common.Hash]*types.Transaction{},
+			expectedError:     nil,
+		},
+		{
+			name:              "single swap tx with almost full swap pool",
+			tx:                singleSwapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    makePooledTxs(testGaslessConfig.GaslessTxSlots/2-1, nil),
+			expectedError:     nil,
+		},
+		{
+			name:              "single swap tx with full swap pool",
+			tx:                singleSwapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{},
+			initialSwapTxs:    makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			expectedError:     ErrTooManySwapTxs,
+		},
+		{
+			name: "single swap tx with full swap pool and existing approve tx",
+			tx:   singleSwapTx,
+			initialApproveTxs: map[common.Hash]*types.Transaction{
+				approveTx.Hash(): approveTx,
+			},
+			initialSwapTxs: makePooledTxs(testGaslessConfig.GaslessTxSlots/2, nil),
+			expectedError:  ErrTooManySwapTxs,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
+			sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			mockTxPool.EXPECT().GetCurrentState().Return(sdb).AnyTimes()
+
+			// Initialize gasless module
+			g := &GaslessModule{
+				InitOpts: InitOpts{
+					GaslessConfig: testGaslessConfig,
+					TxPool:        mockTxPool,
+				},
+				swapRouter:       common.HexToAddress("0x1234"),
+				allowedTokens:    map[common.Address]bool{common.HexToAddress("0xabcd"): true},
+				signer:           types.LatestSignerForChainID(testChainConfig.ChainID),
+				pooledApproveTxs: tc.initialApproveTxs,
+				pooledSwapTxs:    tc.initialSwapTxs,
+			}
+
+			// Call PreAddTx
+			err := g.PreAddTx(tc.tx, false)
+
+			// Verify error
+			require.ErrorIs(t, err, tc.expectedError)
+		})
+	}
+}
 
 func TestIsModuleTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)

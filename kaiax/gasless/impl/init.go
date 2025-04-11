@@ -64,6 +64,7 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
 	g.pooledSwapTxs = make(map[common.Hash]*types.Transaction)
 	g.pooledApproveTxs = make(map[common.Hash]*types.Transaction)
+	g.mu = sync.RWMutex{}
 
 	return g.updateAddresses(g.Chain.CurrentBlock().Header())
 }

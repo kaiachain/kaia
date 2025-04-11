@@ -62,8 +62,9 @@ var (
 		RandaoCompatibleBlock:    big.NewInt(0),
 	}
 	testGaslessConfig = &gasless.GaslessConfig{
-		AllowedTokens: nil,
-		Disable:       false,
+		AllowedTokens:  nil,
+		Disable:        false,
+		GaslessTxSlots: 100,
 	}
 
 	// interface DummyGSR {

@@ -31,7 +31,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 
 	if g.IsApproveTx(tx) {
 		if len(g.pooledApproveTxs) >= g.GaslessConfig.GaslessTxSlots/2 {
-			for _, swap := range g.pooledApproveTxs {
+			for _, swap := range g.pooledSwapTxs {
 				if g.IsExecutable(tx, swap) {
 					return nil
 				}
