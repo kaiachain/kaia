@@ -21,6 +21,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -28,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -195,6 +197,105 @@ func TestIsReady(t *testing.T) {
 
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
+		})
+	}
+}
+
+func TestPostReset(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	mockTx := makeTx(t, nil, 0, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), nil)
+
+	testCases := []struct {
+		name               string
+		initialApproveTxs  map[common.Hash]*types.Transaction
+		initialSwapTxs     map[common.Hash]*types.Transaction
+		txPoolReturns      map[common.Hash]*types.Transaction
+		expectedApproveTxs map[common.Hash]*types.Transaction
+		expectedSwapTxs    map[common.Hash]*types.Transaction
+	}{
+		{
+			name: "approve tx exists in pool",
+			initialApproveTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			txPoolReturns: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			expectedApproveTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+		},
+		{
+			name: "approve tx removed from pool",
+			initialApproveTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			txPoolReturns: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): nil,
+			},
+			expectedApproveTxs: map[common.Hash]*types.Transaction{},
+		},
+		{
+			name: "swap tx exists in pool",
+			initialSwapTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			txPoolReturns: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			expectedSwapTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+		},
+		{
+			name: "swap tx removed from pool",
+			initialSwapTxs: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): mockTx,
+			},
+			txPoolReturns: map[common.Hash]*types.Transaction{
+				mockTx.Hash(): nil,
+			},
+			expectedSwapTxs: map[common.Hash]*types.Transaction{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create tx pool
+			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
+
+			// Set up expectations for Get calls
+			for hash, tx := range tc.txPoolReturns {
+				mockTxPool.EXPECT().Get(hash).Return(tx).Times(1)
+			}
+
+			// Initialize gasless module
+			g := &GaslessModule{
+				InitOpts: InitOpts{
+					TxPool: mockTxPool,
+				},
+				pooledApproveTxs: tc.initialApproveTxs,
+				pooledSwapTxs:    tc.initialSwapTxs,
+			}
+
+			// Call PostReset
+			g.PostReset(nil, nil)
+
+			// Verify that transactions match expected state
+			require.Equal(t, len(tc.expectedApproveTxs), len(g.pooledApproveTxs))
+			for hash, tx := range tc.expectedApproveTxs {
+				require.Contains(t, g.pooledApproveTxs, hash)
+				require.Equal(t, tx, g.pooledApproveTxs[hash])
+			}
+			require.Equal(t, len(tc.expectedSwapTxs), len(g.pooledSwapTxs))
+			for hash, tx := range tc.expectedSwapTxs {
+				require.Contains(t, g.pooledSwapTxs, hash)
+				require.Equal(t, tx, g.pooledSwapTxs[hash])
+			}
 		})
 	}
 }

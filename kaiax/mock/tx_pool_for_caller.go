@@ -9,6 +9,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/kaiachain/kaia/blockchain/state"
+	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 )
 
 // MockTxPoolForCaller is a mock of TxPoolForCaller interface.
@@ -32,6 +34,20 @@ func NewMockTxPoolForCaller(ctrl *gomock.Controller) *MockTxPoolForCaller {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTxPoolForCaller) EXPECT() *MockTxPoolForCallerMockRecorder {
 	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockTxPoolForCaller) Get(arg0 common.Hash) *types.Transaction {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*types.Transaction)
+	return ret0
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockTxPoolForCallerMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTxPoolForCaller)(nil).Get), arg0)
 }
 
 // GetCurrentState mocks base method.
