@@ -17,7 +17,10 @@
 package impl
 
 import (
+	"time"
+
 	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -29,6 +32,11 @@ var (
 
 type InitOpts struct {
 	Backend api.Backend
+}
+
+type txAndTime struct {
+	tx   *types.Transaction
+	time time.Time
 }
 
 type BuilderModule struct {

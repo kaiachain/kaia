@@ -568,6 +568,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
 
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)

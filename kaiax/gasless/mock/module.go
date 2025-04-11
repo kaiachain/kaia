@@ -63,6 +63,20 @@ func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockGaslessModule)(nil).GetCheckBalance))
 }
 
+// IsBundleTx mocks base method.
+func (m *MockGaslessModule) IsBundleTx(arg0 *types.Transaction) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBundleTx", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsBundleTx indicates an expected call of IsBundleTx.
+func (mr *MockGaslessModuleMockRecorder) IsBundleTx(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBundleTx", reflect.TypeOf((*MockGaslessModule)(nil).IsBundleTx), arg0)
+}
+
 // IsModuleTx mocks base method.
 func (m *MockGaslessModule) IsModuleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
@@ -105,32 +119,30 @@ func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
 }
 
-// PreAddLocal mocks base method.
-func (m *MockGaslessModule) PreAddLocal(arg0 *types.Transaction) error {
+// PreAddTx mocks base method.
+func (m *MockGaslessModule) PreAddTx(arg0 *types.Transaction, arg1 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddLocal", arg0)
+	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PreAddLocal indicates an expected call of PreAddLocal.
-func (mr *MockGaslessModuleMockRecorder) PreAddLocal(arg0 interface{}) *gomock.Call {
+// PreAddTx indicates an expected call of PreAddTx.
+func (mr *MockGaslessModuleMockRecorder) PreAddTx(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddLocal", reflect.TypeOf((*MockGaslessModule)(nil).PreAddLocal), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockGaslessModule)(nil).PreAddTx), arg0, arg1)
 }
 
-// PreAddRemote mocks base method.
-func (m *MockGaslessModule) PreAddRemote(arg0 *types.Transaction) error {
+// PreReset mocks base method.
+func (m *MockGaslessModule) PreReset(arg0, arg1 *types.Header) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddRemote", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "PreReset", arg0, arg1)
 }
 
-// PreAddRemote indicates an expected call of PreAddRemote.
-func (mr *MockGaslessModuleMockRecorder) PreAddRemote(arg0 interface{}) *gomock.Call {
+// PreReset indicates an expected call of PreReset.
+func (mr *MockGaslessModuleMockRecorder) PreReset(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddRemote", reflect.TypeOf((*MockGaslessModule)(nil).PreAddRemote), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreReset", reflect.TypeOf((*MockGaslessModule)(nil).PreReset), arg0, arg1)
 }
 
 // Start mocks base method.

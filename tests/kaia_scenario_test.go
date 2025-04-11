@@ -42,7 +42,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builderImpl "github.com/kaiachain/kaia/kaiax/builder/impl"
-	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mocks"
+	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
