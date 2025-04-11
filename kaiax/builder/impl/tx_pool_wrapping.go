@@ -47,8 +47,8 @@ func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *Builde
 
 // PreAddTx is a wrapper function that calls the PreAddTx method of the underlying module.
 func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
 	txTime, ok := b.knownTxs[tx.Hash()]
 	if ok && time.Since(txTime.time) < KnownTxTimeout {
