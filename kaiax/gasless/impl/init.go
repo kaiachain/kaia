@@ -35,7 +35,6 @@ type InitOpts struct {
 	ChainConfig   *params.ChainConfig
 	GaslessConfig *gasless.GaslessConfig
 	NodeKey       *ecdsa.PrivateKey
-	NodeType      common.ConnType
 	Chain         backends.BlockChainForCaller
 	TxPool        kaiax.TxPoolForCaller
 }
@@ -55,7 +54,7 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.NodeType != common.UNKNOWNNODE || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
 
