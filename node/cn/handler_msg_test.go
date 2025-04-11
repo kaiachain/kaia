@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/auction"
-	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mocks"
+	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
