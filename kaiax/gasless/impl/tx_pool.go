@@ -86,12 +86,12 @@ func (g *GaslessModule) PostReset(oldHead, newHead *types.Header) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	for hash, _ := range g.pooledApproveTxs {
+	for hash := range g.pooledApproveTxs {
 		if g.TxPool.Get(hash) == nil {
 			delete(g.pooledApproveTxs, hash)
 		}
 	}
-	for hash, _ := range g.pooledSwapTxs {
+	for hash := range g.pooledSwapTxs {
 		if g.TxPool.Get(hash) == nil {
 			delete(g.pooledSwapTxs, hash)
 		}
