@@ -1,7 +1,9 @@
 # Libraries
 
 These contracts are external dependencies. Some old libraries are kept to support other legacy contracts.
-* The compiled binary for uniswap's gobind has been edited because the contracts expects a specific binary.
+
+> [!NOTE]
+> Uniswap's gobind edits compiled binaries because the contract expects a specific binary.
 
 - `kip13/InterfaceIdentifier.sol`: The ERC-165 & KIP-13 supportsInterface.
 - `openzeppelin-contracts-v2`: https://github.com/OpenZeppelin/openzeppelin-contracts/releases/tag/v2.3.0
