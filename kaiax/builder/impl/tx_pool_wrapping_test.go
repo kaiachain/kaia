@@ -596,6 +596,45 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 	}
 }
 
+func TestPostReset(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name            string
+		hasTxPoolModule bool
+	}{
+		{
+			name:            "TxPoolModule is not set",
+			hasTxPoolModule: false,
+		},
+		{
+			name:            "TxPoolModule is set",
+			hasTxPoolModule: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			builderModule := &BuilderWrappingModule{
+				txBundlingModule: mockTxBundlingModule,
+				knownTxs:         make(map[common.Hash]txAndTime),
+			}
+
+			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
+			if tt.hasTxPoolModule {
+				mockTxPoolModule.EXPECT().PostReset(nil, nil).Return().Times(1)
+				builderModule.txPoolModule = mockTxPoolModule
+			} else {
+				mockTxPoolModule.EXPECT().PostReset(nil, nil).Return().Times(0)
+			}
+
+			builderModule.PostReset(nil, nil)
+		})
+	}
+}
+
 func createTestTransaction(nonce uint64) *types.Transaction {
 	return types.NewTransaction(
 		nonce,
