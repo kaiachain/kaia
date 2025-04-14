@@ -61,7 +61,7 @@ func TestIsModuleTx(t *testing.T) {
 			true,
 		},
 		{
-			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)}),
+			makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			true,
 		},
 		{
@@ -97,11 +97,11 @@ func TestIsReady(t *testing.T) {
 	}
 
 	swapTx := func(nonce uint64) *types.Transaction {
-		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 	}
 
 	singleSwapTx := func(nonce uint64) *types.Transaction {
-		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
+		return makeSwapTx(t, privkey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
 	}
 
 	other := func(nonce uint64) *types.Transaction {
@@ -358,9 +358,9 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			case A:
 				tx = makeApproveTx(t, userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 			case SwithA:
-				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 			case SingleS:
-				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
 			}
 			txMap[ttype] = tx
 			err = pool.AddLocal(tx)
@@ -408,12 +408,12 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 
 	// The number of variable means the number of sender. For exampele, A1 and S1 are Sender1's txs.
 	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
-	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
 	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
-	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
+	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
-	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000)})
+	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
 
 	T4 := makeTx(t, key4, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 
