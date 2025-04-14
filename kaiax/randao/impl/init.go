@@ -44,15 +44,18 @@ type InitOpts struct {
 type RandaoModule struct {
 	InitOpts
 
-	blsPubkeyCache *lru.ARCCache
-	sfGroup        singleflight.Group
+	blsPubkeyCache   *lru.ARCCache
+	storageRootCache *lru.ARCCache
+	sfGroup          singleflight.Group
 }
 
 func NewRandaoModule() *RandaoModule {
-	cache, _ := lru.NewARC(128)
+	blsPubkeyCache, _ := lru.NewARC(128)
+	storageRootCache, _ := lru.NewARC(1000)
 	return &RandaoModule{
-		blsPubkeyCache: cache,
-		sfGroup:        singleflight.Group{},
+		blsPubkeyCache:   blsPubkeyCache,
+		storageRootCache: storageRootCache,
+		sfGroup:          singleflight.Group{},
 	}
 }
 
