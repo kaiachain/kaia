@@ -142,8 +142,10 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
 	altsrc.NewBoolFlag(registryMockFlag),
+	// kaiax/gasless
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewIntFlag(gasless.MaxGaslessBundleSizeFlag),
 }
 
 var SetupCommand = &cli.Command{

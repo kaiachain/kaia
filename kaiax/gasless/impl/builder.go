@@ -72,5 +72,5 @@ func (g *GaslessModule) IsBundleTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) GetMaxBundleSize() int {
-	return 100
+	return g.GaslessConfig.MaxGaslessBundleSize
 }

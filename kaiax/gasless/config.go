@@ -36,28 +36,45 @@ var (
 		Aliases:  []string{"genesis.module.gasless.disable"},
 		Category: "KAIAX",
 	}
+	MaxGaslessBundleSizeFlag = &cli.IntFlag{
+		Name:     "gasless.max-gasless-bundle-size",
+		Usage:    "max size of gasless bundle, default value if 0, no limit if minus value",
+		Value:    100,
+		Aliases:  []string{"genesis.module.gasless.max-gasless-bundle-size"},
+		Category: "KAIAX",
+	}
 )
 
 type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
-	AllowedTokens []common.Address `toml:",omitempty"`
-	Disable       bool
+	AllowedTokens        []common.Address `toml:",omitempty"`
+	Disable              bool
+	MaxGaslessBundleSize int
 }
 
-func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	allowedTokens := []common.Address(nil)
-	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
-		if addr == "all" {
-			allowedTokens = nil
-			break
-		}
-		if allowedTokens == nil {
-			allowedTokens = []common.Address{}
-		}
-		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
-	}
+func DefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
-		AllowedTokens: allowedTokens,
-		Disable:       ctx.Bool(DisableFlag.Name),
+		AllowedTokens:        nil,
+		Disable:              false,
+		MaxGaslessBundleSize: 100,
+	}
+}
+
+func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
+	if tokens := ctx.StringSlice(AllowedTokensFlag.Name); tokens != nil {
+		cfg.AllowedTokens = []common.Address{}
+		for _, addr := range tokens {
+			if addr == "all" {
+				cfg.AllowedTokens = nil
+				break
+			}
+			cfg.AllowedTokens = append(cfg.AllowedTokens, common.HexToAddress(addr))
+		}
+	}
+
+	cfg.Disable = ctx.Bool(DisableFlag.Name)
+
+	if size := ctx.Int(MaxGaslessBundleSizeFlag.Name); size != 0 {
+		cfg.MaxGaslessBundleSize = size
 	}
 }
