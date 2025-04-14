@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -53,7 +52,7 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 
 	txTime, ok := b.knownTxs[tx.Hash()]
 	if ok && time.Since(txTime.time) < KnownTxTimeout {
-		return errors.New("Unable to add known bundle tx into tx pool during lock period")
+		return ErrUnableToAddKnownBundleTx
 	}
 	if b.txPoolModule != nil {
 		return b.txPoolModule.PreAddTx(tx, local)

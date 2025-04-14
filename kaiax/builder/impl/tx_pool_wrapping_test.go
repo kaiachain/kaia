@@ -61,7 +61,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 					time: time.Now(),
 				},
 			},
-			expectedError: errors.New("Unable to add known bundle tx into tx pool during lock period"),
+			expectedError: ErrUnableToAddKnownBundleTx,
 		},
 		{
 			name: "Transaction after KnownTxTimeout period",
