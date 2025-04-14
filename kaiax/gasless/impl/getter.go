@@ -37,8 +37,8 @@ import (
 const (
 	// import { erc20Abi } from 'viem';
 	erc20AbiJson = `[{"type":"event","name":"Approval","inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}]},{"type":"event","name":"Transfer","inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}]},{"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"type":"uint256"}]},{"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]},{"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"account","type":"address"}],"outputs":[{"type":"uint256"}]},{"type":"function","name":"decimals","stateMutability":"view","inputs":[],"outputs":[{"type":"uint8"}]},{"type":"function","name":"name","stateMutability":"view","inputs":[],"outputs":[{"type":"string"}]},{"type":"function","name":"symbol","stateMutability":"view","inputs":[],"outputs":[{"type":"string"}]},{"type":"function","name":"totalSupply","stateMutability":"view","inputs":[],"outputs":[{"type":"uint256"}]},{"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]},{"type":"function","name":"transferFrom","stateMutability":"nonpayable","inputs":[{"name":"sender","type":"address"},{"name":"recipient","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]}]`
-	// function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay) external
-	routerAbiJson = `[{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"minAmountOut","type":"uint256"},{"internalType":"uint256","name":"amountRepay","type":"uint256"}],"name":"swapForGas","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
+	// function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay, uint256 deadline) external
+	routerAbiJson = `[{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"minAmountOut","type":"uint256"},{"internalType":"uint256","name":"amountRepay","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapForGas","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
 )
 
 var (
@@ -62,6 +62,7 @@ type SwapArgs struct {
 	AmountIn     *big.Int
 	MinAmountOut *big.Int
 	AmountRepay  *big.Int
+	Deadline     *big.Int
 }
 
 // IsApproveTx checks following conditions:
@@ -152,6 +153,10 @@ func decodeSwapTx(tx *types.Transaction, signer types.Signer) (args *SwapArgs, o
 	if !ok {
 		return nil, false
 	}
+	deadline, ok := inputs["deadline"].(*big.Int)
+	if !ok {
+		return nil, false
+	}
 	from, err := types.Sender(signer, tx)
 	if err != nil {
 		return nil, false
@@ -163,6 +168,7 @@ func decodeSwapTx(tx *types.Transaction, signer types.Signer) (args *SwapArgs, o
 		AmountIn:     amountIn,
 		MinAmountOut: minAmountOut,
 		AmountRepay:  amountRepay,
+		Deadline:     deadline,
 	}, true
 }
 
