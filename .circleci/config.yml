@@ -23,7 +23,7 @@ executors:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
-      - image: kaiachain/build_base:go1.23.3-solc0.8.13-ubuntu-22.04
+      - image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -31,7 +31,7 @@ executors:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: arm.medium
     docker:
-      - image: kaiachain/build_base:go1.23.3-solc0.8.13-ubuntu-22.04-arm
+      - image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04-arm
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -39,7 +39,7 @@ executors:
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
-      - image: kaiachain/circleci-rpmbuild:1.23.3-gcc11
+      - image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -47,7 +47,7 @@ executors:
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: arm.medium
     docker:
-      - image: kaiachain/circleci-rpmbuild:1.23.3-gcc11-arm
+      - image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
         auth:
           username: $DOCKER_LOGIN
           password: $DOCKER_PASSWORD
@@ -105,7 +105,7 @@ executors:
   default:
     working_directory: ~/go/src/github.com/kaiachain/kaia
     docker:
-      - image: cimg/go:1.23.3
+      - image: cimg/go:1.23.7
 
 commands:
   pre-build:
@@ -115,7 +115,7 @@ commands:
           name: "set variables"
           command: |
             export GOPATH=~/go
-            export PATH=$HOME/go1.23.3/go/bin:$PATH
+            export PATH=$HOME/go1.23.7/go/bin:$PATH
             pat="^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.*"
 
             if [[ $CIRCLE_TAG =~ $pat ]]; then
@@ -152,12 +152,12 @@ commands:
               sudo softwareupdate --install-rosetta --agree-to-license
               sudo installer -pkg AWSCLIV2.pkg -target /
               # install golang
-              curl -O https://dl.google.com/go/go1.23.3.darwin-arm64.tar.gz
-              mkdir $HOME/go1.23.3
-              tar -C $HOME/go1.23.3 -xzf go1.23.3.darwin-arm64.tar.gz
+              curl -O https://dl.google.com/go/go1.23.7.darwin-arm64.tar.gz
+              mkdir $HOME/go1.23.7
+              tar -C $HOME/go1.23.7 -xzf go1.23.7.darwin-arm64.tar.gz
               # Set GOPATH and update PATH
               echo 'export GOPATH=~/go' >> ~/.bashrc
-              echo 'export PATH=$HOME/go1.23.3/go/bin:$PATH' >> ~/.bashrc
+              echo 'export PATH=$HOME/go1.23.7/go/bin:$PATH' >> ~/.bashrc
               source ~/.bashrc
             fi
       - pre-build
