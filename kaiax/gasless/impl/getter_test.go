@@ -278,7 +278,7 @@ func TestTxGeneratorHashUniqueness(t *testing.T) {
 	hashSet := make(map[common.Hash]struct{})
 	g := NewGaslessModule()
 	for range 100 {
-		generator := g.GetLendTxGenerator(nil, makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000)}))
+		generator := g.GetLendTxGenerator(nil, makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)}))
 		_, ok := hashSet[generator.Id]
 		assert.False(t, ok)
 		hashSet[generator.Id] = struct{}{}
