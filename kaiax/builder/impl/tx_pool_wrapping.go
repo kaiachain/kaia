@@ -96,6 +96,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 					}
 				}
 				if len(b.txBundlingModule.ExtractTxBundles(flattened, nil)) >= maxBundleSize {
+					logger.Info("Max bundle size reached", "maxBundleSize", maxBundleSize)
 					return false
 				}
 			}
