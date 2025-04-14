@@ -49,6 +49,20 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
+// GetMaxBundleSize mocks base method.
+func (m *MockTxBundlingModule) GetMaxBundleSize() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleSize")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetMaxBundleSize indicates an expected call of GetMaxBundleSize.
+func (mr *MockTxBundlingModuleMockRecorder) GetMaxBundleSize() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleSize", reflect.TypeOf((*MockTxBundlingModule)(nil).GetMaxBundleSize))
+}
+
 // IsBundleTx mocks base method.
 func (m *MockTxBundlingModule) IsBundleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()

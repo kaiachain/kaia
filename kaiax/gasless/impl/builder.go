@@ -70,3 +70,7 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 func (g *GaslessModule) IsBundleTx(tx *types.Transaction) bool {
 	return g.IsModuleTx(tx)
 }
+
+func (g *GaslessModule) GetMaxBundleSize() int {
+	return 100
+}
