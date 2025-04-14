@@ -42,6 +42,7 @@ func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *Builde
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
 		knownTxs:         make(map[common.Hash]txAndTime),
+		mu:               sync.RWMutex{},
 	}
 }
 
@@ -87,6 +88,16 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 	}
 	if isReady && b.txBundlingModule.IsBundleTx(tx) {
 		if _, ok := b.knownTxs[tx.Hash()]; !ok {
+			flattened := make([]*types.Transaction, 0, len(b.knownTxs))
+			for _, tx := range b.knownTxs {
+				if !tx.tx.IsMarkedUnexecutable() {
+					flattened = append(flattened, tx.tx)
+				}
+			}
+			maxBundleSize := b.txBundlingModule.GetMaxBundleSize()
+			if maxBundleSize > 0 && len(b.txBundlingModule.ExtractTxBundles(flattened, nil)) >= maxBundleSize {
+				return false
+			}
 			b.knownTxs[tx.Hash()] = txAndTime{
 				tx:   tx,
 				time: time.Now(),
