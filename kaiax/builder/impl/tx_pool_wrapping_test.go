@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/params"
@@ -388,6 +389,7 @@ func TestIsReady_KnownTxs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(tt.isBundleTxResult).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(0).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -592,6 +594,140 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 			}
 
 			builderModule.PreReset(nil, nil)
+		})
+	}
+}
+
+func TestIsReady_MaxBundleSize(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	now := time.Now()
+	unexecutable := now.Add(time.Hour)
+	testTx := createTestTransaction(999)
+
+	tests := []struct {
+		name           string
+		maxBundleSize  int
+		knownTxs       map[common.Hash]txAndTime
+		expectedResult bool
+	}{
+		{
+			name:           "No max bundle size limit with zero",
+			maxBundleSize:  0,
+			knownTxs:       make(map[common.Hash]txAndTime),
+			expectedResult: true,
+		},
+		{
+			name:           "No max bundle size limit with minus value",
+			maxBundleSize:  -1,
+			knownTxs:       make(map[common.Hash]txAndTime),
+			expectedResult: true,
+		},
+		{
+			name:          "Below max bundle size limit",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: time.Now(),
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:          "At max bundle size limit",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:          "Above max bundle size limit",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:   createTestTransaction(2),
+					time: now,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:          "With unexecutable transactions",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: unexecutable,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:          "known transaction",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				testTx.Hash(): {
+					tx:   testTx,
+					time: now,
+				},
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(true).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(tt.maxBundleSize).AnyTimes()
+			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), nil).DoAndReturn(func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
+				bundles := make([]*builder.Bundle, len(txs))
+				for i, tx := range txs {
+					bundles[i] = &builder.Bundle{BundleTxs: builder.NewTxOrGenList(tx)}
+				}
+				return bundles
+			}).AnyTimes()
+
+			builderModule := &BuilderWrappingModule{
+				txBundlingModule: mockTxBundlingModule,
+				knownTxs:         copyTxAndTimeMap(tt.knownTxs),
+			}
+
+			// Mark some transactions as unexecutable to test that they are not counted
+			for _, txAndTime := range tt.knownTxs {
+				if txAndTime.time.After(now) {
+					txAndTime.tx.MarkUnexecutable(true)
+				}
+			}
+
+			result := builderModule.IsReady(map[uint64]*types.Transaction{0: testTx}, 0, nil)
+			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
 }
