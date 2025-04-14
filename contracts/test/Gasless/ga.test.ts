@@ -333,9 +333,11 @@ describe("GaslessSwapRouter", function () {
 
       // Execute swap
       const minAmountOut = amountRepay.add(parseEther("1")); // Ensure enough output
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       // Check accumulated commission
       const accumulatedCommission = await ethers.provider.getBalance(
@@ -386,9 +388,11 @@ describe("GaslessSwapRouter", function () {
       const minAmountOut = amountRepay.add(parseEther("0.1"));
 
       const initialBalance = await testUser.getBalance();
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const finalBalance = await testUser.getBalance();
       expect(finalBalance).to.be.lt(initialBalance.add(amountRepay));
@@ -421,10 +425,12 @@ describe("GaslessSwapRouter", function () {
       const minAmountOut = amountRepay.add(parseEther("0.1"));
 
       const initialBalance = await testUser.getBalance();
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const finalBalance = await testUser.getBalance();
       expect(finalBalance).to.be.gt(initialBalance);
@@ -471,10 +477,12 @@ describe("GaslessSwapRouter", function () {
       const preCommissionBalance = await ethers.provider.getBalance(
         gaslessRouter.address
       );
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const postCommissionBalance = await ethers.provider.getBalance(
         gaslessRouter.address
@@ -681,9 +689,12 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const minAmountOut = amountRepay.add(margin);
 
       const initialBalance = await testUser.getBalance();
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
+
       const tx = await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
       await tx.wait();
 
       const finalBalance = await testUser.getBalance();
@@ -699,11 +710,13 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       // First approve some tokens to avoid approval revert
       const amount = parseEther("1");
       await testToken.connect(testUser).approve(gaslessRouter.address, amount);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(invalidToken, amount, amount, parseEther("0.1"))
+          .swapForGas(invalidToken, amount, amount, parseEther("0.1"), deadline)
       ).to.be.revertedWith("TokenNotSupported");
     });
 
@@ -720,6 +733,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -728,7 +743,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             swapAmount,
             parseEther("0.5"),
-            amountRepay
+            amountRepay,
+            deadline
           )
       ).to.be.revertedWith("TokenNotSupported");
     });
@@ -747,10 +763,12 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
       const minAmountOut = amountRepay.add(parseEther("1"));
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const initialCommissionBalance = await ethers.provider.getBalance(
         gaslessRouter.address
@@ -758,7 +776,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const finalCommissionBalance = await ethers.provider.getBalance(
         gaslessRouter.address
@@ -793,10 +811,12 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const initialCommissionBalance = await ethers.provider.getBalance(
         gaslessRouter.address
       );
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       const tx = await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, expectedOutput, amountRepay);
+        .swapForGas(testToken.address, swapAmount, expectedOutput, amountRepay, deadline);
       await tx.wait();
 
       const finalUserBalance = await testUser.getBalance();
@@ -836,6 +856,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Min output should be greater than amountRepay
       expect(tooHighMinOutput).to.be.gt(amountRepay);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -844,7 +866,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             swapAmount,
             tooHighMinOutput,
-            amountRepay
+            amountRepay,
+            deadline
           )
       ).to.be.revertedWith("UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
     });
@@ -860,11 +883,13 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       const amountRepay = parseEther("0.1");
       const minAmountOut = parseEther("0.05"); // Less than amountRepay
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay)
+          .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline)
       ).to.be.revertedWith("InsufficientSwapOutput");
     });
 
@@ -885,6 +910,22 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       // Create pair
       await uniswapFactory.createPair(noBalanceToken.address, wkaia.address);
 
+      const liquidityAmount = parseEther("10.0");
+      await noBalanceToken.connect(deployer).transfer(testUser.address, liquidityAmount);
+      await noBalanceToken.connect(testUser).approve(uniswapRouter.address, liquidityAmount);
+      await wkaia.connect(testUser).approve(uniswapRouter.address, liquidityAmount);
+      await wkaia.connect(testUser).deposit({ value: liquidityAmount });
+
+      var deadline = Math.floor(Date.now() / 1000) + 3600;
+      await uniswapRouter.connect(testUser).addLiquidity(
+        noBalanceToken.address, wkaia.address,
+        liquidityAmount, liquidityAmount.div(2),
+        0, 0, testUser.address, deadline
+      );
+
+      const remainingBalance = await noBalanceToken.balanceOf(testUser.address);
+      await noBalanceToken.connect(testUser).transfer(deployer.address, remainingBalance);
+
       // Add token
       await gaslessRouter.addToken(
         noBalanceToken.address,
@@ -897,7 +938,9 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await noBalanceToken
         .connect(testUser)
         .approve(gaslessRouter.address, swapAmount);
-
+        const currentBlock = await ethers.provider.getBlock("latest");
+        deadline = currentBlock.timestamp + 300;
+  
       await expect(
         gaslessRouter
           .connect(testUser)
@@ -905,7 +948,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             noBalanceToken.address,
             swapAmount,
             parseEther("0.1"),
-            parseEther("0.05")
+            parseEther("0.05"),
+            deadline
           )
       ).to.be.revertedWith("Insufficient token balance");
     });
@@ -924,10 +968,12 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
       const minAmountOut = amountRepay.add(parseEther("1"));
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const initialBalance = await testToken.balanceOf(testUser.address);
       expect(initialBalance).to.be.gt(0);
@@ -942,7 +988,9 @@ describe("GaslessSwapRouter: Swap Operations", function () {
         await testToken
           .connect(testUser)
           .approve(gaslessRouter.address, swapAmount);
-
+          const currentBlock = await ethers.provider.getBlock("latest");
+          const deadline = currentBlock.timestamp + 300;
+    
         await expect(
           gaslessRouter
             .connect(testUser)
@@ -950,7 +998,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
               testToken.address,
               swapAmount,
               parseEther("1000"),
-              parseEther("0.1")
+              parseEther("0.1"),
+              deadline
             )
         ).to.be.reverted;
       } catch (e) {
@@ -1003,6 +1052,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -1011,7 +1062,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             verySmallAmount,
             amountRepay,
-            amountRepay.div(2)
+            amountRepay.div(2),
+            deadline
           )
       ).to.be.reverted;
     });
@@ -1027,6 +1079,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -1035,7 +1089,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             largeSwapAmount,
             parseEther("0.5"),
-            amountRepay
+            amountRepay,
+            deadline
           )
       ).to.be.reverted;
     });
@@ -1057,7 +1112,9 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await testToken
         .connect(testUser)
         .approve(gaslessRouter.address, swapAmount);
-
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const deadline = currentBlock.timestamp + 300;
+  
       await expect(
         gaslessRouter
           .connect(testUser)
@@ -1065,7 +1122,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             swapAmount,
             parseEther("0.5"),
-            parseEther("0.1")
+            parseEther("0.1"),
+            deadline
           )
       ).to.be.revertedWith("Failed to send KAIA to proposer");
 
@@ -1110,6 +1168,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const path = [testToken.address, wkaia.address];
       await uniswapRouter.getAmountsOut(parseEther("1"), path);
       const amountRepay = parseEther("0.1");
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -1118,7 +1178,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             testToken.address,
             parseEther("1"),
             amountRepay.add(parseEther("0.1")),
-            amountRepay
+            amountRepay,
+            deadline
           )
       ).to.be.revertedWith("FailedToSendKAIA");
 
@@ -1218,9 +1279,12 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Execute swap for tokenA through factoryA
       const initialBalanceA = await testUser.getBalance();
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
+
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(tokenA.address, swapAmount, minAmountOutA, amountRepay);
+        .swapForGas(tokenA.address, swapAmount, minAmountOutA, amountRepay, deadline);
       const finalBalanceA = await testUser.getBalance();
 
       // Verify swap for tokenA was successful
@@ -1228,9 +1292,10 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Execute swap for tokenB through factoryB
       const initialBalanceB = await testUser.getBalance();
+      
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(tokenB.address, swapAmount, minAmountOutB, amountRepay);
+        .swapForGas(tokenB.address, swapAmount, minAmountOutB, amountRepay, deadline);
       const finalBalanceB = await testUser.getBalance();
 
       // Verify swap for tokenB was successful
@@ -1296,15 +1361,17 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       const minAmountOutA = amountRepay.add(expectedOutputA.mul(1).div(100));
       const minAmountOutB = amountRepay.add(expectedOutputB.mul(1).div(100));
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       // Both swaps should work since the router can find paths through
       // the correct factories based on the stored factory addresses
       await customGaslessRouter
         .connect(testUser)
-        .swapForGas(tokenA.address, swapAmount, minAmountOutA, amountRepay);
+        .swapForGas(tokenA.address, swapAmount, minAmountOutA, amountRepay, deadline);
       await customGaslessRouter
         .connect(testUser)
-        .swapForGas(tokenB.address, swapAmount, minAmountOutB, amountRepay);
+        .swapForGas(tokenB.address, swapAmount, minAmountOutB, amountRepay, deadline);
 
       // Additional check: getAmountIn should use the correct factory for each token
       const amountOutA = parseEther("0.1");
@@ -1340,6 +1407,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
         uniswapFactory.address,
         uniswapRouter.address
       );
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -1348,7 +1417,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
             maliciousToken.address,
             parseEther("1"),
             parseEther("1"),
-            parseEther("0.1")
+            parseEther("0.1"),
+            deadline
           )
       ).to.be.reverted;
     });
@@ -1388,6 +1458,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const path = [testToken.address, wkaia.address];
       await uniswapRouter.getAmountsOut(parseEther("1"), path);
       const amountRepay = parseEther("0.1");
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await expect(
         gaslessRouter
@@ -1396,7 +1468,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
             testToken.address,
             parseEther("1"),
             amountRepay.add(parseEther("0.1")),
-            amountRepay
+            amountRepay,
+            deadline
           )
       ).to.be.revertedWith("FailedToSendKAIA");
 
@@ -1464,7 +1537,9 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       await testToken
         .connect(testUser)
         .approve(gaslessRouter.address, swapAmount);
-
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const deadline = currentBlock.timestamp + 300;
+  
       await expect(
         gaslessRouter
           .connect(testUser)
@@ -1472,7 +1547,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
             testToken.address,
             swapAmount,
             parseEther("0.5"),
-            parseEther("0.1")
+            parseEther("0.1"),
+            deadline
           )
       ).to.be.revertedWith("Failed to send KAIA to proposer");
 
@@ -1495,10 +1571,12 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
       const minAmountOut = amountRepay.add(parseEther("1"));
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
 
       await gaslessRouter
         .connect(testUser)
-        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay);
+        .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       const MaliciousReceiver = await ethers.getContractFactory(
         "MaliciousReceiver"
@@ -1510,6 +1588,30 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       await expect(
         gaslessRouter.connect(testUser).claimCommission()
       ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("should revert when deadline has passed", async function () {
+      const { gaslessRouter, testToken, testUser } = await loadFixture(
+          gaslessSwapRouterAddTokenFixture
+      );
+      const swapAmount = parseEther("1.0");
+      await testToken
+          .connect(testUser)
+          .approve(gaslessRouter.address, swapAmount);
+  
+      const pastDeadline = Math.floor(Date.now() / 1000) - 60;
+  
+      await expect(
+          gaslessRouter
+              .connect(testUser)
+              .swapForGas(
+                  testToken.address,
+                  swapAmount,
+                  parseEther("0.5"),
+                  parseEther("0.1"),
+                  pastDeadline
+              )
+      ).to.be.revertedWith("UniswapV2Router: EXPIRED");
     });
   });
 

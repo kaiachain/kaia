@@ -104,7 +104,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         emit CommissionRateUpdated(oldRate, _commissionRate);
     }
 
-    function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay) external override {
+    function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay, uint256 deadline) external override {
         // R2: Token is whitelisted and has a corresponding DEX info
         require(isTokenSupported(token), "TokenNotSupported");
 
@@ -134,7 +134,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
             minAmountOut,
             path,
             address(this),
-            block.timestamp + 300
+            deadline
         );
 
         uint256 receivedAmount = amounts[1];
