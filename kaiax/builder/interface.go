@@ -42,6 +42,7 @@ type TxBundlingModule interface {
 
 	// GetMaxBundleSize returns the maximum number of transactions that can be bundled.
 	// if zero or minus value is returned, it means no limit.
+	// this limitation works properly only when a module bundles only txs by the same sender.
 	GetMaxBundleSize() int
 }
 
