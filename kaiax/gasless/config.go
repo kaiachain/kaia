@@ -26,21 +26,21 @@ var (
 		Name:     "gasless.allowed-tokens",
 		Usage:    "allow token addresses for gasless module, allow all tokens if all",
 		Value:    cli.NewStringSlice("all"),
-		Aliases:  []string{"genesis.module.gasless.allowed-tokens"},
+		Aliases:  []string{"kaiax.module.gasless.allowed-tokens"},
 		Category: "KAIAX",
 	}
 	DisableFlag = &cli.BoolFlag{
 		Name:     "gasless.disable",
 		Usage:    "disable gasless module",
 		Value:    false,
-		Aliases:  []string{"genesis.module.gasless.disable"},
+		Aliases:  []string{"kaiax.module.gasless.disable"},
 		Category: "KAIAX",
 	}
 	MaxGaslessBundleSizeFlag = &cli.IntFlag{
 		Name:     "gasless.max-gasless-bundle-size",
 		Usage:    "max size of gasless bundle, default value if 0, no limit if minus value",
 		Value:    100,
-		Aliases:  []string{"genesis.module.gasless.max-gasless-bundle-size"},
+		Aliases:  []string{"kaiax.module.gasless.max-gasless-bundle-size"},
 		Category: "KAIAX",
 	}
 )
