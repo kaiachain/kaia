@@ -686,7 +686,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name:          "Above max bundle size limit",
+			name:          "Above max bundle size limit with ready txs",
 			maxBundleSize: 2,
 			knownTxs: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
