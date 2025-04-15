@@ -663,7 +663,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 					time: now,
 				},
 			},
-			readyTxs:       []*types.Transaction{createTestTransaction(0)},
+			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
 			expectedResult: true,
 		},
 		{
@@ -702,7 +702,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 					time: now,
 				},
 			},
-			readyTxs:       []*types.Transaction{createTestTransaction(0)},
+			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
 			expectedResult: true,
 		},
 		{
