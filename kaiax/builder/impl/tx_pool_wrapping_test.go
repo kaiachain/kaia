@@ -25,7 +25,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/params"
@@ -610,6 +609,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 		name           string
 		maxBundleSize  int
 		knownTxs       map[common.Hash]txAndTime
+		readyTxs       []*types.Transaction
 		expectedResult bool
 	}{
 		{
@@ -651,6 +651,22 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 			expectedResult: false,
 		},
 		{
+			name:          "At max bundle size limit with ready txs",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+			},
+			readyTxs:       []*types.Transaction{createTestTransaction(0)},
+			expectedResult: true,
+		},
+		{
 			name:          "Above max bundle size limit",
 			maxBundleSize: 2,
 			knownTxs: map[common.Hash]txAndTime{
@@ -668,6 +684,26 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 				},
 			},
 			expectedResult: false,
+		},
+		{
+			name:          "Above max bundle size limit",
+			maxBundleSize: 2,
+			knownTxs: map[common.Hash]txAndTime{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:   createTestTransaction(2),
+					time: now,
+				},
+			},
+			readyTxs:       []*types.Transaction{createTestTransaction(0)},
+			expectedResult: true,
 		},
 		{
 			name:          "With unexecutable transactions",
@@ -706,13 +742,6 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(true).AnyTimes()
 			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(tt.maxBundleSize).AnyTimes()
-			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), nil).DoAndReturn(func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
-				bundles := make([]*builder.Bundle, len(txs))
-				for i, tx := range txs {
-					bundles[i] = &builder.Bundle{BundleTxs: builder.NewTxOrGenList(tx)}
-				}
-				return bundles
-			}).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -726,7 +755,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 				}
 			}
 
-			result := builderModule.IsReady(map[uint64]*types.Transaction{0: testTx}, 0, nil)
+			result := builderModule.IsReady(map[uint64]*types.Transaction{0: testTx}, 0, tt.readyTxs)
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
