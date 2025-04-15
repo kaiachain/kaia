@@ -179,7 +179,8 @@ func TestGasless(t *testing.T) {
 	optsForSwap := bind.NewKeyedTransactor(accounts[0].Keys[0])
 	optsForSwap.GasLimit = 300000
 	optsForSwap.Nonce = big.NewInt(int64(accounts[0].Nonce))
-	swapTx, err := gsrContract.SwapForGas(optsForSwap, testTokenAddr, swapAmmount, minAmountOut, ammontRepay)
+	deadline := new(big.Int).Add(chain.CurrentBlock().Time(), big.NewInt(300))
+	swapTx, err := gsrContract.SwapForGas(optsForSwap, testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
 	if err != nil {
 		t.Fatal(err)
 	}

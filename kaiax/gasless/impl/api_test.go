@@ -123,6 +123,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		AmountIn:     big.NewInt(500000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(1021000),
+		Deadline:     big.NewInt(300),
 	})
 
 	// Create a swap transaction for testing
@@ -132,6 +133,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		AmountIn:     big.NewInt(500000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(2021000),
+		Deadline:     big.NewInt(300),
 	})
 	invalidTokenSwapTx := makeSwapTx(t, privKey, 1, SwapArgs{
 		Router:       routerAddr,
@@ -139,6 +141,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		AmountIn:     big.NewInt(500000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(1000000),
+		Deadline:     big.NewInt(300),
 	})
 	insufficientAmountSwapTx := makeSwapTx(t, privKey, 1, SwapArgs{
 		Router:       routerAddr,
@@ -146,6 +149,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		AmountIn:     big.NewInt(2000000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(1000000),
+		Deadline:     big.NewInt(300),
 	})
 	differentSenderSwapTx := makeSwapTx(t, otherPrivKey, 0, SwapArgs{
 		Router:       routerAddr,
@@ -153,6 +157,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		AmountIn:     big.NewInt(500000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(1000000),
+		Deadline:     big.NewInt(300),
 	})
 	// Define gas parameters
 	gasPrice := big.NewInt(1)

@@ -171,11 +171,12 @@ func makeSwapTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, swapArgs 
 		require.NoError(t, err)
 	}
 
-	data := append([]byte{}, common.Hex2Bytes("43bab9f7")...)
+	data := append([]byte{}, common.Hex2Bytes("80426901")...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.Token.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountIn.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.MinAmountOut.Bytes()), 32)...)
 	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.AmountRepay.Bytes()), 32)...)
+	data = append(data, common.Hex2BytesFixed(hex.EncodeToString(swapArgs.Deadline.Bytes()), 32)...)
 	swapTx := makeTx(t, privKey, nonce, common.HexToAddress("0x1234"), big.NewInt(0), 1000000, big.NewInt(1), data)
 
 	return swapTx
