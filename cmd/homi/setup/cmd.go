@@ -145,7 +145,7 @@ var HomiFlags = []cli.Flag{
 	// kaiax/gasless
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
-	altsrc.NewIntFlag(gasless.MaxGaslessBundleSizeFlag),
+	altsrc.NewIntFlag(gasless.MaxGaslessBundleNumFlag),
 }
 
 var SetupCommand = &cli.Command{

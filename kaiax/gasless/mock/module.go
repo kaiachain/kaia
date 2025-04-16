@@ -63,18 +63,18 @@ func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockGaslessModule)(nil).GetCheckBalance))
 }
 
-// GetMaxBundleSize mocks base method.
-func (m *MockGaslessModule) GetMaxBundleSize() uint {
+// GetMaxBundleNum mocks base method.
+func (m *MockGaslessModule) GetMaxBundleNum() uint {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaxBundleSize")
+	ret := m.ctrl.Call(m, "GetMaxBundleNum")
 	ret0, _ := ret[0].(uint)
 	return ret0
 }
 
-// GetMaxBundleSize indicates an expected call of GetMaxBundleSize.
-func (mr *MockGaslessModuleMockRecorder) GetMaxBundleSize() *gomock.Call {
+// GetMaxBundleNum indicates an expected call of GetMaxBundleNum.
+func (mr *MockGaslessModuleMockRecorder) GetMaxBundleNum() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleSize", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleSize))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleNum", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleNum))
 }
 
 // IsBundleTx mocks base method.

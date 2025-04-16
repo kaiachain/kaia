@@ -389,7 +389,7 @@ func TestIsReady_KnownTxs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(tt.isBundleTxResult).AnyTimes()
-			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(uint(math.MaxUint64)).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleNum().Return(uint(math.MaxUint64)).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -742,7 +742,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(true).AnyTimes()
-			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(tt.maxBundleSize).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleNum().Return(tt.maxBundleSize).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
