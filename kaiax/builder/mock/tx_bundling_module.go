@@ -50,10 +50,10 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 }
 
 // GetMaxBundleSize mocks base method.
-func (m *MockTxBundlingModule) GetMaxBundleSize() int {
+func (m *MockTxBundlingModule) GetMaxBundleSize() uint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMaxBundleSize")
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(uint)
 	return ret0
 }
 

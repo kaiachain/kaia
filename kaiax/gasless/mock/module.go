@@ -64,10 +64,10 @@ func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 }
 
 // GetMaxBundleSize mocks base method.
-func (m *MockGaslessModule) GetMaxBundleSize() int {
+func (m *MockGaslessModule) GetMaxBundleSize() uint {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMaxBundleSize")
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(uint)
 	return ret0
 }
 

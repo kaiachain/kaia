@@ -18,6 +18,7 @@ package impl
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -388,7 +389,7 @@ func TestIsReady_KnownTxs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(tt.isBundleTxResult).AnyTimes()
-			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(0).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleSize().Return(uint(math.MaxUint64)).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -607,22 +608,16 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		maxBundleSize  int
+		maxBundleSize  uint
 		knownTxs       map[common.Hash]txAndTime
 		readyTxs       []*types.Transaction
 		expectedResult bool
 	}{
 		{
-			name:           "No max bundle size limit with zero",
+			name:           "Max bundle size is zero",
 			maxBundleSize:  0,
 			knownTxs:       make(map[common.Hash]txAndTime),
-			expectedResult: true,
-		},
-		{
-			name:           "No max bundle size limit with minus value",
-			maxBundleSize:  -1,
-			knownTxs:       make(map[common.Hash]txAndTime),
-			expectedResult: true,
+			expectedResult: false,
 		},
 		{
 			name:          "Below max bundle size limit",
@@ -721,7 +716,7 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 			expectedResult: true,
 		},
 		{
-			name:          "known transaction",
+			name:          "Known transaction",
 			maxBundleSize: 2,
 			knownTxs: map[common.Hash]txAndTime{
 				createTestTransaction(0).Hash(): {
@@ -733,6 +728,12 @@ func TestIsReady_MaxBundleSize(t *testing.T) {
 					time: now,
 				},
 			},
+			expectedResult: true,
+		},
+		{
+			name:           "No max bundle size limit",
+			maxBundleSize:  math.MaxUint64,
+			knownTxs:       make(map[common.Hash]txAndTime),
 			expectedResult: true,
 		},
 	}

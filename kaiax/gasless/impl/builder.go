@@ -71,6 +71,6 @@ func (g *GaslessModule) IsBundleTx(tx *types.Transaction) bool {
 	return g.IsModuleTx(tx)
 }
 
-func (g *GaslessModule) GetMaxBundleSize() int {
+func (g *GaslessModule) GetMaxBundleSize() uint {
 	return g.GaslessConfig.MaxGaslessBundleSize
 }

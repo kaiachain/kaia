@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -87,8 +88,9 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 	}
 	if isReady && b.txBundlingModule.IsBundleTx(tx) {
 		if _, ok := b.knownTxs[tx.Hash()]; !ok {
-			if maxBundleSize := b.txBundlingModule.GetMaxBundleSize(); maxBundleSize > 0 {
-				numExecutable := 0
+			// if maxBundleSize is max uint64, it means no limit
+			if maxBundleSize := b.txBundlingModule.GetMaxBundleSize(); maxBundleSize != math.MaxUint64 {
+				numExecutable := uint(0)
 				for _, tx := range b.knownTxs {
 					if !tx.tx.IsMarkedUnexecutable() {
 						numExecutable++

@@ -17,6 +17,8 @@
 package gasless
 
 import (
+	"math"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/urfave/cli/v2"
 )
@@ -49,7 +51,7 @@ type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
 	AllowedTokens        []common.Address `toml:",omitempty"`
 	Disable              bool
-	MaxGaslessBundleSize int
+	MaxGaslessBundleSize uint
 }
 
 func DefaultGaslessConfig() *GaslessConfig {
@@ -74,7 +76,10 @@ func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
 
 	cfg.Disable = ctx.Bool(DisableFlag.Name)
 
-	if size := ctx.Int(MaxGaslessBundleSizeFlag.Name); size != 0 {
-		cfg.MaxGaslessBundleSize = size
+	// use default value if size is zero
+	if size := ctx.Int(MaxGaslessBundleSizeFlag.Name); size > 0 {
+		cfg.MaxGaslessBundleSize = uint(size)
+	} else {
+		cfg.MaxGaslessBundleSize = math.MaxUint64
 	}
 }
