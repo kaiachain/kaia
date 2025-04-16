@@ -530,6 +530,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
+
+	for _, module := range pool.modules {
+		module.PostReset(oldHead, newHead)
+	}
 }
 
 // Stop terminates the transaction pool.

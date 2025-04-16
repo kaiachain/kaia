@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/kaiachain/kaia/blockchain/types"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -47,74 +46,6 @@ func (m *MockBuilderModule) APIs() []rpc.API {
 func (mr *MockBuilderModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockBuilderModule)(nil).APIs))
-}
-
-// GetCheckBalance mocks base method.
-func (m *MockBuilderModule) GetCheckBalance() func(*types.Transaction) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCheckBalance")
-	ret0, _ := ret[0].(func(*types.Transaction) error)
-	return ret0
-}
-
-// GetCheckBalance indicates an expected call of GetCheckBalance.
-func (mr *MockBuilderModuleMockRecorder) GetCheckBalance() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockBuilderModule)(nil).GetCheckBalance))
-}
-
-// IsModuleTx mocks base method.
-func (m *MockBuilderModule) IsModuleTx(arg0 *types.Transaction) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsModuleTx", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsModuleTx indicates an expected call of IsModuleTx.
-func (mr *MockBuilderModuleMockRecorder) IsModuleTx(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsModuleTx", reflect.TypeOf((*MockBuilderModule)(nil).IsModuleTx), arg0)
-}
-
-// IsReady mocks base method.
-func (m *MockBuilderModule) IsReady(arg0 map[uint64]*types.Transaction, arg1 uint64, arg2 types.Transactions) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsReady", arg0, arg1, arg2)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsReady indicates an expected call of IsReady.
-func (mr *MockBuilderModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReady", reflect.TypeOf((*MockBuilderModule)(nil).IsReady), arg0, arg1, arg2)
-}
-
-// PreAddTx mocks base method.
-func (m *MockBuilderModule) PreAddTx(arg0 *types.Transaction, arg1 bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreAddTx", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PreAddTx indicates an expected call of PreAddTx.
-func (mr *MockBuilderModuleMockRecorder) PreAddTx(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAddTx", reflect.TypeOf((*MockBuilderModule)(nil).PreAddTx), arg0, arg1)
-}
-
-// PreReset mocks base method.
-func (m *MockBuilderModule) PreReset(arg0, arg1 *types.Header) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PreReset", arg0, arg1)
-}
-
-// PreReset indicates an expected call of PreReset.
-func (mr *MockBuilderModuleMockRecorder) PreReset(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreReset", reflect.TypeOf((*MockBuilderModule)(nil).PreReset), arg0, arg1)
 }
 
 // Start mocks base method.
