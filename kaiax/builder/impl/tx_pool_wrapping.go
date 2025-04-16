@@ -88,16 +88,16 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 	if isReady && b.txBundlingModule.IsBundleTx(tx) {
 		if _, ok := b.knownTxs[tx.Hash()]; !ok {
 			if maxBundleSize := b.txBundlingModule.GetMaxBundleSize(); maxBundleSize > 0 {
-				flattened := make([]*types.Transaction, 0, len(b.knownTxs))
+				numExecutable := 0
 				for _, tx := range b.knownTxs {
 					if !tx.tx.IsMarkedUnexecutable() {
-						flattened = append(flattened, tx.tx)
+						numExecutable++
 					}
 				}
 				// it's too much cost to check the size of the bundle here, so we just check the number of txs
 				// if the number of txs is greater than the max bundle size, we reject the tx
 				// but if there are ready txs, we should add the tx to the pool to complete the bundle
-				if len(flattened) >= maxBundleSize && len(ready) == 0 {
+				if numExecutable >= maxBundleSize && len(ready) == 0 {
 					logger.Info("Pending tx pool is full of bundle txs, rejecting tx", "maxBundleSize", maxBundleSize)
 					return false
 				}
