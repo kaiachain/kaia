@@ -88,11 +88,13 @@ func (a *AuctionModule) IsDisabled() bool {
 }
 
 func (a *AuctionModule) Start() error {
+	logger.Info("AuctionModule started")
 	a.bidPool.start()
 	return nil
 }
 
 func (a *AuctionModule) Stop() {
+	logger.Info("AuctionModule stopped")
 	// Clear the existing auction pool.
 	a.bidPool.stop()
 }
