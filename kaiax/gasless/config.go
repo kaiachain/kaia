@@ -38,7 +38,7 @@ var (
 	}
 	MaxGaslessBundleSizeFlag = &cli.IntFlag{
 		Name:     "gasless.max-gasless-bundle-size",
-		Usage:    "max size of gasless bundle, default value if 0, no limit if minus value",
+		Usage:    "max size of gasless bundle. Default value is 0. No limit if negative value",
 		Value:    100,
 		Aliases:  []string{"kaiax.module.gasless.max-gasless-bundle-size"},
 		Category: "KAIAX",
