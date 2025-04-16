@@ -54,6 +54,7 @@ type BidPool struct {
 	wg         sync.WaitGroup
 
 	running uint32
+	stopped uint32
 }
 
 func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCaller) *BidPool {
@@ -70,6 +71,7 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 		bidMsgCh:     make(chan *auction.Bid, bidChSize),
 		newBidCh:     make(chan *auction.Bid, bidChSize),
 		running:      0, // not running yet
+		stopped:      0, // not stopped
 	}
 
 	return bp
@@ -87,6 +89,13 @@ func (bp *BidPool) start() {
 	// Start the bid pool.
 	// running will be set 1 once it's ready.
 
+	// If channels are closed, recreate them
+	if atomic.LoadUint32(&bp.stopped) == 1 {
+		bp.bidMsgCh = make(chan *auction.Bid, bidChSize)
+		bp.newBidCh = make(chan *auction.Bid, bidChSize)
+		atomic.StoreUint32(&bp.stopped, 0)
+	}
+
 	bp.wg.Add(2)
 	go bp.handleBidMsg()
 	go bp.handleNewBid()
@@ -97,8 +106,11 @@ func (bp *BidPool) stop() {
 	atomic.CompareAndSwapUint32(&bp.running, 1, 0)
 	bp.clearBidPool()
 
-	close(bp.bidMsgCh)
-	close(bp.newBidCh)
+	// Only close channels if they haven't been closed before
+	if atomic.CompareAndSwapUint32(&bp.stopped, 0, 1) {
+		close(bp.bidMsgCh)
+		close(bp.newBidCh)
+	}
 	bp.wg.Wait()
 }
 
