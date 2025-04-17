@@ -129,6 +129,7 @@ type GaslessInfoResult struct {
 	IsDisabled    bool             `json:"isDisabled"`
 	SwapRouter    common.Address   `json:"swapRouter"`
 	AllowedTokens []common.Address `json:"allowedTokens"`
+	MaxBundleTxs  uint             `json:"maxBundleTxs"`
 }
 
 func (s *GaslessAPI) GaslessInfo() *GaslessInfoResult {
@@ -140,5 +141,6 @@ func (s *GaslessAPI) GaslessInfo() *GaslessInfoResult {
 		IsDisabled:    s.b.IsDisabled(),
 		SwapRouter:    s.b.swapRouter,
 		AllowedTokens: at,
+		MaxBundleTxs:  s.b.GetMaxBundleTxsInPending(),
 	}
 }
