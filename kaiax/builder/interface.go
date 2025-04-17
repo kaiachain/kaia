@@ -40,10 +40,10 @@ type TxBundlingModule interface {
 	// IsBundleTx returns true if the tx is a potential bundle tx.
 	IsBundleTx(tx *types.Transaction) bool
 
-	// GetMaxBundleNum returns the maximum number of transactions that can be bundled.
+	// GetMaxBundleTxsInPending returns the maximum number of transactions that can be bundled in pending.
 	// if zero or minus value is returned, it means no limit.
-	// this limitation works properly only when a module bundles only txs by the same sender.
-	GetMaxBundleNum() uint
+	// this limitation works properly only when a module bundles only sequential txs by the same sender.
+	GetMaxBundleTxsInPending() uint
 }
 
 // Any component or module that accomodate tx bundling modules.

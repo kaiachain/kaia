@@ -63,18 +63,18 @@ func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockGaslessModule)(nil).GetCheckBalance))
 }
 
-// GetMaxBundleNum mocks base method.
-func (m *MockGaslessModule) GetMaxBundleNum() uint {
+// GetMaxBundleTxsInPending mocks base method.
+func (m *MockGaslessModule) GetMaxBundleTxsInPending() uint {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaxBundleNum")
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInPending")
 	ret0, _ := ret[0].(uint)
 	return ret0
 }
 
-// GetMaxBundleNum indicates an expected call of GetMaxBundleNum.
-func (mr *MockGaslessModuleMockRecorder) GetMaxBundleNum() *gomock.Call {
+// GetMaxBundleTxsInPending indicates an expected call of GetMaxBundleTxsInPending.
+func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleNum", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleNum))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInPending))
 }
 
 // IsBundleTx mocks base method.

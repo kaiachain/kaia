@@ -99,7 +99,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		if next > 0 {
 			preReadyTx = txs[next-1]
 		}
-		if b.txBundlingModule.GetMaxBundleNum() != math.MaxUint64 && !b.txBundlingModule.IsBundleTx(preReadyTx) {
+		if b.txBundlingModule.GetMaxBundleTxsInPending() != math.MaxUint64 && !b.txBundlingModule.IsBundleTx(preReadyTx) {
 			numExecutable := uint(b.knownTxs.numExecutable())
 
 			numSeqTxs := uint(1)
@@ -114,7 +114,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			}
 
 			// false if there is possibility of exceeding max bundle tx num
-			if numExecutable+numSeqTxs > b.txBundlingModule.GetMaxBundleNum() {
+			if numExecutable+numSeqTxs > b.txBundlingModule.GetMaxBundleTxsInPending() {
 				return false
 			}
 		}

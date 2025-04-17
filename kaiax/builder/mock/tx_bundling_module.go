@@ -49,18 +49,18 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
-// GetMaxBundleNum mocks base method.
-func (m *MockTxBundlingModule) GetMaxBundleNum() uint {
+// GetMaxBundleTxsInPending mocks base method.
+func (m *MockTxBundlingModule) GetMaxBundleTxsInPending() uint {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaxBundleNum")
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInPending")
 	ret0, _ := ret[0].(uint)
 	return ret0
 }
 
-// GetMaxBundleNum indicates an expected call of GetMaxBundleNum.
-func (mr *MockTxBundlingModuleMockRecorder) GetMaxBundleNum() *gomock.Call {
+// GetMaxBundleTxsInPending indicates an expected call of GetMaxBundleTxsInPending.
+func (mr *MockTxBundlingModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleNum", reflect.TypeOf((*MockTxBundlingModule)(nil).GetMaxBundleNum))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockTxBundlingModule)(nil).GetMaxBundleTxsInPending))
 }
 
 // IsBundleTx mocks base method.

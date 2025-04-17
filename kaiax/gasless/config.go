@@ -38,27 +38,27 @@ var (
 		Aliases:  []string{"kaiax.module.gasless.disable"},
 		Category: "KAIAX",
 	}
-	MaxGaslessBundleNumFlag = &cli.IntFlag{
-		Name:     "gasless.max-gasless-bundle-num",
-		Usage:    "max number of gasless bundle. Default value is 100. No limit if negative value",
+	MaxBundleTxsInPendingFlag = &cli.IntFlag{
+		Name:     "gasless.max-bundle-txs-in-pending",
+		Usage:    "max number of gasless bundle txs in pending queue. Default value is 100. No limit if negative value",
 		Value:    100,
-		Aliases:  []string{"kaiax.module.gasless.max-gasless-bundle-num"},
+		Aliases:  []string{"kaiax.module.gasless.max-bundle-txs-in-pending"},
 		Category: "KAIAX",
 	}
 )
 
 type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
-	AllowedTokens       []common.Address `toml:",omitempty"`
-	Disable             bool
-	MaxGaslessBundleNum uint
+	AllowedTokens         []common.Address `toml:",omitempty"`
+	Disable               bool
+	MaxBundleTxsInPending uint
 }
 
 func DefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
-		AllowedTokens:       nil,
-		Disable:             false,
-		MaxGaslessBundleNum: 100,
+		AllowedTokens:         nil,
+		Disable:               false,
+		MaxBundleTxsInPending: 100,
 	}
 }
 
@@ -77,9 +77,9 @@ func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
 	cfg.Disable = ctx.Bool(DisableFlag.Name)
 
 	// use default value if size is zero
-	if size := ctx.Int(MaxGaslessBundleNumFlag.Name); size > 0 {
-		cfg.MaxGaslessBundleNum = uint(size)
+	if size := ctx.Int(MaxBundleTxsInPendingFlag.Name); size > 0 {
+		cfg.MaxBundleTxsInPending = uint(size)
 	} else {
-		cfg.MaxGaslessBundleNum = math.MaxUint64
+		cfg.MaxBundleTxsInPending = math.MaxUint64
 	}
 }
