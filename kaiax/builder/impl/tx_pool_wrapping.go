@@ -37,9 +37,10 @@ type BuilderWrappingModule struct {
 	mu               sync.RWMutex
 }
 
-func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *BuilderWrappingModule {
+func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule, txPool kaiax.TxPoolForCaller) *BuilderWrappingModule {
 	txPoolModule, _ := txBundlingModule.(kaiax.TxPoolModule)
 	return &BuilderWrappingModule{
+		txPool:           txPool,
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
 		knownTxs:         make(map[common.Hash]txAndTime),
@@ -83,35 +84,55 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	tx, isReady := txs[next]
-	if b.txPoolModule != nil {
-		isReady = b.txPoolModule.IsReady(txs, next, ready)
+	// false if tx is not in txs
+	tx, ok := txs[next]
+	if !ok {
+		return false
 	}
-	if isReady && b.txBundlingModule.IsBundleTx(tx) {
-		if _, ok := b.knownTxs[tx.Hash()]; !ok {
-			// if maxBundleSize is max uint64, it means no limit
-			if maxBundleNum := b.txBundlingModule.GetMaxBundleNum(); maxBundleNum != math.MaxUint64 {
-				numExecutable := uint(0)
-				for _, txAndTime := range b.knownTxs {
-					if !txAndTime.tx.IsMarkedUnexecutable() && !txAndTime.isDemoted {
-						numExecutable++
-					}
-				}
-				// it's too much cost to check the size of the bundle here, so we just check the number of txs
-				// if the number of txs is greater than the max bundle size, we reject the tx
-				// but if there are ready txs, we should add the tx to the pool to complete the bundle
-				if numExecutable >= maxBundleNum && len(ready) == 0 {
-					logger.Info("Pending tx pool is full of bundle txs, rejecting tx", "maxBundleNum", maxBundleNum)
-					return false
+
+	// false if tx is not ready in child module
+	if b.txPoolModule != nil && !b.txPoolModule.IsReady(txs, next, ready) {
+		return false
+	}
+
+	// add tx to knownTxs if it is a bundle tx and not already in knownTxs
+	if _, ok := b.knownTxs[tx.Hash()]; b.txBundlingModule.IsBundleTx(tx) && !ok {
+		var preReadyTx *types.Transaction
+		if next > 0 {
+			preReadyTx = txs[next-1]
+		}
+		if b.txBundlingModule.GetMaxBundleNum() != math.MaxUint64 && !b.txBundlingModule.IsBundleTx(preReadyTx) {
+			numExecutable := uint(0)
+			for _, txAndTime := range b.knownTxs {
+				if !txAndTime.tx.IsMarkedUnexecutable() && !txAndTime.isDemoted {
+					numExecutable++
 				}
 			}
-			b.knownTxs[tx.Hash()] = txAndTime{
-				tx:   tx,
-				time: time.Now(),
+
+			numSeqTxs := uint(1)
+			for i := next + 1; true; i++ {
+				if _, ok := txs[i]; !ok {
+					break
+				}
+				if !b.txBundlingModule.IsBundleTx(txs[i]) {
+					break
+				}
+				numSeqTxs++
+			}
+
+			// false if there is possibility of exceeding max bundle tx num
+			if numExecutable+numSeqTxs > b.txBundlingModule.GetMaxBundleNum() {
+				return false
 			}
 		}
+
+		b.knownTxs[tx.Hash()] = txAndTime{
+			tx:   tx,
+			time: time.Now(),
+		}
 	}
-	return isReady
+
+	return true
 }
 
 // PreReset is a wrapper function that removes timed out tx from the tx pool and knownTxs.
