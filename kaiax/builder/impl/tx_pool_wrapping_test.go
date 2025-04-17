@@ -32,6 +32,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//go:generate mockgen -source=../tx_pool.go -destination=../mock/tx_pool.go -package=mock_kaiax TxPool
+
 func init() {
 	blockchain.InitDeriveSha(params.TestChainConfig)
 }
@@ -417,6 +419,252 @@ func TestIsReady_KnownTxs(t *testing.T) {
 	}
 }
 
+func TestIsReady_MaxBundleTxs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	now := time.Now()
+	unexecutable := now.Add(time.Hour)
+	testTx := createTestTransaction(900)
+
+	// we assume that tx.Nonce() < 1000 is a bundle tx
+	tests := []struct {
+		name           string
+		maxBundleTxs   uint
+		knownTxs       map[common.Hash]knownTx
+		additionalTxs  map[uint64]*types.Transaction
+		readyTxs       []*types.Transaction
+		expectedResult bool
+	}{
+		{
+			name:           "Max bundle txs is zero",
+			maxBundleTxs:   0,
+			knownTxs:       make(map[common.Hash]knownTx),
+			expectedResult: false,
+		},
+		{
+			name:         "Below max bundle txs limit",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: time.Now(),
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:         "At max bundle txs limit",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:         "At max bundle txs limit with ready bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+			},
+			readyTxs:       []*types.Transaction{createTestTransaction(1)},
+			expectedResult: true,
+		},
+		{
+			name:         "At max bundle txs limit with ready non-bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+			},
+			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
+			expectedResult: false,
+		},
+		{
+			name:         "Above max bundle txs limit",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:   createTestTransaction(2),
+					time: now,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name:         "Above max bundle txs limit with ready txs",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: now,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:   createTestTransaction(2),
+					time: now,
+				},
+			},
+			readyTxs:       []*types.Transaction{createTestTransaction(2)},
+			expectedResult: true,
+		},
+		{
+			name:         "KnownTxs with unexecutable transactions",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:   createTestTransaction(1),
+					time: unexecutable,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:         "KnownTxs with demoted transactions",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:        createTestTransaction(1),
+					time:      now,
+					isDemoted: true,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:         "Additional bundle tx within limit",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+			},
+			additionalTxs:  map[uint64]*types.Transaction{902: createTestTransaction(902)},
+			expectedResult: true,
+		},
+		{
+			name:         "Additional non-bundle tx within limit",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+			},
+			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(1000)},
+			expectedResult: true,
+		},
+		{
+			name:         "Multiple additional txs with non-bundle tx",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+			},
+			additionalTxs:  map[uint64]*types.Transaction{899: createTestTransaction(899), 901: createTestTransaction(1000)},
+			expectedResult: true,
+		},
+		{
+			name:         "Known transaction in knownTxs",
+			maxBundleTxs: 2,
+			knownTxs: map[common.Hash]knownTx{
+				createTestTransaction(0).Hash(): {
+					tx:   createTestTransaction(0),
+					time: now,
+				},
+				testTx.Hash(): {
+					tx:   testTx,
+					time: now,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name:           "No max bundle txs limit",
+			maxBundleTxs:   math.MaxUint64,
+			knownTxs:       make(map[common.Hash]knownTx),
+			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(901)},
+			expectedResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockIsBundleTx := mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).DoAndReturn(func(tx *types.Transaction) bool {
+				return !(tx == nil || tx.Nonce() >= 1000)
+			}).Times(1)
+			if tt.maxBundleTxs != math.MaxUint64 {
+				mockIsBundleTx.AnyTimes()
+			}
+			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInPending().Return(tt.maxBundleTxs).AnyTimes()
+
+			builderModule := &BuilderWrappingModule{
+				txBundlingModule: mockTxBundlingModule,
+				knownTxs:         copyknownTxMap(tt.knownTxs),
+			}
+
+			// Mark some transactions as unexecutable to test that they are not counted
+			for _, knownTx := range tt.knownTxs {
+				if knownTx.time.After(now) {
+					knownTx.tx.MarkUnexecutable(true)
+				}
+			}
+
+			txs := map[uint64]*types.Transaction{
+				900: testTx,
+			}
+			for nonce, tx := range tt.additionalTxs {
+				txs[nonce] = tx
+			}
+			result := builderModule.IsReady(txs, 900, tt.readyTxs)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
+
 func TestIsReady_TxPoolModule(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -598,166 +846,145 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 	}
 }
 
-func TestIsReady_MaxBundleSize(t *testing.T) {
+func TestPostReset(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	now := time.Now()
-	unexecutable := now.Add(time.Hour)
-	testTx := createTestTransaction(999)
-
 	tests := []struct {
-		name           string
-		maxBundleSize  uint
-		knownTxs       map[common.Hash]knownTx
-		readyTxs       []*types.Transaction
-		expectedResult bool
+		name            string
+		knownTxs        map[common.Hash]knownTx
+		pendingTxs      map[common.Address]types.Transactions
+		pendingErr      bool
+		expectedDemoted map[common.Hash]bool
 	}{
 		{
-			name:           "Max bundle size is zero",
-			maxBundleSize:  0,
-			knownTxs:       make(map[common.Hash]knownTx),
-			expectedResult: false,
+			name:            "No known transactions",
+			knownTxs:        make(map[common.Hash]knownTx),
+			pendingTxs:      make(map[common.Address]types.Transactions),
+			expectedDemoted: make(map[common.Hash]bool),
 		},
 		{
-			name:          "Below max bundle size limit",
-			maxBundleSize: 2,
+			name: "All known transactions in pending",
 			knownTxs: map[common.Hash]knownTx{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: time.Now(),
-				},
-			},
-			expectedResult: true,
-		},
-		{
-			name:          "At max bundle size limit",
-			maxBundleSize: 2,
-			knownTxs: map[common.Hash]knownTx{
-				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx: createTestTransaction(0),
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx: createTestTransaction(1),
 				},
 			},
-			expectedResult: false,
-		},
-		{
-			name:          "At max bundle size limit with ready txs",
-			maxBundleSize: 2,
-			knownTxs: map[common.Hash]knownTx{
-				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
-				},
-				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+			pendingTxs: map[common.Address]types.Transactions{
+				common.HexToAddress("0x1"): {
+					createTestTransaction(0),
+					createTestTransaction(1),
 				},
 			},
-			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
-			expectedResult: true,
+			expectedDemoted: make(map[common.Hash]bool),
 		},
 		{
-			name:          "Above max bundle size limit",
-			maxBundleSize: 2,
+			name: "Some known transactions not in pending",
 			knownTxs: map[common.Hash]knownTx{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx: createTestTransaction(0),
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx: createTestTransaction(1),
 				},
 				createTestTransaction(2).Hash(): {
-					tx:   createTestTransaction(2),
-					time: now,
+					tx: createTestTransaction(2),
 				},
 			},
-			expectedResult: false,
+			pendingTxs: map[common.Address]types.Transactions{
+				common.HexToAddress("0x1"): {
+					createTestTransaction(0),
+					createTestTransaction(2),
+				},
+			},
+			expectedDemoted: map[common.Hash]bool{
+				createTestTransaction(1).Hash(): true,
+			},
 		},
 		{
-			name:          "Above max bundle size limit with ready txs",
-			maxBundleSize: 2,
+			name: "No known transactions in pending",
 			knownTxs: map[common.Hash]knownTx{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx: createTestTransaction(0),
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
-				},
-				createTestTransaction(2).Hash(): {
-					tx:   createTestTransaction(2),
-					time: now,
+					tx: createTestTransaction(1),
 				},
 			},
-			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
-			expectedResult: true,
+			pendingTxs: map[common.Address]types.Transactions{
+				common.HexToAddress("0x1"): {
+					createTestTransaction(2),
+					createTestTransaction(3),
+				},
+			},
+			expectedDemoted: map[common.Hash]bool{
+				createTestTransaction(0).Hash(): true,
+				createTestTransaction(1).Hash(): true,
+			},
 		},
 		{
-			name:          "With unexecutable transactions",
-			maxBundleSize: 2,
+			name: "Already demoted transactions",
 			knownTxs: map[common.Hash]knownTx{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:        createTestTransaction(0),
+					isDemoted: true,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: unexecutable,
+					tx: createTestTransaction(1),
 				},
 			},
-			expectedResult: true,
+			pendingTxs: map[common.Address]types.Transactions{
+				common.HexToAddress("0x1"): {
+					createTestTransaction(1),
+				},
+			},
+			expectedDemoted: map[common.Hash]bool{
+				createTestTransaction(0).Hash(): true,
+			},
 		},
 		{
-			name:          "Known transaction",
-			maxBundleSize: 2,
+			name: "Pending error",
 			knownTxs: map[common.Hash]knownTx{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx: createTestTransaction(0),
 				},
-				testTx.Hash(): {
-					tx:   testTx,
-					time: now,
+				createTestTransaction(1).Hash(): {
+					tx: createTestTransaction(1),
 				},
 			},
-			expectedResult: true,
-		},
-		{
-			name:           "No max bundle size limit",
-			maxBundleSize:  math.MaxUint64,
-			knownTxs:       make(map[common.Hash]knownTx),
-			expectedResult: true,
+			pendingTxs:      make(map[common.Address]types.Transactions),
+			pendingErr:      true,
+			expectedDemoted: map[common.Hash]bool{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(true).AnyTimes()
-			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInPending().Return(tt.maxBundleSize).AnyTimes()
+			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
 				knownTxs:         copyknownTxMap(tt.knownTxs),
+				txPool:           mockTxPool,
 			}
 
-			// Mark some transactions as unexecutable to test that they are not counted
-			for _, knownTx := range tt.knownTxs {
-				if knownTx.time.After(now) {
-					knownTx.tx.MarkUnexecutable(true)
-				}
+			if tt.pendingErr {
+				mockTxPool.EXPECT().PendingUnlocked().Return(tt.pendingTxs, errors.New("failed to get pending transactions"))
+			} else {
+				mockTxPool.EXPECT().PendingUnlocked().Return(tt.pendingTxs, nil)
 			}
 
-			result := builderModule.IsReady(map[uint64]*types.Transaction{0: testTx}, 0, tt.readyTxs)
-			assert.Equal(t, tt.expectedResult, result)
+			builderModule.PostReset(nil, nil)
+
+			// Verify that transactions are marked as demoted correctly
+			for hash, knownTx := range builderModule.knownTxs {
+				expectedDemoted := tt.expectedDemoted[hash]
+				assert.Equal(t, expectedDemoted, knownTx.isDemoted, "Transaction %x demoted state mismatch", hash)
+			}
 		})
 	}
 }

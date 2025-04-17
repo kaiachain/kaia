@@ -30,6 +30,9 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 }
 
 func (g *GaslessModule) IsModuleTx(tx *types.Transaction) bool {
+	if tx == nil {
+		return false
+	}
 	return g.IsApproveTx(tx) || g.IsSwapTx(tx)
 }
 

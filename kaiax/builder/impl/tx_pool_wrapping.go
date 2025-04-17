@@ -95,11 +95,9 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 
 	// add tx to knownTxs if it is a bundle tx and not in knownTxs
 	if b.txBundlingModule.IsBundleTx(tx) && !b.knownTxs.has(tx.Hash()) {
-		var preReadyTx *types.Transaction
-		if next > 0 {
-			preReadyTx = txs[next-1]
-		}
-		if b.txBundlingModule.GetMaxBundleTxsInPending() != math.MaxUint64 && !b.txBundlingModule.IsBundleTx(preReadyTx) {
+		isNotBundleTxTail := len(ready) == 0 || !b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
+		maxBundleTxsInPending := b.txBundlingModule.GetMaxBundleTxsInPending()
+		if maxBundleTxsInPending != math.MaxUint64 && isNotBundleTxTail {
 			numExecutable := uint(b.knownTxs.numExecutable())
 
 			numSeqTxs := uint(1)
@@ -114,7 +112,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			}
 
 			// false if there is possibility of exceeding max bundle tx num
-			if numExecutable+numSeqTxs > b.txBundlingModule.GetMaxBundleTxsInPending() {
+			if numExecutable+numSeqTxs > maxBundleTxsInPending {
+				logger.Info("Exceed max bundle tx num", "numExecutable", "maxBundleTxsInPending", maxBundleTxsInPending)
 				return false
 			}
 		}
