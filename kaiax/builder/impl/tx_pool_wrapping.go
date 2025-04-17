@@ -19,7 +19,6 @@ package impl
 import (
 	"math"
 	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -33,7 +32,7 @@ type BuilderWrappingModule struct {
 	txPool           kaiax.TxPoolForCaller
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
-	knownTxs         map[common.Hash]txAndTime
+	knownTxs         knownTxs
 	mu               sync.RWMutex
 }
 
@@ -43,7 +42,7 @@ func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule, txPool 
 		txPool:           txPool,
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
-		knownTxs:         make(map[common.Hash]txAndTime),
+		knownTxs:         knownTxs{},
 		mu:               sync.RWMutex{},
 	}
 }
@@ -53,8 +52,7 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	txTime, ok := b.knownTxs[tx.Hash()]
-	if ok && time.Since(txTime.time) < KnownTxTimeout {
+	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedTime() < KnownTxTimeout {
 		return ErrUnableToAddKnownBundleTx
 	}
 	if b.txPoolModule != nil {
@@ -95,19 +93,14 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		return false
 	}
 
-	// add tx to knownTxs if it is a bundle tx and not already in knownTxs
-	if _, ok := b.knownTxs[tx.Hash()]; b.txBundlingModule.IsBundleTx(tx) && !ok {
+	// add tx to knownTxs if it is a bundle tx and not in knownTxs
+	if b.txBundlingModule.IsBundleTx(tx) && !b.knownTxs.has(tx.Hash()) {
 		var preReadyTx *types.Transaction
 		if next > 0 {
 			preReadyTx = txs[next-1]
 		}
 		if b.txBundlingModule.GetMaxBundleNum() != math.MaxUint64 && !b.txBundlingModule.IsBundleTx(preReadyTx) {
-			numExecutable := uint(0)
-			for _, txAndTime := range b.knownTxs {
-				if !txAndTime.tx.IsMarkedUnexecutable() && !txAndTime.isDemoted {
-					numExecutable++
-				}
-			}
+			numExecutable := uint(b.knownTxs.numExecutable())
 
 			numSeqTxs := uint(1)
 			for i := next + 1; true; i++ {
@@ -126,10 +119,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			}
 		}
 
-		b.knownTxs[tx.Hash()] = txAndTime{
-			tx:   tx,
-			time: time.Now(),
-		}
+		b.knownTxs.add(tx)
 	}
 
 	return true
@@ -140,14 +130,14 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	for hash, txAndTime := range b.knownTxs {
+	for hash, knownTx := range b.knownTxs {
 		// remove pending timed out tx from tx pool
-		if time.Since(txAndTime.time) >= PendingTimeout {
-			b.knownTxs[hash].tx.MarkUnexecutable(true)
+		if knownTx.elapsedTime() >= PendingTimeout {
+			b.knownTxs.markUnexecutable(hash)
 		}
 		// remove known timed out tx from knownTxs
-		if time.Since(txAndTime.time) >= KnownTxTimeout {
-			delete(b.knownTxs, hash)
+		if knownTx.elapsedTime() >= KnownTxTimeout {
+			b.knownTxs.delete(hash)
 		}
 	}
 	if b.txPoolModule != nil {
@@ -170,11 +160,7 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
 	}
 	for hash := range b.knownTxs {
 		if _, ok := flattened[hash]; !ok {
-			b.knownTxs[hash] = txAndTime{
-				tx:        b.knownTxs[hash].tx,
-				time:      b.knownTxs[hash].time,
-				isDemoted: true,
-			}
+			b.knownTxs.markDemoted(hash)
 		}
 	}
 }
