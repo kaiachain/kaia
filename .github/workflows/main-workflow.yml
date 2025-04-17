@@ -1,10 +1,9 @@
 name: Main workflow
 
 on:
-  workflow_run:
-    workflows: ["Testing Workflow"]  
-    types:
-      - completed
+  push:
+    branches:
+      - test/github-action
 
 env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
@@ -14,12 +13,92 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
+  #Test
+  build:
+    uses: ./.github/workflows/test-excutor-template.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        make all
+
+  test-linter:
+    uses: ./.github/workflows/test-excutor-template.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        go run build/ci.go lint -v --new-from-rev=dev
+
+  test-networks:
+    uses: ./.github/workflows/test-excutor-template.yml
+    with:
+      test_command: |
+        git config --global --add safe.directory /__w/kaia/kaia
+        make test-networks
+
+  test-node:
+    uses: ./.github/workflows/test-excutor-template.yml
+    with:
+      test_command: make test-node
+
+  test-tests:
+    uses: ./.github/workflows/test-excutor-template.yml
+    with:
+      test_command: |
+        git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+        make test-tests
+
+  # test-rpc:
+  #   permissions: write-all
+  #   uses: ./.github/workflows/test-excutor-template.yml
+  #   with:
+  #     test_command: |
+  #       make kcn
+  #       git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+  #       cd kaia-rpc-tester
+  #       cp ../build/bin/kcn script/cn/bin/
+  #       cd script
+  #       ./set_CNonly.sh
+  #       cd ..
+  #       cp config_template.json config.json
+  #       apt update
+  #       apt install python3.8 python3-venv -y
+  #       python3.8 -m venv --without-pip venv
+  #       source venv/bin/activate
+  #       curl https://bootstrap.pypa.io/get-pip.py | python
+  #       pip3 install -r requirements.txt
+  #       python3 main.py --protocol rpc
+
+  # Service-dependent test jobs
+  test-datasync:
+    uses: ./.github/workflows/test-other-excutor-template.yml
+    with:
+      test_command: make test-datasync
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  test-others:
+    uses: ./.github/workflows/test-other-excutor-template.yml
+    with:
+      test_command: make test-others
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  check-tagger:
+    runs-on: ubuntu-latest
+    steps:
+      - id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "match=true" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.check-tag.outputs.match == true
+        run: echo "Tag is good"
   
   # Docker build
   docker:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ubuntu-latest
     
     steps:
@@ -48,9 +127,7 @@ jobs:
   
   # Packing
   rpm-linux-amd64:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ubuntu-latest
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
@@ -102,9 +179,7 @@ jobs:
           done
 
   tar-linux-amd64:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ubuntu-latest
     container:
       image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
@@ -143,9 +218,7 @@ jobs:
           done
 
   rpm-linux-arm64:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ['arm-runner']
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
@@ -196,9 +269,7 @@ jobs:
           done
 
   tar-linux-arm64:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
+    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ['arm-runner']
     container:
       image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04-arm

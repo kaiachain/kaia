@@ -3,7 +3,7 @@ name: Testing Workflow
 on:
   push:
     branches:
-      - test/github-action
+      - 'mock'
 
 jobs:
   # Basic test jobs
