@@ -30,6 +30,7 @@ import (
 var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
 
 type BuilderWrappingModule struct {
+	txPool           kaiax.TxPoolForCaller
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         map[common.Hash]txAndTime
@@ -91,8 +92,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			// if maxBundleSize is max uint64, it means no limit
 			if maxBundleNum := b.txBundlingModule.GetMaxBundleNum(); maxBundleNum != math.MaxUint64 {
 				numExecutable := uint(0)
-				for _, tx := range b.knownTxs {
-					if !tx.tx.IsMarkedUnexecutable() {
+				for _, txAndTime := range b.knownTxs {
+					if !txAndTime.tx.IsMarkedUnexecutable() && !txAndTime.isDemoted {
 						numExecutable++
 					}
 				}
@@ -134,4 +135,25 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 }
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.
-func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {}
+func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
+	pending, err := b.txPool.PendingUnlocked()
+	if err != nil {
+		logger.Error("Failed to get pending txs", "error", err)
+		return
+	}
+	flattened := make(map[common.Hash]*types.Transaction)
+	for _, txs := range pending {
+		for _, tx := range txs {
+			flattened[tx.Hash()] = tx
+		}
+	}
+	for hash := range b.knownTxs {
+		if _, ok := flattened[hash]; !ok {
+			b.knownTxs[hash] = txAndTime{
+				tx:        b.knownTxs[hash].tx,
+				time:      b.knownTxs[hash].time,
+				isDemoted: true,
+			}
+		}
+	}
+}

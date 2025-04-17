@@ -35,8 +35,9 @@ type InitOpts struct {
 }
 
 type txAndTime struct {
-	tx   *types.Transaction
-	time time.Time
+	tx        *types.Transaction
+	time      time.Time
+	isDemoted bool
 }
 
 type BuilderModule struct {
