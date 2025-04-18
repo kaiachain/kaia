@@ -152,6 +152,9 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.
 func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	pending, err := b.txPool.PendingUnlocked()
 	if err != nil {
 		logger.Error("Failed to get pending txs", "error", err)
