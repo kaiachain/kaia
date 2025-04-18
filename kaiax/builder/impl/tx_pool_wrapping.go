@@ -107,7 +107,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			numExecutable := uint(b.knownTxs.numExecutable())
 
 			numSeqTxs := uint(1)
-			for i := next + 1; true; i++ {
+			for i := next + 1; i < next+uint64(len(txs)); i++ {
 				if _, ok := txs[i]; !ok {
 					break
 				}
