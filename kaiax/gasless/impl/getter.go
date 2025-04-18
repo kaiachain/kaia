@@ -69,7 +69,7 @@ type SwapArgs struct {
 // A1. tx.to is a whitelisted ERC20 token.
 // A2. tx.data is `approve(spender, amount)`.
 // A3. spender is a whitelisted SwapRouter contract.
-// A4. amount is nonzero.
+// A4. amount is MaxUint.
 func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 	args, ok := decodeApproveTx(tx, g.signer)
 	return ok && g.isApproveTx(args)
@@ -78,7 +78,7 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
 	return g.allowedTokens[args.Token] && // A1
 		g.swapRouter == args.Spender && // A3
-		args.Amount.Sign() > 0 // A4
+		args.Amount.Cmp(abi.MaxUint256) == 0 // A4
 }
 
 // IsSwapTx checks following conditions:

@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -114,7 +115,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	validApproveTx := makeApproveTx(t, privKey, 0, ApproveArgs{
 		Token:   tokenAddr,
 		Spender: routerAddr,
-		Amount:  big.NewInt(1000000),
+		Amount:  abi.MaxUint256,
 	})
 	// Create a standalone swap transaction for testing
 	standaloneSwapTx := makeSwapTx(t, privKey, 0, SwapArgs{
@@ -139,14 +140,6 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		Router:       routerAddr,
 		Token:        differentTokenAddr,
 		AmountIn:     big.NewInt(500000),
-		MinAmountOut: big.NewInt(100),
-		AmountRepay:  big.NewInt(1000000),
-		Deadline:     big.NewInt(300),
-	})
-	insufficientAmountSwapTx := makeSwapTx(t, privKey, 1, SwapArgs{
-		Router:       routerAddr,
-		Token:        tokenAddr,
-		AmountIn:     big.NewInt(2000000),
 		MinAmountOut: big.NewInt(100),
 		AmountRepay:  big.NewInt(1000000),
 		Deadline:     big.NewInt(300),
@@ -203,12 +196,6 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 			txs:            []*types.Transaction{validApproveTx, invalidTokenSwapTx},
 			expectedResult: false,
 			reasonContains: "second transaction is not a swap transaction",
-		},
-		{
-			name:           "Invalid - insufficient approved amount in approve+swap pair",
-			txs:            []*types.Transaction{validApproveTx, insufficientAmountSwapTx},
-			expectedResult: false,
-			reasonContains: "approve transaction approves insufficient amount",
 		},
 		{
 			name:           "Invalid - different senders in approve+swap pair",

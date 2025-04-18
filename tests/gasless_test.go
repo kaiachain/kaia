@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
@@ -168,7 +169,7 @@ func TestGasless(t *testing.T) {
 	optsForApprove := bind.NewKeyedTransactor(accounts[0].Keys[0])
 	optsForApprove.GasLimit = 300000
 	optsForApprove.Nonce = big.NewInt(int64(accounts[0].Nonce))
-	approveTx, err := testTokenContract.Approve(optsForApprove, gsrAddr, swapAmmount)
+	approveTx, err := testTokenContract.Approve(optsForApprove, gsrAddr, abi.MaxUint256)
 	if err != nil {
 		t.Fatal(err)
 	}
