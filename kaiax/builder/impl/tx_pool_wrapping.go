@@ -108,13 +108,11 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 
 			numSeqTxs := uint(1)
 			for i := next + 1; i < next+uint64(len(txs)); i++ {
-				if _, ok := txs[i]; !ok {
+				if tx, ok := txs[i]; ok && b.txBundlingModule.IsBundleTx(tx) {
+					numSeqTxs++
+				} else {
 					break
 				}
-				if !b.txBundlingModule.IsBundleTx(txs[i]) {
-					break
-				}
-				numSeqTxs++
 			}
 
 			// false if there is possibility of exceeding max bundle tx num
