@@ -339,6 +339,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	var (
 		msg          = st.msg
+		msgTo        = msg.To()
 		rules        = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
 		floorDataGas uint64
 		err          error
@@ -376,26 +377,26 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Execute the preparatory steps for state transition which includes:
 	// - prepare accessList(post-berlin)
 	// - reset transient storage(eip 1153)
-	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msgTo, vm.ActivePrecompiles(rules), msg.AccessList())
 
-	// SetCode sender nonce increment should be done before set code process.
-	if msg.Type() == types.TxTypeEthereumSetCode {
-		// Increment the nonce for the next transaction.
-		// Note: EIP-7702 authorizations can also modify the nonce. We perform
-		// this update first to ensure correct validation of authorization nonces.
-		st.state.IncNonce(msg.ValidatedSender())
-	}
-
-	// Apply EIP-7702 authorizations.
-	if msg.AuthList() != nil {
-		for _, auth := range msg.AuthList() {
-			// Note errors are ignored, we simply skip invalid authorizations here.
-			st.applyAuthorization(&auth, *msg.To(), rules)
+	if msgTo != nil {
+		// SetCode sender nonce increment should be done before set code process.
+		if msg.Type() == types.TxTypeEthereumSetCode {
+			// Increment the nonce for the next transaction.
+			// Note: EIP-7702 authorizations can also modify the nonce. We perform
+			// this update first to ensure correct validation of authorization nonces.
+			st.state.IncNonce(msg.ValidatedSender())
 		}
-	}
 
-	if msg.Type() == types.TxTypeEthereumSetCode {
-		if addr, ok := types.ParseDelegation(st.state.GetCode(*msg.To())); ok {
+		// Apply EIP-7702 authorizations.
+		if msg.AuthList() != nil {
+			for _, auth := range msg.AuthList() {
+				// Note errors are ignored, we simply skip invalid authorizations here.
+				st.applyAuthorization(&auth, *msgTo, rules)
+			}
+		}
+
+		if addr, ok := types.ParseDelegation(st.state.GetCode(*msgTo)); ok {
 			// Perform convenience warming of sender's delegation target. Although the
 			// sender is already warmed in Prepare(..), it's possible a delegation to
 			// the account was deployed during this transaction. To handle correctly,
@@ -406,7 +407,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	// Check whether the init code size has been exceeded.
-	if rules.IsShanghai && msg.To() == nil && len(st.data) > params.MaxInitCodeSize {
+	if rules.IsShanghai && msgTo == nil && len(st.data) > params.MaxInitCodeSize {
 		return nil, fmt.Errorf("%w: code size %v limit %v", ErrMaxInitCodeSizeExceeded, len(st.data), params.MaxInitCodeSize)
 	}
 
