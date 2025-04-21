@@ -169,4 +169,8 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
 			b.knownTxs.markDemoted(hash)
 		}
 	}
+
+	if b.txPoolModule != nil {
+		b.txPoolModule.PostReset(oldHead, newHead)
+	}
 }
