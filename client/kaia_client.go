@@ -372,7 +372,11 @@ func (ec *Client) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.L
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+	sub, err := ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+	if err == nil {
+		return sub, err
+	}
+	return ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 func toFilterArg(q kaia.FilterQuery) interface{} {
