@@ -274,12 +274,12 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 // WrapAndConcatenateBundlingModules wraps bundling modules and concatenates them.
 // given: mTxPool = [ A, B, C ], mTxBundling = [ B, D ]
 // want : mTxPool = [ A, WB, C, WD ] (W: wrapped)
-func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
+func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule, txPool kaiax.TxPoolForCaller) []kaiax.TxPoolModule {
 	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
 
 	for _, module := range mTxPool {
 		if txb, ok := module.(builder.TxBundlingModule); ok {
-			ret = append(ret, NewBuilderWrappingModule(txb))
+			ret = append(ret, NewBuilderWrappingModule(txb, txPool))
 		} else {
 			ret = append(ret, module)
 		}
@@ -287,7 +287,7 @@ func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, m
 
 	for _, module := range mTxBundling {
 		if txp, ok := module.(kaiax.TxPoolModule); !(ok && slices.Contains(mTxPool, txp)) {
-			ret = append(ret, NewBuilderWrappingModule(module))
+			ret = append(ret, NewBuilderWrappingModule(module, txPool))
 		}
 	}
 

@@ -277,9 +277,10 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(GpoBlocksFlag),
 	altsrc.NewIntFlag(GpoPercentileFlag),
 	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
-	// kaiax
+	// kaiax/gasless
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
 }
 
 // Common RPC flags
