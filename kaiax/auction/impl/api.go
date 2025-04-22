@@ -80,7 +80,7 @@ type BidInput struct {
 	AuctioneerSig hexutil.Bytes  `json:"auctioneerSig"`
 }
 
-func toBid(bidInput BidInput) *auction.Bid {
+func ToBid(bidInput BidInput) *auction.Bid {
 	bidData := auction.BidData{
 		TargetTxHash:  bidInput.TargetTxHash,
 		BlockNumber:   bidInput.BlockNumber,
@@ -130,7 +130,7 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 	}
 
 	// 2. add bid
-	bid := toBid(bidInput)
+	bid := ToBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
 	return makeRPCOutput(bidHash, errValidateBid)
 }
