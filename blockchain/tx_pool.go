@@ -411,9 +411,11 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	pool.txMu.Lock()
 	for _, module := range pool.modules {
 		module.PreReset(oldHead, newHead)
 	}
+	pool.txMu.Unlock()
 
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
@@ -530,6 +532,12 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
+
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.PostReset(oldHead, newHead)
+	}
+	pool.txMu.Unlock()
 }
 
 // Stop terminates the transaction pool.
@@ -638,6 +646,17 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
+// PendingUnlocked retrieves all currently processable transactions, groupped by origin
+// account and sorted by nonce. The returned transaction set is a copy and can be
+// freely modified by calling code. This function is not thread safe.
+func (pool *TxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()

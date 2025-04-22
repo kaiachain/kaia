@@ -30,6 +30,9 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 }
 
 func (g *GaslessModule) IsModuleTx(tx *types.Transaction) bool {
+	if tx == nil {
+		return false
+	}
 	return g.IsApproveTx(tx) || g.IsSwapTx(tx)
 }
 
@@ -56,6 +59,8 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 }
 
 func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) {}
+
+func (g *GaslessModule) PostReset(oldHead, newHead *types.Header) {}
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {

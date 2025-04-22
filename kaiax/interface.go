@@ -157,11 +157,15 @@ type TxPoolModule interface {
 
 	// Additional actions to perform before the txpool is reset.
 	PreReset(oldHead, newHead *types.Header)
+
+	// Additional actions to perform after the txpool is reset.
+	PostReset(oldHead, newHead *types.Header)
 }
 
 //go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
 type TxPoolForCaller interface {
 	GetCurrentState() *state.StateDB
+	PendingUnlocked() (map[common.Address]types.Transactions, error)
 }
 
 // Any component or module that accomodate txpool modules.

@@ -63,6 +63,20 @@ func (mr *MockGaslessModuleMockRecorder) GetCheckBalance() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckBalance", reflect.TypeOf((*MockGaslessModule)(nil).GetCheckBalance))
 }
 
+// GetMaxBundleTxsInPending mocks base method.
+func (m *MockGaslessModule) GetMaxBundleTxsInPending() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInPending")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInPending indicates an expected call of GetMaxBundleTxsInPending.
+func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInPending))
+}
+
 // IsBundleTx mocks base method.
 func (m *MockGaslessModule) IsBundleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
@@ -117,6 +131,18 @@ func (m *MockGaslessModule) PostInsertBlock(arg0 *types.Block) error {
 func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockGaslessModule)(nil).PostInsertBlock), arg0)
+}
+
+// PostReset mocks base method.
+func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PostReset", arg0, arg1)
+}
+
+// PostReset indicates an expected call of PostReset.
+func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1)
 }
 
 // PreAddTx mocks base method.

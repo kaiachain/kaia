@@ -566,7 +566,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mTxPool = append(mTxPool, mGasless)
 	}
 
-	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
