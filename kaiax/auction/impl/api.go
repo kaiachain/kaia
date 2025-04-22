@@ -143,6 +143,10 @@ func (api *AuctionAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) 
 	return api.f.NewHeads(ctx)
 }
 
+func (api *AuctionAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
+	return api.f.Logs(ctx, crit)
+}
+
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
 	m := make(map[string]any)
 	if err != nil {
