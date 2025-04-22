@@ -57,6 +57,9 @@ func TestFilterTxs(t *testing.T) {
 	mAuction.bidPool.running = 1
 	mAuction.FilterTxs(txs)
 
+	// Filter txs should set the mining block number
+	assert.Equal(t, uint64(1), mAuction.bidPool.miningBlock)
+
 	assert.Equal(t, 2, len(txs[tx1Sender]))
 	assert.Equal(t, 2, len(txs[tx2Sender]))
 

@@ -395,3 +395,31 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	assert.Equal(t, newAuctioneer, pool.auctioneer)
 	assert.Equal(t, newAuctionEntryPoint, pool.auctionEntryPoint)
 }
+
+func TestBidPool_SetMiningBlock(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain)
+	require.NotNil(t, pool)
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Test set mining block
+	pool.setMiningBlock(11)
+	assert.Equal(t, uint64(11), pool.miningBlock)
+
+	_, err := pool.AddBid(testBids[0])
+	require.Equal(t, auction.ErrInvalidBlockNumber, err)
+}

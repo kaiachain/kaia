@@ -77,7 +77,10 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	if curBlock == nil {
 		return
 	}
+
 	targetTxHashMap := a.bidPool.getTargetTxHashMap(curBlock.NumberU64() + 1)
+	// notify the bid pool that worker starts mining
+	a.bidPool.setMiningBlock(curBlock.NumberU64() + 1)
 
 	now := time.Now()
 	// filter txs that are after the auction early deadline

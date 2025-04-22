@@ -53,6 +53,8 @@ type BidPool struct {
 	newBidFeed event.Feed
 	wg         sync.WaitGroup
 
+	miningBlock uint64 // the block number that the worker starts mining
+
 	running uint32
 	stopped uint32
 }
@@ -185,6 +187,11 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint)
 }
 
+// setMiningBlock sets the mining block number when the worker starts mining.
+func (bp *BidPool) setMiningBlock(miningBlock uint64) {
+	atomic.StoreUint64(&bp.miningBlock, miningBlock)
+}
+
 // getTargetTxHashMap returns the target tx hash map for the given block number.
 func (bp *BidPool) getTargetTxHashMap(num uint64) map[common.Hash]struct{} {
 	bp.bidMu.RLock()
@@ -287,7 +294,7 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrBlockNotFound
 	}
 
-	curNum := curBlock.NumberU64()
+	curNum := max(curBlock.NumberU64(), atomic.LoadUint64(&bp.miningBlock))
 	if blockNumber <= curNum || blockNumber > curNum+allowFutureBlock {
 		return auction.ErrInvalidBlockNumber
 	}
