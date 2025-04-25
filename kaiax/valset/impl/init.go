@@ -154,32 +154,12 @@ func (v *ValsetModule) migrate() {
 	targetNum := *pMinVoteNum
 	logger.Info("ValsetModule migrate start", "targetNum", targetNum)
 
-	isThrottled := &atomic.Bool{}
-	done := make(chan struct{})
-
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				blockTime := time.Unix(v.Chain.CurrentBlock().Time().Int64(), 0)
-				isThrottled.Store(time.Now().UTC().After(blockTime.UTC().Add(100 * time.Second)))
-			case <-done:
-				return
-			}
-		}
-	}()
-
 	for targetNum > 0 {
 		if v.quit.Load() == 1 {
 			break
 		}
 
-		if isThrottled.Load() {
-			time.Sleep(50 * time.Millisecond)
-		}
+		time.Sleep(50 * time.Millisecond)
 
 		// At each iteration, targetNum should decrease like ... -> 2048 -> 1024 -> 0.
 		// get(2048,true) scans [1025, 2048] and returns snapshotNum=1024. So we write lowestScannedVoteNum=1025.
@@ -196,9 +176,6 @@ func (v *ValsetModule) migrate() {
 		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
 		targetNum = snapshotNum
 	}
-
-	// Signal the goroutine to stop
-	close(done)
 
 	if targetNum == 0 {
 		logger.Info("ValsetModule migrate complete")
