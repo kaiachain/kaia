@@ -719,6 +719,32 @@ func exceedSizeLimit(bcdata *BCData, txType types.TxType, values txValueMap, _ad
 	return values, nil
 }
 
+func exceedSizeLimitShanghai(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
+	invalidData := make([]byte, blockchain.MaxTxDataSize+1)
+	err := blockchain.ErrOversizedData
+	txType = toBasicType(txType)
+	if txType == types.TxTypeSmartContractDeploy ||
+		txType == types.TxTypeChainDataAnchoring {
+		err = fmt.Errorf("%w: code size %v, limit %v", blockchain.ErrMaxInitCodeSizeExceeded, len(invalidData), params.MaxInitCodeSize)
+	}
+
+	if values[types.TxValueKeyData] != nil {
+		values[types.TxValueKeyData] = invalidData
+		return values, err
+	}
+
+	if values[types.TxValueKeyAnchoredData] != nil {
+		values[types.TxValueKeyAnchoredData] = invalidData
+		return values, err
+	}
+
+	return values, nil
+}
+
 // valueTransferToEOAWithCodeOrSCA changes recipient address of value transfer txs to the EOA with code or SCA.
 func valueTransferToEOAWithCodeOrSCA(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCodeOrSCA common.Address) (txValueMap, error) {
 	if values, err := unsupportedTxType(bcdata, txType, values, EOAWithCodeOrSCA); err != nil {
@@ -1923,6 +1949,170 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			}
 			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
 			validData := make([]byte, blockchain.MaxTxDataSize-1024)
+
+			if valueMap[types.TxValueKeyData] != nil {
+				valueMap[types.TxValueKeyData] = validData
+			}
+
+			if valueMap[types.TxValueKeyAnchoredData] != nil {
+				valueMap[types.TxValueKeyAnchoredData] = validData
+			}
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, _ := rlp.EncodeToBytes(tx)
+			if len(encodedTx) > blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is bigger than MaxTxDataSize")
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, nil, err, txType)
+			reservoir.AddNonce()
+		}
+	}
+}
+
+func TestValidationTxSizeAfterRLPShanghai(t *testing.T) {
+	testTxTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKaiaLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
+		tx, err := types.NewTxInternalData(i)
+		if err == nil {
+			// Since this test is for payload size, tx types without payload field will not be tested.
+			if _, ok := tx.(types.TxInternalDataPayload); ok {
+				testTxTypes = append(testTxTypes, i)
+			}
+		}
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Shanghai"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
+
+		reservoir.AddNonce()
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
+
+	// test for all tx types
+	for _, txType := range testTxTypes {
+		// test for invalid tx size
+		{
+			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, expectedError := exceedSizeLimitShanghai(bcdata, txType, valueMap, contract.Addr)
+			if expectedError == types.ErrTxTypeNotSupported {
+				continue
+			}
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, _ := rlp.EncodeToBytes(tx)
+			if len(encodedTx) < blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is smaller than MaxTxDataSize: txType: %v", txType)
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, expectedError, err, txType)
+		}
+
+		// test for valid tx size
+		{
+			// generate valid txs which size is around (31 * 1024) ~ (32 * 1024)
+			to := reservoir
+			if toBasicType(txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			validData := make([]byte, params.MaxInitCodeSize-1024) // For Shanghai
 
 			if valueMap[types.TxValueKeyData] != nil {
 				valueMap[types.TxValueKeyData] = validData
