@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -149,14 +150,39 @@ func (h *headerGovModule) migrate() {
 	}
 
 	border := *pBorder
+
+	isThrottled := &atomic.Bool{}
+	done := make(chan struct{})
+
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				blockTime := time.Unix(h.Chain.CurrentBlock().Time().Int64(), 0)
+				isThrottled.Store(time.Now().UTC().After(blockTime.UTC().Add(100 * time.Second)))
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	for int64(border) > 0 {
 		if h.quit.Load() == 1 {
 			return
 		}
 
+		if isThrottled.Load() {
+			time.Sleep(50 * time.Millisecond)
+		}
+
 		border -= 1
 		h.accumulateVotesInEpoch(border)
 	}
+
+	close(done)
 
 	if border == 0 {
 		logger.Info("HeaderGovModule migrate complete")
