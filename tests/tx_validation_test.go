@@ -127,8 +127,8 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 		{"unsupportedTxType", unsupportedTxType},
 		{"invalidNonce", decreaseNonce},
 		{"invalidGasPrice", decreaseGasPrice},
-		{"invalidRecipientProgram", valueTransferToContract},
-		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -253,8 +253,8 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		{"unsupportedTxType", unsupportedTxType},
 		{"invalidNonce", decreaseNonce},
 		{"invalidGasPrice", decreaseGasPriceMagma}, // For Magma
-		{"invalidRecipientProgram", valueTransferToContract},
-		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -376,8 +376,13 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 		Name string
 		fn   invalidCasesFn
 	}{
-		{"invalidTo", valueTransferToEOAWithCode},
-		{"invalidFrom", keyUpdateFromEOAWithCode},
+		{"unsupportedTxType", unsupportedTxType},
+		{"invalidNonce", decreaseNonce},
+		{"invalidGasPrice", decreaseGasPriceMagma},                       // For Magma
+		{"invalidRecipientEOAWithCode", valueTransferToEOAWithCodeOrSCA}, // For Prague
+		{"invalidRecipientEOAWithoutCode", executeToEOAWithoutCode},      // For Prague
+		{"invalidCodeFormat", invalidCodeFormat},
+		{"invalidFromEOAWithCode", keyUpdateFromEOAWithCode}, // For Prague
 	}
 
 	prof := profile.NewProfiler()
@@ -504,7 +509,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err, txType, to, contract.Addr)
+			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
@@ -533,8 +538,8 @@ func TestValidationBlockTx(t *testing.T) {
 		fn   invalidCasesFn
 	}{
 		{"invalidNonce", decreaseNonce},
-		{"invalidRecipientProgram", valueTransferToContract},
-		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -633,9 +638,9 @@ func TestValidationBlockTx(t *testing.T) {
 	}
 }
 
-type invalidCasesFn func(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error)
+type invalidCasesFn func(bcdata *BCData, txType types.TxType, values txValueMap, addr common.Address) (txValueMap, error)
 
-func unsupportedTxType(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func unsupportedTxType(bcdata *BCData, txType types.TxType, values txValueMap, _ common.Address) (txValueMap, error) {
 	if txType == types.TxTypeEthereumSetCode &&
 		!bcdata.bc.Config().IsPragueForkEnabled(bcdata.bc.CurrentBlock().Number()) {
 		return values, types.ErrTxTypeNotSupported
@@ -644,8 +649,8 @@ func unsupportedTxType(bcdata *BCData, txType types.TxType, values txValueMap, c
 }
 
 // decreaseNonce changes nonce to zero.
-func decreaseNonce(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+func decreaseNonce(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
@@ -655,8 +660,8 @@ func decreaseNonce(bcdata *BCData, txType types.TxType, values txValueMap, contr
 }
 
 // decreaseGasPrice changes gasPrice to 12345678
-func decreaseGasPrice(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+func decreaseGasPrice(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
@@ -675,8 +680,8 @@ func decreaseGasPrice(bcdata *BCData, txType types.TxType, values txValueMap, co
 }
 
 // decreaseGasPriceMagma changes gasPrice to 12345678 and return an error with magma policy
-func decreaseGasPriceMagma(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+func decreaseGasPriceMagma(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
@@ -693,29 +698,9 @@ func decreaseGasPriceMagma(bcdata *BCData, txType types.TxType, values txValueMa
 	return values, err
 }
 
-func valueTransferToEOAWithCode(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	txType = toBasicType(txType)
-	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
-		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrToMustBeEOAWithoutCode
-	}
-
-	return values, nil
-}
-
-func keyUpdateFromEOAWithCode(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	txType = toBasicType(txType)
-	if txType == types.TxTypeAccountUpdate {
-		values[types.TxValueKeyFrom] = contract
-		return values, kerrors.ErrFromMustBeEOAWithoutCode
-	}
-
-	return values, nil
-}
-
 // exceedSizeLimit assigns tx data bigger than MaxTxDataSize.
-func exceedSizeLimit(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+func exceedSizeLimit(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
@@ -734,24 +719,24 @@ func exceedSizeLimit(bcdata *BCData, txType types.TxType, values txValueMap, con
 	return values, nil
 }
 
-// valueTransferToContract changes recipient address of value transfer txs to the contract address.
-func valueTransferToContract(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+// valueTransferToEOAWithCodeOrSCA changes recipient address of value transfer txs to the EOA with code or SCA.
+func valueTransferToEOAWithCodeOrSCA(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCodeOrSCA common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, EOAWithCodeOrSCA); err != nil {
 		return values, err
 	}
 
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
-		values[types.TxValueKeyTo] = contract
+		values[types.TxValueKeyTo] = EOAWithCodeOrSCA
 		return values, kerrors.ErrToMustBeEOAWithoutCode
 	}
 
 	return values, nil
 }
 
-// executeToEOA changes the recipient of contract execution txs to an EOA address (the same with the sender).
-func executeToEOA(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+// executeToEOAWithoutCode changes the recipient of contract execution txs to an EOA without code address (the same with the sender).
+func executeToEOAWithoutCode(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
@@ -763,8 +748,19 @@ func executeToEOA(bcdata *BCData, txType types.TxType, values txValueMap, contra
 	return values, nil
 }
 
-func invalidCodeFormat(bcdata *BCData, txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	if values, err := unsupportedTxType(bcdata, txType, values, contract); err != nil {
+// keyUpdateFromEOAWithCode changes the sender of key update txs to an EOA with code address.
+func keyUpdateFromEOAWithCode(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCode common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeAccountUpdate {
+		values[types.TxValueKeyFrom] = EOAWithCode
+		return values, kerrors.ErrFromMustBeEOAWithoutCode
+	}
+
+	return values, nil
+}
+
+func invalidCodeFormat(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
 		return values, err
 	}
 
