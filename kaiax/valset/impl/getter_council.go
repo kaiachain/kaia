@@ -116,7 +116,25 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	// Load council at the nearest istanbul snapshot. This is the result
 	// applying the votes up to the snapshotNum.
 	snapshotNum := roundDown(targetNum-1, istanbulCheckpointInterval)
+
+	if v.validatorVoteBlockNumsCache == nil {
+		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
+	}
+	nums := v.validatorVoteBlockNumsCache
+	if nums == nil {
+		return nil, 0, errNoVoteBlockNums
+	}
+	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
 	header := v.Chain.GetHeaderByNumber(snapshotNum)
+	if pMinVoteNum != nil && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
+		// if there was no vote between (lowestScannedVoteNum, snapshotNum),
+		// use the snapshot of the lowestScannedVoteNum block
+		if *pMinVoteNum < snapshotNum {
+			snapshot2Num := roundDown(*pMinVoteNum, istanbulCheckpointInterval)
+			header = v.Chain.GetHeaderByNumber(snapshot2Num)
+		}
+	}
+
 	if header == nil {
 		return nil, 0, errNoHeader
 	}
