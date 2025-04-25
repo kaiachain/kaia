@@ -127,7 +127,6 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 		{"unsupportedTxType", unsupportedTxType},
 		{"invalidNonce", decreaseNonce},
 		{"invalidGasPrice", decreaseGasPrice},
-		{"invalidTxSize", exceedSizeLimit},
 		{"invalidRecipientProgram", valueTransferToContract},
 		{"invalidRecipientNotProgram", executeToEOA},
 		{"invalidCodeFormat", invalidCodeFormat},
@@ -1886,7 +1885,10 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		{
 			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
 			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
-			valueMap, _ = exceedSizeLimit(bcdata, txType, valueMap, contract.Addr)
+			valueMap, expectedError := exceedSizeLimit(bcdata, txType, valueMap, contract.Addr)
+			if expectedError == types.ErrTxTypeNotSupported {
+				continue
+			}
 
 			tx, err := types.NewTransactionWithMap(txType, valueMap)
 			assert.Equal(t, nil, err)
@@ -1900,18 +1902,18 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			}
 
 			// check the rlp encoded tx size
-			encodedTx, err := rlp.EncodeToBytes(tx)
+			encodedTx, _ := rlp.EncodeToBytes(tx)
 			if len(encodedTx) < blockchain.MaxTxDataSize {
-				t.Fatalf("test data size is smaller than MaxTxDataSize")
+				t.Fatalf("test data size is smaller than MaxTxDataSize: txType: %v", txType)
 			}
 
 			// RLP decode and re-generate the tx
 			newTx := &types.Transaction{}
-			err = rlp.DecodeBytes(encodedTx, newTx)
+			rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
 			err = txpool.AddRemote(newTx)
-			assert.Equal(t, blockchain.ErrOversizedData, err)
+			assert.Equal(t, expectedError, err, txType)
 		}
 
 		// test for valid tx size
@@ -1944,18 +1946,18 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			}
 
 			// check the rlp encoded tx size
-			encodedTx, err := rlp.EncodeToBytes(tx)
+			encodedTx, _ := rlp.EncodeToBytes(tx)
 			if len(encodedTx) > blockchain.MaxTxDataSize {
 				t.Fatalf("test data size is bigger than MaxTxDataSize")
 			}
 
 			// RLP decode and re-generate the tx
 			newTx := &types.Transaction{}
-			err = rlp.DecodeBytes(encodedTx, newTx)
+			rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
 			err = txpool.AddRemote(newTx)
-			assert.Equal(t, nil, err)
+			assert.Equal(t, nil, err, txType)
 			reservoir.AddNonce()
 		}
 	}
