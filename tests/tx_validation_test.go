@@ -1987,7 +1987,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	}
 }
 
-func TestValidationTxSizeAfterRLPShanghai(t *testing.T) {
+func TestValidationTxSizeAfterRLPPrague(t *testing.T) {
 	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKaiaLast {
@@ -2006,7 +2006,7 @@ func TestValidationTxSizeAfterRLPShanghai(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Shanghai"])
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
