@@ -250,10 +250,15 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		Name string
 		fn   invalidCasesFn
 	}{
-		{"invalidGasPrice", decreaseGasPriceMagma},
+		{"unsupportedTxType", unsupportedTxType},
+		{"invalidNonce", decreaseNonce},
+		{"invalidGasPrice", decreaseGasPriceMagma}, // For Magma
+		{"invalidRecipientProgram", valueTransferToContract},
+		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
-	// prof := profile.NewProfiler()
+	prof := profile.NewProfiler()
 
 	// Initialize blockchain
 	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
@@ -303,14 +308,11 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		// TODO-Kaia: fix GenABlockWithTransactions and related testcases
-		/*
-			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-				t.Fatal(err)
-			}
-		*/
-
 		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
 
 		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
@@ -347,7 +349,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err)
+			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
