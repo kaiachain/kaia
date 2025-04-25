@@ -1940,7 +1940,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1975,7 +1975,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(0),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
