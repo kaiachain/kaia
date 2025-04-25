@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -164,11 +165,14 @@ func makeTestModule(t *testing.T) (*CompressModule, map[string][][]byte) {
 
 	c := NewCompressModule()
 	c.Init(&InitOpts{
-		Chain:        chain,
-		DBM:          dbm,
-		Retention:    128,
-		ChunkItemCap: 100,
-		ChunkByteCap: 10 * 1024,
+		Chain: chain,
+		DBM:   dbm,
+		CompressConfig: compress.CompressConfig{
+			Enabled:      true,
+			Retention:    128,
+			ChunkItemCap: 100,
+			ChunkByteCap: 10 * 1024,
+		},
 	})
 
 	answers := map[string][][]byte{}

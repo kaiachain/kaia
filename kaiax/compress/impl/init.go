@@ -61,11 +61,9 @@ type dbm interface {
 }
 
 type InitOpts struct {
-	Chain        chain
-	DBM          dbm
-	Retention    uint64 // number of blocks to keep in the uncompressed database
-	ChunkItemCap int    // maximum number of items in a chunk
-	ChunkByteCap int    // maximum size of uncompressed data in a chunk
+	Chain chain
+	DBM   dbm
+	compress.CompressConfig
 }
 
 type CompressModule struct {
@@ -124,13 +122,17 @@ func (c *CompressModule) setSchemas(s ...ItemSchema) {
 }
 
 func (c *CompressModule) Start() error {
+	logger.Info("CompressModule started", "enabled", c.Enabled)
+
 	// Reset the quit state.
 	c.quit.Store(0)
 
-	// Start the compression threads.
-	for _, schema := range c.schemas {
-		c.wg.Add(1)
-		go c.compress(schema)
+	if c.Enabled {
+		// Start the compression threads.
+		for _, schema := range c.schemas {
+			c.wg.Add(1)
+			go c.compress(schema)
+		}
 	}
 	return nil
 }
@@ -138,6 +140,7 @@ func (c *CompressModule) Start() error {
 func (c *CompressModule) Stop() {
 	c.quit.Store(1)
 	c.wg.Wait()
+	logger.Info("CompressModule stopped")
 }
 
 func (c *CompressModule) initSchema(schema ItemSchema) {

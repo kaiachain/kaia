@@ -47,7 +47,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
-	"github.com/kaiachain/kaia/kaiax/compress"
 	compress_impl "github.com/kaiachain/kaia/kaiax/compress/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -552,12 +551,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			TxPool:      s.txPool,
 		}),
 		mCompress.Init(&compress_impl.InitOpts{
-			Chain: s.blockchain,
-			DBM:   s.chainDB,
-			// TODO: make it configurable
-			Retention:    compress.DefaultRetention,
-			ChunkItemCap: compress.DefaultChunkItemCap,
-			ChunkByteCap: compress.DefaultChunkByteCap,
+			Chain:          s.blockchain,
+			DBM:            s.chainDB,
+			CompressConfig: *s.config.Compress,
 		}),
 	)
 	if err != nil {
