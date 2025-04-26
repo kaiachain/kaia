@@ -1,4 +1,4 @@
-# Kaia
+# Kaia 
 
 Official golang implementation of the Kaia blockchain. Please visit our [Docs](https://docs.kaia.io/) for more details on Kaia design, node operation guides and application development resources.
 
@@ -11,7 +11,7 @@ both a Go and a C compiler. You can install them using your favorite package man
 
 ## Executables
 
-After successful build, executable binaries are installed at `build/bin/`.
+After a successful build, executable binaries are installed at `build/bin/`.
 
 | Command    | Description |
 |:----------:|-------------|
@@ -59,4 +59,4 @@ in our repository in the `COPYING` file.
 
 ## Contributing
 
-As an open source project, Kaia always welcomes your contribution. Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) for a walk-through of the contribution process.
+As an open-source project, Kaia always welcomes your contribution. Please read our [CONTRIBUTING.md](./CONTRIBUTING.md) for a walk-through of the contribution process.
