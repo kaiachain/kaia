@@ -317,7 +317,7 @@ commands:
           no_output_timeout: 30m
           command: |
             make kcn
-            git clone https://@github.com/kaiachain/kaia-rpc-tester.git
+            git clone https://github.com/kaiachain/kaia-rpc-tester.git
             cd kaia-rpc-tester
             cp ../build/bin/kcn script/cn/bin/
             cd script
@@ -382,7 +382,7 @@ jobs:
           name: "Run test tests"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://@github.com/kaiachain/kaia-core-tests.git tests/testdata
+            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
             make test-tests
   test-others:
     executor: test-others-executor
@@ -424,7 +424,7 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://@github.com/kaiachain/kaia-core-tests.git tests/testdata
+            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
             make cover
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
