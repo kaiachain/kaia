@@ -66,6 +66,7 @@ type ValsetModule struct {
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
+	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
 
 	validatorVoteBlockNumsCache []uint64
 }
@@ -73,9 +74,11 @@ type ValsetModule struct {
 func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
+	councilCache, _ := lru.New(128)
 	return &ValsetModule{
 		proposerListCache: pListCache,
 		removeVotesCache:  rVoteCache,
+		councilCache:      councilCache,
 	}
 }
 

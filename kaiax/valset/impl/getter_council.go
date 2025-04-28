@@ -113,51 +113,62 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 		council, err := v.getCouncilGenesis()
 		return council, 0, err
 	}
+
 	// Load council at the nearest istanbul snapshot. This is the result
 	// applying the votes up to the snapshotNum.
 	snapshotNum := roundDown(targetNum-1, istanbulCheckpointInterval)
 
-	if v.validatorVoteBlockNumsCache == nil {
-		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
-	}
-	nums := v.validatorVoteBlockNumsCache
-	if nums == nil {
-		return nil, 0, errNoVoteBlockNums
-	}
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
-	header := v.Chain.GetHeaderByNumber(snapshotNum)
-	if pMinVoteNum != nil && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
-		// if there was no vote between (lowestScannedVoteNum, snapshotNum),
-		// use the snapshot of the lowestScannedVoteNum block
-		if *pMinVoteNum < snapshotNum {
-			snapshot2Num := roundDown(*pMinVoteNum, istanbulCheckpointInterval)
-			header = v.Chain.GetHeaderByNumber(snapshot2Num)
-		}
-	}
-
-	if header == nil {
-		return nil, 0, errNoHeader
-	}
-
-	// Load council at the nearest istanbul snapshot except snapshot num is 0.
-	council := new(valset.AddressSet)
-	if snapshotNum > 0 {
-		council = valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
-		if council.Len() == 0 {
-			return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+	var council *valset.AddressSet
+	// Try to get from cache first
+	cached, ok := v.councilCache.Get(targetNum - 1)
+	if ok {
+		council = cached.(*valset.AddressSet)
+		if err := v.applyBlock(council, targetNum-1, write); err != nil {
+			return nil, 0, err
 		}
 	} else {
-		var err error
-		council, err = v.getCouncilGenesis()
-		if err != nil {
-			return nil, 0, err
+		if v.validatorVoteBlockNumsCache == nil {
+			v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
 		}
-	}
+		nums := v.validatorVoteBlockNumsCache
+		if nums == nil {
+			return nil, 0, errNoVoteBlockNums
+		}
+		pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+		header := v.Chain.GetHeaderByNumber(snapshotNum)
+		if pMinVoteNum != nil && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
+			// if there was no vote between (lowestScannedVoteNum, snapshotNum),
+			// use the snapshot of the lowestScannedVoteNum block
+			if *pMinVoteNum < snapshotNum {
+				snapshot2Num := roundDown(*pMinVoteNum, istanbulCheckpointInterval)
+				header = v.Chain.GetHeaderByNumber(snapshot2Num)
+			}
+		}
 
-	// Apply the votes in the interval [snapshotNum+1, targetNum-1].
-	for n := snapshotNum + 1; n < targetNum; n++ {
-		if err := v.applyBlock(council, n, write); err != nil {
-			return nil, 0, err
+		if header == nil {
+			return nil, 0, errNoHeader
+		}
+
+		// Load council at the nearest istanbul snapshot except snapshot num is 0.
+		council = new(valset.AddressSet)
+		if snapshotNum > 0 {
+			council = valset.NewAddressSet(ReadIstanbulSnapshot(v.ChainKv, header.Hash()))
+			if council.Len() == 0 {
+				return nil, 0, ErrNoIstanbulSnapshot(snapshotNum)
+			}
+		} else {
+			var err error
+			council, err = v.getCouncilGenesis()
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+
+		// Apply the votes in the interval [snapshotNum+1, targetNum-1].
+		for n := snapshotNum + 1; n < targetNum; n++ {
+			if err := v.applyBlock(council, n, write); err != nil {
+				return nil, 0, err
+			}
 		}
 	}
 	// Apply the vote at targetNum to write to database, but do not return the modified council.
@@ -167,6 +178,10 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 			return nil, 0, err
 		}
 	}
+
+	// Cache the result
+	v.councilCache.Add(targetNum, council)
+
 	return council, snapshotNum, nil
 }
 
