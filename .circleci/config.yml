@@ -416,6 +416,10 @@ jobs:
   test-others:
     executor: test-others-executor
     resource_class: xlarge
+    environment:
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_DEFAULT_REGION: us-east-1
     steps:
       - checkout
       - wait-other-containers-ready
