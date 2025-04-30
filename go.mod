@@ -75,6 +75,7 @@ require (
 	github.com/cockroachdb/pebble v1.1.1
 	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
 	github.com/google/uuid v1.6.0
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
