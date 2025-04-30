@@ -24,6 +24,7 @@ package utils
 
 import (
 	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -276,6 +277,11 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(GpoBlocksFlag),
 	altsrc.NewIntFlag(GpoPercentileFlag),
 	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
+	// kaiax
+	altsrc.NewBoolFlag(compress.DataCompressFlag),
+	altsrc.NewUint64Flag(compress.DataCompressRetentionFlag),
+	altsrc.NewIntFlag(compress.DataCompressChunkItemCapFlag),
+	altsrc.NewIntFlag(compress.DataCompressChunkByteCapFlag),
 }
 
 // Common RPC flags
