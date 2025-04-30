@@ -61,6 +61,8 @@ func EncodeAuctionCallData(bid *auction.Bid) ([]byte, error) {
 	return data, nil
 }
 
+// DecodeAuctionCallData is the reverse function of EncodeAuctionCallData.
+// It can be used to identify the calldata of a bid.
 func DecodeAuctionCallData(encoded []byte) (*auction.Bid, error) {
 	if len(encoded) <= 4 {
 		return nil, errors.New("invalid encoded data")
