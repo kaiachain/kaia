@@ -34,7 +34,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2
 	github.com/jinzhu/gorm v1.9.15
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/linxGnu/grocksdb v1.7.17-0.20230425035833-f16fdbe0eb3c
+	github.com/linxGnu/grocksdb v1.7.16
 	github.com/mattn/go-colorable v0.1.14
 	github.com/mattn/go-isatty v0.0.20
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
