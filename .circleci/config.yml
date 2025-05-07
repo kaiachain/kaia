@@ -24,33 +24,21 @@ executors:
     resource_class: medium
     docker:
       - image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   tar-linux-arm64-executor: # this executor is for linux-arm64 tar packaging
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: arm.medium
     docker:
       - image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04-arm
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   rpm-linux-amd64-executor: # this executor is for linux-amd64 rpm packaging
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: medium
     docker:
       - image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   rpm-linux-arm64-executor: # this executor is for linux-arm64 rpm packaging
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: arm.medium
     docker:
       - image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   tar-darwin-arm64-executor: # this executor is for darwin-arm64 tar packaging
     working_directory: ~/go/src/github.com/kaiachain/kaia
     macos:
@@ -61,38 +49,21 @@ executors:
     resource_class: medium
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   test-tests-executor: # this executor is for test-tests job
     working_directory: ~/go/src/github.com/kaiachain/kaia
     resource_class: medium+
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
   test-others-executor: # this executor is for test-others job
     working_directory: /go/src/github.com/kaiachain/kaia
     resource_class: xlarge
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
+
       - image: localstack/localstack:0.13.0
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
       - image: circleci/redis:6.0.8-alpine
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
       - name: kafka
         image: bitnami/kafka:3.7
-        auth:
-          username: $DOCKER_LOGIN
-          password: $DOCKER_PASSWORD
         environment:
           KAFKA_CFG_NODE_ID: 0
           KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -346,7 +317,7 @@ commands:
           no_output_timeout: 30m
           command: |
             make kcn
-            git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+            git clone https://github.com/kaiachain/kaia-rpc-tester.git
             cd kaia-rpc-tester
             cp ../build/bin/kcn script/cn/bin/
             cd script
@@ -411,7 +382,7 @@ jobs:
           name: "Run test tests"
           no_output_timeout: 30m
           command: |
-            git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
+            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
             make test-tests
   test-others:
     executor: test-others-executor
@@ -453,7 +424,7 @@ jobs:
           command: |
             set -e
             export GOPATH=/go
-            git clone --depth 1 https://$TEST_TOKEN@github.com/kaiachain/kaia-core-tests.git tests/testdata
+            git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
             make cover
             mkdir -p /tmp/coverage_reports
             cp coverage_report.txt /tmp/coverage_reports/
