@@ -11,7 +11,7 @@ both a Go and a C compiler. You can install them using your favorite package man
 
 ## Executables
 
-After successful build, executable binaries are installed at `build/bin/`.
+After a successful build, executable binaries are installed at `build/bin/`.
 
 | Command    | Description |
 |:----------:|-------------|
