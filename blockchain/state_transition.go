@@ -379,6 +379,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// - reset transient storage(eip 1153)
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msgTo, vm.ActivePrecompiles(rules), msg.AccessList())
 
+        // skip when creating a new contract
 	if msgTo != nil {
 		// SetCode sender nonce increment should be done before set code process.
 		if msg.Type() == types.TxTypeEthereumSetCode {
