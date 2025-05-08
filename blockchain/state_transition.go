@@ -338,11 +338,12 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	}
 
 	var (
-		msg          = st.msg
-		msgTo        = msg.To()
-		rules        = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
-		floorDataGas uint64
-		err          error
+		msg              = st.msg
+		msgTo            = msg.To()
+		contractCreation = msgTo == nil
+		rules            = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber)
+		floorDataGas     uint64
+		err              error
 	)
 
 	if st.evm.Config.Debug {
@@ -380,7 +381,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	st.state.Prepare(rules, msg.ValidatedSender(), msg.ValidatedFeePayer(), st.evm.Context.Coinbase, msgTo, vm.ActivePrecompiles(rules), msg.AccessList())
 
 	// skip when creating a new contract
-	if msgTo != nil {
+	if !contractCreation {
 		// Unlike other transaction types, where the sender nonce is incremented in msg.Execute(),
 		// SetCodeTx's sender nonce should be incremented before processing AuthList.
 		if msg.Type() == types.TxTypeEthereumSetCode {
