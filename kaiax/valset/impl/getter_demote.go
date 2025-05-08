@@ -84,6 +84,24 @@ func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.Stakin
 }
 
 // TODO-kaiax: move the feature into staking_info.go
+// collectStakingAmounts returns the staking amounts for the given nodes(i.e., the registered validator set).
+// The staking amount for each node is determined based on the consolidated nodes,
+// which aggregate stakes across multiple staking contracts that share the same reward address.
+// Under a single RewardAddr, only one representative NodeId is included in the validator set,
+// and that NodeId will be assigned the total aggregated stake.
+//
+// for example, consolidated nodes:
+//
+//	CN1 = {[N1,N2], [S1,S2], R1, A1+A2}
+//	CN3 = {[N3],    [S3],    R3, A3}
+//
+// Given nodes = [N2, N3], the resulting stakingAmounts will be:
+//
+//	{N2: A1 + A2, N3: A3}
+//
+// Note: This function assumes that validator registration is controlled,
+// and that only one NodeId per reward address can be part of the validator set.
+// If this assumption changes, this logic may need to be revisited.
 func collectStakingAmounts(nodes []common.Address, si *staking.StakingInfo) map[common.Address]float64 {
 	cns := si.ConsolidatedNodes()
 	stakingAmounts := make(map[common.Address]float64, len(nodes))
