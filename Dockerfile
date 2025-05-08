@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     make kcn && \
     make all -j
 
-FROM --platform=linux/amd64 ubuntu:latest
+FROM --platform=linux/amd64 ubuntu:24.04
 ARG SRC_DIR
 ARG PKG_DIR
 
