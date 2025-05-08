@@ -122,13 +122,13 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 
 	invalidCases := []struct {
 		Name string
-		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+		fn   invalidCasesFn
 	}{
+		{"unsupportedTxType", unsupportedTxType},
 		{"invalidNonce", decreaseNonce},
 		{"invalidGasPrice", decreaseGasPrice},
-		{"invalidTxSize", exceedSizeLimit},
-		{"invalidRecipientProgram", valueTransferToContract},
-		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -209,7 +209,7 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 
 			// generate a new tx and mutate it
 			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
+			invalidMap, expectedErr := invalidCase.fn(bcdata, txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -223,7 +223,7 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err)
+			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
@@ -248,12 +248,17 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 
 	invalidCases := []struct {
 		Name string
-		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+		fn   invalidCasesFn
 	}{
-		{"invalidGasPrice", decreaseGasPriceMagma},
+		{"unsupportedTxType", unsupportedTxType},
+		{"invalidNonce", decreaseNonce},
+		{"invalidGasPrice", decreaseGasPriceMagma}, // For Magma
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
+		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
-	// prof := profile.NewProfiler()
+	prof := profile.NewProfiler()
 
 	// Initialize blockchain
 	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
@@ -303,14 +308,11 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
-		// TODO-Kaia: fix GenABlockWithTransactions and related testcases
-		/*
-			if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
-				t.Fatal(err)
-			}
-		*/
-
 		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
 
 		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
 
@@ -333,7 +335,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 
 			// generate a new tx and mutate it
 			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
+			invalidMap, expectedErr := invalidCase.fn(bcdata, txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -347,7 +349,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err)
+			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
@@ -372,10 +374,15 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 	invalidCases := []struct {
 		Name string
-		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+		fn   invalidCasesFn
 	}{
-		{"invalidTo", valueTransferToEOAWithCode},
-		{"invalidFrom", keyUpdateFromEOAWithCode},
+		{"unsupportedTxType", unsupportedTxType},
+		{"invalidNonce", decreaseNonce},
+		{"invalidGasPrice", decreaseGasPriceMagma},                       // For Magma
+		{"invalidRecipientEOAWithCode", valueTransferToEOAWithCodeOrSCA}, // For Prague
+		{"invalidRecipientEOAWithoutCode", executeToEOAWithoutCode},      // For Prague
+		{"invalidCodeFormat", invalidCodeFormat},
+		{"invalidFromEOAWithCode", keyUpdateFromEOAWithCode}, // For Prague
 	}
 
 	prof := profile.NewProfiler()
@@ -484,7 +491,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 
 			// generate a new tx and mutate it
 			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, eoaWithCode.Addr)
+			invalidMap, expectedErr := invalidCase.fn(bcdata, txType, valueMap, eoaWithCode.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -502,7 +509,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err, txType, to, contract.Addr)
+			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
@@ -528,11 +535,11 @@ func TestValidationBlockTx(t *testing.T) {
 
 	invalidCases := []struct {
 		Name string
-		fn   func(types.TxType, txValueMap, common.Address) (txValueMap, error)
+		fn   invalidCasesFn
 	}{
 		{"invalidNonce", decreaseNonce},
-		{"invalidRecipientProgram", valueTransferToContract},
-		{"invalidRecipientNotProgram", executeToEOA},
+		{"invalidRecipientProgram", valueTransferToEOAWithCodeOrSCA},
+		{"invalidRecipientNotProgram", executeToEOAWithoutCode},
 		{"invalidCodeFormat", invalidCodeFormat},
 	}
 
@@ -609,7 +616,7 @@ func TestValidationBlockTx(t *testing.T) {
 			}
 			// generate a new tx and mutate it
 			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
-			invalidMap, expectedErr := invalidCase.fn(txType, valueMap, contract.Addr)
+			invalidMap, expectedErr := invalidCase.fn(bcdata, txType, valueMap, contract.Addr)
 
 			tx, err := types.NewTransactionWithMap(txType, invalidMap)
 			assert.Equal(t, nil, err)
@@ -631,15 +638,33 @@ func TestValidationBlockTx(t *testing.T) {
 	}
 }
 
+type invalidCasesFn func(bcdata *BCData, txType types.TxType, values txValueMap, addr common.Address) (txValueMap, error)
+
+func unsupportedTxType(bcdata *BCData, txType types.TxType, values txValueMap, _ common.Address) (txValueMap, error) {
+	if txType == types.TxTypeEthereumSetCode &&
+		!bcdata.bc.Config().IsPragueForkEnabled(bcdata.bc.CurrentBlock().Number()) {
+		return values, types.ErrTxTypeNotSupported
+	}
+	return values, nil
+}
+
 // decreaseNonce changes nonce to zero.
-func decreaseNonce(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func decreaseNonce(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	values[types.TxValueKeyNonce] = uint64(0)
 
 	return values, blockchain.ErrNonceTooLow
 }
 
 // decreaseGasPrice changes gasPrice to 12345678
-func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func decreaseGasPrice(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
@@ -655,7 +680,11 @@ func decreaseGasPrice(txType types.TxType, values txValueMap, contract common.Ad
 }
 
 // decreaseGasPriceMagma changes gasPrice to 12345678 and return an error with magma policy
-func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func decreaseGasPriceMagma(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	var err error
 	if txType == types.TxTypeEthereumDynamicFee || txType == types.TxTypeEthereumSetCode {
 		(*big.Int).SetUint64(values[types.TxValueKeyGasFeeCap].(*big.Int), 12345678)
@@ -669,28 +698,12 @@ func decreaseGasPriceMagma(txType types.TxType, values txValueMap, contract comm
 	return values, err
 }
 
-func valueTransferToEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	txType = toBasicType(txType)
-	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
-		values[types.TxValueKeyTo] = contract
-		return values, kerrors.ErrToMustBeEOAWithoutCode
-	}
-
-	return values, nil
-}
-
-func keyUpdateFromEOAWithCode(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
-	txType = toBasicType(txType)
-	if txType == types.TxTypeAccountUpdate {
-		values[types.TxValueKeyFrom] = contract
-		return values, kerrors.ErrFromMustBeEOAWithoutCode
-	}
-
-	return values, nil
-}
-
 // exceedSizeLimit assigns tx data bigger than MaxTxDataSize.
-func exceedSizeLimit(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func exceedSizeLimit(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	invalidData := make([]byte, blockchain.MaxTxDataSize+1)
 
 	if values[types.TxValueKeyData] != nil {
@@ -706,19 +719,53 @@ func exceedSizeLimit(txType types.TxType, values txValueMap, contract common.Add
 	return values, nil
 }
 
-// valueTransferToContract changes recipient address of value transfer txs to the contract address.
-func valueTransferToContract(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+func exceedSizeLimitShanghai(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
+	invalidData := make([]byte, blockchain.MaxTxDataSize+1)
+	err := blockchain.ErrOversizedData
+	txType = toBasicType(txType)
+	if txType == types.TxTypeSmartContractDeploy ||
+		txType == types.TxTypeChainDataAnchoring {
+		err = fmt.Errorf("%w: code size %v, limit %v", blockchain.ErrMaxInitCodeSizeExceeded, len(invalidData), params.MaxInitCodeSize)
+	}
+
+	if values[types.TxValueKeyData] != nil {
+		values[types.TxValueKeyData] = invalidData
+		return values, err
+	}
+
+	if values[types.TxValueKeyAnchoredData] != nil {
+		values[types.TxValueKeyAnchoredData] = invalidData
+		return values, err
+	}
+
+	return values, nil
+}
+
+// valueTransferToEOAWithCodeOrSCA changes recipient address of value transfer txs to the EOA with code or SCA.
+func valueTransferToEOAWithCodeOrSCA(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCodeOrSCA common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, EOAWithCodeOrSCA); err != nil {
+		return values, err
+	}
+
 	txType = toBasicType(txType)
 	if txType == types.TxTypeValueTransfer || txType == types.TxTypeValueTransferMemo {
-		values[types.TxValueKeyTo] = contract
+		values[types.TxValueKeyTo] = EOAWithCodeOrSCA
 		return values, kerrors.ErrToMustBeEOAWithoutCode
 	}
 
 	return values, nil
 }
 
-// executeToEOA changes the recipient of contract execution txs to an EOA address (the same with the sender).
-func executeToEOA(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+// executeToEOAWithoutCode changes the recipient of contract execution txs to an EOA without code address (the same with the sender).
+func executeToEOAWithoutCode(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	if toBasicType(txType) == types.TxTypeSmartContractExecution {
 		values[types.TxValueKeyTo] = values[types.TxValueKeyFrom].(common.Address)
 		return values, kerrors.ErrToMustBeEOAWithCodeOrSCA
@@ -727,7 +774,22 @@ func executeToEOA(txType types.TxType, values txValueMap, contract common.Addres
 	return values, nil
 }
 
-func invalidCodeFormat(txType types.TxType, values txValueMap, contract common.Address) (txValueMap, error) {
+// keyUpdateFromEOAWithCode changes the sender of key update txs to an EOA with code address.
+func keyUpdateFromEOAWithCode(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCode common.Address) (txValueMap, error) {
+	txType = toBasicType(txType)
+	if txType == types.TxTypeAccountUpdate {
+		values[types.TxValueKeyFrom] = EOAWithCode
+		return values, kerrors.ErrFromMustBeEOAWithoutCode
+	}
+
+	return values, nil
+}
+
+func invalidCodeFormat(bcdata *BCData, txType types.TxType, values txValueMap, _addr common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, _addr); err != nil {
+		return values, err
+	}
+
 	if txType.IsContractDeploy() {
 		values[types.TxValueKeyCodeFormat] = params.CodeFormatLast
 		return values, kerrors.ErrInvalidCodeFormat
@@ -1847,7 +1909,10 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		{
 			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
 			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
-			valueMap, _ = exceedSizeLimit(txType, valueMap, contract.Addr)
+			valueMap, expectedError := exceedSizeLimit(bcdata, txType, valueMap, contract.Addr)
+			if expectedError == types.ErrTxTypeNotSupported {
+				continue
+			}
 
 			tx, err := types.NewTransactionWithMap(txType, valueMap)
 			assert.Equal(t, nil, err)
@@ -1861,18 +1926,18 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			}
 
 			// check the rlp encoded tx size
-			encodedTx, err := rlp.EncodeToBytes(tx)
+			encodedTx, _ := rlp.EncodeToBytes(tx)
 			if len(encodedTx) < blockchain.MaxTxDataSize {
-				t.Fatalf("test data size is smaller than MaxTxDataSize")
+				t.Fatalf("test data size is smaller than MaxTxDataSize: txType: %v", txType)
 			}
 
 			// RLP decode and re-generate the tx
 			newTx := &types.Transaction{}
-			err = rlp.DecodeBytes(encodedTx, newTx)
+			rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
 			err = txpool.AddRemote(newTx)
-			assert.Equal(t, blockchain.ErrOversizedData, err)
+			assert.Equal(t, expectedError, err, txType)
 		}
 
 		// test for valid tx size
@@ -1905,42 +1970,43 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 			}
 
 			// check the rlp encoded tx size
-			encodedTx, err := rlp.EncodeToBytes(tx)
+			encodedTx, _ := rlp.EncodeToBytes(tx)
 			if len(encodedTx) > blockchain.MaxTxDataSize {
 				t.Fatalf("test data size is bigger than MaxTxDataSize")
 			}
 
 			// RLP decode and re-generate the tx
 			newTx := &types.Transaction{}
-			err = rlp.DecodeBytes(encodedTx, newTx)
+			rlp.DecodeBytes(encodedTx, newTx)
 
 			// test for tx pool insert validation
 			err = txpool.AddRemote(newTx)
-			assert.Equal(t, nil, err)
+			assert.Equal(t, nil, err, txType)
 			reservoir.AddNonce()
 		}
 	}
 }
 
-// TestValidationPoolResetAfterSenderKeyChange puts txs in the pending pool and generates a block only with the first tx.
-// Since the tx changes the sender's account key, all rest txs should drop from the pending pool.
-func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
-	txTypes := []types.TxType{}
+func TestValidationTxSizeAfterRLPPrague(t *testing.T) {
+	testTxTypes := []types.TxType{}
 	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
 		if i == types.TxTypeKaiaLast {
 			i = types.TxTypeEthereumAccessList
 		}
 
-		_, err := types.NewTxInternalData(i)
+		tx, err := types.NewTxInternalData(i)
 		if err == nil {
-			txTypes = append(txTypes, i)
+			// Since this test is for payload size, tx types without payload field will not be tested.
+			if _, ok := tx.(types.TxInternalDataPayload); ok {
+				testTxTypes = append(testTxTypes, i)
+			}
 		}
 	}
 
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1975,7 +2041,170 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 			types.TxValueKeyTo:            (*common.Address)(nil),
 			types.TxValueKeyAmount:        big.NewInt(0),
 			types.TxValueKeyGasLimit:      gasLimit,
-			types.TxValueKeyGasPrice:      big.NewInt(0),
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
+			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyData:          common.FromHex(code),
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
+		}
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+
+		contract.Addr = crypto.CreateAddress(reservoir.Addr, reservoir.Nonce)
+
+		reservoir.AddNonce()
+	}
+
+	// make TxPool to test validation in 'TxPool add' process
+	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
+
+	// test for all tx types
+	for _, txType := range testTxTypes {
+		// test for invalid tx size
+		{
+			// generate invalid txs which size is around (32 * 1024) ~ (33 * 1024)
+			valueMap, _ := genMapForTxTypes(reservoir, reservoir, txType)
+			valueMap, expectedError := exceedSizeLimitShanghai(bcdata, txType, valueMap, contract.Addr)
+			if expectedError == types.ErrTxTypeNotSupported {
+				continue
+			}
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, _ := rlp.EncodeToBytes(tx)
+			if len(encodedTx) < blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is smaller than MaxTxDataSize: txType: %v", txType)
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, expectedError, err, txType)
+		}
+
+		// test for valid tx size
+		{
+			// generate valid txs which size is around (31 * 1024) ~ (32 * 1024)
+			to := reservoir
+			if toBasicType(txType) == types.TxTypeSmartContractExecution {
+				to = contract
+			}
+			valueMap, _ := genMapForTxTypes(reservoir, to, txType)
+			validData := make([]byte, params.MaxInitCodeSize-1024) // For Shanghai
+
+			if valueMap[types.TxValueKeyData] != nil {
+				valueMap[types.TxValueKeyData] = validData
+			}
+
+			if valueMap[types.TxValueKeyAnchoredData] != nil {
+				valueMap[types.TxValueKeyAnchoredData] = validData
+			}
+
+			tx, err := types.NewTransactionWithMap(txType, valueMap)
+			assert.Equal(t, nil, err)
+
+			err = tx.SignWithKeys(signer, reservoir.Keys)
+			assert.Equal(t, nil, err)
+
+			if txType.IsFeeDelegatedTransaction() {
+				tx.SignFeePayerWithKeys(signer, reservoir.Keys)
+				assert.Equal(t, nil, err)
+			}
+
+			// check the rlp encoded tx size
+			encodedTx, _ := rlp.EncodeToBytes(tx)
+			if len(encodedTx) > blockchain.MaxTxDataSize {
+				t.Fatalf("test data size is bigger than MaxTxDataSize")
+			}
+
+			// RLP decode and re-generate the tx
+			newTx := &types.Transaction{}
+			rlp.DecodeBytes(encodedTx, newTx)
+
+			// test for tx pool insert validation
+			err = txpool.AddRemote(newTx)
+			assert.Equal(t, nil, err, txType)
+			reservoir.AddNonce()
+		}
+	}
+}
+
+// TestValidationPoolResetAfterSenderKeyChange puts txs in the pending pool and generates a block only with the first tx.
+// Since the tx changes the sender's account key, all rest txs should drop from the pending pool.
+func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
+	txTypes := []types.TxType{}
+	for i := types.TxTypeLegacyTransaction; i < types.TxTypeEthereumLast; i++ {
+		if i == types.TxTypeKaiaLast {
+			i = types.TxTypeEthereumAccessList
+		}
+
+		_, err := types.NewTxInternalData(i)
+		if err == nil {
+			txTypes = append(txTypes, i)
+		}
+	}
+
+	prof := profile.NewProfiler()
+
+	// Initialize blockchain
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	// Initialize address-balance map for verification
+	accountMap := NewAccountMap()
+	if err := accountMap.Initialize(bcdata); err != nil {
+		t.Fatal(err)
+	}
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+
+	// reservoir account
+	reservoir := &TestAccountType{
+		Addr:  *bcdata.addrs[0],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[0]},
+		Nonce: uint64(0),
+	}
+
+	// for contract execution txs
+	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
+	assert.Equal(t, nil, err)
+
+	// deploy a contract for contract execution tx type
+	{
+		var txs types.Transactions
+
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:         reservoir.GetNonce(),
+			types.TxValueKeyFrom:          reservoir.GetAddr(),
+			types.TxValueKeyTo:            (*common.Address)(nil),
+			types.TxValueKeyAmount:        big.NewInt(0),
+			types.TxValueKeyGasLimit:      gasLimit,
+			types.TxValueKeyGasPrice:      big.NewInt(25 * params.Gkei),
 			types.TxValueKeyHumanReadable: false,
 			types.TxValueKeyData:          common.FromHex(code),
 			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,

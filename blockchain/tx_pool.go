@@ -707,7 +707,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
-	if !pool.rules.IsEthTxType && (tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode) {
+	if !pool.rules.IsEthTxType && tx.Type() == types.TxTypeEthereumDynamicFee {
+		return ErrTxTypeNotSupported
+	}
+
+	// Reject set code transactions until EIP-7600(prague) activates.
+	if !pool.rules.IsPrague && tx.Type() == types.TxTypeEthereumSetCode {
 		return ErrTxTypeNotSupported
 	}
 

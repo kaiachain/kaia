@@ -1988,7 +1988,10 @@ func TestSetCodeTransactions(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
-	pool := NewTxPool(testTxPoolConfig, kip71Config, blockchain, &dummyGovModule{chainConfig: kip71Config})
+	eip7600Config := kip71Config.Copy()
+	eip7600Config.PragueCompatibleBlock = common.Big0
+
+	pool := NewTxPool(testTxPoolConfig, eip7600Config, blockchain, &dummyGovModule{chainConfig: eip7600Config})
 	defer pool.Stop()
 
 	// Create the test accounts
