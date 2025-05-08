@@ -381,7 +381,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 
 	// skip when creating a new contract
 	if msgTo != nil {
-		// SetCode sender nonce increment should be done before set code process.
+		// Unlike other transaction types, where the sender nonce is incremented in msg.Execute(),
+		// SetCodeTx's sender nonce should be incremented before processing AuthList.
 		if msg.Type() == types.TxTypeEthereumSetCode {
 			// Increment the nonce for the next transaction.
 			// Note: EIP-7702 authorizations can also modify the nonce. We perform
