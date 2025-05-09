@@ -22,7 +22,6 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -136,8 +135,8 @@ func TestIsExecutable(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
+	sdb, _ := backend.BlockChain().State()
 	key, _ := crypto.GenerateKey()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	err := g.Init(&InitOpts{
 		ChainConfig:   testChainConfig,
 		GaslessConfig: testGaslessConfig,
@@ -215,7 +214,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
 	nodekey, _ := crypto.GenerateKey()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	sdb, _ := backend.BlockChain().State()
 	sdb.SetBalance(crypto.PubkeyToAddress(nodekey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig

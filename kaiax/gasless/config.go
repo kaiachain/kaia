@@ -24,7 +24,7 @@ import (
 var (
 	AllowedTokensFlag = &cli.StringSliceFlag{
 		Name:    "gasless.allowed-tokens",
-		Usage:   "allow token addresses for gasless module, default is all",
+		Usage:   "allow token addresses for gasless module, allow all tokens if all",
 		Value:   cli.NewStringSlice("all"),
 		Aliases: []string{"genesis.module.gasless.allowed-tokens"},
 	}
@@ -43,11 +43,14 @@ type GaslessConfig struct {
 }
 
 func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	allowedTokens := []common.Address{}
+	allowedTokens := []common.Address(nil)
 	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
 		if addr == "all" {
 			allowedTokens = nil
 			break
+		}
+		if allowedTokens == nil {
+			allowedTokens = []common.Address{}
 		}
 		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
 	}

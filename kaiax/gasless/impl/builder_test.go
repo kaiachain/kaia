@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -36,9 +35,9 @@ func TestExtractTxBundles(t *testing.T) {
 
 	g := NewGaslessModule()
 	dbm := database.NewMemoryDBManager()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(dbm), nil, nil)
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
+	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 	err := g.Init(&InitOpts{
 		ChainConfig:   testChainConfig,
