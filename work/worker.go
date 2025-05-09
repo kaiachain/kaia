@@ -913,7 +913,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 					}
 				}
 				logger.Error("TxGenerator error", "error", err)
-				*env.state = *lastSnapshot
+				env.state.Set(lastSnapshot)
 				env.header.GasUsed = gasUsedSnapshot
 				env.tcount = tcountSnapshot
 				return err, &types.Transaction{}, nil
@@ -935,9 +935,10 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 					}
 				}
 			}
-			*env.state = *lastSnapshot
+			env.state.Set(lastSnapshot)
 			env.header.GasUsed = gasUsedSnapshot
 			env.tcount = tcountSnapshot
+			logger.Error("ApplyTransaction error, restoring env", "error", err)
 			if err == nil {
 				err = kerrors.ErrRevertedBundleByVmErr
 			}
