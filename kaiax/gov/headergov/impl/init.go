@@ -20,6 +20,11 @@ import (
 var (
 	_ headergov.HeaderGovModule = (*headerGovModule)(nil)
 
+	// A background migration thread scans the epoch and stores all votes in DB.
+	// To prevent high CPU usage, the migration loop is throttled with a 50ms delay per iteration.
+	// For example, if migration starts at block 180,000,000, the entire process will take at least 0.5 hour.
+	migrationThrottlingDelay = 50 * time.Millisecond
+
 	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
@@ -156,7 +161,7 @@ func (h *headerGovModule) migrate() {
 			return
 		}
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(migrationThrottlingDelay)
 
 		border -= 1
 		h.accumulateVotesInEpoch(border)
