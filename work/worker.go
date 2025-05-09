@@ -946,7 +946,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			if err == nil {
 				err = kerrors.ErrRevertedBundleByVmErr
 			}
-			return err, nil, nil
+			return err, tx, nil
 		}
 
 		env.tcount++
