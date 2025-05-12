@@ -399,7 +399,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		if msg.AuthList() != nil {
 			for _, auth := range msg.AuthList() {
 				// Note errors are ignored, we simply skip invalid authorizations here.
-				st.applyAuthorization(&auth, *msgTo, rules)
+				st.applyAuthorization(&auth, rules)
 			}
 		}
 
@@ -566,7 +566,7 @@ func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorizatio
 	return authority, nil
 }
 
-func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, to common.Address, rules params.Rules) (err error) {
+func (st *StateTransition) applyAuthorization(auth *types.SetCodeAuthorization, rules params.Rules) (err error) {
 	authority, err := st.validateAuthorization(auth)
 	if err != nil {
 		return err

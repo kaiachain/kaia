@@ -699,21 +699,6 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	return obj
 }
 
-// resolveStateObject follows delegation designations to resolve a state object
-// given by the address, returning nil if the object is not found or was deleted
-// in this execution context.
-func (s *StateDB) resolveStateObject(addr common.Address) *stateObject {
-	obj := s.getStateObject(addr)
-	if obj == nil {
-		return nil
-	}
-	addr, ok := types.ParseDelegation(obj.Code(s.db))
-	if !ok {
-		return obj
-	}
-	return s.getStateObject(addr)
-}
-
 func (s *StateDB) setStateObject(object *stateObject) {
 	s.stateObjects[object.Address()] = object
 }

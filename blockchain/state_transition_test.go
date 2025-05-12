@@ -416,7 +416,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 
 			// Verify that the expected mockStateDB's calls are being made.
 			auth := tt.makeAuthorization()
-			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, *tt.msg.To(), params.TestRules)
+			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, params.TestRules)
 			require.Equal(t, tt.expectedError, actual)
 		})
 	}
