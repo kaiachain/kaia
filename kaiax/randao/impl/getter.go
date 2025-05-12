@@ -63,7 +63,7 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 
 		var kip113Addr common.Address
 		var statedb *state.StateDB
-		var pHeader = r.Chain.GetHeaderByNumber(parentNum.Uint64())
+		pHeader := r.Chain.GetHeaderByNumber(parentNum.Uint64())
 
 		// Early validation of parent header existence
 		if pHeader == nil {
