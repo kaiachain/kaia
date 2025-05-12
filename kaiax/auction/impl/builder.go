@@ -83,7 +83,7 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
 		for i, tx := range list {
-			if tx.Time().Add(AuctionEarlyDeadline).After(now) {
+			if tx.Time().After(now.Add(-AuctionEarlyDeadline)) {
 				// if the tx is a target tx, skip it
 				if _, ok := targetTxHashMap[tx.Hash()]; ok {
 					continue
