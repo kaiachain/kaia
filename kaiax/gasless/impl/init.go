@@ -19,9 +19,11 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -29,14 +31,16 @@ import (
 var logger = log.NewModuleLogger(log.KaiaxGasless)
 
 type InitOpts struct {
-	ChainConfig *params.ChainConfig
-	NodeKey     *ecdsa.PrivateKey
-	TxPool      kaiax.TxPoolForCaller
+	ChainConfig   *params.ChainConfig
+	GaslessConfig *gasless.GaslessConfig
+	NodeKey       *ecdsa.PrivateKey
+	Chain         backends.BlockChainForCaller
+	TxPool        kaiax.TxPoolForCaller
 }
 
 type GaslessModule struct {
 	InitOpts
-	swapRouters   map[common.Address]bool
+	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
 }
@@ -46,19 +50,18 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.NodeKey == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
 		return ErrInitUnexpectedNil
 	}
-	g.InitOpts = *opts
 
-	g.swapRouters = map[common.Address]bool{
-		common.HexToAddress("0x1234"): true,
-	}
-	g.allowedTokens = map[common.Address]bool{
-		common.HexToAddress("0xabcd"): true,
-	}
+	g.InitOpts = *opts
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
-	return nil
+
+	return g.updateAddresses(g.Chain.CurrentBlock().Header())
+}
+
+func (g *GaslessModule) IsDisabled() bool {
+	return g.GaslessConfig.Disable
 }
 
 func (g *GaslessModule) Start() error {

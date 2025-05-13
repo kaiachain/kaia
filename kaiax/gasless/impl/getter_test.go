@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -34,6 +34,21 @@ import (
 
 func TestIsApproveTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	g := NewGaslessModule()
+	db := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
+	key, _ := crypto.GenerateKey()
+	err := g.Init(&InitOpts{
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       key,
+		Chain:         backend.BlockChain(),
+		TxPool:        &testTxPool{},
+	})
+	require.NoError(t, err)
+
 	privkey, _ := crypto.GenerateKey()
 	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
 
@@ -59,14 +74,6 @@ func TestIsApproveTx(t *testing.T) {
 		},
 	}
 
-	g := NewGaslessModule()
-	key, _ := crypto.GenerateKey()
-	err := g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     key,
-		TxPool:      &testTxPool{},
-	})
-	require.NoError(t, err)
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsApproveTx(tc.tx)
@@ -77,6 +84,21 @@ func TestIsApproveTx(t *testing.T) {
 
 func TestIsSwapTx(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	g := NewGaslessModule()
+	db := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
+	key, _ := crypto.GenerateKey()
+	err := g.Init(&InitOpts{
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       key,
+		Chain:         backend.BlockChain(),
+		TxPool:        &testTxPool{},
+	})
+	require.NoError(t, err)
+
 	privkey, _ := crypto.GenerateKey()
 	correct := makeSwapTx(t, privkey, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000)})
 
@@ -98,15 +120,6 @@ func TestIsSwapTx(t *testing.T) {
 		},
 	}
 
-	g := NewGaslessModule()
-	key, _ := crypto.GenerateKey()
-	err := g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     key,
-		TxPool:      &testTxPool{},
-	})
-	require.NoError(t, err)
-
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsSwapTx(tc.tx)
@@ -117,6 +130,22 @@ func TestIsSwapTx(t *testing.T) {
 
 func TestIsExecutable(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	g := NewGaslessModule()
+	db := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
+	sdb, _ := backend.BlockChain().State()
+	key, _ := crypto.GenerateKey()
+	err := g.Init(&InitOpts{
+		ChainConfig:   testChainConfig,
+		GaslessConfig: testGaslessConfig,
+		NodeKey:       key,
+		Chain:         backend.BlockChain(),
+		TxPool:        &testTxPool{sdb},
+	})
+	require.NoError(t, err)
+
 	privkey, _ := crypto.GenerateKey()
 	testcases := map[string]struct {
 		approve *types.Transaction
@@ -170,16 +199,6 @@ func TestIsExecutable(t *testing.T) {
 		},
 	}
 
-	g := NewGaslessModule()
-	key, _ := crypto.GenerateKey()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	err := g.Init(&InitOpts{
-		ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-		NodeKey:     key,
-		TxPool:      &testTxPool{sdb},
-	})
-	require.NoError(t, err)
-
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			ok := g.IsExecutable(tc.approve, tc.swap)
@@ -190,7 +209,19 @@ func TestIsExecutable(t *testing.T) {
 
 func TestGetLendTxGenerator(t *testing.T) {
 	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+
+	db := database.NewMemoryDBManager()
+	alloc := testAllocStorage()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
+	nodekey, _ := crypto.GenerateKey()
+	sdb, _ := backend.BlockChain().State()
+	sdb.SetBalance(crypto.PubkeyToAddress(nodekey.PublicKey), new(big.Int).SetUint64(params.KAIA))
+
+	testTxPoolConfig := blockchain.DefaultTxPoolConfig
+	testTxPoolConfig.Journal = ""
+
 	privkey, _ := crypto.GenerateKey()
+
 	testcases := map[string]struct {
 		approve *types.Transaction
 		swap    *types.Transaction
@@ -205,23 +236,20 @@ func TestGetLendTxGenerator(t *testing.T) {
 		},
 	}
 
-	testTxPoolConfig := blockchain.DefaultTxPoolConfig
-	testTxPoolConfig.Journal = ""
-
-	key, _ := crypto.GenerateKey()
-	sdb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	sdb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
-
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			bc := &testBlockChain{sdb.Copy(), 10000000, new(event.Feed)}
-			pool := blockchain.NewTxPool(testTxPoolConfig, chainConfig, bc, &dummyGovModule{chainConfig: chainConfig})
 			g := NewGaslessModule()
-			g.Init(&InitOpts{
-				ChainConfig: &params.ChainConfig{ChainID: big.NewInt(1)},
-				NodeKey:     key,
-				TxPool:      pool,
+			bc := &testBlockChain{sdb.Copy(), 10000000, new(event.Feed)}
+			pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
+			err := g.Init(&InitOpts{
+				ChainConfig:   testChainConfig,
+				GaslessConfig: testGaslessConfig,
+				NodeKey:       nodekey,
+				Chain:         backend.BlockChain(),
+				TxPool:        pool,
 			})
+			require.NoError(t, err)
+
 			pool.RegisterTxPoolModule(g)
 
 			ok := g.IsExecutable(tc.approve, tc.swap)
