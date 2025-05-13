@@ -62,7 +62,7 @@ type AuctionAPI struct {
 }
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
-	publicBlockChainAPI := api.NewPublicBlockChainAPI(a.Backend)
+	publicBlockChainAPI := api.NewPublicBlockChainAPI(a.Backend.(api.Backend))
 	return &AuctionAPI{a: a, f: filters.NewFilterAPI(a.Backend), publicAPI: publicBlockChainAPI}
 }
 
