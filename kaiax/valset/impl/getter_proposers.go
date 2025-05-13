@@ -102,8 +102,7 @@ func (v *ValsetModule) scanBlocks(pUpdateNum, pUpdateInterval uint64) []uint64 {
 	scanBlocks := make([]uint64, 0)
 
 	// if migrated, scanBlocks is set as voteBlockNums between [pUpdateNum, pUpdateNum+pUpdateInterval)
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
-
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum != nil && *pMinVoteNum <= pUpdateNum {
 		if v.validatorVoteBlockNumsCache != nil {
 			scanBlocks = make([]uint64, len(v.validatorVoteBlockNumsCache))

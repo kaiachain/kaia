@@ -76,6 +76,7 @@ type ValsetModule struct {
 	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
 
 	validatorVoteBlockNumsCache []uint64
+	lowestScannedVoteNumCache   *uint64
 }
 
 func NewValsetModule() *ValsetModule {
@@ -113,7 +114,7 @@ func (v *ValsetModule) initSchema() error {
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval
-	if pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv); pMinVoteNum == nil {
+	if pMinVoteNum := v.readLowestScannedVoteNumCached(); pMinVoteNum == nil {
 		// migration not started. Migrating the last interval and leave the rest to be migrated by background thread.
 		currentNum := v.Chain.CurrentBlock().NumberU64()
 		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(currentNum, true)
@@ -127,6 +128,7 @@ func (v *ValsetModule) initSchema() error {
 		} else {
 			writeLowestScannedVoteNum(v.ChainKv, 0)
 		}
+		v.lowestScannedVoteNumCache = nil
 	}
 
 	return nil
@@ -155,7 +157,7 @@ func (v *ValsetModule) Stop() {
 func (v *ValsetModule) migrate() {
 	defer v.wg.Done()
 
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
 		logger.Error("No lowest scanned snapshot num")
 		return
@@ -184,6 +186,7 @@ func (v *ValsetModule) migrate() {
 		}
 		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
 		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		v.lowestScannedVoteNumCache = nil
 		targetNum = snapshotNum
 	}
 
@@ -191,5 +194,6 @@ func (v *ValsetModule) migrate() {
 		logger.Info("ValsetModule migrate complete")
 		// Now the migration is complete.
 		writeLowestScannedVoteNum(v.ChainKv, 0)
+		v.lowestScannedVoteNumCache = nil
 	}
 }

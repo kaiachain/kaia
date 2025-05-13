@@ -57,7 +57,7 @@ func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 }
 
 func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
 		return nil, false, errNoLowestScannedNum
 	}
@@ -78,6 +78,13 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error
 		council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
 		return council, true, nil
 	}
+}
+
+func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
+	if v.lowestScannedVoteNumCache == nil {
+		v.lowestScannedVoteNumCache = ReadLowestScannedVoteNum(v.ChainKv)
+	}
+	return v.lowestScannedVoteNumCache
 }
 
 // lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
@@ -134,7 +141,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 		if nums == nil {
 			return nil, 0, errNoVoteBlockNums
 		}
-		pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+		pMinVoteNum := v.readLowestScannedVoteNumCached()
 		header := v.Chain.GetHeaderByNumber(snapshotNum)
 		if pMinVoteNum != nil && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
 			// if there was no vote between (lowestScannedVoteNum, snapshotNum),
