@@ -558,12 +558,14 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []builder.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
 
 	gaslessDisabled := mGasless.IsDisabled()
 	if !gaslessDisabled {
 		mExecution = append(mExecution, mGasless)
 		mTxBundling = append(mTxBundling, mGasless)
 		mTxPool = append(mTxPool, mGasless)
+		mJsonRpc = append(mJsonRpc, mGasless)
 	}
 
 	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
@@ -571,10 +573,10 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
-	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder)
+	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
+	s.blockchain.RegisterExecutionModule(mExecution...)
 	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
