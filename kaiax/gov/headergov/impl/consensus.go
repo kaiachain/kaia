@@ -146,13 +146,13 @@ func (h *headerGovModule) VerifyGov(header *types.Header) error {
 	return nil
 }
 
+// checkConsistency checks if vote values are consistent with chain states such as other parameters and validator set.
 func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
-	//nolint:exhaustive
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
 		params := h.GetParamSet(blockNum)
 
-		// skip the consistency check if governingMode is non-single.
+		// compare with governing node only in single mode.
 		if params.GovernanceMode != "single" {
 			return nil
 		}
@@ -180,24 +180,29 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		acc := state.GetAccount(vote.Value().(common.Address))
 		if acc == nil {
 			return ErrGovParamNotAccount
-		}
-
-		if acc.Type() != account.SmartContractAccountType || acc.Empty() {
+		} else if acc.Type() != account.SmartContractAccountType || acc.Empty() {
 			return ErrGovParamNotContract
+		} else {
+			return nil
 		}
 	case gov.Kip71LowerBoundBaseFee:
 		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {
 			return ErrLowerBoundBaseFee
+		} else {
+			return nil
 		}
 	case gov.Kip71UpperBoundBaseFee:
 		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) < params.LowerBoundBaseFee {
 			return ErrUpperBoundBaseFee
+		} else {
+			return nil
 		}
 	case gov.AddValidator, gov.RemoveValidator:
 		params := h.GetParamSet(blockNum)
 
+		// compare with governing node only in single mode.
 		if params.GovernanceMode != "single" {
 			return nil
 		}
@@ -206,9 +211,17 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 				return ErrGovNodeInValSetVoteValue
 			}
 		}
+		return nil
+		// These votes are valid as long as it passes the format checks in NewVoteData(). No more checks here.
+	case gov.GovernanceDeriveShaImpl, gov.GovernanceGovernanceMode, gov.GovernanceUnitPrice,
+		gov.IstanbulCommitteeSize, gov.IstanbulEpoch, gov.IstanbulPolicy,
+		gov.Kip71BaseFeeDenominator, gov.Kip71GasTarget, gov.Kip71MaxBlockGasUsedForBaseFee,
+		gov.RewardDeferredTxFee, gov.RewardKip82Ratio, gov.RewardMintingAmount, gov.RewardMinimumStake,
+		gov.RewardProposerUpdateInterval, gov.RewardRatio, gov.RewardStakingUpdateInterval, gov.RewardUseGiniCoeff:
+		return nil
+	default:
+		return ErrInvalidKeyValue
 	}
-
-	return nil
 }
 
 // The blockNum's epoch index must be greater than 0. That is, it must be blockNum >= epoch.
