@@ -465,10 +465,14 @@ func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- co
 func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
 	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if err != nil {
-		return nil, err
+	if err == nil {
+		return hex, nil
 	}
-	return hex, nil
+	err = ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if err == nil {
+		return hex, nil
+	}
+	return nil, err
 }
 
 // PendingCallContract executes a message call transaction using the EVM.
