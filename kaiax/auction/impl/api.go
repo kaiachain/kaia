@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -55,12 +56,14 @@ func (a *AuctionModule) APIs() []rpc.API {
 }
 
 type AuctionAPI struct {
-	a *AuctionModule
-	f *filters.FilterAPI
+	a         *AuctionModule
+	f         *filters.FilterAPI
+	publicAPI *api.PublicBlockChainAPI
 }
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
-	return &AuctionAPI{a, filters.NewFilterAPI(a.Backend)}
+	publicBlockChainAPI := api.NewPublicBlockChainAPI(a.Backend.(api.Backend))
+	return &AuctionAPI{a: a, f: filters.NewFilterAPI(a.Backend), publicAPI: publicBlockChainAPI}
 }
 
 type RPCOutput map[string]any
@@ -145,6 +148,10 @@ func (api *AuctionAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) 
 
 func (api *AuctionAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
 	return api.f.Logs(ctx, crit)
+}
+
+func (api *AuctionAPI) Call(ctx context.Context, args api.CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	return api.publicAPI.Call(ctx, args, blockNrOrHash)
 }
 
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
