@@ -312,7 +312,10 @@ func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header)
 		return sub, nil
 	}
 	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newHeads")
-	return sub, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 // State Access
@@ -378,7 +381,10 @@ func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, c
 		return sub, nil
 	}
 	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
-	return sub, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 func toFilterArg(q kaia.FilterQuery) interface{} {
@@ -438,7 +444,10 @@ func (ec *Client) SubscribeFullPendingTransactions(ctx context.Context, ch chan<
 		return sub, nil
 	}
 	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
-	return sub, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
@@ -447,7 +456,10 @@ func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch ch
 		return sub, nil
 	}
 	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
-	return sub, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
@@ -456,7 +468,10 @@ func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- co
 		return sub, nil
 	}
 	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
-	return sub, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 // Contract Calling
@@ -469,15 +484,15 @@ func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- co
 // blocks might not be available.
 func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
-	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if err == nil {
+	kaiaCallErr := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if kaiaCallErr == nil {
 		return hex, nil
 	}
-	err = ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if err == nil {
+	auctionCallErr := ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if auctionCallErr == nil {
 		return hex, nil
 	}
-	return nil, errors.Join(err)
+	return nil, errors.Join(kaiaCallErr, auctionCallErr)
 }
 
 // PendingCallContract executes a message call transaction using the EVM.
