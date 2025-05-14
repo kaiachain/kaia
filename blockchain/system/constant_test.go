@@ -32,6 +32,8 @@ func TestRuntimeCodeRegression(t *testing.T) {
 		{RegistryCode, "0xfd3c2152828579b98068570231554ed4bacf528f50ff1bf9fce6300ec023f720"},
 		{Kip113Code, "0x236841ea654b0f18e83e934ba0f69b4ab215f0b6ffbeee288797ce67c89aea25"},
 		{ERC1967ProxyCode, "0x7bd49b148f3b1ffd97fb2ef2fdc773271822fa8306d3bcba626fbd412ed21c12"},
+		{UniswapV2FactoryCode, "0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0"},
+		{UniswapV2Router02Code, "0x8078c0090b05e0bee0587064947604e217146cc295dcb119a2c0217d6e88dac5"},
 	}
 
 	for _, tc := range tcs {

@@ -31,7 +31,7 @@ func TestBundle_IsConflict(t *testing.T) {
 	}
 
 	b0 := &Bundle{
-		BundleTxs:    []interface{}{txs[0], txs[1]},
+		BundleTxs:    NewTxOrGenList(txs[0], txs[1]),
 		TargetTxHash: common.Hash{},
 	}
 	defaultTargetHash := txs[1].Hash()
@@ -46,7 +46,7 @@ func TestBundle_IsConflict(t *testing.T) {
 			name:   "Same TargetTxHash (empty TargetHash)",
 			bundle: b0,
 			newBundle: &Bundle{
-				BundleTxs:    []interface{}{},
+				BundleTxs:    NewTxOrGenList(),
 				TargetTxHash: common.Hash{},
 			},
 			expected: true,
@@ -55,7 +55,7 @@ func TestBundle_IsConflict(t *testing.T) {
 			name:   "TargetTxHash divides a bundle",
 			bundle: b0,
 			newBundle: &Bundle{
-				BundleTxs:    []interface{}{},
+				BundleTxs:    NewTxOrGenList(),
 				TargetTxHash: txs[0].Hash(),
 			},
 			expected: true,
@@ -64,7 +64,7 @@ func TestBundle_IsConflict(t *testing.T) {
 			name:   "Overlapping BundleTxs",
 			bundle: b0,
 			newBundle: &Bundle{
-				BundleTxs:    []interface{}{txs[0]},
+				BundleTxs:    NewTxOrGenList(txs[0]),
 				TargetTxHash: defaultTargetHash,
 			},
 			expected: true,
@@ -73,7 +73,7 @@ func TestBundle_IsConflict(t *testing.T) {
 			name:   "Non-overlapping BundleTxs",
 			bundle: b0,
 			newBundle: &Bundle{
-				BundleTxs:    []interface{}{txs[2], txs[3]},
+				BundleTxs:    NewTxOrGenList(txs[2], txs[3]),
 				TargetTxHash: defaultTargetHash,
 			},
 			expected: false,

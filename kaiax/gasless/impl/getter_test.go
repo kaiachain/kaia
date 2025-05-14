@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -252,7 +253,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 			require.True(t, ok)
 
 			generator := g.GetLendTxGenerator(tc.approve, tc.swap)
-			tx, err := generator.Generate(0)
+			tx, err := generator.GetTx(0)
 			require.NoError(t, err)
 
 			// tx contents test
@@ -270,5 +271,16 @@ func TestGetLendTxGenerator(t *testing.T) {
 			flatten := flattenPoolTxs(pending)
 			require.True(t, flatten[tx.Hash()])
 		})
+	}
+}
+
+func TestTxGeneratorHashUniqueness(t *testing.T) {
+	hashSet := make(map[common.Hash]struct{})
+	g := NewGaslessModule()
+	for range 100 {
+		generator := g.GetLendTxGenerator(nil, makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)}))
+		_, ok := hashSet[generator.Id]
+		assert.False(t, ok)
+		hashSet[generator.Id] = struct{}{}
 	}
 }

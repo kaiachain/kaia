@@ -2240,8 +2240,8 @@ func bundleEachTwoTxs(_, _ *TestAccountType, _ types.Signer, _, _ *big.Int,
 				continue
 			}
 			b := &builder.Bundle{}
-			b.BundleTxs = append(b.BundleTxs, tmpTx)
-			b.BundleTxs = append(b.BundleTxs, tx)
+			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tmpTx))
+			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 			tmpTx = &types.Transaction{}
 			bundles = append(bundles, b)
 			if i > 1 {
@@ -2255,22 +2255,21 @@ func bundleEachTwoTxs(_, _ *TestAccountType, _ types.Signer, _, _ *big.Int,
 func bundleAllAndAddGenToFirst(rewardBase, anon *TestAccountType, signer types.Signer, amount, gasPrice *big.Int,
 ) func([]*types.Transaction, []*builder.Bundle) []*builder.Bundle {
 	return func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
-		g := builder.TxGenerator{
-			Generate: func(nonce uint64) (*types.Transaction, error) {
-				tx := types.NewTransaction(rewardBase.Nonce,
-					anon.Addr, amount, gasLimit, gasPrice, []byte{})
-				err := tx.SignWithKeys(signer, rewardBase.Keys)
-				return tx, err
-			},
+		g := func(nonce uint64) (*types.Transaction, error) {
+			tx := types.NewTransaction(rewardBase.Nonce,
+				anon.Addr, amount, gasLimit, gasPrice, []byte{})
+			err := tx.SignWithKeys(signer, rewardBase.Keys)
+			return tx, err
 		}
+
 		// Bundle all transaction and
 		bundles := []*builder.Bundle{}
 		b := &builder.Bundle{
-			BundleTxs:    []interface{}{g},
+			BundleTxs:    builder.NewTxOrGenList(builder.NewTxOrGenFromGen(g, common.Hash{1})),
 			TargetTxHash: common.Hash{},
 		}
 		for _, tx := range txs {
-			b.BundleTxs = append(b.BundleTxs, tx)
+			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 		}
 		bundles = append(bundles, b)
 		return bundles
@@ -2284,7 +2283,7 @@ func bundleAll(rewardBase, anon *TestAccountType, signer types.Signer, amount, g
 		bundles := []*builder.Bundle{}
 		b := &builder.Bundle{}
 		for _, tx := range txs {
-			b.BundleTxs = append(b.BundleTxs, tx)
+			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 		}
 		bundles = append(bundles, b)
 		return bundles

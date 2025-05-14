@@ -27,10 +27,12 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/keystore"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/node"
@@ -169,6 +171,7 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 		genesis = blockchain.DefaultGenesisBlock()
 		genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
 		genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+		genesis.Alloc[validator.Addr] = blockchain.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(params.KAIA))}
 	}
 
 	if config == nil {
@@ -178,6 +181,36 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 		genesis.Config.Governance.Reward.MintingAmount = new(big.Int).Mul(big.NewInt(9000000000000000000), big.NewInt(params.KAIA))
 	} else {
 		genesis.Config = config
+	}
+
+	if genesis.Config.IsRandaoForkEnabled(big.NewInt(0)) {
+		infos := make(map[common.Address]system.BlsPublicKeyInfo)
+		nodeBlsKey, _ := bls.DeriveFromECDSA(validator.Keys[0])
+		infos[validator.Addr] = system.BlsPublicKeyInfo{
+			PublicKey: nodeBlsKey.PublicKey().Marshal(),
+			Pop:       bls.PopProve(nodeBlsKey).Marshal(),
+		}
+
+		allocKip113Storage := system.AllocKip113Proxy(system.AllocKip113Init{
+			Infos: infos,
+			Owner: validator.Addr,
+		})
+		allocRegistryStorage := system.AllocRegistry(&params.RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": system.Kip113LogicAddrMock,
+			},
+			Owner: validator.Addr,
+		})
+		genesis.Alloc[system.RegistryAddr] = blockchain.GenesisAccount{
+			Code:    system.RegistryMockCode,
+			Balance: big.NewInt(0),
+			Storage: allocRegistryStorage,
+		}
+		genesis.Alloc[system.Kip113LogicAddrMock] = blockchain.GenesisAccount{
+			Code:    system.Kip113MockCode,
+			Balance: big.NewInt(0),
+			Storage: allocKip113Storage,
+		}
 	}
 
 	cnConf := cn.GetDefaultConfig()
