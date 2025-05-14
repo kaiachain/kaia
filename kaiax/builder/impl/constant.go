@@ -16,10 +16,9 @@
 
 package impl
 
-import "errors"
+import "time"
 
-var (
-	ErrInitUnexpectedNil         = errors.New("unexpected nil during module init")
-	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
-	ErrUnableToAddKnownBundleTx  = errors.New("unable to add known bundle tx into tx pool during lock period")
+const (
+	PendingTimeout = 10 * time.Second // bundle tx is removed from txpool.pending after PendingTimeout
+	KnownTxTimeout = 30 * time.Second // bundle tx is removed from knownTxs after KnownTxTimeout
 )

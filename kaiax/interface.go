@@ -138,10 +138,11 @@ type TxProcessModuleHost interface {
 
 // TxPoolModule can intervene how the txpool handles transactions
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
+//
+//go:generate mockgen -destination=./mock/tx_pool_module.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolModule
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
-	PreAddLocal(*types.Transaction) error
-	PreAddRemote(*types.Transaction) error
+	PreAddTx(tx *types.Transaction, local bool) error
 
 	// Additional checks to check if a given transaction should be handled by module.
 	IsModuleTx(tx *types.Transaction) bool
@@ -153,10 +154,18 @@ type TxPoolModule interface {
 
 	// Additional actions to check if a module transaction should be appended to pending
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
+
+	// Additional actions to perform before the txpool is reset.
+	PreReset(oldHead, newHead *types.Header)
+
+	// Additional actions to perform after the txpool is reset.
+	PostReset(oldHead, newHead *types.Header)
 }
 
+//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
 type TxPoolForCaller interface {
 	GetCurrentState() *state.StateDB
+	PendingUnlocked() (map[common.Address]types.Transactions, error)
 }
 
 // Any component or module that accomodate txpool modules.

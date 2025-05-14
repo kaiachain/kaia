@@ -68,6 +68,10 @@ func TestIsModuleTx(t *testing.T) {
 			makeTx(t, privkey, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil),
 			false,
 		},
+		{
+			nil,
+			false,
+		},
 	}
 
 	for _, tc := range testcases {

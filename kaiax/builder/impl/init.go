@@ -17,7 +17,11 @@
 package impl
 
 import (
+	"time"
+
 	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
@@ -29,6 +33,66 @@ var (
 
 type InitOpts struct {
 	Backend api.Backend
+}
+
+type knownTxs map[common.Hash]knownTx
+
+func (k knownTxs) add(tx *types.Transaction) {
+	k[tx.Hash()] = knownTx{
+		tx:        tx,
+		time:      time.Now(),
+		isDemoted: false,
+	}
+}
+
+func (k knownTxs) get(hash common.Hash) (knownTx, bool) {
+	tx, ok := k[hash]
+	return tx, ok
+}
+
+func (k knownTxs) has(hash common.Hash) bool {
+	_, ok := k[hash]
+	return ok
+}
+
+func (k knownTxs) delete(hash common.Hash) {
+	delete(k, hash)
+}
+
+func (k knownTxs) numExecutable() int {
+	num := 0
+	for _, knownTx := range k {
+		if !knownTx.tx.IsMarkedUnexecutable() && !knownTx.isDemoted {
+			num++
+		}
+	}
+	return num
+}
+
+func (k knownTxs) markUnexecutable(hash common.Hash) {
+	if tx, ok := k[hash]; ok {
+		tx.tx.MarkUnexecutable(true)
+	}
+}
+
+func (k knownTxs) markDemoted(hash common.Hash) {
+	if tx, ok := k[hash]; ok {
+		k[hash] = knownTx{
+			tx:        tx.tx,
+			time:      tx.time,
+			isDemoted: true,
+		}
+	}
+}
+
+type knownTx struct {
+	tx        *types.Transaction
+	time      time.Time
+	isDemoted bool
+}
+
+func (t *knownTx) elapsedTime() time.Duration {
+	return time.Since(t.time)
 }
 
 type BuilderModule struct {

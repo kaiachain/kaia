@@ -66,3 +66,11 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	}
 	return bundles
 }
+
+func (g *GaslessModule) IsBundleTx(tx *types.Transaction) bool {
+	return g.IsModuleTx(tx)
+}
+
+func (g *GaslessModule) GetMaxBundleTxsInPending() uint {
+	return g.GaslessConfig.MaxBundleTxsInPending
+}

@@ -17,6 +17,8 @@
 package gasless
 
 import (
+	"math"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/urfave/cli/v2"
 )
@@ -26,38 +28,58 @@ var (
 		Name:     "gasless.allowed-tokens",
 		Usage:    "allow token addresses for gasless module, allow all tokens if all",
 		Value:    cli.NewStringSlice("all"),
-		Aliases:  []string{"genesis.module.gasless.allowed-tokens"},
+		Aliases:  []string{"kaiax.module.gasless.allowed-tokens"},
 		Category: "KAIAX",
 	}
 	DisableFlag = &cli.BoolFlag{
 		Name:     "gasless.disable",
 		Usage:    "disable gasless module",
 		Value:    false,
-		Aliases:  []string{"genesis.module.gasless.disable"},
+		Aliases:  []string{"kaiax.module.gasless.disable"},
+		Category: "KAIAX",
+	}
+	MaxBundleTxsInPendingFlag = &cli.IntFlag{
+		Name:     "gasless.max-bundle-txs-in-pending",
+		Usage:    "max number of gasless bundle txs in pending queue. Default value is 100. No limit if negative value",
+		Value:    100,
+		Aliases:  []string{"kaiax.module.gasless.max-bundle-txs-in-pending"},
 		Category: "KAIAX",
 	}
 )
 
 type GaslessConfig struct {
 	// all tokens are allowed if AllowedTokens is nil while all are disallowed if empty slice
-	AllowedTokens []common.Address `toml:",omitempty"`
-	Disable       bool
+	AllowedTokens         []common.Address `toml:",omitempty"`
+	Disable               bool
+	MaxBundleTxsInPending uint
 }
 
-func GetGaslessConfig(ctx *cli.Context) *GaslessConfig {
-	allowedTokens := []common.Address(nil)
-	for _, addr := range ctx.StringSlice(AllowedTokensFlag.Name) {
-		if addr == "all" {
-			allowedTokens = nil
-			break
-		}
-		if allowedTokens == nil {
-			allowedTokens = []common.Address{}
-		}
-		allowedTokens = append(allowedTokens, common.HexToAddress(addr))
-	}
+func DefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
-		AllowedTokens: allowedTokens,
-		Disable:       ctx.Bool(DisableFlag.Name),
+		AllowedTokens:         nil,
+		Disable:               false,
+		MaxBundleTxsInPending: 100,
+	}
+}
+
+func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
+	if tokens := ctx.StringSlice(AllowedTokensFlag.Name); tokens != nil {
+		cfg.AllowedTokens = []common.Address{}
+		for _, addr := range tokens {
+			if addr == "all" {
+				cfg.AllowedTokens = nil
+				break
+			}
+			cfg.AllowedTokens = append(cfg.AllowedTokens, common.HexToAddress(addr))
+		}
+	}
+
+	cfg.Disable = ctx.Bool(DisableFlag.Name)
+
+	// use default value if size is zero
+	if size := ctx.Int(MaxBundleTxsInPendingFlag.Name); size > 0 {
+		cfg.MaxBundleTxsInPending = uint(size)
+	} else {
+		cfg.MaxBundleTxsInPending = math.MaxUint64
 	}
 }
