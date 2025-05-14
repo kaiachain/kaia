@@ -653,7 +653,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
-// PendingUnlocked retrieves all currently processable transactions, groupped by origin
+// PendingUnlocked retrieves all currently processable transactions, grouped by origin
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code. This function is not thread safe.
 func (pool *TxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
