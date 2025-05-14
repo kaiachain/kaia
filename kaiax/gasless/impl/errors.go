@@ -32,6 +32,6 @@ func printApproveTx(args *ApproveArgs) string {
 }
 
 func printSwapTx(args *SwapArgs) string {
-	return fmt.Sprintf("SwapTx{Sender: %s, Router: %s, Token: %s, AmountIn: %s, MinAmountOut: %s, AmountRepay: %s}",
-		args.Sender.Hex(), args.Router.Hex(), args.Token.Hex(), args.AmountIn.String(), args.MinAmountOut.String(), args.AmountRepay.String())
+	return fmt.Sprintf("SwapTx{Sender: %s, Router: %s, Token: %s, AmountIn: %s, MinAmountOut: %s, AmountRepay: %s, Deadline: %s}",
+		args.Sender.Hex(), args.Router.Hex(), args.Token.Hex(), args.AmountIn.String(), args.MinAmountOut.String(), args.AmountRepay.String(), args.Deadline.String())
 }

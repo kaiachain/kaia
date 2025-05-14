@@ -1541,7 +1541,6 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const { gaslessRouter, testToken, testUser } =
         await loadFixture(gaslessSwapRouterAddTokenFixture);
 
-
       await testToken.connect(testUser).approve(gaslessRouter.address, 0);
       const currentBlock = await ethers.provider.getBlock("latest");
       const deadline = currentBlock.timestamp + 300;
@@ -1557,7 +1556,6 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
             deadline
           )
       ).to.be.revertedWith("ERC20: insufficient allowance");
-
     });
 
     it("should fail if transfer to user fails", async function () {
