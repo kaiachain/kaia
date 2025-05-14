@@ -52,8 +52,11 @@ func TestVerifyHeader(t *testing.T) {
 }
 
 func TestVerifyVote(t *testing.T) {
+	config := getTestChainConfig()
+	config.Governance.GoverningNode = validVoter // for "valid governingnode" test case
+
 	var (
-		h          = newHeaderGovModule(t, getTestChainConfig())
+		h          = newHeaderGovModule(t, config)
 		statedb, _ = h.Chain.State()
 
 		eoa      = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -68,13 +71,40 @@ func TestVerifyVote(t *testing.T) {
 		vote          headergov.VoteData
 		expectedError error
 	}{
+		// governance.*
+		{desc: "valid deriveshaimpl", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceDeriveShaImpl), uint64(1)), expectedError: nil},
+		// GovernanceGovernanceMode vote is forbidden
+		{desc: "valid governingnode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), validVoter.Hex()), expectedError: nil},
 		{desc: "valid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
-		{desc: "valid lower", vote: headergov.NewVoteData(validVoter, string(gov.Kip71LowerBoundBaseFee), uint64(1)), expectedError: nil},
-		{desc: "valid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1e18)), expectedError: nil},
+		{desc: "valid unitprice", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: nil},
 		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), common.Address{}), expectedError: ErrGovParamNotAccount},
 		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), eoa), expectedError: ErrGovParamNotContract},
+
+		// istanbul.*
+		{desc: "valid committeesize", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulCommitteeSize), uint64(7)), expectedError: nil},
+		// IstanbulEpoch vote is forbidden
+		// IstanbulPolicy vote is forbidden
+
+		// kip71.*
+		{desc: "valid basefeedenominator", vote: headergov.NewVoteData(validVoter, string(gov.Kip71BaseFeeDenominator), uint64(8)), expectedError: nil},
+		{desc: "valid gastarget", vote: headergov.NewVoteData(validVoter, string(gov.Kip71GasTarget), uint64(30000000)), expectedError: nil},
+		{desc: "valid lowerboundbasefee", vote: headergov.NewVoteData(validVoter, string(gov.Kip71LowerBoundBaseFee), uint64(25000000000)), expectedError: nil},
+		{desc: "valid maxblockgasusedforbasefee", vote: headergov.NewVoteData(validVoter, string(gov.Kip71MaxBlockGasUsedForBaseFee), uint64(60000000)), expectedError: nil},
+		{desc: "valid upperboundbasefee", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(750000000000)), expectedError: nil},
 		{desc: "invalid lower", vote: headergov.NewVoteData(validVoter, string(gov.Kip71LowerBoundBaseFee), uint64(1e18)), expectedError: ErrLowerBoundBaseFee},
 		{desc: "invalid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
+
+		// reward.*
+		// RewardDeferredTxFee vote is forbidden
+		{desc: "valid kip82ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardKip82Ratio), "20/80"), expectedError: nil},
+		{desc: "valid mintingamount", vote: headergov.NewVoteData(validVoter, string(gov.RewardMintingAmount), "6400000000000000000"), expectedError: nil},
+		// RewardMinimumStake vote is forbidden
+		// RewardProposerUpdateInterval vote is forbidden
+		{desc: "valid ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardRatio), "50/30/20"), expectedError: nil},
+		// RewardStakingUpdateInterval vote is forbidden
+		// RewardUseGiniCoeff vote is forbidden
+		{desc: "valid addvalidator", vote: headergov.NewVoteData(validVoter, string(gov.AddValidator), eoa), expectedError: nil},
+		{desc: "valid removevalidator", vote: headergov.NewVoteData(validVoter, string(gov.RemoveValidator), eoa), expectedError: nil},
 	}
 
 	for _, tc := range tcs {
