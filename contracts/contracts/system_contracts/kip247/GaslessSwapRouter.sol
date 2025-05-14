@@ -175,8 +175,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         uint256 finalUserAmount = userAmount - commission;
 
         // Send remaining KAIA to user
-        (bool userTransferSuccess, ) = msg.sender.call{value: finalUserAmount}("");
-        require(userTransferSuccess, "FailedToSendKAIA");
+        payable(msg.sender).transfer(finalUserAmount);
 
         emit SwappedForGas(block.coinbase, amountRepay, msg.sender, finalUserAmount, commission);
     }
