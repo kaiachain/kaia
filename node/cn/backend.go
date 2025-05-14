@@ -25,6 +25,7 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -549,6 +550,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
 			TxPool:        s.txPool,
+			MinBalance:    big.NewInt(1e18),
 		}),
 	)
 	if err != nil {

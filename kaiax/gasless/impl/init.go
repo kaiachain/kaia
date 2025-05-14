@@ -18,10 +18,13 @@ package impl
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+	"math/big"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
@@ -36,6 +39,7 @@ type InitOpts struct {
 	NodeKey       *ecdsa.PrivateKey
 	Chain         backends.BlockChainForCaller
 	TxPool        kaiax.TxPoolForCaller
+	MinBalance    *big.Int // minimum balance required to enable gasless module
 }
 
 type GaslessModule struct {
@@ -56,6 +60,20 @@ func (g *GaslessModule) Init(opts *InitOpts) error {
 
 	g.InitOpts = *opts
 	g.signer = types.LatestSignerForChainID(g.ChainConfig.ChainID)
+
+	// Disable module if node does not have sufficient balance
+	if g.MinBalance != nil {
+		state, err := opts.Chain.State()
+		if err != nil {
+			return fmt.Errorf("failed to get state: %v", err)
+		}
+		nodeAddr := crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
+		balance := state.GetBalance(nodeAddr)
+		if balance.Cmp(g.MinBalance) < 0 {
+			g.GaslessConfig.Disable = true
+			logger.Error("disabling gasless module due to insufficient balance of node %s (balance: %s)", nodeAddr.Hex(), balance.String())
+		}
+	}
 
 	return g.updateAddresses(g.Chain.CurrentBlock().Header())
 }
