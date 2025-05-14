@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -33,7 +34,7 @@ import (
 )
 
 func TestIsApproveTx(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	g := NewGaslessModule()
 	db := database.NewMemoryDBManager()
@@ -50,7 +51,7 @@ func TestIsApproveTx(t *testing.T) {
 	require.NoError(t, err)
 
 	privkey, _ := crypto.GenerateKey()
-	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	correct := makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 
 	testcases := map[string]struct {
 		tx *types.Transaction
@@ -65,7 +66,7 @@ func TestIsApproveTx(t *testing.T) {
 			false,
 		},
 		"invalid spender address": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0xffff"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0xffff"), Amount: abi.MaxUint256}),
 			false,
 		},
 		"invalid amount": {
@@ -83,7 +84,7 @@ func TestIsApproveTx(t *testing.T) {
 }
 
 func TestIsSwapTx(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	g := NewGaslessModule()
 	db := database.NewMemoryDBManager()
@@ -129,7 +130,7 @@ func TestIsSwapTx(t *testing.T) {
 }
 
 func TestIsExecutable(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	g := NewGaslessModule()
 	db := database.NewMemoryDBManager()
@@ -153,7 +154,7 @@ func TestIsExecutable(t *testing.T) {
 		ok      bool
 	}{
 		"correct gasless tx pair": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			true,
 		},
@@ -163,27 +164,22 @@ func TestIsExecutable(t *testing.T) {
 			true,
 		},
 		"gasless tx pair with different sender address": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, nil, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			false,
 		},
 		"gasless tx pair with different token address": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xffff"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			false,
 		},
-		"gasless tx pair with invalid amount in": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
-			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(1000001), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
-			false,
-		},
 		"gasless tx pair with non sequential nonce": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			false,
 		},
 		"gasless tx pair with non head nonce": {
-			makeApproveTx(t, privkey, 1, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 1, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, privkey, 2, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 			false,
 		},
@@ -208,7 +204,7 @@ func TestIsExecutable(t *testing.T) {
 }
 
 func TestGetLendTxGenerator(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
@@ -227,7 +223,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 		swap    *types.Transaction
 	}{
 		"correct gasless tx pair": {
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			makeSwapTx(t, privkey, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)}),
 		},
 		"correct single swap tx": {

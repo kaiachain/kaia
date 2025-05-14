@@ -21,6 +21,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -35,7 +36,7 @@ import (
 )
 
 func TestIsModuleTx(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	g := NewGaslessModule()
 	dbm := database.NewMemoryDBManager()
@@ -57,7 +58,7 @@ func TestIsModuleTx(t *testing.T) {
 		ok bool
 	}{
 		{
-			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)}),
+			makeApproveTx(t, privkey, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256}),
 			true,
 		},
 		{
@@ -81,7 +82,7 @@ func TestIsModuleTx(t *testing.T) {
 }
 
 func TestIsReady(t *testing.T) {
-	log.EnableLogForTest(log.LvlTrace, log.LvlTrace)
+	log.EnableLogForTest(log.LvlError, log.LvlTrace)
 
 	dbm := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
@@ -93,7 +94,7 @@ func TestIsReady(t *testing.T) {
 	addr := crypto.PubkeyToAddress(privkey.PublicKey)
 
 	approveTx := func(nonce uint64) *types.Transaction {
-		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+		return makeApproveTx(t, privkey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 	}
 
 	swapTx := func(nonce uint64) *types.Transaction {
@@ -356,7 +357,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			case T:
 				tx = makeTx(t, userKey, nonce, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), hexutil.MustDecode("0x"))
 			case A:
-				tx = makeApproveTx(t, userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+				tx = makeApproveTx(t, userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 			case SwithA:
 				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 			case SingleS:
@@ -407,10 +408,10 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	key4, _ := crypto.GenerateKey()
 
 	// The number of variable means the number of sender. For exampele, A1 and S1 are Sender1's txs.
-	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
-	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: big.NewInt(1000000)})
+	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
 	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
