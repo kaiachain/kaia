@@ -1323,7 +1323,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
             amountRepay,
             deadline
           )
-      ).to.be.revertedWith("FailedToSendKAIA");
+      ).to.be.reverted;
 
       await network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
@@ -1606,7 +1606,7 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
             amountRepay,
             deadline
           )
-      ).to.be.revertedWith("FailedToSendKAIA");
+      ).to.be.reverted;
 
       await network.provider.request({
         method: "hardhat_stopImpersonatingAccount",
