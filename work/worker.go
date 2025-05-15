@@ -797,12 +797,6 @@ CommitTransactionLoop:
 		}
 
 		switch err {
-		case blockchain.ErrGasLimitReached:
-			// Pop the current out-of-gas transaction without shifting in the next from the account
-			logger.Trace("Gas limit exceeded for current block", "sender", from)
-			numTxsGasLimitReached++
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
-
 		case blockchain.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
