@@ -523,6 +523,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
 	)
+
+	var mGaslessMinBal *big.Int
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		mGaslessMinBal = big.NewInt(1e18)
+	}
+
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -550,7 +556,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
 			TxPool:        s.txPool,
-			MinBalance:    big.NewInt(1e18),
+			MinBalance:    mGaslessMinBal,
 		}),
 	)
 	if err != nil {
