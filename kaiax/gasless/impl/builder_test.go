@@ -46,6 +46,7 @@ func TestExtractTxBundles(t *testing.T) {
 		NodeKey:       nodeKey,
 		Chain:         backend.BlockChain(),
 		TxPool:        &testTxPool{sdb},
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 

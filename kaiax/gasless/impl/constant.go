@@ -16,4 +16,9 @@
 
 package impl
 
-var GaslessSwapRouterName = "GaslessSwapRouter"
+import "math/big"
+
+var (
+	GaslessSwapRouterName = "GaslessSwapRouter"
+	GaslessLenderMinBal   = big.NewInt(1e18)
+)
