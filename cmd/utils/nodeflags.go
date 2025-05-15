@@ -279,7 +279,6 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
 	// kaiax/gasless
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
-	altsrc.NewBoolFlag(gasless.DisableFlag),
 	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
 }
 
@@ -343,6 +342,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
+	altsrc.NewBoolFlag(gasless.DisableFlag),
 }
 
 var KPNFlags = []cli.Flag{
