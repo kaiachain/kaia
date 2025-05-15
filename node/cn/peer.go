@@ -376,6 +376,7 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 			id:               fmt.Sprintf("%x", id[:8]),
 			knownTxsCache:    newKnownTxCache(),
 			knownBlocksCache: newKnownBlockCache(),
+			knownBidsCache:   newKnownBidCache(),
 			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
 			queuedProps:      make(chan *propEvent, maxQueuedProps),
 			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
