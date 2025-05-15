@@ -71,6 +71,7 @@ func TestPostInsertBlock(t *testing.T) {
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
 					TxPool:        &testTxPool{},
+					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
 
@@ -99,6 +100,7 @@ func TestPostInsertBlock(t *testing.T) {
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
 					TxPool:        &testTxPool{},
+					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
 				data := common.Hex2Bytes("5fa7b584000000000000000000000000000000000000000000000000000000000000abcd") // removeToken(dummyTokenAddress1)
@@ -126,6 +128,7 @@ func TestPostInsertBlock(t *testing.T) {
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
 					TxPool:        &testTxPool{},
+					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
 

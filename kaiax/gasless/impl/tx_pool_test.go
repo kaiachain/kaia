@@ -49,6 +49,7 @@ func TestIsModuleTx(t *testing.T) {
 		NodeKey:       nodekey,
 		Chain:         backend.BlockChain(),
 		TxPool:        &testTxPool{},
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 
@@ -195,6 +196,7 @@ func TestIsReady(t *testing.T) {
 				NodeKey:       nodeKey,
 				Chain:         backend.BlockChain(),
 				TxPool:        &testTxPool{cdb},
+				NodeType:      common.ENDPOINTNODE,
 			})
 			require.NoError(t, err)
 
@@ -345,6 +347,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			NodeKey:       nodeKey,
 			Chain:         backend.BlockChain(),
 			TxPool:        pool,
+			NodeType:      common.ENDPOINTNODE,
 		})
 		require.NoError(t, err)
 		pool.RegisterTxPoolModule(g)
@@ -437,6 +440,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 			NodeKey:       nodeKey,
 			Chain:         backend.BlockChain(),
 			TxPool:        pool,
+			NodeType:      common.ENDPOINTNODE,
 		})
 		require.NoError(t, err)
 

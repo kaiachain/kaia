@@ -522,6 +522,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
 	)
+
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -549,6 +550,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
 			TxPool:        s.txPool,
+			NodeType:      ctx.NodeType(),
 		}),
 	)
 	if err != nil {

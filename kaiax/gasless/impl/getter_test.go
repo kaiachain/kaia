@@ -48,6 +48,7 @@ func TestIsApproveTx(t *testing.T) {
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
 		TxPool:        &testTxPool{},
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 
@@ -98,6 +99,7 @@ func TestIsSwapTx(t *testing.T) {
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
 		TxPool:        &testTxPool{},
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 
@@ -145,6 +147,7 @@ func TestIsExecutable(t *testing.T) {
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
 		TxPool:        &testTxPool{sdb},
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 
@@ -244,6 +247,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 				NodeKey:       nodekey,
 				Chain:         backend.BlockChain(),
 				TxPool:        pool,
+				NodeType:      common.ENDPOINTNODE,
 			})
 			require.NoError(t, err)
 

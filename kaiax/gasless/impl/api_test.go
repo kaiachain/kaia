@@ -99,6 +99,7 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		NodeKey:       nodeKey,
 		Chain:         backend.BlockChain(),
 		TxPool:        txpool,
+		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
 

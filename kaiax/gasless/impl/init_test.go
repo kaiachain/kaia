@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,6 +46,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			false,
 			nil,
@@ -61,6 +63,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			true,
 			ErrInitUnexpectedNil,
@@ -72,6 +75,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				nil,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			true,
 			ErrInitUnexpectedNil,
@@ -83,6 +87,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				nil,
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			true,
 			ErrInitUnexpectedNil,
@@ -94,6 +99,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				nil,
+				common.ENDPOINTNODE,
 			},
 			true,
 			ErrInitUnexpectedNil,
@@ -108,6 +114,22 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
+			},
+			true,
+			nil,
+		},
+		"cn has insufficient balance": {
+			&InitOpts{
+				testChainConfig,
+				&gasless.GaslessConfig{
+					AllowedTokens: nil,
+					Disable:       true,
+				},
+				key,
+				backend.BlockChain(),
+				&testTxPool{},
+				common.CONSENSUSNODE,
 			},
 			true,
 			nil,
@@ -119,19 +141,20 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			false,
 			nil,
 		},
 	}
 
-	for _, tc := range tcs {
+	for tcName, tc := range tcs {
 		g := NewGaslessModule()
 		err := g.Init(tc.opts)
 		require.ErrorIs(t, tc.err, err)
 		if err == nil {
 			disabled := g.IsDisabled()
-			require.Equal(t, tc.disabled, disabled)
+			assert.Equal(t, tc.disabled, disabled, "test case: %s", tcName)
 		}
 	}
 }
@@ -154,6 +177,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2, dummyTokenAddress3},
@@ -168,6 +192,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
 			[]common.Address{},
@@ -182,6 +207,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
 			[]common.Address{dummyTokenAddress1, dummyTokenAddress2},
@@ -196,6 +222,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				key,
 				backend.BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
 			[]common.Address{},
@@ -207,6 +234,7 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
 				&testTxPool{},
+				common.ENDPOINTNODE,
 			},
 			common.Address{},
 			nil,
