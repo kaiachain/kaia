@@ -91,14 +91,13 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	}
 
 	// check if Voter is the block proposer.
-	// TODO-kaia: derive author from header
-	//author, err := h.Chain.Engine().Author(header)
-	//if err != nil {
-	//	return err
-	//}
-	//if author != vote.Voter() {
-	//	return ErrInvalidVoter
-	//}
+	author, err := h.Chain.Engine().Author(header)
+	if err != nil {
+		return err
+	}
+	if author != vote.Voter() {
+		return ErrInvalidVoter
+	}
 	return h.checkConsistency(blockNum, vote)
 }
 

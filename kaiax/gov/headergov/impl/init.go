@@ -9,6 +9,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
@@ -26,6 +27,7 @@ type chain interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	CurrentBlock() *types.Block
 	State() (*state.StateDB, error)
+	Engine() consensus.Engine
 }
 
 type ValsetModule interface {

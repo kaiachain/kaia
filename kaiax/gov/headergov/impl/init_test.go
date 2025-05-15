@@ -13,6 +13,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	mock_consensus "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
@@ -47,6 +48,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	var (
 		chain  = mocks.NewMockBlockChain(gomock.NewController(t))
 		valSet = mock_valset.NewMockValsetModule(gomock.NewController(t))
+		engine = mock_consensus.NewMockEngine(gomock.NewController(t))
 		dbm    = database.NewMemoryDBManager()
 		db     = dbm.GetMemDB()
 		b      = GetGenesisGovBytes(config)
@@ -70,6 +72,8 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	statedb, _ := state.New(common.Hash{}, cachingDb, nil, nil)
 	chain.EXPECT().State().Return(statedb, nil).AnyTimes()
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(genesisHeader)).AnyTimes()
+	chain.EXPECT().Engine().Return(engine).AnyTimes()
+	engine.EXPECT().Author(gomock.Any()).Return(validVoter, nil).AnyTimes()
 
 	valSet.EXPECT().GetCouncil(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
 	valSet.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{validVoter}, nil).AnyTimes()
