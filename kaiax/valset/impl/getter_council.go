@@ -191,17 +191,18 @@ func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*vals
 		return v.getCouncilGenesis()
 	}
 
-	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	nums := v.readValidatorVoteBlockNumsCached()
 	if nums == nil {
 		return nil, errNoVoteBlockNums
 	}
-	header := v.Chain.GetHeaderByNumber(snapshotNum)
 
 	// If there were no votes in the range [lowestScannedVoteNum, snapshotNum],
 	// we fall back to the nearest snapshot *before* `lowestScannedVoteNum`.
-	if pMinVoteNum != nil && *pMinVoteNum < snapshotNum && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
+	var header *types.Header
+	if pMinVoteNum := v.readLowestScannedVoteNumCached(); pMinVoteNum != nil && *pMinVoteNum < snapshotNum && lastNumLessThan(nums, snapshotNum) < *pMinVoteNum {
 		header = v.Chain.GetHeaderByNumber(roundDown(*pMinVoteNum, istanbulCheckpointInterval))
+	} else {
+		header = v.Chain.GetHeaderByNumber(snapshotNum)
 	}
 
 	if header == nil {
