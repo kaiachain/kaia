@@ -61,10 +61,7 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error
 	if pMinVoteNum == nil {
 		return nil, false, errNoLowestScannedNum
 	}
-	if v.validatorVoteBlockNumsCache == nil {
-		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
-	}
-	nums := v.validatorVoteBlockNumsCache
+	nums := v.readValidatorVoteBlockNumsCached()
 	if nums == nil {
 		return nil, false, errNoVoteBlockNums
 	}
@@ -85,6 +82,19 @@ func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
 		v.lowestScannedVoteNumCache = ReadLowestScannedVoteNum(v.ChainKv)
 	}
 	return v.lowestScannedVoteNumCache
+}
+
+func (v *ValsetModule) readValidatorVoteBlockNumsCached() []uint64 {
+	if v.validatorVoteBlockNumsCache == nil {
+		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
+		if v.validatorVoteBlockNumsCache == nil {
+			return nil
+		}
+	}
+
+	nums := make([]uint64, len(v.validatorVoteBlockNumsCache))
+	copy(nums, v.validatorVoteBlockNumsCache)
+	return nums
 }
 
 // lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
@@ -182,10 +192,7 @@ func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*vals
 	}
 
 	pMinVoteNum := v.readLowestScannedVoteNumCached()
-	if v.validatorVoteBlockNumsCache == nil {
-		v.validatorVoteBlockNumsCache = ReadValidatorVoteBlockNums(v.ChainKv)
-	}
-	nums := v.validatorVoteBlockNumsCache
+	nums := v.readValidatorVoteBlockNumsCached()
 	if nums == nil {
 		return nil, errNoVoteBlockNums
 	}
