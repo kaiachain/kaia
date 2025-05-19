@@ -9,7 +9,13 @@ interface IKIP247 {
         address router;
     }
 
-    function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay, uint256 deadline) external;
+    function swapForGas(
+        address token,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 amountRepay,
+        uint256 deadline
+    ) external;
 
     function addToken(address token, address factory, address router) external;
 
