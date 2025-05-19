@@ -16,95 +16,58 @@ describe("GaslessSwapRouter Constructor", function () {
     const [deployer] = await ethers.getSigners();
     const GaslessSwapRouter = await ethers.getContractFactory("GaslessSwapRouter");
 
-    await expect(
-      GaslessSwapRouter.deploy(ethers.constants.AddressZero)
-    ).to.be.revertedWith("Zero address is not allowed");
+    await expect(GaslessSwapRouter.deploy(ethers.constants.AddressZero)).to.be.revertedWith(
+      "Zero address is not allowed",
+    );
   });
 });
 
 describe("GaslessSwapRouter", function () {
   describe("Token Management", function () {
     it("should add token successfully", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be
-        .true;
-      expect(await gaslessRouter.dexAddress(testToken.address)).to.equal(
-        uniswapFactory.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
+      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be.true;
+      expect(await gaslessRouter.dexAddress(testToken.address)).to.equal(uniswapFactory.address);
     });
 
     it("should fail to add token if already supported", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
       await expect(
-        gaslessRouter.addToken(
-          testToken.address,
-          uniswapFactory.address,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("TokenAlreadySupported");
     });
 
     it("should remove token successfully", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
       await gaslessRouter.removeToken(testToken.address);
-      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be
-        .false;
+      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be.false;
     });
 
     it("should fail to remove token if not supported", async function () {
-      const { gaslessRouter, testToken } = await loadFixture(
-        gaslessSwapRouterFixture
-      );
+      const { gaslessRouter, testToken } = await loadFixture(gaslessSwapRouterFixture);
 
-      await expect(
-        gaslessRouter.removeToken(testToken.address)
-      ).to.be.revertedWith("TokenNotSupported");
+      await expect(gaslessRouter.removeToken(testToken.address)).to.be.revertedWith("TokenNotSupported");
     });
 
     it("should get all supported tokens", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
       const supportedTokens = await gaslessRouter.getSupportedTokens();
       expect(supportedTokens).to.include(testToken.address);
       expect(supportedTokens.length).to.equal(1);
     });
 
     it("should add and remove multiple tokens in various orders", async function () {
-      const {
-        gaslessRouter,
-        testToken,
-        testUser,
-        wkaia,
-        uniswapFactory,
-        uniswapRouter,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, testUser, wkaia, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // Deploy multiple tokens
       const TokenFactory = await ethers.getContractFactory("TestToken");
@@ -129,47 +92,53 @@ describe("GaslessSwapRouter", function () {
 
       await wkaia.connect(testUser).deposit({ value: liquidityAmount.mul(3) });
 
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 3600;
 
-      await uniswapRouter.connect(testUser).addLiquidity(
-        token1.address, wkaia.address,
-        liquidityAmount, liquidityAmount,
-        0, 0, testUser.address, deadline
-      );
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          token1.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount,
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
-      await uniswapRouter.connect(testUser).addLiquidity(
-        token2.address, wkaia.address,
-        liquidityAmount, liquidityAmount,
-        0, 0, testUser.address, deadline
-      );
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          token2.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount,
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
-      await uniswapRouter.connect(testUser).addLiquidity(
-        token3.address, wkaia.address,
-        liquidityAmount, liquidityAmount,
-        0, 0, testUser.address, deadline
-      );
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          token3.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount,
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
       // Add all tokens to the router
-      await gaslessRouter.addToken(
-        token1.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await gaslessRouter.addToken(
-        token2.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await gaslessRouter.addToken(
-        token3.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(token1.address, uniswapFactory.address, uniswapRouter.address);
+      await gaslessRouter.addToken(token2.address, uniswapFactory.address, uniswapRouter.address);
+      await gaslessRouter.addToken(token3.address, uniswapFactory.address, uniswapRouter.address);
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
 
       // Verify all tokens are supported
       let supportedTokens = await gaslessRouter.getSupportedTokens();
@@ -197,9 +166,7 @@ describe("GaslessSwapRouter", function () {
       expect(supportedTokens).to.include(testToken.address);
 
       // Try to get DEX info for removed token
-      await expect(gaslessRouter.getDEXInfo(token1.address)).to.be.revertedWith(
-        "TokenNotSupported"
-      );
+      await expect(gaslessRouter.getDEXInfo(token1.address)).to.be.revertedWith("TokenNotSupported");
 
       // Verify remaining tokens still work
       const dexInfo = await gaslessRouter.getDEXInfo(token3.address);
@@ -208,85 +175,52 @@ describe("GaslessSwapRouter", function () {
     });
 
     it("should fail to add zero address as token", async function () {
-      const { gaslessRouter, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
       await expect(
-        gaslessRouter.addToken(
-          ethers.constants.AddressZero,
-          uniswapFactory.address,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(ethers.constants.AddressZero, uniswapFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("Invalid token address");
     });
 
     it("should fail when adding token with zero address router or factory", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
       // Test with zero router
       await expect(
-        gaslessRouter.addToken(
-          testToken.address,
-          uniswapFactory.address,
-          ethers.constants.AddressZero
-        )
+        gaslessRouter.addToken(testToken.address, uniswapFactory.address, ethers.constants.AddressZero),
       ).to.be.revertedWith("Invalid router address");
 
       // Test with zero factory
       await expect(
-        gaslessRouter.addToken(
-          testToken.address,
-          ethers.constants.AddressZero,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(testToken.address, ethers.constants.AddressZero, uniswapRouter.address),
       ).to.be.revertedWith("Invalid factory address");
     });
 
     it("should fail to add token with invalid DEX address", async function () {
-      const { gaslessRouter, testUser, uniswapRouter } = await loadFixture(
-        gaslessSwapRouterFixture
-      );
+      const { gaslessRouter, testUser, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
       const MockFactory = await ethers.getContractFactory("MockInvalidFactory");
       const mockFactory = await MockFactory.deploy();
       await mockFactory.deployed();
 
-      const anotherToken = await (
-        await ethers.getContractFactory("TestToken")
-      ).deploy(testUser.address);
+      const anotherToken = await (await ethers.getContractFactory("TestToken")).deploy(testUser.address);
       await anotherToken.deployed();
 
       await expect(
-        gaslessRouter.addToken(
-          anotherToken.address,
-          mockFactory.address,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(anotherToken.address, mockFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("InvalidDEXAddress");
     });
 
     it("should handle multiple token additions and removals", async function () {
-      const {
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterFixture);
-
-      // First make sure testToken is already added
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
+      const { gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterFixture,
       );
 
+      // First make sure testToken is already added
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
+
       // Deploy additional token
-      const additionalToken = await (
-        await ethers.getContractFactory("TestToken")
-      ).deploy(testUser.address);
+      const additionalToken = await (await ethers.getContractFactory("TestToken")).deploy(testUser.address);
       await additionalToken.deployed();
 
       // Create pair for additional token
@@ -297,19 +231,23 @@ describe("GaslessSwapRouter", function () {
       await wkaia.connect(testUser).approve(uniswapRouter.address, liquidityAmount);
 
       await wkaia.connect(testUser).deposit({ value: liquidityAmount });
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
-      await uniswapRouter.connect(testUser).addLiquidity(
-        additionalToken.address, wkaia.address,
-        liquidityAmount, liquidityAmount,
-        0, 0, testUser.address, deadline
-      );
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 3600;
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          additionalToken.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount,
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
       // Add the additional token
-      await gaslessRouter.addToken(
-        additionalToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(additionalToken.address, uniswapFactory.address, uniswapRouter.address);
 
       // Get supported tokens and verify both tokens are included
       const supportedTokens = await gaslessRouter.getSupportedTokens();
@@ -328,8 +266,9 @@ describe("GaslessSwapRouter", function () {
     });
 
     it("should fail to add token with zero reserve", async function () {
-      const { gaslessRouter, testUser, uniswapFactory, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testUser, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // Deploy a new token
       const TokenFactory = await ethers.getContractFactory("TestToken");
@@ -341,17 +280,12 @@ describe("GaslessSwapRouter", function () {
 
       // Try to add token - should fail due to no liquidity
       await expect(
-        gaslessRouter.addToken(
-          newToken.address,
-          uniswapFactory.address,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(newToken.address, uniswapFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("NoLiquidity");
     });
 
     it("should fail to add token with non-existent pair", async function () {
-      const { gaslessRouter, testUser, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testUser, uniswapFactory, uniswapRouter } = await loadFixture(gaslessSwapRouterFixture);
 
       // Create a token but don't create a pair for it
       const TokenFactory = await ethers.getContractFactory("TestToken");
@@ -365,24 +299,17 @@ describe("GaslessSwapRouter", function () {
 
       // Try to add token - should fail due to non-existent pair
       await expect(
-        gaslessRouter.addToken(
-          tokenWithoutPair.address,
-          mockFactory.address,
-          uniswapRouter.address
-        )
+        gaslessRouter.addToken(tokenWithoutPair.address, mockFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("PairDoesNotExist");
     });
 
     it("should successfully add token with sufficient reserves", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // This token should already have liquidity from the fixture
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
 
       // Verify token is supported
       expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be.true;
@@ -413,42 +340,27 @@ describe("GaslessSwapRouter", function () {
       const { gaslessRouter } = await loadFixture(gaslessSwapRouterFixture);
 
       const tooHighRate = 11000; // 110%
-      await expect(
-        gaslessRouter.updateCommissionRate(tooHighRate)
-      ).to.be.revertedWith("InvalidCommissionRate");
+      await expect(gaslessRouter.updateCommissionRate(tooHighRate)).to.be.revertedWith("InvalidCommissionRate");
     });
 
     it("should fail to claim commission if zero", async function () {
       const { gaslessRouter } = await loadFixture(gaslessSwapRouterFixture);
 
-      await expect(gaslessRouter.claimCommission()).to.be.revertedWith(
-        "NoCommissionToWithdraw"
-      );
+      await expect(gaslessRouter.claimCommission()).to.be.revertedWith("NoCommissionToWithdraw");
     });
 
     it("should accumulate and claim commission successfully", async function () {
-      const {
-        deployer,
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { deployer, gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // Set commission rate to 10%
       await gaslessRouter.updateCommissionRate(1000);
 
       // Add token and approve for swap
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
       const swapAmount = parseEther("10.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       // Calculate gas repayment
       const feeData = await ethers.provider.getFeeData();
@@ -464,15 +376,11 @@ describe("GaslessSwapRouter", function () {
         .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
       // Check accumulated commission
-      const accumulatedCommission = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const accumulatedCommission = await ethers.provider.getBalance(gaslessRouter.address);
       expect(accumulatedCommission).to.be.gt(0);
 
       // Get contract balance
-      const contractBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const contractBalance = await ethers.provider.getBalance(gaslessRouter.address);
       expect(contractBalance).to.be.gt(0);
 
       // Claim commission
@@ -481,31 +389,19 @@ describe("GaslessSwapRouter", function () {
       const finalBalance = await deployer.getBalance();
 
       expect(finalBalance.sub(initialBalance)).to.be.gt(0);
-      expect(await ethers.provider.getBalance(gaslessRouter.address)).to.equal(
-        0
-      );
+      expect(await ethers.provider.getBalance(gaslessRouter.address)).to.equal(0);
     });
 
     it("should handle commission rate at boundary (10000)", async function () {
-      const {
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       await gaslessRouter.updateCommissionRate(10000); // 100%
 
       const swapAmount = parseEther("1.0");
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -523,26 +419,16 @@ describe("GaslessSwapRouter", function () {
     });
 
     it("should handle zero commission correctly", async function () {
-      const {
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // Ensure commission rate is 0
       await gaslessRouter.updateCommissionRate(0);
 
       const swapAmount = parseEther("1.0");
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -558,49 +444,31 @@ describe("GaslessSwapRouter", function () {
 
       const finalBalance = await testUser.getBalance();
       expect(finalBalance).to.be.gt(initialBalance);
-      expect(await ethers.provider.getBalance(gaslessRouter.address)).to.equal(
-        0
-      );
+      expect(await ethers.provider.getBalance(gaslessRouter.address)).to.equal(0);
     });
 
     it("should calculate commission precisely", async function () {
-      const {
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       await gaslessRouter.updateCommissionRate(500); // 5%
 
       const swapAmount = parseEther("10.0");
-      await gaslessRouter.addToken(
-        testToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await gaslessRouter.addToken(testToken.address, uniswapFactory.address, uniswapRouter.address);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
       const minAmountOut = amountRepay.add(parseEther("1"));
 
       const path = [testToken.address, wkaia.address];
-      const [, expectedOutput] = await uniswapRouter.getAmountsOut(
-        swapAmount,
-        path
-      );
+      const [, expectedOutput] = await uniswapRouter.getAmountsOut(swapAmount, path);
       const userAmount = expectedOutput.sub(amountRepay);
 
       const commission = userAmount.mul(500).div(10000);
 
-      const preCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const preCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
       const currentBlock = await ethers.provider.getBlock("latest");
       const deadline = currentBlock.timestamp + 300;
 
@@ -608,9 +476,7 @@ describe("GaslessSwapRouter", function () {
         .connect(testUser)
         .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
-      const postCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const postCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
       const actualCommission = postCommissionBalance.sub(preCommissionBalance);
 
       expect(actualCommission).to.equal(commission);
@@ -619,14 +485,9 @@ describe("GaslessSwapRouter", function () {
 
   describe("Ownership Management", function () {
     it("should transfer ownership correctly", async function () {
-      const {
-        deployer,
-        gaslessRouter,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { deployer, gaslessRouter, testUser, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       const newOwner = testUser;
       await gaslessRouter.transferOwnership(newOwner.address);
@@ -641,53 +502,44 @@ describe("GaslessSwapRouter", function () {
       await wkaia.connect(testUser).approve(uniswapRouter.address, liquidityAmount);
       await wkaia.connect(testUser).deposit({ value: liquidityAmount });
 
-      const deadline = Math.floor(Date.now() / 1000) + 3600;
-      await uniswapRouter.connect(testUser).addLiquidity(
-        testToken.address, wkaia.address,
-        liquidityAmount, liquidityAmount,
-        0, 0, testUser.address, deadline
-      );
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 3600;
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          testToken.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount,
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
       await expect(
-        gaslessRouter
-          .connect(newOwner)
-          .addToken(
-            testToken.address,
-            uniswapFactory.address,
-            uniswapRouter.address
-          )
+        gaslessRouter.connect(newOwner).addToken(testToken.address, uniswapFactory.address, uniswapRouter.address),
       ).to.not.be.reverted;
 
       await expect(
         gaslessRouter
           .connect(deployer)
-          .addToken(
-            ethers.Wallet.createRandom().address,
-            uniswapFactory.address,
-            uniswapRouter.address
-          )
+          .addToken(ethers.Wallet.createRandom().address, uniswapFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should fail to claim commission by non-owner", async function () {
-      const { gaslessRouter, testUser } = await loadFixture(
-        gaslessSwapRouterFixture
-      );
+      const { gaslessRouter, testUser } = await loadFixture(gaslessSwapRouterFixture);
 
-      await expect(
-        gaslessRouter.connect(testUser).claimCommission()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(gaslessRouter.connect(testUser).claimCommission()).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("should comprehensively test ownership functions", async function () {
-      const {
-        deployer,
-        gaslessRouter,
-        testToken,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-      } = await loadFixture(gaslessSwapRouterFixture);
+      const { deployer, gaslessRouter, testToken, testUser, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterFixture,
+      );
 
       // Test initial ownership
       expect(await gaslessRouter.owner()).to.equal(deployer.address);
@@ -698,13 +550,7 @@ describe("GaslessSwapRouter", function () {
 
       // Test function access by previous owner (should fail)
       await expect(
-        gaslessRouter
-          .connect(deployer)
-          .addToken(
-            testToken.address,
-            uniswapFactory.address,
-            uniswapRouter.address
-          )
+        gaslessRouter.connect(deployer).addToken(testToken.address, uniswapFactory.address, uniswapRouter.address),
       ).to.be.revertedWith("Ownable: caller is not the owner");
 
       // Transfer ownership back
@@ -712,49 +558,42 @@ describe("GaslessSwapRouter", function () {
       expect(await gaslessRouter.owner()).to.equal(deployer.address);
 
       // Test various privileged functions with non-owner
-      await expect(
-        gaslessRouter.connect(testUser).updateCommissionRate(500)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(gaslessRouter.connect(testUser).updateCommissionRate(500)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
 
-      await expect(
-        gaslessRouter.connect(testUser).claimCommission()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(gaslessRouter.connect(testUser).claimCommission()).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
 
-      await expect(
-        gaslessRouter
-          .connect(testUser)
-          .removeToken(ethers.constants.AddressZero)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(gaslessRouter.connect(testUser).removeToken(ethers.constants.AddressZero)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
   });
 
   describe("Basic Functions", function () {
     it("should receive KAIA successfully", async function () {
-      const { gaslessRouter, testUser } = await loadFixture(
-        gaslessSwapRouterFixture
-      );
+      const { gaslessRouter, testUser } = await loadFixture(gaslessSwapRouterFixture);
 
       const amount = parseEther("1.0");
-      const initialBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const initialBalance = await ethers.provider.getBalance(gaslessRouter.address);
 
       await testUser.sendTransaction({
         to: gaslessRouter.address,
         value: amount,
       });
 
-      const finalBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const finalBalance = await ethers.provider.getBalance(gaslessRouter.address);
       expect(finalBalance.sub(initialBalance)).to.equal(amount);
     });
   });
 
   describe("DEX Information Management", function () {
     it("should handle all DEX info retrieval edge cases", async function () {
-      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { gaslessRouter, testToken, uniswapFactory, uniswapRouter } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
+      );
 
       // Get DEX info for valid token
       const dexInfo = await gaslessRouter.getDEXInfo(testToken.address);
@@ -763,30 +602,21 @@ describe("GaslessSwapRouter", function () {
 
       // Try to get DEX info for non-existent token
       const randomToken = ethers.Wallet.createRandom().address;
-      await expect(gaslessRouter.getDEXInfo(randomToken)).to.be.revertedWith(
-        "TokenNotSupported"
-      );
+      await expect(gaslessRouter.getDEXInfo(randomToken)).to.be.revertedWith("TokenNotSupported");
 
       // Try to get DEX address for non-existent token
-      await expect(gaslessRouter.dexAddress(randomToken)).to.be.revertedWith(
-        "TokenNotSupported"
-      );
+      await expect(gaslessRouter.dexAddress(randomToken)).to.be.revertedWith("TokenNotSupported");
 
       // Check if token is supported
-      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be
-        .true;
+      expect(await gaslessRouter.isTokenSupported(testToken.address)).to.be.true;
       expect(await gaslessRouter.isTokenSupported(randomToken)).to.be.false;
     });
 
     it("should revert when getting dex address for unsupported token", async function () {
-      const { gaslessRouter } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter } = await loadFixture(gaslessSwapRouterAddTokenFixture);
 
       const unknownToken = ethers.Wallet.createRandom().address;
-      await expect(gaslessRouter.dexAddress(unknownToken)).to.be.revertedWith(
-        "TokenNotSupported"
-      );
+      await expect(gaslessRouter.dexAddress(unknownToken)).to.be.revertedWith("TokenNotSupported");
     });
   });
 });
@@ -794,24 +624,18 @@ describe("GaslessSwapRouter", function () {
 describe("GaslessSwapRouter: Swap Operations", function () {
   describe("Core Swap Functionality", function () {
     it("should calculate amount in correctly", async function () {
-      const { gaslessRouter, testToken } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const amountOut = parseEther("1");
-      const amountIn = await gaslessRouter.getAmountIn(
-        testToken.address,
-        amountOut
-      );
+      const amountIn = await gaslessRouter.getAmountIn(testToken.address, amountOut);
       expect(amountIn).to.be.gt(0);
     });
 
     it("should execute swap successfully", async function () {
-      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
+      );
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       // Calculate gas repayment
       const feeData = await ethers.provider.getFeeData();
@@ -823,10 +647,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Get expected output
       const path = [testToken.address, wkaia.address];
-      const [, expectedOutput] = await uniswapRouter.getAmountsOut(
-        swapAmount,
-        path
-      );
+      const [, expectedOutput] = await uniswapRouter.getAmountsOut(swapAmount, path);
       const margin = expectedOutput.mul(1).div(100); // 1% margin
       const minAmountOut = amountRepay.add(margin);
 
@@ -844,9 +665,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
     });
 
     it("should fail swap if token not supported", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const invalidToken = ethers.Wallet.createRandom().address;
 
       // First approve some tokens to avoid approval revert
@@ -856,22 +675,16 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const deadline = currentBlock.timestamp + 300;
 
       await expect(
-        gaslessRouter
-          .connect(testUser)
-          .swapForGas(invalidToken, amount, amount, parseEther("0.1"), deadline)
+        gaslessRouter.connect(testUser).swapForGas(invalidToken, amount, amount, parseEther("0.1"), deadline),
       ).to.be.revertedWith("TokenNotSupported");
     });
 
     it("should prevent operations on removed token", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       await gaslessRouter.removeToken(testToken.address);
 
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -881,26 +694,16 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            swapAmount,
-            parseEther("0.5"),
-            amountRepay,
-            deadline
-          )
+          .swapForGas(testToken.address, swapAmount, parseEther("0.5"), amountRepay, deadline),
       ).to.be.revertedWith("TokenNotSupported");
     });
 
     it("should handle multiple consecutive swaps", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       await gaslessRouter.updateCommissionRate(500); // 5%
 
       const swapAmount = parseEther("5.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount.mul(2));
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount.mul(2));
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -912,47 +715,37 @@ describe("GaslessSwapRouter: Swap Operations", function () {
         .connect(testUser)
         .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
-      const initialCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const initialCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
 
       await gaslessRouter
         .connect(testUser)
         .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
-      const finalCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const finalCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
       expect(finalCommissionBalance).to.be.gt(initialCommissionBalance);
     });
 
     it("should verify swap balances and commission", async function () {
-      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
+      );
       await gaslessRouter.updateCommissionRate(1000); // 10%
 
       const swapAmount = parseEther("10.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
 
       const path = [testToken.address, wkaia.address];
-      const [, expectedOutput] = await uniswapRouter.getAmountsOut(
-        swapAmount,
-        path
-      );
+      const [, expectedOutput] = await uniswapRouter.getAmountsOut(swapAmount, path);
 
       const userAmount = expectedOutput.sub(amountRepay);
       const expectedCommission = userAmount.mul(1000).div(10000);
       const expectedUserFinalAmount = userAmount.sub(expectedCommission);
 
       const initialUserBalance = await testUser.getBalance();
-      const initialCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const initialCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
       const currentBlock = await ethers.provider.getBlock("latest");
       const deadline = currentBlock.timestamp + 300;
 
@@ -962,35 +755,24 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await tx.wait();
 
       const finalUserBalance = await testUser.getBalance();
-      const finalCommissionBalance = await ethers.provider.getBalance(
-        gaslessRouter.address
-      );
+      const finalCommissionBalance = await ethers.provider.getBalance(gaslessRouter.address);
 
-      expect(finalUserBalance.sub(initialUserBalance)).to.be.closeTo(
-        expectedUserFinalAmount,
-        parseEther("0.1")
-      );
-      expect(finalCommissionBalance.sub(initialCommissionBalance)).to.equal(
-        expectedCommission
-      );
+      expect(finalUserBalance.sub(initialUserBalance)).to.be.closeTo(expectedUserFinalAmount, parseEther("0.1"));
+      expect(finalCommissionBalance.sub(initialCommissionBalance)).to.equal(expectedCommission);
     });
   });
 
   describe("Swap Parameter Validation", function () {
     it("should fail swap if insufficient output", async function () {
-      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
+      );
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       // Get expected output
       const path = [testToken.address, wkaia.address];
-      const [, expectedOutput] = await uniswapRouter.getAmountsOut(
-        swapAmount,
-        path
-      );
+      const [, expectedOutput] = await uniswapRouter.getAmountsOut(swapAmount, path);
 
       // Calculate minimum output that's much higher than possible
       const tooHighMinOutput = expectedOutput.mul(2);
@@ -1004,24 +786,14 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            swapAmount,
-            tooHighMinOutput,
-            amountRepay,
-            deadline
-          )
+          .swapForGas(testToken.address, swapAmount, tooHighMinOutput, amountRepay, deadline),
       ).to.be.revertedWith("UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT");
     });
 
     it("should revert when minAmountOut is less than amountRepay", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const amountRepay = parseEther("0.1");
       const minAmountOut = parseEther("0.05"); // Less than amountRepay
@@ -1029,21 +801,14 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const deadline = currentBlock.timestamp + 300;
 
       await expect(
-        gaslessRouter
-          .connect(testUser)
-          .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline)
+        gaslessRouter.connect(testUser).swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline),
       ).to.be.revertedWith("InsufficientSwapOutput");
     });
 
     it("should revert with insufficient token balance", async function () {
-      const {
-        deployer,
-        gaslessRouter,
-        testUser,
-        uniswapFactory,
-        uniswapRouter,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { deployer, gaslessRouter, testUser, uniswapFactory, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
+      );
       // Deploy a new token with no balance
       const NoBalanceToken = await ethers.getContractFactory("TestToken");
       const noBalanceToken = await NoBalanceToken.deploy(deployer.address);
@@ -1058,52 +823,44 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await wkaia.connect(testUser).approve(uniswapRouter.address, liquidityAmount);
       await wkaia.connect(testUser).deposit({ value: liquidityAmount });
 
-      var deadline = Math.floor(Date.now() / 1000) + 3600;
-      await uniswapRouter.connect(testUser).addLiquidity(
-        noBalanceToken.address, wkaia.address,
-        liquidityAmount, liquidityAmount.div(2),
-        0, 0, testUser.address, deadline
-      );
+      let currentBlock = await ethers.provider.getBlock("latest");
+      let deadline = currentBlock.timestamp + 3600;
+      await uniswapRouter
+        .connect(testUser)
+        .addLiquidity(
+          noBalanceToken.address,
+          wkaia.address,
+          liquidityAmount,
+          liquidityAmount.div(2),
+          0,
+          0,
+          testUser.address,
+          deadline,
+        );
 
       const remainingBalance = await noBalanceToken.balanceOf(testUser.address);
       await noBalanceToken.connect(testUser).transfer(deployer.address, remainingBalance);
 
       // Add token
-      await gaslessRouter.addToken(
-        noBalanceToken.address,
-        uniswapFactory.address,
-        uniswapRouter.address
-      );
+      await gaslessRouter.addToken(noBalanceToken.address, uniswapFactory.address, uniswapRouter.address);
 
       // Try to swap with no balance
       const swapAmount = parseEther("1.0");
-      await noBalanceToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
-        const currentBlock = await ethers.provider.getBlock("latest");
-        deadline = currentBlock.timestamp + 300;
-  
+      await noBalanceToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
+      currentBlock = await ethers.provider.getBlock("latest");
+      deadline = currentBlock.timestamp + 300;
+
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            noBalanceToken.address,
-            swapAmount,
-            parseEther("0.1"),
-            parseEther("0.05"),
-            deadline
-          )
+          .swapForGas(noBalanceToken.address, swapAmount, parseEther("0.1"), parseEther("0.05"), deadline),
       ).to.be.revertedWith("Insufficient token balance");
     });
 
     it("should handle token approval limits", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const maxApproval = ethers.constants.MaxUint256;
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, maxApproval);
+      await testToken.connect(testUser).approve(gaslessRouter.address, maxApproval);
 
       const swapAmount = parseEther("10.0");
 
@@ -1122,27 +879,17 @@ describe("GaslessSwapRouter: Swap Operations", function () {
     });
 
     it("should fail swap if gas price is too high", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       try {
         const swapAmount = parseEther("1.0");
-        await testToken
-          .connect(testUser)
-          .approve(gaslessRouter.address, swapAmount);
-          const currentBlock = await ethers.provider.getBlock("latest");
-          const deadline = currentBlock.timestamp + 300;
-    
+        await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const deadline = currentBlock.timestamp + 300;
+
         await expect(
           gaslessRouter
             .connect(testUser)
-            .swapForGas(
-              testToken.address,
-              swapAmount,
-              parseEther("1000"),
-              parseEther("0.1"),
-              deadline
-            )
+            .swapForGas(testToken.address, swapAmount, parseEther("1000"), parseEther("0.1"), deadline),
         ).to.be.reverted;
       } catch (e) {
         const error = e as Error;
@@ -1153,44 +900,28 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
   describe("Swap Edge Cases", function () {
     it("should handle extreme input in getAmountIn", async function () {
-      const { gaslessRouter, testToken } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const largeAmountOut = parseEther("0.00000001");
-      const amountIn = await gaslessRouter.getAmountIn(
-        testToken.address,
-        largeAmountOut
-      );
+      const amountIn = await gaslessRouter.getAmountIn(testToken.address, largeAmountOut);
       expect(amountIn).to.be.gt(0);
     });
 
     it("should handle getAmountIn with extremely large output", async function () {
-      const { gaslessRouter, testToken } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const extremeAmountOut = ethers.constants.MaxUint256;
 
-      await expect(
-        gaslessRouter.getAmountIn(testToken.address, extremeAmountOut)
-      ).to.be.reverted;
+      await expect(gaslessRouter.getAmountIn(testToken.address, extremeAmountOut)).to.be.reverted;
     });
 
     it("should handle getAmountIn with zero output", async function () {
-      const { gaslessRouter, testToken } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
-      await expect(gaslessRouter.getAmountIn(testToken.address, 0)).to.be
-        .reverted;
+      const { gaslessRouter, testToken } = await loadFixture(gaslessSwapRouterAddTokenFixture);
+      await expect(gaslessRouter.getAmountIn(testToken.address, 0)).to.be.reverted;
     });
 
     it("should handle very small swap amount", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const verySmallAmount = parseEther("0.000001");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, verySmallAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, verySmallAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -1200,24 +931,14 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            verySmallAmount,
-            amountRepay,
-            amountRepay.div(2),
-            deadline
-          )
+          .swapForGas(testToken.address, verySmallAmount, amountRepay, amountRepay.div(2), deadline),
       ).to.be.reverted;
     });
 
     it("should handle very large swap amounts", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const largeSwapAmount = parseEther("1000000");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, largeSwapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, largeSwapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -1227,61 +948,40 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            largeSwapAmount,
-            parseEther("0.5"),
-            amountRepay,
-            deadline
-          )
+          .swapForGas(testToken.address, largeSwapAmount, parseEther("0.5"), amountRepay, deadline),
       ).to.be.reverted;
     });
 
     it("should fail if coin transfer fails", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       // Create a mock coinbase that rejects payments
       const MockCoinbase = await ethers.getContractFactory("MockCoinbase");
       const mockCoinbase = await MockCoinbase.deploy();
 
       // Modify block.coinbase to return mock address
-      await network.provider.send("hardhat_setCoinbase", [
-        mockCoinbase.address,
-      ]);
+      await network.provider.send("hardhat_setCoinbase", [mockCoinbase.address]);
 
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
-        const currentBlock = await ethers.provider.getBlock("latest");
-        const deadline = currentBlock.timestamp + 300;
-  
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
+
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            swapAmount,
-            parseEther("0.5"),
-            parseEther("0.1"),
-            deadline
-          )
+          .swapForGas(testToken.address, swapAmount, parseEther("0.5"), parseEther("0.1"), deadline),
       ).to.be.revertedWith("Failed to send KAIA to proposer");
 
       // Reset coinbase
-      await network.provider.send("hardhat_setCoinbase", [
-        "0x0000000000000000000000000000000000000000",
-      ]);
+      await network.provider.send("hardhat_setCoinbase", ["0x0000000000000000000000000000000000000000"]);
     });
 
     it("should fail if transfer to user fails", async function () {
-      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
-      // Deploy a malicious contract that rejects KAIA transfers
-      const MaliciousReceiver = await ethers.getContractFactory(
-        "MaliciousReceiver"
+      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
       );
+      // Deploy a malicious contract that rejects KAIA transfers
+      const MaliciousReceiver = await ethers.getContractFactory("MaliciousReceiver");
       const maliciousReceiver = await MaliciousReceiver.deploy();
 
       // Impersonate the malicious contract
@@ -1299,12 +999,8 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       const maliciousSigner = await ethers.getSigner(maliciousReceiver.address);
 
       // Fund the malicious contract with some test tokens
-      await testToken
-        .connect(testUser)
-        .transfer(maliciousReceiver.address, parseEther("10"));
-      await testToken
-        .connect(maliciousSigner)
-        .approve(gaslessRouter.address, parseEther("1"));
+      await testToken.connect(testUser).transfer(maliciousReceiver.address, parseEther("10"));
+      await testToken.connect(maliciousSigner).approve(gaslessRouter.address, parseEther("1"));
 
       // Get expected output for setting appropriate minAmountOut
       const path = [testToken.address, wkaia.address];
@@ -1316,13 +1012,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
       await expect(
         gaslessRouter
           .connect(maliciousSigner)
-          .swapForGas(
-            testToken.address,
-            parseEther("1"),
-            amountRepay.add(parseEther("0.1")),
-            amountRepay,
-            deadline
-          )
+          .swapForGas(testToken.address, parseEther("1"), amountRepay.add(parseEther("0.1")), amountRepay, deadline),
       ).to.be.reverted;
 
       await network.provider.request({
@@ -1334,65 +1024,30 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
   describe("Multiple DEX Support", function () {
     it("should add tokens with different factories", async function () {
-      const {
-        gaslessRouter,
-        tokenA,
-        factoryA,
-        routerA,
-        tokenB,
-        factoryB,
-        routerB,
-      } = await loadFixture(gaslessSwapRouterMultiTokenFixture);
-      // Add tokenA with factoryA
-      await gaslessRouter.addToken(
-        tokenA.address,
-        factoryA.address,
-        routerA.address
+      const { gaslessRouter, tokenA, factoryA, routerA, tokenB, factoryB, routerB } = await loadFixture(
+        gaslessSwapRouterMultiTokenFixture,
       );
+      // Add tokenA with factoryA
+      await gaslessRouter.addToken(tokenA.address, factoryA.address, routerA.address);
 
       // Add tokenB with factoryB
-      await gaslessRouter.addToken(
-        tokenB.address,
-        factoryB.address,
-        routerB.address
-      );
+      await gaslessRouter.addToken(tokenB.address, factoryB.address, routerB.address);
 
       // Verify both tokens are supported
       expect(await gaslessRouter.isTokenSupported(tokenA.address)).to.be.true;
       expect(await gaslessRouter.isTokenSupported(tokenB.address)).to.be.true;
 
       // Verify correct factory addresses are stored
-      expect(await gaslessRouter.dexAddress(tokenA.address)).to.equal(
-        factoryA.address
-      );
-      expect(await gaslessRouter.dexAddress(tokenB.address)).to.equal(
-        factoryB.address
-      );
+      expect(await gaslessRouter.dexAddress(tokenA.address)).to.equal(factoryA.address);
+      expect(await gaslessRouter.dexAddress(tokenB.address)).to.equal(factoryB.address);
     });
 
     it("should execute swaps through different factories", async function () {
-      const {
-        gaslessRouter,
-        tokenA,
-        factoryA,
-        routerA,
-        tokenB,
-        factoryB,
-        routerB,
-        testUser,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterMultiTokenFixture);
+      const { gaslessRouter, tokenA, factoryA, routerA, tokenB, factoryB, routerB, testUser, wkaia } =
+        await loadFixture(gaslessSwapRouterMultiTokenFixture);
       // Add tokens with their respective factories
-      await gaslessRouter.addToken(
-        tokenA.address,
-        factoryA.address,
-        routerA.address
-      );
-      await gaslessRouter.addToken(
-        tokenB.address,
-        factoryB.address,
-        routerB.address
-      );
+      await gaslessRouter.addToken(tokenA.address, factoryA.address, routerA.address);
+      await gaslessRouter.addToken(tokenB.address, factoryB.address, routerB.address);
 
       // Setup for swaps
       const swapAmount = parseEther("1.0");
@@ -1406,17 +1061,11 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Calculate minAmountOut for both tokens
       const pathA = [tokenA.address, wkaia.address];
-      const [, expectedOutputA] = await routerA.getAmountsOut(
-        swapAmount,
-        pathA
-      );
+      const [, expectedOutputA] = await routerA.getAmountsOut(swapAmount, pathA);
       const minAmountOutA = amountRepay.add(expectedOutputA.mul(1).div(100)); // Add 1% margin
 
       const pathB = [tokenB.address, wkaia.address];
-      const [, expectedOutputB] = await routerB.getAmountsOut(
-        swapAmount,
-        pathB
-      );
+      const [, expectedOutputB] = await routerB.getAmountsOut(swapAmount, pathB);
       const minAmountOutB = amountRepay.add(expectedOutputB.mul(1).div(100)); // Add 1% margin
 
       // Execute swap for tokenA through factoryA
@@ -1434,7 +1083,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Execute swap for tokenB through factoryB
       const initialBalanceB = await testUser.getBalance();
-      
+
       await gaslessRouter
         .connect(testUser)
         .swapForGas(tokenB.address, swapAmount, minAmountOutB, amountRepay, deadline);
@@ -1445,56 +1094,29 @@ describe("GaslessSwapRouter: Swap Operations", function () {
     });
 
     it("should use the correct factory and router for each token", async function () {
-      const {
-        factoryA,
-        factoryB,
-        routerA,
-        routerB,
-        testUser,
-        tokenA,
-        tokenB,
-        wkaia,
-      } = await loadFixture(gaslessSwapRouterMultiTokenFixture);
-      // Deploy a GaslessSwapRouter with a custom router
-      const GaslessSwapRouter = await ethers.getContractFactory(
-        "GaslessSwapRouter"
+      const { factoryA, factoryB, routerA, routerB, testUser, tokenA, tokenB, wkaia } = await loadFixture(
+        gaslessSwapRouterMultiTokenFixture,
       );
+      // Deploy a GaslessSwapRouter with a custom router
+      const GaslessSwapRouter = await ethers.getContractFactory("GaslessSwapRouter");
       const customGaslessRouter = await GaslessSwapRouter.deploy(wkaia.address);
       await customGaslessRouter.deployed();
 
       // Add tokens with specific factory addresses
-      await customGaslessRouter.addToken(
-        tokenA.address,
-        factoryA.address,
-        routerA.address
-      );
-      await customGaslessRouter.addToken(
-        tokenB.address,
-        factoryB.address,
-        routerB.address
-      );
+      await customGaslessRouter.addToken(tokenA.address, factoryA.address, routerA.address);
+      await customGaslessRouter.addToken(tokenB.address, factoryB.address, routerB.address);
 
       // Setup for swaps
       const swapAmount = parseEther("1.0");
-      await tokenA
-        .connect(testUser)
-        .approve(customGaslessRouter.address, swapAmount);
-      await tokenB
-        .connect(testUser)
-        .approve(customGaslessRouter.address, swapAmount);
+      await tokenA.connect(testUser).approve(customGaslessRouter.address, swapAmount);
+      await tokenB.connect(testUser).approve(customGaslessRouter.address, swapAmount);
 
       // Get minAmountOut values
       const pathA = [tokenA.address, wkaia.address];
-      const [, expectedOutputA] = await routerA.getAmountsOut(
-        swapAmount,
-        pathA
-      );
+      const [, expectedOutputA] = await routerA.getAmountsOut(swapAmount, pathA);
 
       const pathB = [tokenB.address, wkaia.address];
-      const [, expectedOutputB] = await routerB.getAmountsOut(
-        swapAmount,
-        pathB
-      );
+      const [, expectedOutputB] = await routerB.getAmountsOut(swapAmount, pathB);
 
       // Calculate gas repayment
       const feeData = await ethers.provider.getFeeData();
@@ -1517,16 +1139,10 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 
       // Additional check: getAmountIn should use the correct factory for each token
       const amountOutA = parseEther("0.1");
-      const amountInA = await customGaslessRouter.getAmountIn(
-        tokenA.address,
-        amountOutA
-      );
+      const amountInA = await customGaslessRouter.getAmountIn(tokenA.address, amountOutA);
 
       const amountOutB = parseEther("0.1");
-      const amountInB = await customGaslessRouter.getAmountIn(
-        tokenB.address,
-        amountOutB
-      );
+      const amountInB = await customGaslessRouter.getAmountIn(tokenB.address, amountOutB);
 
       // Due to different factory configurations, the amount in may differ
       expect(amountInA).to.not.equal(0);
@@ -1538,8 +1154,7 @@ describe("GaslessSwapRouter: Swap Operations", function () {
 describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () {
   describe("Error Cases", function () {
     it("should fail if token approval fails", async function () {
-      const { gaslessRouter, testToken, testUser } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
 
       await testToken.connect(testUser).approve(gaslessRouter.address, 0);
       const currentBlock = await ethers.provider.getBlock("latest");
@@ -1548,23 +1163,16 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            parseEther("100"),
-            parseEther("0.5"),
-            parseEther("0.1"),
-            deadline
-          )
+          .swapForGas(testToken.address, parseEther("100"), parseEther("0.5"), parseEther("0.1"), deadline),
       ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("should fail if transfer to user fails", async function () {
-      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
-      // Deploy a malicious contract that rejects KAIA transfers
-      const MaliciousReceiver = await ethers.getContractFactory(
-        "MaliciousReceiver"
+      const { gaslessRouter, testToken, testUser, uniswapRouter, wkaia } = await loadFixture(
+        gaslessSwapRouterAddTokenFixture,
       );
+      // Deploy a malicious contract that rejects KAIA transfers
+      const MaliciousReceiver = await ethers.getContractFactory("MaliciousReceiver");
       const maliciousReceiver = await MaliciousReceiver.deploy();
 
       // Impersonate the malicious contract
@@ -1582,12 +1190,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const maliciousSigner = await ethers.getSigner(maliciousReceiver.address);
 
       // Fund the malicious contract with some test tokens
-      await testToken
-        .connect(testUser)
-        .transfer(maliciousReceiver.address, parseEther("10"));
-      await testToken
-        .connect(maliciousSigner)
-        .approve(gaslessRouter.address, parseEther("1"));
+      await testToken.connect(testUser).transfer(maliciousReceiver.address, parseEther("10"));
+      await testToken.connect(maliciousSigner).approve(gaslessRouter.address, parseEther("1"));
 
       // Get expected output for setting appropriate minAmountOut
       const path = [testToken.address, wkaia.address];
@@ -1599,13 +1203,7 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       await expect(
         gaslessRouter
           .connect(maliciousSigner)
-          .swapForGas(
-            testToken.address,
-            parseEther("1"),
-            amountRepay.add(parseEther("0.1")),
-            amountRepay,
-            deadline
-          )
+          .swapForGas(testToken.address, parseEther("1"), amountRepay.add(parseEther("0.1")), amountRepay, deadline),
       ).to.be.reverted;
 
       await network.provider.request({
@@ -1615,62 +1213,42 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
     });
 
     it("should fail if WKAIA withdraw fails", async function () {
-      const { testToken, testUser, wkaia } =
-        await loadFixture(gaslessSwapRouterAddTokenFixture);
+      const { testToken, testUser, wkaia } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const MaliciousWKAIA = await ethers.getContractFactory("MaliciousWKAIA");
       const maliciousWKAIA = await MaliciousWKAIA.deploy();
 
       await expect(maliciousWKAIA.withdraw(parseEther("1.0"))).to.be.revertedWith("Withdrawal failed");
-
     });
 
     it("should fail if coinbase payment fails", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       // Create a mock coinbase that rejects payments
       const MockCoinbase = await ethers.getContractFactory("MockCoinbase");
       const mockCoinbase = await MockCoinbase.deploy();
 
       // Modify block.coinbase to return mock address
-      await network.provider.send("hardhat_setCoinbase", [
-        mockCoinbase.address,
-      ]);
+      await network.provider.send("hardhat_setCoinbase", [mockCoinbase.address]);
 
       const swapAmount = parseEther("1.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
-        const currentBlock = await ethers.provider.getBlock("latest");
-        const deadline = currentBlock.timestamp + 300;
-  
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const deadline = currentBlock.timestamp + 300;
+
       await expect(
         gaslessRouter
           .connect(testUser)
-          .swapForGas(
-            testToken.address,
-            swapAmount,
-            parseEther("0.5"),
-            parseEther("0.1"),
-            deadline
-          )
+          .swapForGas(testToken.address, swapAmount, parseEther("0.5"), parseEther("0.1"), deadline),
       ).to.be.revertedWith("Failed to send KAIA to proposer");
 
       // Reset coinbase
-      await network.provider.send("hardhat_setCoinbase", [
-        "0x0000000000000000000000000000000000000000",
-      ]);
+      await network.provider.send("hardhat_setCoinbase", ["0x0000000000000000000000000000000000000000"]);
     });
 
     it("should handle commission claim failure", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       await gaslessRouter.updateCommissionRate(1000); // 10%
       const swapAmount = parseEther("10.0");
-      await testToken
-        .connect(testUser)
-        .approve(gaslessRouter.address, swapAmount);
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
       const gasPriceBN = (await ethers.provider.getFeeData()).gasPrice!;
       const amountRepay = gasPriceBN.mul(600000);
@@ -1682,39 +1260,27 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
         .connect(testUser)
         .swapForGas(testToken.address, swapAmount, minAmountOut, amountRepay, deadline);
 
-      const MaliciousReceiver = await ethers.getContractFactory(
-        "MaliciousReceiver"
-      );
+      const MaliciousReceiver = await ethers.getContractFactory("MaliciousReceiver");
       const maliciousReceiver = await MaliciousReceiver.deploy();
 
       await gaslessRouter.transferOwnership(maliciousReceiver.address);
 
-      await expect(
-        gaslessRouter.connect(testUser).claimCommission()
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(gaslessRouter.connect(testUser).claimCommission()).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
     });
 
     it("should revert when deadline has passed", async function () {
-      const { gaslessRouter, testToken, testUser } = await loadFixture(
-          gaslessSwapRouterAddTokenFixture
-      );
+      const { gaslessRouter, testToken, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       const swapAmount = parseEther("1.0");
-      await testToken
-          .connect(testUser)
-          .approve(gaslessRouter.address, swapAmount);
-  
+      await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
+
       const pastDeadline = Math.floor(Date.now() / 1000) - 60;
-  
+
       await expect(
-          gaslessRouter
-              .connect(testUser)
-              .swapForGas(
-                  testToken.address,
-                  swapAmount,
-                  parseEther("0.5"),
-                  parseEther("0.1"),
-                  pastDeadline
-              )
+        gaslessRouter
+          .connect(testUser)
+          .swapForGas(testToken.address, swapAmount, parseEther("0.5"), parseEther("0.1"), pastDeadline),
       ).to.be.revertedWith("UniswapV2Router: EXPIRED");
     });
   });
@@ -1722,46 +1288,30 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
   describe("Mock Contract Tests", function () {
     it("should safely handle MaliciousWKAIA", async function () {
       // Deploy MaliciousWKAIA
-      const MaliciousWKAIAFactory = await ethers.getContractFactory(
-        "MaliciousWKAIA"
-      );
+      const MaliciousWKAIAFactory = await ethers.getContractFactory("MaliciousWKAIA");
       const maliciousWkaia = await MaliciousWKAIAFactory.deploy();
       await maliciousWkaia.deployed();
 
       // Test withdraw method
-      await expect(maliciousWkaia.withdraw(parseEther("1"))).to.be.revertedWith(
-        "Withdrawal failed"
-      );
+      await expect(maliciousWkaia.withdraw(parseEther("1"))).to.be.revertedWith("Withdrawal failed");
     });
 
     it("should safely handle MaliciousToken", async function () {
-      const { deployer, testUser } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { deployer, testUser } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       // Deploy MaliciousToken
-      const MaliciousTokenFactory = await ethers.getContractFactory(
-        "MaliciousToken"
-      );
-      const maliciousToken = await MaliciousTokenFactory.deploy(
-        deployer.address
-      );
+      const MaliciousTokenFactory = await ethers.getContractFactory("MaliciousToken");
+      const maliciousToken = await MaliciousTokenFactory.deploy(deployer.address);
       await maliciousToken.deployed();
 
       // Test transfer method (should work)
       await maliciousToken.transfer(testUser.address, parseEther("1"));
-      expect(await maliciousToken.balanceOf(testUser.address)).to.equal(
-        parseEther("1")
-      );
+      expect(await maliciousToken.balanceOf(testUser.address)).to.equal(parseEther("1"));
     });
 
     it("should test commission claim failure scenarios", async function () {
-      const { deployer, gaslessRouter } = await loadFixture(
-        gaslessSwapRouterAddTokenFixture
-      );
+      const { deployer, gaslessRouter } = await loadFixture(gaslessSwapRouterAddTokenFixture);
       // Setup a malicious contract that rejects ETH
-      const MaliciousReceiver = await ethers.getContractFactory(
-        "MaliciousReceiver"
-      );
+      const MaliciousReceiver = await ethers.getContractFactory("MaliciousReceiver");
       const maliciousReceiver = await MaliciousReceiver.deploy();
       await maliciousReceiver.deployed();
 
@@ -1789,9 +1339,9 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const maliciousSigner = await ethers.getSigner(maliciousReceiver.address);
 
       // Try to claim commission - should fail because the malicious contract rejects ETH
-      await expect(
-        gaslessRouter.connect(maliciousSigner).claimCommission()
-      ).to.be.revertedWith("CommissionClaimFailed");
+      await expect(gaslessRouter.connect(maliciousSigner).claimCommission()).to.be.revertedWith(
+        "CommissionClaimFailed",
+      );
 
       // Stop impersonating
       await network.provider.request({
@@ -1830,9 +1380,7 @@ describe("WKAIA Contract Tests", function () {
       await wkaia.connect(user1).deposit({ value: depositAmount });
 
       expect(await wkaia.balanceOf(user1.address)).to.equal(depositAmount);
-      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(
-        depositAmount
-      );
+      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(depositAmount);
     });
 
     it("should deposit KAIA via receive() function", async function () {
@@ -1844,9 +1392,7 @@ describe("WKAIA Contract Tests", function () {
       });
 
       expect(await wkaia.balanceOf(user1.address)).to.equal(depositAmount);
-      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(
-        depositAmount
-      );
+      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(depositAmount);
     });
 
     it("should withdraw KAIA via withdraw() function", async function () {
@@ -1866,15 +1412,9 @@ describe("WKAIA Contract Tests", function () {
       const balanceAfter = await ethers.provider.getBalance(user1.address);
 
       // Check balance changes
-      expect(balanceAfter.add(gasUsed).sub(balanceBefore)).to.equal(
-        withdrawAmount
-      );
-      expect(await wkaia.balanceOf(user1.address)).to.equal(
-        depositAmount.sub(withdrawAmount)
-      );
-      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(
-        depositAmount.sub(withdrawAmount)
-      );
+      expect(balanceAfter.add(gasUsed).sub(balanceBefore)).to.equal(withdrawAmount);
+      expect(await wkaia.balanceOf(user1.address)).to.equal(depositAmount.sub(withdrawAmount));
+      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(depositAmount.sub(withdrawAmount));
     });
 
     it("should fail to withdraw more than balance", async function () {
@@ -1883,8 +1423,7 @@ describe("WKAIA Contract Tests", function () {
 
       await wkaia.connect(user1).deposit({ value: depositAmount });
 
-      await expect(wkaia.connect(user1).withdraw(withdrawAmount)).to.be
-        .reverted;
+      await expect(wkaia.connect(user1).withdraw(withdrawAmount)).to.be.reverted;
     });
 
     it("should test totalSupply function", async function () {
@@ -1902,9 +1441,7 @@ describe("WKAIA Contract Tests", function () {
       });
 
       expect(await wkaia.totalSupply()).to.equal(parseEther("5.0"));
-      expect(await wkaia.totalSupply()).to.equal(
-        await ethers.provider.getBalance(wkaia.address)
-      );
+      expect(await wkaia.totalSupply()).to.equal(await ethers.provider.getBalance(wkaia.address));
     });
   });
 
@@ -1929,28 +1466,21 @@ describe("WKAIA Contract Tests", function () {
 
       // User1 approves User2 to spend tokens
       await wkaia.connect(user1).approve(user2.address, approveAmount);
-      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(
-        approveAmount
-      );
+      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(approveAmount);
 
       // User2 transfers tokens from User1 to themselves
-      await wkaia
-        .connect(user2)
-        .transferFrom(user1.address, user2.address, transferAmount);
+      await wkaia.connect(user2).transferFrom(user1.address, user2.address, transferAmount);
 
       // Check balances and allowance
       expect(await wkaia.balanceOf(user1.address)).to.equal(parseEther("7.0"));
       expect(await wkaia.balanceOf(user2.address)).to.equal(transferAmount);
-      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(
-        approveAmount.sub(transferAmount)
-      );
+      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(approveAmount.sub(transferAmount));
     });
 
     it("should handle failed transfers due to insufficient balance", async function () {
       const transferAmount = parseEther("15.0"); // More than User1 has
 
-      await expect(wkaia.connect(user1).transfer(user2.address, transferAmount))
-        .to.be.reverted;
+      await expect(wkaia.connect(user1).transfer(user2.address, transferAmount)).to.be.reverted;
     });
 
     it("should handle failed transferFrom due to insufficient allowance", async function () {
@@ -1961,11 +1491,7 @@ describe("WKAIA Contract Tests", function () {
       await wkaia.connect(user1).approve(user2.address, approveAmount);
 
       // User2 tries to transfer more than approved
-      await expect(
-        wkaia
-          .connect(user2)
-          .transferFrom(user1.address, user2.address, transferAmount)
-      ).to.be.reverted;
+      await expect(wkaia.connect(user2).transferFrom(user1.address, user2.address, transferAmount)).to.be.reverted;
     });
   });
 
@@ -1986,9 +1512,7 @@ describe("WKAIA Contract Tests", function () {
       await wkaia.connect(user1).withdraw(parseEther("2.0"));
 
       expect(await wkaia.balanceOf(user1.address)).to.equal(parseEther("3.0"));
-      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(
-        parseEther("3.0")
-      );
+      expect(await ethers.provider.getBalance(wkaia.address)).to.equal(parseEther("3.0"));
     });
 
     it("should handle zero value deposits", async function () {
@@ -2038,28 +1562,18 @@ describe("WKAIA Contract Tests", function () {
       await wkaia.connect(user1).deposit({ value: parseEther("10.0") });
 
       // Transfer multiple times without approval decreasing
-      await wkaia
-        .connect(user2)
-        .transferFrom(user1.address, user2.address, parseEther("2.0"));
-      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(
-        unlimitedApproval
-      );
+      await wkaia.connect(user2).transferFrom(user1.address, user2.address, parseEther("2.0"));
+      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(unlimitedApproval);
 
-      await wkaia
-        .connect(user2)
-        .transferFrom(user1.address, user2.address, parseEther("3.0"));
-      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(
-        unlimitedApproval
-      );
+      await wkaia.connect(user2).transferFrom(user1.address, user2.address, parseEther("3.0"));
+      expect(await wkaia.allowance(user1.address, user2.address)).to.equal(unlimitedApproval);
     });
   });
 
   describe("Events", function () {
     it("should check that approve emits an event", async function () {
       // Test that approve emits correct event
-      await expect(
-        wkaia.connect(user1).approve(user2.address, parseEther("1.0"))
-      )
+      await expect(wkaia.connect(user1).approve(user2.address, parseEther("1.0")))
         .to.emit(wkaia, "Approval")
         .withArgs(user1.address, user2.address, parseEther("1.0"));
     });
@@ -2086,9 +1600,7 @@ describe("WKAIA Contract Tests", function () {
       await wkaia.connect(user1).deposit({ value: parseEther("5.0") });
 
       // Test that transfer emits correct event
-      await expect(
-        wkaia.connect(user1).transfer(user2.address, parseEther("1.0"))
-      )
+      await expect(wkaia.connect(user1).transfer(user2.address, parseEther("1.0")))
         .to.emit(wkaia, "Transfer")
         .withArgs(user1.address, user2.address, parseEther("1.0"));
     });
