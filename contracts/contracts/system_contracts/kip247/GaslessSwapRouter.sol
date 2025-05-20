@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -9,7 +10,17 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IKIP247.sol";
 import "./IWKAIA.sol";
 
+/**
+ * @title GaslessSwapRouter
+ * @dev Implements KIP-247 gasless transaction functionality
+ * This contract allows users to swap ERC20 tokens for KAIA for gasless transaction.
+ *
+ * LIMITATIONS:
+ * - This contract does not support Fee-on-transfer (FoT) tokens
+ * - Using FoT tokens may result in transaction failures or incorrect amounts
+ */
 contract GaslessSwapRouter is IKIP247, Ownable {
+    using SafeERC20 for IERC20;
     IWKAIA public immutable WKAIA;
 
     mapping(address => DEXInfo) private _dexInfos;
@@ -30,25 +41,37 @@ contract GaslessSwapRouter is IKIP247, Ownable {
     event CommissionClaimed(uint256 amount);
 
     constructor(address _wkaia) {
+        require(_wkaia != address(0), "Zero address is not allowed");
         _transferOwnership(msg.sender);
         WKAIA = IWKAIA(_wkaia);
         commissionRate = 0;
     }
 
+    /**
+     * @notice Adds a token to the list of supported tokens
+     * @dev IMPORTANT: This contract does not support Fee-on-transfer (FoT) tokens.
+     * Such tokens will not function correctly with this contract and should not be added.
+     */
     function addToken(address token, address factory, address router) external override onlyOwner {
         require(token != address(0), "Invalid token address");
         require(factory != address(0), "Invalid factory address");
         require(router != address(0), "Invalid router address");
         require(_dexInfos[token].factory == address(0), "TokenAlreadySupported");
 
+        address pair;
         bool success;
-        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (address) {
+        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (address pairAddress) {
+            pair = pairAddress;
             success = true;
         } catch {
             success = false;
         }
 
         require(success, "InvalidDEXAddress");
+        require(pair != address(0), "PairDoesNotExist");
+
+        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        require(reserve0 > 0 && reserve1 > 0, "NoLiquidity");
 
         _dexInfos[token] = DEXInfo({factory: factory, router: router});
 
@@ -104,7 +127,13 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         emit CommissionRateUpdated(oldRate, _commissionRate);
     }
 
-    function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay) external override {
+    function swapForGas(
+        address token,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 amountRepay,
+        uint256 deadline
+    ) external override {
         // R2: Token is whitelisted and has a corresponding DEX info
         require(isTokenSupported(token), "TokenNotSupported");
 
@@ -117,10 +146,10 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         require(minAmountOut >= amountRepay, "InsufficientSwapOutput");
 
         // Get tokens from user
-        IERC20(token).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amountIn);
 
         // Approve tokens for router
-        IERC20(token).approve(dexInfo.router, amountIn);
+        IERC20(token).safeApprove(dexInfo.router, amountIn);
 
         // Set up path for swap
         address[] memory path = new address[](2);
@@ -129,15 +158,12 @@ contract GaslessSwapRouter is IKIP247, Ownable {
 
         // Execute swap using token-specific router
         IUniswapV2Router02 router = IUniswapV2Router02(dexInfo.router);
-        uint256[] memory amounts = router.swapExactTokensForETH(
-            amountIn,
-            minAmountOut,
-            path,
-            address(this),
-            block.timestamp + 300
-        );
+        uint256[] memory amounts = router.swapExactTokensForETH(amountIn, minAmountOut, path, address(this), deadline);
 
         uint256 receivedAmount = amounts[1];
+
+        // Part of R3: Check receivedAmount >= minAmountOut after swap
+        require(receivedAmount >= minAmountOut, "ReceivedAmountBelowMinimum");
 
         // Pay the block proposer
         (bool success, ) = block.coinbase.call{value: amountRepay}("");
@@ -149,8 +175,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         uint256 finalUserAmount = userAmount - commission;
 
         // Send remaining KAIA to user
-        (bool userTransferSuccess, ) = msg.sender.call{value: finalUserAmount}("");
-        require(userTransferSuccess, "FailedToSendKAIA");
+        payable(msg.sender).transfer(finalUserAmount);
 
         emit SwappedForGas(block.coinbase, amountRepay, msg.sender, finalUserAmount, commission);
     }

@@ -416,7 +416,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 
 			// Verify that the expected mockStateDB's calls are being made.
 			auth := tt.makeAuthorization()
-			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, *tt.msg.To(), params.TestRules)
+			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, params.TestRules)
 			require.Equal(t, tt.expectedError, actual)
 		})
 	}
@@ -459,6 +459,7 @@ func TestStateTransition_EIP7623(t *testing.T) {
 	mockStateDB.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)).AnyTimes()
 	mockStateDB.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	mockStateDB.EXPECT().IncNonce(gomock.Any()).Return().AnyTimes()
+	mockStateDB.EXPECT().GetCode(gomock.Any()).Return(nil).AnyTimes()
 	mockStateDB.EXPECT().Snapshot().Return(1).AnyTimes()
 	mockStateDB.EXPECT().Exist(gomock.Any()).Return(false).AnyTimes()
 	mockStateDB.EXPECT().GetRefund().Return(uint64(0)).AnyTimes()

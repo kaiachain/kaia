@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -58,6 +59,7 @@ type TxPool interface {
 	// Pending should return pending transactions.
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
+	PendingUnlocked() (map[common.Address]types.Transactions, error)
 
 	CachedPendingTxsByCount(count int) types.Transactions
 
@@ -75,6 +77,9 @@ type TxPool interface {
 	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
 	StopSpamThrottler()
+	GetCurrentState() *state.StateDB
+
+	kaiax.TxPoolModuleHost
 }
 
 // Backend wraps all methods required for mining.
@@ -227,6 +232,11 @@ func (self *Miner) PendingBlock() *types.Block {
 // RegisterExecutionModule registers kaiax.ExecutionModule to underlying worker.
 func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.worker.RegisterExecutionModule(modules...)
+}
+
+// RegisterTxBundlingModule registers builder.TxBundlingModule to underlying worker.
+func (self *Miner) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+	self.worker.RegisterTxBundlingModule(modules...)
 }
 
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.

@@ -45,6 +45,9 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
@@ -88,7 +91,8 @@ type Miner interface {
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
-	kaiax.ExecutionModuleHost // Because miner executes blocks, inject ExecutionModule.
+	kaiax.ExecutionModuleHost    // Because miner executes blocks, inject ExecutionModule.
+	builder.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -344,6 +348,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
+
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
@@ -398,7 +403,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(mValset); err != nil {
+	if err := cn.SetupKaiaxModules(ctx, mValset); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
@@ -509,12 +514,15 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 	)
 }
 
-func (s *CN) SetupKaiaxModules(mValset valset.ValsetModule) error {
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule) error {
 	var (
-		mRandao = randao_impl.NewRandaoModule()
-		mReward = reward_impl.NewRewardModule()
-		mSupply = supply_impl.NewSupplyModule()
+		mRandao  = randao_impl.NewRandaoModule()
+		mReward  = reward_impl.NewRewardModule()
+		mSupply  = supply_impl.NewSupplyModule()
+		mBuilder = builder_impl.NewBuilderModule()
+		mGasless = gasless_impl.NewGaslessModule()
 	)
+
 	err := errors.Join(
 		mReward.Init(&reward_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -533,18 +541,46 @@ func (s *CN) SetupKaiaxModules(mValset valset.ValsetModule) error {
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
+		mBuilder.Init(&builder_impl.InitOpts{
+			Backend: s.APIBackend,
+		}),
+		mGasless.Init(&gasless_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			GaslessConfig: s.config.Gasless,
+			NodeKey:       ctx.NodeKey(),
+			Chain:         s.blockchain,
+			TxPool:        s.txPool,
+			NodeType:      ctx.NodeType(),
+		}),
 	)
 	if err != nil {
 		return err
 	}
 
+	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mTxBundling := []builder.TxBundlingModule{}
+	mTxPool := []kaiax.TxPoolModule{}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+
+	gaslessDisabled := mGasless.IsDisabled()
+	if !gaslessDisabled {
+		mExecution = append(mExecution, mGasless)
+		mTxBundling = append(mTxBundling, mGasless)
+		mTxPool = append(mTxPool, mGasless)
+		mJsonRpc = append(mJsonRpc, mGasless)
+	}
+
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
-	s.RegisterJsonRpcModules(s.stakingModule, mReward, mSupply, s.govModule, mRandao)
-	s.miner.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
-	s.blockchain.RegisterExecutionModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterJsonRpcModules(mJsonRpc...)
+	s.miner.RegisterExecutionModule(mExecution...)
+	s.miner.RegisterTxBundlingModule(mTxBundling...)
+	s.blockchain.RegisterExecutionModule(mExecution...)
 	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
 		engine.RegisterConsensusModule(mReward, s.govModule)

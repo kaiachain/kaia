@@ -699,21 +699,6 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	return obj
 }
 
-// resolveStateObject follows delegation designations to resolve a state object
-// given by the address, returning nil if the object is not found or was deleted
-// in this execution context.
-func (s *StateDB) resolveStateObject(addr common.Address) *stateObject {
-	obj := s.getStateObject(addr)
-	if obj == nil {
-		return nil
-	}
-	addr, ok := types.ParseDelegation(obj.Code(s.db))
-	if !ok {
-		return obj
-	}
-	return s.getStateObject(addr)
-}
-
 func (s *StateDB) setStateObject(object *stateObject) {
 	s.stateObjects[object.Address()] = object
 }
@@ -900,79 +885,102 @@ func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (s *StateDB) Copy() *StateDB {
+	state := &StateDB{}
+	copyStateDB(state, s)
+	return state
+}
+
+func (s *StateDB) Set(src *StateDB) {
+	copyStateDB(s, src)
+}
+
+func copyStateDB(dst, src *StateDB) {
 	// Copy all the basic fields, initialize the memory ones
-	state := &StateDB{
-		db:                       s.db,
-		trie:                     s.db.CopyTrie(s.trie),
-		stateObjects:             make(map[common.Address]*stateObject, len(s.journal.dirties)),
-		stateObjectsDirty:        make(map[common.Address]struct{}, len(s.journal.dirties)),
-		stateObjectsDirtyStorage: make(map[common.Address]struct{}),
-		refund:                   s.refund,
-		logs:                     make(map[common.Hash][]*types.Log, len(s.logs)),
-		logSize:                  s.logSize,
-		preimages:                make(map[common.Hash][]byte),
-		journal:                  newJournal(),
-	}
-	// Copy the dirty states, logs, and preimages
-	for addr := range s.journal.dirties {
-		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
-		// and in the Finalise-method, there is a case where an object is in the journal but not
-		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
-		// nil
-		if object, exist := s.stateObjects[addr]; exist {
-			state.stateObjects[addr] = object.deepCopy(state)
-			state.stateObjectsDirty[addr] = struct{}{}
-		}
-	}
-	// Above, we don't copy the actual journal. This means that if the copy is copied, the
-	// loop above will be a no-op, since the copy's journal is empty.
-	// Thus, here we iterate over stateObjects, to enable copies of copies
-	for addr := range s.stateObjectsDirty {
-		if _, exist := state.stateObjects[addr]; !exist {
-			state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
-			state.stateObjectsDirty[addr] = struct{}{}
-		}
-	}
+	dst.db = src.db
+	dst.trie = src.db.CopyTrie(src.trie)
+	dst.trieOpts = src.trieOpts
 
-	deepCopyLogs(s, state)
+	dst.stateObjects = make(map[common.Address]*stateObject, len(src.stateObjects))
+	dst.stateObjectsDirty = make(map[common.Address]struct{}, len(src.stateObjectsDirty))
+	dst.stateObjectsDirtyStorage = make(map[common.Address]struct{}, len(src.stateObjectsDirtyStorage))
 
-	for hash, preimage := range s.preimages {
-		state.preimages[hash] = preimage
-	}
+	dst.dbErr = src.dbErr
+	dst.refund = src.refund
+
+	dst.thash = src.thash
+	dst.bhash = src.bhash
+	dst.txIndex = src.txIndex
+	dst.logs = make(map[common.Hash][]*types.Log, len(src.logs))
+	dst.logSize = src.logSize
+
+	dst.preimages = make(map[common.Hash][]byte, len(src.preimages))
 
 	// Do we need to copy the access list? In practice: No. At the start of a
 	// transaction, the access list is empty. In practice, we only ever copy state
 	// _between_ transactions/blocks, never in the middle of a transaction.
 	// However, it doesn't cost us much to copy an empty list, so we do it anyway
 	// to not blow up if we ever decide copy it in the middle of a transaction
-	state.accessList = s.accessList.Copy()
-	state.transientStorage = s.transientStorage.Copy()
-	if s.snaps != nil {
+	dst.accessList = src.accessList.Copy()
+	dst.transientStorage = src.transientStorage.Copy()
+	dst.journal = newJournal()
+
+	// Copy the dirty states, logs, and preimages
+	for addr := range src.journal.dirties {
+		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
+		// and in the Finalise-method, there is a case where an object is in the journal but not
+		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
+		// nil
+		if object, exist := src.stateObjects[addr]; exist {
+			dst.stateObjects[addr] = object.deepCopy(dst)
+			dst.stateObjectsDirty[addr] = struct{}{}
+		}
+	}
+	// Above, we don't copy the actual journal. This means that if the copy is copied, the
+	// loop above will be a no-op, since the copy's journal is empty.
+	// Thus, here we iterate over stateObjects, to enable copies of copies
+	for addr := range src.stateObjectsDirty {
+		if _, exist := dst.stateObjects[addr]; !exist {
+			dst.stateObjects[addr] = src.stateObjects[addr].deepCopy(dst)
+			dst.stateObjectsDirty[addr] = struct{}{}
+		}
+	}
+	for addr := range src.stateObjectsDirtyStorage {
+		dst.stateObjectsDirtyStorage[addr] = struct{}{}
+	}
+
+	// Deep copy logs
+	deepCopyLogs(src, dst)
+
+	// Copy preimages
+	for hash, preimage := range src.preimages {
+		dst.preimages[hash] = preimage
+	}
+
+	if src.snaps != nil {
 		// In order for the miner to be able to use and make additions
 		// to the snapshot tree, we need to copy that aswell.
 		// Otherwise, any block mined by ourselves will cause gaps in the tree,
 		// and force the miner to operate trie-backed only
-		state.snaps = s.snaps
-		state.snap = s.snap
+		dst.snaps = src.snaps
+		dst.snap = src.snap
 		// deep copy needed
-		state.snapDestructs = make(map[common.Hash]struct{})
-		for k, v := range s.snapDestructs {
-			state.snapDestructs[k] = v
+		dst.snapDestructs = make(map[common.Hash]struct{})
+		for k, v := range src.snapDestructs {
+			dst.snapDestructs[k] = v
 		}
-		state.snapAccounts = make(map[common.Hash][]byte)
-		for k, v := range s.snapAccounts {
-			state.snapAccounts[k] = v
+		dst.snapAccounts = make(map[common.Hash][]byte)
+		for k, v := range src.snapAccounts {
+			dst.snapAccounts[k] = v
 		}
-		state.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		for k, v := range s.snapStorage {
+		dst.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		for k, v := range src.snapStorage {
 			temp := make(map[common.Hash][]byte)
 			for kk, vv := range v {
 				temp[kk] = vv
 			}
-			state.snapStorage[k] = temp
+			dst.snapStorage[k] = temp
 		}
 	}
-	return state
 }
 
 // deepCopyLogs deep-copies StateDB.logs from the left to the right.

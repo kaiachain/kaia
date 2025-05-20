@@ -56,6 +56,8 @@ var (
 	ErrNestedCompositeType                  = errors.New("nested composite type")
 	ErrLegacyTransactionMustBeWithLegacyKey = errors.New("a legacy transaction must be with a legacy account key")
 
-	ErrDeprecated   = errors.New("deprecated feature")
-	ErrNotSupported = errors.New("not supported")
+	ErrDeprecated            = errors.New("deprecated feature")
+	ErrNotSupported          = errors.New("not supported")
+	ErrRevertedBundleByVmErr = errors.New("bundle is reverted by vm err")
+	ErrTxGeneration          = errors.New("transaction generation failed")
 )

@@ -275,7 +275,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, header)
-	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase, nil)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 

@@ -24,6 +24,7 @@ package utils
 
 import (
 	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -276,6 +277,9 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(GpoBlocksFlag),
 	altsrc.NewIntFlag(GpoPercentileFlag),
 	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
+	// kaiax/gasless
+	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
+	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
 }
 
 // Common RPC flags
@@ -338,6 +342,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
+	altsrc.NewBoolFlag(gasless.DisableFlag),
 }
 
 var KPNFlags = []cli.Flag{

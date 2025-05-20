@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.18;
+pragma solidity 0.8.24;
 
 interface IKIP247 {
     // `factory` is to check if the token-WKAIA pair has been deployed. (`factory.getPair(token1, WKAIA)`)
@@ -9,7 +9,13 @@ interface IKIP247 {
         address router;
     }
 
-    function swapForGas(address token, uint256 amountIn, uint256 minAmountOut, uint256 amountRepay) external;
+    function swapForGas(
+        address token,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 amountRepay,
+        uint256 deadline
+    ) external;
 
     function addToken(address token, address factory, address router) external;
 

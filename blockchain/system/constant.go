@@ -23,6 +23,8 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
 	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
 	misccontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
@@ -93,6 +95,10 @@ var (
 	RegistryMockZero          = hexutil.MustDecode("0x" + reward.RegistryMockZeroBinRuntime)
 	CLRegistryMockThreeCLCode = hexutil.MustDecode("0x" + reward.CLRegistryMockThreeCLBinRuntime)
 	WrappedKaiaMockCode       = hexutil.MustDecode("0x" + reward.WrappedKaiaMockBinRuntime)
+
+	// Uniswap contracts for Gasless test
+	UniswapV2FactoryCode  = hexutil.MustDecode("0x" + uniswapFactoryContracts.UniswapV2FactoryBinRuntime)
+	UniswapV2Router02Code = hexutil.MustDecode("0x" + uniswapRouterContracts.UniswapV2Router02BinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled      = errors.New("Registry contract not installed")

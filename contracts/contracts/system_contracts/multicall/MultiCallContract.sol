@@ -49,6 +49,10 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
+interface IGaslessSwapRouter {
+    function getSupportedTokens() external view returns (address[] memory);
+}
+
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
 // It will be temporarily injected into state to be used by the Kaia client.
 // After retrieving the information, the contract will be removed from the state.
@@ -126,6 +130,18 @@ contract MultiCallContract {
                 stakingAmounts[i] = wKaiaToken.balanceOf(clPools[i]);
             }
         }
+    }
+
+    function multiCallGaslessInfo()
+        external
+        view
+        returns (address gsr, address[] memory tokens)
+    {
+        gsr = IRegistry(REGISTRY_ADDRESS).getActiveAddr("GaslessSwapRouter");
+        if (gsr == address(0)) {
+            return (gsr, tokens);
+        }
+        tokens = IGaslessSwapRouter(gsr).getSupportedTokens();
     }
 
     /* ========== MORE FUNCTIONS TBA ========== */

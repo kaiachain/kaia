@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -72,6 +73,8 @@ const (
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
+
+	txPoolIsFullErr = errors.New("txpool is full")
 
 	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
 
@@ -241,6 +244,8 @@ type TxPool struct {
 	rules params.Rules // Fork indicator
 
 	govModule GovModule
+
+	modules []kaiax.TxPoolModule
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -406,6 +411,12 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.PreReset(oldHead, newHead)
+	}
+	pool.txMu.Unlock()
+
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
@@ -521,6 +532,12 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
+
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.PostReset(oldHead, newHead)
+	}
+	pool.txMu.Unlock()
 }
 
 // Stop terminates the transaction pool.
@@ -636,6 +653,17 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
+// PendingUnlocked retrieves all currently processable transactions, grouped by origin
+// account and sorted by nonce. The returned transaction set is a copy and can be
+// freely modified by calling code. This function is not thread safe.
+func (pool *TxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
 // CachedPendingTxsByCount retrieves about number of currently processable transactions
 // by requested count, grouped by origin account and sorted by nonce.
 func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
@@ -702,7 +730,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 	// Reject dynamic fee transactions until EIP-1559 activates.
-	if !pool.rules.IsEthTxType && (tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode) {
+	if !pool.rules.IsEthTxType && tx.Type() == types.TxTypeEthereumDynamicFee {
+		return ErrTxTypeNotSupported
+	}
+
+	// Reject set code transactions until EIP-7600(prague) activates.
+	if !pool.rules.IsPrague && tx.Type() == types.TxTypeEthereumSetCode {
 		return ErrTxTypeNotSupported
 	}
 
@@ -795,6 +828,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNonceTooLow
 	}
 
+	// If module recognizes the tx, run an alternative balance check and then skip the default balance check later.
+	shouldSkipBalanceCheck := false
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
+				shouldSkipBalanceCheck = true
+				err := checkBalance(tx)
+				if err != nil {
+					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
+					return err
+				}
+			}
+			break
+		}
+	}
+
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if tx.IsFeeDelegatedTransaction() {
@@ -844,7 +893,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
 		}
-	} else {
+	} else if !shouldSkipBalanceCheck {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
@@ -957,6 +1006,16 @@ func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, f
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			err := module.PreAddTx(tx, local)
+			if err != nil {
+				return false, err
+			}
+			break
+		}
+	}
+
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {
@@ -1514,7 +1573,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Gather all executable transactions and promote them
 		var readyTxs types.Transactions
 		if pool.rules.IsMagma {
-			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice, pool.modules)
 		} else {
 			readyTxs = list.Ready(pool.getPendingNonce(addr))
 		}
@@ -1736,6 +1795,11 @@ func (pool *TxPool) demoteUnexecutables() {
 	}
 }
 
+// GetCurrentState returns the current stateDB.
+func (pool *TxPool) GetCurrentState() *state.StateDB {
+	return pool.currentState
+}
+
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
 func (pool *TxPool) getNonce(addr common.Address) uint64 {
 	return pool.currentState.GetNonce(addr)
@@ -1775,6 +1839,12 @@ func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
 	if pool.getPendingNonce(addr) > nonce {
 		pool.setPendingNonce(addr, nonce)
 	}
+}
+
+func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.modules = modules
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

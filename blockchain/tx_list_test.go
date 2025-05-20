@@ -85,7 +85,7 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
-	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, nil)
 
 	if ready.Len() != nTxs {
 		t.Error("expected number of filtered txs", nTxs, "got", ready.Len())
@@ -144,7 +144,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 		list.Add(txs[v], DefaultTxPoolConfig.PriceBump, true)
 	}
 
-	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee)
+	ready := list.ReadyWithGasPrice(uint64(startNonce), expectedBaseFee, nil)
 
 	if ready.Len() != 7 {
 		t.Error("expected filtered txs length", 7, "got", ready.Len())

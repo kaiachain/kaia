@@ -67,14 +67,14 @@ type CLStakingInfos []*CLStakingInfo
 // consolidatedNode is the refined staking information suitable for proposer selection.
 // Sometimes a node would register multiple NodeIds in AddressBook,
 // in which each entry has different StakingAddr and same RewardAddr.
-// We treat those entries with common RewardAddr as one node.
+// We treat those entries with common RewardAddr as one GC node.
 //
 // For example,
 //
-//	NodeAddrs      = [N1, N2, N3]
-//	StakingAddrs   = [S1, S2, S3]
-//	RewardAddrs    = [R1, R1, R3]
-//	StakingAmounts = [A1, A2, A3]
+//	NodeIds          = [N1, N2, N3]
+//	StakingContracts = [S1, S2, S3]
+//	RewardAddrs      = [R1, R1, R3]
+//	StakingAmounts   = [A1, A2, A3]
 //
 // can be consolidated into
 //
