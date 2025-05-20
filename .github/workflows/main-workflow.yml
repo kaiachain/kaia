@@ -9,8 +9,6 @@ env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
   FRONTEND_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
   #Test
@@ -47,26 +45,26 @@ jobs:
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
         make test-tests
 
-  # test-rpc:
-  #   permissions: write-all
-  #   uses: ./.github/workflows/test-excutor-template.yml
-  #   with:
-  #     test_command: |
-  #       make kcn
-  #       git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
-  #       cd kaia-rpc-tester
-  #       cp ../build/bin/kcn script/cn/bin/
-  #       cd script
-  #       ./set_CNonly.sh
-  #       cd ..
-  #       cp config_template.json config.json
-  #       apt update
-  #       apt install python3.8 python3-venv -y
-  #       python3.8 -m venv --without-pip venv
-  #       source venv/bin/activate
-  #       curl https://bootstrap.pypa.io/get-pip.py | python
-  #       pip3 install -r requirements.txt
-  #       python3 main.py --protocol rpc
+#  test-rpc:
+#    permissions: write-all
+#    uses: ./.github/workflows/test-excutor-template.yml
+#    with:
+#      test_command: |
+#         make kcn
+#         git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+#         cd kaia-rpc-tester
+#         cp ../build/bin/kcn script/cn/bin/
+#         cd script
+#         ./set_CNonly.sh
+#         cd ..
+#         cp config_template.json config.json
+#         apt update
+#         apt install python3.8 python3-venv -y
+#         python3.8 -m venv --without-pip venv
+#         source venv/bin/activate
+#         curl https://bootstrap.pypa.io/get-pip.py | python
+#         pip3 install -r requirements.txt
+#         python3 main.py --protocol rpc
 
   # Service-dependent test jobs
   test-datasync:
@@ -74,16 +72,16 @@ jobs:
     with:
       test_command: make test-datasync
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
 
   test-others:
     uses: ./.github/workflows/test-other-excutor-template.yml
     with:
       test_command: make test-others
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
 
   check-tagger:
     runs-on: ubuntu-latest
@@ -95,7 +93,7 @@ jobs:
           fi
       - if: steps.check-tag.outputs.match == true
         run: echo "Tag is good"
-  
+
   # Docker build
   docker:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
@@ -124,7 +122,8 @@ jobs:
           tags: |
             kaiachain/kaia:${{ github.ref == 'refs/heads/dev' && 'dev' || github.ref_name }}
             ${{ startsWith(github.ref, 'refs/tags/v') && 'kaiachain/kaia:latest' || '' }} 
-  
+
+
   # Packing
   rpm-linux-amd64:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
@@ -134,7 +133,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set version
         run: |
           export GOPATH=/go
@@ -186,7 +192,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set version
         run: |
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
@@ -224,6 +237,13 @@ jobs:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set version
         run: |
@@ -276,6 +296,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Set version
         run: |
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
@@ -312,7 +339,15 @@ jobs:
     container:
       image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
 
+
     steps:
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Update RPM repository
         run: |
           aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/

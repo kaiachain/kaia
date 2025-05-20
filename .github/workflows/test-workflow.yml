@@ -1,9 +1,9 @@
 name: Testing Workflow
 
 on:
-  push:
-    branches:
-      - 'mock'
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
 
 jobs:
   # Basic test jobs
@@ -67,16 +67,16 @@ jobs:
     with:
       test_command: make test-datasync
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
 
   test-others:
     uses: ./.github/workflows/test-other-excutor-template.yml
     with:
       test_command: make test-others
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
 
   check-tagger:
     runs-on: ubuntu-latest
