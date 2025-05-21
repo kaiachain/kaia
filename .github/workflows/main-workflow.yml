@@ -127,6 +127,8 @@ jobs:
   # Packing
   rpm-linux-amd64:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    permission:
+      id-token: write
     runs-on: ubuntu-latest
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
@@ -187,6 +189,8 @@ jobs:
   tar-linux-amd64:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ubuntu-latest
+    permission:
+      id-token: write
     container:
       image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
 
@@ -233,6 +237,8 @@ jobs:
   rpm-linux-arm64:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ['arm-runner']
+    permission:
+      id-token: write
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
     steps:
@@ -291,6 +297,8 @@ jobs:
   tar-linux-arm64:
     needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
     runs-on: ['arm-runner']
+    permission:
+      id-token: write
     container:
       image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04-arm
     steps:
@@ -336,6 +344,8 @@ jobs:
   deploy-rpm:
     needs: [rpm-linux-amd64, tar-linux-amd64, tar-linux-arm64, rpm-linux-arm64]
     runs-on: ubuntu-latest
+    permission:
+      id-token: write
     container:
       image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
 
