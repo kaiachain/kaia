@@ -347,7 +347,7 @@ jobs:
     permissions:
       id-token: write
     container:
-      image: kaiachain/circleci-rpmbuild:1.22.1-gcc7
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
 
     steps:
       - name: Get AWS credentials
