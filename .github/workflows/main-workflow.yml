@@ -360,7 +360,7 @@ jobs:
       - name: Update RPM repository
         run: |
           aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/ rhel/9-stream/kaia/
-          createrepo --update rhel/7/kaia
+          createrepo --update rhel/9-stream/kaia
           aws s3 sync --delete rhel/9-stream/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/repodata/
       - name: Notify Slack on success
         if: success()
