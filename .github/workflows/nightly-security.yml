@@ -3,6 +3,9 @@ name: Security Scan
 on:
   schedule:
     - cron: '0 12 * * *'  # Runs at 12:00 UTC every Monday
+  push:
+    branches:
+      - 'test/github-action'
 
 jobs:
   scan:
