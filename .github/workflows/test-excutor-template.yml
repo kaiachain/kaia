@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: setup python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
       - name: Download dev branch
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
