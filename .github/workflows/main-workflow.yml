@@ -28,7 +28,7 @@ jobs:
 
   # Docker build
   docker:
-    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    needs: [test-full, check-tagger]
     runs-on: ubuntu-latest
     
     steps:
@@ -58,7 +58,7 @@ jobs:
 
   # Packing
   rpm-linux-amd64:
-    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    needs: [test-full, check-tagger]
     permissions:
       id-token: write
     runs-on: ubuntu-latest
@@ -120,7 +120,7 @@ jobs:
           done
 
   tar-linux-amd64:
-    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    needs: [test-full, check-tagger]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -169,7 +169,7 @@ jobs:
           done
 
   rpm-linux-arm64:
-    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    needs: [test-full, check-tagger]
     runs-on: ['arm-runner']
     permissions:
       id-token: write
@@ -230,7 +230,7 @@ jobs:
           done
 
   tar-linux-arm64:
-    needs: [build, test-linter, test-networks, test-node, test-tests, test-datasync, test-others, check-tagger]
+    needs: [test-full, check-tagger]
     runs-on: ['arm-runner']
     permissions:
       id-token: write
