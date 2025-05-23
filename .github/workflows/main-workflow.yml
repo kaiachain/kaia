@@ -13,7 +13,7 @@ env:
 
 jobs:
   test-full:
-    uses: ./.github/workflows/test-pr-workflow
+    uses: ./.github/workflows/test-pr-workflow.yml
 
   check-tagger:
     runs-on: ubuntu-latest

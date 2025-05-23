@@ -2,10 +2,8 @@ name: Nightly Linter
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
-  push:
-    branches:
-      - 'test/github-action'
+    - cron: '0 0 * * *'
+
 permissions: write-all
 
 jobs:
