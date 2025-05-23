@@ -9,6 +9,7 @@ env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
   FRONTEND_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
   #Test
@@ -182,7 +183,7 @@ jobs:
               KAIROS="-kairos"
             fi
             TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
             aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
           done
 
@@ -290,7 +291,7 @@ jobs:
               KAIROS="-kairos"
             fi
             TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
             aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
           done
 
