@@ -3,7 +3,7 @@ name: Testing Workflow
 on:
   pull_request_target:
     types: [opened, closed, synchronize]
-
+  workflow_call:
 
 jobs:
   # Basic test jobs
