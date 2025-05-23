@@ -145,6 +145,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set version
+        shell: bash
         run: |
           export GOPATH=/go
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
@@ -206,6 +207,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set version
+        shell: bash
         run: |
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
             rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
@@ -253,6 +255,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set version
+        shell: bash
         run: |
           export GOPATH=/go
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
@@ -313,6 +316,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Set version
+        shell: bash
         run: |
           if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
             rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
