@@ -32,7 +32,7 @@ jobs:
       localstack:
         image: localstack/localstack:3
     container:
-      image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
     steps:
       - name: Check out code
         uses: actions/checkout@v4
