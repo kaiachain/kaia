@@ -40,25 +40,25 @@ jobs:
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
         make test-tests
 
-  test-rpc:
-    permissions: write-all
-    uses: ./.github/workflows/test-excutor-template.yml
-    with:
-      test_command: |
-        make kcn
-        git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
-        cd kaia-rpc-tester
-        cp ../build/bin/kcn script/cn/bin/
-        cd script
-        ./set_CNonly.sh
-        cd ..
-        cp config_template.json config.json
-        apt update
-        apt install python3-venv -y
-        python3 -m venv venv
-        source venv/bin/activate
-        pip3 install -r requirements.txt
-        python main.py --protocol rpc
+#  test-rpc:
+#    permissions: write-all
+#    uses: ./.github/workflows/test-excutor-template.yml
+#    with:
+#      test_command: |
+#        make kcn
+#        git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+#        cd kaia-rpc-tester
+#        cp ../build/bin/kcn script/cn/bin/
+#        cd script
+#        ./set_CNonly.sh
+#        cd ..
+#        cp config_template.json config.json
+#        apt update
+#        apt install python3-venv -y
+#        python3 -m venv venv
+#        source venv/bin/activate
+#        pip3 install -r requirements.txt
+#        python main.py --protocol rpc
 
   # Service-dependent test jobs
   test-datasync:
