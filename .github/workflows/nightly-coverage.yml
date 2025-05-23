@@ -7,9 +7,6 @@ on:
     branches:
       - 'test/github-action'
 permissions: write-all
-#env:
-#  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
-#  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
   coverage:
