@@ -3,6 +3,9 @@ name: Nightly Coverage
 on:
   schedule:
     - cron: '0 0 * * *'  # Runs at 00:00 UTC every day
+  push:
+    branches:
+      - 'test/github-action'
 permissions: write-all
 #env:
 #  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
@@ -10,10 +13,10 @@ permissions: write-all
 
 jobs:
   coverage:
-      uses: ./.github/workflows/test-other-excutor.yml
+      uses: ./.github/workflows/test-other-excutor-template.yml
       secrets:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ACCESS_KEY_ID: dummy
+        AWS_SECRET_ACCESS_KEY: dummy
       with:
         test_command: |
           git config --global --add safe.directory /__w/kaia/kaia
