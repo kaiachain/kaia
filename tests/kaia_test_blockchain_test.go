@@ -191,6 +191,7 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 func (bcdata *BCData) Shutdown() {
 	bcdata.bc.Stop()
+	bcdata.engine.Stop()
 
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
