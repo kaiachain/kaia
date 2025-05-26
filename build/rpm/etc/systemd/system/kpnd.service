@@ -1,0 +1,10 @@
+[Unit]
+Description= kpnd Service
+
+[Service]
+Type=forking
+ExecStart=/etc/init.d/kpnd start
+ExecStop=/etc/init.d/kpnd stop
+
+[Install]
+WantedBy=multi-user.target

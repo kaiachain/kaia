@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -604,16 +605,18 @@ func TestIntrinsicGas(t *testing.T) {
 		inputString string
 		expectGas1  uint64 // contractCreate - false, isIstanbul - false
 		expectGas2  uint64 // contractCreate - false, isIstanbul - true
-		expectGas3  uint64 // contractCreate - true,  isIstanbul - false
-		expectGas4  uint64 // contractCreate - true,  isIstanbul - true
+		expectGas3  uint64 // contractCreate - false, isPrague   - true
+		expectGas4  uint64 // contractCreate - true,  isIstanbul - false
+		expectGas5  uint64 // contractCreate - true,  isIstanbul - true
+		expectGas6  uint64 // contractCreate - true, isPrague   - true
 	}{
-		{"0000", 21008, 21200, 53008, 53200},
-		{"1000", 21072, 21200, 53072, 53200},
-		{"0100", 21072, 21200, 53072, 53200},
-		{"ff3d", 21136, 21200, 53136, 53200},
-		{"0000a6bc", 21144, 21400, 53144, 53400},
-		{"fd00fd00", 21144, 21400, 53144, 53400},
-		{"", 21000, 21000, 53000, 53000},
+		{"0000", 21008, 21200, 21008, 53008, 53200, 53010},
+		{"1000", 21072, 21200, 21020, 53072, 53200, 53022},
+		{"0100", 21072, 21200, 21020, 53072, 53200, 53022},
+		{"ff3d", 21136, 21200, 21032, 53136, 53200, 53034},
+		{"0000a6bc", 21144, 21400, 21040, 53144, 53400, 53042},
+		{"fd00fd00", 21144, 21400, 21040, 53144, 53400, 53042},
+		{"", 21000, 21000, 21000, 53000, 53000, 53000},
 	}
 	for _, tc := range testData {
 		var (
@@ -625,20 +628,29 @@ func TestIntrinsicGas(t *testing.T) {
 		data, err = hex.DecodeString(tc.inputString) // decode input string to hex data
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: false})
+		// TODO-Kaia: Add test for EIP-7623
+		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas1, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, false, params.Rules{IsIstanbul: true})
+		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true})
 		assert.Equal(t, tc.expectGas2, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: false})
+		gas, err = IntrinsicGas(data, nil, nil, false, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
 		assert.Equal(t, tc.expectGas3, gas)
 		assert.Equal(t, nil, err)
 
-		gas, err = IntrinsicGas(data, nil, true, params.Rules{IsIstanbul: true})
+		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: false})
 		assert.Equal(t, tc.expectGas4, gas)
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true})
+		assert.Equal(t, tc.expectGas5, gas)
+		assert.Equal(t, nil, err)
+
+		gas, err = IntrinsicGas(data, nil, nil, true, params.Rules{IsIstanbul: true, IsShanghai: true, IsPrague: true})
+		assert.Equal(t, tc.expectGas6, gas)
 		assert.Equal(t, nil, err)
 	}
 }
@@ -746,96 +758,128 @@ func TestTransactionCoding(t *testing.T) {
 		t.Fatalf("could not generate key: %v", err)
 	}
 	var (
-		signer    = LatestSignerForChainID(common.Big1)
-		addr      = common.HexToAddress("0x0000000000000000000000000000000000000001")
-		recipient = common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
-		accesses  = AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}}
-	)
-	for i := uint64(0); i < 500; i++ {
-		var txData TxInternalData
-		switch i % 5 {
-		case 0:
-			// Legacy tx.
-			txData = &TxInternalDataLegacy{
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     1,
-				Price:        big.NewInt(2),
-				Payload:      []byte("abcdef"),
-			}
-		case 1:
-			// Legacy tx contract creation.
-			txData = &TxInternalDataLegacy{
-				AccountNonce: i,
-				GasLimit:     1,
-				Price:        big.NewInt(2),
-				Payload:      []byte("abcdef"),
-			}
-		case 2:
-			// Tx with non-zero access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				AccessList:   accesses,
-				Payload:      []byte("abcdef"),
-			}
-		case 3:
-			// Tx with empty access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				Payload:      []byte("abcdef"),
-			}
-		case 4:
-			// Contract creation with access list.
-			txData = &TxInternalDataEthereumAccessList{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				GasLimit:     123457,
-				Price:        big.NewInt(10),
-				AccessList:   accesses,
-			}
-		case 5:
-			// Tx with non-zero access list.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				AccessList:   accesses,
-				Payload:      []byte("abcdef"),
-			}
-		case 6:
-			// Tx with dynamic fee.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				Recipient:    &recipient,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				Payload:      []byte("abcdef"),
-			}
-		case 7:
-			// Contract creation with dynamic fee tx.
-			txData = &TxInternalDataEthereumDynamicFee{
-				ChainID:      big.NewInt(1),
-				AccountNonce: i,
-				GasLimit:     123457,
-				GasFeeCap:    big.NewInt(10),
-				GasTipCap:    big.NewInt(10),
-				AccessList:   accesses,
-			}
+		signer     = LatestSignerForChainID(common.Big1)
+		addr       = common.HexToAddress("0x0000000000000000000000000000000000000001")
+		recipient  = common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
+		accesses   = AccessList{{Address: addr, StorageKeys: []common.Hash{{0}}}}
+		txDataList = []func(uint64) TxInternalData{
+			func(i uint64) TxInternalData {
+				// Legacy tx.
+				return &TxInternalDataLegacy{
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     1,
+					Price:        big.NewInt(2),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Legacy tx contract creation.
+				return &TxInternalDataLegacy{
+					AccountNonce: i,
+					GasLimit:     1,
+					Price:        big.NewInt(2),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with non-zero access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					AccessList:   accesses,
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with empty access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Contract creation with access list.
+				return &TxInternalDataEthereumAccessList{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					GasLimit:     123457,
+					Price:        big.NewInt(10),
+					AccessList:   accesses,
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with non-zero access list.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					AccessList:   accesses,
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with dynamic fee.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					Recipient:    &recipient,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					Payload:      []byte("abcdef"),
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Contract creation with dynamic fee tx.
+				return &TxInternalDataEthereumDynamicFee{
+					ChainID:      big.NewInt(1),
+					AccountNonce: i,
+					GasLimit:     123457,
+					GasFeeCap:    big.NewInt(10),
+					GasTipCap:    big.NewInt(10),
+					AccessList:   accesses,
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with non-zero access list.
+				return &TxInternalDataEthereumSetCode{
+					ChainID:           uint256.NewInt(1),
+					AccountNonce:      i,
+					Recipient:         recipient,
+					GasLimit:          123457,
+					GasFeeCap:         big.NewInt(10),
+					GasTipCap:         big.NewInt(10),
+					AccessList:        accesses,
+					AuthorizationList: authorizations,
+				}
+			},
+			func(i uint64) TxInternalData {
+				// Tx with set code.
+				return &TxInternalDataEthereumSetCode{
+					ChainID:           uint256.NewInt(1),
+					AccountNonce:      i,
+					Recipient:         recipient,
+					GasLimit:          123457,
+					GasFeeCap:         big.NewInt(10),
+					GasTipCap:         big.NewInt(10),
+					AuthorizationList: authorizations,
+				}
+			},
 		}
-
+	)
+	for i := 0; i < 500; i++ {
+		txData := txDataList[i%len(txDataList)](uint64(i))
 		transaction := Transaction{data: txData}
 		tx, err := SignTx(&transaction, signer, key)
 		if err != nil {
@@ -1153,4 +1197,36 @@ func TestEmptyHeap(t *testing.T) {
 		heap.Pop()
 		heap.Clear()
 	})
+}
+
+func TestHeapCopy(t *testing.T) {
+	// Generate a batch of accounts to start with
+	keys := make([]*ecdsa.PrivateKey, 25)
+	for i := 0; i < len(keys); i++ {
+		keys[i], _ = crypto.GenerateKey()
+	}
+	baseFee := common.Big0
+
+	signer := LatestSignerForChainID(common.Big1)
+	// Generate a batch of transactions with overlapping values, but shifted nonces
+	groups := map[common.Address]Transactions{}
+	for start, key := range keys {
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		for i := 0; i < 25; i++ {
+			tx, _ := SignTx(NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
+			groups[addr] = append(groups[addr], tx)
+		}
+	}
+
+	// Sort the transactions and cross check the nonce ordering
+	txset := NewTransactionsByPriceAndNonce(signer, groups, baseFee)
+	txsetCopy := txset.Copy()
+
+	assert.False(t, txset.Empty())
+	assert.False(t, txsetCopy.Empty())
+	for i := 0; i < 25; i++ {
+		txset.Pop()
+	}
+	assert.True(t, txset.Empty())
+	assert.False(t, txsetCopy.Empty())
 }

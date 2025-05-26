@@ -55,12 +55,16 @@ type DBManager interface {
 	IsSingle() bool
 	InMigration() bool
 	MigrationBlockNumber() uint64
+	MigrationOldDBPath() string
 	getStateTrieMigrationInfo() uint64
 
 	Close()
 	NewBatch(dbType DBEntryType) Batch
 	getDBDir(dbEntry DBEntryType) string
 	setDBDir(dbEntry DBEntryType, newDBDir string)
+	getMigrationOldDBPath() string
+	setMigrationOldDBPath(newDBDir string)
+	RemoveOldDB(dbPath string, endCheck chan struct{})
 	setStateTrieMigrationStatus(uint64)
 	GetMemDB() *MemDB
 	GetDBConfig() *DBConfig
@@ -294,19 +298,6 @@ type DBManager interface {
 	DeleteGovernance(num uint64)
 	// TODO-Kaia implement governance DB deletion methods.
 
-	// StakingInfo related functions
-	ReadStakingInfo(blockNum uint64) ([]byte, error)
-	WriteStakingInfo(blockNum uint64, stakingInfo []byte) error
-	HasStakingInfo(blockNum uint64) (bool, error)
-	DeleteStakingInfo(blockNum uint64)
-
-	// TotalSupply checkpoint functions
-	ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint
-	WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint)
-	DeleteSupplyCheckpoint(blockNum uint64)
-	ReadLastSupplyCheckpointNumber() uint64
-	WriteLastSupplyCheckpointNumber(blockNum uint64)
-
 	// DB migration related function
 	StartDBMigration(DBManager) error
 
@@ -441,6 +432,7 @@ type databaseManager struct {
 	lockInMigration      sync.RWMutex
 	inMigration          bool
 	migrationBlockNumber uint64
+	migrationOldDBPath   string
 }
 
 func NewMemoryDBManager() DBManager {
@@ -614,6 +606,7 @@ func NewDBManager(dbc *DBConfig) DBManager {
 				dbm.migrationBlockNumber = migrationBlockNum
 			}
 		}
+		dbm.migrationOldDBPath = dbm.getMigrationOldDBPath()
 		return dbm
 	}
 	logger.Crit("Must not reach here!")
@@ -637,6 +630,10 @@ func (dbm *databaseManager) InMigration() bool {
 
 func (dbm *databaseManager) MigrationBlockNumber() uint64 {
 	return dbm.migrationBlockNumber
+}
+
+func (dbm *databaseManager) MigrationOldDBPath() string {
+	return dbm.migrationOldDBPath
 }
 
 func (dbm *databaseManager) NewBatch(dbEntryType DBEntryType) Batch {
@@ -742,6 +739,22 @@ func (dbm *databaseManager) setDBDir(dbEntry DBEntryType, newDBDir string) {
 	}
 }
 
+func (dbm *databaseManager) getMigrationOldDBPath() string {
+	miscDB := dbm.getDatabase(MiscDB)
+	enc, _ := miscDB.Get(migrationOldDBPathKey)
+	if len(enc) == 0 {
+		return ""
+	}
+	return string(enc)
+}
+
+func (dbm *databaseManager) setMigrationOldDBPath(dbDir string) {
+	miscDB := dbm.getDatabase(MiscDB)
+	if err := miscDB.Put(migrationOldDBPathKey, []byte(dbDir)); err != nil {
+		logger.Crit("Failed to put migration cleanup dir", "err", err)
+	}
+}
+
 func (dbm *databaseManager) getStateTrieMigrationInfo() uint64 {
 	miscDB := dbm.getDatabase(MiscDB)
 
@@ -840,32 +853,48 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 	dbDirToBeRemoved := dbm.getDBDir(dbRemoved)
 	dbDirToBeUsed := dbm.getDBDir(dbUsed)
 
+	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
+	dbToBeRemoved.Close()
+
 	// Replace StateTrieDB with new one
 	dbm.setDBDir(StateTrieDB, dbDirToBeUsed)
 	dbm.dbs[StateTrieDB] = dbToBeUsed
 
-	dbm.dbs[StateTrieMigrationDB] = nil
-	dbm.setDBDir(StateTrieMigrationDB, "")
+	// Set the completion mark.
+	// If the old database is not removed, it will be removed when the node is restarted.
+	dbm.setStateTrieMigrationStatus(0)
+	dbm.setMigrationOldDBPath(dbPathToBeRemoved)
 
-	dbPathToBeRemoved := filepath.Join(dbm.config.Dir, dbDirToBeRemoved)
-	dbToBeRemoved.Close()
+	dbm.setDBDir(StateTrieMigrationDB, "")
+	dbm.dbs[StateTrieMigrationDB] = nil
 
 	endCheck := make(chan struct{})
-	go dbm.removeOldDB(dbPathToBeRemoved, endCheck)
+	go dbm.RemoveOldDB(dbPathToBeRemoved, endCheck)
 
 	// Used only for testing. Closing it takes time due to the large size of the database
 	return endCheck
 }
 
-// Remove old database. This is called once migration(copy) is done.
-func (dbm *databaseManager) removeOldDB(dbPath string, endCheck chan struct{}) {
+func (dbm *databaseManager) RemoveOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
-		// Set the completion mark if old database is completely removed (possibly not be removed if error occurs)
-		dbm.setStateTrieMigrationStatus(0)
+		dbm.setMigrationOldDBPath("")
 		if endCheck != nil {
 			close(endCheck)
 		}
 	}()
+	if _, err := os.Stat(dbPath); err != nil {
+		if os.IsNotExist(err) {
+			logger.Info("Database already removed", "dir", dbPath)
+			return
+		}
+		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
+		return
+	}
+	dbm.removeOldDB(dbPath)
+}
+
+// Remove old database. This is called once migration(copy) is done.
+func (dbm *databaseManager) removeOldDB(dbPath string) {
 	if err := os.RemoveAll(dbPath); err != nil {
 		logger.Error("Failed to remove the database due to an error", "err", err, "dir", dbPath)
 		return
@@ -2877,74 +2906,6 @@ func (dbm *databaseManager) WriteGovernanceState(b []byte) {
 func (dbm *databaseManager) ReadGovernanceState() ([]byte, error) {
 	db := dbm.getDatabase(MiscDB)
 	return db.Get(governanceStateKey)
-}
-
-// ReadSupplyCheckpoint retrieves the SupplyCheckpoint for a block number
-// Returns nil if the SupplyCheckpoint is not found.
-func (dbm *databaseManager) ReadSupplyCheckpoint(blockNum uint64) *SupplyCheckpoint {
-	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(supplyCheckpointKey(blockNum))
-	if len(data) == 0 || err != nil {
-		return nil
-	}
-	stored := struct {
-		Minted   []byte
-		BurntFee []byte
-	}{}
-	if err := rlp.DecodeBytes(data, &stored); err != nil {
-		logger.Crit("Corrupt supply checkpoint", "err", err)
-	}
-	return &SupplyCheckpoint{
-		Minted:   new(big.Int).SetBytes(stored.Minted),
-		BurntFee: new(big.Int).SetBytes(stored.BurntFee),
-	}
-}
-
-// WriteSupplyCheckpoint stores the SupplyCheckpoint for a specific block number.
-func (dbm *databaseManager) WriteSupplyCheckpoint(blockNum uint64, checkpoint *SupplyCheckpoint) {
-	db := dbm.getDatabase(MiscDB)
-	stored := struct {
-		Minted   []byte
-		BurntFee []byte
-	}{
-		Minted:   checkpoint.Minted.Bytes(),
-		BurntFee: checkpoint.BurntFee.Bytes(),
-	}
-	data, err := rlp.EncodeToBytes(stored)
-	if err != nil {
-		logger.Crit("Failed to write supply checkpoint", "err", err)
-	}
-	if err := db.Put(supplyCheckpointKey(blockNum), data); err != nil {
-		logger.Crit("Failed to write supply checkpoint", "err", err)
-	}
-}
-
-// DeleteSupplyCheckpoint removes the SupplyCheckpoint for a specific block number.
-func (dbm *databaseManager) DeleteSupplyCheckpoint(blockNum uint64) {
-	db := dbm.getDatabase(MiscDB)
-	if err := db.Delete(supplyCheckpointKey(blockNum)); err != nil {
-		logger.Crit("Failed to delete supply checkpoint", "err", err)
-	}
-}
-
-// ReadLastSupplyCheckpointNumber retrieves the highest number for which the SupplyCheckpoint is stored.
-func (dbm *databaseManager) ReadLastSupplyCheckpointNumber() uint64 {
-	db := dbm.getDatabase(MiscDB)
-	data, err := db.Get(lastSupplyCheckpointNumberKey)
-	if len(data) == 0 || err != nil {
-		return 0
-	} else {
-		return binary.BigEndian.Uint64(data)
-	}
-}
-
-// WriteLastSupplyCheckpointNumber stores the highest number for which the SupplyCheckpoint is stored.
-func (dbm *databaseManager) WriteLastSupplyCheckpointNumber(blockNum uint64) {
-	db := dbm.getDatabase(MiscDB)
-	data := common.Int64ToByteBigEndian(blockNum)
-	if err := db.Put(lastSupplyCheckpointNumberKey, data); err != nil {
-		logger.Crit("Failed to write last supply checkpoint number", "err", err)
-	}
 }
 
 func (dbm *databaseManager) WriteChainDataFetcherCheckpoint(checkpoint uint64) {

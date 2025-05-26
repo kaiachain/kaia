@@ -23,6 +23,8 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
 	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
 	misccontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
@@ -42,6 +44,7 @@ var (
 	Kip103Name      = "KIP103"
 	Kip113Name      = "KIP113"
 	Kip160Name      = "KIP160"
+	CLRegistryName  = "CLRegistry"
 
 	AllContractNames = []string{
 		AddressBookName,
@@ -64,6 +67,9 @@ var (
 	Kip113ProxyAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	Kip113LogicAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000403")
 
+	// Registry will return zero address for non-existent system contract.
+	NonExistentAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
+
 	// System contract binaries to be injected at hardfork or used in testing.
 	MainnetCreditCode   = hexutil.MustDecode("0x" + misccontract.CypressCreditBinRuntime)
 	MainnetCreditV2Code = hexutil.MustDecode("0x" + misccontract.CypressCreditV2BinRuntime)
@@ -77,9 +83,22 @@ var (
 	ERC1967ProxyCode = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
 
 	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
+	Kip113MockThreeCNCode    = hexutil.MustDecode("0x" + testcontract.KIP113MockThreeCNBinRuntime)
 
 	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+
+	// Mock for CLRegistry testing
+	CLRegistryMockThreeCLAddr = common.HexToAddress("0x0000000000000000000000000000000000000Ff0")
+	WrappedKaiaMockAddr       = common.HexToAddress("0x0000000000000000000000000000000000000Ff1")
+	RegistryMockForCLCode     = hexutil.MustDecode("0x" + reward.RegistryMockForCLBinRuntime)
+	RegistryMockZero          = hexutil.MustDecode("0x" + reward.RegistryMockZeroBinRuntime)
+	CLRegistryMockThreeCLCode = hexutil.MustDecode("0x" + reward.CLRegistryMockThreeCLBinRuntime)
+	WrappedKaiaMockCode       = hexutil.MustDecode("0x" + reward.WrappedKaiaMockBinRuntime)
+
+	// Uniswap contracts for Gasless test
+	UniswapV2FactoryCode  = hexutil.MustDecode("0x" + uniswapFactoryContracts.UniswapV2FactoryBinRuntime)
+	UniswapV2Router02Code = hexutil.MustDecode("0x" + uniswapRouterContracts.UniswapV2Router02BinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled      = errors.New("Registry contract not installed")

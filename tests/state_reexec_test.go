@@ -14,7 +14,6 @@ import (
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -55,20 +54,17 @@ func TestStateReexec(t *testing.T) {
 
 	ctx.WaitBlock(t, 6)
 
-	// Clear staking cache to force GetStakingInfo post-Kaia to utilize the state trie.
-	reward.PurgeStakingInfoCache()
+	// Restart node to clear staking cache. It forces GetStakingInfo() post-Kaia to lookup the state trie.
+	ctx.Restart()
 	// Delete state roots to force historical state regeneration
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	// Test state regeneration
 	testStateReexec_run(t, ctx.nodes[0], 3)
 
 	// Repeat for post-Kaia block
-	reward.PurgeStakingInfoCache()
+	ctx.Restart()
 	testStateReexec_prune(t, ctx.nodes[0], []uint64{2, 3, 4, 5})
 	testStateReexec_run(t, ctx.nodes[0], 5) // post-kaia
-
-	// Ensure preloaded staking info are released after use.
-	assert.Equal(t, 0, reward.TestGetStakingPreloadSize())
 }
 
 func testStateReexec_config(forkNum *big.Int) *params.ChainConfig {

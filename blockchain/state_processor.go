@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
 )
@@ -74,6 +75,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
+	p.engine.Initialize(p.bc, header, statedb)
+
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
 
@@ -98,4 +101,42 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	processStats.AfterFinalize = time.Now()
 
 	return receipts, allLogs, *usedGas, internalTxTraces, processStats, nil
+}
+
+// ProcessParentBlockHash stores the parent block hash in the history storage contract
+// as per EIP-2935.
+func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.StateDB, rules params.Rules) error {
+	var (
+		from     = params.SystemAddress
+		data     = header.ParentHash.Bytes()
+		gasLimit = uint64(30_000_000)
+	)
+
+	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
+	if err != nil {
+		return err
+	}
+
+	msg := types.NewMessage(
+		from,
+		&params.HistoryStorageAddress,
+		0,
+		common.Big0,
+		gasLimit,
+		common.Big0,
+		nil,
+		nil,
+		data,
+		false,
+		intrinsicGas,
+		nil,
+		nil,
+		nil,
+	)
+
+	vmenv.Reset(NewEVMTxContext(msg, header, vmenv.ChainConfig()), statedb)
+	statedb.AddAddressToAccessList(params.HistoryStorageAddress)
+	vmenv.Call(vm.AccountRef(from), *msg.To(), msg.Data(), gasLimit, common.Big0)
+	statedb.Finalise(true, true)
+	return nil
 }

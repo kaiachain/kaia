@@ -20,13 +20,13 @@ package discover
 
 import (
 	"crypto/rand"
-	rand2 "math/rand"
 	"net"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/pkg/errors"
+	"gotest.tools/assert"
 )
 
 var (
@@ -293,31 +293,28 @@ func TestSimple_getNodes(t *testing.T) {
 }
 
 func TestSimple_closest(t *testing.T) {
-	typeList := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN}
+	typeList := []NodeType{NodeTypeUnknown, NodeTypeCN, NodeTypePN, NodeTypeEN, NodeTypeBN}
+	retrieveSizeList := []int{2, 16, 100, 120}
+	maxSizeList := []int{1, 2, 3, 5, 50, 100}
 	for _, ntype := range typeList {
 		var target NodeID
 		rand.Read(target[:])
-		hash := crypto.Keccak256Hash(target[:]) // randome target hash
+		hash := crypto.Keccak256Hash(target[:]) // random target hash
 		storage := testStorages[ntype]
 		storage.init()
-		storage.max = 5
-		results := storage.closest(hash, rand2.Int()) // second parameter is not used
-		if len(results.entries) != 5 {
-			t.Errorf("the length of the results.entries is wrong. expected: %v, actual: %v", 5, len(results.entries))
-		}
-		for _, node := range results.entries {
-			if !isIn(node, storage.nodes) {
-				t.Errorf("node does not exist in the storage. unknown node: %v", node)
-			}
-		}
-		storage.max = 50
-		results = storage.closest(hash, rand2.Int())
-		if len(results.entries) != 10 {
-			t.Errorf("the length of the results.entries is wrong. expected: %v, actual: %v", 10, len(results.entries))
-		}
-		for _, node := range results.entries {
-			if !isIn(node, storage.nodes) {
-				t.Errorf("node does not exist in the storage. unknown node: %v", node)
+
+		for _, maxSize := range maxSizeList {
+			storage.max = maxSize
+			for _, retrieveSize := range retrieveSizeList {
+				results := storage.closest(hash, retrieveSize)
+				// Result should be capped by minimum of:
+				// - retrieveSize
+				// - maxSize
+				// - length of nodes in storage
+				assert.Equal(t, len(results.entries), min(min(retrieveSize, maxSize), len(testStorages[ntype].nodes)))
+				for _, node := range results.entries {
+					assert.Assert(t, isIn(node, storage.nodes))
+				}
 			}
 		}
 	}

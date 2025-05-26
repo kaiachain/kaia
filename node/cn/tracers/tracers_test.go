@@ -152,7 +152,7 @@ func runTracer(t *testing.T, tc *tracerTestdata, tracer vm.Tracer) (*types.Trans
 		signer       = types.MakeSigner(config, header.Number)
 		blockContext = blockchain.NewEVMBlockContext(header, nil, &common.Address{}) // stub author (COINBASE) to 0x0
 		txContext    = blockchain.NewEVMTxContext(tx, header, config)
-		statedb      = tests.MakePreState(database.NewMemoryDBManager(), alloc)
+		statedb      = tests.MakePreState(database.NewMemoryDBManager(), alloc, false, config.Rules(new(big.Int).SetUint64(uint64(tc.Context.Number))))
 		evm          = vm.NewEVM(blockContext, txContext, statedb, config, &vm.Config{Debug: true, Tracer: tracer})
 	)
 

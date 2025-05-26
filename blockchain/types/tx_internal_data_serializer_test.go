@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -32,16 +33,17 @@ import (
 )
 
 var (
-	to        = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
-	key, from = defaultTestKey()
-	feePayer  = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
-	nonce     = uint64(1234)
-	amount    = big.NewInt(10)
-	gasLimit  = uint64(1000000)
-	gasPrice  = big.NewInt(25)
-	gasTipCap = big.NewInt(25)
-	gasFeeCap = big.NewInt(25)
-	accesses  = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	to             = common.HexToAddress("7b65B75d204aBed71587c9E519a89277766EE1d0")
+	key, from      = defaultTestKey()
+	feePayer       = common.HexToAddress("5A0043070275d9f6054307Ee7348bD660849D90f")
+	nonce          = uint64(1234)
+	amount         = big.NewInt(10)
+	gasLimit       = uint64(1000000)
+	gasPrice       = big.NewInt(25)
+	gasTipCap      = big.NewInt(25)
+	gasFeeCap      = big.NewInt(25)
+	accesses       = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	authorizations = []SetCodeAuthorization{{ChainID: *uint256.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 )
 
 // TestTransactionSerialization tests RLP/JSON serialization for TxInternalData
@@ -74,6 +76,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"AccessList", genAccessListTransaction()},
 		{"DynamicFee", genDynamicFeeTransaction()},
+		{"SetCode", genSetCodeTransaction()},
 	}
 
 	testcases := []struct {
@@ -279,6 +282,26 @@ func genDynamicFeeTransaction() TxInternalData {
 		TxValueKeyData:       []byte("1234"),
 		TxValueKeyAccessList: accesses,
 		TxValueKeyChainID:    big.NewInt(2),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genSetCodeTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumSetCode, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:             nonce,
+		TxValueKeyTo:                to,
+		TxValueKeyAmount:            amount,
+		TxValueKeyGasLimit:          gasLimit,
+		TxValueKeyGasFeeCap:         gasFeeCap,
+		TxValueKeyGasTipCap:         gasTipCap,
+		TxValueKeyData:              []byte("1234"),
+		TxValueKeyAccessList:        accesses,
+		TxValueKeyAuthorizationList: authorizations,
+		TxValueKeyChainID:           big.NewInt(2),
 	})
 	if err != nil {
 		panic(err)

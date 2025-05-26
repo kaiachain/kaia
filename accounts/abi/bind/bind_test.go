@@ -646,6 +646,43 @@ var bindTests = []struct {
 		nil,
 		nil,
 	},
+	{
+		`NonExistentStruct`,
+		`
+			contract NonExistentStruct {
+				function Struct() public view returns(uint256 a, uint256 b) {
+					return (10, 10);
+				}
+			}
+		`,
+		[]string{`6080604052348015600f57600080fd5b5060888061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063d5f6622514602d575b600080fd5b6033604c565b6040805192835260208301919091528051918290030190f35b600a809156fea264697066735822beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef64736f6c6343decafe0033`},
+		[]string{`[{"inputs":[],"name":"Struct","outputs":[{"internalType":"uint256","name":"a","type":"uint256"},{"internalType":"uint256","name":"b","type":"uint256"}],"stateMutability":"pure","type":"function"}]`},
+		`
+			"github.com/kaiachain/kaia/accounts/abi/bind"
+			"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+			"github.com/kaiachain/kaia/blockchain"
+			"github.com/kaiachain/kaia/common"
+		`,
+		`
+			// Create a simulator and wrap a non-deployed contract
+			sim := backends.NewSimulatedBackend(blockchain.GenesisAlloc{})
+			defer sim.Close()
+			nonexistent, err := NewNonExistentStruct(common.Address{}, sim)
+			if err != nil {
+				t.Fatalf("Failed to access non-existent contract: %v", err)
+			}
+			// Ensure that contract calls fail with the appropriate error
+			if res, err := nonexistent.Struct(nil); err == nil {
+				t.Fatalf("Call succeeded on non-existent contract: %v", res)
+			} else if (err != bind.ErrNoCode) {
+				t.Fatalf("Error mismatch: have %v, want %v", err, bind.ErrNoCode)
+			}
+		`,
+		nil,
+		nil,
+		nil,
+		nil,
+	},
 	// Tests that gas estimation works for contracts with weird gas mechanics too.
 	{
 		`FunkyGasPattern`,
@@ -1763,6 +1800,76 @@ var bindTests = []struct {
 		nil,
 		nil,
 	},
+	// Test resolving single struct argument
+	{
+		`NewSingleStructArgument`,
+		`
+		 pragma solidity ^0.8.0;
+
+		 contract NewSingleStructArgument {
+			 struct MyStruct{
+				 uint256 a;
+				 uint256 b;
+			 }
+			 event StructEvent(MyStruct s);
+			 function TestEvent() public {
+				 emit StructEvent(MyStruct({a: 1, b: 2}));
+			 }
+		 }
+	   `,
+		[]string{"608060405234801561001057600080fd5b50610113806100206000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806324ec1d3f14602d575b600080fd5b60336035565b005b7fb4b2ff75e30cb4317eaae16dd8a187dd89978df17565104caa6c2797caae27d460405180604001604052806001815260200160028152506040516078919060ba565b60405180910390a1565b6040820160008201516096600085018260ad565b50602082015160a7602085018260ad565b50505050565b60b48160d3565b82525050565b600060408201905060cd60008301846082565b92915050565b600081905091905056fea26469706673582212208823628796125bf9941ce4eda18da1be3cf2931b231708ab848e1bd7151c0c9a64736f6c63430008070033"},
+		[]string{`[{"anonymous":false,"inputs":[{"components":[{"internalType":"uint256","name":"a","type":"uint256"},{"internalType":"uint256","name":"b","type":"uint256"}],"indexed":false,"internalType":"struct Test.MyStruct","name":"s","type":"tuple"}],"name":"StructEvent","type":"event"},{"inputs":[],"name":"TestEvent","outputs":[],"stateMutability":"nonpayable","type":"function"}]`},
+		`
+			"math/big"
+
+			"github.com/kaiachain/kaia/accounts/abi/bind"
+			"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+			"github.com/kaiachain/kaia/blockchain"
+			"github.com/kaiachain/kaia/crypto"
+	   `,
+		`
+			var (
+				key, _  = crypto.GenerateKey()
+				auth    = bind.NewKeyedTransactor(key)
+				sim     = backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}})
+			)
+			defer sim.Close()
+
+			_, _, d, err := DeployNewSingleStructArgument(auth, sim)
+			if err != nil {
+				t.Fatalf("Failed to deploy contract %v", err)
+			}
+			sim.Commit()
+
+			_, err = d.TestEvent(auth)
+			if err != nil {
+				t.Fatalf("Failed to call contract %v", err)
+			}
+			sim.Commit()
+
+			it, err := d.FilterStructEvent(nil)
+			if err != nil {
+				t.Fatalf("Failed to filter contract event %v", err)
+			}
+			var count int
+			for it.Next() {
+				if it.Event.S.A.Cmp(big.NewInt(1)) != 0 {
+					t.Fatal("Unexpected contract event")
+				}
+				if it.Event.S.B.Cmp(big.NewInt(2)) != 0 {
+					t.Fatal("Unexpected contract event")
+				}
+				count += 1
+			}
+			if count != 1 {
+				t.Fatal("Unexpected contract event number")
+			}
+			`,
+		nil,
+		nil,
+		nil,
+		nil,
+	},
 	// Test errors introduced in v0.8.4
 	{
 		`NewErrors`,
@@ -1817,6 +1924,82 @@ var bindTests = []struct {
 		nil,
 		nil,
 	},
+	{
+		name: `ConstructorWithStructParam`,
+		contract: `
+		pragma solidity >=0.8.0 <0.9.0;
+		
+		contract ConstructorWithStructParam {
+			struct StructType {
+				uint256 field;
+			}
+		
+			constructor(StructType memory st) {}
+		}
+		`,
+		bytecode: []string{`0x608060405234801561001057600080fd5b506040516101c43803806101c48339818101604052810190610032919061014a565b50610177565b6000604051905090565b600080fd5b600080fd5b6000601f19601f8301169050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6100958261004c565b810181811067ffffffffffffffff821117156100b4576100b361005d565b5b80604052505050565b60006100c7610038565b90506100d3828261008c565b919050565b6000819050919050565b6100eb816100d8565b81146100f657600080fd5b50565b600081519050610108816100e2565b92915050565b60006020828403121561012457610123610047565b5b61012e60206100bd565b9050600061013e848285016100f9565b60008301525092915050565b6000602082840312156101605761015f610042565b5b600061016e8482850161010e565b91505092915050565b603f806101856000396000f3fe6080604052600080fdfea2646970667358221220cdffa667affecefac5561f65f4a4ba914204a8d4eb859d8cd426fb306e5c12a364736f6c634300080a0033`},
+		abi:      []string{`[{"inputs":[{"components":[{"internalType":"uint256","name":"field","type":"uint256"}],"internalType":"struct ConstructorWithStructParam.StructType","name":"st","type":"tuple"}],"stateMutability":"nonpayable","type":"constructor"}]`},
+		imports: `
+			"math/big"
+			"github.com/kaiachain/kaia/accounts/abi/bind"
+			"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+			"github.com/kaiachain/kaia/blockchain"
+			"github.com/kaiachain/kaia/crypto"
+		`,
+		tester: `
+			var (
+				key, _  = crypto.GenerateKey()
+				auth    = bind.NewKeyedTransactor(key)
+				sim     = backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}})
+			)
+			defer sim.Close()
+			_, tx, _, err := DeployConstructorWithStructParam(auth, sim, ConstructorWithStructParamStructType{Field: big.NewInt(42)})
+			if err != nil {
+				t.Fatalf("DeployConstructorWithStructParam() got err %v; want nil err", err)
+			}
+			sim.Commit()
+			
+			if _, err = bind.WaitDeployed(nil, sim, tx); err != nil {
+				t.Logf("Deployment tx: %+v", tx)
+				t.Errorf("bind.WaitDeployed(nil, %T, <deployment tx>) got err %v; want nil err", sim, err)
+			}
+		`,
+	},
+	{
+		name: "RangeKeyword",
+		contract: `
+		// SPDX-License-Identifier: GPL-3.0
+		pragma solidity >=0.4.22 <0.9.0;
+		contract keywordcontract {
+			function functionWithKeywordParameter(range uint256) public pure {}
+		}
+		`,
+		bytecode: []string{"0x608060405234801561001057600080fd5b5060dc8061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063527a119f14602d575b600080fd5b60436004803603810190603f9190605b565b6045565b005b50565b6000813590506055816092565b92915050565b600060208284031215606e57606d608d565b5b6000607a848285016048565b91505092915050565b6000819050919050565b600080fd5b6099816083565b811460a357600080fd5b5056fea2646970667358221220d4f4525e2615516394055d369fb17df41c359e5e962734f27fd683ea81fd9db164736f6c63430008070033"},
+		abi:      []string{`[{"inputs":[{"internalType":"uint256","name":"range","type":"uint256"}],"name":"functionWithKeywordParameter","outputs":[],"stateMutability":"pure","type":"function"}]`},
+		imports: `
+			"math/big"
+
+			"github.com/kaiachain/kaia/accounts/abi/bind"
+			"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+			"github.com/kaiachain/kaia/blockchain"
+			"github.com/kaiachain/kaia/crypto"
+		`,
+		tester: `
+			var (
+				key, _ = crypto.GenerateKey()
+				auth   = bind.NewKeyedTransactor(key)
+				sim    = backends.NewSimulatedBackend(blockchain.GenesisAlloc{auth.From: {Balance: big.NewInt(1000000000000000000)}})
+			)
+			_, tx, _, err := DeployRangeKeyword(auth, sim)
+			if err != nil {
+				t.Fatalf("error deploying contract: %v", err)
+			}
+			sim.Commit()
+			if _, err = bind.WaitDeployed(nil, sim, tx); err != nil {
+				t.Errorf("error deploying the contract: %v", err)
+			}
+		`,
+	},
 }
 
 // Tests that packages generated by the binder can be successfully compiled and
@@ -1828,14 +2011,10 @@ func TestGolangBindings(t *testing.T) {
 		t.Skip("go sdk not found for testing")
 	}
 	// Create a temporary workspace for the test suite
-	ws, err := os.MkdirTemp("", "binding-test")
-	if err != nil {
-		t.Fatalf("failed to create temporary workspace: %v", err)
-	}
-	defer os.RemoveAll(ws)
+	ws := t.TempDir()
 
 	pkg := filepath.Join(ws, "bindtest")
-	if err = os.MkdirAll(pkg, 0o700); err != nil {
+	if err := os.MkdirAll(pkg, 0o700); err != nil {
 		t.Fatalf("failed to create package: %v", err)
 	}
 	// Generate the test suite for all the contracts

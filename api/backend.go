@@ -38,14 +38,13 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 //
-//go:generate mockgen -destination=mocks/backend_mock.go github.com/kaiachain/kaia/api Backend
+//go:generate mockgen -destination=./mocks/backend_mock.go -package=mock_api github.com/kaiachain/kaia/api Backend
 type Backend interface {
 	// General Kaia API
 	Progress() kaia.SyncProgress
@@ -61,8 +60,7 @@ type Backend interface {
 	RPCGasCap() *big.Int          // global gas cap for eth/kaia_call/estimateGas/estimateComputationCost
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Engine() consensus.Engine
-	FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
-	GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error)
+	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64) error
@@ -74,10 +72,10 @@ type Backend interface {
 	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
 	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error)
 	StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	GetBlockReceipts(ctx context.Context, blockHash common.Hash) types.Receipts
 	GetTxLookupInfoAndReceipt(ctx context.Context, hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
-	GetTd(blockHash common.Hash) *big.Int
 	GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error)
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
 	SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription
@@ -85,6 +83,7 @@ type Backend interface {
 	IsParallelDBWrite() bool
 
 	IsSenderTxHashIndexingEnabled() bool
+	IsConsoleLogEnabled() bool
 
 	// TxPool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error

@@ -29,7 +29,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -365,17 +364,7 @@ func (t *TxInternalDataAccountCreation) SetSignature(s TxSignatures) {
 }
 
 func (t *TxInternalDataAccountCreation) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gasKey, err := t.Key.AccountCreationGas(currentBlockNumber)
-	if err != nil {
-		return 0, err
-	}
-
-	gas := params.TxGasAccountCreation + gasKey
-	if t.HumanReadable {
-		gas += params.TxGasHumanReadable
-	}
-
-	return gas, nil
+	return GetTxGasForTxTypeWithAccountKey(t.Type(), t.Key, currentBlockNumber, t.HumanReadable)
 }
 
 func (t *TxInternalDataAccountCreation) SerializeForSignToBytes() []byte {
@@ -454,7 +443,7 @@ func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNu
 	//if t.HumanReadable {
 	//	return kerrors.ErrHumanReadableNotSupported
 	//}
-	//if common.IsPrecompiledContractAddress(t.Recipient) {
+	//if common.IsPrecompiledContractAddress(t.Recipient, fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 	//	return kerrors.ErrPrecompiledContractAddress
 	//}
 	//if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {

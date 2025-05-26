@@ -23,108 +23,95 @@
 package istanbul
 
 import (
-	"strings"
+	"math"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-type Validator interface {
-	// Address returns address
-	Address() common.Address
-
-	// String representation of Validator
-	String() string
-
-	RewardAddress() common.Address
-	VotingPower() uint64
-	Weight() uint64
+type BlockValSet struct {
+	council   *valset.AddressSet // council = demoted + qualified
+	qualified *valset.AddressSet
+	demoted   *valset.AddressSet
 }
 
-// ----------------------------------------------------------------------------
+func NewBlockValSet(council, demoted []common.Address) *BlockValSet {
+	councilSet := valset.NewAddressSet(council)
+	demotedSet := valset.NewAddressSet(demoted)
+	qualifiedSet := councilSet.Subtract(demotedSet)
 
-type Validators []Validator
-
-func (slice Validators) Len() int {
-	return len(slice)
+	return &BlockValSet{councilSet, qualifiedSet, demotedSet}
 }
-
-func (slice Validators) Less(i, j int) bool {
-	return strings.Compare(slice[i].String(), slice[j].String()) < 0
-}
-
-func (slice Validators) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func (slice Validators) AddressStringList() []string {
-	var stringAddrs []string
-	for _, val := range slice {
-		stringAddrs = append(stringAddrs, val.Address().String())
+func (cs *BlockValSet) Council() *valset.AddressSet   { return cs.council }
+func (cs *BlockValSet) Qualified() *valset.AddressSet { return cs.qualified }
+func (cs *BlockValSet) Demoted() *valset.AddressSet   { return cs.demoted }
+func (cs *BlockValSet) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	// 1. Get signature address
+	signer, err := GetSignatureAddress(data, sig)
+	if err != nil {
+		logger.Error("Failed to get signer address", "err", err)
+		return common.Address{}, err
 	}
-	return stringAddrs
+
+	// 2. Check validator
+	if cs.Qualified().Contains(signer) {
+		return signer, nil
+	}
+
+	return common.Address{}, ErrUnauthorizedAddress
 }
 
-// ----------------------------------------------------------------------------
+type RoundCommitteeState struct {
+	*BlockValSet
+	committee *valset.AddressSet
+	proposer  common.Address
 
-type ValidatorSet interface {
-	// Calculate the proposer
-	CalcProposer(lastProposer common.Address, round uint64)
-	// Return the validator size
-	Size() uint64
-	// Return the sub validator group size
-	SubGroupSize() uint64
-	// Set the sub validator group size
-	SetSubGroupSize(size uint64)
-	// Return the validator array
-	List() []Validator
-	// Return the demoted validator array
-	DemotedList() []Validator
-	// SubList composes a committee after setting a proposer with a default value.
-	SubList(prevHash common.Hash, view *View) []Validator
-	// Return whether the given address is one of sub-list
-	CheckInSubList(prevHash common.Hash, view *View, addr common.Address) bool
-	// SubListWithProposer composes a committee with given parameters.
-	SubListWithProposer(prevHash common.Hash, proposer common.Address, view *View) []Validator
-	// Get validator by index
-	GetByIndex(i uint64) Validator
-	// Get validator by given address
-	GetByAddress(addr common.Address) (int, Validator)
-	// Get demoted validator by given address
-	GetDemotedByAddress(addr common.Address) (int, Validator)
-	// Get current proposer
-	GetProposer() Validator
-	// Check whether the validator with given address is a proposer
-	IsProposer(address common.Address) bool
-	// Add validator
-	AddValidator(address common.Address) bool
-	// Remove validator
-	RemoveValidator(address common.Address) bool
-	// Copy validator set
-	Copy() ValidatorSet
-	// Get the maximum number of faulty nodes
-	F() int
-	// Get proposer policy
-	Policy() ProposerPolicy
-
-	IsSubSet() bool
-
-	// Refreshes a list of validators at given blockNum
-	RefreshValSet(blockNum uint64, config *params.ChainConfig, isSingle bool, governingNode common.Address, minStaking uint64) error
-
-	// Refreshes a list of candidate proposers with given hash and blockNum
-	RefreshProposers(hash common.Hash, blockNum uint64, config *params.ChainConfig) error
-
-	SetBlockNum(blockNum uint64)
-	SetMixHash(mixHash []byte)
-
-	Proposers() []Validator // TODO-Klaytn-Issue1166 For debugging
-
-	TotalVotingPower() uint64
-
-	Selector(valSet ValidatorSet, lastProposer common.Address, round uint64) Validator
+	// pre-calculated values
+	committeeSize        uint64
+	requiredMessageCount int
+	f                    int
 }
 
-// ----------------------------------------------------------------------------
+func NewRoundCommitteeState(set *BlockValSet, committeeSize uint64, committee []common.Address, proposer common.Address) *RoundCommitteeState {
+	committeeSet := valset.NewAddressSet(committee)
+	reqMsgCnt := requiredMessageCount(set.Qualified().Len(), committeeSize)
+	fNum := f(set.Qualified().Len(), committeeSize)
 
-type ProposalSelector func(ValidatorSet, common.Address, uint64) Validator
+	return &RoundCommitteeState{set, committeeSet, proposer, committeeSize, reqMsgCnt, fNum}
+}
+func (cs *RoundCommitteeState) ValSet() *BlockValSet          { return cs.BlockValSet }
+func (cs *RoundCommitteeState) Committee() *valset.AddressSet { return cs.committee }
+func (cs *RoundCommitteeState) NonCommittee() *valset.AddressSet {
+	return cs.qualified.Subtract(cs.committee)
+}
+func (cs *RoundCommitteeState) Proposer() common.Address            { return cs.proposer }
+func (cs *RoundCommitteeState) IsProposer(addr common.Address) bool { return cs.proposer == addr }
+func (cs *RoundCommitteeState) CommitteeSize() uint64               { return cs.committeeSize }
+func (cs *RoundCommitteeState) RequiredMessageCount() int           { return cs.requiredMessageCount }
+func (cs *RoundCommitteeState) F() int                              { return cs.f }
+
+// requiredMessageCount returns a minimum required number of consensus messages to proceed
+func requiredMessageCount(qualifiedSize int, committeeSize uint64) int {
+	var size int
+	if qualifiedSize > int(committeeSize) {
+		size = int(committeeSize)
+	} else {
+		size = qualifiedSize
+	}
+	// For less than 4 validators, quorum size equals validator count.
+	if size < 4 {
+		return size
+	}
+	// Adopted QBFT quorum implementation
+	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
+	return int(math.Ceil(float64(2*size) / 3))
+}
+
+// f returns a maximum endurable number of byzantine fault nodes
+func f(qualifiedSize int, committeeSize uint64) int {
+	if qualifiedSize > int(committeeSize) {
+		return int(math.Ceil(float64(committeeSize)/3)) - 1
+	} else {
+		return int(math.Ceil(float64(qualifiedSize)/3)) - 1
+	}
+}

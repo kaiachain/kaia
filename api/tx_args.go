@@ -30,6 +30,7 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -136,6 +137,8 @@ type SendTxArgs struct {
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
+
 	FeePayer *common.Address `json:"feePayer"`
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
 
@@ -178,11 +181,11 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 	}
 
 	// For the transaction that do not use the gasPrice field, the default value of gasPrice is not set.
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		args.Price = (*hexutil.Big)(price)
 	}
 
-	if *args.TypeInt == types.TxTypeEthereumDynamicFee {
+	if *args.TypeInt == types.TxTypeEthereumDynamicFee || *args.TypeInt == types.TxTypeEthereumSetCode {
 		if args.MaxPriorityFeePerGas == nil {
 			args.MaxPriorityFeePerGas = (*hexutil.Big)(tip)
 		}
@@ -263,8 +266,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.TypeInt == nil || args.AccountNonce == nil || args.GasLimit == nil {
 		return values
 	}
-	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee
-	if args.Price == nil && *args.TypeInt != types.TxTypeEthereumDynamicFee {
+	// GasPrice can be an optional tx filed for TxTypeEthereumDynamicFee or TxTypeEthereumSetCode.
+	if args.Price == nil && (*args.TypeInt != types.TxTypeEthereumDynamicFee && *args.TypeInt != types.TxTypeEthereumSetCode) {
 		return values
 	}
 
@@ -278,8 +281,8 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	if args.Price != nil {
 		values[types.TxValueKeyGasPrice] = (*big.Int)(args.Price)
 	}
-	if args.TypeInt.IsContractDeploy() || args.TypeInt.IsEthereumTransaction() {
-		// contract deploy type and ethereum tx types allow nil as TxValueKeyTo value
+	if args.TypeInt.IsContractDeploy() || (args.TypeInt.IsEthereumTransaction() && *args.TypeInt != types.TxTypeEthereumSetCode) {
+		// contract deploy type and ethereum tx types except set code type allow nil as TxValueKeyTo value
 		values[types.TxValueKeyTo] = (*common.Address)(args.Recipient)
 	} else if args.Recipient != nil {
 		values[types.TxValueKeyTo] = *args.Recipient
@@ -323,6 +326,9 @@ func (args *SendTxArgs) genTxValuesMap() map[types.TxValueKeyType]interface{} {
 	}
 	if args.AccessList != nil {
 		values[types.TxValueKeyAccessList] = *args.AccessList
+	}
+	if args.AuthorizationList != nil {
+		values[types.TxValueKeyAuthorizationList] = args.AuthorizationList
 	}
 	if args.MaxPriorityFeePerGas != nil {
 		values[types.TxValueKeyGasTipCap] = (*big.Int)(args.MaxPriorityFeePerGas)
@@ -557,6 +563,9 @@ type EthTransactionArgs struct {
 	// Introduced by AccessListTxType transaction.
 	AccessList *types.AccessList `json:"accessList,omitempty"`
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
+
+	// For SetCodeTxType
+	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList"`
 }
 
 // from retrieves the transaction sender address.
@@ -588,6 +597,22 @@ func (args *EthTransactionArgs) data() []byte {
 		return *args.Data
 	}
 	return nil
+}
+
+func (args *EthTransactionArgs) GetAccessList() types.AccessList {
+	if args.AccessList != nil {
+		return *args.AccessList
+	} else {
+		return nil
+	}
+}
+
+func (args *EthTransactionArgs) GetAuthorizationList() []types.SetCodeAuthorization {
+	if args.AuthorizationList != nil {
+		return args.AuthorizationList
+	} else {
+		return nil
+	}
 }
 
 func (args *EthTransactionArgs) setGas(gas *hexutil.Uint64) {
@@ -696,6 +721,7 @@ func (args *EthTransactionArgs) setDefaults(ctx context.Context, b Backend) erro
 			Value:                args.Value,
 			Data:                 (*hexutil.Bytes)(&data),
 			AccessList:           args.AccessList,
+			AuthorizationList:    args.AuthorizationList,
 		}
 		pendingBlockNr := rpc.NewBlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
 		gasCap := uint64(0)
@@ -728,6 +754,11 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	}
 	// Set sender address or use zero address if none specified.
 	addr := args.from()
+
+	// EIP7702's SetCodeTx inherits the Blob transaction specifications and does not allow a nil to.
+	if args.AuthorizationList != nil && args.To == nil {
+		return nil, errors.New("SetCodeTx must have a non-nil recipient address")
+	}
 
 	// Set default gas & gas price if none were set
 	gas := globalGasCap
@@ -768,7 +799,12 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, data, false, intrinsicGas, accessList), nil
+
+	var AuthorizationList []types.SetCodeAuthorization
+	if args.AuthorizationList != nil {
+		AuthorizationList = args.AuthorizationList
+	}
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, accessList, nil, AuthorizationList), nil
 }
 
 // toTransaction converts the arguments to a transaction.
@@ -776,6 +812,23 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 func (args *EthTransactionArgs) toTransaction() (*types.Transaction, error) {
 	var tx *types.Transaction
 	switch {
+	case args.AuthorizationList != nil:
+		al := types.AccessList{}
+		if args.AccessList != nil {
+			al = *args.AccessList
+		}
+		tx = types.NewTx(&types.TxInternalDataEthereumSetCode{
+			ChainID:           uint256.MustFromBig((*big.Int)(args.ChainID)),
+			AccountNonce:      uint64(*args.Nonce),
+			GasTipCap:         (*big.Int)(args.MaxPriorityFeePerGas),
+			GasFeeCap:         (*big.Int)(args.MaxFeePerGas),
+			GasLimit:          uint64(*args.Gas),
+			Recipient:         *args.To,
+			Amount:            (*big.Int)(args.Value),
+			Payload:           args.data(),
+			AccessList:        al,
+			AuthorizationList: args.AuthorizationList,
+		})
 	case args.MaxFeePerGas != nil:
 		al := types.AccessList{}
 		if args.AccessList != nil {

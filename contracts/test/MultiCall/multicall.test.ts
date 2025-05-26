@@ -3,7 +3,6 @@ import {
   setBalance,
 } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-
 import {
   CnStakingContract,
   CnStakingContract__factory,
@@ -11,16 +10,24 @@ import {
   CnStakingV2__factory,
   CnStakingV3MultiSig,
   CnStakingV3MultiSig__factory,
+  IERC20,
+  IERC20__factory,
 } from "../../typechain-types";
-
-import { toPeb } from "../common/helper";
-import { smock } from "@defi-wonderland/smock";
-import { multiCallTestFixture } from "../common/fixtures";
+import { jumpBlock, nowBlock, toPeb } from "../common/helper";
+import { FakeContract, smock } from "@defi-wonderland/smock";
+import {
+  multiCallTestFixture,
+  clRegistryTestFixture,
+  registerContract,
+} from "../materials";
+import { ethers } from "hardhat";
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
 describe("Multicall", function () {
-  let fixture: UnPromisify<ReturnType<typeof multiCallTestFixture>>;
+  let multiCallFixture: UnPromisify<ReturnType<typeof multiCallTestFixture>>;
+  let fakeWKaia: FakeContract<IERC20>;
+
   const expectedStakingAmounts = [
     toPeb(3000n),
     toPeb(3000n),
@@ -30,11 +37,19 @@ describe("Multicall", function () {
     toPeb(10000n),
     toPeb(15000n),
   ];
+  // Test params for CL staking
+  const gcId1 = 1;
+  const nodeId1 = "0x0000000000000000000000000000000000000001";
+  const clPool1 = "0x0000000000000000000000000000000000000002";
+  const gcId2 = 2;
+  const nodeId2 = "0x0000000000000000000000000000000000000004";
+  const clPool2 = "0x0000000000000000000000000000000000000005";
+
   beforeEach(async function () {
-    fixture = await loadFixture(multiCallTestFixture);
+    multiCallFixture = await loadFixture(multiCallTestFixture);
 
     // Assume that initialization has been done
-    const { AB, deployer } = fixture;
+    const { addressBook, deployer } = multiCallFixture;
 
     const cn = [];
     const nodeIds = [];
@@ -97,14 +112,20 @@ describe("Multicall", function () {
       rewardAddresses.push(cnV3.address);
     }
 
-    await AB.mockRegisterCnStakingContracts(nodeIds, cn, rewardAddresses);
-    await AB.submitUpdatePocContract(deployer.address, 1);
-    await AB.submitUpdateKirContract(deployer.address, 1);
+    await addressBook.mockRegisterCnStakingContracts(
+      nodeIds,
+      cn,
+      rewardAddresses
+    );
+    await addressBook.submitUpdatePocContract(deployer.address, 1);
+    await addressBook.submitUpdateKirContract(deployer.address, 1);
+
+    fakeWKaia = await smock.fake<IERC20>(IERC20__factory.abi);
   });
   it("Multicall returns staking info", async function () {
-    const { AB, multiCall } = fixture;
+    const { addressBook, multiCall } = multiCallFixture;
 
-    await AB.activateAddressBook();
+    await addressBook.activateAddressBook();
 
     const stakingInfo = await multiCall.multiCallStakingInfo();
 
@@ -115,12 +136,90 @@ describe("Multicall", function () {
     }
   });
   it("Mutlcall returns early if AB not activated", async function () {
-    const { multiCall } = fixture;
+    const { multiCall } = multiCallFixture;
 
     const stakingInfo = await multiCall.multiCallStakingInfo();
 
     const stakingAmounts = stakingInfo[2];
 
     expect(stakingAmounts).to.have.lengthOf(0);
+  });
+  it("Multicall returns DP staking info", async function () {
+    const { multiCall, registry } = multiCallFixture;
+    const { clRegistry } = await clRegistryTestFixture();
+
+    const curBlock = await nowBlock();
+    // Enroll a CLRegistry and WrappedKaia contract address
+    await registerContract(registry, "CLRegistry", clRegistry.address);
+    await registerContract(registry, "WrappedKaia", fakeWKaia.address);
+
+    fakeWKaia.balanceOf.whenCalledWith(clPool1).returns(toPeb(3000n));
+    fakeWKaia.balanceOf.whenCalledWith(clPool2).returns(toPeb(10000n));
+
+    // Add a CL pair1
+    await expect(
+      clRegistry.addCLPair([{ nodeId: nodeId1, gcId: gcId1, clPool: clPool1 }])
+    ).to.emit(clRegistry, "RegisterPair");
+    // Add a CL pair2
+    await expect(
+      clRegistry.addCLPair([{ nodeId: nodeId2, gcId: gcId2, clPool: clPool2 }])
+    ).to.emit(clRegistry, "RegisterPair");
+
+    await jumpBlock(curBlock + 100);
+
+    expect(await registry.getActiveAddr("CLRegistry")).to.equal(
+      clRegistry.address
+    );
+    expect(await multiCall.multiCallDPStakingInfo()).to.deep.equal([
+      [nodeId1, nodeId2],
+      [clPool1, clPool2],
+      [toPeb(3000n), toPeb(10000n)],
+    ]);
+  });
+  it("Multicall returns DP staking info (no WKaia)", async function () {
+    const { multiCall, registry } = multiCallFixture;
+    const { clRegistry } = await clRegistryTestFixture();
+
+    const curBlock = await nowBlock();
+    // Enroll a CLRegistry contract address but no WrappedKaia
+    await registerContract(registry, "CLRegistry", clRegistry.address);
+
+    fakeWKaia.balanceOf.whenCalledWith(clPool1).returns(toPeb(3000n));
+    fakeWKaia.balanceOf.whenCalledWith(clPool2).returns(toPeb(10000n));
+
+    // Add a CL pair1
+    await expect(
+      clRegistry.addCLPair([{ nodeId: nodeId1, gcId: gcId1, clPool: clPool1 }])
+    ).to.emit(clRegistry, "RegisterPair");
+    // Add a CL pair2
+    await expect(
+      clRegistry.addCLPair([{ nodeId: nodeId2, gcId: gcId2, clPool: clPool2 }])
+    ).to.emit(clRegistry, "RegisterPair");
+
+    await jumpBlock(curBlock + 100);
+
+    expect(await registry.getActiveAddr("CLRegistry")).to.equal(
+      clRegistry.address
+    );
+    expect(await registry.getActiveAddr("WrappedKaia")).to.equal(
+      ethers.constants.AddressZero
+    );
+    expect(await multiCall.multiCallDPStakingInfo()).to.deep.equal([
+      [nodeId1, nodeId2],
+      [clPool1, clPool2],
+      [toPeb(0n), toPeb(0n)], // No WKaia registered in Registry
+    ]);
+  });
+  it("Multicall returns DP staking info (not activated)", async function () {
+    const { multiCall, registry } = multiCallFixture;
+
+    expect(await registry.getActiveAddr("CLRegistry")).to.equal(
+      ethers.constants.AddressZero
+    );
+    expect(await multiCall.multiCallDPStakingInfo()).to.deep.equal([
+      [],
+      [],
+      [],
+    ]);
   });
 });

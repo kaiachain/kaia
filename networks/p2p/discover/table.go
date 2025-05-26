@@ -55,6 +55,23 @@ const (
 	seedMaxAge = 5 * 24 * time.Hour
 )
 
+const (
+	// Below configuration reflects the Mainnet's size and network structure.
+	// Note that PNEN and ENEN connections are discovered with the Kademlia algorithm which doesn't accept a max argument.
+
+	// CN connects to each other in a mesh structure. Assuming up to 100 validators.
+	MaxCNCNCount = 100
+	// PN connects to one neighboring PN. In production, PN connections are usually specified via static nodes to make up a certain network structure, in which case this number is ignored.
+	MaxPNPNCount = 1
+	// EN connects to up to 2 PNs for high availability.
+	MaxENPNCount = 2
+	// BN connects to every CN and PN
+	MaxBNCNCount = 100
+	MaxBNPNCount = 100
+	// All nodes try to discover up to 3 BNs
+	MaxBNConn = 3
+)
+
 type DiscoveryType uint8
 
 type Discovery interface {
@@ -150,21 +167,53 @@ func newTable(cfg *Config) (Discovery, error) {
 		localLogger: logger.NewWith("Discover", "Table"),
 	}
 
+	// Supported discovery types for each NodeType
+	// - CN: CN, BN
+	// - PN: PN, EN, BN
+	// - EN: PN, EN, BN
+	// - BN: CN, PN, EN, BN
+
+	// if self.NodeType == BN, add all types (CN, PN, EN, BN)
+	// if self.NodeType != BN,
+	// - Always add BN
+	// - Add xN if DiscoverTypes.xN && xN is supported by self.NodeType
 	switch cfg.NodeType {
 	case NodeTypeCN:
-		tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: 100})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		if cfg.DiscoverTypes.CN {
+			tab.addStorage(NodeTypeCN, &simpleStorage{targetType: NodeTypeCN, noDiscover: true, max: MaxCNCNCount})
+		}
+		if cfg.DiscoverTypes.PN {
+			logger.Crit("Cannot enable PN discovery for CN")
+		}
+		if cfg.DiscoverTypes.EN {
+			logger.Crit("Cannot enable EN discovery for CN")
+		}
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypePN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 1})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		if cfg.DiscoverTypes.CN {
+			logger.Crit("Cannot enable CN discovery for PN")
+		}
+		if cfg.DiscoverTypes.PN {
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxPNPNCount})
+		}
+		if cfg.DiscoverTypes.EN {
+			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
+		}
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypeEN:
-		tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: 2})
-		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
-		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: 3})
+		if cfg.DiscoverTypes.CN {
+			logger.Crit("Cannot enable CN discovery for EN")
+		}
+		if cfg.DiscoverTypes.PN {
+			tab.addStorage(NodeTypePN, &simpleStorage{targetType: NodeTypePN, noDiscover: true, max: MaxENPNCount})
+		}
+		if cfg.DiscoverTypes.EN {
+			tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN})
+		}
+		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, noDiscover: true, max: MaxBNConn})
 	case NodeTypeBN:
-		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, 100, cfg.AuthorizedNodes))
-		tab.addStorage(NodeTypePN, NewSimpleStorage(NodeTypePN, true, 100, cfg.AuthorizedNodes))
+		tab.addStorage(NodeTypeCN, NewSimpleStorage(NodeTypeCN, true, MaxBNCNCount, cfg.AuthorizedNodes))
+		tab.addStorage(NodeTypePN, NewSimpleStorage(NodeTypePN, true, MaxBNPNCount, cfg.AuthorizedNodes))
 		tab.addStorage(NodeTypeEN, &KademliaStorage{targetType: NodeTypeEN, noDiscover: true})
 		tab.addStorage(NodeTypeBN, &simpleStorage{targetType: NodeTypeBN, max: 3})
 	}
@@ -273,6 +322,9 @@ func (tab *Table) findNewNode(seeds *nodesByDistance, targetID NodeID, targetNT 
 			}
 			pendingQueries--
 		} else {
+			if targetNT != NodeTypeBN { // filter before capping by `max`
+				seeds.entries = removeBn(seeds.entries)
+			}
 			for i := 0; i < pendingQueries; i++ {
 				for _, n := range <-reply {
 					if n != nil && !seen[n.ID] {
@@ -644,11 +696,13 @@ func (tab *Table) Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 		return nil, errors.New("still initializing")
 	}
 	// Start bonding if we haven't seen this node for a while or if it failed findnode too often.
+	// db.node: nil if never bonded or program exited before writing (via copyBondedNodes) to db.
+	// db.findFails: 0 if never tried or never failed.
+	// db.bondTime: 0 if never bonded, in which case age becomes very big.
 	node, fails := tab.db.node(id), tab.db.findFails(id)
 	age := time.Since(tab.db.bondTime(id))
 	var result error
-	// A Bootnode always add node(cn, pn, en) to table.
-	if fails > 0 || age > nodeDBNodeExpiration || (node == nil && tab.self.NType == NodeTypeBN) {
+	if node == nil || fails > 0 || age > nodeDBNodeExpiration {
 		tab.localLogger.Trace("Bond - Starting bonding ping/pong", "id", id, "known", node != nil, "failcount", fails, "age", age)
 
 		tab.bondmu.Lock()

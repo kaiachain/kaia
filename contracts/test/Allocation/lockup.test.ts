@@ -1,22 +1,12 @@
-import {
-  loadFixture,
-  setBalance,
-} from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 
-import { LockupTestFixture } from "../common/fixtures";
-import {
-  PublicDelegation,
-  PublicDelegation__factory,
-} from "../../typechain-types";
+import { LockupTestFixture } from "../materials";
+import { PublicDelegation, PublicDelegation__factory } from "../../typechain-types";
 import { FakeContract, smock } from "@defi-wonderland/smock";
 
-const ADMIN_ROLE = hre.ethers.utils.keccak256(
-  hre.ethers.utils.toUtf8Bytes("ADMIN_ROLE")
-);
-const SECRETARY_ROLE = hre.ethers.utils.keccak256(
-  hre.ethers.utils.toUtf8Bytes("SECRETARY_ROLE")
-);
+const ADMIN_ROLE = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes("ADMIN_ROLE"));
+const SECRETARY_ROLE = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes("SECRETARY_ROLE"));
 
 enum AcquisitionStatus {
   UNDEFINED,
@@ -59,9 +49,7 @@ describe("Airdrop", function () {
 
       await lockup.connect(admin).refreshDelegated();
 
-      expect(await lockup.totalDelegatedAmount()).to.equal(
-        totalDelegatedAmount
-      );
+      expect(await lockup.totalDelegatedAmount()).to.equal(totalDelegatedAmount);
       expect(await lockup.isInitialized()).to.be.true;
     });
   });
@@ -69,81 +57,55 @@ describe("Airdrop", function () {
     it("check all functions", async function () {
       const { lockup, user } = fixture;
 
-      await expect(
-        lockup.connect(user).transferAdmin(user.address)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).transferAdmin(user.address)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).transferSecretary(user.address)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).transferSecretary(user.address)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).refreshDelegated()
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).refreshDelegated()).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).proposeAcquisition(1)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).proposeAcquisition(1)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).requestDelegatedTransfer(1, user.address)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).requestDelegatedTransfer(1, user.address)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).withdrawAcquisition(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).withdrawAcquisition(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).withdrawDelegatedTransfer(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).withdrawDelegatedTransfer(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).withdrawStakingAmounts(user.address, 1)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).withdrawStakingAmounts(user.address, 1)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).claimStakingAmounts(user.address, 0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).claimStakingAmounts(user.address, 0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).confirmAcquisition(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).confirmAcquisition(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).rejectAcquisition(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).rejectAcquisition(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).confirmDelegatedTransfer(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).confirmDelegatedTransfer(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
-      await expect(
-        lockup.connect(user).rejectDelegatedTransfer(0)
-      ).to.be.revertedWithCustomError(
+      await expect(lockup.connect(user).rejectDelegatedTransfer(0)).to.be.revertedWithCustomError(
         lockup,
         "AccessControlUnauthorizedAccount"
       );
@@ -171,23 +133,19 @@ describe("Airdrop", function () {
       it("#proposeAcquisition: failed to propose acqusition request with 0 amount", async function () {
         const { lockup, admin } = fixture;
 
-        await expect(
-          lockup.connect(admin).proposeAcquisition(0)
-        ).to.be.revertedWith("Lockup: invalid amount");
+        await expect(lockup.connect(admin).proposeAcquisition(0)).to.be.revertedWith("Lockup: invalid amount");
       });
       it("#proposeAcquisition: failed to propose acquisition request more than total delegated amount", async function () {
         const { lockup, admin, totalDelegatedAmount } = fixture;
 
-        await expect(
-          lockup.connect(admin).proposeAcquisition(totalDelegatedAmount + 1n)
-        ).to.be.revertedWith("Lockup: invalid amount");
+        await expect(lockup.connect(admin).proposeAcquisition(totalDelegatedAmount + 1n)).to.be.revertedWith(
+          "Lockup: invalid amount"
+        );
 
         // or there's pending acquisition
         await lockup.connect(admin).proposeAcquisition(totalDelegatedAmount);
 
-        await expect(
-          lockup.connect(admin).proposeAcquisition(1)
-        ).to.be.revertedWith("Lockup: invalid amount");
+        await expect(lockup.connect(admin).proposeAcquisition(1)).to.be.revertedWith("Lockup: invalid amount");
       });
     });
     describe("Confirm/Reject Acquisition", function () {
@@ -199,9 +157,7 @@ describe("Airdrop", function () {
       it("#confirmAcquisition: successfully confirm acquisition request", async function () {
         const { lockup, deployer } = fixture;
 
-        await expect(lockup.connect(deployer).confirmAcquisition(0))
-          .to.emit(lockup, "ConfirmAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(deployer).confirmAcquisition(0)).to.emit(lockup, "ConfirmAcquisition").withArgs(0);
 
         const acquisition = await lockup.getAcquisition(0);
         expect(acquisition.status).to.equal(AcquisitionStatus.CONFIRMED);
@@ -209,20 +165,14 @@ describe("Airdrop", function () {
       it("#confirmAcquisition: failed to confirm acquisition request not proposed status", async function () {
         const { lockup, deployer } = fixture;
 
-        await expect(lockup.connect(deployer).confirmAcquisition(0))
-          .to.emit(lockup, "ConfirmAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(deployer).confirmAcquisition(0)).to.emit(lockup, "ConfirmAcquisition").withArgs(0);
         // Already confirmed
-        await expect(
-          lockup.connect(deployer).confirmAcquisition(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(deployer).confirmAcquisition(0)).to.be.revertedWith("Lockup: invalid status");
       });
       it("#rejectAcquisition: successfully reject acquisition request", async function () {
         const { lockup, deployer } = fixture;
 
-        await expect(lockup.connect(deployer).rejectAcquisition(0))
-          .to.emit(lockup, "RejectAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(deployer).rejectAcquisition(0)).to.emit(lockup, "RejectAcquisition").withArgs(0);
 
         const acquisition = await lockup.getAcquisition(0);
         expect(acquisition.status).to.equal(AcquisitionStatus.REJECTED);
@@ -230,13 +180,9 @@ describe("Airdrop", function () {
       it("#rejectAcquisition: failed to reject acquisition request not proposed status", async function () {
         const { lockup, deployer } = fixture;
 
-        await expect(lockup.connect(deployer).confirmAcquisition(0))
-          .to.emit(lockup, "ConfirmAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(deployer).confirmAcquisition(0)).to.emit(lockup, "ConfirmAcquisition").withArgs(0);
         // Already confirmed
-        await expect(
-          lockup.connect(deployer).rejectAcquisition(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(deployer).rejectAcquisition(0)).to.be.revertedWith("Lockup: invalid status");
       });
     });
     describe("#withdrawAcquisition", function () {
@@ -249,41 +195,26 @@ describe("Airdrop", function () {
       it("successfully withdraw acquisition request", async function () {
         const { lockup, deployer, admin } = fixture;
 
-        const beforeBalance = await hre.ethers.provider.getBalance(
-          admin.address
-        );
+        const beforeBalance = await hre.ethers.provider.getBalance(admin.address);
 
         await lockup.connect(deployer).confirmAcquisition(0);
-        await expect(lockup.connect(admin).withdrawAcquisition(0))
-          .to.emit(lockup, "WithdrawAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(admin).withdrawAcquisition(0)).to.emit(lockup, "WithdrawAcquisition").withArgs(0);
 
-        const afterBalance = await hre.ethers.provider.getBalance(
-          admin.address
-        );
+        const afterBalance = await hre.ethers.provider.getBalance(admin.address);
         // 0.0001 is a transaction fee
-        expect(afterBalance).to.be.closeTo(
-          beforeBalance.add(requestAmount),
-          hre.ethers.utils.parseEther("0.0001")
-        );
+        expect(afterBalance).to.be.closeTo(beforeBalance.add(requestAmount), hre.ethers.utils.parseEther("0.0001"));
         const acquisition = await lockup.getAcquisition(0);
         expect(acquisition.status).to.equal(AcquisitionStatus.WITHDRAWN);
       });
       it("failed to withdraw acquisition request not confirmed status", async function () {
         const { lockup, deployer, admin } = fixture;
 
-        await expect(
-          lockup.connect(admin).withdrawAcquisition(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(admin).withdrawAcquisition(0)).to.be.revertedWith("Lockup: invalid status");
 
         await lockup.connect(deployer).confirmAcquisition(0);
-        await expect(lockup.connect(admin).withdrawAcquisition(0))
-          .to.emit(lockup, "WithdrawAcquisition")
-          .withArgs(0);
+        await expect(lockup.connect(admin).withdrawAcquisition(0)).to.emit(lockup, "WithdrawAcquisition").withArgs(0);
 
-        await expect(
-          lockup.connect(admin).withdrawAcquisition(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(admin).withdrawAcquisition(0)).to.be.revertedWith("Lockup: invalid status");
       });
     });
   });
@@ -297,9 +228,7 @@ describe("Airdrop", function () {
       it("#requestDelegatedTransfer: successfully request delegated transfer", async function () {
         const { lockup, admin, user } = fixture;
 
-        await expect(
-          lockup.connect(admin).requestDelegatedTransfer(1000, user.address)
-        )
+        await expect(lockup.connect(admin).requestDelegatedTransfer(1000, user.address))
           .to.emit(lockup, "RequestDelegatedTransfer")
           .withArgs(0, 1000, user.address);
 
@@ -312,36 +241,30 @@ describe("Airdrop", function () {
       it("#requestDelegatedTransfer: failed to request delegated transfer with 0 amount", async function () {
         const { lockup, admin, user } = fixture;
 
-        await expect(
-          lockup.connect(admin).requestDelegatedTransfer(0, user.address)
-        ).to.be.revertedWith("Lockup: invalid amount");
+        await expect(lockup.connect(admin).requestDelegatedTransfer(0, user.address)).to.be.revertedWith(
+          "Lockup: invalid amount"
+        );
       });
       it("#requestDelegatedTransfer: failed to request delegated transfer more than total delegated amount", async function () {
         const { lockup, admin, user, totalDelegatedAmount } = fixture;
 
         await expect(
-          lockup
-            .connect(admin)
-            .requestDelegatedTransfer(totalDelegatedAmount + 1n, user.address)
+          lockup.connect(admin).requestDelegatedTransfer(totalDelegatedAmount + 1n, user.address)
         ).to.be.revertedWith("Lockup: invalid amount");
 
         // or there's pending transfer
-        await lockup
-          .connect(admin)
-          .requestDelegatedTransfer(totalDelegatedAmount, user.address);
+        await lockup.connect(admin).requestDelegatedTransfer(totalDelegatedAmount, user.address);
 
-        await expect(
-          lockup.connect(admin).requestDelegatedTransfer(1, user.address)
-        ).to.be.revertedWith("Lockup: invalid amount");
+        await expect(lockup.connect(admin).requestDelegatedTransfer(1, user.address)).to.be.revertedWith(
+          "Lockup: invalid amount"
+        );
       });
     });
     describe("Confirm/Reject Delegated Transfer", function () {
       this.beforeEach(async function () {
         const { lockup, admin, user } = fixture;
 
-        await lockup
-          .connect(admin)
-          .requestDelegatedTransfer(1000, user.address);
+        await lockup.connect(admin).requestDelegatedTransfer(1000, user.address);
       });
       it("#confirmDelegatedTransfer: successfully confirm delegated transfer", async function () {
         const { lockup, deployer } = fixture;
@@ -360,9 +283,7 @@ describe("Airdrop", function () {
           .to.emit(lockup, "ConfirmDelegatedTransfer")
           .withArgs(0);
         // Already confirmed
-        await expect(
-          lockup.connect(deployer).confirmDelegatedTransfer(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(deployer).confirmDelegatedTransfer(0)).to.be.revertedWith("Lockup: invalid status");
       });
       it("#rejectDelegatedTransfer: successfully reject delegated transfer", async function () {
         const { lockup, deployer } = fixture;
@@ -381,9 +302,7 @@ describe("Airdrop", function () {
           .to.emit(lockup, "ConfirmDelegatedTransfer")
           .withArgs(0);
         // Already confirmed
-        await expect(
-          lockup.connect(deployer).rejectDelegatedTransfer(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(deployer).rejectDelegatedTransfer(0)).to.be.revertedWith("Lockup: invalid status");
       });
     });
     describe("#withdrawDelegatedTransfer", function () {
@@ -391,16 +310,12 @@ describe("Airdrop", function () {
       this.beforeEach(async function () {
         const { lockup, admin, user } = fixture;
 
-        await lockup
-          .connect(admin)
-          .requestDelegatedTransfer(requestAmount, user.address);
+        await lockup.connect(admin).requestDelegatedTransfer(requestAmount, user.address);
       });
       it("successfully withdraw delegated transfer", async function () {
         const { lockup, deployer, admin, user } = fixture;
 
-        const beforeBalance = await hre.ethers.provider.getBalance(
-          user.address
-        );
+        const beforeBalance = await hre.ethers.provider.getBalance(user.address);
 
         await lockup.connect(deployer).confirmDelegatedTransfer(0);
         await expect(lockup.connect(admin).withdrawDelegatedTransfer(0))
@@ -416,18 +331,14 @@ describe("Airdrop", function () {
       it("failed to withdraw delegated transfer not confirmed status", async function () {
         const { lockup, deployer, admin } = fixture;
 
-        await expect(
-          lockup.connect(admin).withdrawDelegatedTransfer(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(admin).withdrawDelegatedTransfer(0)).to.be.revertedWith("Lockup: invalid status");
 
         await lockup.connect(deployer).confirmDelegatedTransfer(0);
         await expect(lockup.connect(admin).withdrawDelegatedTransfer(0))
           .to.emit(lockup, "WithdrawDelegatedTransfer")
           .withArgs(0);
 
-        await expect(
-          lockup.connect(admin).withdrawDelegatedTransfer(0)
-        ).to.be.revertedWith("Lockup: invalid status");
+        await expect(lockup.connect(admin).withdrawDelegatedTransfer(0)).to.be.revertedWith("Lockup: invalid status");
       });
     });
   });
@@ -438,9 +349,7 @@ describe("Airdrop", function () {
 
       await lockup.connect(admin).refreshDelegated();
 
-      mockPD = await smock.fake<PublicDelegation>(
-        PublicDelegation__factory.abi
-      );
+      mockPD = await smock.fake<PublicDelegation>(PublicDelegation__factory.abi);
       mockPD.maxRedeem.returns(1000);
 
       mockPD.requestIdToOwner.returns(lockup.address);
@@ -448,18 +357,16 @@ describe("Airdrop", function () {
     it("#withdrawStakingAmounts: successfully withdraw staking amounts", async function () {
       const { lockup, admin } = fixture;
 
-      await expect(
-        lockup.connect(admin).withdrawStakingAmounts(mockPD.address, 1000)
-      )
+      await expect(lockup.connect(admin).withdrawStakingAmounts(mockPD.address, 1000))
         .to.emit(lockup, "WithdrawStakingAmounts")
         .withArgs(mockPD.address, 1000);
     });
     it("#withdrawStakingAmounts: failed to withdraw more than max redeemable shares", async function () {
       const { lockup, admin } = fixture;
 
-      await expect(
-        lockup.connect(admin).withdrawStakingAmounts(mockPD.address, 10_000)
-      ).to.be.revertedWith("Lockup: invalid shares");
+      await expect(lockup.connect(admin).withdrawStakingAmounts(mockPD.address, 10_000)).to.be.revertedWith(
+        "Lockup: invalid shares"
+      );
     });
     it("#claimStakingAmounts: successfully claim staking amounts", async function () {
       const { lockup, admin } = fixture;
@@ -473,9 +380,9 @@ describe("Airdrop", function () {
 
       mockPD.requestIdToOwner.returns(user.address); // Not owned
 
-      await expect(
-        lockup.connect(admin).claimStakingAmounts(mockPD.address, 0)
-      ).to.be.revertedWith("Lockup: invalid request owner");
+      await expect(lockup.connect(admin).claimStakingAmounts(mockPD.address, 0)).to.be.revertedWith(
+        "Lockup: invalid request owner"
+      );
     });
   });
   describe("Check view functions", function () {
@@ -527,16 +434,12 @@ describe("Airdrop", function () {
       await lockup.connect(deployer).confirmAcquisition(0);
       await lockup.connect(deployer).confirmAcquisition(1);
 
-      const ret = await lockup.getAcquisitionAtStatus(
-        AcquisitionStatus.CONFIRMED
-      );
+      const ret = await lockup.getAcquisitionAtStatus(AcquisitionStatus.CONFIRMED);
       expect(ret.length).to.equal(2);
       expect(ret[0].acReqId).to.equal(0);
       expect(ret[1].acReqId).to.equal(1);
 
-      const ret2 = await lockup.getAcquisitionAtStatus(
-        AcquisitionStatus.PROPOSED
-      );
+      const ret2 = await lockup.getAcquisitionAtStatus(AcquisitionStatus.PROPOSED);
       expect(ret2.length).to.equal(1);
       expect(ret2[0].acReqId).to.equal(2);
     });
@@ -549,16 +452,12 @@ describe("Airdrop", function () {
       await lockup.connect(admin).withdrawDelegatedTransfer(0);
       await lockup.connect(admin).withdrawDelegatedTransfer(1);
 
-      const ret = await lockup.getDelegatedTransferAtStatus(
-        AcquisitionStatus.WITHDRAWN
-      );
+      const ret = await lockup.getDelegatedTransferAtStatus(AcquisitionStatus.WITHDRAWN);
       expect(ret.length).to.equal(2);
       expect(ret[0].delegatedTransferId).to.equal(0);
       expect(ret[1].delegatedTransferId).to.equal(1);
 
-      const ret2 = await lockup.getDelegatedTransferAtStatus(
-        AcquisitionStatus.PROPOSED
-      );
+      const ret2 = await lockup.getDelegatedTransferAtStatus(AcquisitionStatus.PROPOSED);
       expect(ret2.length).to.equal(1);
       expect(ret2[0].delegatedTransferId).to.equal(2);
     });

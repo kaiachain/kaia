@@ -442,6 +442,7 @@ type ContextUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ContextUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _ContextUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -453,6 +454,7 @@ func (_ContextUpgradeable *ContextUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_ContextUpgradeable *ContextUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ContextUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _ContextUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -493,6 +495,7 @@ func (_ContextUpgradeable *ContextUpgradeableFilterer) ParseInitialized(log type
 	if err := _ContextUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -728,6 +731,7 @@ type ERC1967UpgradeUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -739,6 +743,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterAdmin
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -779,6 +784,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) ParseAdminC
 	if err := _ERC1967UpgradeUpgradeable.contract.UnpackLog(event, "AdminChanged", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -859,6 +865,7 @@ type ERC1967UpgradeUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeUpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -875,6 +882,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterBeaco
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -920,6 +928,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) ParseBeacon
 	if err := _ERC1967UpgradeUpgradeable.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1000,6 +1009,7 @@ type ERC1967UpgradeUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*ERC1967UpgradeUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1011,6 +1021,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterIniti
 //
 // Solidity: event Initialized(uint8 version)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _ERC1967UpgradeUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -1051,6 +1062,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) ParseInitia
 	if err := _ERC1967UpgradeUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1131,6 +1143,7 @@ type ERC1967UpgradeUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1147,6 +1160,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) FilterUpgra
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -1192,6 +1206,7 @@ func (_ERC1967UpgradeUpgradeable *ERC1967UpgradeUpgradeableFilterer) ParseUpgrad
 	if err := _ERC1967UpgradeUpgradeable.contract.UnpackLog(event, "Upgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -1234,8 +1249,8 @@ var IAddressBookABI = IAddressBookMetaData.ABI
 // IAddressBookBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IAddressBookBinRuntime = ``
 
-// IAddressBookFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IAddressBookMetaData.Sigs instead.
+// IAddressBookFuncSigs maps the 4-byte function signature to its string representation.
 var IAddressBookFuncSigs = IAddressBookMetaData.Sigs
 
 // IAddressBook is an auto generated Go binding around a Kaia contract.
@@ -1386,8 +1401,7 @@ func (_IAddressBook *IAddressBookTransactorRaw) Transact(opts *bind.TransactOpts
 func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddress")
 
@@ -1395,10 +1409,15 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 		TypeList    []uint8
 		AddressList []common.Address
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.TypeList = *abi.ConvertType(out[0], new([]uint8)).(*[]uint8)
 	outstruct.AddressList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
+
 	return *outstruct, err
+
 }
 
 // GetAllAddress is a free data retrieval call binding the contract method 0x715b208b.
@@ -1407,8 +1426,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddress(opts *bind.CallOpts) (str
 func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1418,8 +1436,7 @@ func (_IAddressBook *IAddressBookSession) GetAllAddress() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetAllAddress() (struct {
 	TypeList    []uint8
 	AddressList []common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddress(&_IAddressBook.CallOpts)
 }
 
@@ -1432,8 +1449,7 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getAllAddressInfo")
 
@@ -1444,13 +1460,18 @@ func (_IAddressBook *IAddressBookCaller) GetAllAddressInfo(opts *bind.CallOpts) 
 		PocContractAddress    common.Address
 		KirContractAddress    common.Address
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.CnNodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.CnStakingContractList = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	outstruct.CnRewardAddressList = *abi.ConvertType(out[2], new([]common.Address)).(*[]common.Address)
 	outstruct.PocContractAddress = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
 	outstruct.KirContractAddress = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
+
 	return *outstruct, err
+
 }
 
 // GetAllAddressInfo is a free data retrieval call binding the contract method 0x160370b8.
@@ -1462,8 +1483,7 @@ func (_IAddressBook *IAddressBookSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1476,8 +1496,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetAllAddressInfo() (struct {
 	CnRewardAddressList   []common.Address
 	PocContractAddress    common.Address
 	KirContractAddress    common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetAllAddressInfo(&_IAddressBook.CallOpts)
 }
 
@@ -1488,8 +1507,7 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getCnInfo", _cnNodeId)
 
@@ -1498,11 +1516,16 @@ func (_IAddressBook *IAddressBookCaller) GetCnInfo(opts *bind.CallOpts, _cnNodeI
 		CnStakingcontract common.Address
 		CnRewardAddress   common.Address
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.CnNodeId = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 	outstruct.CnStakingcontract = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
 	outstruct.CnRewardAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+
 	return *outstruct, err
+
 }
 
 // GetCnInfo is a free data retrieval call binding the contract method 0x15575d5a.
@@ -1512,8 +1535,7 @@ func (_IAddressBook *IAddressBookSession) GetCnInfo(_cnNodeId common.Address) (s
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1524,8 +1546,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 	CnNodeId          common.Address
 	CnStakingcontract common.Address
 	CnRewardAddress   common.Address
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetCnInfo(&_IAddressBook.CallOpts, _cnNodeId)
 }
 
@@ -1535,6 +1556,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetCnInfo(_cnNodeId common.Addre
 func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOpts) ([][32]byte, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getPendingRequestList")
+
 	if err != nil {
 		return *new([][32]byte), err
 	}
@@ -1542,6 +1564,7 @@ func (_IAddressBook *IAddressBookCaller) GetPendingRequestList(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
 
 	return out0, err
+
 }
 
 // GetPendingRequestList is a free data retrieval call binding the contract method 0xda34a0bd.
@@ -1569,8 +1592,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfo", _id)
 
@@ -1583,6 +1605,9 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 		InitialProposedTime *big.Int
 		State               uint8
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.FunctionId = *abi.ConvertType(out[0], new(uint8)).(*uint8)
 	outstruct.FirstArg = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
@@ -1591,7 +1616,9 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfo(opts *bind.CallOpts, _id
 	outstruct.Confirmers = *abi.ConvertType(out[4], new([]common.Address)).(*[]common.Address)
 	outstruct.InitialProposedTime = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[6], new(uint8)).(*uint8)
+
 	return *outstruct, err
+
 }
 
 // GetRequestInfo is a free data retrieval call binding the contract method 0x82d67e5a.
@@ -1605,8 +1632,7 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfo(_id [32]byte) (struct {
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1621,8 +1647,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfo(_id [32]byte) (st
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfo(&_IAddressBook.CallOpts, _id)
 }
 
@@ -1634,8 +1659,7 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getRequestInfoByArgs", _functionId, _firstArg, _secondArg, _thirdArg)
 
@@ -1645,12 +1669,17 @@ func (_IAddressBook *IAddressBookCaller) GetRequestInfoByArgs(opts *bind.CallOpt
 		InitialProposedTime *big.Int
 		State               uint8
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.Id = *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 	outstruct.Confirmers = *abi.ConvertType(out[1], new([]common.Address)).(*[]common.Address)
 	outstruct.InitialProposedTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 	outstruct.State = *abi.ConvertType(out[3], new(uint8)).(*uint8)
+
 	return *outstruct, err
+
 }
 
 // GetRequestInfoByArgs is a free data retrieval call binding the contract method 0x407091eb.
@@ -1661,8 +1690,7 @@ func (_IAddressBook *IAddressBookSession) GetRequestInfoByArgs(_functionId uint8
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1674,8 +1702,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 	Confirmers          []common.Address
 	InitialProposedTime *big.Int
 	State               uint8
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetRequestInfoByArgs(&_IAddressBook.CallOpts, _functionId, _firstArg, _secondArg, _thirdArg)
 }
 
@@ -1685,8 +1712,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetRequestInfoByArgs(_functionId
 func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "getState")
 
@@ -1694,10 +1720,15 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 		AdminList   []common.Address
 		Requirement *big.Int
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.AdminList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.Requirement = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
 	return *outstruct, err
+
 }
 
 // GetState is a free data retrieval call binding the contract method 0x1865c57d.
@@ -1706,8 +1737,7 @@ func (_IAddressBook *IAddressBookCaller) GetState(opts *bind.CallOpts) (struct {
 func (_IAddressBook *IAddressBookSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1717,8 +1747,7 @@ func (_IAddressBook *IAddressBookSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 	AdminList   []common.Address
 	Requirement *big.Int
-}, error,
-) {
+}, error) {
 	return _IAddressBook.Contract.GetState(&_IAddressBook.CallOpts)
 }
 
@@ -1728,6 +1757,7 @@ func (_IAddressBook *IAddressBookCallerSession) GetState() (struct {
 func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isActivated")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1735,6 +1765,7 @@ func (_IAddressBook *IAddressBookCaller) IsActivated(opts *bind.CallOpts) (bool,
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
@@ -1757,6 +1788,7 @@ func (_IAddressBook *IAddressBookCallerSession) IsActivated() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (bool, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "isConstructed")
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -1764,6 +1796,7 @@ func (_IAddressBook *IAddressBookCaller) IsConstructed(opts *bind.CallOpts) (boo
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsConstructed is a free data retrieval call binding the contract method 0x50a5bb69.
@@ -1786,6 +1819,7 @@ func (_IAddressBook *IAddressBookCallerSession) IsConstructed() (bool, error) {
 func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "kirContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1793,6 +1827,7 @@ func (_IAddressBook *IAddressBookCaller) KirContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // KirContractAddress is a free data retrieval call binding the contract method 0xb858dd95.
@@ -1815,6 +1850,7 @@ func (_IAddressBook *IAddressBookCallerSession) KirContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "pocContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1822,6 +1858,7 @@ func (_IAddressBook *IAddressBookCaller) PocContractAddress(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // PocContractAddress is a free data retrieval call binding the contract method 0xd267eda5.
@@ -1844,6 +1881,7 @@ func (_IAddressBook *IAddressBookCallerSession) PocContractAddress() (common.Add
 func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAddressBook.contract.Call(opts, &out, "spareContractAddress")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1851,6 +1889,7 @@ func (_IAddressBook *IAddressBookCaller) SpareContractAddress(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // SpareContractAddress is a free data retrieval call binding the contract method 0x6abd623d.
@@ -2155,8 +2194,8 @@ var IBeaconUpgradeableABI = IBeaconUpgradeableMetaData.ABI
 // IBeaconUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IBeaconUpgradeableBinRuntime = ``
 
-// IBeaconUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IBeaconUpgradeableMetaData.Sigs instead.
+// IBeaconUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 var IBeaconUpgradeableFuncSigs = IBeaconUpgradeableMetaData.Sigs
 
 // IBeaconUpgradeable is an auto generated Go binding around a Kaia contract.
@@ -2307,6 +2346,7 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableTransactorRaw) Transact(opts *bind.
 func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IBeaconUpgradeable.contract.Call(opts, &out, "implementation")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2314,6 +2354,7 @@ func (_IBeaconUpgradeable *IBeaconUpgradeableCaller) Implementation(opts *bind.C
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Implementation is a free data retrieval call binding the contract method 0x5c60da1b.
@@ -2345,8 +2386,8 @@ var IERC1822ProxiableUpgradeableABI = IERC1822ProxiableUpgradeableMetaData.ABI
 // IERC1822ProxiableUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IERC1822ProxiableUpgradeableBinRuntime = ``
 
-// IERC1822ProxiableUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IERC1822ProxiableUpgradeableMetaData.Sigs instead.
+// IERC1822ProxiableUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 var IERC1822ProxiableUpgradeableFuncSigs = IERC1822ProxiableUpgradeableMetaData.Sigs
 
 // IERC1822ProxiableUpgradeable is an auto generated Go binding around a Kaia contract.
@@ -2497,6 +2538,7 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableTransactorRaw) 
 func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IERC1822ProxiableUpgradeable.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -2504,6 +2546,7 @@ func (_IERC1822ProxiableUpgradeable *IERC1822ProxiableUpgradeableCaller) Proxiab
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -2752,6 +2795,7 @@ type IERC1967UpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*IERC1967UpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _IERC1967Upgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2763,6 +2807,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterAdminChanged(opts
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _IERC1967Upgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -2803,6 +2848,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) ParseAdminChanged(log t
 	if err := _IERC1967Upgradeable.contract.UnpackLog(event, "AdminChanged", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -2883,6 +2929,7 @@ type IERC1967UpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*IERC1967UpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2899,6 +2946,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterBeaconUpgraded(op
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -2944,6 +2992,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) ParseBeaconUpgraded(log
 	if err := _IERC1967Upgradeable.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3024,6 +3073,7 @@ type IERC1967UpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*IERC1967UpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3040,6 +3090,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) FilterUpgraded(opts *bi
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *IERC1967UpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -3085,6 +3136,7 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) ParseUpgraded(log types
 	if err := _IERC1967Upgradeable.contract.UnpackLog(event, "Upgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3103,8 +3155,8 @@ var IKIP113ABI = IKIP113MetaData.ABI
 // IKIP113BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const IKIP113BinRuntime = ``
 
-// IKIP113FuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use IKIP113MetaData.Sigs instead.
+// IKIP113FuncSigs maps the 4-byte function signature to its string representation.
 var IKIP113FuncSigs = IKIP113MetaData.Sigs
 
 // IKIP113 is an auto generated Go binding around a Kaia contract.
@@ -3255,8 +3307,7 @@ func (_IKIP113 *IKIP113TransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IKIP113.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -3264,10 +3315,15 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 		NodeIdList []common.Address
 		PubkeyList []IKIP113BlsPublicKeyInfo
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
+
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -3276,8 +3332,7 @@ func (_IKIP113 *IKIP113Caller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3287,8 +3342,7 @@ func (_IKIP113 *IKIP113Session) GetAllBlsInfo() (struct {
 func (_IKIP113 *IKIP113CallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _IKIP113.Contract.GetAllBlsInfo(&_IKIP113.CallOpts)
 }
 
@@ -3523,6 +3577,7 @@ type InitializableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.FilterOpts) (*InitializableInitializedIterator, error) {
+
 	logs, sub, err := _Initializable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3534,6 +3589,7 @@ func (_Initializable *InitializableFilterer) FilterInitialized(opts *bind.Filter
 //
 // Solidity: event Initialized(uint8 version)
 func (_Initializable *InitializableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *InitializableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _Initializable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3574,6 +3630,7 @@ func (_Initializable *InitializableFilterer) ParseInitialized(log types.Log) (*I
 	if err := _Initializable.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -3594,8 +3651,8 @@ var OwnableUpgradeableABI = OwnableUpgradeableMetaData.ABI
 // OwnableUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const OwnableUpgradeableBinRuntime = ``
 
-// OwnableUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use OwnableUpgradeableMetaData.Sigs instead.
+// OwnableUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 var OwnableUpgradeableFuncSigs = OwnableUpgradeableMetaData.Sigs
 
 // OwnableUpgradeable is an auto generated Go binding around a Kaia contract.
@@ -3746,6 +3803,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableTransactorRaw) Transact(opts *bind.
 func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _OwnableUpgradeable.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3753,6 +3811,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableCaller) Owner(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -3888,6 +3947,7 @@ type OwnableUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*OwnableUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _OwnableUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3899,6 +3959,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterInitialized(opts *b
 //
 // Solidity: event Initialized(uint8 version)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _OwnableUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -3939,6 +4000,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) ParseInitialized(log type
 	if err := _OwnableUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4020,6 +4082,7 @@ type OwnableUpgradeableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableUpgradeableOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4040,6 +4103,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) FilterOwnershipTransferre
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_OwnableUpgradeable *OwnableUpgradeableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableUpgradeableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -4089,6 +4153,7 @@ func (_OwnableUpgradeable *OwnableUpgradeableFilterer) ParseOwnershipTransferred
 	if err := _OwnableUpgradeable.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4112,7 +4177,7 @@ var SimpleBlsRegistryMetaData = &bind.MetaData{
 		"3659cfe6": "upgradeTo(address)",
 		"4f1ef286": "upgradeToAndCall(address,bytes)",
 	},
-	Bin: "0x60a06040523060805234801561001457600080fd5b5061001d610022565b6100e1565b600054610100900460ff161561008e5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b60005460ff908116146100df576000805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b608051611ecc61011860003960008181610593015281816105d301528181610672015281816106b201526107450152611ecc6000f3fe6080604052600436106100e85760003560e01c80636fc522c61161008a578063829d639d11610059578063829d639d1461026d5780638da5cb5b1461029b578063a5834971146102b9578063f2fde38b146102d957600080fd5b80636fc522c6146101ef578063715018a614610223578063786cd4d7146102385780638129fc1c1461025857600080fd5b80633659cfe6116100c65780633659cfe6146101845780634f1ef286146101a457806352d1902d146101b75780636968b53f146101cc57600080fd5b806320abd458146100ed5780632ec2c246146101345780633465d6d514610156575b600080fd5b3480156100f957600080fd5b506101217f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2181565b6040519081526020015b60405180910390f35b34801561014057600080fd5b5061015461014f3660046116cb565b6102f9565b005b34801561016257600080fd5b506101766101713660046116cb565b61045d565b60405161012b92919061173f565b34801561019057600080fd5b5061015461019f3660046116cb565b610589565b6101546101b2366004611783565b610668565b3480156101c357600080fd5b50610121610738565b3480156101d857600080fd5b506101e16107eb565b60405161012b929190611847565b3480156101fb57600080fd5b506101217fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29381565b34801561022f57600080fd5b50610154610aa8565b34801561024457600080fd5b50610154610253366004611955565b610abc565b34801561026457600080fd5b50610154610e30565b34801561027957600080fd5b5061028361040081565b6040516001600160a01b03909116815260200161012b565b3480156102a757600080fd5b506097546001600160a01b0316610283565b3480156102c557600080fd5b506102836102d43660046119d8565b610f48565b3480156102e557600080fd5b506101546102f43660046116cb565b610f72565b610301610fe8565b61030a81611042565b1561035c5760405162461bcd60e51b815260206004820152601a60248201527f434e206973207374696c6c20696e2041646472657373426f6f6b00000000000060448201526064015b60405180910390fd5b6001600160a01b038116600090815260ca60205260409020805461037f906119f1565b90506000036103c75760405162461bcd60e51b815260206004820152601460248201527310d3881a5cc81b9bdd081c9959da5cdd195c995960621b6044820152606401610353565b6103d0816110be565b6001600160a01b038116600090815260ca60205260409081902090517fb98b07c4d52e8d65fa5416810f2746a810eb074b1ac7784e1b07e315c0dfd2d99161041f918491906001820190611aa8565b60405180910390a16001600160a01b038116600090815260ca602052604081209061044a8282611668565b610458600183016000611668565b505050565b60ca60205260009081526040902080548190610478906119f1565b80601f01602080910402602001604051908101604052809291908181526020018280546104a4906119f1565b80156104f15780601f106104c6576101008083540402835291602001916104f1565b820191906000526020600020905b8154815290600101906020018083116104d457829003601f168201915b505050505090806001018054610506906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610532906119f1565b801561057f5780601f106105545761010080835404028352916020019161057f565b820191906000526020600020905b81548152906001019060200180831161056257829003601f168201915b5050505050905082565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036105d15760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031661061a600080516020611e50833981519152546001600160a01b031690565b6001600160a01b0316146106405760405162461bcd60e51b815260040161035390611b2a565b610649816111c5565b60408051600080825260208201909252610665918391906111cd565b50565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036106b05760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166106f9600080516020611e50833981519152546001600160a01b031690565b6001600160a01b03161461071f5760405162461bcd60e51b815260040161035390611b2a565b610728826111c5565b610734828260016111cd565b5050565b6000306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146107d85760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401610353565b50600080516020611e5083398151915290565b60c954606090819067ffffffffffffffff81111561080b5761080b61176d565b604051908082528060200260200182016040528015610834578160200160208202803683370190505b5060c95490925067ffffffffffffffff8111156108535761085361176d565b60405190808252806020026020018201604052801561089857816020015b60408051808201909152606080825260208201528152602001906001900390816108715790505b50905060005b8251811015610aa35760c981815481106108ba576108ba611b76565b9060005260206000200160009054906101000a90046001600160a01b03168382815181106108ea576108ea611b76565b60200260200101906001600160a01b031690816001600160a01b03168152505060ca600060c9838154811061092157610921611b76565b60009182526020808320909101546001600160a01b031683528201929092526040908101909120815180830190925280548290829061095f906119f1565b80601f016020809104026020016040519081016040528092919081815260200182805461098b906119f1565b80156109d85780601f106109ad576101008083540402835291602001916109d8565b820191906000526020600020905b8154815290600101906020018083116109bb57829003601f168201915b505050505081526020016001820180546109f1906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610a1d906119f1565b8015610a6a5780601f10610a3f57610100808354040283529160200191610a6a565b820191906000526020600020905b815481529060010190602001808311610a4d57829003601f168201915b505050505081525050828281518110610a8557610a85611b76565b60200260200101819052508080610a9b90611ba2565b91505061089e565b509091565b610ab0610fe8565b610aba6000611338565b565b610ac4610fe8565b838360308114610b165760405162461bcd60e51b815260206004820152601b60248201527f5075626c6963206b6579206d75737420626520343820627974657300000000006044820152606401610353565b6040517fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29390610b489084908490611bbb565b604051809103902003610b9d5760405162461bcd60e51b815260206004820152601960248201527f5075626c6963206b65792063616e6e6f74206265207a65726f000000000000006044820152606401610353565b838360608114610be65760405162461bcd60e51b8152602060048201526014602482015273506f70206d75737420626520393620627974657360601b6044820152606401610353565b6040517f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2190610c189084908490611bbb565b604051809103902003610c625760405162461bcd60e51b8152602060048201526012602482015271506f702063616e6e6f74206265207a65726f60701b6044820152606401610353565b610c6b89611042565b610cb75760405162461bcd60e51b815260206004820152601e60248201527f636e4e6f64654964206973206e6f7420696e2041646472657373426f6f6b00006044820152606401610353565b6001600160a01b038916600090815260ca602052604090208054610cda906119f1565b9050600003610d2f5760c980546001810182556000919091527f66be4f155c5ef2ebd3772b228f2f00681e4ed5826cdb3b1943cc11ad15ad1d280180546001600160a01b0319166001600160a01b038b161790555b6040805160606020601f8b018190040282018101835291810189815290918291908b908b9081908501838280828437600092019190915250505090825250604080516020601f8a018190048102820181019092528881529181019190899089908190840183828082843760009201829052509390945250506001600160a01b038c16815260ca6020526040902082519091508190610dcd9082611c19565b5060208201516001820190610de29082611c19565b509050507f79c75399e89a1f580d9a6252cb8bdcf4cd80f73b3597c94d845eb52174ad930f8989898989604051610e1d959493929190611d02565b60405180910390a1505050505050505050565b600054610100900460ff1615808015610e505750600054600160ff909116105b80610e6a5750303b158015610e6a575060005460ff166001145b610ecd5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401610353565b6000805460ff191660011790558015610ef0576000805461ff0019166101001790555b610ef861138a565b610f006113b9565b8015610665576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150565b60c98181548110610f5857600080fd5b6000918252602090912001546001600160a01b0316905081565b610f7a610fe8565b6001600160a01b038116610fdf5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610353565b61066581611338565b6097546001600160a01b03163314610aba5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610353565b604051630aabaead60e11b81526001600160a01b0382166004820152600090610400906315575d5a90602401606060405180830381865afa9250505080156110a7575060408051601f3d908101601f191682019092526110a491810190611d46565b60015b6110b357506000919050565b506001949350505050565b60005b60c95481101561073457816001600160a01b031660c982815481106110e8576110e8611b76565b6000918252602090912001546001600160a01b0316036111b35760c9805461111290600190611d93565b8154811061112257611122611b76565b60009182526020909120015460c980546001600160a01b03909216918390811061114e5761114e611b76565b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b0316021790555060c980548061118d5761118d611da6565b600082815260209020810160001990810180546001600160a01b03191690550190555050565b806111bd81611ba2565b9150506110c1565b610665610fe8565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff161561120057610458836113e0565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa92505050801561125a575060408051601f3d908101601f1916820190925261125791810190611dbc565b60015b6112bd5760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401610353565b600080516020611e50833981519152811461132c5760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401610353565b5061045883838361147c565b609780546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600054610100900460ff166113b15760405162461bcd60e51b815260040161035390611dd5565b610aba6114a7565b600054610100900460ff16610aba5760405162461bcd60e51b815260040161035390611dd5565b6001600160a01b0381163b61144d5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401610353565b600080516020611e5083398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b611485836114d7565b6000825111806114925750805b15610458576114a18383611517565b50505050565b600054610100900460ff166114ce5760405162461bcd60e51b815260040161035390611dd5565b610aba33611338565b6114e0816113e0565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b90600090a250565b606061153c8383604051806060016040528060278152602001611e7060279139611545565b90505b92915050565b6060600080856001600160a01b0316856040516115629190611e20565b600060405180830381855af49150503d806000811461159d576040519150601f19603f3d011682016040523d82523d6000602084013e6115a2565b606091505b50915091506115b3868383876115bd565b9695505050505050565b6060831561162c578251600003611625576001600160a01b0385163b6116255760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610353565b5081611636565b611636838361163e565b949350505050565b81511561164e5781518083602001fd5b8060405162461bcd60e51b81526004016103539190611e3c565b508054611674906119f1565b6000825580601f10611684575050565b601f01602090049060005260206000209081019061066591905b808211156116b2576000815560010161169e565b5090565b6001600160a01b038116811461066557600080fd5b6000602082840312156116dd57600080fd5b81356116e8816116b6565b9392505050565b60005b8381101561170a5781810151838201526020016116f2565b50506000910152565b6000815180845261172b8160208601602086016116ef565b601f01601f19169290920160200192915050565b6040815260006117526040830185611713565b82810360208401526117648185611713565b95945050505050565b634e487b7160e01b600052604160045260246000fd5b6000806040838503121561179657600080fd5b82356117a1816116b6565b9150602083013567ffffffffffffffff808211156117be57600080fd5b818501915085601f8301126117d257600080fd5b8135818111156117e4576117e461176d565b604051601f8201601f19908116603f0116810190838211818310171561180c5761180c61176d565b8160405282815288602084870101111561182557600080fd5b8260208601602083013760006020848301015280955050505050509250929050565b60408082528351828201819052600091906020906060850190828801855b8281101561188a5781516001600160a01b031684529284019290840190600101611865565b50505084810382860152855180825282820190600581901b8301840188850160005b838110156118fc57858303601f19018552815180518985526118d08a860182611713565b91890151858303868b01529190506118e88183611713565b9689019694505050908601906001016118ac565b50909a9950505050505050505050565b60008083601f84011261191e57600080fd5b50813567ffffffffffffffff81111561193657600080fd5b60208301915083602082850101111561194e57600080fd5b9250929050565b60008060008060006060868803121561196d57600080fd5b8535611978816116b6565b9450602086013567ffffffffffffffff8082111561199557600080fd5b6119a189838a0161190c565b909650945060408801359150808211156119ba57600080fd5b506119c78882890161190c565b969995985093965092949392505050565b6000602082840312156119ea57600080fd5b5035919050565b600181811c90821680611a0557607f821691505b602082108103611a2557634e487b7160e01b600052602260045260246000fd5b50919050565b60008154611a38816119f1565b808552602060018381168015611a555760018114611a6f57611a9d565b60ff1985168884015283151560051b880183019550611a9d565b866000528260002060005b85811015611a955781548a8201860152908301908401611a7a565b890184019650505b505050505092915050565b6001600160a01b0384168152606060208201819052600090611acc90830185611a2b565b82810360408401526115b38185611a2b565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b600060018201611bb457611bb4611b8c565b5060010190565b8183823760009101908152919050565b601f82111561045857600081815260208120601f850160051c81016020861015611bf25750805b601f850160051c820191505b81811015611c1157828155600101611bfe565b505050505050565b815167ffffffffffffffff811115611c3357611c3361176d565b611c4781611c4184546119f1565b84611bcb565b602080601f831160018114611c7c5760008415611c645750858301515b600019600386901b1c1916600185901b178555611c11565b600085815260208120601f198616915b82811015611cab57888601518255948401946001909101908401611c8c565b5085821015611cc95787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b6001600160a01b0386168152606060208201819052600090611d279083018688611cd9565b8281036040840152611d3a818587611cd9565b98975050505050505050565b600080600060608486031215611d5b57600080fd5b8351611d66816116b6565b6020850151909350611d77816116b6565b6040850151909250611d88816116b6565b809150509250925092565b8181038181111561153f5761153f611b8c565b634e487b7160e01b600052603160045260246000fd5b600060208284031215611dce57600080fd5b5051919050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b60008251611e328184602087016116ef565b9190910192915050565b60208152600061153c602083018461171356fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220cf3c282151123924c9c8275c323310bbf7c513b7905cf4ab928cb0d42f59f3a664736f6c63430008130033",
+	Bin: "0x60a06040523060805234801561001457600080fd5b5061001d610022565b6100e1565b600054610100900460ff161561008e5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b60005460ff908116146100df576000805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b608051611ecc61011860003960008181610593015281816105d301528181610672015281816106b201526107450152611ecc6000f3fe6080604052600436106100e85760003560e01c80636fc522c61161008a578063829d639d11610059578063829d639d1461026d5780638da5cb5b1461029b578063a5834971146102b9578063f2fde38b146102d957600080fd5b80636fc522c6146101ef578063715018a614610223578063786cd4d7146102385780638129fc1c1461025857600080fd5b80633659cfe6116100c65780633659cfe6146101845780634f1ef286146101a457806352d1902d146101b75780636968b53f146101cc57600080fd5b806320abd458146100ed5780632ec2c246146101345780633465d6d514610156575b600080fd5b3480156100f957600080fd5b506101217f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2181565b6040519081526020015b60405180910390f35b34801561014057600080fd5b5061015461014f3660046116cb565b6102f9565b005b34801561016257600080fd5b506101766101713660046116cb565b61045d565b60405161012b92919061173f565b34801561019057600080fd5b5061015461019f3660046116cb565b610589565b6101546101b2366004611783565b610668565b3480156101c357600080fd5b50610121610738565b3480156101d857600080fd5b506101e16107eb565b60405161012b929190611847565b3480156101fb57600080fd5b506101217fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29381565b34801561022f57600080fd5b50610154610aa8565b34801561024457600080fd5b50610154610253366004611955565b610abc565b34801561026457600080fd5b50610154610e30565b34801561027957600080fd5b5061028361040081565b6040516001600160a01b03909116815260200161012b565b3480156102a757600080fd5b506097546001600160a01b0316610283565b3480156102c557600080fd5b506102836102d43660046119d8565b610f48565b3480156102e557600080fd5b506101546102f43660046116cb565b610f72565b610301610fe8565b61030a81611042565b1561035c5760405162461bcd60e51b815260206004820152601a60248201527f434e206973207374696c6c20696e2041646472657373426f6f6b00000000000060448201526064015b60405180910390fd5b6001600160a01b038116600090815260ca60205260409020805461037f906119f1565b90506000036103c75760405162461bcd60e51b815260206004820152601460248201527310d3881a5cc81b9bdd081c9959da5cdd195c995960621b6044820152606401610353565b6103d0816110be565b6001600160a01b038116600090815260ca60205260409081902090517fb98b07c4d52e8d65fa5416810f2746a810eb074b1ac7784e1b07e315c0dfd2d99161041f918491906001820190611aa8565b60405180910390a16001600160a01b038116600090815260ca602052604081209061044a8282611668565b610458600183016000611668565b505050565b60ca60205260009081526040902080548190610478906119f1565b80601f01602080910402602001604051908101604052809291908181526020018280546104a4906119f1565b80156104f15780601f106104c6576101008083540402835291602001916104f1565b820191906000526020600020905b8154815290600101906020018083116104d457829003601f168201915b505050505090806001018054610506906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610532906119f1565b801561057f5780601f106105545761010080835404028352916020019161057f565b820191906000526020600020905b81548152906001019060200180831161056257829003601f168201915b5050505050905082565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036105d15760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031661061a600080516020611e50833981519152546001600160a01b031690565b6001600160a01b0316146106405760405162461bcd60e51b815260040161035390611b2a565b610649816111c5565b60408051600080825260208201909252610665918391906111cd565b50565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036106b05760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166106f9600080516020611e50833981519152546001600160a01b031690565b6001600160a01b03161461071f5760405162461bcd60e51b815260040161035390611b2a565b610728826111c5565b610734828260016111cd565b5050565b6000306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146107d85760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401610353565b50600080516020611e5083398151915290565b60c954606090819067ffffffffffffffff81111561080b5761080b61176d565b604051908082528060200260200182016040528015610834578160200160208202803683370190505b5060c95490925067ffffffffffffffff8111156108535761085361176d565b60405190808252806020026020018201604052801561089857816020015b60408051808201909152606080825260208201528152602001906001900390816108715790505b50905060005b8251811015610aa35760c981815481106108ba576108ba611b76565b9060005260206000200160009054906101000a90046001600160a01b03168382815181106108ea576108ea611b76565b60200260200101906001600160a01b031690816001600160a01b03168152505060ca600060c9838154811061092157610921611b76565b60009182526020808320909101546001600160a01b031683528201929092526040908101909120815180830190925280548290829061095f906119f1565b80601f016020809104026020016040519081016040528092919081815260200182805461098b906119f1565b80156109d85780601f106109ad576101008083540402835291602001916109d8565b820191906000526020600020905b8154815290600101906020018083116109bb57829003601f168201915b505050505081526020016001820180546109f1906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610a1d906119f1565b8015610a6a5780601f10610a3f57610100808354040283529160200191610a6a565b820191906000526020600020905b815481529060010190602001808311610a4d57829003601f168201915b505050505081525050828281518110610a8557610a85611b76565b60200260200101819052508080610a9b90611ba2565b91505061089e565b509091565b610ab0610fe8565b610aba6000611338565b565b610ac4610fe8565b838360308114610b165760405162461bcd60e51b815260206004820152601b60248201527f5075626c6963206b6579206d75737420626520343820627974657300000000006044820152606401610353565b6040517fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29390610b489084908490611bbb565b604051809103902003610b9d5760405162461bcd60e51b815260206004820152601960248201527f5075626c6963206b65792063616e6e6f74206265207a65726f000000000000006044820152606401610353565b838360608114610be65760405162461bcd60e51b8152602060048201526014602482015273506f70206d75737420626520393620627974657360601b6044820152606401610353565b6040517f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2190610c189084908490611bbb565b604051809103902003610c625760405162461bcd60e51b8152602060048201526012602482015271506f702063616e6e6f74206265207a65726f60701b6044820152606401610353565b610c6b89611042565b610cb75760405162461bcd60e51b815260206004820152601e60248201527f636e4e6f64654964206973206e6f7420696e2041646472657373426f6f6b00006044820152606401610353565b6001600160a01b038916600090815260ca602052604090208054610cda906119f1565b9050600003610d2f5760c980546001810182556000919091527f66be4f155c5ef2ebd3772b228f2f00681e4ed5826cdb3b1943cc11ad15ad1d280180546001600160a01b0319166001600160a01b038b161790555b6040805160606020601f8b018190040282018101835291810189815290918291908b908b9081908501838280828437600092019190915250505090825250604080516020601f8a018190048102820181019092528881529181019190899089908190840183828082843760009201829052509390945250506001600160a01b038c16815260ca6020526040902082519091508190610dcd9082611c19565b5060208201516001820190610de29082611c19565b509050507f79c75399e89a1f580d9a6252cb8bdcf4cd80f73b3597c94d845eb52174ad930f8989898989604051610e1d959493929190611d02565b60405180910390a1505050505050505050565b600054610100900460ff1615808015610e505750600054600160ff909116105b80610e6a5750303b158015610e6a575060005460ff166001145b610ecd5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401610353565b6000805460ff191660011790558015610ef0576000805461ff0019166101001790555b610ef861138a565b610f006113b9565b8015610665576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150565b60c98181548110610f5857600080fd5b6000918252602090912001546001600160a01b0316905081565b610f7a610fe8565b6001600160a01b038116610fdf5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610353565b61066581611338565b6097546001600160a01b03163314610aba5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610353565b604051630aabaead60e11b81526001600160a01b0382166004820152600090610400906315575d5a90602401606060405180830381865afa9250505080156110a7575060408051601f3d908101601f191682019092526110a491810190611d46565b60015b6110b357506000919050565b506001949350505050565b60005b60c95481101561073457816001600160a01b031660c982815481106110e8576110e8611b76565b6000918252602090912001546001600160a01b0316036111b35760c9805461111290600190611d93565b8154811061112257611122611b76565b60009182526020909120015460c980546001600160a01b03909216918390811061114e5761114e611b76565b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b0316021790555060c980548061118d5761118d611da6565b600082815260209020810160001990810180546001600160a01b03191690550190555050565b806111bd81611ba2565b9150506110c1565b610665610fe8565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff161561120057610458836113e0565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa92505050801561125a575060408051601f3d908101601f1916820190925261125791810190611dbc565b60015b6112bd5760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401610353565b600080516020611e50833981519152811461132c5760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401610353565b5061045883838361147c565b609780546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600054610100900460ff166113b15760405162461bcd60e51b815260040161035390611dd5565b610aba6114a7565b600054610100900460ff16610aba5760405162461bcd60e51b815260040161035390611dd5565b6001600160a01b0381163b61144d5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401610353565b600080516020611e5083398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b611485836114d7565b6000825111806114925750805b15610458576114a18383611517565b50505050565b600054610100900460ff166114ce5760405162461bcd60e51b815260040161035390611dd5565b610aba33611338565b6114e0816113e0565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b90600090a250565b606061153c8383604051806060016040528060278152602001611e7060279139611545565b90505b92915050565b6060600080856001600160a01b0316856040516115629190611e20565b600060405180830381855af49150503d806000811461159d576040519150601f19603f3d011682016040523d82523d6000602084013e6115a2565b606091505b50915091506115b3868383876115bd565b9695505050505050565b6060831561162c578251600003611625576001600160a01b0385163b6116255760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610353565b5081611636565b611636838361163e565b949350505050565b81511561164e5781518083602001fd5b8060405162461bcd60e51b81526004016103539190611e3c565b508054611674906119f1565b6000825580601f10611684575050565b601f01602090049060005260206000209081019061066591905b808211156116b2576000815560010161169e565b5090565b6001600160a01b038116811461066557600080fd5b6000602082840312156116dd57600080fd5b81356116e8816116b6565b9392505050565b60005b8381101561170a5781810151838201526020016116f2565b50506000910152565b6000815180845261172b8160208601602086016116ef565b601f01601f19169290920160200192915050565b6040815260006117526040830185611713565b82810360208401526117648185611713565b95945050505050565b634e487b7160e01b600052604160045260246000fd5b6000806040838503121561179657600080fd5b82356117a1816116b6565b9150602083013567ffffffffffffffff808211156117be57600080fd5b818501915085601f8301126117d257600080fd5b8135818111156117e4576117e461176d565b604051601f8201601f19908116603f0116810190838211818310171561180c5761180c61176d565b8160405282815288602084870101111561182557600080fd5b8260208601602083013760006020848301015280955050505050509250929050565b60408082528351828201819052600091906020906060850190828801855b8281101561188a5781516001600160a01b031684529284019290840190600101611865565b50505084810382860152855180825282820190600581901b8301840188850160005b838110156118fc57858303601f19018552815180518985526118d08a860182611713565b91890151858303868b01529190506118e88183611713565b9689019694505050908601906001016118ac565b50909a9950505050505050505050565b60008083601f84011261191e57600080fd5b50813567ffffffffffffffff81111561193657600080fd5b60208301915083602082850101111561194e57600080fd5b9250929050565b60008060008060006060868803121561196d57600080fd5b8535611978816116b6565b9450602086013567ffffffffffffffff8082111561199557600080fd5b6119a189838a0161190c565b909650945060408801359150808211156119ba57600080fd5b506119c78882890161190c565b969995985093965092949392505050565b6000602082840312156119ea57600080fd5b5035919050565b600181811c90821680611a0557607f821691505b602082108103611a2557634e487b7160e01b600052602260045260246000fd5b50919050565b60008154611a38816119f1565b808552602060018381168015611a555760018114611a6f57611a9d565b60ff1985168884015283151560051b880183019550611a9d565b866000528260002060005b85811015611a955781548a8201860152908301908401611a7a565b890184019650505b505050505092915050565b6001600160a01b0384168152606060208201819052600090611acc90830185611a2b565b82810360408401526115b38185611a2b565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b600060018201611bb457611bb4611b8c565b5060010190565b8183823760009101908152919050565b601f82111561045857600081815260208120601f850160051c81016020861015611bf25750805b601f850160051c820191505b81811015611c1157828155600101611bfe565b505050505050565b815167ffffffffffffffff811115611c3357611c3361176d565b611c4781611c4184546119f1565b84611bcb565b602080601f831160018114611c7c5760008415611c645750858301515b600019600386901b1c1916600185901b178555611c11565b600085815260208120601f198616915b82811015611cab57888601518255948401946001909101908401611c8c565b5085821015611cc95787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b6001600160a01b0386168152606060208201819052600090611d279083018688611cd9565b8281036040840152611d3a818587611cd9565b98975050505050505050565b600080600060608486031215611d5b57600080fd5b8351611d66816116b6565b6020850151909350611d77816116b6565b6040850151909250611d88816116b6565b809150509250925092565b8181038181111561153f5761153f611b8c565b634e487b7160e01b600052603160045260246000fd5b600060208284031215611dce57600080fd5b5051919050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b60008251611e328184602087016116ef565b9190910192915050565b60208152600061153c602083018461171356fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a26469706673582212201e45843e869e3638b99b6ffbb125e93e972798438114a77f24524b3a66e9788564736f6c63430008130033",
 }
 
 // SimpleBlsRegistryABI is the input ABI used to generate the binding from.
@@ -4122,8 +4187,8 @@ var SimpleBlsRegistryABI = SimpleBlsRegistryMetaData.ABI
 // SimpleBlsRegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const SimpleBlsRegistryBinRuntime = `6080604052600436106100e85760003560e01c80636fc522c61161008a578063829d639d11610059578063829d639d1461026d5780638da5cb5b1461029b578063a5834971146102b9578063f2fde38b146102d957600080fd5b80636fc522c6146101ef578063715018a614610223578063786cd4d7146102385780638129fc1c1461025857600080fd5b80633659cfe6116100c65780633659cfe6146101845780634f1ef286146101a457806352d1902d146101b75780636968b53f146101cc57600080fd5b806320abd458146100ed5780632ec2c246146101345780633465d6d514610156575b600080fd5b3480156100f957600080fd5b506101217f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2181565b6040519081526020015b60405180910390f35b34801561014057600080fd5b5061015461014f3660046116cb565b6102f9565b005b34801561016257600080fd5b506101766101713660046116cb565b61045d565b60405161012b92919061173f565b34801561019057600080fd5b5061015461019f3660046116cb565b610589565b6101546101b2366004611783565b610668565b3480156101c357600080fd5b50610121610738565b3480156101d857600080fd5b506101e16107eb565b60405161012b929190611847565b3480156101fb57600080fd5b506101217fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29381565b34801561022f57600080fd5b50610154610aa8565b34801561024457600080fd5b50610154610253366004611955565b610abc565b34801561026457600080fd5b50610154610e30565b34801561027957600080fd5b5061028361040081565b6040516001600160a01b03909116815260200161012b565b3480156102a757600080fd5b506097546001600160a01b0316610283565b3480156102c557600080fd5b506102836102d43660046119d8565b610f48565b3480156102e557600080fd5b506101546102f43660046116cb565b610f72565b610301610fe8565b61030a81611042565b1561035c5760405162461bcd60e51b815260206004820152601a60248201527f434e206973207374696c6c20696e2041646472657373426f6f6b00000000000060448201526064015b60405180910390fd5b6001600160a01b038116600090815260ca60205260409020805461037f906119f1565b90506000036103c75760405162461bcd60e51b815260206004820152601460248201527310d3881a5cc81b9bdd081c9959da5cdd195c995960621b6044820152606401610353565b6103d0816110be565b6001600160a01b038116600090815260ca60205260409081902090517fb98b07c4d52e8d65fa5416810f2746a810eb074b1ac7784e1b07e315c0dfd2d99161041f918491906001820190611aa8565b60405180910390a16001600160a01b038116600090815260ca602052604081209061044a8282611668565b610458600183016000611668565b505050565b60ca60205260009081526040902080548190610478906119f1565b80601f01602080910402602001604051908101604052809291908181526020018280546104a4906119f1565b80156104f15780601f106104c6576101008083540402835291602001916104f1565b820191906000526020600020905b8154815290600101906020018083116104d457829003601f168201915b505050505090806001018054610506906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610532906119f1565b801561057f5780601f106105545761010080835404028352916020019161057f565b820191906000526020600020905b81548152906001019060200180831161056257829003601f168201915b5050505050905082565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036105d15760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031661061a600080516020611e50833981519152546001600160a01b031690565b6001600160a01b0316146106405760405162461bcd60e51b815260040161035390611b2a565b610649816111c5565b60408051600080825260208201909252610665918391906111cd565b50565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036106b05760405162461bcd60e51b815260040161035390611ade565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166106f9600080516020611e50833981519152546001600160a01b031690565b6001600160a01b03161461071f5760405162461bcd60e51b815260040161035390611b2a565b610728826111c5565b610734828260016111cd565b5050565b6000306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146107d85760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401610353565b50600080516020611e5083398151915290565b60c954606090819067ffffffffffffffff81111561080b5761080b61176d565b604051908082528060200260200182016040528015610834578160200160208202803683370190505b5060c95490925067ffffffffffffffff8111156108535761085361176d565b60405190808252806020026020018201604052801561089857816020015b60408051808201909152606080825260208201528152602001906001900390816108715790505b50905060005b8251811015610aa35760c981815481106108ba576108ba611b76565b9060005260206000200160009054906101000a90046001600160a01b03168382815181106108ea576108ea611b76565b60200260200101906001600160a01b031690816001600160a01b03168152505060ca600060c9838154811061092157610921611b76565b60009182526020808320909101546001600160a01b031683528201929092526040908101909120815180830190925280548290829061095f906119f1565b80601f016020809104026020016040519081016040528092919081815260200182805461098b906119f1565b80156109d85780601f106109ad576101008083540402835291602001916109d8565b820191906000526020600020905b8154815290600101906020018083116109bb57829003601f168201915b505050505081526020016001820180546109f1906119f1565b80601f0160208091040260200160405190810160405280929190818152602001828054610a1d906119f1565b8015610a6a5780601f10610a3f57610100808354040283529160200191610a6a565b820191906000526020600020905b815481529060010190602001808311610a4d57829003601f168201915b505050505081525050828281518110610a8557610a85611b76565b60200260200101819052508080610a9b90611ba2565b91505061089e565b509091565b610ab0610fe8565b610aba6000611338565b565b610ac4610fe8565b838360308114610b165760405162461bcd60e51b815260206004820152601b60248201527f5075626c6963206b6579206d75737420626520343820627974657300000000006044820152606401610353565b6040517fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd29390610b489084908490611bbb565b604051809103902003610b9d5760405162461bcd60e51b815260206004820152601960248201527f5075626c6963206b65792063616e6e6f74206265207a65726f000000000000006044820152606401610353565b838360608114610be65760405162461bcd60e51b8152602060048201526014602482015273506f70206d75737420626520393620627974657360601b6044820152606401610353565b6040517f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c2190610c189084908490611bbb565b604051809103902003610c625760405162461bcd60e51b8152602060048201526012602482015271506f702063616e6e6f74206265207a65726f60701b6044820152606401610353565b610c6b89611042565b610cb75760405162461bcd60e51b815260206004820152601e60248201527f636e4e6f64654964206973206e6f7420696e2041646472657373426f6f6b00006044820152606401610353565b6001600160a01b038916600090815260ca602052604090208054610cda906119f1565b9050600003610d2f5760c980546001810182556000919091527f66be4f155c5ef2ebd3772b228f2f00681e4ed5826cdb3b1943cc11ad15ad1d280180546001600160a01b0319166001600160a01b038b161790555b6040805160606020601f8b018190040282018101835291810189815290918291908b908b9081908501838280828437600092019190915250505090825250604080516020601f8a018190048102820181019092528881529181019190899089908190840183828082843760009201829052509390945250506001600160a01b038c16815260ca6020526040902082519091508190610dcd9082611c19565b5060208201516001820190610de29082611c19565b509050507f79c75399e89a1f580d9a6252cb8bdcf4cd80f73b3597c94d845eb52174ad930f8989898989604051610e1d959493929190611d02565b60405180910390a1505050505050505050565b600054610100900460ff1615808015610e505750600054600160ff909116105b80610e6a5750303b158015610e6a575060005460ff166001145b610ecd5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401610353565b6000805460ff191660011790558015610ef0576000805461ff0019166101001790555b610ef861138a565b610f006113b9565b8015610665576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150565b60c98181548110610f5857600080fd5b6000918252602090912001546001600160a01b0316905081565b610f7a610fe8565b6001600160a01b038116610fdf5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610353565b61066581611338565b6097546001600160a01b03163314610aba5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401610353565b604051630aabaead60e11b81526001600160a01b0382166004820152600090610400906315575d5a90602401606060405180830381865afa9250505080156110a7575060408051601f3d908101601f191682019092526110a491810190611d46565b60015b6110b357506000919050565b506001949350505050565b60005b60c95481101561073457816001600160a01b031660c982815481106110e8576110e8611b76565b6000918252602090912001546001600160a01b0316036111b35760c9805461111290600190611d93565b8154811061112257611122611b76565b60009182526020909120015460c980546001600160a01b03909216918390811061114e5761114e611b76565b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b0316021790555060c980548061118d5761118d611da6565b600082815260209020810160001990810180546001600160a01b03191690550190555050565b806111bd81611ba2565b9150506110c1565b610665610fe8565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff161561120057610458836113e0565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa92505050801561125a575060408051601f3d908101601f1916820190925261125791810190611dbc565b60015b6112bd5760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401610353565b600080516020611e50833981519152811461132c5760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401610353565b5061045883838361147c565b609780546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b600054610100900460ff166113b15760405162461bcd60e51b815260040161035390611dd5565b610aba6114a7565b600054610100900460ff16610aba5760405162461bcd60e51b815260040161035390611dd5565b6001600160a01b0381163b61144d5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401610353565b600080516020611e5083398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b611485836114d7565b6000825111806114925750805b15610458576114a18383611517565b50505050565b600054610100900460ff166114ce5760405162461bcd60e51b815260040161035390611dd5565b610aba33611338565b6114e0816113e0565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b90600090a250565b606061153c8383604051806060016040528060278152602001611e7060279139611545565b90505b92915050565b6060600080856001600160a01b0316856040516115629190611e20565b600060405180830381855af49150503d806000811461159d576040519150601f19603f3d011682016040523d82523d6000602084013e6115a2565b606091505b50915091506115b3868383876115bd565b9695505050505050565b6060831561162c578251600003611625576001600160a01b0385163b6116255760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610353565b5081611636565b611636838361163e565b949350505050565b81511561164e5781518083602001fd5b8060405162461bcd60e51b81526004016103539190611e3c565b508054611674906119f1565b6000825580601f10611684575050565b601f01602090049060005260206000209081019061066591905b808211156116b2576000815560010161169e565b5090565b6001600160a01b038116811461066557600080fd5b6000602082840312156116dd57600080fd5b81356116e8816116b6565b9392505050565b60005b8381101561170a5781810151838201526020016116f2565b50506000910152565b6000815180845261172b8160208601602086016116ef565b601f01601f19169290920160200192915050565b6040815260006117526040830185611713565b82810360208401526117648185611713565b95945050505050565b634e487b7160e01b600052604160045260246000fd5b6000806040838503121561179657600080fd5b82356117a1816116b6565b9150602083013567ffffffffffffffff808211156117be57600080fd5b818501915085601f8301126117d257600080fd5b8135818111156117e4576117e461176d565b604051601f8201601f19908116603f0116810190838211818310171561180c5761180c61176d565b8160405282815288602084870101111561182557600080fd5b8260208601602083013760006020848301015280955050505050509250929050565b60408082528351828201819052600091906020906060850190828801855b8281101561188a5781516001600160a01b031684529284019290840190600101611865565b50505084810382860152855180825282820190600581901b8301840188850160005b838110156118fc57858303601f19018552815180518985526118d08a860182611713565b91890151858303868b01529190506118e88183611713565b9689019694505050908601906001016118ac565b50909a9950505050505050505050565b60008083601f84011261191e57600080fd5b50813567ffffffffffffffff81111561193657600080fd5b60208301915083602082850101111561194e57600080fd5b9250929050565b60008060008060006060868803121561196d57600080fd5b8535611978816116b6565b9450602086013567ffffffffffffffff8082111561199557600080fd5b6119a189838a0161190c565b909650945060408801359150808211156119ba57600080fd5b506119c78882890161190c565b969995985093965092949392505050565b6000602082840312156119ea57600080fd5b5035919050565b600181811c90821680611a0557607f821691505b602082108103611a2557634e487b7160e01b600052602260045260246000fd5b50919050565b60008154611a38816119f1565b808552602060018381168015611a555760018114611a6f57611a9d565b60ff1985168884015283151560051b880183019550611a9d565b866000528260002060005b85811015611a955781548a8201860152908301908401611a7a565b890184019650505b505050505092915050565b6001600160a01b0384168152606060208201819052600090611acc90830185611a2b565b82810360408401526115b38185611a2b565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b600060018201611bb457611bb4611b8c565b5060010190565b8183823760009101908152919050565b601f82111561045857600081815260208120601f850160051c81016020861015611bf25750805b601f850160051c820191505b81811015611c1157828155600101611bfe565b505050505050565b815167ffffffffffffffff811115611c3357611c3361176d565b611c4781611c4184546119f1565b84611bcb565b602080601f831160018114611c7c5760008415611c645750858301515b600019600386901b1c1916600185901b178555611c11565b600085815260208120601f198616915b82811015611cab57888601518255948401946001909101908401611c8c565b5085821015611cc95787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b6001600160a01b0386168152606060208201819052600090611d279083018688611cd9565b8281036040840152611d3a818587611cd9565b98975050505050505050565b600080600060608486031215611d5b57600080fd5b8351611d66816116b6565b6020850151909350611d77816116b6565b6040850151909250611d88816116b6565b809150509250925092565b8181038181111561153f5761153f611b8c565b634e487b7160e01b600052603160045260246000fd5b600060208284031215611dce57600080fd5b5051919050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b60008251611e328184602087016116ef565b9190910192915050565b60208152600061153c602083018461171356fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220cf3c282151123924c9c8275c323310bbf7c513b7905cf4ab928cb0d42f59f3a664736f6c63430008130033`
 
-// SimpleBlsRegistryFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use SimpleBlsRegistryMetaData.Sigs instead.
+// SimpleBlsRegistryFuncSigs maps the 4-byte function signature to its string representation.
 var SimpleBlsRegistryFuncSigs = SimpleBlsRegistryMetaData.Sigs
 
 // SimpleBlsRegistryBin is the compiled bytecode used for deploying new contracts.
@@ -4295,6 +4360,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryTransactorRaw) Transact(opts *bind.Tr
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO48HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4302,6 +4368,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO48HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO48HASH is a free data retrieval call binding the contract method 0x6fc522c6.
@@ -4324,6 +4391,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO48HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "ZERO96HASH")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4331,6 +4399,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ZERO96HASH(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ZERO96HASH is a free data retrieval call binding the contract method 0x20abd458.
@@ -4353,6 +4422,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ZERO96HASH() ([32]byte
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "abook")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4360,6 +4430,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Abook(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Abook is a free data retrieval call binding the contract method 0x829d639d.
@@ -4382,6 +4453,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Abook() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "allNodeIds", arg0)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4389,6 +4461,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) AllNodeIds(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // AllNodeIds is a free data retrieval call binding the contract method 0xa5834971.
@@ -4411,8 +4484,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) AllNodeIds(arg0 *big.I
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "getAllBlsInfo")
 
@@ -4420,10 +4492,15 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 		NodeIdList []common.Address
 		PubkeyList []IKIP113BlsPublicKeyInfo
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]IKIP113BlsPublicKeyInfo)).(*[]IKIP113BlsPublicKeyInfo)
+
 	return *outstruct, err
+
 }
 
 // GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
@@ -4432,8 +4509,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) GetAllBlsInfo(opts *bind.Call
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4443,8 +4519,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) GetAllBlsInfo() (struct {
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struct {
 	NodeIdList []common.Address
 	PubkeyList []IKIP113BlsPublicKeyInfo
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.GetAllBlsInfo(&_SimpleBlsRegistry.CallOpts)
 }
 
@@ -4454,6 +4529,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) GetAllBlsInfo() (struc
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4461,6 +4537,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Owner(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -4483,6 +4560,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Owner() (common.Addres
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -4490,6 +4568,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) ProxiableUUID(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -4512,8 +4591,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) ProxiableUUID() ([32]b
 func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _SimpleBlsRegistry.contract.Call(opts, &out, "record", arg0)
 
@@ -4521,10 +4599,15 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 		PublicKey []byte
 		Pop       []byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
 	outstruct.PublicKey = *abi.ConvertType(out[0], new([]byte)).(*[]byte)
 	outstruct.Pop = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
+
 	return *outstruct, err
+
 }
 
 // Record is a free data retrieval call binding the contract method 0x3465d6d5.
@@ -4533,8 +4616,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryCaller) Record(opts *bind.CallOpts, a
 func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4544,8 +4626,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistrySession) Record(arg0 common.Address) 
 func (_SimpleBlsRegistry *SimpleBlsRegistryCallerSession) Record(arg0 common.Address) (struct {
 	PublicKey []byte
 	Pop       []byte
-}, error,
-) {
+}, error) {
 	return _SimpleBlsRegistry.Contract.Record(&_SimpleBlsRegistry.CallOpts, arg0)
 }
 
@@ -4774,6 +4855,7 @@ type SimpleBlsRegistryAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*SimpleBlsRegistryAdminChangedIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4785,6 +4867,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterAdminChanged(opts *bi
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -4825,6 +4908,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseAdminChanged(log types
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "AdminChanged", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -4905,6 +4989,7 @@ type SimpleBlsRegistryBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*SimpleBlsRegistryBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -4921,6 +5006,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterBeaconUpgraded(opts *
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -4966,6 +5052,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseBeaconUpgraded(log typ
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5046,6 +5133,7 @@ type SimpleBlsRegistryInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bind.FilterOpts) (*SimpleBlsRegistryInitializedIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5057,6 +5145,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterInitialized(opts *bin
 //
 // Solidity: event Initialized(uint8 version)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -5097,6 +5186,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseInitialized(log types.
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5178,6 +5268,7 @@ type SimpleBlsRegistryOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*SimpleBlsRegistryOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5198,6 +5289,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterOwnershipTransferred(
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5247,6 +5339,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseOwnershipTransferred(l
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5329,6 +5422,7 @@ type SimpleBlsRegistryRegistered struct {
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind.FilterOpts) (*SimpleBlsRegistryRegisteredIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5340,6 +5434,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterRegistered(opts *bind
 //
 // Solidity: event Registered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchRegistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryRegistered) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Registered")
 	if err != nil {
 		return nil, err
@@ -5380,6 +5475,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseRegistered(log types.L
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "Registered", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5462,6 +5558,7 @@ type SimpleBlsRegistryUnregistered struct {
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bind.FilterOpts) (*SimpleBlsRegistryUnregisteredIterator, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.FilterLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5473,6 +5570,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUnregistered(opts *bi
 //
 // Solidity: event Unregistered(address cnNodeId, bytes publicKey, bytes pop)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUnregistered(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUnregistered) (event.Subscription, error) {
+
 	logs, sub, err := _SimpleBlsRegistry.contract.WatchLogs(opts, "Unregistered")
 	if err != nil {
 		return nil, err
@@ -5513,6 +5611,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseUnregistered(log types
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "Unregistered", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5593,6 +5692,7 @@ type SimpleBlsRegistryUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*SimpleBlsRegistryUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -5609,6 +5709,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) FilterUpgraded(opts *bind.F
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *SimpleBlsRegistryUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -5654,6 +5755,7 @@ func (_SimpleBlsRegistry *SimpleBlsRegistryFilterer) ParseUpgraded(log types.Log
 	if err := _SimpleBlsRegistry.contract.UnpackLog(event, "Upgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -5850,8 +5952,8 @@ var UUPSUpgradeableABI = UUPSUpgradeableMetaData.ABI
 // UUPSUpgradeableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
 const UUPSUpgradeableBinRuntime = ``
 
-// UUPSUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 // Deprecated: Use UUPSUpgradeableMetaData.Sigs instead.
+// UUPSUpgradeableFuncSigs maps the 4-byte function signature to its string representation.
 var UUPSUpgradeableFuncSigs = UUPSUpgradeableMetaData.Sigs
 
 // UUPSUpgradeable is an auto generated Go binding around a Kaia contract.
@@ -6002,6 +6104,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableTransactorRaw) Transact(opts *bind.Transa
 func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _UUPSUpgradeable.contract.Call(opts, &out, "proxiableUUID")
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -6009,6 +6112,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableCaller) ProxiableUUID(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
@@ -6145,6 +6249,7 @@ type UUPSUpgradeableAdminChanged struct {
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*UUPSUpgradeableAdminChangedIterator, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6156,6 +6261,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterAdminChanged(opts *bind.F
 //
 // Solidity: event AdminChanged(address previousAdmin, address newAdmin)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableAdminChanged) (event.Subscription, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "AdminChanged")
 	if err != nil {
 		return nil, err
@@ -6196,6 +6302,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseAdminChanged(log types.Log
 	if err := _UUPSUpgradeable.contract.UnpackLog(event, "AdminChanged", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -6276,6 +6383,7 @@ type UUPSUpgradeableBeaconUpgraded struct {
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*UUPSUpgradeableBeaconUpgradedIterator, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6292,6 +6400,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterBeaconUpgraded(opts *bind
 //
 // Solidity: event BeaconUpgraded(address indexed beacon)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
 	var beaconRule []interface{}
 	for _, beaconItem := range beacon {
 		beaconRule = append(beaconRule, beaconItem)
@@ -6337,6 +6446,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseBeaconUpgraded(log types.L
 	if err := _UUPSUpgradeable.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -6417,6 +6527,7 @@ type UUPSUpgradeableInitialized struct {
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.FilterOpts) (*UUPSUpgradeableInitializedIterator, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.FilterLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6428,6 +6539,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterInitialized(opts *bind.Fi
 //
 // Solidity: event Initialized(uint8 version)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableInitialized) (event.Subscription, error) {
+
 	logs, sub, err := _UUPSUpgradeable.contract.WatchLogs(opts, "Initialized")
 	if err != nil {
 		return nil, err
@@ -6468,6 +6580,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseInitialized(log types.Log)
 	if err := _UUPSUpgradeable.contract.UnpackLog(event, "Initialized", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }
 
@@ -6548,6 +6661,7 @@ type UUPSUpgradeableUpgraded struct {
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*UUPSUpgradeableUpgradedIterator, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -6564,6 +6678,7 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) FilterUpgraded(opts *bind.Filte
 //
 // Solidity: event Upgraded(address indexed implementation)
 func (_UUPSUpgradeable *UUPSUpgradeableFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *UUPSUpgradeableUpgraded, implementation []common.Address) (event.Subscription, error) {
+
 	var implementationRule []interface{}
 	for _, implementationItem := range implementation {
 		implementationRule = append(implementationRule, implementationItem)
@@ -6609,5 +6724,6 @@ func (_UUPSUpgradeable *UUPSUpgradeableFilterer) ParseUpgraded(log types.Log) (*
 	if err := _UUPSUpgradeable.contract.UnpackLog(event, "Upgraded", log); err != nil {
 		return nil, err
 	}
+	event.Raw = log
 	return event, nil
 }

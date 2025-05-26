@@ -25,7 +25,6 @@ package cn
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -41,12 +40,23 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -54,7 +64,6 @@ import (
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
@@ -62,7 +71,7 @@ import (
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=node/cn/mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
+//go:generate mockgen -destination=./mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -72,7 +81,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
+//go:generate mockgen -destination=./mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -80,13 +89,15 @@ type Miner interface {
 	Mining() bool
 	HashRate() (tot int64)
 	SetExtra(extra []byte) error
-	Pending() (*types.Block, *state.StateDB)
+	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
+	kaiax.ExecutionModuleHost    // Because miner executes blocks, inject ExecutionModule.
+	builder.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=node/cn/protocolmanager_mock_test.go github.com/kaiachain/kaia/node/cn BackendProtocolManager
+//go:generate mockgen -destination=./protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)
@@ -98,6 +109,7 @@ type BackendProtocolManager interface {
 	Start(maxPeers int)
 	Stop()
 	SetSyncStop(flag bool)
+	staking.StakingModuleHost
 }
 
 // CN implements the Kaia consensus node service.
@@ -124,10 +136,10 @@ type CN struct {
 
 	APIBackend *CNAPIBackend
 
-	miner    Miner
-	gasPrice *big.Int
+	miner Miner
 
-	rewardbase common.Address
+	rewardbase  common.Address
+	nodeAddress common.Address
 
 	networkId     uint64
 	netRPCService *api.PublicNetAPI
@@ -136,8 +148,12 @@ type CN struct {
 
 	components []interface{}
 
-	governance    governance.Engine
-	supplyManager reward.SupplyManager
+	govModule gov.GovModule
+
+	// kaiax modules
+	baseModules    []kaiax.BaseModule
+	jsonRpcModules []kaiax.JsonRpcModule
+	stakingModule  staking.StakingModule // TODO-kaiax: temporary for governance/api.go. Remove it after having kaiax/reward.
 }
 
 func (s *CN) AddLesServer(ls LesServer) {
@@ -220,30 +236,32 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// load governance state
 	chainConfig.SetDefaults()
 	// latest values will be applied to chainConfig after NewMixedEngine call
-	governance := governance.NewMixedEngine(chainConfig, chainDB)
 	logger.Info("Initialised chain configuration", "config", chainConfig)
 
-	config.GasPrice = new(big.Int).SetUint64(chainConfig.UnitPrice)
-
+	var (
+		mGov     = gov_impl.NewGovModule()
+		mValset  = valset_impl.NewValsetModule()
+		mStaking = staking_impl.NewStakingModule()
+	)
 	cn := &CN{
 		config:            config,
 		chainDB:           chainDB,
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, governance, ctx.NodeType()),
+		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, mGov, ctx.NodeType()),
 		networkId:         config.NetworkId,
-		gasPrice:          config.GasPrice,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
 		bloomIndexer:      NewBloomIndexer(chainDB, params.BloomBitsBlocks),
 		closeBloomHandler: make(chan struct{}),
-		governance:        governance,
+		govModule:         mGov,
+		stakingModule:     mStaking,
 	}
 
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
-		governance.SetNodeAddress(crypto.PubkeyToAddress(ctx.NodeKey().PublicKey))
+		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 
 	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
@@ -295,22 +313,20 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	cn.blockchain = bc
-	governance.SetBlockchain(cn.blockchain)
-	if err := governance.UpdateParams(cn.blockchain.CurrentBlock().NumberU64()); err != nil {
+
+	if err := cn.InitGovModule(mStaking, mGov, mValset); err != nil {
 		return nil, err
 	}
-	blockchain.InitDeriveShaWithGov(cn.chainConfig, governance)
+
+	blockchain.InitDeriveShaWithGov(cn.chainConfig, mGov)
 
 	// Synchronize proposerpolicy & useGiniCoeff
-	pset, err := governance.EffectiveParams(bc.CurrentBlock().NumberU64() + 1)
-	if err != nil {
-		return nil, err
-	}
+	pset := mGov.GetParamSet(bc.CurrentBlock().NumberU64() + 1)
 	if cn.blockchain.Config().Istanbul != nil {
-		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.Policy()
+		cn.blockchain.Config().Istanbul.ProposerPolicy = pset.ProposerPolicy
 	}
 	if cn.blockchain.Config().Governance.Reward != nil {
-		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff()
+		cn.blockchain.Config().Governance.Reward.UseGiniCoeff = pset.UseGiniCoeff
 	}
 
 	if config.SenderTxHashIndexing {
@@ -332,8 +348,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc)
-	governance.SetTxPool(cn.txPool)
+
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
@@ -358,44 +374,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 
-	// Setup reward related components
-	if pset.Policy() == uint64(istanbul.WeightedRandom) {
-		// NewStakingManager is called with proper non-nil parameters
-		reward.NewStakingManager(cn.blockchain, governance, cn.chainDB)
-	}
-	cn.supplyManager = reward.NewSupplyManager(cn.blockchain, cn.governance, cn.chainDB)
-
-	// Governance states which are not yet applied to the db remains at in-memory storage
-	// It disappears during the node restart, so restoration is needed before the sync starts
-	// By calling CreateSnapshot, it restores the gov state snapshots and apply the votes in it
-	// Particularly, the gov.changeSet is also restored here.
-	// Temporarily set chain since snapshot needs state since kaia hardfork
-	logger.Info("Start creating istanbul snapshot")
-	var (
-		currBlock = cn.blockchain.CurrentBlock()
-		headers   []*types.Header
-	)
-	if headers, err = cn.Engine().GetKaiaHeadersForSnapshotApply(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), nil); err != nil {
-		logger.Error("Failed to get headers to apply", "err", err)
-	} else {
-		// Temporarily supply blockchain for `Finalize`.
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(cn.blockchain)
-		preloadNums, err := reward.PreloadStakingInfo(headers)
-		if err != nil {
-			logger.Error("Preload staking info failed", "err", err)
-		}
-		cn.blockchain.Engine().(consensus.Istanbul).SetChain(nil)
-		defer func() {
-			for _, num := range preloadNums {
-				reward.UnloadStakingInfo(num)
-			}
-		}()
-	}
-	if err := cn.Engine().CreateSnapshot(cn.blockchain, currBlock.NumberU64(), currBlock.Hash(), headers); err != nil {
-		logger.Error("CreateSnapshot failed", "err", err)
-	}
-	logger.Info("Finished creating istanbul snapshot")
-
 	// set worker
 	if config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
@@ -407,7 +385,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
 	}
 
 	// istanbul BFT
@@ -417,17 +395,29 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	gpoParams := config.GPO
 
-	// NOTE-Kaia Now we use latest unitPrice
-	//         So let's override gpoParams.Default with config.GasPrice
-	gpoParams.Default = config.GasPrice
-
-	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, cn.governance)
+	cn.APIBackend.gpo = gasprice.NewOracle(cn.APIBackend, gpoParams, cn.txPool, mGov)
 	//@TODO Kaia add core component
 	cn.addComponent(cn.blockchain)
 	cn.addComponent(cn.txPool)
 	cn.addComponent(cn.APIs())
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
+
+	if err := cn.SetupKaiaxModules(ctx, mValset); err != nil {
+		logger.Error("Failed to setup kaiax modules", "err", err)
+	}
+
+	// Fill the staking info cache for the recent blocks.
+	if currBlock := cn.blockchain.CurrentBlock(); currBlock.NumberU64() > 0 {
+		logger.Info("Preloading staking info for the recent blocks", "blockNumber", currBlock.NumberU64())
+		if parentBlock := cn.blockchain.GetBlockByNumber(currBlock.NumberU64() - 1); parentBlock != nil {
+			if _, release, err := cn.stateAtBlock(parentBlock, 128, nil, true, false); err != nil {
+				logger.Error("Failed to get state at block", "err", err)
+			} else {
+				release()
+			}
+		}
+	}
 
 	if config.AutoRestartFlag {
 		daemonPath := config.DaemonPathFlag
@@ -499,6 +489,117 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
+func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule,
+) error {
+	// Initialize modules
+	return errors.Join(
+		mStaking.Init(&staking_impl.InitOpts{
+			ChainKv:     s.chainDB.GetMiscDB(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+		}),
+		mGov.Init(&gov_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			ChainKv:     s.chainDB.GetMiscDB(),
+			Chain:       s.blockchain,
+			Valset:      mValset,
+			NodeAddress: s.nodeAddress,
+		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       s.chainDB.GetMiscDB(),
+			Chain:         s.blockchain,
+			GovModule:     mGov,
+			StakingModule: mStaking,
+		}),
+	)
+}
+
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule) error {
+	var (
+		mRandao  = randao_impl.NewRandaoModule()
+		mReward  = reward_impl.NewRewardModule()
+		mSupply  = supply_impl.NewSupplyModule()
+		mBuilder = builder_impl.NewBuilderModule()
+		mGasless = gasless_impl.NewGaslessModule()
+	)
+
+	err := errors.Join(
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			Chain:         s.blockchain,
+			GovModule:     s.govModule,
+			StakingModule: s.stakingModule,
+		}),
+		mSupply.Init(&supply_impl.InitOpts{
+			ChainKv:      s.chainDB.GetMiscDB(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			RewardModule: mReward,
+		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			Downloader:  s.protocolManager.Downloader(),
+		}),
+		mBuilder.Init(&builder_impl.InitOpts{
+			Backend: s.APIBackend,
+		}),
+		mGasless.Init(&gasless_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			GaslessConfig: s.config.Gasless,
+			NodeKey:       ctx.NodeKey(),
+			Chain:         s.blockchain,
+			TxPool:        s.txPool,
+			NodeType:      ctx.NodeType(),
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mTxBundling := []builder.TxBundlingModule{}
+	mTxPool := []kaiax.TxPoolModule{}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+
+	gaslessDisabled := mGasless.IsDisabled()
+	if !gaslessDisabled {
+		mExecution = append(mExecution, mGasless)
+		mTxBundling = append(mTxBundling, mGasless)
+		mTxPool = append(mTxPool, mGasless)
+		mJsonRpc = append(mJsonRpc, mGasless)
+	}
+
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
+
+	// Register modules to respective components
+	// TODO-kaiax: Organize below lines.
+	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterJsonRpcModules(mJsonRpc...)
+	s.miner.RegisterExecutionModule(mExecution...)
+	s.miner.RegisterTxBundlingModule(mTxBundling...)
+	s.blockchain.RegisterExecutionModule(mExecution...)
+	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.txPool.RegisterTxPoolModule(mTxPool...)
+	if engine, ok := s.engine.(consensus.Istanbul); ok {
+		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
+		engine.RegisterConsensusModule(mReward, s.govModule)
+	}
+	s.protocolManager.RegisterStakingModule(s.stakingModule)
+
+	return nil
+}
+
+func (s *CN) RegisterBaseModules(modules ...kaiax.BaseModule) {
+	// Add to s.modules so s.Start() and s.Stop() can call them.
+	s.baseModules = append(s.baseModules, modules...)
+}
+
+func (s *CN) RegisterJsonRpcModules(modules ...kaiax.JsonRpcModule) {
+	// Add to s.modules so s.Start() and s.Stop() can call them.
+	s.jsonRpcModules = append(s.jsonRpcModules, modules...)
+}
+
 // istanbul BFT
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
@@ -529,7 +630,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, gov governance.Engine, nodetype common.ConnType) consensus.Engine {
+func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
 	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
 	if chainConfig.Governance == nil {
 		chainConfig.Governance = params.GetDefaultGovernanceConfig()
@@ -540,7 +641,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		PrivateKey:     ctx.NodeKey(),
 		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
-		Governance:     gov,
+		GovModule:      govModule,
 		NodeType:       nodetype,
 	})
 }
@@ -604,9 +705,7 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend, false)
-	governanceKaiaAPI := governance.NewGovernanceKaiaAPI(s.governance, s.blockchain)
-	governanceAPI := governance.NewGovernanceAPI(s.governance)
+	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend)
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
@@ -616,7 +715,7 @@ func (s *CN) APIs() []rpc.API {
 		publicBlockChainAPI,
 		publicTransactionPoolAPI,
 		publicAccountAPI,
-		governanceAPI,
+		s.nodeAddress,
 	)
 
 	// Append all the local APIs and return
@@ -671,16 +770,6 @@ func (s *CN) APIs() []rpc.API {
 			Service:   s.netRPCService,
 			Public:    true,
 		}, {
-			Namespace: "governance",
-			Version:   "1.0",
-			Service:   governanceAPI,
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   governanceKaiaAPI,
-			Public:    true,
-		}, {
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   ethAPI,
@@ -693,6 +782,11 @@ func (s *CN) APIs() []rpc.API {
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
 	}...)
+
+	// Append APIs exposed by JsonRpcModules
+	for _, module := range s.jsonRpcModules {
+		apis = append(apis, module.APIs()...)
+	}
 
 	return apis
 }
@@ -751,7 +845,7 @@ func (s *CN) IsListening() bool                       { return true } // Always 
 func (s *CN) ProtocolVersion() int                    { return s.protocolManager.ProtocolVersion() }
 func (s *CN) NetVersion() uint64                      { return s.networkId }
 func (s *CN) Progress() kaia.SyncProgress             { return s.protocolManager.Downloader().Progress() }
-func (s *CN) Governance() governance.Engine           { return s.governance }
+func (s *CN) GovModule() gov.GovModule                { return s.govModule }
 
 func (s *CN) ReBroadcastTxs(transactions types.Transactions) {
 	s.protocolManager.ReBroadcastTxs(transactions)
@@ -769,6 +863,13 @@ func (s *CN) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Kaia protocol implementation.
 func (s *CN) Start(srvr p2p.Server) error {
+	// Start kaiax modules in the order they were registered
+	for _, module := range s.baseModules {
+		if err := module.Start(); err != nil {
+			return err
+		}
+	}
+
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()
 
@@ -783,11 +884,6 @@ func (s *CN) Start(srvr p2p.Server) error {
 		s.lesServer.Start(srvr)
 	}
 
-	if !s.chainConfig.IsKaiaForkEnabled(s.blockchain.CurrentBlock().Number()) {
-		reward.StakingManagerSubscribe()
-	}
-	s.supplyManager.Start()
-
 	return nil
 }
 
@@ -801,12 +897,13 @@ func (s *CN) Stop() error {
 	}
 
 	// Then stop everything else.
+	for _, module := range s.baseModules {
+		module.Stop()
+	}
 	s.bloomIndexer.Close()
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()
-	reward.StakingManagerUnsubscribe()
-	s.supplyManager.Stop()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

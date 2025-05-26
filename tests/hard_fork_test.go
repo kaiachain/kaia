@@ -21,6 +21,7 @@ package tests
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -37,7 +38,12 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -90,23 +96,63 @@ func TestHardForkBlock(t *testing.T) {
 		os.RemoveAll(dir)
 	}()
 
-	gov := generateGovernaceDataForTest()
 	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false, false)
-	governance.AddGovernanceCacheForTest(gov, 0, genesis.Config)
+	chainConfig.Istanbul = &params.IstanbulConfig{
+		Epoch: 100,
+	}
+	require.Nil(t, err)
+
+	govModule := gov_impl.NewGovModule()
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
 		PrivateKey:     genesisKey,
 		DB:             chainDb,
-		Governance:     gov,
+		GovModule:      govModule,
 		NodeType:       common.CONSENSUSNODE,
 	})
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
+	require.NoError(t, err)
+
+	mStaking := staking_impl.NewStakingModule()
+	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
+	mRandao := randao_impl.NewRandaoModule()
+	fakeDownloader := downloader.NewFakeDownloader()
+	err = errors.Join(
+		govModule.Init(&gov_impl.InitOpts{
+			ChainConfig: chainConfig,
+			ChainKv:     chainDb.GetMiscDB(),
+			Chain:       chain,
+			Valset:      mValset,
+		}),
+		mReward.Init(&reward_impl.InitOpts{
+			ChainConfig:   chainConfig,
+			Chain:         chain,
+			GovModule:     govModule,
+			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       chainDb.GetMiscDB(),
+			Chain:         chain,
+			GovModule:     govModule,
+			StakingModule: mStaking,
+		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: chainConfig,
+			Chain:       chain,
+			Downloader:  fakeDownloader,
+		}),
+	)
+	require.NoError(t, err)
+	engine.RegisterConsensusModule(mReward)
+	engine.RegisterKaiaxModules(govModule, mStaking, mValset, mRandao)
+	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	r2, err := hexutil.Decode(string(rawb2))
-	require.Equal(t, nil, err)
+	require.NoError(t, err)
 	rawBlocks := [...][]byte{r1, r2}
 
 	var blocks types.Blocks
@@ -165,8 +211,8 @@ func genBlocks(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
-	assert.Equal(t, nil, err)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	assert.NoError(t, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
 	b, err := json.Marshal(bcdata.genesis)

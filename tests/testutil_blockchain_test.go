@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip32"
@@ -55,8 +54,6 @@ type blockchainTestContext struct {
 	accounts     []*bind.TransactOpts // accounts[0:numNodes] are node keys
 	config       *params.ChainConfig
 	genesis      *blockchain.Genesis
-
-	savedStakingManager *reward.StakingManager
 
 	workspace string
 	nodes     []*blockchainTestNode
@@ -263,18 +260,6 @@ func (ctx *blockchainTestContext) forEachNode(f func(*blockchainTestNode) error)
 }
 
 func (ctx *blockchainTestContext) Start() error {
-	// TODO: make StakingManager not singleton OR recreate new in cn.New()
-	// Manually re-wire StakingManager with the new blockchain.
-	// Because StakingManager is a singleton, it has to be part of one node. Here we use the first node.
-	ctx.savedStakingManager = reward.GetStakingManager()
-	reward.SetTestStakingManagerWithChain(
-		ctx.nodes[0].cn.BlockChain(),
-		ctx.nodes[0].cn.Governance(),
-		ctx.nodes[0].cn.ChainDB(),
-	)
-	reward.StakingManagerUnsubscribe()
-	reward.StakingManagerSubscribe() // re-subscribe to the new blockchain
-
 	return ctx.forEachNode(func(tn *blockchainTestNode) error {
 		return tn.cn.StartMining(false)
 	})
@@ -288,13 +273,7 @@ func (ctx *blockchainTestContext) Stop() error {
 		return err
 	}
 
-	// TODO: make StakingManager not singleton OR recreate new in cn.New()
-	// StakingManager is a global singleton and it never gets recreated.
-	// Manually clear StakingManager-related global states so that
-	// other tests can use StakingManager as if it's fresh.
-	reward.PurgeStakingInfoCache()
 	blockchain.ClearMigrationPrerequisites()
-	reward.SetTestStakingManager(ctx.savedStakingManager)
 	return nil
 }
 

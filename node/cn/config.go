@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/params"
@@ -56,7 +57,6 @@ func GetDefaultConfig() *Config {
 		TrieNodeCacheConfig:  *statedb.GetEmptyTrieNodeCacheConfig(),
 		TriesInMemory:        blockchain.DefaultTriesInMemory,
 		LivePruningRetention: blockchain.DefaultLivePruningRetention,
-		GasPrice:             big.NewInt(18 * params.Gkei),
 
 		TxPool: blockchain.DefaultTxPoolConfig,
 		GPO: gasprice.Config{
@@ -70,6 +70,8 @@ func GetDefaultConfig() *Config {
 
 		Istanbul:      *istanbul.DefaultConfig,
 		RPCEVMTimeout: 5 * time.Second,
+
+		Gasless: gasless.DefaultGaslessConfig(),
 	}
 }
 
@@ -138,7 +140,6 @@ type Config struct {
 	// Mining-related options
 	ServiceChainSigner common.Address `toml:",omitempty"`
 	ExtraData          []byte         `toml:",omitempty"`
-	GasPrice           *big.Int
 
 	// Reward
 	Rewardbase common.Address `toml:",omitempty"`
@@ -194,6 +195,12 @@ type Config struct {
 	// Disable option for unsafe debug APIs
 	DisableUnsafeDebug         bool          `toml:",omitempty"`
 	StateRegenerationTimeLimit time.Duration `toml:",omitempty"`
+
+	// Use console.log in solidity for local network
+	UseConsoleLog bool
+
+	// Kaiax configs
+	Gasless *gasless.GaslessConfig
 }
 
 type configMarshaling struct {
@@ -205,5 +212,6 @@ func (c *Config) getVMConfig() vm.Config {
 		EnablePreimageRecording: c.EnablePreimageRecording,
 		EnableInternalTxTracing: c.EnableInternalTxTracing,
 		EnableOpDebug:           c.EnableOpDebug,
+		UseConsoleLog:           c.UseConsoleLog,
 	}
 }

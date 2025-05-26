@@ -32,24 +32,21 @@ import (
 
 // Backend provides application specific functions for Istanbul core
 //
-//go:generate mockgen -destination=consensus/istanbul/mocks/backend_mock.go github.com/kaiachain/kaia/consensus/istanbul Backend
+//go:generate mockgen -destination=./mocks/backend_mock.go -package=mock_istanbul github.com/kaiachain/kaia/consensus/istanbul Backend
 type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
-
-	// Validators returns the validator set
-	Validators(proposal Proposal) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
 
 	// Broadcast sends a message to all validators (include self)
-	Broadcast(prevHash common.Hash, valSet ValidatorSet, payload []byte) error
+	Broadcast(prevHash common.Hash, payload []byte) error
 
 	// Gossip sends a message to all validators (exclude self)
-	Gossip(valSet ValidatorSet, payload []byte) error
+	Gossip(payload []byte) error
 
-	GossipSubPeer(prevHash common.Hash, valSet ValidatorSet, payload []byte) map[common.Address]bool
+	GossipSubPeer(prevHash common.Hash, payload []byte)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
@@ -75,10 +72,7 @@ type Backend interface {
 	// GetProposer returns the proposer of the given block height
 	GetProposer(number uint64) common.Address
 
-	// ParentValidators returns the validator set of the given proposal's parent block
-	ParentValidators(proposal Proposal) ValidatorSet
-
-	// HasBadBlock returns whether the block with the hash is a bad block
+	// HasBadProposal returns whether the proposal with the hash is a bad proposal
 	HasBadProposal(hash common.Hash) bool
 
 	GetRewardBase() common.Address
@@ -86,4 +80,10 @@ type Backend interface {
 	SetCurrentView(view *View)
 
 	NodeType() common.ConnType
+
+	GetValidatorSet(num uint64) (*BlockValSet, error)
+
+	GetCommitteeState(num uint64) (*RoundCommitteeState, error)
+
+	GetCommitteeStateByRound(num uint64, round uint64) (*RoundCommitteeState, error)
 }

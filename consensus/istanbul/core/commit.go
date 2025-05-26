@@ -34,15 +34,13 @@ func (c *core) sendCommit() {
 		return
 	}
 
-	sub := c.current.Subject()
-	prevHash := c.current.Proposal().ParentHash()
-
-	// Do not send message if the owner of the core is not a member of the committee for the `sub.View`
-	if !c.valSet.CheckInSubList(prevHash, sub.View, c.Address()) {
+	// Do not send message if the owner of the core is not a member of the committee for the current view
+	if !c.currentCommittee.Committee().Contains(c.Address()) {
 		return
 	}
 
 	// TODO-Kaia-Istanbul: generalize broadcastCommit for all istanbul message types
+	sub := c.current.Subject()
 	c.broadcastCommit(sub)
 }
 
@@ -71,7 +69,7 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 	})
 }
 
-func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
+func (c *core) handleCommit(msg *message, src common.Address) error {
 	// Decode COMMIT message
 	var commit *istanbul.Subject
 	err := msg.Decode(&commit)
@@ -94,9 +92,9 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 		return err
 	}
 
-	if !c.valSet.CheckInSubList(msg.Hash, commit.View, src.Address()) {
+	if !c.currentCommittee.Committee().Contains(src) {
 		logger.Warn("received an istanbul commit message from non-committee",
-			"currentSequence", c.current.sequence.Uint64(), "sender", src.Address().String(), "msgView", commit.View.String())
+			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", commit.View.String())
 		return errNotFromCommittee
 	}
 
@@ -111,8 +109,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= RequiredMessageCount(c.valSet) {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.valSet.Size())
+		} else if c.current.GetPrepareOrCommitSize() >= c.currentCommittee.RequiredMessageCount() {
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.currentCommittee.Qualified().Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -124,7 +122,7 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= RequiredMessageCount(c.valSet) {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.currentCommittee.RequiredMessageCount() {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()
@@ -134,8 +132,8 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) error {
-	logger := c.logger.NewWith("from", src, "state", c.state)
+func (c *core) verifyCommit(commit *istanbul.Subject, src common.Address) error {
+	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	sub := c.current.Subject()
 	if !commit.Equal(sub) {
@@ -146,14 +144,13 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 	return nil
 }
 
-func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
-	logger := c.logger.NewWith("from", src, "state", c.state)
+func (c *core) acceptCommit(msg *message, src common.Address) error {
+	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	// Add the COMMIT message to current round state
 	if err := c.current.Commits.Add(msg); err != nil {
 		logger.Error("Failed to record commit message", "msg", msg, "err", err)
 		return err
 	}
-
 	return nil
 }

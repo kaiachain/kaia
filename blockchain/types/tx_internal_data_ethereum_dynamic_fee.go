@@ -47,9 +47,9 @@ type TxInternalDataEthereumDynamicFee struct {
 	AccessList   AccessList
 
 	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	V *big.Int
+	R *big.Int
+	S *big.Int
 
 	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
@@ -289,7 +289,7 @@ func (t *TxInternalDataEthereumDynamicFee) RecoverPubkey(txhash common.Hash, hom
 }
 
 func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.AccessList, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataEthereumDynamicFee) ChainId() *big.Int {
@@ -425,7 +425,7 @@ func (t *TxInternalDataEthereumDynamicFee) SenderTxHash() common.Hash {
 
 func (t *TxInternalDataEthereumDynamicFee) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient) {
+		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 			return kerrors.ErrPrecompiledContractAddress
 		}
 	}

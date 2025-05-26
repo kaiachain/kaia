@@ -488,6 +488,13 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_NO_PERF_METRICS", "KAIA_DB_NO_PERF_METRICS"},
 		Category: "DATABASE",
 	}
+	SenderTxHashIndexingFlag = &cli.BoolFlag{
+		Name:     "sendertxhashindexing",
+		Usage:    "Enables storing mapping information of senderTxHash to txHash",
+		Aliases:  []string{"common.sender-tx-hash-indexing"},
+		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
+		Category: "DATABASE",
+	}
 	SnapshotFlag = &cli.BoolFlag{
 		Name:     "snapshot",
 		Usage:    "Enables snapshot-database mode",
@@ -544,7 +551,7 @@ var (
 	}
 	LivePruningRetentionFlag = &cli.Uint64Flag{
 		Name:     "state.live-pruning-retention",
-		Usage:    "Number of blocks from the latest block that are not to be pruned",
+		Usage:    "Number of blocks from the latest block whose state data should not be pruned",
 		Value:    blockchain.DefaultLivePruningRetention,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
@@ -648,13 +655,6 @@ var (
 		Category: "CACHE",
 	}
 
-	SenderTxHashIndexingFlag = &cli.BoolFlag{
-		Name:     "sendertxhashindexing",
-		Usage:    "Enables storing mapping information of senderTxHash to txHash",
-		Aliases:  []string{"common.sender-tx-hash-indexing"},
-		EnvVars:  []string{"KLAYTN_SENDERTXHASHINDEXING", "KAIA_SENDERTXHASHINDEXING"},
-		Category: "DATABASE",
-	}
 	ChildChainIndexingFlag = &cli.BoolFlag{
 		Name:     "childchainindexing",
 		Usage:    "Enables storing transaction hash of child chain transaction for fast access to child chain data",
@@ -1190,6 +1190,14 @@ var (
 		Usage:    "Disables the peer discovery mechanism (manual peer addition)",
 		Aliases:  []string{"p2p.no-discover"},
 		EnvVars:  []string{"KLAYTN_NODISCOVER", "KAIA_NODISCOVER"},
+		Category: "NETWORK",
+	}
+	DiscoverTypesFlag = &cli.StringFlag{
+		Name:     "discover-types",
+		Usage:    "Comma-separated node type to enable discovery (auto, cn, pn, en)",
+		Value:    "auto",
+		Aliases:  []string{"p2p.discover-types"},
+		EnvVars:  []string{"KLAYTN_DISCOVER_TYPES", "KAIA_DISCOVER_TYPES"},
 		Category: "NETWORK",
 	}
 	NetrestrictFlag = &cli.StringFlag{
@@ -1986,6 +1994,13 @@ var (
 			"Should set the same value within the network",
 		Aliases:  []string{"experimental.opcode-computation-cost-limit"},
 		EnvVars:  []string{"KLAYTN_OPCODE_COMPUTATION_COST_LIMIT", "KAIA_OPCODE_COMPUTATION_COST_LIMIT"},
+		Category: "KAIA",
+	}
+	UseConsoleLogFlag = &cli.BoolFlag{
+		Name:     "use-console-log",
+		Usage:    "",
+		Value:    false,
+		EnvVars:  []string{"KLAYTN_USE_CONSOLE_LOG", "KAIA_USE_CONSOLE_LOG"},
 		Category: "KAIA",
 	}
 

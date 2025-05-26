@@ -99,7 +99,7 @@ type Backend interface {
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
 	StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, StateReleaseFunc, error)
-	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, StateReleaseFunc, error)
+	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, StateReleaseFunc, error)
 }
 
 // CommonAPI contains
@@ -425,17 +425,12 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				logged = time.Now()
 				logger.Info("Tracing chain segment", "start", start.NumberU64(), "end", end.NumberU64(), "current", number, "transactions", traced, "elapsed", time.Since(begin))
 			}
-			// Retrieve the parent block and target block for tracing.
-			block, err := api.blockByNumber(localctx, rpc.BlockNumber(number))
-			if err != nil {
-				failed = err
-				break
-			}
 			next, err := api.blockByNumber(localctx, rpc.BlockNumber(number+1))
 			if err != nil {
 				failed = err
 				break
 			}
+
 			// Prepare the statedb for tracing. Don't use the live database for
 			// tracing to avoid persisting state junks into the database. Switch
 			// over to `preferDisk` mode only if the memory usage exceeds the
@@ -446,11 +441,12 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				s1, s2, s3 := statedb.Database().TrieDB().Size()
 				preferDisk = s1+s2+s3 > defaultTracechainMemLimit
 			}
-			statedb, release, err = api.backend.StateAtBlock(localctx, block, reexec, statedb, false, preferDisk)
+			_, _, _, statedb, release, err = api.backend.StateAtTransaction(localctx, next, 0, reexec, statedb, false, preferDisk)
 			if err != nil {
 				failed = err
 				break
 			}
+
 			// Clean out any pending derefs. Note this step must be done after
 			// constructing tracing state, because the tracing state of block
 			// next depends on the parent state and construction may fail if
@@ -623,17 +619,12 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	if block.NumberU64() == 0 {
 		return nil, errors.New("genesis is not traceable")
 	}
-	// Create the parent state database
-	parent, err := api.blockByNumberAndHash(ctx, rpc.BlockNumber(block.NumberU64()-1), block.ParentHash())
-	if err != nil {
-		return nil, err
-	}
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
 
-	statedb, release, err := api.backend.StateAtBlock(ctx, parent, reexec, nil, true, false)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, block, 0, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +638,11 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 
 		pend = new(sync.WaitGroup)
 		jobs = make(chan *txTraceTask, len(txs))
+
+		header   = block.Header()
+		blockCtx = blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
 	)
+
 	threads := runtime.NumCPU()
 	if threads > len(txs) {
 		threads = len(txs)
@@ -667,7 +662,6 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 				}
 
 				txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
-				blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 				res, err := api.traceTx(ctx, msg, blockCtx, txCtx, task.statedb, config)
 				if err != nil {
 					results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Error: err.Error()}
@@ -732,7 +726,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
-	statedb, release, err := api.backend.StateAtBlock(ctx, parent, reexec, nil, true, false)
+	_, _, _, statedb, release, err := api.backend.StateAtTransaction(ctx, parent, 0, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -751,6 +745,9 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 	}
 	logConfig.Debug = true
 
+	header := block.Header()
+	blockCtx := blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
+
 	// Execute transaction, either tracing all or just the requested one
 	var (
 		signer = types.MakeSigner(api.backend.ChainConfig(), block.Number())
@@ -765,8 +762,7 @@ func (api *CommonAPI) standardTraceBlockToFile(ctx context.Context, block *types
 		}
 
 		var (
-			txCtx    = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
-			blockCtx = blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
+			txCtx = blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 
 			vmConf vm.Config
 			dump   *os.File
@@ -850,7 +846,7 @@ func (api *CommonAPI) TraceTransaction(ctx context.Context, hash common.Hash, co
 	if err != nil {
 		return nil, err
 	}
-	msg, blockCtx, txCtx, statedb, release, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec)
+	msg, blockCtx, txCtx, statedb, release, err := api.backend.StateAtTransaction(ctx, block, int(index), reexec, nil, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -891,6 +887,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
 	}
+
 	statedb, release, err := api.backend.StateAtBlock(ctx, block, reexec, nil, true, false)
 	if err != nil {
 		return nil, err
@@ -898,7 +895,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	defer release()
 
 	// Execute the trace
-	intrinsicGas, err := types.IntrinsicGas(args.InputData(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
+	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
 		return nil, err
 	}

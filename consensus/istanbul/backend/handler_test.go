@@ -130,6 +130,8 @@ func TestBackend_HandleMsg(t *testing.T) {
 
 func TestBackend_Protocol(t *testing.T) {
 	backend := newTestBackend()
+	defer backend.Stop()
+
 	assert.Equal(t, IstanbulProtocol, backend.Protocol())
 }
 

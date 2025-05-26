@@ -96,20 +96,6 @@ func (mr *MockEngineMockRecorder) CanVerifyHeadersConcurrently() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanVerifyHeadersConcurrently", reflect.TypeOf((*MockEngine)(nil).CanVerifyHeadersConcurrently))
 }
 
-// CreateSnapshot mocks base method.
-func (m *MockEngine) CreateSnapshot(arg0 consensus.ChainReader, arg1 uint64, arg2 common.Hash, arg3 []*types.Header) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSnapshot", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateSnapshot indicates an expected call of CreateSnapshot.
-func (mr *MockEngineMockRecorder) CreateSnapshot(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshot", reflect.TypeOf((*MockEngine)(nil).CreateSnapshot), arg0, arg1, arg2, arg3)
-}
-
 // Finalize mocks base method.
 func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB, arg3 []*types.Transaction, arg4 []*types.Receipt) (*types.Block, error) {
 	m.ctrl.T.Helper()
@@ -140,31 +126,16 @@ func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
 }
 
-// GetKaiaHeadersForSnapshotApply mocks base method.
-func (m *MockEngine) GetKaiaHeadersForSnapshotApply(arg0 consensus.ChainReader, arg1 uint64, arg2 common.Hash, arg3 []*types.Header) ([]*types.Header, error) {
+// Initialize mocks base method.
+func (m *MockEngine) Initialize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKaiaHeadersForSnapshotApply", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].([]*types.Header)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	m.ctrl.Call(m, "Initialize", arg0, arg1, arg2)
 }
 
-// GetKaiaHeadersForSnapshotApply indicates an expected call of GetKaiaHeadersForSnapshotApply.
-func (mr *MockEngineMockRecorder) GetKaiaHeadersForSnapshotApply(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+// Initialize indicates an expected call of Initialize.
+func (mr *MockEngineMockRecorder) Initialize(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKaiaHeadersForSnapshotApply", reflect.TypeOf((*MockEngine)(nil).GetKaiaHeadersForSnapshotApply), arg0, arg1, arg2, arg3)
-}
-
-// InitSnapshot mocks base method.
-func (m *MockEngine) InitSnapshot() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InitSnapshot")
-}
-
-// InitSnapshot indicates an expected call of InitSnapshot.
-func (mr *MockEngineMockRecorder) InitSnapshot() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitSnapshot", reflect.TypeOf((*MockEngine)(nil).InitSnapshot))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockEngine)(nil).Initialize), arg0, arg1, arg2)
 }
 
 // Prepare mocks base method.
@@ -208,6 +179,18 @@ func (m *MockEngine) Protocol() consensus.Protocol {
 func (mr *MockEngineMockRecorder) Protocol() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Protocol", reflect.TypeOf((*MockEngine)(nil).Protocol))
+}
+
+// PurgeCache mocks base method.
+func (m *MockEngine) PurgeCache() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PurgeCache")
+}
+
+// PurgeCache indicates an expected call of PurgeCache.
+func (mr *MockEngineMockRecorder) PurgeCache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeCache", reflect.TypeOf((*MockEngine)(nil).PurgeCache))
 }
 
 // Seal mocks base method.

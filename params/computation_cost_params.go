@@ -203,6 +203,15 @@ const (
 	Log3ComputationCostCancun   = 500
 	Log4ComputationCostCancun   = 500
 
+	Bls12381G1AddComputationCost          = 18750
+	Bls12381G1MulComputationCost          = 600000
+	Bls12381G2AddComputationCost          = 30000
+	Bls12381G2MulComputationCost          = 1125000
+	Bls12381PairingBaseComputationCost    = 1885000
+	Bls12381PairingPerPairComputationCost = 1630000
+	Bls12381MapG1ComputationCost          = 275000
+	Bls12381MapG2ComputationCost          = 1190000
+
 	OpcodeComputationCostLimit         = 100000000      // 100ms
 	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
 	OpcodeComputationCostLimitInfinite = math.MaxUint64 // pass it to disable computation cost checks

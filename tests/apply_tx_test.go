@@ -351,7 +351,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCData(6, 4)
+	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Istanbul"])
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -380,10 +380,9 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 	contract, err := createAnonymousAccount("a5c9a50938a089618167c9d67dbebc0deaffc3c76ddc6b40c2777ae59438e989")
 	contract.Addr = common.Address{}
 
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
-
-	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
 	// Deploy smart contract (reservoir -> contract)
 	{
@@ -400,6 +399,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 			types.TxValueKeyGasLimit:      gasLimit,
 			types.TxValueKeyGasPrice:      gasPrice,
 			types.TxValueKeyHumanReadable: false,
+			types.TxValueKeyCodeFormat:    params.CodeFormatEVM,
 			types.TxValueKeyData:          common.FromHex(code),
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeSmartContractDeploy, values)

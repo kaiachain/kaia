@@ -102,6 +102,22 @@ func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.receipts = append(b.receipts, receipt)
 }
 
+// AddTxWithChainEvenHasError is an AddTx that inherits the vmConfig of the received chain
+// and does not panic even if an error occurs.
+func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transaction) error {
+	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
+	var vmConfig vm.Config
+	if bc != nil {
+		vmConfig = bc.vmConfig
+	}
+	receipt, _, _ := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
+	b.txs = append(b.txs, tx)
+	if receipt != nil {
+		b.receipts = append(b.receipts, receipt)
+	}
+	return nil
+}
+
 // AddUncheckedTx forcefully adds a transaction to the block without any
 // validation.
 //
@@ -191,6 +207,8 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)
+
+		engine.Initialize(blockchain, b.header, stateDB)
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {

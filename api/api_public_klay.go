@@ -78,7 +78,7 @@ type FeeHistoryResult struct {
 
 // FeeHistory returns data relevant for fee estimation based on the specified range of blocks.
 func (s *PublicKaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
-	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, int(blockCount), lastBlock, rewardPercentiles)
+	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, uint64(blockCount), lastBlock, rewardPercentiles)
 	if err != nil {
 		return nil, err
 	}
@@ -102,56 +102,6 @@ func (s *PublicKaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 		}
 	}
 	return results, nil
-}
-
-type TotalSupplyResult struct {
-	Number      *hexutil.Big `json:"number"`          // Block number in which the total supply was calculated.
-	Error       *string      `json:"error,omitempty"` // Errors that occurred while fetching the components, thus failed to deliver the total supply.
-	TotalSupply *hexutil.Big `json:"totalSupply"`     // The total supply of the native token. i.e. Minted - Burnt.
-	TotalMinted *hexutil.Big `json:"totalMinted"`     // Total minted amount.
-	TotalBurnt  *hexutil.Big `json:"totalBurnt"`      // Total burnt amount. Sum of all burnt amounts below.
-	BurntFee    *hexutil.Big `json:"burntFee"`        // from tx fee burn.
-	ZeroBurn    *hexutil.Big `json:"zeroBurn"`        // balance of 0x0 (zero) address.
-	DeadBurn    *hexutil.Big `json:"deadBurn"`        // balance of 0xdead (dead) address.
-	Kip103Burn  *hexutil.Big `json:"kip103Burn"`      // by KIP103 fork. Read from its memo.
-	Kip160Burn  *hexutil.Big `json:"kip160Burn"`      // by KIP160 fork. Read from its memo.
-}
-
-// If showPartial == nil or *showPartial == false, the regular use case, this API either delivers the full result or fails.
-// If showPartial == true, the advanced and debugging use case, this API delivers full or best effort partial result.
-func (s *PublicKaiaAPI) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash, showPartial *bool) (*TotalSupplyResult, error) {
-	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
-	if err != nil {
-		return nil, err
-	}
-
-	// Case 1. Failed to fetch essential components. The API fails.
-	ts, err := s.b.GetTotalSupply(ctx, blockNrOrHash)
-	if ts == nil {
-		return nil, err
-	}
-
-	// Case 2. Failed to fetch some components. The API delivers the partial result with the 'error' field set.
-	// Case 3. Succeeded to fetch all components. The API delivers the full result.
-	res := &TotalSupplyResult{
-		Number:      (*hexutil.Big)(block.Number()),
-		Error:       nil,
-		TotalSupply: (*hexutil.Big)(ts.TotalSupply),
-		TotalMinted: (*hexutil.Big)(ts.TotalMinted),
-		TotalBurnt:  (*hexutil.Big)(ts.TotalBurnt),
-		BurntFee:    (*hexutil.Big)(ts.BurntFee),
-		ZeroBurn:    (*hexutil.Big)(ts.ZeroBurn),
-		DeadBurn:    (*hexutil.Big)(ts.DeadBurn),
-		Kip103Burn:  (*hexutil.Big)(ts.Kip103Burn),
-		Kip160Burn:  (*hexutil.Big)(ts.Kip160Burn),
-	}
-	if showPartial != nil && *showPartial && err != nil {
-		errStr := err.Error()
-		res.Error = &errStr
-		return res, nil
-	} else {
-		return res, err
-	}
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not

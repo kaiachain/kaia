@@ -37,6 +37,9 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -48,7 +51,7 @@ var logger = log.NewModuleLogger(log.Work)
 
 // TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
 //
-//go:generate mockgen -destination=work/mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
+//go:generate mockgen -destination=./mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -56,6 +59,7 @@ type TxPool interface {
 	// Pending should return pending transactions.
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
+	PendingUnlocked() (map[common.Address]types.Transactions, error)
 
 	CachedPendingTxsByCount(count int) types.Transactions
 
@@ -73,6 +77,9 @@ type TxPool interface {
 	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
 	StopSpamThrottler()
+	GetCurrentState() *state.StateDB
+
+	kaiax.TxPoolModuleHost
 }
 
 // Backend wraps all methods required for mining.
@@ -99,12 +106,12 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy),
+		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy, govModule),
 		canStart: 1,
 	}
 	// TODO-Kaia drop or missing tx
@@ -208,8 +215,8 @@ func (self *Miner) SetExtra(extra []byte) error {
 	return nil
 }
 
-// Pending returns the currently pending block and associated state.
-func (self *Miner) Pending() (*types.Block, *state.StateDB) {
+// Pending returns the currently pending block, corresponding receipts and associated state.
+func (self *Miner) Pending() (*types.Block, types.Receipts, *state.StateDB) {
 	return self.worker.pending()
 }
 
@@ -222,9 +229,19 @@ func (self *Miner) PendingBlock() *types.Block {
 	return self.worker.pendingBlock()
 }
 
+// RegisterExecutionModule registers kaiax.ExecutionModule to underlying worker.
+func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
+	self.worker.RegisterExecutionModule(modules...)
+}
+
+// RegisterTxBundlingModule registers builder.TxBundlingModule to underlying worker.
+func (self *Miner) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+	self.worker.RegisterTxBundlingModule(modules...)
+}
+
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 //
-//go:generate mockgen -destination=mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
 type BlockChain interface {
 	Genesis() *types.Block
 
@@ -321,4 +338,8 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
+
+	// kaiax module host
+	kaiax.ExecutionModuleHost
+	kaiax.RewindableModuleHost
 }

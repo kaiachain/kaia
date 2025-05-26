@@ -210,13 +210,16 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 // TestRedisCache_Timeout tests timout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
 	storage.SkipLocalTest(t)
+	serverReady := make(chan struct{})
 
+	// spawn an unresponsive server that accepts TCP connection but won't respond
 	go func() {
 		tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:11234")
 		if err != nil {
 			t.Error(err)
 			return
 		}
+		close(serverReady)
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
@@ -241,6 +244,8 @@ func TestRedisCache_Timeout(t *testing.T) {
 		}
 	}()
 
+	// wait for server to spawn
+	<-serverReady
 	var cache TrieNodeCache = &RedisCache{redis.NewClient(&redis.Options{
 		Addr:         "localhost:11234",
 		DialTimeout:  redisCacheDialTimeout,
@@ -254,13 +259,16 @@ func TestRedisCache_Timeout(t *testing.T) {
 	start := time.Now()
 	redisCache := cache.(*RedisCache) // Because RedisCache.Set writes item asynchronously, use RedisCache.set
 	redisCache.Set(key, value)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_ = cache.Get(key)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 
 	start = time.Now()
 	_, _ = cache.Has(key)
+	t.Log(time.Since(start))
 	assert.Equal(t, redisCacheTimeout, time.Since(start).Round(redisCacheTimeout/2))
 }

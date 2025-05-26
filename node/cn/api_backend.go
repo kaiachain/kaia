@@ -38,12 +38,10 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/governance"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
 )
@@ -82,17 +80,12 @@ func (b *CNAPIBackend) CurrentBlock() *types.Block {
 	return b.cn.blockchain.CurrentBlock()
 }
 
-func doSetHead(bc work.BlockChain, cn consensus.Engine, gov governance.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
+func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, targetBlkNum uint64) error {
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
-	// Initialize snapshot cache, staking info cache, and governance cache
-	cn.InitSnapshot()
-	if reward.GetStakingManager() != nil {
-		reward.PurgeStakingInfoCache()
-	}
-	gov.InitGovCache()
-	gov.InitLastGovStateBlkNum()
+	// Initialize staking info cache, and governance cache
+	cn.PurgeCache()
 	gpo.PurgeCache()
 	return nil
 }
@@ -101,9 +94,7 @@ func (b *CNAPIBackend) SetHead(number uint64) error {
 	b.cn.protocolManager.Downloader().Cancel()
 	b.cn.protocolManager.SetSyncStop(true)
 	defer b.cn.protocolManager.SetSyncStop(false)
-	b.cn.supplyManager.Stop()
-	defer b.cn.supplyManager.Start()
-	return doSetHead(b.cn.blockchain, b.cn.engine, b.cn.governance, b.gpo, number)
+	return doSetHead(b.cn.blockchain, b.cn.engine, b.gpo, number)
 }
 
 func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
@@ -144,7 +135,7 @@ func (b *CNAPIBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*typ
 	if header := b.cn.blockchain.GetHeaderByHash(hash); header != nil {
 		return header, nil
 	}
-	return nil, fmt.Errorf("the header does not exist (hash: %d)", hash)
+	return nil, fmt.Errorf("the header does not exist (hash: %s)", hash.String())
 }
 
 func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
@@ -181,10 +172,14 @@ func (b *CNAPIBackend) BlockByNumberOrHash(ctx context.Context, blockNrOrHash rp
 	return nil, fmt.Errorf("invalid arguments; neither block nor hash specified")
 }
 
+func (b *CNAPIBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	return b.cn.miner.Pending()
+}
+
 func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error) {
 	// Pending state is only known by the miner
 	if blockNr == rpc.PendingBlockNumber {
-		block, state := b.cn.miner.Pending()
+		block, _, state := b.cn.miner.Pending()
 		if block == nil || state == nil {
 			return nil, nil, fmt.Errorf("pending block is not prepared yet")
 		}
@@ -234,10 +229,6 @@ func (b *CNAPIBackend) GetBlockReceipts(ctx context.Context, hash common.Hash) t
 
 func (b *CNAPIBackend) GetLogs(ctx context.Context, hash common.Hash) ([][]*types.Log, error) {
 	return b.cn.blockchain.GetLogsByHash(hash), nil
-}
-
-func (b *CNAPIBackend) GetTd(blockHash common.Hash) *big.Int {
-	return b.cn.blockchain.GetTdByHash(blockHash)
 }
 
 func (b *CNAPIBackend) GetEVM(ctx context.Context, msg blockchain.Message, state *state.StateDB, header *types.Header, vmCfg vm.Config) (*vm.EVM, func() error, error) {
@@ -329,27 +320,21 @@ func (b *CNAPIBackend) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 
 func (b *CNAPIBackend) UpperBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.GetParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.UpperBoundBaseFee())
+		return new(big.Int).SetUint64(pset.UpperBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 
 func (b *CNAPIBackend) LowerBoundGasPrice(ctx context.Context) *big.Int {
 	bignum := b.CurrentBlock().Number()
-	pset, err := b.cn.governance.EffectiveParams(bignum.Uint64() + 1)
-	if err != nil {
-		return nil
-	}
+	pset := b.cn.govModule.GetParamSet(bignum.Uint64() + 1)
 	if b.cn.chainConfig.IsMagmaForkEnabled(bignum) {
-		return new(big.Int).SetUint64(pset.LowerBoundBaseFee())
+		return new(big.Int).SetUint64(pset.LowerBoundBaseFee)
 	} else {
-		return new(big.Int).SetUint64(pset.UnitPrice())
+		return new(big.Int).SetUint64(pset.UnitPrice)
 	}
 }
 
@@ -384,6 +369,10 @@ func (b *CNAPIBackend) IsSenderTxHashIndexingEnabled() bool {
 	return b.cn.BlockChain().IsSenderTxHashIndexingEnabled()
 }
 
+func (b *CNAPIBackend) IsConsoleLogEnabled() bool {
+	return b.cn.config.UseConsoleLog
+}
+
 func (b *CNAPIBackend) RPCGasCap() *big.Int {
 	return b.cn.config.RPCGasCap
 }
@@ -404,18 +393,10 @@ func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, ree
 	return b.cn.stateAtBlock(block, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
-	return b.cn.stateAtTransaction(block, txIndex, reexec)
+func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (blockchain.Message, vm.BlockContext, vm.TxContext, *state.StateDB, tracers.StateReleaseFunc, error) {
+	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount int, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
-}
-
-func (b *CNAPIBackend) GetTotalSupply(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
-	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
-	if err != nil {
-		return nil, err
-	}
-	return b.cn.supplyManager.GetTotalSupply(block.NumberU64())
 }

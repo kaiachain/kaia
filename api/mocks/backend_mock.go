@@ -11,7 +11,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia"
+	kaia "github.com/kaiachain/kaia"
 	accounts "github.com/kaiachain/kaia/accounts"
 	blockchain "github.com/kaiachain/kaia/blockchain"
 	state "github.com/kaiachain/kaia/blockchain/state"
@@ -22,7 +22,6 @@ import (
 	event "github.com/kaiachain/kaia/event"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 	params "github.com/kaiachain/kaia/params"
-	reward "github.com/kaiachain/kaia/reward"
 	database "github.com/kaiachain/kaia/storage/database"
 )
 
@@ -179,7 +178,7 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 }
 
 // FeeHistory mocks base method.
-func (m *MockBackend) FeeHistory(arg0 context.Context, arg1 int, arg2 rpc.BlockNumber, arg3 []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (m *MockBackend) FeeHistory(arg0 context.Context, arg1 uint64, arg2 rpc.BlockNumber, arg3 []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FeeHistory", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*big.Int)
@@ -281,35 +280,6 @@ func (m *MockBackend) GetPoolTransactions() (types.Transactions, error) {
 func (mr *MockBackendMockRecorder) GetPoolTransactions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPoolTransactions", reflect.TypeOf((*MockBackend)(nil).GetPoolTransactions))
-}
-
-// GetTd mocks base method.
-func (m *MockBackend) GetTd(arg0 common.Hash) *big.Int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTd", arg0)
-	ret0, _ := ret[0].(*big.Int)
-	return ret0
-}
-
-// GetTd indicates an expected call of GetTd.
-func (mr *MockBackendMockRecorder) GetTd(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTd", reflect.TypeOf((*MockBackend)(nil).GetTd), arg0)
-}
-
-// GetTotalSupply mocks base method.
-func (m *MockBackend) GetTotalSupply(arg0 context.Context, arg1 rpc.BlockNumberOrHash) (*reward.TotalSupply, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTotalSupply", arg0, arg1)
-	ret0, _ := ret[0].(*reward.TotalSupply)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTotalSupply indicates an expected call of GetTotalSupply.
-func (mr *MockBackendMockRecorder) GetTotalSupply(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalSupply", reflect.TypeOf((*MockBackend)(nil).GetTotalSupply), arg0, arg1)
 }
 
 // GetTxAndLookupInfo mocks base method.
@@ -427,6 +397,20 @@ func (mr *MockBackendMockRecorder) HeaderByNumberOrHash(arg0, arg1 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderByNumberOrHash", reflect.TypeOf((*MockBackend)(nil).HeaderByNumberOrHash), arg0, arg1)
 }
 
+// IsConsoleLogEnabled mocks base method.
+func (m *MockBackend) IsConsoleLogEnabled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsConsoleLogEnabled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsConsoleLogEnabled indicates an expected call of IsConsoleLogEnabled.
+func (mr *MockBackendMockRecorder) IsConsoleLogEnabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConsoleLogEnabled", reflect.TypeOf((*MockBackend)(nil).IsConsoleLogEnabled))
+}
+
 // IsParallelDBWrite mocks base method.
 func (m *MockBackend) IsParallelDBWrite() bool {
 	m.ctrl.T.Helper()
@@ -467,6 +451,22 @@ func (m *MockBackend) LowerBoundGasPrice(arg0 context.Context) *big.Int {
 func (mr *MockBackendMockRecorder) LowerBoundGasPrice(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LowerBoundGasPrice", reflect.TypeOf((*MockBackend)(nil).LowerBoundGasPrice), arg0)
+}
+
+// Pending mocks base method.
+func (m *MockBackend) Pending() (*types.Block, types.Receipts, *state.StateDB) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pending")
+	ret0, _ := ret[0].(*types.Block)
+	ret1, _ := ret[1].(types.Receipts)
+	ret2, _ := ret[2].(*state.StateDB)
+	return ret0, ret1, ret2
+}
+
+// Pending indicates an expected call of Pending.
+func (mr *MockBackendMockRecorder) Pending() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockBackend)(nil).Pending))
 }
 
 // Progress mocks base method.

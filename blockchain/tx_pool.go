@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -37,6 +38,8 @@ import (
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/rcrowley/go-metrics"
@@ -71,9 +74,26 @@ var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
-	txPoolIsFullErr = fmt.Errorf("txpool is full")
+	txPoolIsFullErr = errors.New("txpool is full")
 
 	errNotAllowedAnchoringTx = errors.New("locally anchoring chaindata tx is not allowed in this node")
+
+	// ErrTxPoolOverflow is returned if the transaction pool is full and can't accept
+	// another remote transaction.
+	ErrTxPoolOverflow = errors.New("txpool is full")
+
+	// ErrInflightTxLimitReached is returned when the maximum number of in-flight
+	// transactions is reached for specific accounts.
+	ErrInflightTxLimitReached = errors.New("in-flight transaction limit reached for delegated accounts")
+
+	// ErrAuthorityReserved is returned if a transaction has an authorization
+	// signed by an address which already has in-flight transactions known to the
+	// pool.
+	ErrAuthorityReserved = errors.New("authority already reserved")
+
+	// ErrFutureReplacePending is returned if a future transaction replaces a pending
+	// one. Future transactions should only be able to replace other future transactions.
+	ErrFutureReplacePending = errors.New("future transaction tries to replace pending")
 )
 
 var (
@@ -177,6 +197,10 @@ func (config *TxPoolConfig) sanitize() TxPoolConfig {
 	return conf
 }
 
+type GovModule interface {
+	GetParamSet(blockNum uint64) gov.ParamSet
+}
+
 // TxPool contains all currently known transactions. Transactions
 // enter the pool when they are received from the network or submitted
 // locally. They exit the pool when they are included in the blockchain.
@@ -218,13 +242,19 @@ type TxPool struct {
 	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
 	rules params.Rules // Fork indicator
+
+	govModule GovModule
+
+	modules []kaiax.TxPoolModule
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
+
+	pset := govModule.GetParamSet(chain.CurrentBlock().NumberU64() + 1)
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
@@ -238,9 +268,10 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:          newTxLookup(),
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:     new(big.Int).SetUint64(chainconfig.UnitPrice),
+		gasPrice:     new(big.Int).SetUint64(pset.UnitPrice),
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 		txFeedCh:     make(chan types.Transactions, txFeedChSize),
+		govModule:    govModule,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -380,6 +411,12 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.PreReset(oldHead, newHead)
+	}
+	pool.txMu.Unlock()
+
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
 
@@ -492,8 +529,15 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	// It needs to update gas price of tx pool since magma hardfork
 	if pool.rules.IsMagma {
-		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pool.chainconfig.Governance.KIP71)
+		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
+		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
+
+	pool.txMu.Lock()
+	for _, module := range pool.modules {
+		module.PostReset(oldHead, newHead)
+	}
+	pool.txMu.Unlock()
 }
 
 // Stop terminates the transaction pool.
@@ -609,6 +653,17 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
+// PendingUnlocked retrieves all currently processable transactions, grouped by origin
+// account and sorted by nonce. The returned transaction set is a copy and can be
+// freely modified by calling code. This function is not thread safe.
+func (pool *TxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
+	pending := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.pending {
+		pending[addr] = list.Flatten()
+	}
+	return pending, nil
+}
+
 // CachedPendingTxsByCount retrieves about number of currently processable transactions
 // by requested count, grouped by origin account and sorted by nonce.
 func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
@@ -679,6 +734,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 
+	// Reject set code transactions until EIP-7600(prague) activates.
+	if !pool.rules.IsPrague && tx.Type() == types.TxTypeEthereumSetCode {
+		return ErrTxTypeNotSupported
+	}
+
 	// Check whether the init code size has been exceeded
 	if pool.rules.IsShanghai && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
 		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)
@@ -691,7 +751,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 
 	// NOTE-Kaia Drop transactions with unexpected gasPrice
 	// If the transaction type is DynamicFee tx, Compare transaction's GasFeeCap(MaxFeePerGas) and GasTipCap with tx pool's gasPrice to check to have same value.
-	if tx.Type() == types.TxTypeEthereumDynamicFee {
+	if tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode {
 		// Sanity check for extremely large numbers
 		if tx.GasTipCap().BitLen() > 256 {
 			return ErrTipVeryHigh
@@ -768,6 +828,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNonceTooLow
 	}
 
+	// If module recognizes the tx, run an alternative balance check and then skip the default balance check later.
+	shouldSkipBalanceCheck := false
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			if checkBalance := module.GetCheckBalance(); checkBalance != nil {
+				shouldSkipBalanceCheck = true
+				err := checkBalance(tx)
+				if err != nil {
+					logger.Trace("[tx_pool] invalid funds of module transaction sender", "from", from, "txhash", tx.Hash().Hex())
+					return err
+				}
+			}
+			break
+		}
+	}
+
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
 	if tx.IsFeeDelegatedTransaction() {
@@ -817,7 +893,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
 			return ErrInsufficientFundsFrom
 		}
-	} else {
+	} else if !shouldSkipBalanceCheck {
 		// balance check for non-fee-delegated tx
 		if senderBalance.Cmp(tx.Cost()) < 0 {
 			logger.Trace("[tx_pool] insufficient funds for cost(gas * price + value)", "from", from, "balance", senderBalance, "cost", tx.Cost())
@@ -826,12 +902,32 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	intrGas, err := tx.IntrinsicGas(pool.currentBlockNumber)
-	intrGas += gasFrom + gasFeePayer
+	sigValGas := gasFrom + gasFeePayer
 	if err != nil {
 		return err
 	}
-	if tx.Gas() < intrGas {
+	if tx.Gas() < intrGas+sigValGas {
 		return ErrIntrinsicGas
+	}
+	// Ensure the transaction can cover floor data gas.
+	if pool.rules.IsPrague {
+		floorDataGas, err := FloorDataGas(tx.Type(), tx.Data(), sigValGas)
+		if err != nil {
+			return err
+		}
+		if tx.Gas() < floorDataGas {
+			return fmt.Errorf("%w: gas %v, minimum needed %v", ErrFloorDataGas, tx.Gas(), floorDataGas)
+		}
+	}
+
+	if tx.Type() == types.TxTypeEthereumSetCode {
+		if len(tx.AuthList()) == 0 {
+			return errors.New("set code tx must have at least one authorization tuple")
+		}
+	}
+
+	if err := pool.validateAuth(tx); err != nil {
+		return err
 	}
 
 	// "tx.Validate()" conducts additional validation for each new txType.
@@ -843,6 +939,43 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return err
 	}
 
+	return nil
+}
+
+// validateAuth verifies that the transaction complies with code authorization
+// restrictions brought by SetCode transaction type.
+func (pool *TxPool) validateAuth(tx *types.Transaction) error {
+	from, _ := types.Sender(pool.signer, tx) // validated
+
+	// Allow at most one in-flight tx for delegated accounts or those with a
+	// pending authorization.
+	if pool.currentState.GetCodeHash(from) != types.EmptyCodeHash || len(pool.all.auths[from]) != 0 {
+		var (
+			count  int
+			exists bool
+		)
+		pending := pool.pending[from]
+		if pending != nil {
+			count += pending.Len()
+			exists = pending.Contains(tx.Nonce())
+		}
+		queue := pool.queue[from]
+		if queue != nil {
+			count += queue.Len()
+			exists = exists || queue.Contains(tx.Nonce())
+		}
+		// Replace the existing in-flight transaction for delegated accounts
+		// are still supported
+		if count >= 1 && !exists {
+			return ErrInflightTxLimitReached
+		}
+	}
+	// Authorities cannot conflict with any pending or queued transactions.
+	for _, auth := range tx.SetCodeAuthorities() {
+		if pool.pending[auth] != nil || pool.queue[auth] != nil {
+			return ErrAuthorityReserved
+		}
+	}
 	return nil
 }
 
@@ -873,6 +1006,16 @@ func (pool *TxPool) getMaxTxFromQueueWhenNonceIsMissing(tx *types.Transaction, f
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			err := module.PreAddTx(tx, local)
+			if err != nil {
+				return false, err
+			}
+			break
+		}
+	}
+
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {
@@ -1248,7 +1391,7 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 
 	if poolCapacity < numTxs {
 		for i := 0; i < numTxs-poolCapacity; i++ {
-			errs = append(errs, txPoolIsFullErr)
+			errs = append(errs, ErrTxPoolOverflow)
 		}
 	}
 
@@ -1430,7 +1573,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		// Gather all executable transactions and promote them
 		var readyTxs types.Transactions
 		if pool.rules.IsMagma {
-			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice)
+			readyTxs = list.ReadyWithGasPrice(pool.getPendingNonce(addr), pool.gasPrice, pool.modules)
 		} else {
 			readyTxs = list.Ready(pool.getPendingNonce(addr))
 		}
@@ -1652,6 +1795,11 @@ func (pool *TxPool) demoteUnexecutables() {
 	}
 }
 
+// GetCurrentState returns the current stateDB.
+func (pool *TxPool) GetCurrentState() *state.StateDB {
+	return pool.currentState
+}
+
 // getNonce returns the nonce of the account from the cache. If it is not in the cache, it gets the nonce from the stateDB.
 func (pool *TxPool) getNonce(addr common.Address) uint64 {
 	return pool.currentState.GetNonce(addr)
@@ -1691,6 +1839,12 @@ func (pool *TxPool) updatePendingNonce(addr common.Address, nonce uint64) {
 	if pool.getPendingNonce(addr) > nonce {
 		pool.setPendingNonce(addr, nonce)
 	}
+}
+
+func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.modules = modules
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.
@@ -1751,16 +1905,19 @@ func (as *accountSet) add(addr common.Address) {
 // peeking into the pool in TxPool.Get without having to acquire the widely scoped
 // TxPool.mu mutex.
 type txLookup struct {
-	all   map[common.Hash]*types.Transaction
 	slots int
 	lock  sync.RWMutex
+	txs   map[common.Hash]*types.Transaction
+
+	auths map[common.Address][]common.Hash // All accounts with a pooled authorization
 }
 
 // newTxLookup returns a new txLookup structure.
 func newTxLookup() *txLookup {
 	slotsGauge.Update(int64(0))
 	return &txLookup{
-		all: make(map[common.Hash]*types.Transaction),
+		txs:   make(map[common.Hash]*types.Transaction),
+		auths: make(map[common.Address][]common.Hash),
 	}
 }
 
@@ -1777,7 +1934,7 @@ func (t *txLookup) Range(f func(hash common.Hash, tx *types.Transaction) bool) {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	for key, value := range t.all {
+	for key, value := range t.txs {
 		if !f(key, value) {
 			break
 		}
@@ -1789,7 +1946,7 @@ func (t *txLookup) Get(hash common.Hash) *types.Transaction {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	return t.all[hash]
+	return t.txs[hash]
 }
 
 // Count returns the current number of items in the lookup.
@@ -1797,7 +1954,7 @@ func (t *txLookup) Count() int {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	return len(t.all)
+	return len(t.txs)
 }
 
 // Add adds a transaction to the lookup.
@@ -1808,7 +1965,8 @@ func (t *txLookup) Add(tx *types.Transaction) {
 	t.slots += numSlots(tx)
 	slotsGauge.Update(int64(t.slots))
 
-	t.all[tx.Hash()] = tx
+	t.txs[tx.Hash()] = tx
+	t.addAuthorities(tx)
 }
 
 // Remove removes a transaction from the lookup.
@@ -1816,13 +1974,69 @@ func (t *txLookup) Remove(hash common.Hash) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.slots -= numSlots(t.all[hash])
+	tx, ok := t.txs[hash]
+	if !ok {
+		logger.Error("No transaction found to be deleted", "hash", hash)
+		return
+	}
+
+	t.removeAuthorities(tx)
+	t.slots -= numSlots(tx)
 	slotsGauge.Update(int64(t.slots))
 
-	delete(t.all, hash)
+	delete(t.txs, hash)
+}
+
+// addAuthorities tracks the supplied tx in relation to each authority it
+// specifies.
+func (t *txLookup) addAuthorities(tx *types.Transaction) {
+	for _, addr := range tx.SetCodeAuthorities() {
+		list, ok := t.auths[addr]
+		if !ok {
+			list = []common.Hash{}
+		}
+		if slices.Contains(list, tx.Hash()) {
+			// Don't add duplicates.
+			continue
+		}
+		t.auths[addr] = append(list, tx.Hash())
+	}
+}
+
+// removeAuthorities stops tracking the supplied tx in relation to its
+// authorities.
+func (t *txLookup) removeAuthorities(tx *types.Transaction) {
+	hash := tx.Hash()
+	for _, addr := range tx.SetCodeAuthorities() {
+		list := t.auths[addr]
+		// Remove tx from tracker.
+		if i := slices.Index(list, hash); i >= 0 {
+			list = append(list[:i], list[i+1:]...)
+		} else {
+			logger.Error("Authority with untracked tx", "addr", addr, "hash", hash)
+		}
+		if len(list) == 0 {
+			// If list is newly empty, delete it entirely.
+			delete(t.auths, addr)
+			continue
+		}
+		t.auths[addr] = list
+	}
 }
 
 // numSlots calculates the number of slots needed for a single transaction.
 func numSlots(tx *types.Transaction) int {
 	return int((tx.Size() + txSlotSize - 1) / txSlotSize)
+}
+
+// Clear implements removing all tracked txs from the pool
+func (pool *TxPool) Clear() {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.all = newTxLookup()
+	pool.priced = newTxPricedList(pool.all)
+	pool.pending = make(map[common.Address]*txList)
+	pool.queue = make(map[common.Address]*txList)
+	pool.pendingNonce = make(map[common.Address]uint64)
 }

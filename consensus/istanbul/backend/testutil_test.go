@@ -19,24 +19,28 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"flag"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/governance"
+	"github.com/kaiachain/kaia/datasync/downloader"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -64,7 +68,6 @@ func init() {
 	testRandaoConfig.ShanghaiCompatibleBlock = common.Big0
 	testRandaoConfig.CancunCompatibleBlock = common.Big0
 	testRandaoConfig.RandaoCompatibleBlock = common.Big0
-	testRandaoConfig.RandaoRegistry = &params.RegistryConfig{}
 }
 
 type testOverrides struct {
@@ -74,29 +77,6 @@ type testOverrides struct {
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
 
-// Mock BlsPubkeyProvider that replaces KIP-113 contract query.
-type mockBlsPubkeyProvider struct {
-	infos map[common.Address]bls.PublicKey
-}
-
-func newMockBlsPubkeyProvider(addrs []common.Address, blsKeys []bls.SecretKey) *mockBlsPubkeyProvider {
-	infos := make(map[common.Address]bls.PublicKey)
-	for i := 0; i < len(addrs); i++ {
-		infos[addrs[i]] = blsKeys[i].PublicKey()
-	}
-	return &mockBlsPubkeyProvider{infos}
-}
-
-func (m *mockBlsPubkeyProvider) GetBlsPubkey(chain consensus.ChainReader, proposer common.Address, num *big.Int) (bls.PublicKey, error) {
-	if pub, ok := m.infos[proposer]; ok {
-		return pub, nil
-	} else {
-		return nil, errNoBlsPub
-	}
-}
-
-func (m *mockBlsPubkeyProvider) ResetBlsCache() {}
-
 type testContext struct {
 	config      *params.ChainConfig
 	nodeKeys    []*ecdsa.PrivateKey // Generated node keys
@@ -105,7 +85,6 @@ type testContext struct {
 
 	chain  *blockchain.BlockChain
 	engine *backend
-	sm     *reward.StakingManager
 }
 
 func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOverrides) *testContext {
@@ -136,7 +115,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		nodeBlsKeys = make([]bls.SecretKey, numNodes)
 
 		dbm = database.NewMemoryDBManager()
-		gov = governance.NewMixedEngine(config, dbm)
 	)
 	nodeKeys[0] = overrides.node0Key
 	nodeAddrs[0] = crypto.PubkeyToAddress(nodeKeys[0].PublicKey)
@@ -155,6 +133,38 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	genesis.Config = config
 	genesis.ExtraData = makeGenesisExtra(nodeAddrs)
 	genesis.Timestamp = uint64(time.Now().Unix())
+	if config.IsRandaoForkEnabled(big.NewInt(0)) {
+		allocRegistryStorage := system.AllocRegistry(&params.RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": system.Kip113LogicAddrMock,
+			},
+			Owner: common.HexToAddress("0xffff"),
+		})
+		infos := make(map[common.Address]system.BlsPublicKeyInfo)
+		for i, addr := range nodeAddrs {
+			infos[addr] = system.BlsPublicKeyInfo{
+				PublicKey: nodeBlsKeys[i].PublicKey().Marshal(),
+				Pop:       bls.PopProve(nodeBlsKeys[i]).Marshal(),
+			}
+		}
+		allocKip113Storage := system.AllocKip113Proxy(system.AllocKip113Init{
+			Infos: infos,
+			Owner: common.HexToAddress("0xffff"),
+		})
+		alloc := blockchain.GenesisAlloc{
+			system.RegistryAddr: {
+				Code:    system.RegistryMockCode,
+				Balance: big.NewInt(0),
+				Storage: allocRegistryStorage,
+			},
+			system.Kip113LogicAddrMock: {
+				Code:    system.Kip113MockCode,
+				Balance: big.NewInt(0),
+				Storage: allocKip113Storage,
+			},
+		}
+		genesis.Alloc = alloc
+	}
 	genesis.MustCommit(dbm)
 
 	// Create istanbul engine
@@ -165,20 +175,18 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		Epoch:          config.Istanbul.Epoch,
 		SubGroupSize:   config.Istanbul.SubGroupSize,
 	}
-	engine := New(&BackendOpts{
-		IstanbulConfig:    istanbulConfig,
-		Rewardbase:        common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
-		PrivateKey:        nodeKeys[0],
-		BlsSecretKey:      nodeBlsKeys[0],
-		DB:                dbm,
-		Governance:        gov,
-		BlsPubkeyProvider: newMockBlsPubkeyProvider(nodeAddrs, nodeBlsKeys),
-		NodeType:          common.CONSENSUSNODE,
-	}).(*backend)
-	gov.SetNodeAddress(engine.Address())
 
-	// Override StakingManager
-	sm := makeTestStakingManager(nodeAddrs, overrides.stakingAmounts)
+	mGov := gov_impl.NewGovModule()
+	mRandao := randao_impl.NewRandaoModule()
+	engine := New(&BackendOpts{
+		IstanbulConfig: istanbulConfig,
+		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
+		PrivateKey:     nodeKeys[0],
+		BlsSecretKey:   nodeBlsKeys[0],
+		DB:             dbm,
+		GovModule:      mGov,
+		NodeType:       common.CONSENSUSNODE,
+	}).(*backend)
 
 	// Create blockchain
 	cacheConfig := &blockchain.CacheConfig{
@@ -192,10 +200,38 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if err != nil {
 		panic(err)
 	}
-	gov.SetBlockchain(chain)
 
+	mStaking := staking_impl.NewStakingModule()
+	mValset := valset_impl.NewValsetModule()
+	fakeDownloader := downloader.NewFakeDownloader()
+	if err = errors.Join(
+		mGov.Init(&gov_impl.InitOpts{
+			Chain:       chain,
+			ChainKv:     dbm.GetMiscDB(),
+			ChainConfig: config,
+			NodeAddress: engine.Address(),
+		}),
+		mStaking.Init(&staking_impl.InitOpts{
+			ChainKv:     dbm.GetMiscDB(),
+			ChainConfig: config,
+			Chain:       chain,
+		}),
+		mValset.Init(&valset_impl.InitOpts{
+			ChainKv:       dbm.GetMiscDB(),
+			Chain:         chain,
+			StakingModule: mStaking,
+			GovModule:     mGov,
+		}),
+		mRandao.Init(&randao_impl.InitOpts{
+			ChainConfig: config,
+			Chain:       chain,
+			Downloader:  fakeDownloader,
+		})); err != nil {
+		panic(err)
+	}
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	// Start the engine
-	if err := engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
+	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
 		panic(err)
 	}
 
@@ -206,7 +242,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 		chain:  chain,
 		engine: engine,
-		sm:     sm,
 	}
 }
 
@@ -286,7 +321,6 @@ func (ctx *testContext) MakeCommittedSeals(hash common.Hash) [][]byte {
 func (ctx *testContext) Cleanup() {
 	ctx.chain.Stop()
 	ctx.engine.Stop()
-	reward.SetTestStakingManager(ctx.sm)
 }
 
 func makeGenesisExtra(addrs []common.Address) []byte {
@@ -302,29 +336,6 @@ func makeGenesisExtra(addrs []common.Address) []byte {
 
 	vanity := make([]byte, types.IstanbulExtraVanity)
 	return append(vanity, encoded...)
-}
-
-// Set StakingInfo with given addresses and amounts, returns the original (old) StakingManager.
-// Must call `reward.SetTestStakingManager(oldStakingManager)` after testing
-// because StakingManager is a global singleton.
-func makeTestStakingManager(addrs []common.Address, amounts []uint64) *reward.StakingManager {
-	info := &reward.StakingInfo{BlockNum: 0}
-	for i, addr := range addrs {
-		// Assign random reward address
-		rewardKey, _ := crypto.GenerateKey()
-		rewardAddr := crypto.PubkeyToAddress(rewardKey.PublicKey)
-
-		info.CouncilNodeAddrs = append(info.CouncilNodeAddrs, addr)
-		info.CouncilStakingAddrs = append(info.CouncilStakingAddrs, addr)
-		info.CouncilStakingAmounts = append(info.CouncilStakingAmounts, amounts[i])
-		info.CouncilRewardAddrs = append(info.CouncilRewardAddrs, rewardAddr)
-	}
-
-	// Save old StakingManager, overwrite with the fake one.
-	oldStakingManager := reward.GetStakingManager()
-	reward.SetTestStakingManagerWithStakingInfoCache(info)
-
-	return oldStakingManager
 }
 
 func TestTestContext(t *testing.T) {

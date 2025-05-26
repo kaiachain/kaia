@@ -55,6 +55,8 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 		enable1344(jt)
 	case 1153:
 		enable1153(jt)
+	case 7702:
+		enable7702(jt)
 	default:
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
@@ -377,4 +379,19 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG2].computationCost = params.Log2ComputationCostCancun
 	jt[LOG3].computationCost = params.Log3ComputationCostCancun
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
+}
+
+func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
+	jt[opCode].constantGas = constantGas
+}
+
+// enable7702 the EIP-7702 changes to support delegation designators.
+func enable7702(jt *JumpTable) {
+	jt[CALL].dynamicGas = gasCallEIP7702
+
+	jt[CALLCODE].dynamicGas = gasCallCodeEIP7702
+
+	jt[STATICCALL].dynamicGas = gasStaticCallEIP7702
+
+	jt[DELEGATECALL].dynamicGas = gasDelegateCallEIP7702
 }

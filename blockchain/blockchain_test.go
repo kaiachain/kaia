@@ -23,7 +23,9 @@
 package blockchain
 
 import (
+	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -33,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -1459,8 +1462,8 @@ func TestAccessListTx(t *testing.T) {
 			b.SetRewardbase(common.Address{1})
 
 			// One transaction to 0xAAAA
-			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, false, gspec.Config.Rules(block.Number()))
-			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), []byte{}, false, intrinsicGas, list), signer, senderKey)
+			intrinsicGas, _ := types.IntrinsicGas([]byte{}, list, nil, false, gspec.Config.Rules(block.Number()))
+			tx, _ := types.SignTx(types.NewMessage(senderAddr, &contractAddr, senderNonce, big.NewInt(0), 30000, big.NewInt(1), nil, nil, []byte{}, false, intrinsicGas, list, nil, nil), signer, senderKey)
 			b.AddTx(tx)
 		})
 		if n, err := chain.InsertChain(blocks); err != nil {
@@ -2204,4 +2207,288 @@ func TestTransientStorageReset(t *testing.T) {
 	if slot != (common.Hash{}) {
 		t.Fatalf("Unexpected dirty storage slot")
 	}
+}
+
+func TestProcessParentBlockHash(t *testing.T) {
+	var (
+		chainConfig = &params.ChainConfig{
+			ShanghaiCompatibleBlock: common.Big0, // Shanghai fork is necesasry because `params.HistoryStorageCode` contains `PUSH0(0x5f)` instruction
+		}
+		hashA    = common.Hash{0x01}
+		hashB    = common.Hash{0x02}
+		header   = &types.Header{ParentHash: hashA, Number: big.NewInt(2), Time: common.Big0, BlockScore: common.Big0}
+		parent   = &types.Header{ParentHash: hashB, Number: big.NewInt(1), Time: common.Big0, BlockScore: common.Big0}
+		coinbase = common.Address{}
+		rules    = params.Rules{}
+		db       = state.NewDatabase(database.NewMemoryDBManager())
+	)
+	test := func(statedb *state.StateDB) {
+		if err := statedb.SetCode(params.HistoryStorageAddress, params.HistoryStorageCode); err != nil {
+			t.Error(err)
+		}
+		statedb.SetNonce(params.HistoryStorageAddress, 1)
+		statedb.IntermediateRoot(true)
+
+		vmContext := NewEVMBlockContext(header, nil, &coinbase)
+		evm := vm.NewEVM(vmContext, vm.TxContext{}, statedb, chainConfig, &vm.Config{})
+		if err := ProcessParentBlockHash(header, evm, statedb, rules); err != nil {
+			t.Error(err)
+		}
+
+		vmContext = NewEVMBlockContext(parent, nil, &coinbase)
+		evm = vm.NewEVM(vmContext, vm.TxContext{}, statedb, chainConfig, &vm.Config{})
+		if err := ProcessParentBlockHash(parent, evm, statedb, rules); err != nil {
+			t.Error(err)
+		}
+
+		// make sure that the state is correct
+		if have := getParentBlockHash(statedb, 1); have != hashA {
+			t.Errorf("want parent hash %v, have %v", hashA, have)
+		}
+		if have := getParentBlockHash(statedb, 0); have != hashB {
+			t.Errorf("want parent hash %v, have %v", hashB, have)
+		}
+	}
+	t.Run("MPT", func(t *testing.T) {
+		statedb, _ := state.New(types.EmptyRootHash, db, nil, nil)
+		test(statedb)
+	})
+}
+
+func getParentBlockHash(statedb *state.StateDB, number uint64) common.Hash {
+	ringIndex := number % params.HistoryServeWindow
+	var key common.Hash
+	binary.BigEndian.PutUint64(key[24:], ringIndex)
+	return statedb.GetState(params.HistoryStorageAddress, key)
+}
+
+func newGkei(n int64) *big.Int {
+	return new(big.Int).Mul(big.NewInt(n), big.NewInt(params.Gkei))
+}
+
+// TestEIP7702 deploys two delegation designations and calls them. It writes one
+// value to storage which is verified after.
+func TestEIP7702(t *testing.T) {
+	var (
+		// Generate a canonical chain to act as the main dataset
+		engine  = gxhash.NewFaker()
+		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
+		addr2   = crypto.PubkeyToAddress(key2.PublicKey)
+		aa      = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		bb      = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
+		funds   = big.NewInt(100000000000000000)
+	)
+	gspec := &Genesis{
+		Config: params.TestChainConfig.Copy(),
+		Alloc: GenesisAlloc{
+			addr1: {Balance: funds},
+			addr2: {Balance: funds},
+			// The address 0xAAAA sstores 1 into slot 2.
+			aa: {
+				Code: []byte{
+					byte(vm.PC),          // [0]
+					byte(vm.DUP1),        // [0,0]
+					byte(vm.DUP1),        // [0,0,0]
+					byte(vm.DUP1),        // [0,0,0,0]
+					byte(vm.PUSH1), 0x01, // [0,0,0,0,1] (value)
+					byte(vm.PUSH20), addr2[0], addr2[1], addr2[2], addr2[3], addr2[4], addr2[5], addr2[6], addr2[7], addr2[8], addr2[9], addr2[10], addr2[11], addr2[12], addr2[13], addr2[14], addr2[15], addr2[16], addr2[17], addr2[18], addr2[19],
+					byte(vm.GAS),
+					byte(vm.CALL),
+					byte(vm.STOP),
+				},
+				Nonce:   0,
+				Balance: big.NewInt(0),
+			},
+			// The address 0xBBBB sstores 42 into slot 42.
+			bb: {
+				Code: []byte{
+					byte(vm.PUSH1), 0x42,
+					byte(vm.DUP1),
+					byte(vm.SSTORE),
+					byte(vm.STOP),
+				},
+				Nonce:   0,
+				Balance: big.NewInt(0),
+			},
+		},
+	}
+	gspec.Config.SetDefaults()
+	gspec.Config.IstanbulCompatibleBlock = common.Big0
+	gspec.Config.LondonCompatibleBlock = common.Big0
+	gspec.Config.EthTxTypeCompatibleBlock = common.Big0
+	gspec.Config.MagmaCompatibleBlock = common.Big0
+	gspec.Config.KoreCompatibleBlock = common.Big0
+	gspec.Config.ShanghaiCompatibleBlock = common.Big0
+	gspec.Config.CancunCompatibleBlock = common.Big0
+	gspec.Config.KaiaCompatibleBlock = common.Big0
+	gspec.Config.PragueCompatibleBlock = common.Big0
+
+	// Sign authorization tuples.
+	// The way the auths are combined, it becomes
+	// 1. tx -> addr1 which is delegated to 0xaaaa
+	// 2. addr1:0xaaaa calls into addr2:0xbbbb
+	// 3. addr2:0xbbbb  writes to storage
+	auth1, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
+		Address: aa,
+		Nonce:   1,
+	})
+
+	auth2, _ := types.SignSetCode(key2, types.SetCodeAuthorization{
+		ChainID: *uint256.NewInt(0),
+		Address: bb,
+		Nonce:   0,
+	})
+
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+
+	testdb := database.NewMemoryDBManager()
+	genesis := gspec.MustCommit(testdb)
+	blocks, _ := GenerateChain(gspec.Config, genesis, engine, testdb, 1, func(i int, b *BlockGen) {
+		b.SetRewardbase(common.Address{1})
+
+		authorizationList := []types.SetCodeAuthorization{auth1, auth2}
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		if err != nil {
+			t.Fatalf("failed to run intrinsic gas: %v", err)
+		}
+
+		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, uint64(0), nil, 500000, nil, newGkei(50),
+			big.NewInt(20), nil, false, intrinsicGas, nil, nil, authorizationList), signer, key1)
+		if err != nil {
+			t.Fatalf("failed to sign tx: %v", err)
+		}
+		b.AddTx(tx)
+	})
+
+	chain, err := NewBlockChain(testdb, nil, gspec.Config, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	defer chain.Stop()
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
+
+	// Verify delegation designations were deployed.
+	state, _ := chain.State()
+	code, want := state.GetCode(addr1), types.AddressToDelegation(auth1.Address)
+	if !bytes.Equal(code, want) {
+		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
+	}
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion1 && ok) {
+		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
+	}
+
+	code, want = state.GetCode(addr2), types.AddressToDelegation(auth2.Address)
+	if !bytes.Equal(code, want) {
+		t.Fatalf("addr2 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
+	}
+	if vmVersion, ok := state.GetVmVersion(addr2); !(vmVersion == params.VmVersion1 && ok) {
+		t.Fatalf("addr2 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
+	}
+
+	// Verify delegation executed the correct code.
+	var (
+		fortyTwo = common.BytesToHash([]byte{0x42})
+		actual   = state.GetState(addr2, fortyTwo)
+	)
+	if !bytes.Equal(actual[:], fortyTwo[:]) {
+		t.Fatalf("addr2 storage wrong: expected %d, got %d", fortyTwo, actual)
+	}
+
+	// Check if EOA with code can be called with kaia's execution type
+	execTxTypes := []types.TxType{
+		types.TxTypeSmartContractExecution,
+		types.TxTypeFeeDelegatedSmartContractExecution,
+		types.TxTypeFeeDelegatedSmartContractExecutionWithRatio,
+	}
+	for _, execTxType := range execTxTypes {
+		tx, err := genTxForExecutionType(execTxType, addr1, addr1, state.GetNonce(addr1))
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, []*ecdsa.PrivateKey{key1})
+		assert.Equal(t, nil, err)
+
+		if execTxType.IsFeeDelegatedTransaction() {
+			err = tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{key1})
+			assert.Equal(t, nil, err)
+		}
+
+		// It only checks whether the transaction is successful.
+		err = applyTransaction(chain, state, tx, addr1)
+		assert.Equal(t, nil, err)
+	}
+
+	// Set 0x0000000000000000000000000000000000000000000 test
+	{
+		authForEmpty, _ := types.SignSetCode(key1, types.SetCodeAuthorization{
+			ChainID: *uint256.MustFromBig(gspec.Config.ChainID),
+			Address: common.Address{},
+			Nonce:   state.GetNonce(addr1) + 1,
+		})
+
+		authorizationList := []types.SetCodeAuthorization{authForEmpty}
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		if err != nil {
+			t.Fatalf("failed to run intrinsic gas: %v", err)
+		}
+
+		tx, err := types.SignTx(types.NewMessage(addr1, &addr1, state.GetNonce(addr1), nil, 500000, nil, newGkei(50),
+			big.NewInt(20), nil, false, intrinsicGas, nil, nil, authorizationList), signer, key1)
+		if err != nil {
+			t.Fatalf("failed to sign tx: %v", err)
+		}
+		err = applyTransaction(chain, state, tx, addr1)
+		assert.Equal(t, nil, err)
+
+		state.GetCode(addr1)
+	}
+
+	// Checks whether code and codeInfo are initialized.
+	if !bytes.Equal(state.GetCode(addr1), nil) {
+		t.Fatalf("addr1 code incorrect: got %s, want %s", common.Bytes2Hex(code), common.Bytes2Hex(want))
+	}
+	if vmVersion, ok := state.GetVmVersion(addr1); !(vmVersion == params.VmVersion0 && !ok) {
+		t.Fatalf("addr1 code info incorrect: got %v, want %v", vmVersion, params.VmVersion1)
+	}
+}
+
+func genTxForExecutionType(txType types.TxType, from, to common.Address, nonce uint64) (*types.Transaction, error) {
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    nonce,
+		types.TxValueKeyFrom:     from,
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(0),
+		types.TxValueKeyGasLimit: uint64(500000),
+		types.TxValueKeyGasPrice: big.NewInt(25 * params.Gkei),
+		types.TxValueKeyData:     []byte{},
+	}
+
+	if txType.IsFeeDelegatedTransaction() {
+		values[types.TxValueKeyFeePayer] = from
+	}
+
+	if txType.IsFeeDelegatedWithRatioTransaction() {
+		values[types.TxValueKeyFeeRatioOfFeePayer] = types.FeeRatio(30)
+	}
+
+	return types.NewTransactionWithMap(txType, values)
+}
+
+func applyTransaction(chain *BlockChain, state *state.StateDB, tx *types.Transaction, author common.Address) error {
+	parent := chain.CurrentBlock()
+	num := parent.Number()
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num.Add(num, common.Big1),
+		Extra:      parent.Extra(),
+		Time:       new(big.Int).Add(parent.Time(), common.Big1),
+		BlockScore: big.NewInt(0),
+	}
+	usedGas := uint64(0)
+	_, _, err := chain.ApplyTransaction(chain.Config(), &author, state, header, tx, &usedGas, &vm.Config{})
+	return err
 }

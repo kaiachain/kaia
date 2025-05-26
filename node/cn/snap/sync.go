@@ -34,10 +34,10 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/msgrate"
@@ -48,14 +48,6 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.SnapshotSync)
-
-var (
-	// emptyRoot is the known root hash of an empty trie.
-	emptyRoot = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-
-	// emptyCode is the known hash of the empty EVM bytecode.
-	emptyCode = crypto.Keccak256Hash(nil)
-)
 
 const (
 	// minRequestSize is the minimum number of bytes to request from a remote peer.
@@ -762,7 +754,7 @@ func (s *Syncer) loadSyncStatus() {
 		last := common.BigToHash(new(big.Int).Add(next.Big(), step))
 		if i == accountConcurrency-1 {
 			// Make sure we don't overflow if the step is not a proper divisor
-			last = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+			last = common.MaxHash
 		}
 		db := statedb.NewDatabase(s.db)
 		trie, _ := statedb.NewTrie(common.Hash{}, db, nil)
@@ -1785,7 +1777,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 	for i, acc := range res.accounts {
 		pacc := account.GetProgramAccount(acc)
 		// Check if the account is a contract with an unknown code
-		if pacc != nil && !bytes.Equal(pacc.GetCodeHash(), emptyCode[:]) {
+		if pacc != nil && !bytes.Equal(pacc.GetCodeHash(), types.EmptyCodeHash.Bytes()) {
 			if !s.db.HasCodeWithPrefix(common.BytesToHash(pacc.GetCodeHash())) {
 				res.task.codeTasks[common.BytesToHash(pacc.GetCodeHash())] = struct{}{}
 				res.task.needCode[i] = true
@@ -1793,7 +1785,7 @@ func (s *Syncer) processAccountResponse(res *accountResponse) {
 			}
 		}
 		// Check if the account is a contract with an unknown storage trie
-		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != types.EmptyRootHash {
 			if ok, err := s.db.HasTrieNode(pacc.GetStorageRoot()); err != nil || !ok {
 				// If there was a previous large state retrieval in progress,
 				// don't restart it from scratch. This happens if a sync cycle
@@ -2505,7 +2497,7 @@ func (s *Syncer) OnStorage(peer SyncPeer, id uint64, hashes [][]common.Hash, slo
 	// the requested data. For storage range queries that means the state being
 	// retrieved was either already pruned remotely, or the peer is not yet
 	// synced to our head.
-	if len(hashes) == 0 {
+	if len(hashes) == 0 && len(proof) == 0 {
 		logger.Debug("Peer rejected storage request")
 		s.statelessPeers[peer.ID()] = struct{}{}
 		s.lock.Unlock()
@@ -2516,6 +2508,14 @@ func (s *Syncer) OnStorage(peer SyncPeer, id uint64, hashes [][]common.Hash, slo
 
 	// Reconstruct the partial tries from the response and verify them
 	var cont bool
+
+	// If a proof was attached while the response is empty, it indicates that the
+	// requested range specified with 'origin' is empty. Construct an empty state
+	// response locally to finalize the range.
+	if len(hashes) == 0 && len(proof) > 0 {
+		hashes = append(hashes, []common.Hash{})
+		slots = append(slots, [][]byte{})
+	}
 
 	for i := 0; i < len(hashes); i++ {
 		// Convert the keys and proofs into an internal format

@@ -34,10 +34,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/snap"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -104,7 +104,7 @@ type Downloader struct {
 
 	isStakingInfoRecovery     bool
 	stakingInfoRecoveryTotal  int
-	stakingInfoRecoveryCh     chan []*reward.StakingInfo
+	stakingInfoRecoveryCh     chan []*staking.P2PStakingInfo
 	stakingInfoRecoveryBlocks []uint64
 
 	queue *queue   // Scheduler for selecting the hashes to download
@@ -122,8 +122,9 @@ type Downloader struct {
 	syncStatsState       stateSyncStats
 	syncStatsLock        sync.RWMutex // Lock protecting the sync stats fields
 
-	lightchain LightChain
-	blockchain BlockChain
+	lightchain    LightChain
+	blockchain    BlockChain
+	stakingModule staking.StakingModule
 
 	// Callbacks
 	dropPeer peerDropFn // Drops a peer for misbehaving
@@ -227,7 +228,7 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloom, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, proposerPolicy uint64) *Downloader {
+func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloom, mux *event.TypeMux, chain BlockChain, lightchain LightChain, stakingModule staking.StakingModule, dropPeer peerDropFn, proposerPolicy uint64) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
@@ -245,6 +246,7 @@ func New(mode SyncMode, stateDB database.DBManager, stateBloom *statedb.SyncBloo
 		rttConfidence:             uint64(1000000),
 		blockchain:                chain,
 		lightchain:                lightchain,
+		stakingModule:             stakingModule,
 		dropPeer:                  dropPeer,
 		headerCh:                  make(chan dataPack, 1),
 		bodyCh:                    make(chan dataPack, 1),
@@ -612,11 +614,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 			d.isStakingInfoRecovery = false
 			return fmt.Errorf("failed to retrieve block hash by number (blockNumber: %v)", i)
 		}
-		has, err := reward.HasStakingInfoFromDB(i)
-		if err != nil {
-			d.isStakingInfoRecovery = false
-			return err
-		}
+		has := d.stakingModule.GetStakingInfoFromDB(i) != nil
 		if !has {
 			blockNums = append(blockNums, i)
 			blockHashes = append(blockHashes, blockHash)
@@ -636,7 +634,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 
 	d.stakingInfoRecoveryBlocks = blockNums
 	d.stakingInfoRecoveryTotal = len(blockNums)
-	d.stakingInfoRecoveryCh = make(chan []*reward.StakingInfo, 1)
+	d.stakingInfoRecoveryCh = make(chan []*staking.P2PStakingInfo, 1)
 
 	go func() {
 		defer func() {
@@ -672,11 +670,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
 						return
 					}
-
-					if err := reward.AddStakingInfoToDB(stakingInfo); err != nil {
-						logger.Error("failed to add staking info", "fixed", fixed, "stakingInfo", stakingInfo, "err", err)
-						return
-					}
+					d.stakingModule.PutStakingInfoToDB(stakingInfo.BlockNum, staking.ToStakingInfo(stakingInfo))
 					fixed++
 					d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[1:]
 				}
@@ -837,7 +831,11 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	}
 	from := int64(head) - int64(MaxHeaderFetch)
 	if from < 0 {
-		from = 0
+		if head < 16 {
+			from = 0
+		} else {
+			from = int64(head % 16)
+		}
 	}
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
@@ -1886,12 +1884,8 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 		receipts[i] = result.Receipts
 		if result.StakingInfo != nil {
-			if err := reward.AddStakingInfoToDB(result.StakingInfo); err != nil {
-				logger.Error("Inserting downloaded staking info is failed", "err", err)
-				return fmt.Errorf("failed to insert the downloaded staking information: %v", err)
-			} else {
-				logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
-			}
+			d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
+			logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
 		}
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
@@ -1905,12 +1899,8 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 	logger.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if result.StakingInfo != nil {
-		if err := reward.AddStakingInfoToDB(result.StakingInfo); err != nil {
-			logger.Error("Inserting downloaded staking info is failed on pivot block", "err", err, "pivot", block.Number())
-			return fmt.Errorf("failed to insert the downloaded staking information on pivot block (%v) : %v", block.Number(), err)
-		} else {
-			logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
-		}
+		d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
+		logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
 	}
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
 		return err
@@ -1948,7 +1938,7 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 }
 
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
-func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*reward.StakingInfo) error {
+func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
 	if d.isStakingInfoRecovery {
 		d.stakingInfoRecoveryCh <- stakingInfos
 	}

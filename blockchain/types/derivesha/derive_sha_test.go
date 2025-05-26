@@ -24,9 +24,10 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var dummyList = types.Transactions([]*types.Transaction{
@@ -48,25 +49,22 @@ var testGovSchedule = map[uint64]int{
 	8: types.ImplDeriveShaConcat,
 }
 
-func (e *testGov) EffectiveParams(num uint64) (*params.GovParamSet, error) {
-	return params.NewGovParamSetIntMap(map[int]interface{}{
-		params.DeriveShaImpl: testGovSchedule[num],
-	})
+func (e *testGov) GetParamSet(num uint64) gov.ParamSet {
+	return gov.ParamSet{
+		DeriveShaImpl: uint64(testGovSchedule[num]),
+	}
 }
 
 func TestEmptyRoot(t *testing.T) {
 	assert.Equal(t,
 		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
-		types.EmptyRootHashOriginal.Hex())
-	assert.Equal(t,
-		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
-		"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+		types.EmptyTxRootOriginal.Hex())
 	assert.Equal(t,
 		DeriveShaSimple{}.DeriveSha(types.Transactions{}).Hex(),
-		"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+		types.EmptyTxRootSimple.Hex())
 	assert.Equal(t,
 		DeriveShaConcat{}.DeriveSha(types.Transactions{}).Hex(),
-		"0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+		types.EmptyTxRootConcat.Hex())
 }
 
 func TestMuxChainConfig(t *testing.T) {

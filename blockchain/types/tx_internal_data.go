@@ -22,11 +22,15 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -36,6 +40,8 @@ import (
 const MaxFeeRatio FeeRatio = 100
 
 const SubTxTypeBits uint = 3
+
+var emptyCodeHash = crypto.Keccak256(nil)
 
 type TxType uint16
 
@@ -58,7 +64,10 @@ const (
 	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
-	TxTypeEthereumLast       = TxType(0x7803)
+	// EIP-4844 BLOB_TX_TYPE not supported in Kaia.
+	_                     = TxType(0x7803)
+	TxTypeEthereumSetCode = TxType(0x7804)
+	TxTypeEthereumLast    = TxType(0x7805)
 )
 
 type TxValueKeyType uint
@@ -83,6 +92,7 @@ const (
 	TxValueKeyChainID
 	TxValueKeyGasTipCap
 	TxValueKeyGasFeeCap
+	TxValueKeyAuthorizationList
 )
 
 type TxTypeMask uint8
@@ -115,6 +125,7 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyAuthorizationListInvalid  = errors.New("AuthorizationList must be a type of AuthorizationList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
 	errValueKeyGasFeeCapMustBigInt       = errors.New("GasFeeCap must be a type of *big.Int")
@@ -164,6 +175,8 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyGasTipCap"
 	case TxValueKeyGasFeeCap:
 		return "TxValueKeyGasFeeCap"
+	case TxValueKeyAuthorizationList:
+		return "TxValueKeyAuthorizationList"
 	}
 
 	return "UndefinedTxValueKeyType"
@@ -223,6 +236,8 @@ func (t TxType) String() string {
 		return "TxTypeEthereumAccessList"
 	case TxTypeEthereumDynamicFee:
 		return "TxTypeEthereumDynamicFee"
+	case TxTypeEthereumSetCode:
+		return "TxTypeEthereumSetCode"
 	}
 
 	return "UndefinedTxType"
@@ -427,6 +442,7 @@ type StateDB interface {
 	IsContractAvailable(addr common.Address) bool
 	IsValidCodeFormat(addr common.Address) bool
 	GetKey(addr common.Address) accountkey.AccountKey
+	GetAccount(addr common.Address) account.Account
 }
 
 func NewTxInternalData(t TxType) (TxInternalData, error) {
@@ -481,6 +497,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFee(), nil
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCode(), nil
 	}
 
 	return nil, errUndefinedTxType
@@ -538,6 +556,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFeeWithMap(values)
+	case TxTypeEthereumSetCode:
+		return newTxInternalDataEthereumSetCodeWithMap(values)
 	}
 
 	return nil, errUndefinedTxType
@@ -552,17 +572,33 @@ func toWordSize(size uint64) uint64 {
 	return (size + 31) / 32
 }
 
+// Klaytn-TxTypes since genesis, and EthTxTypes since istanbul use this.
 func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules params.Rules) (uint64, error) {
 	// Bump the required gas by the amount of transactional data
 	length := uint64(len(data))
-	if length == 0 {
-		return gas, nil
+	if length > 0 {
+		// Zero and non-zero bytes are priced differently
+		z := uint64(bytes.Count(data, []byte{0}))
+		nz := length - z
+
+		// Since the genesis block, a flat 100 gas is paid
+		// regardless of whether the value is zero or non-zero.
+		nonZeroGas, zeroGas := params.TxDataGas, params.TxDataGas
+		if rules.IsPrague {
+			nonZeroGas = params.TxDataNonZeroGasEIP2028
+			zeroGas = params.TxDataZeroGas
+		}
+		// Make sure we don't exceed uint64 for all data combinations
+		if (math.MaxUint64-gas)/nonZeroGas < nz {
+			return 0, ErrGasUintOverflow
+		}
+		gas += nz * nonZeroGas
+
+		if (math.MaxUint64-gas)/zeroGas < z {
+			return 0, ErrGasUintOverflow
+		}
+		gas += z * zeroGas
 	}
-	// Make sure we don't exceed uint64 for all data combinations
-	if (math.MaxUint64-gas)/params.TxDataGas < length {
-		return 0, ErrGasUintOverflow
-	}
-	gas += length * params.TxDataGas
 
 	if isContractCreation && rules.IsShanghai {
 		lenWords := toWordSize(length)
@@ -574,23 +610,22 @@ func IntrinsicGasPayload(gas uint64, data []byte, isContractCreation bool, rules
 	return gas, nil
 }
 
+// Eth-TxTypes before istanbul use this. Only 0 tx type exists before Istanbul (No dynamic and access list types correspond to)
+// Calculate gas cost for type 0 transactions:
+// 68 gas for each non-zero byte and 16 gas for each zero byte in the data field.
 func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 	length := uint64(len(data))
 	if length > 0 {
 		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
-			}
-		}
+		z := uint64(bytes.Count(data, []byte{0}))
+		nz := length - z
+
 		// Make sure we don't exceed uint64 for all data combinations
-		if (math.MaxUint64-gas)/params.TxDataNonZeroGas < nz {
+		if (math.MaxUint64-gas)/params.TxDataNonZeroGasFrontier < nz {
 			return 0, ErrGasUintOverflow
 		}
-		gas += nz * params.TxDataNonZeroGas
+		gas += nz * params.TxDataNonZeroGasFrontier
 
-		z := uint64(len(data)) - nz
 		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
 			return 0, ErrGasUintOverflow
 		}
@@ -601,9 +636,10 @@ func IntrinsicGasPayloadLegacy(gas uint64, data []byte) (uint64, error) {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
-func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r params.Rules) (uint64, error) {
+func IntrinsicGas(data []byte, accessList AccessList, authorizationList []SetCodeAuthorization, contractCreation bool, r params.Rules) (uint64, error) {
 	// Set the starting gas for the raw transaction
 	var gas uint64
+
 	if contractCreation {
 		gas = params.TxGasContractCreation
 	} else {
@@ -613,8 +649,11 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 	var gasPayloadWithGas uint64
 	var err error
 	if r.IsIstanbul {
+		// tx types 1,2 only exist after istanbul; so they take this path.
+		// tx types 8+ take this path as well.
 		gasPayloadWithGas, err = IntrinsicGasPayload(gas, data, contractCreation, r)
 	} else {
+		// only for tx type 0 before istanbul.
 		gasPayloadWithGas, err = IntrinsicGasPayloadLegacy(gas, data)
 	}
 
@@ -630,7 +669,69 @@ func IntrinsicGas(data []byte, accessList AccessList, contractCreation bool, r p
 		gasPayloadWithGas += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	}
 
+	// We charge additional gas for the authorizationList:
+	// PER_EMPTY_ACCOUNT_COST : gas per address in authorizationList
+	// Since this is the same value as CallNewAccountGas, we will use this.
+	if authorizationList != nil {
+		gasPayloadWithGas += uint64(len(authorizationList)) * params.CallNewAccountGas
+	}
+
 	return gasPayloadWithGas, nil
+}
+
+var txTypeToGasMap = map[TxType]uint64{
+	TxTypeLegacyTransaction:                           params.TxGas,
+	TxTypeValueTransfer:                               params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransfer:                   params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferWithRatio:          params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeValueTransferMemo:                           params.TxGasValueTransfer,
+	TxTypeFeeDelegatedValueTransferMemo:               params.TxGasValueTransfer + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedValueTransferMemoWithRatio:      params.TxGasValueTransfer + params.TxGasFeeDelegatedWithRatio,
+	TxTypeAccountCreation:                             params.TxGasAccountCreation,
+	TxTypeAccountUpdate:                               params.TxGasAccountUpdate,
+	TxTypeFeeDelegatedAccountUpdate:                   params.TxGasAccountUpdate + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedAccountUpdateWithRatio:          params.TxGasAccountUpdate + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractDeploy:                         params.TxGasContractCreation,
+	TxTypeFeeDelegatedSmartContractDeploy:             params.TxGasContractCreation + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractDeployWithRatio:    params.TxGasContractCreation + params.TxGasFeeDelegatedWithRatio,
+	TxTypeSmartContractExecution:                      params.TxGasContractExecution,
+	TxTypeFeeDelegatedSmartContractExecution:          params.TxGasContractExecution + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedSmartContractExecutionWithRatio: params.TxGasContractExecution + params.TxGasFeeDelegatedWithRatio,
+	TxTypeCancel:                                  params.TxGasCancel,
+	TxTypeFeeDelegatedCancel:                      params.TxGasCancel + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedCancelWithRatio:             params.TxGasCancel + params.TxGasFeeDelegatedWithRatio,
+	TxTypeChainDataAnchoring:                      params.TxChainDataAnchoringGas,
+	TxTypeFeeDelegatedChainDataAnchoring:          params.TxChainDataAnchoringGas + params.TxGasFeeDelegated,
+	TxTypeFeeDelegatedChainDataAnchoringWithRatio: params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio,
+	TxTypeEthereumAccessList:                      params.TxGas,
+	TxTypeEthereumDynamicFee:                      params.TxGas,
+	TxTypeEthereumSetCode:                         params.TxGas,
+}
+
+func GetTxGasForTxType(txType TxType) (uint64, error) {
+	if gas, exists := txTypeToGasMap[txType]; exists {
+		return gas, nil
+	}
+	return 0, fmt.Errorf("cannot find txGas for txType %s", txType.String())
+}
+
+func GetTxGasForTxTypeWithAccountKey(txType TxType, accountKey accountkey.AccountKey, currentBlockNumber uint64, humanReadable bool) (uint64, error) {
+	gas, err := GetTxGasForTxType(txType)
+	if err != nil {
+		return 0, err
+	}
+	var gasKey uint64
+	if accountKey != nil {
+		gasKey, err = accountKey.AccountCreationGas(currentBlockNumber)
+		if err != nil {
+			return 0, err
+		}
+	}
+	gas += gasKey
+	if humanReadable {
+		gas += params.TxGasHumanReadable
+	}
+	return gas, nil
 }
 
 // CalcFeeWithRatio returns feePayer's fee and sender's fee based on feeRatio.
@@ -671,4 +772,68 @@ func calculateTxSize(data TxInternalData) common.StorageSize {
 	c := writeCounter(0)
 	rlp.Encode(&c, data)
 	return common.StorageSize(c)
+}
+
+func validate7702(stateDB StateDB, txType TxType, from, to common.Address) error {
+	switch txType {
+	// Group 1: Recipient must be EOA without code
+	case TxTypeValueTransfer,
+		TxTypeFeeDelegatedValueTransfer,
+		TxTypeFeeDelegatedValueTransferWithRatio,
+		TxTypeValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemo,
+		TxTypeFeeDelegatedValueTransferMemoWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return nil
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return kerrors.ErrToMustBeEOAWithoutCode
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return kerrors.ErrToMustBeEOAWithoutCode
+		}
+
+		return nil
+
+	// Group 2: From must be EOA without code
+	case TxTypeAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdate,
+		TxTypeFeeDelegatedAccountUpdateWithRatio:
+		acc := stateDB.GetAccount(from)
+		if acc == nil {
+			return nil
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return kerrors.ErrFromMustBeEOAWithoutCode
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return kerrors.ErrFromMustBeEOAWithoutCode
+		}
+
+		return nil
+
+	// Group 3: Recipient must be EOA with code or SCA
+	case TxTypeSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecution,
+		TxTypeFeeDelegatedSmartContractExecutionWithRatio:
+		acc := stateDB.GetAccount(to)
+		if acc == nil {
+			return kerrors.ErrToMustBeEOAWithCodeOrSCA
+		}
+		if acc.Type() == account.SmartContractAccountType {
+			return nil
+		}
+		eoa, ok := acc.(*account.ExternallyOwnedAccount)
+		if !ok || !bytes.Equal(eoa.GetCodeHash(), emptyCodeHash) {
+			return nil
+		}
+
+		return kerrors.ErrToMustBeEOAWithCodeOrSCA
+
+	default:
+		return nil
+	}
 }

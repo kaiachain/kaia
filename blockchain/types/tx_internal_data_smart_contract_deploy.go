@@ -269,10 +269,9 @@ func (t *TxInternalDataSmartContractDeploy) String() string {
 }
 
 func (t *TxInternalDataSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	gas := params.TxGasContractCreation
-
-	if t.HumanReadable {
-		gas += params.TxGasHumanReadable
+	gas, err := GetTxGasForTxTypeWithAccountKey(t.Type(), nil, currentBlockNumber, t.HumanReadable)
+	if err != nil {
+		return 0, err
 	}
 
 	gasPayloadWithGas, err := IntrinsicGasPayload(gas, t.Payload, true, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
@@ -356,7 +355,7 @@ func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlo
 	} else {
 		to = crypto.CreateAddress(t.From, t.AccountNonce)
 	}
-	if common.IsPrecompiledContractAddress(to) {
+	if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
 	}
 	if t.HumanReadable {

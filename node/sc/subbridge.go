@@ -88,7 +88,7 @@ type SubBridgeInfo struct {
 	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
-//go:generate mockgen -destination=bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
+//go:generate mockgen -destination=./bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
 type BridgeTxPool interface {
 	GetMaxTxNonce(from *common.Address) uint64
 	AddLocal(tx *types.Transaction) error
@@ -368,7 +368,7 @@ func (sb *SubBridge) SetComponents(components []interface{}) {
 		}
 	}
 
-	es := filters.NewEventSystem(sb.eventMux, &filterLocalBackend{sb}, false)
+	es := filters.NewEventSystem(sb.eventMux, &filterLocalBackend{sb})
 	sb.localBackend = backends.NewBlockchainContractBackend(sb.blockchain, sb.txPool, es)
 
 	sb.bridgeManager, err = NewBridgeManager(sb)

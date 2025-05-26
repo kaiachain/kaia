@@ -24,6 +24,7 @@ package utils
 
 import (
 	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
@@ -244,6 +245,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(TargetGasLimitFlag),
 	altsrc.NewStringFlag(NATFlag),
 	altsrc.NewBoolFlag(NoDiscoverFlag),
+	altsrc.NewStringFlag(DiscoverTypesFlag),
 	altsrc.NewDurationFlag(RWTimerWaitTimeFlag),
 	altsrc.NewUint64Flag(RWTimerIntervalFlag),
 	altsrc.NewStringFlag(NetrestrictFlag),
@@ -268,12 +270,16 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(APIFilterGetLogsMaxItemsFlag),
 	altsrc.NewDurationFlag(APIFilterGetLogsDeadlineFlag),
 	altsrc.NewUint64Flag(OpcodeComputationCostLimitFlag),
+	altsrc.NewBoolFlag(UseConsoleLogFlag),
 	altsrc.NewBoolFlag(SnapshotFlag),
 	altsrc.NewIntFlag(SnapshotCacheSizeFlag),
 	altsrc.NewBoolFlag(SnapshotAsyncGen),
 	altsrc.NewIntFlag(GpoBlocksFlag),
 	altsrc.NewIntFlag(GpoPercentileFlag),
 	altsrc.NewInt64Flag(GpoMaxGasPriceFlag),
+	// kaiax/gasless
+	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
+	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
 }
 
 // Common RPC flags
@@ -336,6 +342,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
+	altsrc.NewBoolFlag(gasless.DisableFlag),
 }
 
 var KPNFlags = []cli.Flag{

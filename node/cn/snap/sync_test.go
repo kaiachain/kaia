@@ -28,14 +28,17 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	mrand "math/rand"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/testrand"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -272,7 +275,7 @@ func defaultAccountRequestHandler(t *testPeer, id uint64, root common.Hash, orig
 func createAccountRequestResponse(t *testPeer, root common.Hash, origin common.Hash, limit common.Hash, cap uint64) (keys []common.Hash, vals [][]byte, proofs [][]byte) {
 	var size uint64
 	if limit == (common.Hash{}) {
-		limit = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+		limit = common.MaxHash
 	}
 	for _, entry := range t.accountValues {
 		if size > cap {
@@ -337,7 +340,7 @@ func createStorageRequestResponse(t *testPeer, root common.Hash, accounts []comm
 		if len(origin) > 0 {
 			originHash = common.BytesToHash(origin)
 		}
-		limitHash := common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+		limitHash := common.MaxHash
 		if len(limit) > 0 {
 			limitHash = common.BytesToHash(limit)
 		}
@@ -754,7 +757,7 @@ func TestSyncWithStorage(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(3, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(3, 3000, true, false, false)
 
 	mkSource := func(name string) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -786,7 +789,7 @@ func TestMultiSyncManyUseless(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false, false)
 
 	mkSource := func(name string, noAccount, noStorage, noTrieNode bool) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -832,7 +835,7 @@ func TestMultiSyncManyUselessWithLowTimeout(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false, false)
 
 	mkSource := func(name string, noAccount, noStorage, noTrieNode bool) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -883,7 +886,7 @@ func TestMultiSyncManyUnresponsive(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false, false)
 
 	mkSource := func(name string, noAccount, noStorage, noTrieNode bool) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -1148,7 +1151,7 @@ func TestSyncBoundaryStorageTrie(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(10, 1000, false, true)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(10, 1000, false, true, false)
 
 	mkSource := func(name string) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -1184,7 +1187,7 @@ func TestSyncWithStorageAndOneCappedPeer(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(300, 1000, false, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(300, 1000, false, false, false)
 
 	mkSource := func(name string, slow bool) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -1225,7 +1228,7 @@ func TestSyncWithStorageAndCorruptPeer(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false, false)
 
 	mkSource := func(name string, handler storageHandlerFunc) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -1263,7 +1266,7 @@ func TestSyncWithStorageAndNonProvingPeer(t *testing.T) {
 			})
 		}
 	)
-	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false)
+	sourceAccountTrie, elems, storageTries, storageElems := makeAccountTrieWithStorage(100, 3000, true, false, false)
 
 	mkSource := func(name string, handler storageHandlerFunc) *testPeer {
 		source := newTestPeer(name, t, term)
@@ -1321,6 +1324,45 @@ func TestSyncWithStorageMisbehavingProve(t *testing.T) {
 	verifyTrie(syncer.db, sourceAccountTrie.Hash(), t)
 }
 
+// TestSyncWithUnevenStorage tests sync where the storage trie is not even
+// and with a few empty ranges.
+func TestSyncWithUnevenStorage(t *testing.T) {
+	t.Parallel()
+
+	testSyncWithUnevenStorage(t)
+	testSyncWithUnevenStorage(t)
+}
+
+func testSyncWithUnevenStorage(t *testing.T) {
+	var (
+		once   sync.Once
+		cancel = make(chan struct{})
+		term   = func() {
+			once.Do(func() {
+				close(cancel)
+			})
+		}
+	)
+	accountTrie, accounts, storageTries, storageElems := makeAccountTrieWithStorage(3, 256, false, false, true)
+
+	mkSource := func(name string) *testPeer {
+		source := newTestPeer(name, t, term)
+		source.accountTrie = accountTrie
+		source.accountValues = accounts
+		source.storageTries = storageTries
+		source.storageValues = storageElems
+		source.storageRequestHandler = func(t *testPeer, reqId uint64, root common.Hash, accounts []common.Hash, origin, limit []byte, max uint64) error {
+			return defaultStorageRequestHandler(t, reqId, root, accounts, origin, limit, 128) // retrieve storage in large mode
+		}
+		return source
+	}
+	syncer := setupSyncer(mkSource("source"))
+	if err := syncer.Sync(accountTrie.Hash(), cancel); err != nil {
+		t.Fatalf("sync failed: %v", err)
+	}
+	verifyTrie(syncer.db, accountTrie.Hash(), t)
+}
+
 type kv struct {
 	k, v []byte
 }
@@ -1357,7 +1399,7 @@ func getCodeHash(i uint64) []byte {
 
 // getCodeByHash convenience function to lookup the code from the code hash
 func getCodeByHash(hash common.Hash) []byte {
-	if hash == emptyCode {
+	if hash == types.EmptyCodeHash {
 		return nil
 	}
 	for i, h := range codehashes {
@@ -1409,14 +1451,14 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	for i := 0; i < accountConcurrency; i++ {
 		last := common.BigToHash(new(big.Int).Add(next.Big(), step))
 		if i == accountConcurrency-1 {
-			last = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+			last = common.MaxHash
 		}
 		boundaries = append(boundaries, last)
 		next = common.BigToHash(new(big.Int).Add(last.Big(), common.Big1))
 	}
 	// Fill boundary accounts
 	for i := 0; i < len(boundaries); i++ {
-		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), emptyRoot, getCodeHash(uint64(i)))
+		acc, _ := genSmartContractAccount(uint64(0), big.NewInt(int64(i)), types.EmptyRootHash, getCodeHash(uint64(i)))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{boundaries[i].Bytes(), value}
@@ -1425,7 +1467,7 @@ func makeBoundaryAccountTrie(n int) (*statedb.Trie, entrySlice) {
 	}
 	// Fill other accounts if required
 	for i := uint64(1); i <= uint64(n); i++ {
-		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), emptyRoot, getCodeHash(i))
+		acc, _ := genSmartContractAccount(i, big.NewInt(int64(i)), types.EmptyRootHash, getCodeHash(i))
 		serializer := account.NewAccountSerializerWithAccount(acc)
 		value, _ := rlp.EncodeToBytes(serializer)
 		elem := &kv{key32(i), value}
@@ -1450,7 +1492,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 	// Create n accounts in the trie
 	for i := uint64(1); i <= uint64(accounts); i++ {
 		key := key32(i)
-		codehash := emptyCode[:]
+		codehash := types.EmptyCodeHash.Bytes()
 		if code {
 			codehash = getCodeHash(i)
 		}
@@ -1475,7 +1517,7 @@ func makeAccountTrieWithStorageWithUniqueStorage(accounts, slots int, code bool)
 }
 
 // makeAccountTrieWithStorage spits out a trie, along with the leafs
-func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
+func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool, uneven bool) (*statedb.Trie, entrySlice, map[common.Hash]*statedb.Trie, map[common.Hash]entrySlice) {
 	var (
 		db             = statedb.NewDatabase(database.NewMemoryDBManager())
 		accTrie, _     = statedb.NewTrie(common.Hash{}, db, nil)
@@ -1490,6 +1532,8 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 	)
 	if boundary {
 		stTrie, stEntries = makeBoundaryStorageTrie(slots, db)
+	} else if uneven {
+		stTrie, stEntries = makeUnevenStorageTrie(slots, db)
 	} else {
 		stTrie, stEntries = makeStorageTrieWithSeed(uint64(slots), 0, db)
 	}
@@ -1498,7 +1542,7 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 	// Create n accounts in the trie
 	for i := uint64(1); i <= uint64(accounts); i++ {
 		key := key32(i)
-		codehash := emptyCode[:]
+		codehash := types.EmptyCodeHash.Bytes()
 		if code {
 			codehash = getCodeHash(i)
 		}
@@ -1516,6 +1560,38 @@ func makeAccountTrieWithStorage(accounts, slots int, code, boundary bool) (*stat
 	stTrie.Commit(nil)
 	accTrie.Commit(nil)
 	return accTrie, entries, storageTries, storageEntries
+}
+
+// makeUnevenStorageTrie constructs a storage tries will states distributed in
+// different range unevenly.
+func makeUnevenStorageTrie(slots int, db *statedb.Database) (*statedb.Trie, entrySlice) {
+	var (
+		entries entrySlice
+		trie, _ = statedb.NewTrie(types.EmptyRootHash, db, nil)
+		chosen  = make(map[byte]struct{})
+	)
+	for i := 0; i < 3; i++ {
+		var n int
+		for {
+			n = mrand.Intn(15) // the last range is set empty deliberately
+			if _, ok := chosen[byte(n)]; ok {
+				continue
+			}
+			chosen[byte(n)] = struct{}{}
+			break
+		}
+		for j := 0; j < slots/3; j++ {
+			key := append([]byte{byte(n)}, testrand.Bytes(31)...)
+			val, _ := rlp.EncodeToBytes(testrand.Bytes(32))
+
+			elem := &kv{key, val}
+			trie.Update(elem.k, elem.v)
+			entries = append(entries, elem)
+		}
+	}
+	sort.Sort(entries)
+	trie.Commit(nil)
+	return trie, entries
 }
 
 // makeStorageTrieWithSeed fills a storage trie with n items, returning the
@@ -1561,7 +1637,7 @@ func makeBoundaryStorageTrie(n int, db *statedb.Database) (*statedb.Trie, entryS
 	for i := 0; i < accountConcurrency; i++ {
 		last := common.BigToHash(new(big.Int).Add(next.Big(), step))
 		if i == accountConcurrency-1 {
-			last = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+			last = common.MaxHash
 		}
 		boundaries = append(boundaries, last)
 		next = common.BigToHash(new(big.Int).Add(last.Big(), common.Big1))
@@ -1609,7 +1685,7 @@ func verifyTrie(db database.DBManager, root common.Hash, t *testing.T) {
 		acc := serializer.GetAccount()
 		pacc := account.GetProgramAccount(acc)
 		accounts++
-		if pacc != nil && pacc.GetStorageRoot().Unextend() != emptyRoot {
+		if pacc != nil && pacc.GetStorageRoot().Unextend() != types.EmptyRootHash {
 			storeTrie, err := statedb.NewSecureStorageTrie(pacc.GetStorageRoot(), triedb, nil)
 			if err != nil {
 				t.Fatal(err)

@@ -82,15 +82,15 @@ type core struct {
 	timeoutSub            *event.TypeMuxSubscription
 	futurePreprepareTimer *time.Timer
 
-	valSet                istanbul.ValidatorSet
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error)
 
 	backlogs   map[common.Address]*prque.Prque
 	backlogsMu *sync.Mutex
 
-	current   *roundState
-	handlerWg *sync.WaitGroup
+	currentCommittee *istanbul.RoundCommitteeState
+	current          *roundState
+	handlerWg        *sync.WaitGroup
 
 	roundChangeSet    *roundChangeSet
 	roundChangeTimer  atomic.Value //*time.Timer
@@ -158,7 +158,7 @@ func (c *core) broadcast(msg *message) {
 	}
 
 	// Broadcast payload
-	if err = c.backend.Broadcast(msg.Hash, c.valSet, payload); err != nil {
+	if err = c.backend.Broadcast(msg.Hash, payload); err != nil {
 		logger.Error("Failed to broadcast message", "msg", msg, "err", err)
 		return
 	}
@@ -172,7 +172,7 @@ func (c *core) currentView() *istanbul.View {
 }
 
 func (c *core) isProposer() bool {
-	v := c.valSet
+	v := c.currentCommittee
 	if v == nil {
 		return false
 	}
@@ -219,7 +219,7 @@ func (c *core) startNewRound(round *big.Int) {
 
 	roundChange := false
 	// Try to get last proposal
-	lastProposal, lastProposer := c.backend.LastProposal()
+	lastProposal, _ := c.backend.LastProposal()
 	//if c.valSet != nil && c.valSet.IsSubSet() {
 	//	c.current = nil
 	//} else {
@@ -249,7 +249,15 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	//}
 
-	var newView *istanbul.View
+	var (
+		newView     *istanbul.View
+		err         error
+		oldProposer common.Address
+	)
+
+	if c.currentCommittee != nil {
+		oldProposer = c.currentCommittee.Proposer()
+	}
 	if roundChange {
 		newView = &istanbul.View{
 			Sequence: new(big.Int).Set(c.current.Sequence()),
@@ -260,10 +268,16 @@ func (c *core) startNewRound(round *big.Int) {
 			Sequence: new(big.Int).Add(lastProposal.Number(), common.Big1),
 			Round:    new(big.Int),
 		}
-		c.valSet = c.backend.Validators(lastProposal)
+	}
 
-		councilSize := int64(c.valSet.Size())
-		committeeSize := int64(c.valSet.SubGroupSize())
+	c.currentCommittee, err = c.backend.GetCommitteeStateByRound(newView.Sequence.Uint64(), round.Uint64())
+	if err != nil {
+		logger.Error("Failed to get current round's committee state", "err", err)
+		return
+	}
+
+	if !roundChange {
+		councilSize, committeeSize := int64(c.currentCommittee.Qualified().Len()), int64(c.currentCommittee.CommitteeSize())
 		if committeeSize > councilSize {
 			committeeSize = councilSize
 		}
@@ -273,13 +287,12 @@ func (c *core) startNewRound(round *big.Int) {
 	c.backend.SetCurrentView(newView)
 
 	// Update logger
-	logger = logger.NewWith("old_proposer", c.valSet.GetProposer())
+	logger = logger.NewWith("old_proposer", oldProposer)
 	// Clear invalid ROUND CHANGE messages
-	c.roundChangeSet = newRoundChangeSet(c.valSet)
+	c.roundChangeSet = newRoundChangeSet(c.currentCommittee.ValSet())
 	// New snapshot for new round
-	c.updateRoundState(newView, c.valSet, roundChange)
+	c.updateRoundState(newView, c.currentCommittee, roundChange)
 	// Calculate new proposer
-	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
 	if roundChange && c.isProposer() && c.current != nil {
@@ -296,12 +309,12 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "isProposer", c.isProposer())
-	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.valSet.Size(), "valSet", c.valSet.List())
+	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.currentCommittee.Proposer(), "isProposer", c.isProposer())
+	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.currentCommittee.Qualified().Len(), "valSet", c.currentCommittee.Qualified().String())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
-	logger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.valSet.GetProposer())
+	logger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.currentCommittee.Proposer())
 
 	if view.Round.Cmp(c.current.Round()) > 0 {
 		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
@@ -309,24 +322,24 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.waitingForRoundChange = true
 
 	// Need to keep block locked for round catching up
-	c.updateRoundState(view, c.valSet, true)
+	c.updateRoundState(view, c.currentCommittee, true)
 	c.roundChangeSet.Clear(view.Round)
 
 	c.newRoundChangeTimer()
-	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet.GetProposer())
+	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.currentCommittee.Proposer())
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
-func (c *core) updateRoundState(view *istanbul.View, validatorSet istanbul.ValidatorSet, roundChange bool) {
+func (c *core) updateRoundState(view *istanbul.View, cState *istanbul.RoundCommitteeState, roundChange bool) {
 	// Lock only if both roundChange is true and it is locked
 	if roundChange && c.current != nil {
 		if c.current.IsHashLocked() {
-			c.current = newRoundState(view, validatorSet, c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, cState.ValSet(), c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.backend.HasBadProposal)
 		} else {
-			c.current = newRoundState(view, validatorSet, common.Hash{}, nil, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, cState.ValSet(), common.Hash{}, nil, c.current.pendingRequest, c.backend.HasBadProposal)
 		}
 	} else {
-		c.current = newRoundState(view, validatorSet, common.Hash{}, nil, nil, c.backend.HasBadProposal)
+		c.current = newRoundState(view, cState.ValSet(), common.Hash{}, nil, nil, c.backend.HasBadProposal)
 	}
 	c.currentRoundGauge.Update(c.current.round.Int64())
 	if c.current.IsHashLocked() {
@@ -376,7 +389,7 @@ func (c *core) newRoundChangeTimer() {
 	}
 
 	current := c.current
-	proposer := c.valSet.GetProposer()
+	proposer := c.currentCommittee.Proposer()
 
 	c.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
 		var loc, proposerStr string
@@ -386,7 +399,7 @@ func (c *core) newRoundChangeTimer() {
 		} else {
 			loc = "catchUpRound"
 		}
-		if proposer == nil {
+		if common.EmptyAddress(proposer) {
 			proposerStr = ""
 		} else {
 			proposerStr = proposer.String()
@@ -418,7 +431,7 @@ func (c *core) newRoundChangeTimer() {
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return istanbul.CheckValidatorSignature(c.valSet, data, sig)
+	return c.currentCommittee.CheckValidatorSignature(data, sig)
 }
 
 // PrepareCommittedSeal returns a committed seal for the given hash
@@ -427,21 +440,4 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(msgCommit)})
 	return buf.Bytes()
-}
-
-// Minimum required number of consensus messages to proceed
-func RequiredMessageCount(valSet istanbul.ValidatorSet) int {
-	var size uint64
-	if valSet.IsSubSet() {
-		size = valSet.SubGroupSize()
-	} else {
-		size = valSet.Size()
-	}
-	// For less than 4 validators, quorum size equals validator count.
-	if size < 4 {
-		return int(size)
-	}
-	// Adopted QBFT quorum implementation
-	// https://github.com/Consensys/quorum/blob/master/consensus/istanbul/qbft/core/core.go#L312
-	return int(math.Ceil(float64(2*size) / 3))
 }

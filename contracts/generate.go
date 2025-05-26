@@ -21,13 +21,16 @@ package contracts
 /*
 Recommended to install solc-select or svm-rs to switch solc versions within abigenw.
 
-	solc-select install 0.4.24 0.5.6 0.8.19 0.8.25
+	solc-select install 0.4.24 0.5.6 0.5.9 0.5.16 0.6.6 0.8.19 0.8.25
 	go generate
 
 Othewise, you can manually switch solc versions and run go generate for each solc version.
 
 	go generate --run 0.4.24
 	go generate --run 0.5.6
+	go generate --run 0.5.9
+	go generate --run 0.5.16
+	go generate --run 0.6.6
 	go generate --run 0.8.19
 	go generate --run 0.8.25
 */
@@ -46,6 +49,18 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg sc_erc721_no_uri --sol ./contracts/testing/sc_erc721_no_uri/sc_nft_no_uri.sol --out ./contracts/testing/sc_erc721_no_uri/sc_nft_no_uri.go --ver 0.5.6
 //go:generate ./abigenw --pkg extbridge --sol ./contracts/testing/extbridge/ext_bridge.sol --out ./contracts/testing/extbridge/ext_bridge.go --ver 0.5.6
 
+// These files were compiled with solidity 0.5.9.
+
+//go:generate ./abigenw --pkg system_contracts --sol ./contracts/testing/system_contracts/WKAIA.sol --out ./contracts/testing/system_contracts/WKAIA.go --ver 0.5.9
+
+// These files were compiled with solidity 0.5.16.
+
+//go:generate ./abigenw --pkg factory --sol ./node_modules/@uniswap/v2-core/contracts/UniswapV2Factory.sol --out ./contracts/libs/uniswap/factory/UniswapV2Factory.go --ver 0.5.16
+
+// These files were compiled with solidity 0.6.6.
+
+//go:generate ./abigenw --pkg router --sol ./node_modules/@uniswap/v2-periphery/contracts/UniswapV2Router02.sol --out ./contracts/libs/uniswap/router/UniswapV2Router02.go --ver 0.6.6
+
 // These files were compiled with solidity 0.8.19.
 
 //go:generate ./abigenw --pkg gov --sol ./contracts/system_contracts/gov/GovParam.sol --out ./contracts/system_contracts/gov/GovParam.go --ver 0.8.19
@@ -54,8 +69,10 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg kip149 --sol ./contracts/system_contracts/kip149/Registry.sol --out ./contracts/system_contracts/kip149/Registry.go --ver 0.8.19
 //go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./contracts/system_contracts/proxy/proxy.go --ver 0.8.19
 //go:generate ./abigenw --pkg system_contracts --sol ./contracts/testing/system_contracts/all.sol --out ./contracts/testing/system_contracts/all.go --ver 0.8.19
+//go:generate ./abigenw --pkg multicall --sol ./contracts/system_contracts/multicall/MultiCallContract.sol --out ./contracts/system_contracts/multicall/MultiCallContract.go --ver 0.8.19
 
 // These files were compiled with solidity 0.8.25.
 
 //go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/Kip163.sol --out ./contracts/system_contracts/consensus/Kip163.go --ver 0.8.25
-//go:generate ./abigenw --pkg multicall --sol ./contracts/system_contracts/multicall/MultiCallContract.sol --out ./contracts/system_contracts/multicall/MultiCallContract.go --ver 0.8.25
+//go:generate ./abigenw --pkg kip247 --sol ./contracts/system_contracts/kip247/GaslessSwapRouter.sol --out ./contracts/system_contracts/kip247/GaslessSwapRouter.go --ver 0.8.25
+//go:generate ./abigenw --pkg gasless --sol ./contracts/testing/system_contracts/gasless/TestToken.sol --out ./contracts/testing/system_contracts/gasless/TestToken.go --ver 0.8.25

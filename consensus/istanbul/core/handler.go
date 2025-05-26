@@ -102,23 +102,22 @@ func (c *core) handleEvents() {
 				}
 			case istanbul.MessageEvent:
 				if err := c.handleMsg(ev.Payload); err == nil {
-					c.backend.GossipSubPeer(ev.Hash, c.valSet, ev.Payload)
+					c.backend.GossipSubPeer(ev.Hash, ev.Payload)
 					// c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
-				_, src := c.valSet.GetByAddress(ev.src)
-				if src == nil {
+				if !c.currentCommittee.Qualified().Contains(ev.src) {
 					c.logger.Error("Invalid address in valSet", "addr", ev.src)
 					continue
 				}
 				// No need to check signature for internal messages
-				if err := c.handleCheckedMsg(ev.msg, src); err == nil {
+				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
 					p, err := ev.msg.Payload()
 					if err != nil {
 						c.logger.Warn("Get message payload failed", "err", err)
 						continue
 					}
-					c.backend.GossipSubPeer(ev.Hash, c.valSet, p)
+					c.backend.GossipSubPeer(ev.Hash, p)
 					// c.backend.Gossip(c.valSet, p)
 				}
 			}
@@ -177,16 +176,15 @@ func (c *core) handleMsg(payload []byte) error {
 	}
 
 	// Only accept message if the address is valid
-	_, src := c.valSet.GetByAddress(msg.Address)
-	if src == nil {
+	if !c.currentCommittee.Qualified().Contains(msg.Address) {
 		logger.Error("Invalid address in message", "msg", msg)
 		return istanbul.ErrUnauthorizedAddress
 	}
 
-	return c.handleCheckedMsg(msg, src)
+	return c.handleCheckedMsg(msg, msg.Address)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
+func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
 	// Store the message if it's a future message
@@ -238,7 +236,7 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 	// the max round with F+1 round change message. We only need to catch up
 	// if the max round is larger than current round.
 	if !c.waitingForRoundChange {
-		maxRound := c.roundChangeSet.MaxRound(c.valSet.F() + 1)
+		maxRound := c.roundChangeSet.MaxRound(c.currentCommittee.F() + 1)
 		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
 			logger.Warn("[RC] Send round change because of timeout event")
 			c.sendRoundChange(maxRound)

@@ -33,7 +33,7 @@ import (
 )
 
 // Construct a new message set to accumulate messages for given sequence/view number.
-func newMessageSet(valSet istanbul.ValidatorSet) *messageSet {
+func newMessageSet(valSet *istanbul.BlockValSet) *messageSet {
 	return &messageSet{
 		view: &istanbul.View{
 			Round:    new(big.Int),
@@ -49,7 +49,7 @@ func newMessageSet(valSet istanbul.ValidatorSet) *messageSet {
 
 type messageSet struct {
 	view       *istanbul.View
-	valSet     istanbul.ValidatorSet
+	valSet     *istanbul.BlockValSet
 	messagesMu *sync.Mutex
 	messages   map[common.Address]*message
 }
@@ -107,7 +107,7 @@ func (ms *messageSet) Get(addr common.Address) *message {
 
 func (ms *messageSet) verify(msg *message) error {
 	// verify if the message comes from one of the validators
-	if _, v := ms.valSet.GetByAddress(msg.Address); v == nil {
+	if !ms.valSet.Qualified().Contains(msg.Address) {
 		return istanbul.ErrUnauthorizedAddress
 	}
 

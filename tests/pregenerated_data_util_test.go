@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"os"
 	"path"
 	"strconv"
@@ -39,10 +38,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/governance"
+	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/reward"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work"
@@ -277,7 +275,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	task := work.NewTask(bcdata.bc.Config(), signer, stateDB, header)
-	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase)
+	task.ApplyTransactions(pooltxs, bcdata.bc, *bcdata.rewardBase, nil)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 
@@ -355,10 +353,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Create a governance
-	gov := generateGovernaceDataForTest()
-
-	////////////////////////////////////////////////////////////////////////////////
 	// Prepare sender addresses and private keys
 	// 1) If generating test, create accounts and private keys as many as numTotalSenders
 	// 2) If executing test, load accounts and private keys from file as many as numTotalSenders
@@ -382,7 +376,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDB,
-		Governance:     gov,
 		NodeType:       common.CONSENSUSNODE,
 	})
 
@@ -393,7 +386,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	var bc *blockchain.BlockChain
 	var genesis *blockchain.Genesis
 	if tc.isGenerateTest {
-		bc, genesis, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, nil, engine)
+		bc, genesis, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, nil, engine, Forks["Byzantium"])
 	} else {
 		chainConfig, err := getChainConfig(chainDB)
 		if err != nil {
@@ -404,16 +397,20 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}
 
+	mGov := gov_impl.NewGovModule()
+	err = mGov.Init(&gov_impl.InitOpts{
+		ChainConfig: genesis.Config,
+		Chain:       bc,
+		ChainKv:     chainDB.GetMiscDB(),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	rewardDistributor := reward.NewRewardDistributor(gov)
-
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, gov, rewardDistributor,
+		validatorPrivKeys, engine, genesis, mGov,
 	}, nil
 }
 
@@ -450,7 +447,7 @@ func genCandidateLevelDBOptions() (*database.DBConfig, *opt.Options) {
 	return dbc, opts
 }
 
-// genCandidateLevelDBOptions returns candidate database configurations of main-net, using BadgerDB.
+// genCandidateBadgerDBOptions returns candidate database configurations of main-net, using BadgerDB.
 func genCandidateBadgerDBOptions() (*database.DBConfig, *opt.Options) {
 	dbc := defaultDBConfig()
 	dbc.DBType = database.BadgerDB
@@ -494,23 +491,6 @@ func defaultCacheConfig() *blockchain.CacheConfig {
 		},
 		SnapshotCacheSize: 512,
 	}
-}
-
-// generateGovernaceDataForTest returns governance.Engine for test.
-func generateGovernaceDataForTest() governance.Engine {
-	dbm := database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
-
-	return governance.NewMixedEngine(&params.ChainConfig{
-		ChainID:       big.NewInt(2018),
-		UnitPrice:     25000000000,
-		DeriveShaImpl: 0,
-		Istanbul: &params.IstanbulConfig{
-			Epoch:          istanbul.DefaultConfig.Epoch,
-			ProposerPolicy: uint64(istanbul.DefaultConfig.ProposerPolicy),
-			SubGroupSize:   istanbul.DefaultConfig.SubGroupSize,
-		},
-		Governance: params.GetDefaultGovernanceConfig(),
-	}, dbm)
 }
 
 // setUpTest sets up test data directory, verbosity and profile file.

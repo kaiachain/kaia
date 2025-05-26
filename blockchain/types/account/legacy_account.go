@@ -20,7 +20,6 @@ package account
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 
 	"github.com/go-stack/stack"
@@ -138,32 +137,4 @@ func (a *LegacyAccount) DeepCopy() Account {
 		a.Root,
 		a.CodeHash,
 	}
-}
-
-func (a *LegacyAccount) Dump() {
-	fmt.Println(a.String())
-}
-
-func (a *LegacyAccount) String() string {
-	return fmt.Sprintf(`
-	Nonce:        %d
-	Balance:      %v
-	StorageRoot:  %s
-	CodeHash:     %s`,
-		a.Nonce,
-		a.Balance,
-		a.Root.String(),
-		string(a.CodeHash))
-}
-
-func (a *LegacyAccount) Equal(b Account) bool {
-	tb, ok := b.(*LegacyAccount)
-	if !ok {
-		return false
-	}
-
-	return a.Nonce == tb.Nonce &&
-		a.Balance.Cmp(tb.Balance) == 0 &&
-		bytes.Equal(a.Root.Bytes(), tb.Root.Bytes()) &&
-		bytes.Equal(a.CodeHash, tb.CodeHash)
 }

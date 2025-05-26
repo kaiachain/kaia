@@ -79,7 +79,7 @@ func TestSubBridge_basic(t *testing.T) {
 
 	// New components of MainBridge which will update old components
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -112,7 +112,7 @@ func TestSubBridge_removePeer(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)
@@ -222,7 +222,7 @@ func TestSubBridge_handle(t *testing.T) {
 
 	// Set components of SubBridge
 	bc := testBlockChain(t)
-	txPool := testTxPool(sBridge.config.DataDir, bc)
+	txPool := testTxPool(t, sBridge.config.DataDir, bc)
 
 	var comp []interface{}
 	comp = append(comp, bc)

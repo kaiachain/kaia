@@ -23,6 +23,8 @@
 package state
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -289,6 +291,14 @@ func (s *StateDB) GetCode(addr common.Address) []byte {
 	return nil
 }
 
+func (s *StateDB) GetStorageRoot(addr common.Address) common.Hash {
+	stateObject := s.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.Root()
+	}
+	return common.Hash{}
+}
+
 func (s *StateDB) GetAccount(addr common.Address) account.Account {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
@@ -377,12 +387,12 @@ func (s *StateDB) IsValidCodeFormat(addr common.Address) bool {
 	return false
 }
 
-// GetVmVersion return false when getStateObject(addr) or GetProgramAccount(stateObject.account) is failed.
+// GetVmVersion returns true when the address is an SCA or an EOA with code.
 func (s *StateDB) GetVmVersion(addr common.Address) (params.VmVersion, bool) {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		pa := account.GetProgramAccount(stateObject.account)
-		if pa != nil {
+		if pa != nil && !(bytes.Equal(pa.GetCodeHash(), emptyCodeHash) && pa.Type() == account.ExternallyOwnedAccountType) {
 			return pa.GetVmVersion(), true
 		}
 		return params.VmVersion0, false
@@ -467,6 +477,26 @@ func (s *StateDB) SetNonce(addr common.Address, nonce uint64) {
 func (s *StateDB) SetCode(addr common.Address, code []byte) error {
 	stateObject := s.GetOrNewSmartContract(addr)
 	if stateObject != nil {
+		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
+	}
+
+	return nil
+}
+
+func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte, r params.Rules) error {
+	stateObject := s.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		pa := account.GetProgramAccount(stateObject.account)
+		if pa == nil {
+			return nil
+		}
+		if bytes.Equal(code, []byte{}) {
+			pa.SetCodeInfo(params.CodeInfo(0))
+		} else {
+			pa.SetCodeInfo(params.NewCodeInfoWithRules(params.CodeFormatEVM, r))
+		}
+		// If it is not a program account, SetCode will return an error,
+		// but that is handled above so there is no need to roll back SetCodeInfo.
 		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
 
@@ -719,8 +749,6 @@ func (s *StateDB) createObject(addr common.Address) (newobj, prev *stateObject) 
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
 
-	newobj.created = true
-
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
 		return newobj, prev
@@ -754,8 +782,6 @@ func (s *StateDB) createObjectWithMap(addr common.Address, accountType account.A
 	} else {
 		s.journal.append(resetObjectChange{prev: prev, prevdestruct: prevdestruct})
 	}
-
-	newobj.created = true
 
 	s.setStateObject(newobj)
 	if prev != nil && !prev.deleted {
@@ -800,8 +826,37 @@ func (s *StateDB) CreateSmartContractAccountWithKey(addr common.Address, humanRe
 		account.AccountValueKeyCodeInfo:      params.NewCodeInfoWithRules(format, r),
 	}
 	new, prev := s.createObjectWithMap(addr, account.SmartContractAccountType, values)
+	new.created = true
 	if prev != nil {
 		new.setBalance(prev.account.GetBalance())
+	}
+}
+
+// SetLegacyAccountForTest is setting an account as Legacy Account to StateDB.
+// SetLegacyAccountForTest should be used for only tests.
+func (s *StateDB) SetLegacyAccountForTest(addr common.Address, nonce uint64, balance *big.Int, root common.Hash, codeHash []byte) {
+	acc := &account.LegacyAccount{
+		Nonce:    nonce,
+		Balance:  balance,
+		Root:     root,
+		CodeHash: codeHash,
+	}
+	newobj := newObject(s, addr, acc)
+	s.journal.append(createObjectChange{account: &addr})
+	newobj.created = true
+	s.setStateObject(newobj)
+}
+
+func (s *StateDB) ForEachAccount(cb func(addr common.Address, data account.Account)) {
+	it := statedb.NewIterator(s.trie.NodeIterator(nil))
+	for it.Next() {
+		addr := s.trie.GetKey(it.Key)
+		serializer := account.NewAccountSerializer()
+		if err := rlp.DecodeBytes(it.Value, serializer); err != nil {
+			panic(err)
+		}
+		data := serializer.GetAccount()
+		cb(common.BytesToAddress(addr), data)
 	}
 }
 
@@ -830,78 +885,102 @@ func (s *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.
 // Copy creates a deep, independent copy of the state.
 // Snapshots of the copied state cannot be applied to the copy.
 func (s *StateDB) Copy() *StateDB {
+	state := &StateDB{}
+	copyStateDB(state, s)
+	return state
+}
+
+func (s *StateDB) Set(src *StateDB) {
+	copyStateDB(s, src)
+}
+
+func copyStateDB(dst, src *StateDB) {
 	// Copy all the basic fields, initialize the memory ones
-	state := &StateDB{
-		db:                s.db,
-		trie:              s.db.CopyTrie(s.trie),
-		stateObjects:      make(map[common.Address]*stateObject, len(s.journal.dirties)),
-		stateObjectsDirty: make(map[common.Address]struct{}, len(s.journal.dirties)),
-		refund:            s.refund,
-		logs:              make(map[common.Hash][]*types.Log, len(s.logs)),
-		logSize:           s.logSize,
-		preimages:         make(map[common.Hash][]byte),
-		journal:           newJournal(),
-	}
-	// Copy the dirty states, logs, and preimages
-	for addr := range s.journal.dirties {
-		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
-		// and in the Finalise-method, there is a case where an object is in the journal but not
-		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
-		// nil
-		if object, exist := s.stateObjects[addr]; exist {
-			state.stateObjects[addr] = object.deepCopy(state)
-			state.stateObjectsDirty[addr] = struct{}{}
-		}
-	}
-	// Above, we don't copy the actual journal. This means that if the copy is copied, the
-	// loop above will be a no-op, since the copy's journal is empty.
-	// Thus, here we iterate over stateObjects, to enable copies of copies
-	for addr := range s.stateObjectsDirty {
-		if _, exist := state.stateObjects[addr]; !exist {
-			state.stateObjects[addr] = s.stateObjects[addr].deepCopy(state)
-			state.stateObjectsDirty[addr] = struct{}{}
-		}
-	}
+	dst.db = src.db
+	dst.trie = src.db.CopyTrie(src.trie)
+	dst.trieOpts = src.trieOpts
 
-	deepCopyLogs(s, state)
+	dst.stateObjects = make(map[common.Address]*stateObject, len(src.stateObjects))
+	dst.stateObjectsDirty = make(map[common.Address]struct{}, len(src.stateObjectsDirty))
+	dst.stateObjectsDirtyStorage = make(map[common.Address]struct{}, len(src.stateObjectsDirtyStorage))
 
-	for hash, preimage := range s.preimages {
-		state.preimages[hash] = preimage
-	}
+	dst.dbErr = src.dbErr
+	dst.refund = src.refund
+
+	dst.thash = src.thash
+	dst.bhash = src.bhash
+	dst.txIndex = src.txIndex
+	dst.logs = make(map[common.Hash][]*types.Log, len(src.logs))
+	dst.logSize = src.logSize
+
+	dst.preimages = make(map[common.Hash][]byte, len(src.preimages))
 
 	// Do we need to copy the access list? In practice: No. At the start of a
 	// transaction, the access list is empty. In practice, we only ever copy state
 	// _between_ transactions/blocks, never in the middle of a transaction.
 	// However, it doesn't cost us much to copy an empty list, so we do it anyway
 	// to not blow up if we ever decide copy it in the middle of a transaction
-	state.accessList = s.accessList.Copy()
-	state.transientStorage = s.transientStorage.Copy()
-	if s.snaps != nil {
+	dst.accessList = src.accessList.Copy()
+	dst.transientStorage = src.transientStorage.Copy()
+	dst.journal = newJournal()
+
+	// Copy the dirty states, logs, and preimages
+	for addr := range src.journal.dirties {
+		// As documented [here](https://github.com/ethereum/go-ethereum/pull/16485#issuecomment-380438527),
+		// and in the Finalise-method, there is a case where an object is in the journal but not
+		// in the stateObjects: OOG after touch on ripeMD prior to Byzantium. Thus, we need to check for
+		// nil
+		if object, exist := src.stateObjects[addr]; exist {
+			dst.stateObjects[addr] = object.deepCopy(dst)
+			dst.stateObjectsDirty[addr] = struct{}{}
+		}
+	}
+	// Above, we don't copy the actual journal. This means that if the copy is copied, the
+	// loop above will be a no-op, since the copy's journal is empty.
+	// Thus, here we iterate over stateObjects, to enable copies of copies
+	for addr := range src.stateObjectsDirty {
+		if _, exist := dst.stateObjects[addr]; !exist {
+			dst.stateObjects[addr] = src.stateObjects[addr].deepCopy(dst)
+			dst.stateObjectsDirty[addr] = struct{}{}
+		}
+	}
+	for addr := range src.stateObjectsDirtyStorage {
+		dst.stateObjectsDirtyStorage[addr] = struct{}{}
+	}
+
+	// Deep copy logs
+	deepCopyLogs(src, dst)
+
+	// Copy preimages
+	for hash, preimage := range src.preimages {
+		dst.preimages[hash] = preimage
+	}
+
+	if src.snaps != nil {
 		// In order for the miner to be able to use and make additions
 		// to the snapshot tree, we need to copy that aswell.
 		// Otherwise, any block mined by ourselves will cause gaps in the tree,
 		// and force the miner to operate trie-backed only
-		state.snaps = s.snaps
-		state.snap = s.snap
+		dst.snaps = src.snaps
+		dst.snap = src.snap
 		// deep copy needed
-		state.snapDestructs = make(map[common.Hash]struct{})
-		for k, v := range s.snapDestructs {
-			state.snapDestructs[k] = v
+		dst.snapDestructs = make(map[common.Hash]struct{})
+		for k, v := range src.snapDestructs {
+			dst.snapDestructs[k] = v
 		}
-		state.snapAccounts = make(map[common.Hash][]byte)
-		for k, v := range s.snapAccounts {
-			state.snapAccounts[k] = v
+		dst.snapAccounts = make(map[common.Hash][]byte)
+		for k, v := range src.snapAccounts {
+			dst.snapAccounts[k] = v
 		}
-		state.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
-		for k, v := range s.snapStorage {
+		dst.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
+		for k, v := range src.snapStorage {
 			temp := make(map[common.Hash][]byte)
 			for kk, vv := range v {
 				temp[kk] = vv
 			}
-			state.snapStorage[k] = temp
+			dst.snapStorage[k] = temp
 		}
 	}
-	return state
 }
 
 // deepCopyLogs deep-copies StateDB.logs from the left to the right.
@@ -1044,16 +1123,14 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(stateObject)
 		case isDirty:
-			if stateObject.IsProgramAccount() {
-				// Write any contract code associated with the state object.
-				if stateObject.code != nil && stateObject.dirtyCode {
-					s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
-					stateObject.dirtyCode = false
-				}
-				// Write any storage changes in the state object to its storage trie.
-				if err := stateObject.CommitStorageTrie(s.db); err != nil {
-					return common.Hash{}, err
-				}
+			// Write any contract code associated with the state object.
+			if stateObject.code != nil && stateObject.dirtyCode {
+				s.db.TrieDB().DiskDB().WriteCode(common.BytesToHash(stateObject.CodeHash()), stateObject.code)
+				stateObject.dirtyCode = false
+			}
+			// Write any storage changes in the state object to its storage trie.
+			if err := stateObject.CommitStorageTrie(s.db); err != nil {
+				return common.Hash{}, err
 			}
 			// Update the object in the main account trie.
 			stateObjectsToUpdate = append(stateObjectsToUpdate, stateObject)
@@ -1095,6 +1172,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
 				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)
 			}
+
 			// Keep 128 diff layers in the memory, persistent layer is 129th.
 			// - head layer is paired with HEAD state
 			// - head-1 layer is paired with HEAD-1 state
@@ -1105,7 +1183,6 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		}
 		s.snap, s.snapDestructs, s.snapAccounts, s.snapStorage = nil, nil, nil, nil
 	}
-
 	return root, err
 }
 
@@ -1115,8 +1192,8 @@ func (s *StateDB) GetTxHash() common.Hash {
 }
 
 var (
-	errNotExistingAddress = fmt.Errorf("there is no account corresponding to the given address")
-	errNotContractAddress = fmt.Errorf("given address is not a contract address")
+	errNotExistingAddress = errors.New("there is no account corresponding to the given address")
+	errNotProgramAccount  = errors.New("given address is not a program account")
 )
 
 func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.ExtHash, error) {
@@ -1124,14 +1201,11 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 	if acc == nil {
 		return common.ExtHash{}, errNotExistingAddress
 	}
-	if acc.Type() != account.SmartContractAccountType {
-		return common.ExtHash{}, errNotContractAddress
+	pa := account.GetProgramAccount(acc)
+	if pa == nil {
+		return common.ExtHash{}, errNotProgramAccount
 	}
-	contract, true := acc.(*account.SmartContractAccount)
-	if !true {
-		return common.ExtHash{}, errNotContractAddress
-	}
-	return contract.GetStorageRoot(), nil
+	return pa.GetStorageRoot(), nil
 }
 
 // Prepare handles the preparatory steps for executing a state transition with.

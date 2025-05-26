@@ -23,9 +23,12 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -35,10 +38,44 @@ var Forks = map[string]*params.ChainConfig{
 	"Frontier": {
 		ChainID: big.NewInt(1),
 	},
+	"Homestead": {
+		ChainID: big.NewInt(1),
+	},
 	"Byzantium": {
 		ChainID: big.NewInt(1),
 	},
 	"Constantinople": {
+		ChainID: big.NewInt(1),
+	},
+	"ConstantinopleFix": {
+		ChainID: big.NewInt(1),
+	},
+	"Istanbul": {
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
+	},
+	"Berlin": {
+		ChainID: big.NewInt(1),
+	},
+	"London": {
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: new(big.Int),
+		LondonCompatibleBlock:   new(big.Int),
+	},
+	"EthTxType": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+	},
+	"Magma": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+	},
+	"Merge": {
 		ChainID: big.NewInt(1),
 	},
 	"Shanghai": {
@@ -50,6 +87,33 @@ var Forks = map[string]*params.ChainConfig{
 		KoreCompatibleBlock:      new(big.Int),
 		ShanghaiCompatibleBlock:  new(big.Int),
 	},
+	"Cancun": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		Kip103CompatibleBlock:    new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		Kip160CompatibleBlock:    new(big.Int),
+	},
+	"Prague": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		Kip103CompatibleBlock:    new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		Kip160CompatibleBlock:    new(big.Int),
+		PragueCompatibleBlock:    new(big.Int),
+	},
 }
 
 // UnsupportedForkError is returned when a test requests a fork that isn't implemented.
@@ -59,4 +123,29 @@ type UnsupportedForkError struct {
 
 func (e UnsupportedForkError) Error() string {
 	return fmt.Sprintf("unsupported fork %q", e.Name)
+}
+
+// IsPrecompiledContractAddressForEthTest returns true if this is used for TestExecutionSpecState and the input address is one of precompiled contract addresses.
+func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface{}) bool {
+	r, ok := rules.(params.Rules)
+	if !ok {
+		panic("unexpected type of rules")
+	}
+	var activePrecompiles []common.Address
+	switch {
+	case r.IsPrague:
+		activePrecompiles = vm.PrecompiledAddressPrague
+	case r.IsCancun:
+		activePrecompiles = vm.PrecompiledAddressCancun
+	case r.IsIstanbul:
+		activePrecompiles = vm.PrecompiledAddressIstanbul
+	default:
+		activePrecompiles = vm.PrecompiledAddressesByzantium
+	}
+	for _, pre := range activePrecompiles {
+		if bytes.Equal(pre.Bytes(), addr.Bytes()) {
+			return true
+		}
+	}
+	return false
 }

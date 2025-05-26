@@ -256,6 +256,7 @@ func (h *handler) startCallProc(fn func(*callProc)) {
 		defer h.callWG.Done()
 		defer cancel()
 		defer atomic.AddInt64(&pendingRequestCount, -1)
+		defer rpcPendingRequestsCount.Dec(1)
 		fn(&callProc{ctx: ctx})
 	}()
 }
@@ -476,7 +477,7 @@ func requestUpstream(ctx context.Context, msg *jsonrpcMessage, args []reflect.Va
 	}
 
 	rpcErrorResponsesCounter.Inc(1)
-	return msg.errorResponse(err)
+	return msg.errorResponse(fmt.Errorf("from upstream rpc endpoint: %w", err))
 }
 
 // unsubscribe is the callback function for all *_unsubscribe calls.

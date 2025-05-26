@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
@@ -193,6 +194,28 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	cfg.NoDiscovery = ctx.Bool(NoDiscoverFlag.Name)
 
+	if ctx.IsSet(DiscoverTypesFlag.Name) {
+		nodetypes := strings.Split(ctx.String(DiscoverTypesFlag.Name), ",")
+		for _, nodetype := range nodetypes {
+			switch strings.ToLower(nodetype) {
+			case "auto":
+				setDefaultDiscoverTypes(cfg)
+			case "cn":
+				cfg.DiscoverTypes.CN = true
+			case "pn":
+				cfg.DiscoverTypes.PN = true
+			case "en":
+				cfg.DiscoverTypes.EN = true
+			default:
+				logger.Crit("Invalid node type in DiscoverTypesFlag, should be one of auto, cn, pn, en", "nodetype", nodetype)
+			}
+		}
+	} else {
+		// Enable discovery for default node type
+		// To disable discovery, set NoDiscoverFlag instead of setting DiscoverTypesFlag to empty.
+		setDefaultDiscoverTypes(cfg)
+	}
+
 	cfg.RWTimerConfig = p2p.RWTimerConfig{}
 	cfg.RWTimerConfig.Interval = ctx.Uint64(RWTimerIntervalFlag.Name)
 	cfg.RWTimerConfig.WaitTime = ctx.Duration(RWTimerWaitTimeFlag.Name)
@@ -208,6 +231,17 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	common.MaxRequestContentLength = ctx.Int(MaxRequestContentLengthFlag.Name)
 
 	cfg.NetworkID, _ = getNetworkId(ctx)
+}
+
+// setDefaultDiscoverTypes sets the default discovery types for the node type
+// Note that cfg.ConnectionType should be properly set before calling this function
+func setDefaultDiscoverTypes(cfg *p2p.Config) {
+	if cfg.ConnectionType == common.CONSENSUSNODE {
+		cfg.DiscoverTypes.CN = true
+	} else { // PN or EN
+		cfg.DiscoverTypes.PN = true
+		cfg.DiscoverTypes.EN = true
+	}
 }
 
 // setNodeKey parses manually provided node key from command line flags,
@@ -686,6 +720,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
 		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
 	}
+	cfg.UseConsoleLog = ctx.Bool(UseConsoleLogFlag.Name)
+	if cfg.UseConsoleLog && !ctx.IsSet(NetworkIdFlag.Name) {
+		logger.Crit("Use of --use-console-log is only supported for private network, however --networkid is not set.")
+	}
 
 	if ctx.IsSet(SnapshotFlag.Name) {
 		cfg.SnapshotCacheSize = ctx.Int(SnapshotCacheSizeFlag.Name)
@@ -720,6 +758,9 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
+
+	// Set kaiax module config
+	gasless.SetGaslessConfig(ctx, cfg.Gasless)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value

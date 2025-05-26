@@ -31,11 +31,14 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"testing/quick"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -147,38 +150,50 @@ func TestCopy(t *testing.T) {
 	// Copy the state, modify both in-memory
 	copy := orig.Copy()
 
+	// Copy the copy state
+	ccopy := copy.Copy()
+
 	for i := byte(0); i < 255; i++ {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 
 		origObj.AddBalance(big.NewInt(2 * int64(i)))
 		copyObj.AddBalance(big.NewInt(3 * int64(i)))
+		ccopyObj.AddBalance(big.NewInt(4 * int64(i)))
 
 		orig.updateStateObject(origObj)
 		copy.updateStateObject(copyObj)
+		ccopy.updateStateObject(ccopyObj)
 	}
 
-	// Finalise the changes on both concurrently
-	done := make(chan struct{})
+	// Finalise the changes on all concurrently
+	finalise := func(wg *sync.WaitGroup, db *StateDB) {
+		defer wg.Done()
+		db.Finalise(true, true)
+	}
 
-	go func() {
-		orig.Finalise(true, true)
-		close(done)
-	}()
-
-	copy.Finalise(true, true)
-	<-done
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go finalise(&wg, orig)
+	go finalise(&wg, copy)
+	go finalise(&wg, ccopy)
+	wg.Wait()
 
 	// Verify that the two states have been updated independently
 	for i := byte(0); i < 255; i++ {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
+		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 
 		if want := big.NewInt(3 * int64(i)); origObj.Balance().Cmp(want) != 0 {
 			t.Errorf("orig obj %d: balance mismatch: have %v, want %v", i, origObj.Balance(), want)
 		}
 		if want := big.NewInt(4 * int64(i)); copyObj.Balance().Cmp(want) != 0 {
 			t.Errorf("copy obj %d: balance mismatch: have %v, want %v", i, copyObj.Balance(), want)
+		}
+		if want := big.NewInt(5 * int64(i)); ccopyObj.Balance().Cmp(want) != 0 {
+			t.Errorf("ccopy obj %d: balance mismatch: have %v, want %v", i, ccopyObj.Balance(), want)
 		}
 	}
 }
@@ -209,6 +224,28 @@ func TestStateObjects(t *testing.T) {
 	}
 
 	assert.Equal(t, 128, len(stateDB.stateObjects))
+}
+
+// TestCopiedEIP7702 tests that copied EOA has the same code related fields as the original EOA.
+// This test has been introduced since the implementation of EIP-7702.
+func TestCopiedEIP7702(t *testing.T) {
+	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	testCode := common.Hex2Bytes("0xef0100")
+	testCodeHash := crypto.Keccak256Hash(testCode)
+
+	addr := common.BytesToAddress([]byte{5})
+	stateDB.SetCodeToEOA(addr, testCode, params.Rules{})
+
+	assert.Equal(t, stateDB.GetCodeHash(addr), testCodeHash)
+	pa := account.GetProgramAccount(stateDB.GetAccount(addr))
+	assert.Equal(t, pa.GetStorageRoot(), types.EmptyRootHash.ExtendZero())
+
+	copy := stateDB.Copy()
+
+	assert.Equal(t, copy.GetCodeHash(addr), testCodeHash)
+	pa = account.GetProgramAccount(copy.GetAccount(addr))
+	assert.Equal(t, pa.GetStorageRoot(), types.EmptyRootHash.ExtendZero())
 }
 
 // Test that invalid pruning options are prohibited.

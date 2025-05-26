@@ -49,6 +49,8 @@ var (
 	GetLogsMaxItems       = int(10000)       // maximum allowed number of return items for getLogs and getFilterLogs APIs
 )
 
+var errPendingLogsUnsupported = errors.New("pending logs are not supported")
+
 // filter is a helper struct that holds meta information over the filter type
 // and associated subscription in the event system.
 type filter struct {
@@ -76,12 +78,12 @@ type PublicFilterAPI struct {
 }
 
 // NewPublicFilterAPI returns a new PublicFilterAPI instance.
-func NewPublicFilterAPI(backend Backend, lightMode bool) *PublicFilterAPI {
+func NewPublicFilterAPI(backend Backend) *PublicFilterAPI {
 	api := &PublicFilterAPI{
 		backend: backend,
 		mux:     backend.EventMux(),
 		chainDB: backend.ChainDB(),
-		events:  NewEventSystem(backend.EventMux(), backend, lightMode),
+		events:  NewEventSystem(backend.EventMux(), backend),
 		filters: make(map[rpc.ID]*filter),
 		timeout: defaultFilterDeadline,
 	}

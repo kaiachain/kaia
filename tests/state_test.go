@@ -29,10 +29,13 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestState(t *testing.T) {
+// TestKaiaSpecState runs the StateTests fixtures from kaia-core-tests
+func TestKaiaSpecState(t *testing.T) {
 	t.Parallel()
 
 	st := new(testMatcher)
@@ -58,21 +61,92 @@ func TestState(t *testing.T) {
 	st.skipLoad(`^stRandom2/randomStatetest642.json`)
 
 	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
-		for _, subtest := range test.Subtests() {
-			subtest := subtest
-			key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
-			name := name + "/" + key
-			t.Run(key, func(t *testing.T) {
-				if subtest.Fork == "Constantinople" {
-					t.Skip("constantinople not supported yet")
-				}
-				withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
-					_, err := test.Run(subtest, vmconfig)
-					return st.checkFailure(t, name, err)
-				})
-			})
-		}
+		execStateTest(t, st, test, name, []string{"Constantinople"}, false)
 	})
+}
+
+// TestExecutionSpecState runs the state_test fixtures from execution-spec-tests.
+
+type ExecutionSpecStateTestSuite struct {
+	suite.Suite
+	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
+}
+
+func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
+	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
+	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
+}
+
+func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
+	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
+}
+
+func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
+	t := suite.T()
+
+	if !common.FileExist(executionSpecStateTestDir) {
+		t.Skipf("directory %s does not exist", executionSpecStateTestDir)
+	}
+	st := new(testMatcher)
+
+	// TODO-Kaia: should remove these skip
+	// executing precompiled contracts with value transferring is not permitted
+	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+
+	// tests to skip
+	// unsupported EIPs
+	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
+	st.skipLoad(`^cancun\/eip4844_blobs\/`)
+	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-31_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-32_bytes\]`)
+	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-empty_calldata\]`)
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_CancunToPragueAtTime15k-state_test--G1ADD\]`)
+	// type 3 tx (EIP-4844) is not supported
+	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
+
+	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
+		execStateTest(t, st, test, name, []string{
+			// Even if we skip fork levels, old EIPs are still retrospectively tested against Cancun or later forks.
+			// The EEST framework was added when Kaia was at Cancun hardfork. Previous forks will be, and continue to be tested with kaia-core-tests.
+			"Frontier",
+			"Homestead",
+			"Byzantium",
+			"Constantinople",
+			"ConstantinopleFix",
+			"Istanbul",
+			"Berlin",
+			"London",
+			"Merge",
+			"Paris",
+			"Shanghai",
+			// "Cancun",
+			// "Prague",
+		}, true)
+	})
+}
+
+func TestExecutionSpecStateTestSuite(t *testing.T) {
+	suite.Run(t, new(ExecutionSpecStateTestSuite))
+}
+
+func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
+	for _, subtest := range test.Subtests() {
+		subtest := subtest
+		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+		name := name + "/" + key
+		t.Run(key, func(t *testing.T) {
+			for _, skip := range skipForks {
+				if skip == subtest.Fork {
+					t.Skipf("%s not supported yet", subtest.Fork)
+				}
+			}
+			withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
+				err := test.Run(subtest, vmconfig, isTestExecutionSpecState)
+				return st.checkFailure(t, name, err)
+			})
+		})
+	}
 }
 
 // Transactions with gasLimit above this value will not get a VM trace on failure.

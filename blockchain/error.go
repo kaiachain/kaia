@@ -39,10 +39,6 @@ var (
 	// ErrBlacklistedHash is returned if a block to import is on the blacklist.
 	ErrBlacklistedHash = errors.New("blacklisted hash")
 
-	// ErrNonceTooHigh is returned if the nonce of a transaction is higher than the
-	// next one expected based on the local chain.
-	ErrNonceTooHigh = errors.New("nonce too high")
-
 	// tx_pool
 
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.
@@ -54,6 +50,14 @@ var (
 	// ErrNonceTooLow is returned if the nonce of a transaction is lower than the
 	// one present in the local chain.
 	ErrNonceTooLow = errors.New("nonce too low")
+
+	// ErrNonceTooHigh is returned if the nonce of a transaction is higher than the
+	// next one expected based on the local chain.
+	ErrNonceTooHigh = errors.New("nonce too high")
+
+	// ErrNonceMax is returned if the nonce of a transaction sender account has
+	// maximum allowed value and would become invalid if incremented.
+	ErrNonceMax = errors.New("nonce has max value")
 
 	// ErrUnderpriced is returned if a transaction's gas price is below the minimum
 	// configured for the transaction pool.
@@ -85,6 +89,10 @@ var (
 	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
 	// than required to start the invocation.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
+
+	// ErrFloorDataGas is returned if the transaction is specified to use less gas
+	// than required for the data floor cost.
+	ErrFloorDataGas = errors.New("insufficient gas for floor data gas cost")
 
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
 	// maximum allowance of the current block.
@@ -147,4 +155,24 @@ var (
 
 	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
 	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
+
+	// -- EIP-7702 errors --
+
+	// Message validation errors:
+	// Note these are just informational, and do not cause tx execution abort.
+	ErrEmptyAuthList   = errors.New("EIP-7702 transaction with empty auth list")
+	ErrSetCodeTxCreate = errors.New("EIP-7702 transaction cannot be used to create contract")
+)
+
+// EIP-7702 state transition errors.
+// Note these are just informational, and do not cause tx execution abort.
+var (
+
+	// EIP-7702 state transition errors:
+	ErrAuthorizationWrongChainID           = errors.New("EIP-7702 authorization chain ID mismatch")
+	ErrAuthorizationNonceOverflow          = errors.New("EIP-7702 authorization nonce > 64 bit")
+	ErrAuthorizationInvalidSignature       = errors.New("EIP-7702 authorization has invalid signature")
+	ErrAuthorizationDestinationHasCode     = errors.New("EIP-7702 authorization destination is a contract")
+	ErrAuthorizationNonceMismatch          = errors.New("EIP-7702 authorization nonce does not match current account nonce")
+	ErrAuthorizationNotAllowAccountKeyType = errors.New("EIP-7702 authorization don't allow AccountKeyType")
 )
