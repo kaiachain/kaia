@@ -84,8 +84,11 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 		backend := backends.NewBlockchainContractBackend(r.Chain, nil, nil)
 
 		var kip113Addr common.Address
-		var statedb *state.StateDB
-		var parentNum *big.Int
+
+		// Early check for before-fork blocks
+		if !r.ChainConfig.IsRandaoForkEnabled(num) && !r.ChainConfig.IsRandaoForkBlock(num) {
+			return nil, randao.ErrBeforeRandaoFork
+		}
 
 		// Get the parent block's statedb and block number
 		statedb, parentNum, err := r.getParentBlockStateDB(num)
@@ -97,18 +100,19 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 		// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
 		// Hence the ChainConfig fallback.
 		if r.ChainConfig.IsRandaoForkBlock(num) {
+			// For fork block, get kip113Addr from ChainConfig
 			var ok bool
 			kip113Addr, ok = r.ChainConfig.RandaoRegistry.Records[system.Kip113Name]
 			if !ok {
 				return nil, randao.ErrMissingKIP113
 			}
-		} else if r.ChainConfig.IsRandaoForkEnabled(num) {
+		} else {
+			// For fork-enabled blocks, get kip113Addr from Registry
+			// (We already checked above that this is a fork-enabled block)
 			kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
 			if err != nil {
 				return nil, err
 			}
-		} else {
-			return nil, randao.ErrBeforeRandaoFork
 		}
 
 		// Check storage root cache
