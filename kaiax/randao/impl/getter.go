@@ -45,6 +45,32 @@ func (r *RandaoModule) GetBlsPubkey(proposer common.Address, num *big.Int) (bls.
 	return bls.PublicKeyFromBytes(info.PublicKey)
 }
 
+// getParentBlockStateDB retrieves both the StateDB and block number of the parent block
+// for the given current block number. This function handles the calculation of the parent
+// block number and retrieval of its state in a single operation.
+func (r *RandaoModule) getParentBlockStateDB(blockNum *big.Int) (*state.StateDB, *big.Int, error) {
+	if common.Big0.Cmp(blockNum) == 0 {
+		return nil, nil, randao.ErrZeroBlockNumber
+	}
+
+	parentNum := new(big.Int).Sub(blockNum, common.Big1)
+	pHeader := r.Chain.GetHeaderByNumber(parentNum.Uint64())
+
+	// Validate parent header existence
+	if pHeader == nil {
+		return nil, nil, consensus.ErrUnknownAncestor
+	}
+
+	// If no state exist at block number `parentNum`,
+	// return the error `consensus.ErrPrunedAncestor`
+	statedb, err := r.Chain.StateAt(pHeader.Root)
+	if err != nil {
+		return nil, nil, consensus.ErrPrunedAncestor
+	}
+
+	return statedb, parentNum, nil
+}
+
 func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, error) {
 	// First check the block number based cache
 	if item, ok := r.blsPubkeyCache.Get(num.Uint64()); ok {
@@ -56,18 +82,15 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 		start := time.Now()
 
 		backend := backends.NewBlockchainContractBackend(r.Chain, nil, nil)
-		if common.Big0.Cmp(num) == 0 {
-			return nil, randao.ErrZeroBlockNumber
-		}
-		parentNum := new(big.Int).Sub(num, common.Big1)
 
 		var kip113Addr common.Address
 		var statedb *state.StateDB
-		pHeader := r.Chain.GetHeaderByNumber(parentNum.Uint64())
+		var parentNum *big.Int
 
-		// Early validation of parent header existence
-		if pHeader == nil {
-			return nil, consensus.ErrUnknownAncestor
+		// Get the parent block's statedb and block number
+		statedb, parentNum, err := r.getParentBlockStateDB(num)
+		if err != nil {
+			return nil, err
 		}
 
 		// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
@@ -79,21 +102,7 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 			if !ok {
 				return nil, randao.ErrMissingKIP113
 			}
-
-			// Get the statedb for storage root cache
-			var err error
-			statedb, err = r.Chain.StateAt(pHeader.Root)
-			if err != nil {
-				return nil, consensus.ErrPrunedAncestor
-			}
 		} else if r.ChainConfig.IsRandaoForkEnabled(num) {
-			// If no state exist at block number `parentNum`,
-			// return the error `consensus.ErrPrunedAncestor`
-			var err error
-			statedb, err = r.Chain.StateAt(pHeader.Root)
-			if err != nil {
-				return nil, consensus.ErrPrunedAncestor
-			}
 			kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
 			if err != nil {
 				return nil, err
