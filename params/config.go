@@ -105,7 +105,7 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
-		PragueCompatibleBlock: nil, // TODO-Kaia-Prague: set Kairos PragueCompatibleBlock
+		PragueCompatibleBlock: big.NewInt(187930000),
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
