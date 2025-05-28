@@ -51,7 +51,7 @@ type RandaoModule struct {
 
 func NewRandaoModule() *RandaoModule {
 	blsPubkeyCache, _ := lru.NewARC(128)
-	storageRootCache, _ := lru.NewARC(1000)
+	storageRootCache, _ := lru.NewARC(128)
 	return &RandaoModule{
 		blsPubkeyCache:   blsPubkeyCache,
 		storageRootCache: storageRootCache,
