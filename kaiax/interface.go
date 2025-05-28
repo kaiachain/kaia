@@ -66,7 +66,7 @@ type ConsensusModule interface {
 	FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
 }
 
-// Any component or module that accomodate consensus modules.
+// Any component or module that accommodate consensus modules.
 type ConsensusModuleHost interface {
 	RegisterConsensusModule(modules ...ConsensusModule)
 
@@ -83,7 +83,7 @@ type ExecutionModule interface {
 	PostInsertBlock(block *types.Block) error
 }
 
-// Any component or module that accomodate execution modules.
+// Any component or module that accommodate execution modules.
 type ExecutionModuleHost interface {
 	RegisterExecutionModule(modules ...ExecutionModule)
 }
@@ -112,7 +112,7 @@ type RewindableModule interface {
 	RewindDelete(hash common.Hash, num uint64)
 }
 
-// Any component or module that accomodate rewindable modules.
+// Any component or module that accommodate rewindable modules.
 type RewindableModuleHost interface {
 	RegisterRewindableModule(modules ...RewindableModule)
 }
@@ -131,7 +131,7 @@ type TxProcessModule interface {
 	PostRunTx(evm *vm.EVM, tx *types.Transaction) error
 }
 
-// Any component or module that accomodate tx process modules.
+// Any component or module that accommodate tx process modules.
 type TxProcessModuleHost interface {
 	RegisterTxProcessModule(modules ...TxProcessModule)
 }
@@ -168,7 +168,7 @@ type TxPoolForCaller interface {
 	PendingUnlocked() (map[common.Address]types.Transactions, error)
 }
 
-// Any component or module that accomodate txpool modules.
+// Any component or module that accommodate txpool modules.
 type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)
 }
