@@ -86,7 +86,7 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 		var kip113Addr common.Address
 
 		// Early check for before-fork blocks
-		if !r.ChainConfig.IsRandaoForkEnabled(num) && !r.ChainConfig.IsRandaoForkBlock(num) {
+		if !r.ChainConfig.IsRandaoForkEnabled(num) {
 			return nil, randao.ErrBeforeRandaoFork
 		}
 
