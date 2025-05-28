@@ -44,7 +44,7 @@ func TestFeePayerContract(t *testing.T) {
 	}
 }
 
-// TestFeePayerContract tests an indirect call of precompiled contract 0xa (feepayer).
+// TestFeePayerContractIndirect tests an indirect call of precompiled contract 0xa (feepayer).
 // - It tests a contract `FeePayerIndirect` in fee_payer_indirect_test.sol.
 // - It calls a deployed contract calling the precompiled contract 0xa.
 // TODO-Kaia-FeePayer: need more test cases for other calls such as delegatecall, etc.
@@ -135,7 +135,7 @@ func testFeePayerContract(t *testing.T, fn string) {
 	}
 }
 
-// testFeePayerContract tests an indirect call of the fee-payer precompiled contract.
+// testFeePayerContractIndirect tests an indirect call of the fee-payer precompiled contract.
 // 1. Deploy the FeePayer contract.
 // 2. Deploy the FeePayerIndirect contract.
 // 3. Make an input data for the contract call. The function name is given as a parameter.
