@@ -181,7 +181,7 @@ type ConsensusInfo struct {
 	// Proposer signs [sigHash] to make seal; Validators signs [block.Hash + msgCommit] to make committedSeal
 	SigHash        common.Hash
 	Proposer       common.Address
-	OriginProposer common.Address // the proposer of 0th round at the same block number
+	OriginProposer *common.Address // the proposer of 0th round at the same block number
 	Committee      []common.Address
 	Committers     []common.Address
 	Round          byte

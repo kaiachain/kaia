@@ -762,13 +762,20 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	}
 
 	round := block.Header().Round()
-
 	// get the committee list of this block (blockNumber, round)
-	currentRoundCState, err := sb.GetCommitteeState(block.NumberU64())
+	currentProposer, err := sb.valsetModule.GetProposer(blockNumber, uint64(round))
 	if err != nil {
-		logger.Error("Failed to get committee or proposer.", "blockNum", blockNumber, "round", uint64(round), "err", err)
+		logger.Error("Failed to get proposer.", "blockNum", blockNumber, "round", uint64(round), "err", err)
 		return consensus.ConsensusInfo{}, errInternalError
 	}
+
+	var currentCommittee []common.Address
+
+	currentRoundCState, err := sb.GetCommitteeState(block.NumberU64())
+	if err == nil {
+		currentCommittee = currentRoundCState.Committee().List()
+	}
+
 	// Uncomment to validate if committers are in the committee
 	// for _, recovered := range committers {
 	// 	found := false
@@ -783,17 +790,19 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	// }
 
 	// get origin proposer at 0 round.
+	var roundZeroProposer *common.Address
+
 	roundZeroCState, err := sb.GetCommitteeStateByRound(blockNumber, 0)
-	if err != nil {
-		logger.Error("Failed to get committee or proposer.", "blockNum", blockNumber, "round", 0, "err", err)
-		return consensus.ConsensusInfo{}, errInternalError
+	if err == nil {
+		addr := roundZeroCState.Proposer()
+		roundZeroProposer = &addr
 	}
 
 	cInfo := consensus.ConsensusInfo{
 		SigHash:        sigHash(block.Header()),
-		Proposer:       currentRoundCState.Proposer(),
-		OriginProposer: roundZeroCState.Proposer(),
-		Committee:      currentRoundCState.Committee().List(),
+		Proposer:       currentProposer,
+		OriginProposer: roundZeroProposer,
+		Committee:      currentCommittee,
 		Committers:     committers,
 		Round:          round,
 	}
