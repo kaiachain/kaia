@@ -144,6 +144,9 @@ var (
 	// base fee of the block.
 	ErrFeeCapTooLow = errors.New("max fee per gas less than block base fee")
 
+	// ErrSenderNoEOA is returned if the sender of a transaction is a contract.
+	ErrSenderNoEOA = errors.New("sender not an eoa")
+
 	// ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a
 	// transaction with a tip higher than the total fee cap.
 	ErrTipAboveFeeCap = errors.New("max fee per gas higher than max priority fee per gas")

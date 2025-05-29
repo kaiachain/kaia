@@ -244,9 +244,9 @@ func TestBlockChainEstimateGas(t *testing.T) {
 
 	// Error case - simple transfer with insufficient funds with zero gasPrice
 	gas, err = c.EstimateGas(context.Background(), kaia.CallMsg{
-		From:  code1Addr,
-		To:    &code1Addr,
-		Value: big.NewInt(1),
+		From:  testAddr,
+		To:    &testAddr,
+		Value: big.NewInt(10000000001),
 	})
 	assert.Contains(t, err.Error(), "insufficient balance for transfer")
 	assert.Zero(t, gas)

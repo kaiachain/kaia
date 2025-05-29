@@ -108,7 +108,14 @@ type Message interface {
 	Value() *big.Int
 
 	Nonce() uint64
+
+	// When CheckNonce is true, the message nonce is not checked against the
+	// account nonce in state.
+	// This will return true for operations like RPC eth_call.
 	CheckNonce() bool
+	// When FromEOACheck is true, the message sender is not checked to be an EOA.
+	FromEOACheck() bool
+
 	Data() []byte
 
 	// IntrinsicGas returns `intrinsic gas` based on the tx type.
@@ -296,6 +303,14 @@ func (st *StateTransition) preCheck() error {
 		} else if stNonce+1 < stNonce {
 			return fmt.Errorf("%w: address %v, nonce: %d", ErrNonceMax,
 				st.msg.ValidatedSender().Hex(), stNonce)
+		}
+	}
+	if !st.msg.FromEOACheck() {
+		// Make sure the sender is an EOA
+		code := st.state.GetCode(st.msg.ValidatedSender())
+		_, delegated := types.ParseDelegation(code)
+		if len(code) > 0 && !delegated {
+			return fmt.Errorf("%w: address %v, len(code): %d", ErrSenderNoEOA, st.msg.ValidatedSender().Hex(), len(code))
 		}
 	}
 

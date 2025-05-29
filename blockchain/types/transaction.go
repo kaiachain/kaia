@@ -104,6 +104,8 @@ type Transaction struct {
 	validatedGas *ValidatedGas
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
+	// The message sender is checked EOA only if `fromEOACheck` is true.
+	fromEOACheck bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
 	markedUnexecutable int32
 
@@ -381,6 +383,12 @@ func (tx *Transaction) CheckNonce() bool {
 	defer tx.mu.RUnlock()
 	return tx.checkNonce
 }
+
+func (tx *Transaction) FromEOACheck() bool {
+	tx.mu.RLock()
+	defer tx.mu.RUnlock()
+	return tx.fromEOACheck
+}
 func (tx *Transaction) Type() TxType                { return tx.data.Type() }
 func (tx *Transaction) IsLegacyTransaction() bool   { return tx.Type().IsLegacyTransaction() }
 func (tx *Transaction) IsEthTypedTransaction() bool { return tx.Type().IsEthTypedTransaction() }
@@ -629,6 +637,7 @@ func (tx *Transaction) AsMessageWithAccountKeyPicker(s Signer, picker AccountKey
 
 	tx.mu.Lock()
 	tx.checkNonce = true
+	tx.fromEOACheck = true
 	tx.mu.Unlock()
 
 	gasFeePayer := uint64(0)
@@ -1135,12 +1144,13 @@ func (t *TransactionsByPriceAndNonce) Copy() *TransactionsByPriceAndNonce {
 // NewMessage returns a `*Transaction` object with the given arguments.
 // Care must be taken when creating SetCodeTx because if you assign nil to `to`,
 // a panic will occur because `newTxInternalDataEthereumSetCodeWithValues` reference the pointer of `to`.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce, fromEOACheck bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
 		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
 		validatedFeePayer: from,
 		validatedSender:   from,
 		checkNonce:        checkNonce,
+		fromEOACheck:      fromEOACheck,
 	}
 
 	// Call supports EthereumAccessList, EthereumSetCode and Legacy txTypes only.

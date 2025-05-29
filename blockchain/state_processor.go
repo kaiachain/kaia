@@ -128,6 +128,7 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 		nil,
 		data,
 		false,
+		false,
 		intrinsicGas,
 		nil,
 		nil,
