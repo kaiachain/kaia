@@ -2,7 +2,7 @@
 
 ## 1. Install protobuf for Go
 ```
-$ go get -u github.com/golang/protobuf/protoc-gen-go
+$ go get -u google.golang.org/protobuf/cmd/protoc-gen-go
 ```
 
 ## 2. Generate a Go file from protobuf IDL
