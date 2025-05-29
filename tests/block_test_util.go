@@ -124,7 +124,8 @@ var _ consensus.Engine = &eestEngine{}
 
 // This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
 func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
-	// Change GasLimit to the one in the eth header
+	// Change BaseFee/GasLimit to the one in the eth header
+	evm.Context.BaseFee = e.baseFee
 	evm.Context.GasLimit = e.gasLimit
 
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
@@ -295,7 +296,6 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			e.applyHeader(header)
 		}
 
-		// var maxFeePerGas *big.Int
 		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			for _, tx := range txs {
