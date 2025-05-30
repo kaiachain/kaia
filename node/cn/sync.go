@@ -184,13 +184,8 @@ func (pm *ProtocolManager) getSyncMode(currentBlock *types.Block) downloader.Syn
 		// Fast sync was explicitly requested, and explicitly granted
 		return downloader.FastSync
 	} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() > 0 {
-		// The database seems empty as the current block is the genesis. Yet the fast
-		// block is ahead, so fast sync was enabled for this node at a certain point.
-		// The only scenario where this can happen is if the user manually (or via a
-		// bad block) rolled back a fast sync node below the sync point. In this case
-		// however it's safe to reenable fast sync.
-		atomic.StoreUint32(&pm.snapSync, 1)
-		return downloader.SnapSync
+		// NOTE: Kaia does not support snap sync in this case.
+		return downloader.FullSync
 	}
 	return downloader.FullSync
 }
