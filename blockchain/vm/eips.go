@@ -381,8 +381,10 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
 }
 
-func ChangeGasCostForTest(jt *JumpTable, opCode OpCode, constantGas uint64) {
-	jt[opCode].constantGas = constantGas
+func ChangeGasCostForTest(jt *JumpTable) {
+	// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
+	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
+	jt[EXTCODEHASH].dynamicGas = gasEip2929AccountCheck
 }
 
 // enable7702 the EIP-7702 changes to support delegation designators.
