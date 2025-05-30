@@ -583,7 +583,9 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 				}
 			}
 			if newHeadBlock.NumberU64() == 0 {
-				return 0, errors.New("rewound to block number 0, but repair failed")
+				if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps, nil); err != nil {
+					return 0, errors.New("rewound to block number 0, but repair failed")
+				}
 			}
 			bc.db.WriteHeadBlockHash(newHeadBlock.Hash())
 
