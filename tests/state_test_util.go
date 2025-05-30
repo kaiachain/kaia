@@ -508,8 +508,7 @@ func calculateEthGasPrice(r params.Rules, envGasPrice, envBaseFee, envMaxFeePerG
 
 func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	if r.IsCancun {
-		// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
-		vm.ChangeGasCostForTest(&evm.Config.JumpTable, vm.EXTCODEHASH, params.WarmStorageReadCostEIP2929)
+		vm.ChangeGasCostForTest(&evm.Config.JumpTable)
 	}
 }
 
