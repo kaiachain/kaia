@@ -69,8 +69,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
-	// unsupported Forks: ParisToShanghai
-	bt.skipLoad(`^berlin\/eip2929_gas_cost_increases\/precompile_warming\/precompile_warming.json\/tests\/berlin\/eip2929_gas_cost_increases\/test_precompile_warming.py::test_precompile_warming\[fork_ParisToShanghai`)
 	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
 	bt.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Cancun-address_0xb-precompile_exists_False-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-31_bytes\]`)
@@ -101,6 +99,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 			"London",
 			"Merge",
 			"Paris",
+			"ParisToShanghaiAtTime15k",
 			"Shanghai",
 			"ShanghaiToCancunAtTime15k",
 			"CancunToPragueAtTime15k",
