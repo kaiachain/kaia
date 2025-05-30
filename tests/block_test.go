@@ -70,12 +70,20 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
 	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-31_bytes\]`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-32_bytes\]`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test-empty_calldata\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Cancun-address_0xb-precompile_exists_False-blockchain_test_from_state_test\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-31_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-32_bytes\]`)
+	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-empty_calldata\]`)
+	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_Cancun-state_test--G1ADD\]`)
 	// type 3 tx (EIP-4844) is not supported
+	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-program_BLOBBASEFEE-debug\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test\]`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
+	// Kaia cannot calculate the same block hash as Ethereum
+	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-program_BLOCKHASH-debug\]`)
+	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-program_BLOCKHASH-debug\]`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		skipForks := []string{
@@ -91,6 +99,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 			"London",
 			"Merge",
 			"Paris",
+			"ParisToShanghaiAtTime15k",
 			"Shanghai",
 			"ShanghaiToCancunAtTime15k",
 			"CancunToPragueAtTime15k",

@@ -456,7 +456,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, nil, authorizationList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, true, intrinsicGas, accessList, nil, authorizationList)
 	return msg, nil
 }
 
@@ -507,8 +507,7 @@ func calculateEthGasPrice(r params.Rules, envGasPrice, envBaseFee, envMaxFeePerG
 
 func useEthOpCodeGas(r params.Rules, evm *vm.EVM) {
 	if r.IsCancun {
-		// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
-		vm.ChangeGasCostForTest(&evm.Config.JumpTable, vm.EXTCODEHASH, params.WarmStorageReadCostEIP2929)
+		vm.ChangeGasCostForTest(&evm.Config.JumpTable)
 	}
 }
 
