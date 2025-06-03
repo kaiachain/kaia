@@ -51,7 +51,7 @@ executors:
       - image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
   test-tests-executor: # this executor is for test-tests job
     working_directory: ~/go/src/github.com/kaiachain/kaia
-    resource_class: medium+
+    resource_class: xlarge
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
   test-others-executor: # this executor is for test-others job
