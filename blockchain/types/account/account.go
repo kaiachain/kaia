@@ -23,11 +23,11 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 type AccountType uint8

@@ -28,16 +28,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/asm"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/accounts/abi"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/asm"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 func TestDefaults(t *testing.T) {

@@ -31,11 +31,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/node"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/node"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 const (

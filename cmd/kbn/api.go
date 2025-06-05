@@ -19,7 +19,7 @@
 package main
 
 import (
-	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
 )
 
 type PublicBootnodeAPI struct {

@@ -29,8 +29,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 // API describes the set of methods offered over the RPC interface

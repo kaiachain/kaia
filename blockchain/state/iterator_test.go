@@ -23,9 +23,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 // Tests that the node iterator indeed walks over the entire database contents.

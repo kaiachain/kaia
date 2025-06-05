@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // TestPack tests the general pack/unpack tests in packing_test.go

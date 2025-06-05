@@ -34,7 +34,7 @@ import (
 	"testing"
 
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/v2/common/math"
 )
 
 func TestStreamKind(t *testing.T) {

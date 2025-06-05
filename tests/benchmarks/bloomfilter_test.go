@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 	"github.com/syndtr/goleveldb/leveldb/filter"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )

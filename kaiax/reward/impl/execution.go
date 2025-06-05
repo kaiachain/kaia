@@ -17,8 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
 )
 
 func (r *RewardModule) PreRunTx(evm *vm.EVM, tx *types.Transaction) (*types.Transaction, error) {

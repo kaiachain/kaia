@@ -25,10 +25,10 @@ package node_test
 import (
 	"fmt"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
 )
 
 // SampleService is a trivial network service that can be attached to a node for

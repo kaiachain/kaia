@@ -30,12 +30,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/prque"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/log"
 	"github.com/rcrowley/go-metrics"
 )
 

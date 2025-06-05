@@ -30,48 +30,48 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/bloombits"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/datasync/downloader"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
-	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
-	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
-	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
-	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
-	"github.com/kaiachain/kaia/kaiax/valset"
-	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
-	"github.com/kaiachain/kaia/node/cn/filters"
-	"github.com/kaiachain/kaia/node/cn/gasprice"
-	"github.com/kaiachain/kaia/node/cn/tracers"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/work"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/bloombits"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/consensus"
+	istanbulBackend "github.com/kaiachain/kaia/v2/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/datasync/downloader"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/v2/kaiax/builder/impl"
+	gasless_impl "github.com/kaiachain/kaia/v2/kaiax/gasless/impl"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	gov_impl "github.com/kaiachain/kaia/v2/kaiax/gov/impl"
+	randao_impl "github.com/kaiachain/kaia/v2/kaiax/randao/impl"
+	reward_impl "github.com/kaiachain/kaia/v2/kaiax/reward/impl"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/v2/kaiax/staking/impl"
+	supply_impl "github.com/kaiachain/kaia/v2/kaiax/supply/impl"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
+	valset_impl "github.com/kaiachain/kaia/v2/kaiax/valset/impl"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
+	"github.com/kaiachain/kaia/v2/node/cn/filters"
+	"github.com/kaiachain/kaia/v2/node/cn/gasprice"
+	"github.com/kaiachain/kaia/v2/node/cn/tracers"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/work"
 )
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
 
-//go:generate mockgen -destination=./mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/node/cn LesServer
+//go:generate mockgen -destination=./mocks/lesserver_mock.go -package=mocks github.com/kaiachain/kaia/v2/node/cn LesServer
 type LesServer interface {
 	Start(srvr p2p.Server)
 	Stop()
@@ -81,7 +81,7 @@ type LesServer interface {
 
 // Miner is an interface of work.Miner used by ServiceChain.
 //
-//go:generate mockgen -destination=./mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/node/cn Miner
+//go:generate mockgen -destination=./mocks/miner_mock.go -package=mocks github.com/kaiachain/kaia/v2/node/cn Miner
 type Miner interface {
 	Start()
 	Stop()
@@ -97,7 +97,7 @@ type Miner interface {
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
 //
-//go:generate mockgen -destination=./protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn BackendProtocolManager
+//go:generate mockgen -destination=./protocolmanager_mock_test.go -package=cn github.com/kaiachain/kaia/v2/node/cn BackendProtocolManager
 type BackendProtocolManager interface {
 	Downloader() ProtocolManagerDownloader
 	SetWsEndPoint(wsep string)

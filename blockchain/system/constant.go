@@ -21,18 +21,18 @@ package system
 import (
 	"errors"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
-	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
-	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	misccontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
-	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
-	"github.com/kaiachain/kaia/contracts/contracts/testing/reward"
-	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/v2/contracts/contracts/libs/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/v2/contracts/contracts/libs/uniswap/router"
+	kip113contract "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/kip113"
+	kip149contract "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/kip149"
+	misccontract "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/misc"
+	"github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/multicall"
+	proxycontract "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/proxy"
+	"github.com/kaiachain/kaia/v2/contracts/contracts/testing/reward"
+	testcontract "github.com/kaiachain/kaia/v2/contracts/contracts/testing/system_contracts"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 var (

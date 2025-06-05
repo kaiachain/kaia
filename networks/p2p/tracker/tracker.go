@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
-	metricutils "github.com/kaiachain/kaia/metrics/utils"
+	"github.com/kaiachain/kaia/v2/log"
+	metricutils "github.com/kaiachain/kaia/v2/metrics/utils"
 	"github.com/rcrowley/go-metrics"
 )
 

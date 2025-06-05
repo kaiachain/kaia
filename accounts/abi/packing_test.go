@@ -25,7 +25,7 @@ package abi
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 type packUnpackTest struct {

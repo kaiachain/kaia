@@ -27,11 +27,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types/account"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain/types/account"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	checker "gopkg.in/check.v1"
 )
 

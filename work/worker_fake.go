@@ -19,10 +19,10 @@
 package work
 
 import (
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
 )
 
 type FakeWorker struct{}

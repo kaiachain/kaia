@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 func (ds *DBSyncer) HandleChainEventParallel(block *types.Block) error {

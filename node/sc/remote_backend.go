@@ -24,11 +24,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/networks/rpc"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 	"github.com/pkg/errors"
 )
 

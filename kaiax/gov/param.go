@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 type canonicalizerT func(v any) (any, error)

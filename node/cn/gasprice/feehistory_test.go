@@ -26,9 +26,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

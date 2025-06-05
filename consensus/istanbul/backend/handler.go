@@ -26,10 +26,10 @@ import (
 	"errors"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
 )
 
 const (

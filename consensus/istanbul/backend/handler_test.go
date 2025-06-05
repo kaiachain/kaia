@@ -23,10 +23,10 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

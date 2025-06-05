@@ -21,8 +21,8 @@ package system
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 	"github.com/stretchr/testify/assert"
 )
 

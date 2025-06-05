@@ -19,8 +19,8 @@ package supply
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/supply"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/supply"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -19,11 +19,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

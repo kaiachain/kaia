@@ -17,8 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 func (r *RewardModule) VerifyHeader(header *types.Header) error {

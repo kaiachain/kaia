@@ -22,11 +22,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas/mocks"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kas/mocks"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 	"github.com/stretchr/testify/suite"
 )
 

@@ -27,8 +27,8 @@ import (
 
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/bloom"
-	"github.com/kaiachain/kaia/log"
-	kaiametrics "github.com/kaiachain/kaia/metrics"
+	"github.com/kaiachain/kaia/v2/log"
+	kaiametrics "github.com/kaiachain/kaia/v2/metrics"
 	"github.com/rcrowley/go-metrics"
 )
 

@@ -29,13 +29,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")

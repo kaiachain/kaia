@@ -32,12 +32,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 // HeaderChain implements the basic block header chain logic that is shared by

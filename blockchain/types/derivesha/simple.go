@@ -23,9 +23,9 @@
 package derivesha
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto/sha3"
 )
 
 // An alternative implementation of DeriveSha()

@@ -28,10 +28,10 @@ import (
 	"strconv"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/prque"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 // ErrNotRequested is returned by the trie sync when it's requested to process a

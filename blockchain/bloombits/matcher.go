@@ -32,8 +32,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/common/bitutil"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/common/bitutil"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong

@@ -27,10 +27,10 @@ import (
 	"encoding/json"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 // Vote represents a single vote that an authorized signer made to modify the

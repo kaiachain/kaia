@@ -24,15 +24,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/contracts/contracts/libs/kip13"
-	"github.com/kaiachain/kaia/networks/rpc"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/contracts/contracts/libs/kip13"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 // TODO-ChainDataFetcher extract the call timeout c as a configuration
@@ -56,7 +56,7 @@ var (
 
 // BlockchainAPI interface is for testing purpose.
 //
-//go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher/kas BlockchainAPI
+//go:generate mockgen -destination=./mocks/blockchain_api_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kas BlockchainAPI
 type BlockchainAPI interface {
 	GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)
 	Call(ctx context.Context, args api.CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error)

@@ -25,10 +25,10 @@ package core
 import (
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {

@@ -19,9 +19,9 @@ package randao
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto/bls"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
 type RandaoModule interface {

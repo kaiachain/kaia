@@ -26,15 +26,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/consensus/misc"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 )
 
 // BlockGen creates blocks for testing.

@@ -33,25 +33,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
-	"github.com/kaiachain/kaia/node/cn/filters"
-	"github.com/kaiachain/kaia/node/sc/bridgepool"
-	"github.com/kaiachain/kaia/node/sc/kas"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/work"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
+	"github.com/kaiachain/kaia/v2/node/cn/filters"
+	"github.com/kaiachain/kaia/v2/node/sc/bridgepool"
+	"github.com/kaiachain/kaia/v2/node/sc/kas"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/work"
 )
 
 const (
@@ -88,7 +88,7 @@ type SubBridgeInfo struct {
 	ChainID *big.Int            `json:"chainid"` // ChainID
 }
 
-//go:generate mockgen -destination=./bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/node/sc BridgeTxPool
+//go:generate mockgen -destination=./bridgeTxPool_mock_test.go -package=sc github.com/kaiachain/kaia/v2/node/sc BridgeTxPool
 type BridgeTxPool interface {
 	GetMaxTxNonce(from *common.Address) uint64
 	AddLocal(tx *types.Transaction) error

@@ -25,17 +25,17 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/randao"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 // ChainReader defines a small collection of methods needed to access the local
@@ -74,7 +74,7 @@ type ChainReader interface {
 
 // Engine is an algorithm agnostic consensus engine.
 //
-//go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
+//go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/v2/consensus Engine
 type Engine interface {
 	// Author retrieves the Kaia address of the account that minted the given
 	// block.

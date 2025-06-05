@@ -36,7 +36,7 @@ var Logger sarama.StdLogger = log.New(os.Stdout, "[Chaindatafetcher] ", log.Lstd
 
 // ConsumerGroupSession is for mocking sarama.ConsumerGroupSession for better testing.
 //
-//go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka ConsumerGroupSession
+//go:generate mockgen -destination=./mocks/consumer_group_session_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kafka ConsumerGroupSession
 type ConsumerGroupSession interface {
 	MarkOffset(topic string, partition int32, offset int64, metadata string)
 	MarkMessage(msg *sarama.ConsumerMessage, metadata string)

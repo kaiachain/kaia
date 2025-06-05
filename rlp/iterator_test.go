@@ -25,7 +25,7 @@ package rlp
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 // TestIterator tests some basic things about the ListIterator. A more

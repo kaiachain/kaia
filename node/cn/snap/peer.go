@@ -23,9 +23,9 @@
 package snap
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
 )
 
 // Peer is a collection of relevant information we have about a `snap` peer.

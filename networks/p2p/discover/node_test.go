@@ -35,8 +35,8 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 func init() {

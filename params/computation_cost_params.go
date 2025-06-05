@@ -22,7 +22,7 @@
 
 package params
 
-import "github.com/kaiachain/kaia/common/math"
+import "github.com/kaiachain/kaia/v2/common/math"
 
 const (
 	// Computation cost for opcodes

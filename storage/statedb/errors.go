@@ -26,7 +26,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // MissingNodeError is returned by the trie functions (TryGet, TryUpdate, TryDelete)

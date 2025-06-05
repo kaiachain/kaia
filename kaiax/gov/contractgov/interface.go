@@ -1,11 +1,11 @@
 package contractgov
 
 import (
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
 )
 
-//go:generate mockgen -destination=./mock/contractgov_mock.go -package=mock_contractgov github.com/kaiachain/kaia/kaiax/gov/contractgov ContractGovModule
+//go:generate mockgen -destination=./mock/contractgov_mock.go -package=mock_contractgov github.com/kaiachain/kaia/v2/kaiax/gov/contractgov ContractGovModule
 type ContractGovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule

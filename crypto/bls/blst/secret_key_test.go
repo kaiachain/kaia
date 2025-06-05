@@ -21,8 +21,8 @@ package blst
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto/bls/types"
 	"github.com/stretchr/testify/assert"
 )
 

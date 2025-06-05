@@ -19,9 +19,9 @@ package impl
 import (
 	"encoding/json"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 var stakingInfoPrefix = []byte("stakingInfo")

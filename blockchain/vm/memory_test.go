@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 func TestMemoryCopy(t *testing.T) {

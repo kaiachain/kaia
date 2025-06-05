@@ -23,8 +23,8 @@
 package core
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
 )
 
 // Start implements core.Engine.Start

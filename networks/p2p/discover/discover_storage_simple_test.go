@@ -23,8 +23,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
 	"github.com/pkg/errors"
 	"gotest.tools/assert"
 )

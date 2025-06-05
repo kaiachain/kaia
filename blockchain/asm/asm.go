@@ -26,7 +26,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
 )
 
 // Iterator for disassembled EVM instructions

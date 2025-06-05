@@ -1,9 +1,9 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 func (h *headerGovModule) APIs() []rpc.API {

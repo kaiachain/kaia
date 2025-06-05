@@ -24,10 +24,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/common"
-	sctoken "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
-	scnft "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc721"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/common"
+	sctoken "github.com/kaiachain/kaia/v2/contracts/contracts/testing/sc_erc20"
+	scnft "github.com/kaiachain/kaia/v2/contracts/contracts/testing/sc_erc721"
 	"github.com/stretchr/testify/assert"
 )
 

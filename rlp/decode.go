@@ -35,7 +35,7 @@ import (
 	"sync"
 
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/v2/rlp/internal/rlpstruct"
 )
 
 //lint:ignore ST1012 EOL is not an error.

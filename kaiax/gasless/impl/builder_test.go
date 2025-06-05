@@ -20,14 +20,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/accounts/abi"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"github.com/stretchr/testify/require"
 )
 

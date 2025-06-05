@@ -15,8 +15,8 @@ import (
 	"bytes"
 	"math/big"
 
-	cloudflare "github.com/kaiachain/kaia/crypto/bn256/cloudflare"
-	google "github.com/kaiachain/kaia/crypto/bn256/google"
+	cloudflare "github.com/kaiachain/kaia/v2/crypto/bn256/cloudflare"
+	google "github.com/kaiachain/kaia/v2/crypto/bn256/google"
 )
 
 // FuzzAdd fuzzez bn256 addition between the Google and Cloudflare libraries.

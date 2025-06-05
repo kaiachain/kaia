@@ -30,8 +30,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 func (i InternalTxTrace) MarshalJSON() ([]byte, error) {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kaiachain/kaia/log/term"
+	"github.com/kaiachain/kaia/v2/log/term"
 	"github.com/mattn/go-colorable"
 )
 

@@ -27,12 +27,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/cmd/utils/nodecmd"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/cmd/utils/nodecmd"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
 	"github.com/urfave/cli/v2"
 )
 

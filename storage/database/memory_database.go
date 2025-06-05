@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // errMemorydbClosed is returned if a memory database was already closed at the

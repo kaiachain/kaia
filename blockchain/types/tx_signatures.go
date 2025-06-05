@@ -24,10 +24,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/v2/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/kerrors"
 )
 
 var ErrShouldBeSingleSignature = errors.New("the number of signatures should be one")

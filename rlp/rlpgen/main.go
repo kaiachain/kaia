@@ -33,7 +33,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const pathOfPackageRLP = "github.com/kaiachain/kaia/rlp"
+const pathOfPackageRLP = "github.com/kaiachain/kaia/v2/rlp"
 
 func main() {
 	var (

@@ -21,8 +21,8 @@ package chaindatafetcher
 import (
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/types"
 )
 
 const (
@@ -32,9 +32,9 @@ const (
 
 type HandleChainEventFn func(blockchain.ChainEvent, types.RequestType) error
 
-//go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher Repository
-//go:generate mockgen -destination=./mocks/checkpoint_db_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher CheckpointDB
-//go:generate mockgen -destination=./mocks/component_setter_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher ComponentSetter
+//go:generate mockgen -destination=./mocks/repository_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher Repository
+//go:generate mockgen -destination=./mocks/checkpoint_db_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher CheckpointDB
+//go:generate mockgen -destination=./mocks/component_setter_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher ComponentSetter
 
 type Repository interface {
 	HandleChainEvent(event blockchain.ChainEvent, dataType types.RequestType) error

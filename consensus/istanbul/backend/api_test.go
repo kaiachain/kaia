@@ -3,11 +3,11 @@ package backend
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
+	istanbulCore "github.com/kaiachain/kaia/v2/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/v2/rlp"
 	"github.com/stretchr/testify/assert"
 )
 

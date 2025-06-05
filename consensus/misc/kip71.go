@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 func VerifyMagmaHeader(parentHeader, header *types.Header, kip71Config *params.KIP71Config) error {

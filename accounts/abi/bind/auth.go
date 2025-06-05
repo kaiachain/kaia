@@ -28,11 +28,11 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/accounts/keystore"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/accounts/keystore"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 // NewTransactor is a utility method to easily create a transaction signer from

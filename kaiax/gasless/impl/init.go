@@ -20,14 +20,14 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gasless"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/gasless"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var logger = log.NewModuleLogger(log.KaiaxGasless)

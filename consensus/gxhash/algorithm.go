@@ -33,10 +33,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/bitutil"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/bitutil"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/crypto/sha3"
 )
 
 const (

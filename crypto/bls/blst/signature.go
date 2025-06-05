@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/v2/crypto/bls/types"
 	"github.com/pkg/errors"
 )
 

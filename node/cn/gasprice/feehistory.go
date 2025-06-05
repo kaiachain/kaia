@@ -30,12 +30,12 @@ import (
 	"sort"
 	"sync/atomic"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/misc"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var (

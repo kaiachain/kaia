@@ -33,9 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/iterator"

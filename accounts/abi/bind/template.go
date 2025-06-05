@@ -25,7 +25,7 @@ package bind
 import (
 	_ "embed"
 
-	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/v2/accounts/abi"
 )
 
 // tmplData is the data structure required to fill the binding template.

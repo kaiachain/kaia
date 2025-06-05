@@ -27,11 +27,11 @@ import (
 	"os"
 	"sort"
 
-	"github.com/kaiachain/kaia/api/debug"
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/cmd/utils/nodecmd"
-	"github.com/kaiachain/kaia/console"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/api/debug"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/cmd/utils/nodecmd"
+	"github.com/kaiachain/kaia/v2/console"
+	"github.com/kaiachain/kaia/v2/log"
 	"github.com/urfave/cli/v2"
 )
 

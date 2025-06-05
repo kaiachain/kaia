@@ -17,8 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
 var _ kaiax.ExecutionModule = (*GaslessModule)(nil)

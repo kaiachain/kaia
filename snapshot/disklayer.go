@@ -27,11 +27,11 @@ import (
 	"sync"
 
 	"github.com/VictoriaMetrics/fastcache"
-	"github.com/kaiachain/kaia/blockchain/types/account"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/blockchain/types/account"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 )
 
 // diskLayer is a low level persistent snapshot built on top of a key-value store.

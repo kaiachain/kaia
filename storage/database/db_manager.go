@@ -32,11 +32,11 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/rlp"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )

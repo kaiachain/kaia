@@ -31,10 +31,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/p2p/simulations/adapters"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/p2p/simulations/adapters"
 )
 
 var DialBanTimeout = 200 * time.Millisecond

@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/reward"
-	reward_mock "github.com/kaiachain/kaia/kaiax/reward/mock"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/reward"
+	reward_mock "github.com/kaiachain/kaia/v2/kaiax/reward/mock"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

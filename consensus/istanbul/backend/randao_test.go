@@ -19,9 +19,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/bls"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/crypto/bls"
 	"github.com/stretchr/testify/assert"
 )
 

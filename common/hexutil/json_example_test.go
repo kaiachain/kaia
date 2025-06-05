@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 type MyType [5]byte

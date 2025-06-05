@@ -28,12 +28,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/consensus/gxhash"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/consensus/gxhash"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 func ExampleGenerateChain() {

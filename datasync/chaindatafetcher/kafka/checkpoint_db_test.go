@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 

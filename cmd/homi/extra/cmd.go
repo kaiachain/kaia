@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )

@@ -18,7 +18,7 @@ package system
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/crypto"
 	"github.com/stretchr/testify/assert"
 )
 

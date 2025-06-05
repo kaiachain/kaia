@@ -25,8 +25,8 @@ package downloader
 import (
 	"fmt"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
 )
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.

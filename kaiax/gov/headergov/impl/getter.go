@@ -3,8 +3,8 @@ package impl
 import (
 	"slices"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
 	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 

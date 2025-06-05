@@ -51,7 +51,7 @@ func (c *TrieNodeCacheConfig) DumpPeriodically() bool {
 
 // TrieNodeCache interface the cache of stateDB
 //
-//go:generate mockgen -destination=./mocks/trie_node_cache_mock.go -package=mock_statedb github.com/kaiachain/kaia/storage/statedb TrieNodeCache
+//go:generate mockgen -destination=./mocks/trie_node_cache_mock.go -package=mock_statedb github.com/kaiachain/kaia/v2/storage/statedb TrieNodeCache
 type TrieNodeCache interface {
 	Set(k, v []byte)
 	Get(k []byte) []byte

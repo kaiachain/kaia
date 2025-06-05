@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kaiachain/kaia/cmd/homi/extra"
-	"github.com/kaiachain/kaia/cmd/homi/setup"
-	"github.com/kaiachain/kaia/cmd/utils/nodecmd"
+	"github.com/kaiachain/kaia/v2/cmd/homi/extra"
+	"github.com/kaiachain/kaia/v2/cmd/homi/setup"
+	"github.com/kaiachain/kaia/v2/cmd/utils/nodecmd"
 	"github.com/urfave/cli/v2"
 )
 

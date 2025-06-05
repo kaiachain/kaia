@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"reflect"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
 )
 
 func (h *headerGovModule) PostInsertBlock(b *types.Block) error {

@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -27,7 +27,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/v2/event"
 )
 
 // Manager is an overarching account manager that can communicate with various
@@ -46,7 +46,7 @@ type Manager struct {
 
 // AccountManager is an interface of accounts.Manager struct.
 //
-//go:generate mockgen -destination=./mocks/account_manager_mock.go -package=mock_accounts github.com/kaiachain/kaia/accounts AccountManager
+//go:generate mockgen -destination=./mocks/account_manager_mock.go -package=mock_accounts github.com/kaiachain/kaia/v2/accounts AccountManager
 type AccountManager interface {
 	Wallet(url string) (Wallet, error)
 	Wallets() []Wallet

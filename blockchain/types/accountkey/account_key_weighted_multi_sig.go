@@ -23,11 +23,11 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/fork"
-	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/fork"
+	"github.com/kaiachain/kaia/v2/kerrors"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 const (

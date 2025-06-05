@@ -17,13 +17,13 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/kaiax/reward"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/kaiax/reward"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var (

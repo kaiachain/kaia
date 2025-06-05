@@ -25,7 +25,7 @@ package snapshot
 import (
 	"bytes"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // binaryIterator is a simplistic iterator to step over the accounts or storage

@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // weightedIterator is a iterator with an assigned weight. It is used to prioritise

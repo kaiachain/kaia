@@ -29,9 +29,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 var testNodeKey, _ = crypto.GenerateKey()

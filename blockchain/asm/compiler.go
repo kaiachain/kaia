@@ -28,8 +28,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common/math"
 )
 
 // Compiler contains information about the parsed source

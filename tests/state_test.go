@@ -28,9 +28,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/suite"
 )
 

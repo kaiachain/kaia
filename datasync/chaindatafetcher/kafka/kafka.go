@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 
 	"github.com/Shopify/sarama"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 var logger = log.NewModuleLogger(log.ChainDataFetcher)

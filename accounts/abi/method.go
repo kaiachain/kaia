@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 // FunctionType represents different types of functions a contract might have.

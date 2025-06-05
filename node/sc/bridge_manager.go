@@ -27,14 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	bridgecontract "github.com/kaiachain/kaia/contracts/contracts/service_chain/bridge"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/node/sc/bridgepool"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	bridgecontract "github.com/kaiachain/kaia/v2/contracts/contracts/service_chain/bridge"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/node/sc/bridgepool"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 const (

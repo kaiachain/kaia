@@ -25,9 +25,9 @@ package blockchain
 import (
 	"encoding/json"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // NewTxsEvent is posted when a batch of transactions enter the transaction pool.

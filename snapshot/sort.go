@@ -25,7 +25,7 @@ package snapshot
 import (
 	"bytes"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // hashes is a helper to implement sort.Interface.

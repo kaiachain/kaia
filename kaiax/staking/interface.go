@@ -17,12 +17,12 @@
 package staking
 
 import (
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
-//go:generate mockgen -destination=./mock/staking.go -package=mock github.com/kaiachain/kaia/kaiax/staking StakingModule
+//go:generate mockgen -destination=./mock/staking.go -package=mock github.com/kaiachain/kaia/v2/kaiax/staking StakingModule
 type StakingModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule

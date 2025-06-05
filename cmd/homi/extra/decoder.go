@@ -18,8 +18,8 @@
 package extra
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 func Decode(extraData string) ([]byte, *types.IstanbulExtra, error) {

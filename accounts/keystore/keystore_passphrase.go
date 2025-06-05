@@ -36,9 +36,9 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/crypto"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )

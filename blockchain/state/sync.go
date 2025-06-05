@@ -26,10 +26,10 @@ import (
 	"bytes"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types/account"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/blockchain/types/account"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 )
 
 // NewStateSync create a new state trie download scheduler.

@@ -26,8 +26,8 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1

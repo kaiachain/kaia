@@ -30,7 +30,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/log"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 	"github.com/urfave/cli/v2"

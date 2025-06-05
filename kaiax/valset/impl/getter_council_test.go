@@ -20,14 +20,14 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/storage/database"
-	chain_mock "github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	chain_mock "github.com/kaiachain/kaia/v2/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

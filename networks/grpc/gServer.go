@@ -31,9 +31,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

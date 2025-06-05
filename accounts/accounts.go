@@ -25,10 +25,10 @@ package accounts
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/event"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/event"
 )
 
 // Account represents a Kaia account located at a specific location defined

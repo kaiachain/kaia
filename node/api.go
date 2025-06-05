@@ -29,12 +29,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/crypto/bls"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 	"github.com/rcrowley/go-metrics"
 )
 

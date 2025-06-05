@@ -26,9 +26,9 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 var (

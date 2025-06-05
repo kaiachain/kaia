@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // The gini coefficient of an empty set. As Gini is mathematically undefined with an empty set,

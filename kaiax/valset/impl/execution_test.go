@@ -21,13 +21,13 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
-	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
-	"github.com/kaiachain/kaia/storage/database"
-	chain_mock "github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
+	gov_mock "github.com/kaiachain/kaia/v2/kaiax/gov/mock"
+	staking_mock "github.com/kaiachain/kaia/v2/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	chain_mock "github.com/kaiachain/kaia/v2/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

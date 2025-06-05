@@ -23,8 +23,8 @@
 package utils
 
 import (
-	"github.com/kaiachain/kaia/api/debug"
-	"github.com/kaiachain/kaia/kaiax/gasless"
+	"github.com/kaiachain/kaia/v2/api/debug"
+	"github.com/kaiachain/kaia/v2/kaiax/gasless"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )

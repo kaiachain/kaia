@@ -29,8 +29,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
 )
 
 // Tests that datadirs can be successfully created, be them manually configured

@@ -23,10 +23,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas/mocks"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kas/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

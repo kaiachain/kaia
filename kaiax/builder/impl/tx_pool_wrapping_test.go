@@ -23,12 +23,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
-	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	mock_builder "github.com/kaiachain/kaia/v2/kaiax/builder/mock"
+	mock_kaiax "github.com/kaiachain/kaia/v2/kaiax/mock"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

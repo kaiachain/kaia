@@ -23,12 +23,12 @@ import (
 	"math/big"
 	"slices"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
+	builder_impl "github.com/kaiachain/kaia/v2/kaiax/builder/impl"
 )
 
 // //////////////////////////////////////////////////////////////////////////////

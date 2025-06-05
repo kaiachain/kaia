@@ -20,11 +20,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/reward"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/reward"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

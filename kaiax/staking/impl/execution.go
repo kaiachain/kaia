@@ -17,8 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 func (s *StakingModule) PostInsertBlock(block *types.Block) error {

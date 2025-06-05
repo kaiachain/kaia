@@ -33,10 +33,10 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/crypto/sha3"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // SignatureLength indicates the byte length required to carry a signature with recovery id.

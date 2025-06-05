@@ -19,8 +19,8 @@ package impl
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 func (s *StakingModule) APIs() []rpc.API {

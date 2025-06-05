@@ -26,20 +26,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
-	cfTypes "github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
-	"github.com/kaiachain/kaia/node/cn/tracers"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kafka"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kas"
+	cfTypes "github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
+	"github.com/kaiachain/kaia/v2/node/cn/tracers"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -54,7 +54,7 @@ var (
 	errMaxRetryExceeded = errors.New("the number of retries is exceeded over max")
 )
 
-//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/datasync/chaindatafetcher BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/v2/datasync/chaindatafetcher BlockChain
 type BlockChain interface {
 	SubscribeChainEvent(ch chan<- blockchain.ChainEvent) event.Subscription
 	CurrentHeader() *types.Header

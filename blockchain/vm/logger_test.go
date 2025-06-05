@@ -27,9 +27,9 @@ import (
 	"testing"
 
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 type dummyContractRef struct {

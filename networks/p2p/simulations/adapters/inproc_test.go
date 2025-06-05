@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/networks/p2p/simulations/pipes"
+	"github.com/kaiachain/kaia/v2/networks/p2p/simulations/pipes"
 )
 
 func TestTCPPipe(t *testing.T) {

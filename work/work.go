@@ -28,30 +28,30 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/datasync/downloader"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/snapshot"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/datasync/downloader"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/snapshot"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 var logger = log.NewModuleLogger(log.Work)
 
 // TxPool is an interface of blockchain.TxPool used by ProtocolManager and Backend.
 //
-//go:generate mockgen -destination=./mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/work TxPool
+//go:generate mockgen -destination=./mocks/txpool_mock.go -package=mocks github.com/kaiachain/kaia/v2/work TxPool
 type TxPool interface {
 	// HandleTxMsg should add the given transactions to the pool.
 	HandleTxMsg(types.Transactions)
@@ -241,7 +241,7 @@ func (self *Miner) RegisterTxBundlingModule(modules ...builder.TxBundlingModule)
 
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.
 //
-//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/work BlockChain
+//go:generate mockgen -destination=./mocks/blockchain_mock.go -package=mocks github.com/kaiachain/kaia/v2/work BlockChain
 type BlockChain interface {
 	Genesis() *types.Block
 

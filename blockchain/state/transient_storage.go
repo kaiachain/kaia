@@ -23,7 +23,7 @@
 package state
 
 import (
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // transientStorage is a representation of EIP-1153 "Transient Storage".

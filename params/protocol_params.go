@@ -27,7 +27,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 var TargetGasLimit = GenesisGasLimit // The artificial target

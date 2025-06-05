@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/v2/accounts/abi"
 	"github.com/pkg/errors"
 )
 

@@ -25,16 +25,16 @@ package vm
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/types/account"
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types/account"
+	"github.com/kaiachain/kaia/v2/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 // StateDB is an EVM database for full state querying.
 //
-//go:generate mockgen -destination=./mocks/statedb_mock.go -package=mock_vm github.com/kaiachain/kaia/blockchain/vm StateDB
+//go:generate mockgen -destination=./mocks/statedb_mock.go -package=mock_vm github.com/kaiachain/kaia/v2/blockchain/vm StateDB
 type StateDB interface {
 	CreateAccount(common.Address)
 	CreateSmartContractAccount(addr common.Address, format params.CodeFormat, r params.Rules)

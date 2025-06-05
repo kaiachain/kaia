@@ -29,13 +29,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/rlp"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // TODO-Kaia Needs to separate APIs along with each namespaces.

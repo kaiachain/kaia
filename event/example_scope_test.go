@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/v2/event"
 )
 
 // This example demonstrates how SubscriptionScope can be used to control the lifetime of

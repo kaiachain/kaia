@@ -17,7 +17,7 @@
 package builder
 
 import (
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 type Bundle struct {

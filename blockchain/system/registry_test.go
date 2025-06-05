@@ -19,14 +19,14 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/common"
+	contracts "github.com/kaiachain/kaia/v2/contracts/contracts/testing/system_contracts"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

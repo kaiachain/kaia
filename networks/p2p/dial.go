@@ -31,9 +31,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/p2p/netutil"
 )
 
 const (

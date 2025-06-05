@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 // HandleChainEventContext supports 2PC Commit (insert block + insert txs) for data consistency

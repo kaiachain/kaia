@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/urfave/cli/v2"
 )
 

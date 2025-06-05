@@ -19,11 +19,11 @@ package impl
 import (
 	"time"
 
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/api"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/builder"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 var (

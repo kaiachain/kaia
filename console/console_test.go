@@ -31,11 +31,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/console/jsre"
-	"github.com/kaiachain/kaia/node"
-	"github.com/kaiachain/kaia/node/cn"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/console/jsre"
+	"github.com/kaiachain/kaia/v2/node"
+	"github.com/kaiachain/kaia/v2/node/cn"
 )
 
 const (

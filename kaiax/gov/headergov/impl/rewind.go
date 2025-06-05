@@ -1,9 +1,9 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
 )
 
 func (h *headerGovModule) RewindTo(newBlock *types.Block) {

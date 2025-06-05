@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 func (g *GovModule) PostInsertBlock(b *types.Block) error {

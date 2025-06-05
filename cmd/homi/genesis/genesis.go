@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	istcommon "github.com/kaiachain/kaia/cmd/homi/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	istcommon "github.com/kaiachain/kaia/v2/cmd/homi/common"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 const (

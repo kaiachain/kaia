@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
 )
 
 func TestMocker(t *testing.T) {

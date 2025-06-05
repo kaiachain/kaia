@@ -23,7 +23,7 @@ import (
 	"go/types"
 	"sort"
 
-	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/v2/rlp/internal/rlpstruct"
 )
 
 // buildContext keeps the data needed for make*Op.

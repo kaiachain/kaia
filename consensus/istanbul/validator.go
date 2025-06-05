@@ -25,8 +25,8 @@ package istanbul
 import (
 	"math"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
 )
 
 type BlockValSet struct {

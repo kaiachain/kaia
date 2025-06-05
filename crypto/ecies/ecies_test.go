@@ -43,7 +43,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 // Ensure the KDF generates appropriately sized keys.

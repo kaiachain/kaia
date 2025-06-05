@@ -24,14 +24,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types/account"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/snapshot"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types/account"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/snapshot"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 

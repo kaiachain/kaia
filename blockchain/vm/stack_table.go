@@ -23,7 +23,7 @@
 package vm
 
 import (
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 func minSwapStack(n int) int {

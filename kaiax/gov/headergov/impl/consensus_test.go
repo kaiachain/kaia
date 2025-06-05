@@ -4,11 +4,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/v2/log"
 	"github.com/stretchr/testify/assert"
 )
 

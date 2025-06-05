@@ -26,10 +26,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/lru"
-	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/lru"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 )
 
 const (

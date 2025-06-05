@@ -42,7 +42,7 @@ import (
 	"crypto/elliptic"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 const (

@@ -1,12 +1,12 @@
 package headergov
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
 )
 
-//go:generate mockgen -destination=./mock/headergov_mock.go -package=mock_headergov github.com/kaiachain/kaia/kaiax/gov/headergov HeaderGovModule
+//go:generate mockgen -destination=./mock/headergov_mock.go -package=mock_headergov github.com/kaiachain/kaia/v2/kaiax/gov/headergov HeaderGovModule
 type HeaderGovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule

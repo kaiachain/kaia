@@ -27,7 +27,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 // Tests whether the dataset size calculator works correctly by cross checking the

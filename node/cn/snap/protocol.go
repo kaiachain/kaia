@@ -25,7 +25,7 @@ package snap
 import (
 	"errors"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // Constants to match up protocol versions and messages

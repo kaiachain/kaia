@@ -32,13 +32,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/mclock"
-	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/p2p/nat"
-	"github.com/kaiachain/kaia/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/mclock"
+	"github.com/kaiachain/kaia/v2/event"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/p2p/nat"
+	"github.com/kaiachain/kaia/v2/networks/p2p/netutil"
 )
 
 const (

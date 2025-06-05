@@ -1,7 +1,7 @@
 package test
 
 import "github.com/holiman/uint256"
-import "github.com/kaiachain/kaia/rlp"
+import "github.com/kaiachain/kaia/v2/rlp"
 import "io"
 
 func (obj *Test) EncodeRLP(_w io.Writer) error {

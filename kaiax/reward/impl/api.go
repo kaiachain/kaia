@@ -20,8 +20,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/kaiachain/kaia/kaiax/reward"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/kaiax/reward"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 var accumulatedRewardsRangeLimit = uint64(604800) // 7 days. naive resource protection

@@ -21,8 +21,8 @@ package accountkey
 import (
 	"crypto/ecdsa"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kerrors"
 )
 
 // AccountKeyFail is used to prevent smart contract accounts from withdrawing tokens

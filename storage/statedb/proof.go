@@ -27,9 +27,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 type ProofDBWriter interface {

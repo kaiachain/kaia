@@ -21,7 +21,7 @@ package cn
 import (
 	"fmt"
 
-	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
 )
 
 const (

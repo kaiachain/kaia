@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 type BN struct {

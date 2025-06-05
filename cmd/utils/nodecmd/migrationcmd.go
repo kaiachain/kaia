@@ -20,8 +20,8 @@ package nodecmd
 import (
 	"encoding/json"
 
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )

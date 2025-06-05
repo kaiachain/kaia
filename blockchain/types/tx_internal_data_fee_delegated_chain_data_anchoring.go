@@ -25,12 +25,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/fork"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/crypto/sha3"
+	"github.com/kaiachain/kaia/v2/fork"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // TxInternalDataFeeDelegatedChainDataAnchoring represents the fee-delegated transaction anchoring child chain data.

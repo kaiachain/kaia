@@ -27,8 +27,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // senderFromServer is a types.Signer that remembers the sender address returned by the RPC

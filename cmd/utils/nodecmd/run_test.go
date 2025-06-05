@@ -32,12 +32,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/kaiachain/kaia/api/debug"
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/console"
-	metricutils "github.com/kaiachain/kaia/metrics/utils"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/v2/api/debug"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/console"
+	metricutils "github.com/kaiachain/kaia/v2/metrics/utils"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
 	"github.com/urfave/cli/v2"
 )
 

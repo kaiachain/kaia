@@ -34,11 +34,11 @@ import (
 	"syscall"
 
 	"github.com/dop251/goja"
-	"github.com/kaiachain/kaia/console/jsre"
-	"github.com/kaiachain/kaia/console/jsre/deps"
-	"github.com/kaiachain/kaia/console/web3ext"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/console/jsre"
+	"github.com/kaiachain/kaia/v2/console/jsre/deps"
+	"github.com/kaiachain/kaia/v2/console/web3ext"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"
 )

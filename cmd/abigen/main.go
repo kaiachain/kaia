@@ -30,11 +30,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/common/compiler"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/common/compiler"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/log"
 	"github.com/urfave/cli/v2"
 )
 

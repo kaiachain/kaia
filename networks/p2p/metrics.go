@@ -27,7 +27,7 @@ package p2p
 import (
 	"net"
 
-	metricutils "github.com/kaiachain/kaia/metrics/utils"
+	metricutils "github.com/kaiachain/kaia/v2/metrics/utils"
 	"github.com/rcrowley/go-metrics"
 )
 

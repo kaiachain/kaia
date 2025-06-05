@@ -24,7 +24,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/v2/crypto/bls/types"
 )
 
 var benchAggregateLen = 100

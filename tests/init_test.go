@@ -34,7 +34,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var (

@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 var (

@@ -22,7 +22,7 @@
 
 package blockchain
 
-import "github.com/kaiachain/kaia/common"
+import "github.com/kaiachain/kaia/v2/common"
 
 // BadHashes represent a set of manually tracked bad hashes (usually hard forks)
 var BadHashes = map[common.Hash]bool{

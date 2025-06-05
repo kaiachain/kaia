@@ -19,11 +19,11 @@ package impl
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/kaiax/reward"
-	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/kaiax/reward"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
 )
 
 // Below outlines the relationship between the getters and their helper functions.

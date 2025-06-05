@@ -19,11 +19,11 @@ package vm
 import (
 	"errors"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/kerrors"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 func makeGasSStoreFunc(clearingRefund uint64) gasFunc {

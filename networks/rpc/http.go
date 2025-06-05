@@ -38,7 +38,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/rs/cors"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"

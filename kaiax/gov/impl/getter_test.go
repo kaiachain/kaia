@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
-	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
-	blockchain_mock "github.com/kaiachain/kaia/kaiax/gov/impl/mock"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	contractgov_mock "github.com/kaiachain/kaia/v2/kaiax/gov/contractgov/mock"
+	headergov_mock "github.com/kaiachain/kaia/v2/kaiax/gov/headergov/mock"
+	blockchain_mock "github.com/kaiachain/kaia/v2/kaiax/gov/impl/mock"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/stretchr/testify/assert"
 )
 

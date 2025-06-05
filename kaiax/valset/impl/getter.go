@@ -17,8 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
 )
 
 // GetCouncil returns the whole validator list for validating the block `num`.

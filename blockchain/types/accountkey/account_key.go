@@ -22,8 +22,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 type AccountKeyType uint8

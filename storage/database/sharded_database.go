@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/pkg/errors"
 )
 

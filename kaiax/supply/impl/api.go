@@ -17,8 +17,8 @@
 package supply
 
 import (
-	"github.com/kaiachain/kaia/kaiax/supply"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/kaiax/supply"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 func (s *SupplyModule) APIs() []rpc.API {

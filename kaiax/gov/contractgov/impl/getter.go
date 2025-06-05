@@ -3,10 +3,10 @@ package impl
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/common"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
-	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/common"
+	govcontract "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
 )
 
 // GetParamSet returns default parameter set in case of the following errors:

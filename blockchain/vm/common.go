@@ -24,8 +24,8 @@ package vm
 
 import (
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/math"
 )
 
 // calcMemSize64 calculates the required memory size, and returns

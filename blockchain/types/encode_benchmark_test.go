@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 func BenchmarkTxEncode(b *testing.B) {

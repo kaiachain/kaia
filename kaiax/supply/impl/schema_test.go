@@ -20,9 +20,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/kaiax/supply"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/kaiax/supply"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 

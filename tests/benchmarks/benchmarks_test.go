@@ -21,7 +21,7 @@ package benchmarks
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 func TestInterpreterMload100000(t *testing.T) {

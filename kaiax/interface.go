@@ -17,11 +17,11 @@
 package kaiax
 
 import (
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/vm"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 // On top of below Module interfaces, every module must have these:
@@ -139,7 +139,7 @@ type TxProcessModuleHost interface {
 // TxPoolModule can intervene how the txpool handles transactions
 // from the inception (e.g. AddLocal) to termination (e.g. drop).
 //
-//go:generate mockgen -destination=./mock/tx_pool_module.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolModule
+//go:generate mockgen -destination=./mock/tx_pool_module.go -package=mock github.com/kaiachain/kaia/v2/kaiax TxPoolModule
 type TxPoolModule interface {
 	// Additional actions to be taken when a new tx arrives at txpool
 	PreAddTx(tx *types.Transaction, local bool) error
@@ -162,7 +162,7 @@ type TxPoolModule interface {
 	PostReset(oldHead, newHead *types.Header)
 }
 
-//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
+//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/v2/kaiax TxPoolForCaller
 type TxPoolForCaller interface {
 	GetCurrentState() *state.StateDB
 	PendingUnlocked() (map[common.Address]types.Transactions, error)

@@ -19,7 +19,7 @@
 package system
 
 import (
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 func AllocProxy(impl common.Address) map[common.Hash]common.Hash {

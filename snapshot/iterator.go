@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 // Iterator is an iterator to step over all the accounts or the specific

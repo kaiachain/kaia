@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
-	kaiametrics "github.com/kaiachain/kaia/metrics"
-	metricutils "github.com/kaiachain/kaia/metrics/utils"
+	"github.com/kaiachain/kaia/v2/log"
+	kaiametrics "github.com/kaiachain/kaia/v2/metrics"
+	metricutils "github.com/kaiachain/kaia/v2/metrics/utils"
 	"github.com/linxGnu/grocksdb"
 	"github.com/rcrowley/go-metrics"
 )

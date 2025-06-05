@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kaiachain/kaia/kaiax/gov"
-	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
-	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	contractgov_mock "github.com/kaiachain/kaia/v2/kaiax/gov/contractgov/mock"
+	headergov_mock "github.com/kaiachain/kaia/v2/kaiax/gov/headergov/mock"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/work/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

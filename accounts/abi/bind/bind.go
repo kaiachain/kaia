@@ -32,7 +32,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/v2/accounts/abi"
 )
 
 // Lang is a target programming language selector to generate bindings for.

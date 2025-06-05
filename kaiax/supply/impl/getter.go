@@ -23,11 +23,11 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
-	"github.com/kaiachain/kaia/kaiax/supply"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/v2/kaiax/supply"
 )
 
 var (

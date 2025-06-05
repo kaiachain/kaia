@@ -24,7 +24,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 type sortableAddressList []common.Address

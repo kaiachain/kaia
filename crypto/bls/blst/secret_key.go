@@ -21,7 +21,7 @@ package blst
 import (
 	"crypto/rand"
 
-	"github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/v2/crypto/bls/types"
 	blst "github.com/supranational/blst/bindings/go"
 )
 

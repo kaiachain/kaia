@@ -26,7 +26,7 @@ import (
 	"math"
 	"runtime"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 // senderCacher is a concurrent transaction sender recoverer and cacher.

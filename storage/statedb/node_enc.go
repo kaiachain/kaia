@@ -23,7 +23,7 @@
 package statedb
 
 import (
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 func nodeToBytes(n node) []byte {

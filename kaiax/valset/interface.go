@@ -17,11 +17,11 @@
 package valset
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
-//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/v2/kaiax/valset ValsetModule
 type ValsetModule interface {
 	kaiax.BaseModule
 	kaiax.ExecutionModule

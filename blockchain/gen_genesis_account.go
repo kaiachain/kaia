@@ -7,9 +7,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common/math"
 )
 
 var _ = (*genesisAccountMarshaling)(nil)

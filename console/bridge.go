@@ -32,9 +32,9 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/console/jsre"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/console/jsre"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 // bridge is a collection of JavaScript utility methods to bride the .js runtime

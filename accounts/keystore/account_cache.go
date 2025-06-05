@@ -33,9 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
 	"gopkg.in/fatih/set.v0"
 )
 

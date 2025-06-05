@@ -17,19 +17,19 @@
 package builder
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
 type TxGenerator func(nonce uint64) (*types.Transaction, error)
 
-//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/builder BuilderModule
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/v2/kaiax/builder BuilderModule
 type BuilderModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
 }
 
-//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/kaiax/builder TxBundlingModule
+//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/v2/kaiax/builder TxBundlingModule
 type TxBundlingModule interface {
 	// The function finds transactions to be bundled.
 	// New transactions can be injected.

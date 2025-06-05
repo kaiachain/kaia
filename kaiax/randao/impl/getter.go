@@ -20,13 +20,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/system"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/kaiax/randao"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/system"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/crypto/bls"
+	"github.com/kaiachain/kaia/v2/kaiax/randao"
 )
 
 func (r *RandaoModule) GetBlsPubkey(proposer common.Address, num *big.Int) (bls.PublicKey, error) {

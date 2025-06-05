@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/storage"
+	"github.com/kaiachain/kaia/v2/storage"
 	"github.com/stretchr/testify/assert"
 )
 

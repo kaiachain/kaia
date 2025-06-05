@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // Type enumerator

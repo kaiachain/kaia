@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 const (

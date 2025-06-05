@@ -25,13 +25,13 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/influxdata/influxdb/pkg/deep"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage/database"
-	mock_statedb "github.com/kaiachain/kaia/storage/statedb/mocks"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
+	"github.com/kaiachain/kaia/v2/rlp"
+	"github.com/kaiachain/kaia/v2/storage/database"
+	mock_statedb "github.com/kaiachain/kaia/v2/storage/statedb/mocks"
 )
 
 func getTestBlock(t *testing.T) types.Block {

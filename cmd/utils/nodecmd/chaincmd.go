@@ -28,13 +28,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/cmd/utils"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	headergov_impl "github.com/kaiachain/kaia/v2/kaiax/gov/headergov/impl"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"github.com/urfave/cli/v2"
 )
 

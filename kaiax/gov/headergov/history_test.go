@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
 	"github.com/stretchr/testify/assert"
 )
 

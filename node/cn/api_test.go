@@ -26,9 +26,9 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 var dumper = spew.ConfigState{Indent: "    "}

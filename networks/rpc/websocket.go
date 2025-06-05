@@ -40,7 +40,7 @@ import (
 	fastws "github.com/clevergo/websocket"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/valyala/fasthttp"
 )
 

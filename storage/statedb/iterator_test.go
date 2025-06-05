@@ -28,8 +28,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 func TestIterator(t *testing.T) {

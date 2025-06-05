@@ -25,7 +25,7 @@ package blockchain
 import (
 	"errors"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 var (

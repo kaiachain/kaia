@@ -28,7 +28,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 // In this example, our client whishes to track the latest 'block number'

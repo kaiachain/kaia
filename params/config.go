@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 // Genesis hashes to enforce below configs on.

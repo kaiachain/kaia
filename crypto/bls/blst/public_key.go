@@ -19,7 +19,7 @@
 package blst
 
 import (
-	"github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/v2/crypto/bls/types"
 )
 
 type publicKey struct {

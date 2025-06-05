@@ -26,7 +26,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/v2/common/math"
 )
 
 type diffTest struct {

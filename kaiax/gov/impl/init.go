@@ -5,19 +5,19 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/gov/contractgov"
-	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
-	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
-	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/blockchain"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/kaiax/gov"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/contractgov"
+	contractgov_impl "github.com/kaiachain/kaia/v2/kaiax/gov/contractgov/impl"
+	"github.com/kaiachain/kaia/v2/kaiax/gov/headergov"
+	headergov_impl "github.com/kaiachain/kaia/v2/kaiax/gov/headergov/impl"
+	"github.com/kaiachain/kaia/v2/kaiax/valset"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
+	"github.com/kaiachain/kaia/v2/storage/database"
 	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
@@ -27,7 +27,7 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxGov)
 )
 
-//go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
+//go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/v2/kaiax/gov/impl BlockChain
 type BlockChain interface {
 	blockchain.ChainContext
 

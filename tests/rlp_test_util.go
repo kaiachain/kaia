@@ -30,7 +30,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // RLPTest is the JSON structure of a single RLP test.

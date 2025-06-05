@@ -29,8 +29,8 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka/mocks"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/kafka/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -19,7 +19,7 @@ package gasless
 import (
 	"math"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/urfave/cli/v2"
 )
 

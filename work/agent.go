@@ -26,8 +26,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
 )
 
 type CpuAgent struct {

@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 func TestUnmarshalJSONNewFilterArgs(t *testing.T) {

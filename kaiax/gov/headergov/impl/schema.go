@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/v2/storage/database"
 )
 
 var (

@@ -25,9 +25,9 @@ package keystore
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/blockchain/types"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

@@ -28,7 +28,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 var (

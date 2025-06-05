@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

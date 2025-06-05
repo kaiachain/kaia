@@ -25,7 +25,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/kaiachain/kaia/node/cn/tracers/internal/tracers"
+	"github.com/kaiachain/kaia/v2/node/cn/tracers/internal/tracers"
 )
 
 // all contains all the built in JavaScript tracers by name.

@@ -19,7 +19,7 @@ package supply
 import (
 	"math/big"
 
-	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/v2/common/hexutil"
 )
 
 // AccReward is a subset of TotalSupply that comprises the minted and burnt amounts by the block reward mechanism.

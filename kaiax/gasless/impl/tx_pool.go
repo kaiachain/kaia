@@ -19,8 +19,8 @@ package impl
 import (
 	"math"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/kaiax"
 )
 
 var _ kaiax.TxPoolModule = (*GaslessModule)(nil)

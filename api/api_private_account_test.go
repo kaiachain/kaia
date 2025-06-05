@@ -23,9 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/accounts/keystore"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/accounts/keystore"
+	"github.com/kaiachain/kaia/v2/common"
 	"github.com/stretchr/testify/require"
 )
 

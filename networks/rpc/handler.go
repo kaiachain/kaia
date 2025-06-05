@@ -34,8 +34,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/storage/statedb"
 )
 
 // handler handles JSON-RPC messages. There is one handler per connection. Note that

@@ -1,4 +1,4 @@
-module github.com/kaiachain/kaia
+module github.com/kaiachain/kaia/v2
 
 go 1.23.7
 

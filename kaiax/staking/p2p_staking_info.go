@@ -23,8 +23,8 @@ import (
 	"io"
 	"math"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // P2PStakingInfo contains staking information which is a wrapped version of StakingInfo.

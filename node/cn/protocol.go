@@ -28,14 +28,14 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/kaiachain/kaia"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/datasync/downloader"
-	"github.com/kaiachain/kaia/datasync/fetcher"
-	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/node/cn/snap"
-	"github.com/kaiachain/kaia/rlp"
+	kaia "github.com/kaiachain/kaia/v2"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/datasync/downloader"
+	"github.com/kaiachain/kaia/v2/datasync/fetcher"
+	"github.com/kaiachain/kaia/v2/kaiax/staking"
+	"github.com/kaiachain/kaia/v2/node/cn/snap"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 // `kaia` is the default fallback protocol for all consensus engine types.
@@ -122,7 +122,7 @@ var errorToString = map[int]string{
 
 // ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
 //
-//go:generate mockgen -destination=./mocks/downloader_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerDownloader
+//go:generate mockgen -destination=./mocks/downloader_mock.go -package=mocks github.com/kaiachain/kaia/v2/node/cn ProtocolManagerDownloader
 type ProtocolManagerDownloader interface {
 	RegisterPeer(id string, version int, peer downloader.Peer) error
 	UnregisterPeer(id string) error
@@ -147,7 +147,7 @@ type ProtocolManagerDownloader interface {
 
 // ProtocolManagerFetcher is an interface of fetcher.Fetcher used by ProtocolManager.
 //
-//go:generate mockgen -destination=./mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerFetcher
+//go:generate mockgen -destination=./mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/v2/node/cn ProtocolManagerFetcher
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction

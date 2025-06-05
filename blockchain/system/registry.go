@@ -23,11 +23,11 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/blockchain/state"
+	"github.com/kaiachain/kaia/v2/common"
+	contracts "github.com/kaiachain/kaia/v2/contracts/contracts/system_contracts/kip149"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 // Create storage state from the given initial values.

@@ -23,9 +23,9 @@
 package core
 
 import (
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/common/prque"
+	"github.com/kaiachain/kaia/v2/consensus/istanbul"
 )
 
 // msgPriority is defined for calculating processing priority to speedup consensus

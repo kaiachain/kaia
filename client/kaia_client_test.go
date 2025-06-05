@@ -22,7 +22,7 @@
 
 package client
 
-import "github.com/kaiachain/kaia"
+import kaia "github.com/kaiachain/kaia/v2"
 
 // Verify that Client implements the Kaia interfaces.
 var (

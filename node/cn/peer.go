@@ -30,15 +30,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/datasync/downloader"
-	"github.com/kaiachain/kaia/networks/p2p"
-	"github.com/kaiachain/kaia/networks/p2p/discover"
-	"github.com/kaiachain/kaia/node/cn/snap"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/consensus"
+	"github.com/kaiachain/kaia/v2/crypto"
+	"github.com/kaiachain/kaia/v2/datasync/downloader"
+	"github.com/kaiachain/kaia/v2/networks/p2p"
+	"github.com/kaiachain/kaia/v2/networks/p2p/discover"
+	"github.com/kaiachain/kaia/v2/node/cn/snap"
+	"github.com/kaiachain/kaia/v2/rlp"
 )
 
 var (
@@ -87,7 +87,7 @@ type propEvent struct {
 	td    *big.Int
 }
 
-//go:generate mockgen -destination=./peer_mock_test.go -package=cn github.com/kaiachain/kaia/node/cn Peer
+//go:generate mockgen -destination=./peer_mock_test.go -package=cn github.com/kaiachain/kaia/v2/node/cn Peer
 type Peer interface {
 	// Broadcast is a write loop that multiplexes block propagations, announcements
 	// and transaction broadcasts into the remote peer. The goal is to have an async

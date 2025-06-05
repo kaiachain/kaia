@@ -18,10 +18,10 @@ package impl
 
 import (
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/kaiax/randao"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/v2/kaiax/randao"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/params"
 	"golang.org/x/sync/singleflight"
 )
 

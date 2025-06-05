@@ -30,7 +30,7 @@ import (
 	"reflect"
 
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/rlp/internal/rlpstruct"
+	"github.com/kaiachain/kaia/v2/rlp/internal/rlpstruct"
 )
 
 var (

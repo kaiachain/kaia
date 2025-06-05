@@ -25,7 +25,7 @@ package snap
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // Tests that given a starting hash and a density, the hash ranger can correctly

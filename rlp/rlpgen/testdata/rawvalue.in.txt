@@ -2,7 +2,7 @@
 
 package test
 
-import "github.com/kaiachain/kaia/rlp"
+import "github.com/kaiachain/kaia/v2/rlp"
 
 type Test struct {
 	RawValue          rlp.RawValue

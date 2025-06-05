@@ -21,7 +21,7 @@ package utils
 import (
 	"sort"
 
-	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/v2/api/debug"
 	"github.com/urfave/cli/v2"
 )
 

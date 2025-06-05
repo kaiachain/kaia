@@ -17,8 +17,8 @@
 package supply
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/common"
 )
 
 // PostInsertBlock will try to advance the supplyCheckpoint by one block.

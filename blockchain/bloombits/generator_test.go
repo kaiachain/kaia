@@ -27,7 +27,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

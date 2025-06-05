@@ -27,13 +27,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts"
-	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/accounts/keystore"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/cmd/homi/setup"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/accounts"
+	"github.com/kaiachain/kaia/v2/accounts/abi/bind"
+	"github.com/kaiachain/kaia/v2/accounts/keystore"
+	"github.com/kaiachain/kaia/v2/blockchain/types"
+	"github.com/kaiachain/kaia/v2/cmd/homi/setup"
+	"github.com/kaiachain/kaia/v2/common"
+	"github.com/kaiachain/kaia/v2/params"
 )
 
 const (

@@ -22,7 +22,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
+	"github.com/kaiachain/kaia/v2/datasync/chaindatafetcher/types"
 )
 
 type PublicChainDataFetcherAPI struct {

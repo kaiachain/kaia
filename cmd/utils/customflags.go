@@ -34,8 +34,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/v2/common/math"
+	"github.com/kaiachain/kaia/v2/datasync/downloader"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )

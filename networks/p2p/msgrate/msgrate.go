@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/v2/log"
 )
 
 // measurementImpact is the impact a single measurement has on a peer's final

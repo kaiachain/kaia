@@ -20,8 +20,8 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	"github.com/kaiachain/kaia/kaiax/randao"
-	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/v2/kaiax/randao"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
 )
 
 func (r *RandaoModule) APIs() []rpc.API {

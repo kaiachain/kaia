@@ -22,7 +22,7 @@
 
 package types
 
-import "github.com/kaiachain/kaia/common"
+import "github.com/kaiachain/kaia/v2/common"
 
 // ContractRef is a reference to the contract's backing object
 type ContractRef interface {

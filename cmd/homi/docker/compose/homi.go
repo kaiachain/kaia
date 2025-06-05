@@ -23,7 +23,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/kaiachain/kaia/cmd/homi/docker/service"
+	"github.com/kaiachain/kaia/v2/cmd/homi/docker/service"
 )
 
 type Homi struct {

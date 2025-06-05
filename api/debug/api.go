@@ -37,9 +37,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/metrics/exp"
-	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/metrics/exp"
+	"github.com/kaiachain/kaia/v2/params"
 	"github.com/rcrowley/go-metrics"
 )
 

@@ -27,11 +27,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/console"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/v2/cmd/utils"
+	"github.com/kaiachain/kaia/v2/console"
+	"github.com/kaiachain/kaia/v2/log"
+	"github.com/kaiachain/kaia/v2/networks/rpc"
+	"github.com/kaiachain/kaia/v2/node"
 	"github.com/urfave/cli/v2"
 )
 
