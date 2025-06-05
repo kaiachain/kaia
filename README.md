@@ -47,6 +47,13 @@ Service chain node is a node for Service Chain which is an auxiliary blockchain 
 Although the service chain feature is under development, we provide the operation guide for testing purposes. Please visit the official document [Service Chain Operation Guide](https://docs.kaia.io/docs/nodes/service-chain/).
 Furthermore, for those who are interested in the Kaia Service Chain, please check out [Scaling Solutions](https://docs.kaia.io/docs/learn/scaling-solutions/).
 
+## Import as library
+
+Please use git branch (main) or commit hash. Do not use tags (v2.0.0)
+```
+go get github.com/kaiachain/kaia@main
+```
+
 ## License
 
 The Kaia library (i.e. all code outside of the `cmd` directory) is licensed under the
