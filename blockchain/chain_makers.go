@@ -72,6 +72,18 @@ func (b *BlockGen) SetGovData(data []byte) {
 	b.header.Governance = data
 }
 
+func (b *BlockGen) SetMixHash(mixHash common.Hash) {
+	b.header.MixHash = mixHash.Bytes()
+}
+
+func (b *BlockGen) SetBaseFee(baseFee *big.Int) {
+	b.header.BaseFee = baseFee
+}
+
+func (b *BlockGen) SetTime(time *big.Int) {
+	b.header.Time = time
+}
+
 // AddTx adds a transaction to the generated block.
 // In gxhash, arbitrary address is used as a block author's address.
 //
@@ -110,7 +122,11 @@ func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transact
 	if bc != nil {
 		vmConfig = bc.vmConfig
 	}
-	receipt, _, _ := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
+	auther, err := b.engine.Author(b.header)
+	if err != nil {
+		return err
+	}
+	receipt, _, _ := bc.ApplyTransaction(b.config, &auther, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
 	b.txs = append(b.txs, tx)
 	if receipt != nil {
 		b.receipts = append(b.receipts, receipt)

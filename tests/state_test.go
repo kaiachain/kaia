@@ -98,12 +98,15 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
 	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
+	st.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Cancun-address_0xb-precompile_exists_False-state_test\]`)
 	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-31_bytes\]`)
 	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-32_bytes\]`)
 	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-empty_calldata\]`)
-	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_CancunToPragueAtTime15k-state_test--G1ADD\]`)
+	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_Cancun-state_test--G1ADD\]`)
 	// type 3 tx (EIP-4844) is not supported
 	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
+	// EIP-3607 is not implemented because Kaia can't reject the TxFromSenderEOA since Kaia have a contract code at the zero address and people usually use from == 0x0 to call the view function
+	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/set_code_from_account_with_non_delegating_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_set_code_from_account_with_non_delegating_code`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{

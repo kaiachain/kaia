@@ -299,6 +299,33 @@ func (st *StateTransition) preCheck() error {
 		}
 	}
 
+	// Make sure that transaction gasFeeCap is greater than the baseFee (post london)
+	// NOTE: Kaia adopt the validation post Prague since we're already released London
+	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsPrague {
+		// Skip the checks if gas fields are zero and baseFee was explicitly disabled (eth_call)
+		skipCheck := st.msg.GasFeeCap().BitLen() == 0 && st.msg.GasTipCap().BitLen() == 0
+		if !skipCheck {
+			if l := st.msg.GasFeeCap().BitLen(); l > 256 {
+				return fmt.Errorf("%w: address %v, maxFeePerGas bit length: %d", ErrFeeCapVeryHigh,
+					st.msg.ValidatedSender().Hex(), l)
+			}
+			if l := st.msg.GasTipCap().BitLen(); l > 256 {
+				return fmt.Errorf("%w: address %v, maxPriorityFeePerGas bit length: %d", ErrTipVeryHigh,
+					st.msg.ValidatedSender().Hex(), l)
+			}
+			if st.msg.GasFeeCap().Cmp(st.msg.GasTipCap()) < 0 {
+				return fmt.Errorf("%w: address %v, maxPriorityFeePerGas: %s, maxFeePerGas: %s", ErrTipAboveFeeCap,
+					st.msg.ValidatedSender().Hex(), st.msg.GasTipCap(), st.msg.GasFeeCap())
+			}
+			// This will panic if baseFee is nil, but basefee presence is verified
+			// as part of header validation.
+			if st.msg.GasFeeCap().Cmp(st.evm.Context.BaseFee) < 0 {
+				return fmt.Errorf("%w: address %v, maxFeePerGas: %s, baseFee: %s", ErrFeeCapTooLow,
+					st.msg.ValidatedSender().Hex(), st.msg.GasFeeCap(), st.evm.Context.BaseFee)
+			}
+		}
+	}
+
 	// Check that EIP-7702 authorization list signatures are well formed.
 	if st.msg.AuthList() != nil {
 		if st.msg.To() == nil {
