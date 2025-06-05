@@ -1493,6 +1493,8 @@ func (pool *TxPool) checkAndSetBeat(addr common.Address) {
 
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
+//
+// Returns the number of transactions removed from the pending queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) int {
 	// Fetch the transaction we wish to delete
 	tx := pool.all.Get(hash)
