@@ -1066,14 +1066,14 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		// New transaction is better than our worse ones, make room for it
 		drop, success := pool.priced.Discard(pool.all.Slots()-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll)+numSlots(tx), pool.locals)
 		// Special case, we still can't make the room for the new remote one.
-		if !success {
+		if !local && !success {
 			logger.Trace("Discarding overflown transaction", "hash", hash)
 			overflowedTxMeter.Mark(1)
 			return false, ErrTxPoolOverflow
 		}
 
 		// If the new transaction is a future transaction it should never churn pending transactions
-		if pool.isGapped(tx, from) {
+		if !local && pool.isGapped(tx, from) {
 			var replacesPending bool
 			for _, dropTx := range drop {
 				dropSender, _ := types.Sender(pool.signer, dropTx)
