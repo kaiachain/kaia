@@ -52,6 +52,7 @@ Furthermore, for those who are interested in the Kaia Service Chain, please chec
 Please use git branch (main) or commit hash. Do not use tags (v2.0.0)
 ```
 go get github.com/kaiachain/kaia@main
+go mod tidy
 ```
 
 ## License
