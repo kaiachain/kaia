@@ -361,12 +361,6 @@ web3._extend({
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		}),
 		new web3._extend.Method({
-			name: 'getChainConfig',
-			call: 'governance_getChainConfig',
-			params: 1,
-			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
-		}),
-		new web3._extend.Method({
 			name: 'votes',
 			call: 'governance_votes',
 			params: 1,
@@ -860,6 +854,16 @@ web3._extend({
 			call: 'debug_setVMLogTarget',
 			params: 1
 		}),
+		new web3._extend.Method({
+			name: 'isGaslessTx',
+			call: 'debug_isGaslessTx',
+			params: 1,
+			inputFormatter: [null]
+		}),
+		new web3._extend.Method({
+			name: 'gaslessInfo',
+			call: 'debug_gaslessInfo',
+		}),
 	],
 	properties: []
 });
@@ -1163,6 +1167,16 @@ var klayMethods = [
 		call: 'klay_getProof',
 		params: 3,
 		inputFormatter: [web3._extend.formatters.inputAddressFormatter, null, web3._extend.formatters.inputBlockNumberFormatter]
+	}),
+	new web3._extend.Method({
+		name: 'sendRawTransactions',
+		call: 'klay_sendRawTransactions',
+		params: 1,
+		inputFormatter: [null]
+	}),
+	new web3._extend.Method({
+		name: 'isConsoleLogEnabled',
+		call: 'klay_isConsoleLogEnabled',
 	}),
 ];
 `
