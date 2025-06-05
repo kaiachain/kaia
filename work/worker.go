@@ -884,6 +884,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 }
 
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
+	env.state.Database().TrieDB().SavePruningMarksInBundle()
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
 	tcountSnapshot := env.tcount
@@ -901,6 +902,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	}
 
 	restoreEnv := func() {
+		env.state.Database().TrieDB().RevertPruningMarksInBundle()
 		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
@@ -937,6 +939,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		logs = append(logs, receipt.Logs...)
 	}
 
+	env.state.Database().TrieDB().CompleteBundle()
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
 
