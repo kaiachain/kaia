@@ -1,0 +1,28 @@
+FROM centos:centos7
+
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+RUN curl https://dl.google.com/go/go1.23.7.linux-arm64.tar.gz | tar xzvf - -C /usr/local
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Manually add SCL repo (EOL ?~]??~[~D ?~H~X?~O~Y ?~C~]?~D?)
+RUN echo "[centos-sclo-rh]" > /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "name=CentOS-7 - SCLo rh" >> /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/rh/" >> /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "" >> /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
+    echo "[centos-sclo-sclo]" > /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
+    echo "name=CentOS-7 - SCLo sclo" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
+    echo "baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/sclo/" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo
+
+# Install gcc 7 and other build tools
+RUN yum install -y centos-release-scl scl-utils devtoolset-7 devtoolset-7-gcc devtoolset-7-gcc-c++ make rpm-build git createrepo python3 unzip
+
+
+# Add gcc 7.x in $PATH
+ENV PATH="/opt/rh/devtoolset-7/root/usr/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/rh/devtoolset-7/root/usr/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
