@@ -725,7 +725,7 @@ func makeAccounts(size int) (addresses [][20]byte, accounts [][]byte) {
 	return addresses, accounts
 }
 
-// BenchmarkCommitAfterHashFixedSize benchmarks the Commit (after Hash) of a fixed number of updates to a trie.
+// BenchmarkHashFixedSize benchmarks the Commit (after Hash) of a fixed number of updates to a trie.
 // This benchmark is meant to capture the difference on efficiency of small versus large changes. Typically,
 // storage tries are small (a couple of entries), whereas the full post-block account trie update is large (a couple
 // of thousand entries)
