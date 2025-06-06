@@ -93,8 +93,11 @@ type Database struct {
 	oldest common.ExtHash                 // Oldest tracked node, flush-list head
 	newest common.ExtHash                 // Newest tracked node, flush-list tail
 
-	preimages    map[common.Hash][]byte // Preimages of nodes from the secure trie
-	pruningMarks []database.PruningMark // Trie node pruning marks from the pruning trie
+	preimages            map[common.Hash][]byte // Preimages of nodes from the secure trie
+	pruningMarks         []database.PruningMark // Trie node pruning marks from the pruning trie
+	pruningMarksInBundle []database.PruningMark // Trie node pruning marks from the pruning trie in bundle
+
+	savingPruningMarksInBundle bool
 
 	gctime  time.Duration      // Time spent on garbage collection since last commit
 	gcnodes uint64             // Nodes garbage collected since last commit
@@ -468,6 +471,26 @@ func (db *Database) insertPruningMark(hash common.ExtHash, blockNum uint64) {
 		Number: blockNum,
 		Hash:   hash,
 	})
+	if db.savingPruningMarksInBundle {
+		db.pruningMarksInBundle = append(db.pruningMarksInBundle, database.PruningMark{
+			Number: blockNum,
+			Hash:   hash,
+		})
+	}
+}
+
+func (db *Database) SavePruningMarksInBundle() {
+	db.savingPruningMarksInBundle = true
+}
+
+func (db *Database) RevertPruningMarksInBundle() {
+	db.diskDB.DeletePruningMarks(db.pruningMarksInBundle)
+	db.CompleteBundle()
+}
+
+func (db *Database) CompleteBundle() {
+	db.pruningMarksInBundle = []database.PruningMark{}
+	db.savingPruningMarksInBundle = false
 }
 
 // getCachedNode finds an encoded node in the trie node cache if enabled.
