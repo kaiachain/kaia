@@ -887,6 +887,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
 	tcountSnapshot := env.tcount
+	env.state.StartPruningSnapshot()
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
 	logs := []*types.Log{}
@@ -901,6 +902,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	}
 
 	restoreEnv := func() {
+		env.state.RevertPruningSnapshot()
 		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
@@ -939,6 +941,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
+	env.state.EndPruningSnapshot()
 
 	return nil, nil, logs
 }

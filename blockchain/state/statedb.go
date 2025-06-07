@@ -995,6 +995,18 @@ func deepCopyLogs(from, to *StateDB) {
 	}
 }
 
+func (s *StateDB) StartPruningSnapshot() {
+	s.trie.StartPruningSnapshot()
+}
+
+func (s *StateDB) EndPruningSnapshot() {
+	s.trie.EndPruningSnapshot()
+}
+
+func (s *StateDB) RevertPruningSnapshot() {
+	s.trie.RevertPruningSnapshot()
+}
+
 // Snapshot returns an identifier for the current revision of the state.
 func (s *StateDB) Snapshot() int {
 	id := s.nextRevisionId

@@ -235,3 +235,15 @@ func (t *SecureTrie) getSecKeyCache() map[string][]byte {
 	}
 	return t.secKeyCache
 }
+
+func (t *SecureTrie) StartPruningSnapshot() {
+	t.trie.StartPruningSnapshot()
+}
+
+func (t *SecureTrie) EndPruningSnapshot() {
+	t.trie.EndPruningSnapshot()
+}
+
+func (t *SecureTrie) RevertPruningSnapshot() {
+	t.trie.RevertPruningSnapshot()
+}

@@ -75,6 +75,13 @@ type Database interface {
 
 // Trie is a Kaia Merkle Patricia trie.
 type Trie interface {
+	// StartPruningSnapshot starts a pruning snapshot.
+	StartPruningSnapshot()
+	// EndPruningSnapshot ends a pruning snapshot.
+	EndPruningSnapshot()
+	// RevertPruningSnapshot reverts a pruning snapshot.
+	RevertPruningSnapshot()
+
 	// GetKey returns the sha3 preimage of a hashed key that was previously used
 	// to store a value.
 	//
