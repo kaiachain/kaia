@@ -71,8 +71,10 @@ devtools:
 	env GOFLAGS= GOBIN= go install golang.org/x/tools/cmd/stringer@latest
 	env GOFLAGS= GOBIN= go install github.com/go-bindata/go-bindata/...@latest
 	env GOFLAGS= GOBIN= go install mvdan.cc/gofumpt@latest
+	env GOFLAGS= GOBIN= go install golang.org/x/tools/cmd/goimports@latest
 	env GOFLAGS= GOBIN= go install github.com/fjl/gencodec@latest
-	env GOFLAGS= GOBIN= go install github.com/golang/protobuf/protoc-gen-go@latest
+	env GOFLAGS= GOBIN= go install github.com/golang/mock/mockgen@latest
+	env GOFLAGS= GOBIN= go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	env GOFLAGS= GOBIN= go install ./cmd/abigen
 	@type "npm" 2> /dev/null || echo 'Please install node.js and npm'
 	@type "solc" 2> /dev/null || echo 'Please install solc'

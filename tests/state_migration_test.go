@@ -100,10 +100,9 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 		err := cn.ChainDB().GetMiscDB().Put(stateTriePathKey, []byte(newDBPath))
 		assert.NoError(t, err)
 
-		// an error expected on node start
+		// no error expected on node start, even if the state trie db has no data
 		stopNode(t, fullNode)
-		_, _, err = newKaiaNode(t, workspace, validator, nil, nil)
-		assert.Error(t, err, "start failure expected, changed state trie db has no data") // error expected
+		_, _ = startNode(t, workspace, validator)
 	}
 }
 
