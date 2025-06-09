@@ -425,7 +425,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
