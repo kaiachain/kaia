@@ -325,8 +325,14 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.updateRoundState(view, c.currentCommittee, true)
 	c.roundChangeSet.Clear(view.Round)
 
+	newProposer, err := c.backend.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
+	if err != nil {
+		logger.Error("Failed to get proposer by round", "new_round", view.Round, "new_seq", view.Sequence, "err", err)
+		return
+	}
+
 	c.newRoundChangeTimer()
-	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.currentCommittee.Proposer())
+	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", newProposer)
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
