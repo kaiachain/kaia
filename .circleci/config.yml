@@ -145,6 +145,7 @@ commands:
       - run:
           name: "build binaries"
           command: |
+            touch ~/.bashrc
             source ~/.bashrc
             make all
       - run:
