@@ -2298,7 +2298,7 @@ func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.
 				assert.Equal(t, nil, err)
 				txs = append(txs, tx)
 			}
-			// tx0 and tx1 are bundled, and then tx4 fails due to nonceTooHigh, so it is reverted.
+			// tx0 and tx1 are bundled, and then tx1 fails due to nonceTooHigh, so it is reverted.
 			expectedFailTxHashes := []common.Hash{txs[0].Hash(), txs[1].Hash()}
 			err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, expectedFailTxHashes, prof, txBundlingModules, builderModule)
 
