@@ -328,7 +328,8 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	newProposer, err := c.backend.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
 	if err != nil {
 		logger.Error("Failed to get proposer by round", "new_round", view.Round, "new_seq", view.Sequence, "err", err)
-		return
+		// The newProposer is only for logging purpose, so we don't need to return here.
+		// If there's error, it'll be handled in the `startNewRound` anyway.
 	}
 
 	c.newRoundChangeTimer()
