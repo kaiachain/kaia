@@ -291,8 +291,6 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 		return nil, nil, nil, err
 	}
 
-	bcdata.bc.WriteBlockWithState(b, receipts, statedb)
-
 	prof.Profile("mine_seal_block", time.Now().Sub(start))
 
 	return statedb, b, receipts, nil
