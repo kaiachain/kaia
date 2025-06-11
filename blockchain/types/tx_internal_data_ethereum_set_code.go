@@ -553,12 +553,12 @@ func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big
 }
 
 type SetCodeAuthorization struct {
-	ChainID uint256.Int    `json:"chainId"`
-	Address common.Address `json:"address"`
-	Nonce   uint64         `json:"nonce"`
-	V       uint8          `json:"v"`
-	R       uint256.Int    `json:"r"`
-	S       uint256.Int    `json:"s"`
+	ChainID uint256.Int    `json:"chainId" gencodec:"required"`
+	Address common.Address `json:"address" gencodec:"required"`
+	Nonce   uint64         `json:"nonce" gencodec:"required"`
+	V       uint8          `json:"yParity" gencodec:"required"`
+	R       uint256.Int    `json:"r" gencodec:"required"`
+	S       uint256.Int    `json:"s" gencodec:"required"`
 }
 
 type authorizationMarshaling struct {
