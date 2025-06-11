@@ -23,8 +23,8 @@
 package work
 
 import (
-	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -926,7 +926,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			}
 			receiptStatus := ""
 			if receipt != nil {
-				receiptStatus = fmt.Sprintf("%d", receipt.Status)
+				receiptStatus = strconv.FormatUint(uint64(receipt.Status), 10)
 			}
 			logger.Warn("ApplyTransaction error, restoring env",
 				"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
