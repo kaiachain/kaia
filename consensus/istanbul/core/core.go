@@ -314,7 +314,7 @@ func (c *core) startNewRound(round *big.Int) {
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
-	logger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.currentCommittee.Proposer())
+	cLogger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.currentCommittee.Proposer())
 
 	if view.Round.Cmp(c.current.Round()) > 0 {
 		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
@@ -327,13 +327,13 @@ func (c *core) catchUpRound(view *istanbul.View) {
 
 	newProposer, err := c.backend.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
 	if err != nil {
-		logger.Error("Failed to get proposer by round", "new_round", view.Round, "new_seq", view.Sequence, "err", err)
+		logger.Warn("Failed to get proposer by round", "err", err)
 		// The newProposer is only for logging purpose, so we don't need to return here.
 		// If there's error, it'll be handled in the `startNewRound` anyway.
 	}
 
 	c.newRoundChangeTimer()
-	logger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", newProposer)
+	cLogger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", newProposer)
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
