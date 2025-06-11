@@ -17,7 +17,18 @@ RUN echo "[centos-sclo-rh]" > /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo && \
     echo "name=CentOS-7 - SCLo sclo" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
     echo "baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/sclo/" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
     echo "enabled=1" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo && \
-    echo "gpgcheck=0" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo
+    echo "gpgcheck=0" >> /etc/yum.repos.d/CentOS-SCLo-scl.repo \
+    echo "[devtoolset-7]" > /etc/yum.repos.d/devtoolset-7.repo && \
+    echo "name=CentOS 7 DevToolset-7 (aarch64)" >> /etc/yum.repos.d/devtoolset-7.repo && \
+    echo "baseurl=https://buildlogs.cdn.centos.org/c7-devtoolset-7.aarch64/" >> /etc/yum.repos.d/devtoolset-7.repo && \
+    echo "enabled=1" >> /etc/yum.repos.d/devtoolset-7.repo && \
+    echo "gpgcheck=0" >> /etc/yum.repos.d/devtoolset-7.repo
+
+RUN echo -e '[devtoolset-7]\n\
+name=CentOS 7 DevToolset-7 (aarch64)\n\
+baseurl=https://buildlogs.cdn.centos.org/c7-devtoolset-7.aarch64/\n\
+enabled=1\n\
+gpgcheck=0' > /etc/yum.repos.d/devtoolset-7.repo
 
 # Install gcc 7 and other build tools
 RUN yum install -y centos-release-scl scl-utils devtoolset-7 devtoolset-7-gcc devtoolset-7-gcc-c++ make rpm-build git createrepo python3 unzip
