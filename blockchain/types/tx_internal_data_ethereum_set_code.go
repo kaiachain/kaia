@@ -561,6 +561,14 @@ type SetCodeAuthorization struct {
 	S       uint256.Int    `json:"s"`
 }
 
+type authorizationMarshaling struct {
+	ChainID hexutil.U256
+	Nonce   hexutil.Uint64
+	V       hexutil.Uint64
+	R       hexutil.U256
+	S       hexutil.U256
+}
+
 // SignSetCode creates a signed the SetCode authorization.
 func SignSetCode(prv *ecdsa.PrivateKey, auth SetCodeAuthorization) (SetCodeAuthorization, error) {
 	sighash := auth.sigHash()
