@@ -11,8 +11,8 @@ require (
 	github.com/bt51/ntpclient v0.0.0-20140310165113-3045f71e2530
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
-	github.com/consensys/gnark-crypto v0.12.1
-	github.com/crate-crypto/go-kzg-4844 v0.7.0
+	github.com/consensys/gnark-crypto v0.13.0
+	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
@@ -140,7 +140,7 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/tinylib/msgp v1.1.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
