@@ -23,6 +23,7 @@
 package work
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -923,7 +924,14 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 				markAllTxUnexecutable()
 			}
-			logger.Error("ApplyTransaction error, restoring env", "error", err)
+			receiptStatus := ""
+			if receipt != nil {
+				receiptStatus = fmt.Sprintf("%d", receipt.Status)
+			}
+			logger.Warn("ApplyTransaction error, restoring env",
+				"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
+				"error", err, "receiptStatus", receiptStatus,
+			)
 			restoreEnv()
 			if err == nil {
 				err = kerrors.ErrRevertedBundleByVmErr
