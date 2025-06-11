@@ -39,33 +39,47 @@ func packBytesSlice(bytes []byte, l int) []byte {
 
 // packElement packs the given reflect value according to the abi specification in
 // t.
-func packElement(t Type, reflectValue reflect.Value) []byte {
+func packElement(t Type, reflectValue reflect.Value) ([]byte, error) {
 	switch t.T {
-	case IntTy, UintTy:
-		return packNum(reflectValue)
+	case UintTy:
+		// make sure to not pack a negative value into a uint type.
+		if reflectValue.Kind() == reflect.Ptr {
+			val := new(big.Int).Set(reflectValue.Interface().(*big.Int))
+			if val.Sign() == -1 {
+				return nil, errInvalidSign
+			}
+		} else if reflectValue.Kind() >= reflect.Int && reflectValue.Kind() <= reflect.Int64 {
+			// Check for negative values in int types
+			if reflectValue.Int() < 0 {
+				return nil, errInvalidSign
+			}
+		}
+		return packNum(reflectValue), nil
+	case IntTy:
+		return packNum(reflectValue), nil
 	case StringTy:
-		return packBytesSlice([]byte(reflectValue.String()), reflectValue.Len())
+		return packBytesSlice([]byte(reflectValue.String()), reflectValue.Len()), nil
 	case AddressTy:
 		if reflectValue.Kind() == reflect.Array {
 			reflectValue = mustArrayToByteSlice(reflectValue)
 		}
 
-		return common.LeftPadBytes(reflectValue.Bytes(), 32)
+		return common.LeftPadBytes(reflectValue.Bytes(), 32), nil
 	case BoolTy:
 		if reflectValue.Bool() {
-			return math.PaddedBigBytes(common.Big1, 32)
+			return math.PaddedBigBytes(common.Big1, 32), nil
 		}
-		return math.PaddedBigBytes(common.Big0, 32)
+		return math.PaddedBigBytes(common.Big0, 32), nil
 	case BytesTy:
 		if reflectValue.Kind() == reflect.Array {
 			reflectValue = mustArrayToByteSlice(reflectValue)
 		}
-		return packBytesSlice(reflectValue.Bytes(), reflectValue.Len())
+		return packBytesSlice(reflectValue.Bytes(), reflectValue.Len()), nil
 	case FixedBytesTy, FunctionTy:
 		if reflectValue.Kind() == reflect.Array {
 			reflectValue = mustArrayToByteSlice(reflectValue)
 		}
-		return common.RightPadBytes(reflectValue.Bytes(), 32)
+		return common.RightPadBytes(reflectValue.Bytes(), 32), nil
 	default:
 		panic("abi: fatal error")
 	}
