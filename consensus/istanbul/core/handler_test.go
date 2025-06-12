@@ -87,6 +87,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 				mockValset, committeeSize, validatorAddrs[0:committeeSize], validatorAddrs[0],
 			), nil
 		}).AnyTimes()
+	mockBackend.EXPECT().GetProposerByRound(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
 
 	// Set an eventMux in which istanbul core will subscribe istanbul events
