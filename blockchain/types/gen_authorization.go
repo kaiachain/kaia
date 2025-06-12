@@ -1,0 +1,73 @@
+package types
+
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/holiman/uint256"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+)
+
+var _ = (*authorizationMarshaling)(nil)
+
+// MarshalJSON marshals as JSON.
+func (s SetCodeAuthorization) MarshalJSON() ([]byte, error) {
+	type SetCodeAuthorization struct {
+		ChainID hexutil.U256   `json:"chainId"`
+		Address common.Address `json:"address"`
+		Nonce   hexutil.Uint64 `json:"nonce"`
+		V       hexutil.Uint64 `json:"yParity"`
+		R       hexutil.U256   `json:"r"`
+		S       hexutil.U256   `json:"s"`
+	}
+	var enc SetCodeAuthorization
+	enc.ChainID = hexutil.U256(s.ChainID)
+	enc.Address = s.Address
+	enc.Nonce = hexutil.Uint64(s.Nonce)
+	enc.V = hexutil.Uint64(s.V)
+	enc.R = hexutil.U256(s.R)
+	enc.S = hexutil.U256(s.S)
+	return json.Marshal(&enc)
+}
+
+// UnmarshalJSON unmarshals from JSON.
+func (s *SetCodeAuthorization) UnmarshalJSON(input []byte) error {
+	type SetCodeAuthorization struct {
+		ChainID *hexutil.U256   `json:"chainId"`
+		Address *common.Address `json:"address"`
+		Nonce   *hexutil.Uint64 `json:"nonce"`
+		V       *hexutil.Uint64 `json:"yParity"`
+		R       *hexutil.U256   `json:"r"`
+		S       *hexutil.U256   `json:"s"`
+	}
+	var dec SetCodeAuthorization
+	if err := json.Unmarshal(input, &dec); err != nil {
+		return err
+	}
+	if dec.ChainID == nil {
+		return errors.New("missing required field 'chainId' for SetCodeAuthorization")
+	}
+	s.ChainID = uint256.Int(*dec.ChainID)
+	if dec.Address == nil {
+		return errors.New("missing required field 'address' for SetCodeAuthorization")
+	}
+	s.Address = *dec.Address
+	if dec.Nonce == nil {
+		return errors.New("missing required field 'nonce' for SetCodeAuthorization")
+	}
+	s.Nonce = uint64(*dec.Nonce)
+	if dec.V == nil {
+		return errors.New("missing required field 'yParity' for SetCodeAuthorization")
+	}
+	s.V = uint8(*dec.V)
+	if dec.R == nil {
+		return errors.New("missing required field 'r' for SetCodeAuthorization")
+	}
+	s.R = uint256.Int(*dec.R)
+	if dec.S == nil {
+		return errors.New("missing required field 's' for SetCodeAuthorization")
+	}
+	s.S = uint256.Int(*dec.S)
+	return nil
+}
